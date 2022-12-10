@@ -63,6 +63,17 @@ public class EinkaufsangebotDtoAssembler {
 			einkaufsangebotDto.setPersonalIIdAendern(einkaufsangebot
 					.getPersonalIIdAendern());
 			einkaufsangebotDto.setTAendern(einkaufsangebot.getTAendern());
+			einkaufsangebotDto.setBRoHs(einkaufsangebot.getBRoHs());
+			einkaufsangebotDto.setIAnzahlwebabfragen(einkaufsangebot.getIAnzahlwebabfragen());
+			einkaufsangebotDto.setTLiefertermin(einkaufsangebot.getTLiefertermin());
+			einkaufsangebotDto.setBKundeExportieren(einkaufsangebot.getBKundeExportieren());
+			einkaufsangebotDto.setBOptimierenMinmenge(einkaufsangebot.getBOptimierenMinmenge());
+			einkaufsangebotDto.setBOptimierenVerpackungseinheit(einkaufsangebot.getBOptimierenVerpackungseinheit());
+			einkaufsangebotDto.setIOptimierenLieferzeit(einkaufsangebot.getIOptimierenLieferzeit());
+			einkaufsangebotDto.setTFertigungstermin(einkaufsangebot.getTFertigungstermin());
+			einkaufsangebotDto.setCKommentar(einkaufsangebot.getCKommentar());
+			einkaufsangebotDto.setIOptimierenMenge(einkaufsangebot.getIOptimierenMenge());
+			einkaufsangebotDto.setISortierung(einkaufsangebot.getISortierung());
 		}
 		return einkaufsangebotDto;
 	}

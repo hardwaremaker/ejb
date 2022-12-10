@@ -44,6 +44,8 @@ import com.lp.util.EJBExceptionLP;
 public interface BenutzerFac {
 
 	public final static String REPORT_BENUTZERSTATISTIK = "pers_benutzerstatistik.jasper";
+	public final static String REPORT_ROLLENUNDRECHTE = "pers_rollenundrechte.jasper";
+	public final static String REPORT_LOGIN = "pers_login.jasper";
 
 	
 	public static final String FLR_BENUTZER_C_BENUTZERKENNUNG = "c_benutzerkennung";
@@ -80,6 +82,9 @@ public interface BenutzerFac {
 	public static final String FLR_FERTIGUNGSGRUPPEROLLE_FLRFERTIGUNGSGRUPPE = "flrfertigungsgruppe";
 	public static final String FLR_FERTIGUNGSGRUPPEROLLE_FLRSYSTEMROLLE = "flrsystemrolle";
 	
+	public static final String FLR_ARTGRUROLLE_FLRFARTIKELGRUPPE = "flrartikelgruppe";
+	public static final String FLR_ARTGRUROLLE_FLRSYSTEMROLLE = "flrsystemrolle";
+	
 	// Nachrichtenarten
 	public static final Integer NA_RUESTZEIT_UEBERSCHRITTEN_ID = 1;
 	public static final String NA_RUESTZEIT_UEBERSCHRITTEN = "NA_RUESTZEIT";
@@ -111,7 +116,7 @@ public interface BenutzerFac {
 	public void kopiereLagerRechteEinerRolle(Integer systemrolleIIdQuelle,
 			Integer systemrolleIIdZiel, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 	
-	public void removeBenutzer(Integer iId) throws EJBExceptionLP,
+	public void removeBenutzer(Integer iId,TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
 	public void updateBenutzer(BenutzerDto benutzerDto,
@@ -131,13 +136,13 @@ public interface BenutzerFac {
 			String cBenutzerkennung, String cKennwort) throws EJBExceptionLP,
 			RemoteException;
 
-	public Integer createSystemrolle(SystemrolleDto systemrolleDto)
+	public Integer createSystemrolle(SystemrolleDto systemrolleDto,TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void removeSystemrolle(Integer iId) throws EJBExceptionLP,
+	public void removeSystemrolle(Integer iId,TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
-	public void updateSystemrolle(SystemrolleDto systemrolleDto)
+	public void updateSystemrolle(SystemrolleDto systemrolleDto,TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public SystemrolleDto systemrolleFindByPrimaryKey(Integer iId)
@@ -153,7 +158,7 @@ public interface BenutzerFac {
 			BenutzermandantsystemrolleDto benutzermandantsystemrolleDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void removeBenutzermandantsystemrolle(Integer iId)
+	public void removeBenutzermandantsystemrolle(Integer iId,TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public void updateBenutzermandantsystemrolle(
@@ -216,9 +221,9 @@ public interface BenutzerFac {
 	
 	public String[] getThemenDesAngemeldetenBenutzers(TheClientDto theClientDto);
 	
-	public Integer createLagerrolle(LagerrolleDto lagerrolleDto);
-	public void updateLagerrolle(LagerrolleDto lagerrolleDto);
-	public void removeLagerrolle(Integer iId);
+	public Integer createLagerrolle(LagerrolleDto lagerrolleDto, TheClientDto theClientDto);
+	public void updateLagerrolle(LagerrolleDto lagerrolleDto,TheClientDto theClientDto);
+	public void removeLagerrolle(Integer iId,TheClientDto theClientDto);
 	public LagerrolleDto lagerrolleFindByPrimaryKey(Integer iId);
 	
 	public int getAnzahlDerUnbearbeitetenMeldungen(TheClientDto theClientDto);
@@ -226,10 +231,39 @@ public interface BenutzerFac {
 			TheClientDto theClientDto);
 	
 	public JasperPrintLP printBenutzerstatistik(java.sql.Date dVon, java.sql.Date dBis, TheClientDto theClientDto);
-	public void updateFertigungsgrupperolle(FertigungsgrupperolleDto fertigungsgrupperolleDto);
-	public Integer createFertigungsgrupperolle(FertigungsgrupperolleDto dto);
+	public void updateFertigungsgrupperolle(FertigungsgrupperolleDto fertigungsgrupperolleDto, TheClientDto theClientDto);
+	public Integer createFertigungsgrupperolle(FertigungsgrupperolleDto dto,TheClientDto theClientDto);
 	public FertigungsgrupperolleDto fertigungsgrupperolleFindByPrimaryKey(Integer iId);
-	public void removeFertigungsgrupperolle(Integer iId);
+	public void removeFertigungsgrupperolle(Integer iId,TheClientDto theClientDto);
+	public JasperPrintLP printRollenundrechte(TheClientDto theClientDto);
+	
+	/**
+	 * Ermittelt die Themarolle f&uuml;r das angegebene Thema 
+	 * 
+	 * @param themaCnr das gesuchte Thema
+	 * @param theClientDto (die gesuchte Systemrolle-Id)
+	 * @return null wenn die Kombination thema und theClientDto nicht vorhanden ist, ansonsten themarolledto
+	 */
+	ThemarolleDto themarolleFindByCnr(String themaCnr, TheClientDto theClientDto) ;
+	
+	public SystemrolleDto[] systemrolleFindAll()
+			throws EJBExceptionLP;
+	
+	public LagerrolleDto lagerrollefindBySystemrolleIIdLagerIIdOhneExc(
+			Integer systemrolleIId, Integer lagerIId, TheClientDto theClientDto);
+	public FertigungsgrupperolleDto fertigungsgrupperollefindBySystemrolleIIdFertigungsgruppeIIdOhneExc(
+			Integer systemrolleIId, Integer fertigungsgruppeIId, TheClientDto theClientDto);
+	public void updateArtgrurolle(ArtgrurolleDto artgrurolleDto,
+			TheClientDto theClientDto);
+	public Integer createArtgrurolle(ArtgrurolleDto dto,
+			TheClientDto theClientDto);
+	public ArtgrurolleDto artgrurolleFindByPrimaryKey(Integer iId);
+	public void removeArtgrurolle(Integer iId, TheClientDto theClientDto);
+	public JasperPrintLP printLogin(String benutzer,String password,TheClientDto theClientDto);
+	
+	public ArtgrurolleDto artgrurollefindBySystemrolleIIdArtgruIIdOhneExc(
+			Integer systemrolleIId, Integer artgruIId,
+			TheClientDto theClientDto);
 	
 	
 }

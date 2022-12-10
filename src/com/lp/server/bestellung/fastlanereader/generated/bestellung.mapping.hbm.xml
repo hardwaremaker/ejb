@@ -19,54 +19,95 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd"> -->
+
 <!-- Diese Mappingdatei kuemmert sich um die Bestellungen. Copyright Logistik 
 	Pur GmbH (c) 2005 Erstellungsdatum 01.02.05 @author Josef Erlinger @version 
 	1.0 -->
-<hibernate-mapping package="com.lp.server.bestellung.fastlanereader.generated">
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd">
+<hibernate-mapping
+	package="com.lp.server.bestellung.fastlanereader.generated">
 	<class name="FLRBestellung" table="BES_BESTELLUNG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String"
 			not-null="false" />
-		<property name="t_belegdatum" column="T_BELEGDATUM" type="java.sql.Timestamp"
-			not-null="false" />
-		<property name="t_liefertermin" column="T_LIEFERTERMIN" type="java.sql.Timestamp"
-			not-null="false" />
-		<property name="t_manuellgeliefert" column="T_MANUELLGELIEFERT"
+		<property name="t_belegdatum" column="T_BELEGDATUM"
 			type="java.sql.Timestamp" not-null="false" />
-		<property name="n_bestellwert" column="N_BESTELLWERT" type="java.math.BigDecimal"
+		<property name="t_liefertermin" column="T_LIEFERTERMIN"
+			type="java.sql.Timestamp" not-null="false" />
+		<property name="t_vollstaendig_geliefert"
+			column="T_VOLLSTAENDIG_GELIEFERT" type="java.sql.Timestamp"
 			not-null="false" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+		<property name="t_komissionierung_geplant"
+			column="T_KOMISSIONIERUNG_GEPLANT" type="java.sql.Timestamp"
 			not-null="false" />
-		<property name="bestellungstatus_c_nr" column="BESTELLUNGSTATUS_C_NR"
+		<property name="t_komissionierung_durchgefuehrt"
+			column="T_KOMISSIONIERUNG_DURCHGEFUEHT" type="java.sql.Timestamp"
+			not-null="false" />
+		<property name="t_uebergabe_technik"
+			column="T_UEBERGABE_TECHNIK" type="java.sql.Timestamp"
+			not-null="false" />
+		<property name="t_manuellgeliefert"
+			column="T_MANUELLGELIEFERT" type="java.sql.Timestamp"
+			not-null="false" />
+		<property name="n_bestellwert" column="N_BESTELLWERT"
+			type="java.math.BigDecimal" not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
 			type="java.lang.String" not-null="false" />
-		<property name="bestellungart_c_nr" column="BESTELLUNGART_C_NR"
-			type="java.lang.String" not-null="false" />
-		<property name="bestellung_i_id_rahmenbestellung" column="BESTELLUNG_I_ID_RAHMENBESTELLUNG"
-			type="java.lang.Integer" not-null="false" />
-		<property name="waehrung_c_nr_bestellwaehrung" column="WAEHRUNG_C_NR_BESTELLUNGSWAEHRUNG"
-			type="java.lang.String" not-null="false" />
-		<property name="lieferant_i_id_bestelladresse" column="LIEFERANT_I_ID_BESTELLADRESSE"
-			type="java.lang.Integer" />
+		<property name="bestellungstatus_c_nr"
+			column="BESTELLUNGSTATUS_C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="bestellungart_c_nr"
+			column="BESTELLUNGART_C_NR" type="java.lang.String" not-null="false" />
+		<property name="bestellung_i_id_rahmenbestellung"
+			column="BESTELLUNG_I_ID_RAHMENBESTELLUNG" type="java.lang.Integer"
+			not-null="false" />
+		<property name="waehrung_c_nr_bestellwaehrung"
+			column="WAEHRUNG_C_NR_BESTELLUNGSWAEHRUNG" type="java.lang.String"
+			not-null="false" />
+		<property name="lieferant_i_id_bestelladresse"
+			column="LIEFERANT_I_ID_BESTELLADRESSE" type="java.lang.Integer" />
+		<property name="lieferant_i_id_rechnungsadresse"
+			column="LIEFERANT_I_ID_RECHNUNGSADRESSE" type="java.lang.Integer" />
 		<property name="kostenstelle_i_id" column="KOSTENSTELLE_I_ID"
 			type="java.lang.Integer" />
-		<property name="auftrag_i_id" column="AUFTRAG_I_ID" type="java.lang.Integer" />
-		<property name="c_bezprojektbezeichnung" column="C_BEZPROJEKTBEZEICHNUNG"
-			type="java.lang.String" />
-			<property name="c_lieferantenangebot" column="C_LIEFERANTENANGEBOT"
-			type="java.lang.String" />
-		<property name="f_wechselkursmandantwaehrungbestellungswaehrung"
-			column="F_WECHSELKURSMANDANTWAEHRUNGBESTELLUNGSWAEHRUNG" type="java.lang.Double" />
-		<property name="mahnstufe_i_id" column="MAHNSTUFE_I_ID" type="java.lang.Integer" />
-		<property name="t_versandzeitpunkt" column="T_VERSANDZEITPUNKT"
-			type="java.sql.Timestamp" not-null="false" />
+		<property name="auftrag_i_id" column="AUFTRAG_I_ID"
+			type="java.lang.Integer" />
+		<property name="c_bezprojektbezeichnung"
+			column="C_BEZPROJEKTBEZEICHNUNG" type="java.lang.String" />
+		<property name="c_lieferantenangebot"
+			column="C_LIEFERANTENANGEBOT" type="java.lang.String" />
+		<property
+			name="f_wechselkursmandantwaehrungbestellungswaehrung"
+			column="F_WECHSELKURSMANDANTWAEHRUNGBESTELLUNGSWAEHRUNG"
+			type="java.lang.Double" />
+		<property name="mahnstufe_i_id" column="MAHNSTUFE_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_versandzeitpunkt"
+			column="T_VERSANDZEITPUNKT" type="java.sql.Timestamp"
+			not-null="false" />
 		<property name="t_mahnsperrebis" column="T_MAHNSPERREBIS"
 			type="java.sql.Timestamp" not-null="false" />
-		<property name="c_versandtype" column="C_VERSANDTYPE" type="java.lang.String" />
-		<property name="b_poenale" column="B_POENALE" type="java.lang.Short" />
-		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
+		<property name="c_versandtype" column="C_VERSANDTYPE"
+			type="java.lang.String" />
+		<property name="b_poenale" column="B_POENALE"
+			type="java.lang.Short" />
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" />
+		<property name="ansprechpartner_i_id"
+			column="ANSPRECHPARTNER_I_ID" type="java.lang.Integer" />
+
+		<property name="lieferart_i_id" column="LIEFERART_I_ID"
+			type="java.lang.Integer" />
+		<property name="x_internerkommentar"
+			column="X_INTERNERKOMMENTAR" type="java.lang.String" />
+		<property name="x_externerkommentar"
+			column="X_EXTERNERKOMMENTAR" type="java.lang.String" />
+		<many-to-one name="flrlieferart"
+			class="com.lp.server.system.fastlanereader.generated.FLRLieferart"
+			column="LIEFERART_I_ID" unique="true" insert="false" update="false" />
 		<many-to-one name="flrlieferant"
 			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
 			column="LIEFERANT_I_ID_BESTELLADRESSE" unique="true" insert="false"
@@ -80,10 +121,12 @@
 			update="false" />
 		<many-to-one name="flrpersonalanleger"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
-			column="PERSONAL_I_ID_ANLEGEN" unique="true" insert="false" update="false" />
+			column="PERSONAL_I_ID_ANLEGEN" unique="true" insert="false"
+			update="false" />
 		<many-to-one name="flrpersonalaenderer"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
-			column="PERSONAL_I_ID_AENDERN" unique="true" insert="false" update="false" />
+			column="PERSONAL_I_ID_AENDERN" unique="true" insert="false"
+			update="false" />
 		<many-to-one name="flrbestellungtextsuche"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellungtextsuche"
 			column="I_ID" insert="false" update="false" />
@@ -96,11 +139,22 @@
 		<many-to-one name="flrprojekt"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
 			column="PROJEKT_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrzahlungsziel"
+			class="com.lp.server.system.fastlanereader.generated.FLRZahlungsziel"
+			column="ZAHLUNGSZIEL_I_ID" unique="true" insert="false"
+			update="false" />
+
 		<set name="bestellpositionen" inverse="true">
 			<key column="BESTELLUNG_I_ID" />
 			<one-to-many
 				class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellposition" />
 		</set>
+
+		<property name="spediteur_i_id" column="SPEDITEUR_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrspediteur"
+			class="com.lp.server.system.fastlanereader.generated.FLRSpediteur"
+			column="SPEDITEUR_I_ID" unique="true" insert="false" update="false" />
 	</class>
 
 	<class name="FLRBestellungtextsuche" table="BES_TEXTSUCHE">
@@ -109,42 +163,54 @@
 		</id>
 		<property name="c_typ" column="C_TYP" type="java.lang.String" />
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="c_suche" column="C_SUCHE" type="java.lang.String" />
+		<property name="c_suche" column="C_SUCHE"
+			type="java.lang.String" />
 	</class>
-
 
 	<class name="FLRBestellposition" table="BES_BESTELLPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
-			not-null="true" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
-		<property name="c_bezeichnung" column="C_BEZ" type="java.lang.String" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" not-null="true" />
+		<property name="n_menge" column="N_MENGE"
+			type="java.math.BigDecimal" />
+		<property name="einheit_c_nr" column="EINHEIT_C_NR"
+			type="java.lang.String" />
+		<property name="c_bezeichnung" column="C_BEZ"
+			type="java.lang.String" />
 		<property name="c_zusatzbezeichnung" column="C_ZBEZ"
 			type="java.lang.String" />
-		<property name="b_artikelbezuebersteuert" column="B_ARTIKELBEZUEBERSTEUERT"
-			type="java.lang.Short" />
-		<property name="n_nettoeinzelpreis" column="N_NETTOEINZELPREIS"
-			type="java.math.BigDecimal" />
-		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
-			type="java.math.BigDecimal" />
-		<property name="c_textinhalt" column="C_TEXTINHALT" type="java.lang.String" />
-		<property name="bestellpositionstatus_c_nr" column="BESTELLPOSITIONSTATUS_C_NR"
+		<property name="b_artikelbezuebersteuert"
+			column="B_ARTIKELBEZUEBERSTEUERT" type="java.lang.Short" />
+		<property name="n_nettoeinzelpreis"
+			column="N_NETTOEINZELPREIS" type="java.math.BigDecimal" />
+		<property name="n_nettogesamtpreis"
+			column="N_NETTOGESAMTPREIS" type="java.math.BigDecimal" />
+		<property name="c_textinhalt" column="C_TEXTINHALT"
 			type="java.lang.String" />
-		<property name="bestellpositionart_c_nr" column="BESTELLPOSITIONART_C_NR"
+		<property name="bestellpositionstatus_c_nr"
+			column="BESTELLPOSITIONSTATUS_C_NR" type="java.lang.String" />
+		<property name="bestellpositionart_c_nr"
+			column="BESTELLPOSITIONART_C_NR" type="java.lang.String" />
+		<property name="n_offenemenge" column="N_OFFENEMENGE"
+			type="java.math.BigDecimal" />
+		<property name="t_uebersteuerterliefertermin"
+			column="T_UEBERSTEUERTERLIEFERTERMIN" type="java.sql.Timestamp" />
+		<property name="t_auftragsbestaetigungstermin"
+			column="T_AUFTRAGSBESTAETIGUNGSTERMIN" type="java.sql.Timestamp" />
+		<property name="t_abursprungstermin"
+			column="T_ABURSPRUNGSTERMIN" type="java.sql.Timestamp" />
+		<property name="c_abnummer" column="C_ABNUMMER"
 			type="java.lang.String" />
-		<property name="n_offenemenge" column="N_OFFENEMENGE" type="java.math.BigDecimal" />
-		<property name="t_uebersteuerterliefertermin" column="T_UEBERSTEUERTERLIEFERTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="t_auftragsbestaetigungstermin" column="T_AUFTRAGSBESTAETIGUNGSTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="t_abursprungstermin" column="T_ABURSPRUNGSTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="c_abnummer" column="C_ABNUMMER" type="java.lang.String" />
-		<property name="position_i_id_artikelset" column="POSITION_I_ID_ARTIKELSET"
+		<property name="position_i_id_artikelset"
+			column="POSITION_I_ID_ARTIKELSET" type="java.lang.Integer" />
+		<property name="bestellposition_i_id_rahmenposition"
+			column="BESTELLPOSITION_I_ID_RAHMENPOSITION" type="java.lang.Integer" />
+
+		<property name="lossollmaterial_i_id" column="LOSSOLLMATERIAL_I_ID"
 			type="java.lang.Integer" />
+
 		<many-to-one name="flrbestellung"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellung"
 			column="BESTELLUNG_I_ID" unique="true" />
@@ -156,43 +222,50 @@
 			column="MEDIASTANDARD_I_ID" unique="true" />
 		<many-to-one name="flrlossollmaterial"
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
-			column="LOSSOLLMATERIAL_I_ID" />
+			column="LOSSOLLMATERIAL_I_ID" insert="false" update="false" />
 
 	</class>
 
 
 
 
-	<class name="FLRBestellpositionMitArtikelliste" table="BES_BESTELLPOSITION">
+	<class name="FLRBestellpositionMitArtikelliste"
+		table="BES_BESTELLPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
-			not-null="true" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
-		<property name="c_bezeichnung" column="C_BEZ" type="java.lang.String" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" not-null="true" />
+		<property name="n_menge" column="N_MENGE"
+			type="java.math.BigDecimal" />
+		<property name="einheit_c_nr" column="EINHEIT_C_NR"
+			type="java.lang.String" />
+		<property name="c_bezeichnung" column="C_BEZ"
+			type="java.lang.String" />
 		<property name="c_zusatzbezeichnung" column="C_ZBEZ"
 			type="java.lang.String" />
-		<property name="b_artikelbezuebersteuert" column="B_ARTIKELBEZUEBERSTEUERT"
-			type="java.lang.Short" />
-		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
+		<property name="b_artikelbezuebersteuert"
+			column="B_ARTIKELBEZUEBERSTEUERT" type="java.lang.Short" />
+		<property name="n_nettogesamtpreis"
+			column="N_NETTOGESAMTPREIS" type="java.math.BigDecimal" />
+		<property name="c_textinhalt" column="C_TEXTINHALT"
+			type="java.lang.String" />
+		<property name="bestellpositionstatus_c_nr"
+			column="BESTELLPOSITIONSTATUS_C_NR" type="java.lang.String" />
+		<property name="bestellpositionart_c_nr"
+			column="BESTELLPOSITIONART_C_NR" type="java.lang.String" />
+		<property name="n_offenemenge" column="N_OFFENEMENGE"
 			type="java.math.BigDecimal" />
-		<property name="c_textinhalt" column="C_TEXTINHALT" type="java.lang.String" />
-		<property name="bestellpositionstatus_c_nr" column="BESTELLPOSITIONSTATUS_C_NR"
+		<property name="t_uebersteuerterliefertermin"
+			column="T_UEBERSTEUERTERLIEFERTERMIN" type="java.sql.Timestamp" />
+		<property name="t_auftragsbestaetigungstermin"
+			column="T_AUFTRAGSBESTAETIGUNGSTERMIN" type="java.sql.Timestamp" />
+		<property name="t_abursprungstermin"
+			column="T_ABURSPRUNGSTERMIN" type="java.sql.Timestamp" />
+		<property name="c_abnummer" column="C_ABNUMMER"
 			type="java.lang.String" />
-		<property name="bestellpositionart_c_nr" column="BESTELLPOSITIONART_C_NR"
-			type="java.lang.String" />
-		<property name="n_offenemenge" column="N_OFFENEMENGE" type="java.math.BigDecimal" />
-		<property name="t_uebersteuerterliefertermin" column="T_UEBERSTEUERTERLIEFERTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="t_auftragsbestaetigungstermin" column="T_AUFTRAGSBESTAETIGUNGSTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="t_abursprungstermin" column="T_ABURSPRUNGSTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="c_abnummer" column="C_ABNUMMER" type="java.lang.String" />
-		<property name="position_i_id_artikelset" column="POSITION_I_ID_ARTIKELSET"
-			type="java.lang.Integer" />
+		<property name="position_i_id_artikelset"
+			column="POSITION_I_ID_ARTIKELSET" type="java.lang.Integer" />
 		<many-to-one name="flrbestellung"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellung"
 			column="BESTELLUNG_I_ID" unique="true" />
@@ -208,35 +281,47 @@
 
 	</class>
 
-	<class name="FLRBestellpositionReport" table="BES_BESTELLPOSITION">
+	<class name="FLRBestellpositionReport"
+		table="BES_BESTELLPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
-			not-null="true" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
-		<property name="c_bezeichnung" column="C_BEZ" type="java.lang.String" />
-		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" not-null="true" />
+		<property name="n_menge" column="N_MENGE"
 			type="java.math.BigDecimal" />
-		<property name="bestellpositionstatus_c_nr" column="BESTELLPOSITIONSTATUS_C_NR"
+		<property name="einheit_c_nr" column="EINHEIT_C_NR"
 			type="java.lang.String" />
-		<property name="bestellpositionart_c_nr" column="BESTELLPOSITIONART_C_NR"
+		<property name="c_bezeichnung" column="C_BEZ"
 			type="java.lang.String" />
-		<property name="t_uebersteuerterliefertermin" column="T_UEBERSTEUERTERLIEFERTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="t_lieferterminbestaetigt" column="T_LIEFERTERMINBESTAETIGT"
-			type="java.sql.Timestamp" />
-		<property name="n_offenemenge" column="N_OFFENEMENGE" type="java.math.BigDecimal" />
-		<property name="t_auftragsbestaetigungstermin" column="T_AUFTRAGSBESTAETIGUNGSTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="c_abnummer" column="C_ABNUMMER" type="java.lang.String" />
-		<property name="c_abkommentar" column="C_ABKOMMENTAR" type="java.lang.String" />
-		<property name="t_abursprungstermin" column="T_ABURSPRUNGSTERMIN"
-			type="java.sql.Timestamp" />
+		<property name="c_zusatzbezeichnung" column="C_ZBEZ"
+			type="java.lang.String" />
+		<property name="n_nettogesamtpreis"
+			column="N_NETTOGESAMTPREIS" type="java.math.BigDecimal" />
+		<property name="bestellpositionstatus_c_nr"
+			column="BESTELLPOSITIONSTATUS_C_NR" type="java.lang.String" />
+		<property name="bestellpositionart_c_nr"
+			column="BESTELLPOSITIONART_C_NR" type="java.lang.String" />
+		<property name="t_uebersteuerterliefertermin"
+			column="T_UEBERSTEUERTERLIEFERTERMIN" type="java.sql.Timestamp" />
+		<property name="t_lieferterminbestaetigt"
+			column="T_LIEFERTERMINBESTAETIGT" type="java.sql.Timestamp" />
+		<property name="n_offenemenge" column="N_OFFENEMENGE"
+			type="java.math.BigDecimal" />
+		<property name="t_auftragsbestaetigungstermin"
+			column="T_AUFTRAGSBESTAETIGUNGSTERMIN" type="java.sql.Timestamp" />
+		<property name="c_abnummer" column="C_ABNUMMER"
+			type="java.lang.String" />
+		<property name="c_abkommentar" column="C_ABKOMMENTAR"
+			type="java.lang.String" />
+		<property name="t_abursprungstermin"
+			column="T_ABURSPRUNGSTERMIN" type="java.sql.Timestamp" />
 
-		<property name="position_i_id_artikelset" column="POSITION_I_ID_ARTIKELSET"
-			type="java.lang.Integer" />
+		<property name="n_fixkosten" column="N_FIXKOSTEN"
+			type="java.math.BigDecimal" />
+
+		<property name="position_i_id_artikelset"
+			column="POSITION_I_ID_ARTIKELSET" type="java.lang.Integer" />
 		<many-to-one name="flrbestellung"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellung"
 			column="BESTELLUNG_I_ID" unique="true" />
@@ -251,6 +336,15 @@
 			<one-to-many
 				class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellpositionReport" />
 		</set>
+
+		<property name="gebinde_i_id" column="GEBINDE_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrgebinde"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRGebinde"
+			column="GEBINDE_I_ID" insert="false" update="false" />
+		<property name="n_anzahlgebinde" column="N_ANZAHLGEBINDE"
+			type="java.math.BigDecimal" />
+
 	</class>
 
 
@@ -260,30 +354,34 @@
 		</id>
 		<property name="c_lieferscheinnr" column="C_LIEFERSCHEINNR"
 			type="java.lang.String" not-null="false" />
-		<property name="t_lieferscheindatum" column="T_LIEFERSCHEINDATUM"
-			type="java.sql.Timestamp" not-null="false" />
+		<property name="t_lieferscheindatum"
+			column="T_LIEFERSCHEINDATUM" type="java.sql.Timestamp"
+			not-null="false" />
 		<property name="n_transportkosten" column="N_TRANSPORTKOSTEN"
 			type="java.math.BigDecimal" not-null="false" />
-		<property name="n_zollkosten" column="N_ZOLLKOSTEN" type="java.math.BigDecimal"
-			not-null="false" />
-		<property name="n_bankspesen" column="N_BANKSPESEN" type="java.math.BigDecimal"
-			not-null="false" />
+		<property name="n_zollkosten" column="N_ZOLLKOSTEN"
+			type="java.math.BigDecimal" not-null="false" />
+		<property name="n_bankspesen" column="N_BANKSPESEN"
+			type="java.math.BigDecimal" not-null="false" />
 		<property name="n_sonstigespesen" column="N_SONSTIGESPESEN"
 			type="java.math.BigDecimal" not-null="false" />
-		<property name="n_wechselkurs" column="N_WECHSELKURS" type="java.math.BigDecimal"
-			not-null="false" />
-		<property name="f_gemeinkostenfaktor" column="F_GEMEINKOSTENFAKTOR"
+		<property name="n_wechselkurs" column="N_WECHSELKURS"
+			type="java.math.BigDecimal" not-null="false" />
+		<property name="f_gemeinkostenfaktor"
+			column="F_GEMEINKOSTENFAKTOR" type="java.lang.Double" />
+		<property name="f_rabattsatz" column="F_RABATTSATZ"
 			type="java.lang.Double" />
-		<property name="f_rabattsatz" column="F_RABATTSATZ" type="java.lang.Double" />
-		<property name="t_wareneingansdatum" column="T_WARENEINGANGSDATUM"
-			type="java.sql.Timestamp" not-null="false" />
+		<property name="t_wareneingansdatum"
+			column="T_WARENEINGANGSDATUM" type="java.sql.Timestamp"
+			not-null="false" />
 		<property name="bestellung_i_id" column="BESTELLUNG_I_ID"
 			type="java.lang.Integer" not-null="false" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
-			not-null="true" />
-		<property name="lager_i_id" column="LAGER_I_ID" type="java.lang.Integer" />
-		<property name="eingangsrechnung_i_id" column="EINGANGSRECHNUNG_I_ID"
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" not-null="true" />
+		<property name="lager_i_id" column="LAGER_I_ID"
 			type="java.lang.Integer" />
+		<property name="eingangsrechnung_i_id"
+			column="EINGANGSRECHNUNG_I_ID" type="java.lang.Integer" />
 		<many-to-one name="flrbestellung"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellung"
 			column="BESTELLUNG_I_ID" insert="false" update="false" />
@@ -294,29 +392,37 @@
 		<many-to-one name="flreingangsrechnung"
 			class="com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung"
 			column="EINGANGSRECHNUNG_I_ID" insert="false" update="false" />
+		<set name="weps" inverse="true">
+			<key column="WARENEINGANG_I_ID" />
+			<one-to-many
+				class="com.lp.server.bestellung.fastlanereader.generated.FLRWareneingangspositionen" />
+		</set>
+
 	</class>
 
-	<class name="FLRWareneingangspositionen" table="BES_WARENEINGANGSPOSITION">
+	<class name="FLRWareneingangspositionen"
+		table="BES_WARENEINGANGSPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="n_geliefertemenge" column="N_GELIEFERTEMENGE"
 			type="java.math.BigDecimal" />
-		<property name="n_gelieferterpreis" column="N_GELIEFERTERPREIS"
-			type="java.math.BigDecimal" />
+		<property name="n_gelieferterpreis"
+			column="N_GELIEFERTERPREIS" type="java.math.BigDecimal" />
 		<property name="n_einstandspreis" column="N_EINSTANDSPREIS"
 			type="java.math.BigDecimal" />
-		<property name="bestellposition_i_id" column="BESTELLPOSITION_I_ID"
-			type="java.lang.Integer" />
+		<property name="bestellposition_i_id"
+			column="BESTELLPOSITION_I_ID" type="java.lang.Integer" />
 		<property name="wareneingang_i_id" column="WARENEINGANG_I_ID"
 			type="java.lang.Integer" />
 		<property name="t_manuellerledigt" column="T_MANUELLERLEDIGT"
 			type="java.sql.Timestamp" not-null="false" />
 		<property name="b_preiseerfasst" column="B_PREISEERFASST"
 			type="java.lang.Short" />
-		<property name="b_verraeumt" column="B_VERRAEUMT" type="java.lang.Short" />
-		<property name="x_internerkommentar" column="X_INTERNERKOMMENTAR"
-			type="java.lang.String" not-null="false" />
+		<property name="b_verraeumt" column="B_VERRAEUMT"
+			type="java.lang.Short" />
+		<property name="x_internerkommentar"
+			column="X_INTERNERKOMMENTAR" type="java.lang.String" not-null="false" />
 		<many-to-one name="flrbestellposition"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellposition"
 			column="BESTELLPOSITION_I_ID" insert="false" update="false" />
@@ -329,10 +435,13 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR"
+			type="java.lang.String" />
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="c_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+		<property name="c_textinhalt" column="X_TEXTINHALT"
+			type="java.lang.String" />
 	</class>
 
 	<class name="FLRBestellungart" table="BES_BESTELLUNGART">
@@ -343,13 +452,16 @@
 			<key column="BESTELLUNGART_C_NR" />
 			<one-to-many
 				class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellungartspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLRBestellungartspr" table="BES_BESTELLUNGARTSPR">
 		<composite-id>
-			<key-many-to-one name="bestellungart" column="BESTELLUNGART_C_NR"
+			<key-many-to-one name="bestellungart"
+				column="BESTELLUNGART_C_NR"
 				class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellungart" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
@@ -361,42 +473,63 @@
 		<id name="c_nr" column="STATUS_C_NR" type="java.lang.String">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLRBestellvorschlag" table="BES_BESTELLVORSCHLAG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="n_zubestellendemenge" column="N_ZUBESTELLENDEMENGE"
-			type="java.math.BigDecimal" not-null="false" />
+		<property name="n_zubestellendemenge"
+			column="N_ZUBESTELLENDEMENGE" type="java.math.BigDecimal"
+			not-null="false" />
 		<property name="t_liefertermin" column="T_BESTELLTERMIN"
 			type="java.sql.Timestamp" not-null="false" />
-		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer"
-			not-null="false" />
-		<property name="lieferant_i_id" column="LIEFERANT_I_ID" type="java.lang.Integer"
-			not-null="false" />
-		<property name="n_nettoeinzelpreis" column="N_NETTOEINZELPREIS"
-			type="java.math.BigDecimal" not-null="false" />
-		<property name="n_rabattbetrag" column="N_RABATTBETRAG" type="java.math.BigDecimal"
-			not-null="false" />
-		<property name="n_nettogesamtpreisminusrabatte" column="N_NETTOGESAMTPREISMINUSRABATTE"
-			type="java.math.BigDecimal" not-null="false" />
-		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
-			type="java.math.BigDecimal" not-null="false" />
-		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String"
-			not-null="false" />
-		<property name="i_belegartid" column="I_BELEGARTID" type="java.lang.Integer"
-			not-null="false" />
-		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
 			type="java.lang.Integer" not-null="false" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+		<property name="lieferant_i_id" column="LIEFERANT_I_ID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="n_nettoeinzelpreis"
+			column="N_NETTOEINZELPREIS" type="java.math.BigDecimal"
 			not-null="false" />
-		<property name="b_nettopreisuebersteuert" column="B_NETTOPREISUEBERSTEUERT"
-			type="java.lang.Short" />
+		<property name="n_rabattbetrag" column="N_RABATTBETRAG"
+			type="java.math.BigDecimal" not-null="false" />
+		<property name="n_nettogesamtpreisminusrabatte"
+			column="N_NETTOGESAMTPREISMINUSRABATTE" type="java.math.BigDecimal"
+			not-null="false" />
+		<property name="n_nettogesamtpreis"
+			column="N_NETTOGESAMTPREIS" type="java.math.BigDecimal"
+			not-null="false" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR"
+			type="java.lang.String" not-null="false" />
+		<property name="i_belegartid" column="I_BELEGARTID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="i_belegartpositionid"
+			column="I_BELEGARTPOSITIONID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" not-null="false" />
+		<property name="b_nettopreisuebersteuert"
+			column="B_NETTOPREISUEBERSTEUERT" type="java.lang.Short" />
 		<property name="b_vormerkung" column=" B_VORMERKUNG "
 			type="java.lang.Short" />
-		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
-		<property name="x_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" />
+		<property name="x_textinhalt" column="X_TEXTINHALT"
+			type="java.lang.String" />
+		<property name="partner_i_id_standort"
+			column="PARTNER_I_ID_STANDORT" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="i_wiederbeschaffungszeit"
+			column="I_WIEDERBESCHAFFUNGSZEIT" type="java.lang.Integer" />
+
+		<property name="t_bearbeitet" column="T_BEARBEITET"
+			type="java.sql.Timestamp" not-null="false" />
+
+		<property name="f_lagermindest" column="F_LAGERMINDEST"
+			type="java.lang.Double" />
+
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" insert="false" update="false" />
@@ -415,27 +548,44 @@
 		<many-to-one name="flrprojekt"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
 			column="PROJEKT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpartner_standort"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID_STANDORT" insert="false" update="false" />
+
+		<property name="gebinde_i_id" column="GEBINDE_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrgebinde"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRGebinde"
+			column="GEBINDE_I_ID" insert="false" update="false" />
+		<property name="n_anzahlgebinde" column="N_ANZAHLGEBINDE"
+			type="java.math.BigDecimal" />
+
 	</class>
 
 
-	<class name="FLRLieferantenoptimieren" table="BES_LIEFERANTENOPTIMIEREN">
+	<class name="FLRLieferantenoptimieren"
+		table="BES_LIEFERANTENOPTIMIEREN">
 		<id name="bestellvorschlag_i_id" column="BESTELLVORSCHLAG_I_ID"
 			type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer"
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="lieferant_i_id_artikellieferant"
+			column="LIEFERANT_I_ID_ARTIKELLIEFERANT" type="java.lang.Integer"
 			not-null="false" />
-		<property name="lieferant_i_id_artikellieferant" column="LIEFERANT_I_ID_ARTIKELLIEFERANT"
-			type="java.lang.Integer" not-null="false" />
-		<property name="lieferant_i_id_bestellvorschlag" column="LIEFERANT_I_ID_BESTELLVORSCHLAG"
-			type="java.lang.Integer" not-null="false" />
+		<property name="lieferant_i_id_bestellvorschlag"
+			column="LIEFERANT_I_ID_BESTELLVORSCHLAG" type="java.lang.Integer"
+			not-null="false" />
 
 		<many-to-one name="flrlieferant_bestellvorschlag"
 			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
-			column="LIEFERANT_I_ID_BESTELLVORSCHLAG" insert="false" update="false" />
+			column="LIEFERANT_I_ID_BESTELLVORSCHLAG" insert="false"
+			update="false" />
 		<many-to-one name="flrlieferant_artikellieferant"
 			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
-			column="LIEFERANT_I_ID_ARTIKELLIEFERANT" insert="false" update="false" />
+			column="LIEFERANT_I_ID_ARTIKELLIEFERANT" insert="false"
+			update="false" />
 		<many-to-one name="flrartikelliste"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
 			column="ARTIKEL_I_ID" insert="false" update="false" />
@@ -449,37 +599,77 @@
 
 
 
-	<class name="FLRBestellvorschlagAlleLieferanten" table="BES_BESTELLVORSCHLAG">
-		<id name="lieferant_i_id" column="LIEFERANT_I_ID" type="java.lang.Integer">
+	<class name="FLRBestellvorschlagAlleLieferanten"
+		table="BES_BESTELLVORSCHLAG">
+		<id name="lieferant_i_id" column="LIEFERANT_I_ID"
+			type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" not-null="false" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
 		<many-to-one name="flrlieferant"
 			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
 			column="LIEFERANT_I_ID" insert="false" update="false" />
 	</class>
 
-	<class name="FLRBestellvorschlagAlleTermine" table="BES_BESTELLVORSCHLAG">
-		<id name="t_liefertermin" column="T_BESTELLTERMIN" type="java.sql.Date">
+	<class name="FLRBestellvorschlagAlleTermine"
+		table="BES_BESTELLVORSCHLAG">
+		<id name="t_liefertermin" column="T_BESTELLTERMIN"
+			type="java.sql.Date">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" not-null="false" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
 	</class>
 
-	<class name="FLRBestellpositionSichtRahmen" table="BES_BESTELLPOSITION">
+
+	<class name="FLRWarezwischenmandanten"
+		table="BES_WAREZWISCHENMANDANTEN">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+
+		<property name="bestellposition_i_id"
+			column="BESTELLPOSITION_I_ID" type="java.lang.Integer" />
+		<property name="auftragposition_i_id"
+			column="AUFTRAGPOSITION_I_ID" type="java.lang.Integer" />
+		<property name="lieferscheinposition_i_id"
+			column="LIEFERSCHEINPOSITION_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrbestellposition"
+			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellpositionMitArtikelliste"
+			column="BESTELLPOSITION_I_ID" unique="true" insert="false"
+			update="false" />
+		<many-to-one name="flrauftragposition"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition"
+			column="AUFTRAGPOSITION_I_ID" unique="true" insert="false"
+			update="false" />
+		<many-to-one name="flrlieferscheinposition"
+			class="com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition"
+			column="LIEFERSCHEINPOSITION_I_ID" unique="true" insert="false"
+			update="false" />
+	</class>
+
+	<class name="FLRBestellpositionSichtRahmen"
+		table="BES_BESTELLPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="bestellpositionstatus_c_nr" column="BESTELLPOSITIONSTATUS_C_NR"
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE"
+			type="java.math.BigDecimal" />
+		<property name="bestellpositionstatus_c_nr"
+			column="BESTELLPOSITIONSTATUS_C_NR" type="java.lang.String" />
+		<property name="einheit_c_nr" column="EINHEIT_C_NR"
 			type="java.lang.String" />
-		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
-		<property name="n_offenemenge" column="N_OFFENEMENGE" type="java.math.BigDecimal" />
-		<property name="bestellpositionart_c_nr" column="BESTELLPOSITIONART_C_NR"
-			type="java.lang.String" />
+		<property name="n_offenemenge" column="N_OFFENEMENGE"
+			type="java.math.BigDecimal" />
+		<property name="bestellpositionart_c_nr"
+			column="BESTELLPOSITIONART_C_NR" type="java.lang.String" />
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" unique="true" />
@@ -488,24 +678,31 @@
 			column="BESTELLUNG_I_ID" unique="true" />
 	</class>
 
-	<class name="FLRBestellungAuftragsbestaetigung" table="BES_BESTELLPOSITION">
+	<class name="FLRBestellungAuftragsbestaetigung"
+		table="BES_BESTELLPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
-			not-null="true" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="c_bezeichnung" column="C_BEZ" type="java.lang.String" />
-		<property name="bestellpositionart_c_nr" column="BESTELLPOSITIONART_C_NR"
-			type="java.lang.String" />
-		<property name="bestellpositionstatus_c_nr" column="BESTELLPOSITIONSTATUS_C_NR"
-			type="java.lang.String" />
-		<property name="t_auftragsbestaetigungstermin" column="T_AUFTRAGSBESTAETIGUNGSTERMIN"
-			type="java.sql.Timestamp" />
-		<property name="t_lieferterminbestaetigt" column="T_LIEFERTERMINBESTAETIGT"
-			type="java.sql.Timestamp" />
-		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" not-null="true" />
+		<property name="n_menge" column="N_MENGE"
 			type="java.math.BigDecimal" />
+		<property name="c_bezeichnung" column="C_BEZ"
+			type="java.lang.String" />
+		<property name="einheit_c_nr" column="EINHEIT_C_NR"
+			type="java.lang.String" />
+		<property name="bestellpositionart_c_nr"
+			column="BESTELLPOSITIONART_C_NR" type="java.lang.String" />
+		<property name="bestellpositionstatus_c_nr"
+			column="BESTELLPOSITIONSTATUS_C_NR" type="java.lang.String" />
+		<property name="t_auftragsbestaetigungstermin"
+			column="T_AUFTRAGSBESTAETIGUNGSTERMIN" type="java.sql.Timestamp" />
+		<property name="t_lieferterminbestaetigt"
+			column="T_LIEFERTERMINBESTAETIGT" type="java.sql.Timestamp" />
+		<property name="t_uebersteuerterliefertermin"
+			column="T_UEBERSTEUERTERLIEFERTERMIN" type="java.sql.Timestamp" />
+		<property name="n_nettogesamtpreis"
+			column="N_NETTOGESAMTPREIS" type="java.math.BigDecimal" />
 		<many-to-one name="flrbestellung"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellung"
 			column="BESTELLUNG_I_ID" unique="true" />
@@ -516,21 +713,59 @@
 			class="com.lp.server.system.fastlanereader.generated.FLRMediastandard"
 			column="MEDIASTANDARD_I_ID" unique="true" />
 	</class>
-	<class name="FLRBestellpositionart" table="BES_BESTELLPOSITIONART">
-		<id name="positionsart_c_nr" column="POSITIONSART_C_NR" type="java.lang.String">
+
+
+	<class name="FLRBSZahlungsplan" table="BES_BSZAHLUNGSPLAN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="t_termin" column="T_TERMIN"
+			type="java.sql.Date" />
+		<property name="n_betrag" column="N_BETRAG"
+			type="java.math.BigDecimal" />
+		<property name="n_betrag_ursprung" column="N_BETRAG_URSPRUNG"
+			type="java.math.BigDecimal" />
+		<property name="bestellung_i_id" column="BESTELLUNG_I_ID"
+			type="java.lang.Integer" not-null="true" />
+		<many-to-one name="flrbestellung"
+			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellung"
+			column="BESTELLUNG_I_ID" unique="true" insert="false" update="false" />
+
+		<property name="c_kommentar" column="C_KOMMENTAR"
+			type="java.lang.String" />
+		<property name="x_text" column="X_TEXT"
+			type="java.lang.String" />
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+		<many-to-one name="flrpersonalerledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" unique="true" insert="false"
+			update="false" />
+
+
+	</class>
+
+	<class name="FLRBestellpositionart"
+		table="BES_BESTELLPOSITIONART">
+		<id name="positionsart_c_nr" column="POSITIONSART_C_NR"
+			type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLRBSMahnstufe" table="BES_BSMAHNSTUFE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="i_tage" column="I_TAGE" type="java.lang.Integer" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="i_tage" column="I_TAGE"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLRMahngruppe" table="BES_MAHNGRUPPE">
-		<id name="artgru_i_id" column="ARTGRU_I_ID" type="java.lang.Integer">
+		<id name="artgru_i_id" column="ARTGRU_I_ID"
+			type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<many-to-one name="flrartikelgruppe"
@@ -541,41 +776,54 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR"
+			type="java.lang.String" />
 		<property name="mahnstufe_i_id" column="BSMAHNSTUFE_I_ID"
 			type="java.lang.Integer" />
-		<property name="c_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+		<property name="c_textinhalt" column="X_TEXTINHALT"
+			type="java.lang.String" />
 	</class>
 	<class name="FLRBSMahnung" table="BES_BSMAHNUNG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mahnlauf_i_id" column="BSMAHNLAUF_I_ID" type="java.lang.Integer" />
+		<property name="mahnlauf_i_id" column="BSMAHNLAUF_I_ID"
+			type="java.lang.Integer" />
 		<property name="mahnstufe_i_id" column="BSMAHNSTUFE_I_ID"
 			type="java.lang.Integer" />
-		<property name="d_mahndatum" column="T_MAHNDATUM" type="java.sql.Date" />
-		<property name="t_gedruckt" column="T_GEDRUCKT" type="java.sql.Date" />
-		<property name="bestellposition_i_id" column="BESTELLPOSITION_I_ID"
-			type="java.lang.Integer" />
-		<property name="n_offenemenge" column="N_OFFENEMENGE" type="java.math.BigDecimal" />
+		<property name="d_mahndatum" column="T_MAHNDATUM"
+			type="java.sql.Date" />
+		<property name="t_gedruckt" column="T_GEDRUCKT"
+			type="java.sql.Date" />
+		<property name="bestellposition_i_id"
+			column="BESTELLPOSITION_I_ID" type="java.lang.Integer" />
+		<property name="n_offenemenge" column="N_OFFENEMENGE"
+			type="java.math.BigDecimal" />
 		<many-to-one name="flrbestellung"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellung"
 			column="BESTELLUNG_I_ID" insert="false" update="false" />
 		<many-to-one name="flrbestellposition"
 			class="com.lp.server.bestellung.fastlanereader.generated.FLRBestellposition"
 			column="BESTELLPOSITION_I_ID" insert="false" update="false" />
+		<many-to-one name="flrmahnlauf"
+			class="com.lp.server.bestellung.fastlanereader.generated.FLRBSMahnlauf"
+			column="BSMAHNLAUF_I_ID" insert="false" update="false" />
 	</class>
 	<class name="FLRBSMahnlauf" table="BES_BSMAHNLAUF">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			insert="false" update="false" not-null="false" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" insert="false" update="false"
+			not-null="false" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Timestamp" />
 		<many-to-one name="flrpersonalanleger"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
-			column="PERSONAL_I_ID_ANLEGEN" unique="true" insert="false" update="false" />
+			column="PERSONAL_I_ID_ANLEGEN" unique="true" insert="false"
+			update="false" />
 
 	</class>
 </hibernate-mapping>

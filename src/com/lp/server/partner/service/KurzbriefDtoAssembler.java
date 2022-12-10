@@ -57,6 +57,7 @@ public class KurzbriefDtoAssembler {
 					.getPersonalIIdAendern());
 			kurzbriefDto.setXText(kurzbrief.getXText());
 			kurzbriefDto.setBHtml(kurzbrief.getBHtml());
+			kurzbriefDto.setMandantCNr(kurzbrief.getMandantCNr());
 		}
 		return kurzbriefDto;
 	}

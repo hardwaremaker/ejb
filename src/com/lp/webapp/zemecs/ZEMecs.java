@@ -117,11 +117,14 @@ public class ZEMecs extends HttpServlet {
 			partnerFac = (PartnerFac) context.lookup("PartnerFac");
 			logonFac = (LogonFac) context.lookup("LogonFac");
 
-			theClientDto = logonFac.logon(
+			/*theClientDto = logonFac.logon(
 					Helper.getFullUsername(sUser),
 					Helper.getMD5Hash((sUser + "lpwebappzemecs").toCharArray()),
 					new Locale("de", "AT"), null, 
-					new Timestamp(System.currentTimeMillis()));
+					new Timestamp(System.currentTimeMillis()));*/
+			
+			theClientDto = logonFac.logonIntern(new Locale("de","AT"), null);
+			
 		} catch (Exception e) {
 			myLogger.error("Fehler beim holen der Fac", e);
 		}
@@ -249,7 +252,7 @@ public class ZEMecs extends HttpServlet {
 						.erstelleMonatsAbrechnung(personalDto.getIId(),
 								new Integer(c.get(Calendar.YEAR)), new Integer(
 										c.get(Calendar.MONTH)), false,
-								new java.sql.Date(ts.getTime()), theClientDto,false,ZeiterfassungFacAll.REPORT_MONATSABRECHNUNG_OPTION_SORTIERUNG_PERSONALNUMMER);
+								new java.sql.Date(ts.getTime()), theClientDto,false,ZeiterfassungFacAll.REPORT_MONATSABRECHNUNG_OPTION_SORTIERUNG_PERSONALNUMMER, null);
 
 				GleitzeitsaldoDto gleitzeitsaldoDto = personalFac
 						.gleitzeitsaldoFindByPersonalIIdIJahrIMonat(personalDto

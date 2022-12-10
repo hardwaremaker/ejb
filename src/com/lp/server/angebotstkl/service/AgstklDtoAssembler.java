@@ -48,12 +48,11 @@ public class AgstklDtoAssembler {
 			agstklDto.setCNr(agstkl.getCNr());
 			agstklDto.setBelegartCNr(agstkl.getBelegartCNr());
 			agstklDto.setKundeIId(agstkl.getKundeIId());
-			agstklDto.setAnsprechpartnerIIdKunde(agstkl
-					.getAnsprechpartnerIIdKunde());
+			agstklDto.setAnsprechpartnerIIdKunde(agstkl.getAnsprechpartnerIIdKunde());
 			agstklDto.setCBez(agstkl.getCBez());
 			agstklDto.setWaehrungCNr(agstkl.getWaehrungCNr());
-			agstklDto.setFWechselkursmandantwaehrungzuagstklwaehrung(agstkl
-					.getFWechselkursmandantwaehrungzuagstklwaehrung());
+			agstklDto.setFWechselkursmandantwaehrungzuagstklwaehrung(
+					agstkl.getFWechselkursmandantwaehrungzuagstklwaehrung());
 			agstklDto.setPersonalIIdAnlegen(agstkl.getPersonalIIdAnlegen());
 			agstklDto.setTAnlegen(agstkl.getTAnlegen());
 			agstklDto.setPersonalIIdAendern(agstkl.getPersonalIIdAendern());
@@ -61,6 +60,16 @@ public class AgstklDtoAssembler {
 			agstklDto.setTBelegdatum(agstkl.getTBelegdatum());
 			agstklDto.setProjektIId(agstkl.getProjektIId());
 			agstklDto.setIEkpreisbasis(agstkl.getIEkpreisbasis());
+			agstklDto.setBDatengeaendert(agstkl.getBDatengeaendert());
+			agstklDto.setStuecklisteIId(agstkl.getStuecklisteIId());
+			agstklDto.setBVorlage(agstkl.getBVorlage());
+			agstklDto.setOMedia(agstkl.getOMedia());
+			agstklDto.setDatenformatCNr(agstkl.getDatenformatCNr());
+			agstklDto.setIHoeheDialog(agstkl.getIHoeheDialog());
+			agstklDto.setCDateiname(agstkl.getCDateiname());
+			agstklDto.setCZeichnungsnummer(agstkl.getCZeichnungsnummer());
+			agstklDto.setNInitialkosten(agstkl.getNInitialkosten());
+			
 		}
 		return agstklDto;
 	}

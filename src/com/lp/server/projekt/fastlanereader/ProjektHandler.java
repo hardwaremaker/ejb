@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.projekt.fastlanereader;
@@ -42,38 +42,45 @@ import java.util.Locale;
 
 import javax.swing.Icon;
 
-import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.PartnerFac;
-import com.lp.server.personal.service.PersonalFac;
-import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche;
 import com.lp.server.projekt.service.BereichDto;
+import com.lp.server.projekt.service.HistoryartDto;
+import com.lp.server.projekt.service.IProjektFLRData;
+import com.lp.server.projekt.service.ProjectQueryResult;
 import com.lp.server.projekt.service.ProjektDto;
+import com.lp.server.projekt.service.ProjektFLRDataDto;
 import com.lp.server.projekt.service.ProjektFac;
+import com.lp.server.projekt.service.ProjektHandlerFeature;
+import com.lp.server.projekt.service.ProjektServiceFac;
 import com.lp.server.projekt.service.ProjekttypsprDto;
-import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeProjekt;
 import com.lp.server.system.jcr.service.docnode.DocPath;
+import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
-import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.FlrFirmaAnsprechpartnerFilterBuilder;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.FlrFeatureBase;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
+import com.lp.server.util.fastlanereader.service.query.QueryParametersFeatures;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.StatusIcon;
 
 /**
  * <p>
@@ -98,22 +105,121 @@ import com.lp.util.Helper;
 public class ProjektHandler extends UseCaseHandler {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	boolean bProjektMitUmsatz = false;
 	boolean bKurzzeichenStattName = false;
 	boolean bSuchenInklusiveKbez = true;
 	boolean bKbezStattOrt = false;
+	boolean bProjektMitBetreiber = false;
+	boolean bProjektMitArtikel = false;
+	private HistoryartDto titelAusHistoryartInAuswahllisteAnzeigen = null;
 	public static final String FLR_PROJEKT = "projekt.";
-	public static final String FLR_PROJEKT_FROM_CLAUSE = " from FLRProjekt projekt ";
 	/**
 	 * @todo VF->VF -> Query von client abschicken.
 	 */
 	public static String lastQuery = "";
 
+	private Feature cachedFeature;
+
+	private class Feature extends FlrFeatureBase<IProjektFLRData> {
+		private boolean enabled;
+
+		public Feature() {
+			super(getQuery());
+		}
+
+		public boolean isEnabled() {
+			return enabled;
+		}
+
+		@Override
+		protected void initialize(QueryParametersFeatures qpf) {
+			enabled = qpf.hasFeature(ProjektHandlerFeature.PROJECT_DATA);
+		}
+
+		@Override
+		protected IProjektFLRData[] createFlrData(int rows) {
+			return new ProjektFLRDataDto[rows];
+		}
+
+		@Override
+		protected IProjektFLRData createFlrDataObject(int index) {
+			return new ProjektFLRDataDto();
+		}
+
+		public void setAddress(int row, String ort) {
+			getFlrDataObject(row).setAddress(ort);
+		}
+
+		public void setCategory(int row, String category) {
+			getFlrDataObject(row).setCategory(category);
+		}
+
+		public void setTitle(int row, String title) {
+			getFlrDataObject(row).setTitle(title);
+		}
+
+		public void setDeadline(int row, Date d) {
+			getFlrDataObject(row).setDeadlineMs(d.getTime());
+		}
+
+		public void setInternalDone(int row, Boolean internalDone) {
+			getFlrDataObject(row).setInternalDone(internalDone);
+		}
+
+		public void setInternalComment(int row, String comment) {
+			getFlrDataObject(row).setInternalComment(comment);
+		}
+
+		public void setPartnerId(int row, Integer partnerId) {
+			getFlrDataObject(row).setPartnerId(partnerId);
+		}
+
+		public void setPriority(int row, Integer priority) {
+			getFlrDataObject(row).setPriority(priority);
+		}
+
+		public void setStatusCnr(int row, String statusCnr) {
+			getFlrDataObject(row).setStatusCnr(statusCnr);
+		}
+	}
+
+	private class ProjektPartnerAnsprechpartnerFilterBuilder extends FlrFirmaAnsprechpartnerFilterBuilder {
+
+		public ProjektPartnerAnsprechpartnerFilterBuilder(boolean bSuchenInklusiveKBez) {
+			super(bSuchenInklusiveKBez);
+		}
+
+		public String getFlrPartner() {
+			return FLR_PROJEKT + ProjektFac.FLR_PROJEKT_FLRPARTNER;
+		}
+
+		public String getFlrPropertyAnsprechpartnerIId() {
+			return FLR_PROJEKT + "ansprechpartner_i_id";
+		}
+	}
+
+	private Feature getFeature() {
+		if (cachedFeature == null) {
+			cachedFeature = new Feature();
+		}
+		return cachedFeature;
+	}
+
+	private String getPartnerAddress(String projekt_partner, String lkz, String plz, String ort) {
+		String cAnschrift = null;
+		if (projekt_partner != null && lkz != null) {
+			cAnschrift = lkz + "-" + plz + " " + ort;
+		}
+		return cAnschrift;
+	}
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 
+		myLogger.warn("ProjektHandler.getPageAt BEGINN "+theClientDto.getBenutzername());
+		
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
@@ -124,8 +230,34 @@ public class ProjektHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = getFromClause() + buildWhereClause()
-					+ buildOrderByClause();
+
+			// String queryString =
+			// "SELECT distinct projekt.i_id, projekt.c_nr, projekt.typ_c_nr,
+			// projekt.i_prio,projekt.bereich_i_id, projekt.n_umsatzgeplant,
+			// projekt.i_wahrscheinlichkeit, projekt.d_dauer, projekt.t_internerledigt, "
+			// +
+			// " projekt.b_verrechenbar, cast(projekt.x_freetext as string) ,projekt.i_sort,
+			// projekt.status_c_nr, projekt.t_zielwunschdatum, projekt.c_titel,
+			// projekt.kategorie_c_nr, projekt.flrpartner.c_name1nachnamefirmazeile1,
+			// projekt.flrpartner.c_kbez, flrland.c_lkz, flrlandplzort.c_plz,"
+			// +
+			// " flrort.c_name, projekt.flrpersonalZugewiesener.c_kurzzeichen,
+			// projekt.flrpersonalZugewiesener.flrpartner.c_name1nachnamefirmazeile1,
+			// projekt.flrpersonalErzeuger.c_kurzzeichen,projekt.flrpersonalErzeuger.flrpartner.c_name1nachnamefirmazeile1,
+			// projekt.flrpersonalErzeuger.c_kurzzeichen from FLRProjekt projekt "
+			// + " LEFT OUTER JOIN projekt.technikerset AS ts "
+			// +
+			// " left outer join projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort as
+			// flrlandplzort "
+			// +
+			// " left outer join
+			// projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort.flrort as flrort "
+			// +
+			// " left outer join
+			// projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort.flrland as flrland "
+			// + buildWhereClause() + buildOrderByClause();
+
+			String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
 			lastQuery = queryString;
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -134,135 +266,243 @@ public class ProjektHandler extends UseCaseHandler {
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount + 1];
 			String[] tooltipData = new String[resultList.size()];
-			String sProjekt = getTextRespectUISpr("proj.projekt",
-					theClientDto.getMandant(), theClientDto.getLocUi());
+			String sProjekt = getTextRespectUISpr("proj.projekt", theClientDto.getMandant(), theClientDto.getLocUi());
+
+			getFeature().setFlrRowCount(rows.length);
 
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
 				// flrjoin: 1
-				FLRProjekt projekt = (FLRProjekt) resultListIterator.next();
-				rows[row][col++] = projekt.getI_id();
-				rows[row][col++] = projekt.getC_nr();
-				rows[row][col++] = projekt.getFlrpartner()
-						.getC_name1nachnamefirmazeile1();
+				Object[] o = (Object[]) resultListIterator.next();
+
+				Integer projektIId = (Integer) o[0];
+				String c_nr = (String) o[1];
+
+				String typ_c_nr = (String) o[2];
+				Integer i_prio = (Integer) o[3];
+				Integer bereich_i_id = (Integer) o[4];
+				BigDecimal n_umsatzgeplant = (BigDecimal) o[5];
+				Integer i_wahrscheinlichkeit = (Integer) o[6];
+				Double d_dauer = (Double) o[7];
+				java.util.Date t_internerledigt = (java.util.Date) o[8];
+				Integer i_verrechenbar = (Integer) o[9];
+				String x_freetext = (String) o[10];
+				Integer i_sort = (Integer) o[11];
+				String status_c_nr = (String) o[12];
+				java.util.Date t_zielwunschdatum = (java.util.Date) o[13];
+				String titel = (String) o[14];
+				String kategorie_c_nr = (String) o[15];
+				String projekt_partner = (String) o[16];
+				String projekt_partner_kbez = (String) o[17];
+				String lkz = (String) o[18];
+				String plz = (String) o[19];
+				String ort = (String) o[20];
+				String zugewiesener_c_kurzzeichen = (String) o[21];
+				String zugewiesener_c_name = (String) o[22];
+				String erzeuger_c_kurzzeichen = (String) o[23];
+				String erzeuger_c_name = (String) o[25];
+
+				String betreiber = (String) o[26];
+				Integer partner_i_id = (Integer) o[27];
+
+				String verkaufsfortschritt = (String) o[28];
+				String leadstatus = (String) o[29];
+				String artikel = (String) o[30];
+				String artikelbez = (String) o[31];
+
+				String bereich_c_bez = (String) o[32];
+
+				if (bereich_c_bez != null && bereich_c_bez.length() > 2) {
+					bereich_c_bez = bereich_c_bez.substring(0, 2);
+				}
+
+				Long iAnzahlZeitbuchungen = (Long) o[33];
+
+				String typSPR = (String) o[34];
+
+				String titelAusHistoryart = (String) o[35];
+
+				getFeature().setPartnerId(row, partner_i_id);
+
+				Object[] rowToAddCandidate = new Object[colCount];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")] = projektIId;
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.nr")] = c_nr;
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.bereich")] = bereich_c_bez;
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.firma_nachname")] = projekt_partner;
 
 				if (bKbezStattOrt) {
-					rows[row][col++] = projekt.getFlrpartner().getC_kbez();
-				} else {
 
-					String cAnschrift = null;
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("lp.kurzbezeichnung")] = projekt_partner_kbez;
 
-					if (projekt.getFlrpartner() != null) {
-						FLRLandplzort flranschrift = projekt.getFlrpartner()
-								.getFlrlandplzort();
-
-						if (flranschrift != null) {
-							cAnschrift = flranschrift.getFlrland().getC_lkz()
-									+ "-" + flranschrift.getC_plz() + " "
-									+ flranschrift.getFlrort().getC_name();
-						}
+					if (getFeature().isEnabled()) {
+						String cAnschrift = getPartnerAddress(projekt_partner, lkz, plz, ort);
+						getFeature().setAddress(row, cAnschrift);
 					}
-					rows[row][col++] = cAnschrift;
+				} else {
+					String cAnschrift = getPartnerAddress(projekt_partner, lkz, plz, ort);
+					//
+					// if (projekt_partner != null && lkz != null) {
+					//
+					// cAnschrift = lkz + "-" + plz + " " + ort;
+					//
+					// }
+					//
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.ort")] = cAnschrift;
+					getFeature().setAddress(row, cAnschrift);
 				}
 
-				rows[row][col++] = projekt.getKategorie_c_nr().trim();
-				rows[row][col++] = projekt.getC_titel();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.kategorie")] = kategorie_c_nr.trim();
+				getFeature().setCategory(row, kategorie_c_nr.trim());
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.titel")] = titel;
+				getFeature().setTitle(row, titel);
+
+				if (bProjektMitBetreiber) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.betreiber")] = betreiber;
+				}
+
+				if (bProjektMitArtikel) {
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("artikel.artikelnummerhalblang")] = artikel;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.artikelbezeichnung")] = artikelbez;
+				}
 
 				if (bKurzzeichenStattName) {
-					rows[row][col++] = projekt.getFlrpersonalErzeuger()
-							.getC_kurzzeichen();
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("proj.personal.erzeuger")] = erzeuger_c_kurzzeichen;
 				} else {
-					rows[row][col++] = projekt.getFlrpersonalErzeuger()
-							.getFlrpartner().getC_name1nachnamefirmazeile1();
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("proj.personal.erzeuger")] = erzeuger_c_name;
 				}
 
-				if (projekt.getFlrpersonalZugewiesener() != null) {
-					if (bKurzzeichenStattName) {
-						rows[row][col++] = projekt.getFlrpersonalZugewiesener()
-								.getC_kurzzeichen();
-					} else {
-						rows[row][col++] = projekt.getFlrpersonalZugewiesener()
-								.getFlrpartner()
-								.getC_name1nachnamefirmazeile1();
-					}
-
+				if (bKurzzeichenStattName) {
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("proj.personal.fuer")] = zugewiesener_c_kurzzeichen;
 				} else {
-					rows[row][col++] = "";
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("proj.personal.fuer")] = zugewiesener_c_name;
 				}
 
-				rows[row][col++] = getProjektTypBezeichnung(
-						projekt.getTyp_c_nr(), theClientDto.getLocUi(),
-						theClientDto.getMandant());
-				rows[row][col++] = projekt.getI_prio();
-				String sStatus = projekt.getStatus_c_nr();
-				rows[row][col++] = getStatusMitUebersetzung(sStatus);
-				rows[row][col++] = projekt.getT_zielwunschdatum();
+				if (typSPR != null) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.typ")] = typSPR;
+				} else {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.typ")] = typ_c_nr;
+				}
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.prio")] = i_prio;
+				getFeature().setPriority(row, i_prio);
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.status")] = getStatusMitUebersetzung(
+						status_c_nr);
+				getFeature().setStatusCnr(row, status_c_nr);
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.termin")] = t_zielwunschdatum;
+				getFeature().setDeadline(row, t_zielwunschdatum);
+
+				rowToAddCandidate[getTableColumnInformation()
+						.getViewIndex("proj.label.umsatzgeplant")] = n_umsatzgeplant;
+
+				if (titelAusHistoryartInAuswahllisteAnzeigen != null) {
+
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("titelhistoryart")] = titelAusHistoryart;
+				}
 
 				if (bProjektMitUmsatz) {
 
-					rows[row][col++] = projekt.getN_umsatzgeplant();
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("proj.label.wahrscheinlichkeit")] = i_wahrscheinlichkeit;
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("proj.verkaufsfortschritt")] = verkaufsfortschritt;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.leadstatus")] = leadstatus;
 
-					rows[row][col++] = projekt.getI_wahrscheinlichkeit();
 				} else {
-					if (projekt.getD_dauer() != null) {
-						rows[row][col++] = projekt.getD_dauer();
-					} else {
-						rows[row][col++] = new Double(0.0);
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.schaetzung")] = d_dauer != null
+							? d_dauer
+							: new Double(0.0);
+
+					StatusIcon si = new StatusIcon();
+
+					String tooltip = getProjektServiceFac().getTextVerrechenbar(i_verrechenbar, theClientDto);
+					si.setTooltip(tooltip);
+					if (i_verrechenbar == ProjektServiceFac.PROJEKT_VERRECHENBAR_NICHT_DEFINIERT) {
+						si.setIcon(LocaleFac.STATUS_DATEN_UNGUELTIG);
+					} else if (i_verrechenbar == ProjektServiceFac.PROJEKT_VERRECHENBAR_NICHT_VERRECHENBAR) {
+						si = new StatusIcon();
+						si.setIcon(LocaleFac.STATUS_STORNIERT);
+					} else if (i_verrechenbar == ProjektServiceFac.PROJEKT_VERRECHENBAR_VERRECHENBAR) {
+						si.setIcon(LocaleFac.STATUS_VERRECHNET);
 					}
 
-					rows[row][col++] = Helper.short2Boolean(projekt
-							.getB_verrechenbar());
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.label.verrechenbar")] = si;
+					Boolean internalDone = new Boolean(t_internerledigt != null);
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("proj.internerledigt")] = internalDone;
+					getFeature().setInternalDone(row, internalDone);
+				}
 
-					if (projekt.getT_internerledigt() == null) {
-						rows[row][col++] = new Boolean(false);
+				if (i_sort != null) {
+
+					if (iAnzahlZeitbuchungen != null && iAnzahlZeitbuchungen > 0) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = new Color(255, 161, 50);
 					} else {
-						rows[row][col++] = new Boolean(true);
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = new Color(176, 0, 255);
+					}
+
+				} else {
+					if (iAnzahlZeitbuchungen != null && iAnzahlZeitbuchungen > 0) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = new Color(0, 153, 51);// GRUEN
 					}
 				}
 
-				if (projekt.getX_freetext() != null) {
-					String text = "<b>" + sProjekt + " " + projekt.getC_nr()
-							+ ":</b>\n" + projekt.getX_freetext();
+				if (x_freetext != null) {
+					String text = "<b>" + sProjekt + " " + c_nr + ":</b>\n" + x_freetext;
 					text = text.replaceAll("\n", "<br>");
 					text = "<html>" + text + "</html>";
 					tooltipData[row] = text;
 				}
 
-				if (projekt.getI_sort() != null) {
-					rows[row][col++] = new Color(176, 0, 255);
-				} else {
-					rows[row][col++] = null;
+				if (getFeature().isEnabled()) {
+					Session s = factory.openSession();
+					String textQuery = "SELECT f.x_freetext FROM FLRProjekt AS f where f.i_id =" + projektIId;
+					Query querys = s.createQuery(textQuery);
+					Iterator r = querys.list().iterator();
+					while (r.hasNext()) {
+						Object ro = r.next();
+						getFeature().setInternalComment(row, (String) ro);
+						break;
+					}
+					s.close();
+
+					// getFeature().setInternalComment(row, x_freetext);
 				}
-				
-				rows[row][col++] = projekt.getBereich_i_id() ;
-				row++ ;
+
+				rows[row] = rowToAddCandidate;
+
+				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0, tooltipData);
+
+			if (getFeature().isEnabled()) {
+				ProjectQueryResult projectResult = new ProjectQueryResult(rows, this.getRowCount(), startIndex,
+						endIndex, 0);
+				projectResult.setFlrData(getFeature().getFlrData());
+				result = projectResult;
+			} else {
+				result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0, tooltipData);
+			}
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			closeSession(session);
 		}
 
+		myLogger.warn("ProjektHandler.getPageAt ENDE "+theClientDto.getBenutzername());
+		
 		return result;
-	}
-
-	private String getProjektTypBezeichnung(String projektTypCNr,
-			Locale locale, String mandantCNr) throws RemoteException {
-		ProjekttypsprDto ptDto = getProjektServiceFac()
-				.projekttypsprFindByPrimaryKeyohneEx(projektTypCNr,
-						Helper.locale2String(locale), mandantCNr);
-		if (ptDto == null || ptDto.getCBez() == null)
-			return projektTypCNr;
-		else
-			return ptDto.getCBez();
 	}
 
 	/**
@@ -271,39 +511,69 @@ public class ProjektHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRProjekt projekt ";
+		// return "from FLRProjekt projekt ";
+		return "SELECT DISTINCT projekt.i_id," + "projekt.c_nr," + "projekt.typ_c_nr," + "projekt.i_prio,"
+				+ "projekt.bereich_i_id," + "projekt.n_umsatzgeplant," + "projekt.i_wahrscheinlichkeit,"
+				+ "projekt.d_dauer," + "projekt.t_internerledigt, " + "projekt.i_verrechenbar,"
+				+ "CAST(projekt.x_freetext as string)," + "projekt.i_sort," + "projekt.status_c_nr,"
+				+ "projekt.t_zielwunschdatum," + "projekt.c_titel," + "projekt.kategorie_c_nr,"
+				+ "flrpar.c_name1nachnamefirmazeile1," + "flrpar.c_kbez," + "flrl.c_lkz," + "flrlpo.c_plz,"
+				+ "flro.c_name," + "flrperszug.c_kurzzeichen," + "flrpartnerperszug.c_name1nachnamefirmazeile1,"
+				+ "flrperserz.c_kurzzeichen," + "flrperserz.c_kurzzeichen,"
+				+ "flrpartnerperserz.c_name1nachnamefirmazeile1," + "flrparbetr.c_name1nachnamefirmazeile1,"
+				+ "flrpar.i_id," + "vkf.c_nr," + "leadstatus.c_bez,"
+				+ "flrartikel.c_nr, (SELECT spr.c_bez FROM FLRArtikellistespr as spr WHERE spr.Id.artikelliste=flrartikel.i_id AND spr.Id.locale='"
+				+ theClientDto.getLocUiAsString()
+				+ "' ), projekt.flrbereich.c_bez, (select count(z.i_id) FROM FLRZeitdaten z WHERE z.i_belegartid=projekt.i_id AND z.c_belegartnr='"
+				+ LocaleFac.BELEGART_PROJEKT
+				+ "'), (SELECT t.c_bez FROM FLRTypspr t WHERE t.projekttyp_c_nr=projekt.flrtyp.c_nr AND t.mandant_c_nr=projekt.mandant_c_nr AND t.locale_c_nr='"
+				+ theClientDto.getLocUiAsString()
+				+ "'  ), projekt.flrtitelaushistory.c_titel  FROM FLRProjekt AS projekt"
+				+ " LEFT OUTER JOIN projekt.technikerset AS ts " + " LEFT OUTER JOIN projekt.historyset AS hs"
+				+ " LEFT OUTER JOIN projekt.flrpartner AS flrpar "
+				+ " LEFT OUTER JOIN projekt.flrpartnerbetreiber AS flrparbetr "
+				+ " LEFT OUTER JOIN flrpar.flrlandplzort AS flrlpo " + " LEFT OUTER JOIN flrlpo.flrland AS flrl "
+				+ " LEFT OUTER JOIN flrlpo.flrort AS flro "
+				+ " LEFT OUTER JOIN projekt.flrpersonalZugewiesener AS flrperszug "
+				+ " LEFT OUTER JOIN flrperszug.flrpartner AS flrpartnerperszug "
+				+ " LEFT OUTER JOIN projekt.flrpersonalErzeuger AS flrperserz "
+				+ " LEFT OUTER JOIN flrperserz.flrpartner AS flrpartnerperserz "
+				+ " LEFT OUTER JOIN projekt.flrvkfortschritt AS vkf "
+				+ " LEFT OUTER JOIN vkf.flrleadstatus AS leadstatus" + " LEFT OUTER JOIN projekt.flrtyp as flrtyp"
+				+ " LEFT OUTER JOIN projekt.flrartikel as flrartikel"
+				+ " LEFT OUTER JOIN flrtyp.typ_typ_set as flrtypspr"
+				+ " LEFT OUTER JOIN projekt.flrbereich"
+				+ " LEFT OUTER JOIN projekt.flrtitelaushistory";
+		// +
+		// " left outer join projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort as
+		// flrlandplzort "
+		// +
+		// " left outer join
+		// projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort.flrort as flrort "
+		// +
+		// " left outer join
+		// projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort.flrland as flrland "
 	}
 
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(e);
-		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(he);
-				}
-			}
-		}
-		return rowCount;
+		
+		myLogger.warn("ProjektHandler.getRowCountFromDataBase BEGINN "+theClientDto.getBenutzername());
+		
+		String queryString = "SELECT COUNT(DISTINCT projekt.i_id)" + " FROM FLRProjekt AS projekt"
+				+ " LEFT OUTER JOIN projekt.technikerset AS ts" + " LEFT OUTER JOIN projekt.historyset AS hs"
+				+ " LEFT OUTER JOIN projekt.flrtyp as flrtyp" + " LEFT OUTER JOIN flrtyp.typ_typ_set as flrtypspr"
+				+ buildWhereClause();
+		
+		long l=getRowCountFromDataBaseByQuery(queryString);
+		
+		myLogger.warn("ProjektHandler.getRowCountFromDataBase ENDE "+theClientDto.getBenutzername());
+		
+		return l;
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -313,8 +583,7 @@ public class ProjektHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -325,87 +594,75 @@ public class ProjektHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 
-					// wenn nach der c_nr gefilter wird, wird das kriterium
-					// veraendert
-					if (bSuchenInklusiveKbez
-							&& filterKriterien[i].kritName
-									.equals("flrpartner."
-											+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
-						where.append(" (lower(" + filterKriterien[i].kritName
-								+ ")");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
-						where.append(" OR lower(flrpartner.c_name2vornamefirmazeile2)");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
-						where.append(" OR lower(flrpartner.c_kbez)");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase() + ")");
-					} else if (bSuchenInklusiveKbez == false
-							&& filterKriterien[i].kritName
-									.equals("flrpartner."
-											+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
-						where.append(" (lower(" + filterKriterien[i].kritName
-								+ ")");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
-						where.append(" OR lower(flrpartner.c_name2vornamefirmazeile2)");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase() + ")");
-					} else if (filterKriterien[i].kritName.equals("c_nr")) {
+					String flrpartnerKrit = FLR_PROJEKT + ProjektFac.FLR_PROJEKT_FLRPARTNER + "."
+							+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1;
+					if (isFilterPartner(filterKriterien[i])) {
+						ProjektPartnerAnsprechpartnerFilterBuilder filterBuilder = new ProjektPartnerAnsprechpartnerFilterBuilder(
+								bSuchenInklusiveKbez);
+						filterBuilder.buildFirmaAnsprechpartnerFilter(filterKriterien[i], where);
+						// if (bSuchenInklusiveKbez
+						// && filterKriterien[i].kritName
+						// .equals(flrpartnerKrit)) {
+						// getWhereFlrPartner(where, filterKriterien, i);
+						// where.append(" OR lower(" + FLR_PROJEKT
+						// + ProjektFac.FLR_PROJEKT_FLRPARTNER + "."
+						// + PartnerFac.FLR_PARTNER_C_KBEZ + ")");
+						// where.append(" " + filterKriterien[i].operator);
+						// where.append(" "
+						// + filterKriterien[i].value.toLowerCase() + ")");
+						// } else if (bSuchenInklusiveKbez == false
+						// && filterKriterien[i].kritName
+						// .equals(flrpartnerKrit)) {
+						// getWhereFlrPartner(where, filterKriterien, i);
+						// where.append(")");
+					} else if (filterKriterien[i].kritName.equals(ProjektFac.FLR_PROJEKT_C_NR)) {
 						try {
-							String sValue = super.buildWhereBelegnummer(
-									filterKriterien[i], false);
-							// Belegnummernsuche auch in "altem" Jahr, wenn im
-							// neuen noch keines vorhanden ist
+							String sValue = super.buildWhereBelegnummer(filterKriterien[i], false,
+									ParameterFac.KATEGORIE_PROJEKT,
+									ParameterFac.PARAMETER_PROJEKT_BELEGNUMMERSTARTWERT);
 							if (!istBelegnummernInJahr("FLRProjekt", sValue)) {
-								sValue = super.buildWhereBelegnummer(
-										filterKriterien[i], true);
+								sValue = super.buildWhereBelegnummer(filterKriterien[i], true);
 							}
-							where.append(" " + FLR_PROJEKT
-									+ filterKriterien[i].kritName);
+							where.append(" " + FLR_PROJEKT + filterKriterien[i].kritName);
 							where.append(" " + filterKriterien[i].operator);
 							where.append(" " + sValue);
 						} catch (Exception ex) {
-							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-									ex);
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, ex);
 						}
 					} else if (filterKriterien[i].kritName.equals("c_suche")) {
+
+						where.append(buildWhereClauseExtendedSearchWithoutDuplicates(
+								FLRProjekttextsuche.class.getSimpleName(), FLR_PROJEKT, filterKriterien[i]));
+
+					} else if (filterKriterien[i].kritName.endsWith("personal_i_id_zugewiesener")) {
+
+						where.append(" ( projekt.flrpersonalZugewiesener.i_id=" + filterKriterien[i].value
+								+ " OR ts.personal_i_id=" + filterKriterien[i].value
+								+ " OR (projekt.flrbereich.b_duchgefuehrt_von_in_offene=1 AND hs.flrpersonal_wirddurchgefuehrtvon.i_id="
+								+ filterKriterien[i].value + "))");
+
+					} else if (filterKriterien[i].kritName.endsWith("flrtypspr.c_bez")) {
+
+//						where.append(" ( lower(flrtypspr.c_bez) LIKE " + filterKriterien[i].value.toLowerCase()
+//								+ " OR lower(flrtyp.c_nr) LIKE " + filterKriterien[i].value.toLowerCase() + ")");
+						where.append(
+								filterKriterien[i].getQueryWithMultipleColumns(true, "flrtypspr.c_bez", "flrtyp.c_nr"));
+
+					}
+
+					else {
+						String critName = filterKriterien[i].kritName;
+						if ("i_id".equals(critName)) {
+							critName = FLR_PROJEKT + critName;
+						}
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower("
-									+ FLR_PROJEKT
-									+ ProjektFac.FLR_PROJEKT_FLRPROJEKTTEXTSUCHE
-									+ "." + filterKriterien[i].kritName + ")");
+							where.append(" lower(" + critName + ")");
 						} else {
-							where.append(" "
-									+ FLR_PROJEKT
-									+ ProjektFac.FLR_PROJEKT_FLRPROJEKTTEXTSUCHE
-									+ "." + filterKriterien[i].kritName);
+							where.append(" " + critName);
 						}
 						where.append(" " + filterKriterien[i].operator);
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
-						} else {
-							where.append(" " + filterKriterien[i].value);
-						}
-					} else {
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower(" + FLR_PROJEKT
-									+ filterKriterien[i].kritName + ")");
-						} else {
-							where.append(" " + FLR_PROJEKT
-									+ filterKriterien[i].kritName);
-						}
-						where.append(" " + filterKriterien[i].operator);
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
+							where.append(" " + filterKriterien[i].value.toLowerCase());
 						} else {
 							where.append(" " + filterKriterien[i].value);
 						}
@@ -419,9 +676,16 @@ public class ProjektHandler extends UseCaseHandler {
 		return where.toString();
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	private boolean isFilterPartner(FilterKriterium filterKriterium) {
+		return filterKriterium.kritName.equals(FLR_PROJEKT + ProjektFac.FLR_PROJEKT_FLRPARTNER + "."
+				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
+	}
 
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
+
+		myLogger.warn("ProjektHandler.sort BEGINN "+theClientDto.getBenutzername());
+
+		
 		if (this.getQuery() != null) {
 			this.getQuery().setSortKrit(sortierKriterien);
 		}
@@ -435,9 +699,27 @@ public class ProjektHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select projekt.i_id "
-						+ this.getFromClause() + this.buildWhereClause()
-						+ this.buildOrderByClause();
+
+				// String queryString =
+				// "SELECT distinct projekt.i_id, projekt.c_nr, projekt.typ_c_nr,
+				// projekt.i_prio,projekt.bereich_i_id, projekt.n_umsatzgeplant,
+				// projekt.i_wahrscheinlichkeit, projekt.d_dauer, projekt.t_internerledigt, "
+				// +
+				// " projekt.b_verrechenbar, cast(projekt.x_freetext as string),projekt.i_sort,
+				// projekt.status_c_nr, projekt.t_zielwunschdatum, projekt.c_titel,
+				// projekt.kategorie_c_nr, projekt.flrpartner.c_name1nachnamefirmazeile1,
+				// projekt.flrpartner.c_kbez, projekt.flrpartner.flrlandplzort.flrland.c_lkz,
+				// projekt.flrpartner.flrlandplzort.c_plz,"
+				// +
+				// " projekt.flrpartner.flrlandplzort.flrort.c_name,
+				// projekt.flrpersonalZugewiesener.c_kurzzeichen,
+				// projekt.flrpersonalZugewiesener.flrpartner.c_name1nachnamefirmazeile1,
+				// projekt.flrpersonalErzeuger.c_kurzzeichen,projekt.flrpersonalErzeuger.flrpartner.c_name1nachnamefirmazeile1,
+				// projekt.flrpersonalErzeuger.c_kurzzeichen from FLRProjekt projekt LEFT OUTER
+				// JOIN projekt.technikerset AS ts "
+				// + this.buildWhereClause() + this.buildOrderByClause();
+
+				String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
 
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -454,11 +736,7 @@ public class ProjektHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
+				closeSession(session);
 			}
 		}
 
@@ -469,6 +747,8 @@ public class ProjektHandler extends UseCaseHandler {
 		result = this.getPageAt(new Integer(rowNumber));
 		result.setIndexOfSelectedRow(rowNumber);
 
+		myLogger.warn("ProjektHandler.sort ENDE "+theClientDto.getBenutzername());
+		
 		return result;
 	}
 
@@ -486,14 +766,15 @@ public class ProjektHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_PROJEKT + kriterien[i].kritName);
+							// orderBy.append(FLR_PROJEKT +
+							// kriterien[i].kritName);
+							orderBy.append(kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -517,8 +798,7 @@ public class ProjektHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_PROJEKT)
-						.append(ProjektFac.FLR_PROJEKT_I_ID).append(" ASC ");
+				orderBy.append(" ").append(FLR_PROJEKT).append(ProjektFac.FLR_PROJEKT_I_ID).append(" ASC ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -528,250 +808,168 @@ public class ProjektHandler extends UseCaseHandler {
 		return orderBy.toString();
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
+	private void setupParameters() {
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_PROJEKT, ParameterFac.PARAMETER_PROJEKT_MIT_UMSATZ);
+			bProjektMitUmsatz = (Boolean) parameter.getCWertAsObject();
 
-			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_PROJEKT,
-								ParameterFac.PARAMETER_PROJEKT_MIT_UMSATZ);
-				bProjektMitUmsatz = (Boolean) parameter.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+			bSuchenInklusiveKbez = (java.lang.Boolean) parameter.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_PROJEKT,
+					ParameterFac.PARAMETER_KURZBEZEICHNUNG_STATT_ORT_IN_AUSWAHLLISTE);
+			bKbezStattOrt = (java.lang.Boolean) parameter.getCWertAsObject();
 
-				parameter = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_ALLGEMEIN,
-						ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
-				bSuchenInklusiveKbez = (java.lang.Boolean) parameter
-						.getCWertAsObject();
-				parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_PROJEKT,
-								ParameterFac.PARAMETER_KURZBEZEICHNUNG_STATT_ORT_IN_AUSWAHLLISTE);
-				bKbezStattOrt = (java.lang.Boolean) parameter
-						.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_PROJEKT,
+					ParameterFac.PARAMETER_KURZZEICHEN_STATT_NAME_IN_AUSWAHLLISTE);
+			bKurzzeichenStattName = (java.lang.Boolean) parameter.getCWertAsObject();
 
-				parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_PROJEKT,
-								ParameterFac.PARAMETER_KURZZEICHEN_STATT_NAME_IN_AUSWAHLLISTE);
-				bKurzzeichenStattName = (java.lang.Boolean) parameter
-						.getCWertAsObject();
+			bProjektMitBetreiber = getProjektServiceFac().esGibtMindestensEinenBereichMitBetreiber(theClientDto);
+			bProjektMitArtikel = getProjektServiceFac().esGibtMindestensEinenBereichMitArtikel(theClientDto);
 
-			} catch (RemoteException ex) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-			}
+			titelAusHistoryartInAuswahllisteAnzeigen = getProjektServiceFac()
+					.getHistoryartInAuswahllisteAnzeigen(theClientDto);
 
-			String mandantCNr = theClientDto.getMandant();
-			String sortierungNachPartner = Facade.NICHT_SORTIERBAR;
-			String sortierungNachPersonalErzeuger = Facade.NICHT_SORTIERBAR;
-			String sortierungNachPersonalZugewiesener = Facade.NICHT_SORTIERBAR;
-			Locale locUI = theClientDto.getLocUi();
-			if (SORTIERUNG_UI_PARTNER_ORT) {
-				sortierungNachPartner = ProjektFac.FLR_PROJEKT_FLRPARTNER + "."
-						+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1;
-				sortierungNachPersonalErzeuger = ProjektFac.FLR_PROJEKT_FLRPERSONALERZEUGER
-						+ "."
-						+ PersonalFac.FLR_PERSONAL_FLRPARTNER
-						+ "."
-						+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1;
-				sortierungNachPersonalZugewiesener = ProjektFac.FLR_PROJEKT_FLRPERSONALZUGEWIESENER
-						+ "."
-						+ PersonalFac.FLR_PERSONAL_FLRPARTNER
-						+ "."
-						+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1;
-			}
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+	}
 
-			if (bProjektMitUmsatz) {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
 
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, String.class,
-								String.class, String.class, String.class,
-								String.class, String.class, String.class,
-								String.class, Integer.class, Icon.class,
-								Date.class, BigDecimal.class, Integer.class,
-								Color.class
+		TableColumnInformation columns = new TableColumnInformation();
 
-						},
-						new String[] {
-								"i_id",
-								getTextRespectUISpr("proj.nr", mandantCNr,
-										locUI),
-								getTextRespectUISpr("lp.firma_nachname",
-										mandantCNr, locUI),
-								bKbezStattOrt ? getTextRespectUISpr(
-										"lp.kurzbezeichnung", mandantCNr, locUI)
-										: getTextRespectUISpr("lp.ort",
-												mandantCNr, locUI),
-								getTextRespectUISpr("proj.kategorie",
-										mandantCNr, locUI),
-								getTextRespectUISpr("proj.titel", mandantCNr,
-										locUI),
-								getTextRespectUISpr("proj.personal.erzeuger",
-										mandantCNr, locUI),
-								getTextRespectUISpr("proj.personal.fuer",
-										mandantCNr, locUI),
-								getTextRespectUISpr("lp.typ", mandantCNr, locUI),
-								getTextRespectUISpr("proj.prio", mandantCNr,
-										locUI),
-								getTextRespectUISpr("lp.status", mandantCNr,
-										locUI),
-								getTextRespectUISpr("lp.termin", mandantCNr,
-										locUI),
-								getTextRespectUISpr("proj.label.umsatzgeplant",
-										mandantCNr, locUI),
-								getTextRespectUISpr(
-										"proj.label.wahrscheinlichkeit",
-										mandantCNr, locUI), "" },// color
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // i_id
-								10, // c_nr
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // partner_i_id
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_M, // kategorieCNr
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // c_titel
-								QueryParameters.FLR_BREITE_M,// personal_i_id_erzeuger
-								QueryParameters.FLR_BREITE_M,// personal_i_id_zugewiesener
-								QueryParameters.FLR_BREITE_M, // typCNr
-								1, // i_prio
-								QueryParameters.FLR_BREITE_XS, // statusCNr
-								10, // termin
-								QueryParameters.FLR_BREITE_M,// dauer
-								QueryParameters.FLR_BREITE_XS,// verrechenbar
-								1 }, // color
-						new String[] {
-								ProjektFac.FLR_PROJEKT_I_ID,
-								ProjektFac.FLR_PROJEKT_C_NR,
-								sortierungNachPartner,
-								// Sortierung fuers erste mal nach LKZ
-								bKbezStattOrt ? KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_C_KBEZ
-										: KundeFac.FLR_PARTNER
-												+ "."
-												+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-												+ "."
-												+ SystemFac.FLR_LP_FLRLAND
-												+ "."
-												+ SystemFac.FLR_LP_LANDLKZ
-												+ ", "
-												+
-												// und dann nach plz
-												KundeFac.FLR_PARTNER
-												+ "."
-												+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-												+ "."
-												+ SystemFac.FLR_LP_LANDPLZORTPLZ,
-								ProjektFac.FLR_PROJEKT_KATEGORIE_C_NR,
-								ProjektFac.FLR_PROJEKT_C_TITEL,
-								sortierungNachPersonalErzeuger,
-								sortierungNachPersonalZugewiesener,
-								ProjektFac.FLR_PROJEKT_TYP_C_NR,
-								ProjektFac.FLR_PROJEKT_I_PRIO,
-								ProjektFac.FLR_PROJEKT_STATUS_C_NR,
-								ProjektFac.FLR_PROJEKT_T_ZIELDATUM,
-								ProjektFac.FLR_PROJEKT_N_UMSATZGEPLANT,
-								ProjektFac.FLR_PROJEKT_I_WAHRSCHEINLICHKEIT,
-								"", // color
-						}));
-			} else {
+		columns.add("i_id", Integer.class, "i_id", -1, "i_id");
 
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, String.class,
-								String.class, String.class, String.class,
-								String.class, String.class, String.class,
-								String.class, Integer.class, Icon.class,
-								Date.class, Double.class, Boolean.class,
-								Boolean.class, Color.class
+		columns.add("proj.bereich", String.class, getTextRespectUISpr("proj.bereich", mandant, locUi), 3,
+				FLR_PROJEKT + "flrbereich.c_bez");
 
-						},
-						new String[] {
-								"i_id",
-								getTextRespectUISpr("proj.nr", mandantCNr,
-										locUI),
-								getTextRespectUISpr("lp.firma_nachname",
-										mandantCNr, locUI),
-								bKbezStattOrt ? getTextRespectUISpr(
-										"lp.kurzbezeichnung", mandantCNr, locUI)
-										: getTextRespectUISpr("lp.ort",
-												mandantCNr, locUI),
-								getTextRespectUISpr("proj.kategorie",
-										mandantCNr, locUI),
-								getTextRespectUISpr("proj.titel", mandantCNr,
-										locUI),
-								getTextRespectUISpr("proj.personal.erzeuger",
-										mandantCNr, locUI),
-								getTextRespectUISpr("proj.personal.fuer",
-										mandantCNr, locUI),
-								getTextRespectUISpr("lp.typ", mandantCNr, locUI),
-								getTextRespectUISpr("proj.prio", mandantCNr,
-										locUI),
-								getTextRespectUISpr("lp.status", mandantCNr,
-										locUI),
-								getTextRespectUISpr("lp.termin", mandantCNr,
-										locUI),
-								getTextRespectUISpr("proj.schaetzung",
-										mandantCNr, locUI),
-								getTextRespectUISpr("proj.label.verrechenbar",
-										mandantCNr, locUI),
-								getTextRespectUISpr("proj.internerledigt",
-										mandantCNr, locUI), "" },// color
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // i_id
-								10, // c_nr
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // partner_i_id
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_M, // kategorieCNr
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // c_titel
-								QueryParameters.FLR_BREITE_M,// personal_i_id_erzeuger
-								QueryParameters.FLR_BREITE_M,// personal_i_id_zugewiesener
-								QueryParameters.FLR_BREITE_M, // typCNr
-								1, // i_prio
-								QueryParameters.FLR_BREITE_XS, // statusCNr
-								10, // termin
-								QueryParameters.FLR_BREITE_XS,// dauer
-								QueryParameters.FLR_BREITE_S,// verrechenbar
-								QueryParameters.FLR_BREITE_S,// intern erledigt
-								1 }, // color
-						new String[] {
-								ProjektFac.FLR_PROJEKT_I_ID,
-								ProjektFac.FLR_PROJEKT_C_NR,
-								sortierungNachPartner,
-								// Sortierung fuers erste mal nach LKZ
-								bKbezStattOrt ? KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_C_KBEZ
-										: KundeFac.FLR_PARTNER
-												+ "."
-												+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-												+ "."
-												+ SystemFac.FLR_LP_FLRLAND
-												+ "."
-												+ SystemFac.FLR_LP_LANDLKZ
-												+ ", "
-												+
-												// und dann nach plz
-												KundeFac.FLR_PARTNER
-												+ "."
-												+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-												+ "."
-												+ SystemFac.FLR_LP_LANDPLZORTPLZ,
-								ProjektFac.FLR_PROJEKT_KATEGORIE_C_NR,
-								ProjektFac.FLR_PROJEKT_C_TITEL,
-								sortierungNachPersonalErzeuger,
-								sortierungNachPersonalZugewiesener,
-								ProjektFac.FLR_PROJEKT_TYP_C_NR,
-								ProjektFac.FLR_PROJEKT_I_PRIO,
-								ProjektFac.FLR_PROJEKT_STATUS_C_NR,
-								ProjektFac.FLR_PROJEKT_T_ZIELDATUM,
-								ProjektFac.FLR_PROJEKT_D_DAUER,
-								ProjektFac.FLR_PROJEKT_B_VERRECHENBAR,
-								ProjektFac.FLR_PROJEKT_T_INTERNERLEDIGT, "", // color
-						}));
-			}
+		columns.add("proj.nr", String.class, getTextRespectUISpr("proj.nr", mandant, locUi), 10,
+				FLR_PROJEKT + ProjektFac.FLR_PROJEKT_C_NR);
+
+		columns.add("lp.firma_nachname", String.class, getTextRespectUISpr("lp.firma_nachname", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+				"flrpar." + PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1);
+
+		if (bKbezStattOrt) {
+			columns.add("lp.kurzbezeichnung", String.class, getTextRespectUISpr("lp.kurzbezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, "flrpar." + PartnerFac.FLR_PARTNER_C_KBEZ);
+		} else {
+			columns.add("lp.ort", String.class, getTextRespectUISpr("lp.ort", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, "flrl.c_lkz" + ",  flrlpo.c_plz");
 		}
 
-		return super.getTableInfo();
+		columns.add("proj.kategorie", String.class, getTextRespectUISpr("proj.kategorie", mandant, locUi),
+				QueryParameters.FLR_BREITE_M, FLR_PROJEKT + ProjektFac.FLR_PROJEKT_KATEGORIE_C_NR);
+
+		columns.add("proj.titel", String.class, getTextRespectUISpr("proj.titel", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, FLR_PROJEKT + ProjektFac.FLR_PROJEKT_C_TITEL);
+
+		if (bProjektMitBetreiber) {
+			columns.add("proj.betreiber", String.class, getTextRespectUISpr("proj.betreiber", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					"flrartikel." + PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1);
+
+		}
+
+		if (bProjektMitArtikel) {
+			columns.add("artikel.artikelnummerhalblang", String.class,
+					getTextRespectUISpr("artikel.artikelnummerhalblang", mandant, locUi),
+					QueryParameters.FLR_BREITE_IDENT, "flrartikel.c_nr");
+
+			columns.add("bes.artikelbezeichnung", String.class,
+					getTextRespectUISpr("bes.artikelbezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+
+		}
+
+		String sortierungNachPersonalErzeuger = "flrpartnerperserz."
+				+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1;
+
+		if (bKurzzeichenStattName) {
+			sortierungNachPersonalErzeuger = "flrperserz.c_kurzzeichen";
+		}
+
+		columns.add("proj.personal.erzeuger", String.class,
+				getTextRespectUISpr("proj.personal.erzeuger", mandant, locUi), QueryParameters.FLR_BREITE_M,
+				sortierungNachPersonalErzeuger);
+
+		String sortierungNachPersonalZugewiesener = "flrpartnerperszug."
+				+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1;
+		if (bKurzzeichenStattName) {
+			sortierungNachPersonalZugewiesener = "flrperszug.c_kurzzeichen";
+		}
+
+		columns.add("proj.personal.fuer", String.class, getTextRespectUISpr("proj.personal.fuer", mandant, locUi),
+				QueryParameters.FLR_BREITE_M, sortierungNachPersonalZugewiesener);
+
+		columns.add("lp.typ", String.class, getTextRespectUISpr("lp.typ", mandant, locUi), QueryParameters.FLR_BREITE_M,
+				FLR_PROJEKT + ProjektFac.FLR_PROJEKT_TYP_C_NR);
+		
+		if (titelAusHistoryartInAuswahllisteAnzeigen != null) {
+
+			columns.add("titelhistoryart", String.class, titelAusHistoryartInAuswahllisteAnzeigen.getCBez(),
+					QueryParameters.FLR_BREITE_M, FLR_PROJEKT + ProjektFac.FLR_PROJEKT_TYP_C_NR);
+		}
+		
+		columns.add("proj.prio", Integer.class, getTextRespectUISpr("proj.prioritaet.short", mandant, locUi), 1,
+				FLR_PROJEKT + ProjektFac.FLR_PROJEKT_I_PRIO,
+				getTextRespectUISpr("proj.prioritaet.tooltip", mandant, locUi));
+		columns.add("lp.status", Icon.class, getTextRespectUISpr("lp.status", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, FLR_PROJEKT + ProjektFac.FLR_PROJEKT_STATUS_C_NR);
+		columns.add("lp.termin", Date.class, getTextRespectUISpr("lp.termin", mandant, locUi), 10,
+				FLR_PROJEKT + ProjektFac.FLR_PROJEKT_T_ZIELDATUM);
+
+	
+
+		columns.add("proj.label.umsatzgeplant", BigDecimal.class,
+				getTextRespectUISpr("proj.label.umsatzgeplant", mandant, locUi), QueryParameters.FLR_BREITE_M,
+				FLR_PROJEKT + ProjektFac.FLR_PROJEKT_N_UMSATZGEPLANT);
+
+		if (bProjektMitUmsatz) {
+
+			columns.add("proj.label.wahrscheinlichkeit", Integer.class,
+					getTextRespectUISpr("proj.label.wahrscheinlichkeit", mandant, locUi), QueryParameters.FLR_BREITE_XS,
+					FLR_PROJEKT + ProjektFac.FLR_PROJEKT_I_WAHRSCHEINLICHKEIT);
+			columns.add("proj.verkaufsfortschritt", String.class,
+					getTextRespectUISpr("proj.verkaufsfortschritt", mandant, locUi), QueryParameters.FLR_BREITE_XS,
+					"vkf.c_nr");
+			columns.add("proj.leadstatus", String.class, getTextRespectUISpr("proj.leadstatus", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, "leadstatus.c_bez");
+		} else {
+			columns.add("proj.schaetzung", Double.class, getTextRespectUISpr("proj.schaetzung", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, FLR_PROJEKT + ProjektFac.FLR_PROJEKT_D_DAUER);
+
+			columns.add("proj.label.verrechenbar", Icon.class,
+					getTextRespectUISpr("proj.verrechenbar.short", mandant, locUi), QueryParameters.FLR_BREITE_S,
+					FLR_PROJEKT + ProjektFac.FLR_PROJEKT_I_VERRECHENBAR,
+					getTextRespectUISpr("proj.verrechenbar.tooltip", mandant, locUi));
+			columns.add("proj.internerledigt", Boolean.class,
+					getTextRespectUISpr("proj.internerledigt.short", mandant, locUi), QueryParameters.FLR_BREITE_S,
+					FLR_PROJEKT + ProjektFac.FLR_PROJEKT_T_INTERNERLEDIGT,
+					getTextRespectUISpr("proj.internerledigt.tooltip", mandant, locUi));
+
+		}
+
+		columns.add("Color", Color.class, "", 1, "");
+
+		return columns;
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setupParameters();
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
@@ -779,8 +977,7 @@ public class ProjektHandler extends UseCaseHandler {
 		BereichDto bereichDto = null;
 		try {
 			projektDto = getProjektFac().projektFindByPrimaryKey((Integer) key);
-			bereichDto = getProjektServiceFac().bereichFindByPrimaryKey(
-					projektDto.getBereichIId());
+			bereichDto = getProjektServiceFac().bereichFindByPrimaryKey(projektDto.getBereichIId());
 		} catch (Exception e) {
 			// Nicht gefunden
 		}
@@ -795,10 +992,8 @@ public class ProjektHandler extends UseCaseHandler {
 			// projektDto.getBereichIId()).getCBez() + "/"
 			// + projektDto.getCNr().replace("/", ".");
 
-			DocPath docPath = new DocPath(new DocNodeProjekt(projektDto,
-					bereichDto));
-			return new PrintInfoDto(docPath, projektDto.getPartnerIId(),
-					getSTable());
+			DocPath docPath = new DocPath(new DocNodeProjekt(projektDto, bereichDto));
+			return new PrintInfoDto(docPath, projektDto.getPartnerIId(), getSTable());
 		} else {
 			return null;
 		}

@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.partner.fastlanereader;
@@ -44,14 +44,12 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
-import com.lp.server.system.jcr.service.JCRDocFac;
 import com.lp.server.system.jcr.service.PrintInfoDto;
-import com.lp.server.system.jcr.service.docnode.DocNodeAgStueckliste;
 import com.lp.server.system.jcr.service.docnode.DocNodePartner;
 import com.lp.server.system.jcr.service.docnode.DocPath;
-import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
@@ -90,7 +88,7 @@ import com.lp.util.Helper;
 public class PartnerHandler extends UseCaseHandler {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	boolean bSuchenInklusiveKbez = true;
@@ -116,7 +114,7 @@ public class PartnerHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount];
-
+			
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
@@ -127,6 +125,7 @@ public class PartnerHandler extends UseCaseHandler {
 				rows[row][col++] = o[1];
 				rows[row][col++] = o[2];
 				rows[row][col++] = o[3];
+				rows[row][col++] = o[9];
 				rows[row][col++] = o[4];
 				rows[row][col++] = o[5];
 				rows[row][col++] = o[6];
@@ -167,6 +166,7 @@ public class PartnerHandler extends UseCaseHandler {
 					+ " LEFT JOIN partner.flrlandplzort.flrland AS flrland "
 					+ " LEFT OUTER JOIN partner.ansprechpartner AS ansprechpartnerset "
 					+ " LEFT OUTER JOIN ansprechpartnerset.flrpartneransprechpartner AS partneransprechpartner "
+					+ " LEFT OUTER JOIN partner.partner_paselektion_set AS selektionset "
 
 					+ buildWhereClause();
 			Query query = session.createQuery(queryString);
@@ -213,6 +213,7 @@ public class PartnerHandler extends UseCaseHandler {
 
 			FilterBlock filterBlock = getQuery().getFilterBlock();
 			FilterKriterium[] filterKriterien = getQuery().getFilterBlock().filterKrit;
+
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 			for (int i = 0; i < filterKriterien.length; i++) {
@@ -252,33 +253,25 @@ public class PartnerHandler extends UseCaseHandler {
 								+ filterKriterien[i].value.toLowerCase() + ")");
 					} else if (filterKriterien[i].kritName
 							.equals(PartnerFac.PARTNERQP1_TELEFONNUMMERN_SUCHE)) {
-						
-						
 						where.append(" replace(replace(replace(replace(replace(coalesce(replace(partner.c_telefon,' ',''),'') ||' '|| coalesce(replace(partner.c_fax,' ',''),'') ||' '|| coalesce(replace(ansprechpartnerset.c_handy,' ',''),'') ||' '|| coalesce(replace(partneransprechpartner.c_fax,' ',''),'') ||' '|| coalesce(replace(partneransprechpartner.c_telefon,' ',''),'') ,'(','') ,')','') ,'+','') ,'-','') ,'/','')");
 						where.append(" " + filterKriterien[i].operator);
 						where.append(" "
 								+ filterKriterien[i].value.toLowerCase()
 										.replaceAll(" ", ""));
-						
+
 					} else if (filterKriterien[i].kritName
 							.equals(PartnerFac.PARTNERQP1_ERWEITERTE_SUCHE)) {
 
-						
-					
-						
-						
 						String suchstring = "  coalesce(partner.c_name1nachnamefirmazeile1,'')||' '||coalesce(partner.c_name2vornamefirmazeile2,'')||' '||coalesce(partner.c_name3vorname2abteilung,'')||' '||coalesce(partner.c_kbez,'')";
-							suchstring += "||' '||coalesce(partner.c_strasse,'')||' '||coalesce(partneransprechpartner.c_name1nachnamefirmazeile1,'')||' '||coalesce(partneransprechpartner.c_name2vornamefirmazeile2,'')";
-						
-							suchstring += "||' '||coalesce(partneransprechpartner.c_name3vorname2abteilung,'')||' '||coalesce(partner.c_email,'')||' '||coalesce(partner.c_fax,'')";
-						
-							suchstring += "||' '||coalesce(partner.c_telefon,'')||' '||coalesce(ansprechpartnerset.c_handy,'')||' '||coalesce(ansprechpartnerset.c_email,'')";
-							suchstring += "||' '||coalesce(cast(ansprechpartnerset.x_bemerkung as string),'')||' '||coalesce(cast(partner.x_bemerkung as string),'')";
-							
+						suchstring += "||' '||coalesce(partner.c_strasse,'')||' '||coalesce(partneransprechpartner.c_name1nachnamefirmazeile1,'')||' '||coalesce(partneransprechpartner.c_name2vornamefirmazeile2,'')";
+
+						suchstring += "||' '||coalesce(partneransprechpartner.c_name3vorname2abteilung,'')||' '||coalesce(partner.c_email,'')||' '||coalesce(partner.c_fax,'')";
+
+						suchstring += "||' '||coalesce(partner.c_telefon,'')||' '||coalesce(ansprechpartnerset.c_handy,'')||' '||coalesce(ansprechpartnerset.c_email,'')";
+						suchstring += "||' '||coalesce(cast(ansprechpartnerset.x_bemerkung as string),'')||' '||coalesce(cast(partner.x_bemerkung as string),'')";
 
 						String[] teile = filterKriterien[i].value.toLowerCase()
 								.split(" ");
-						
 
 						for (int p = 0; p < teile.length; p++) {
 
@@ -296,12 +289,25 @@ public class PartnerHandler extends UseCaseHandler {
 							}
 						}
 
-						
+					} else if (filterKriterien[i].kritName.equals("PLZOrt")) {
+						where.append(" (lower(partner.flrlandplzort.flrort.c_name)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase());
+						where.append(" OR lower(partner.flrlandplzort.c_plz)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase() + ")");
+					} else if (filterKriterien[i].kritName
+							.equals("selektionset.flrselektion.c_nr")) {
+						where.append(" lower(selektionset.flrselektion.c_nr)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase());
 
-					} else {
+					}
 
-						//
-
+					else {
 						// ignorecase: 1 hier auf upper
 						if (filterKriterien[i].isBIgnoreCase()) {
 							where.append(" lower(partner."
@@ -324,7 +330,20 @@ public class PartnerHandler extends UseCaseHandler {
 				}
 			}
 			if (filterAdded) {
-				where.insert(0, " WHERE");
+				// PJ20508
+				boolean recht = getTheJudgeFac().hatRecht(
+						RechteFac.RECHT_PERS_PERSONAL_R, theClientDto)
+						|| getTheJudgeFac()
+								.hatRecht(RechteFac.RECHT_PERS_PERSONAL_CUD,
+										theClientDto);
+				if (recht) {
+					where.insert(0, " WHERE ");
+				} else {
+					where.insert(
+							0,
+							" WHERE partner.i_id NOT IN (SELECT pers.flrpartner.i_id FROM FLRPersonal pers WHERE (SELECT count(lf.i_id) FROM FLRLieferant lf WHERE lf.flrpartner.i_id=partner.i_id)=0 AND  (SELECT count(kd.i_id) FROM FLRKunde kd WHERE kd.flrpartner.i_id=partner.i_id)=0)  AND ");
+				}
+
 			}
 		}
 
@@ -389,12 +408,13 @@ public class PartnerHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "SELECT distinct partner.i_id, partner.partnerart_c_nr,partner.c_name1nachnamefirmazeile1,partner.c_name2vornamefirmazeile2,partner.flrlandplzort.flrland.c_lkz,partner.flrlandplzort.c_plz,partner.flrlandplzort.flrort.c_name,partner.f_gmtversatz,partner.b_versteckt FROM FLRPartner AS partner "
+		return "SELECT distinct partner.i_id, partner.partnerart_c_nr,partner.c_name1nachnamefirmazeile1,partner.c_name2vornamefirmazeile2,partner.flrlandplzort.flrland.c_lkz,partner.flrlandplzort.c_plz,partner.flrlandplzort.flrort.c_name,partner.f_gmtversatz,partner.b_versteckt, partner.c_kbez FROM FLRPartner AS partner "
 				+ " LEFT JOIN partner.flrlandplzort AS flrlandplzort "
 				+ " LEFT JOIN partner.flrlandplzort.flrort AS flrort "
 				+ " LEFT JOIN partner.flrlandplzort.flrland AS flrland "
 				+ " LEFT OUTER JOIN partner.ansprechpartner AS ansprechpartnerset "
-				+ " LEFT OUTER JOIN ansprechpartnerset.flrpartneransprechpartner AS partneransprechpartner ";
+				+ " LEFT OUTER JOIN ansprechpartnerset.flrpartneransprechpartner AS partneransprechpartner "
+				+ " LEFT OUTER JOIN partner.partner_paselektion_set AS selektionset ";
 
 	}
 
@@ -456,7 +476,8 @@ public class PartnerHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
 					String.class, String.class, String.class, String.class,
-					String.class, String.class, Double.class, Color.class },
+					String.class, String.class, String.class, Double.class,
+					Color.class },
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.art", mandantCNr, locUI),
@@ -464,6 +485,8 @@ public class PartnerHandler extends UseCaseHandler {
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.firma_vorname", mandantCNr,
 									locUI),
+							getTextRespectUISpr("lp.kurzbezeichnung",
+									mandantCNr, locUI),
 							getTextRespectUISpr("lp.lkz", mandantCNr, locUI),
 							getTextRespectUISpr("lp.plz", mandantCNr, locUI),
 							getTextRespectUISpr("lp.ort", mandantCNr, locUI),
@@ -474,6 +497,7 @@ public class PartnerHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_S,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -482,6 +506,7 @@ public class PartnerHandler extends UseCaseHandler {
 							PartnerFac.FLR_PARTNER_PARTNERART,
 							PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
 							PartnerFac.FLR_PARTNER_NAME2VORNAMEFIRMAZEILE2,
+							PartnerFac.FLR_PARTNER_C_KBEZ,
 							PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
 									+ SystemFac.FLR_LP_FLRLAND + "."
 									+ SystemFac.FLR_LP_LANDLKZ,

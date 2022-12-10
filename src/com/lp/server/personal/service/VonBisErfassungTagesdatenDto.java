@@ -50,6 +50,14 @@ public class VonBisErfassungTagesdatenDto implements Serializable {
 	private double dSontigeBezahlt = 0;
 	private double dSonstigeNichtBezahlt = 0;
 
+	private String sZusatzbezeichnung=""; 
+	
+	public String getSZusatzbezeichnung() {
+		return sZusatzbezeichnung;
+	}
+	public void setSZusatzbezeichnung(String sZusatzbezeichnung) {
+		this.sZusatzbezeichnung = sZusatzbezeichnung;
+	}
 	public double getdUrlaub() {
 		return dUrlaub;
 	}

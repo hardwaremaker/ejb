@@ -33,6 +33,7 @@
 package com.lp.server.fertigung.service;
 
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import javax.ejb.Remote;
@@ -83,5 +84,24 @@ public interface FertigungServiceFac {
 
 	public void removeLosbereich(LosbereichDto losbereichDto,
 			TheClientDto theClientDto);
+
+	public LospruefplanDto lospruefplanFindByPrimaryKey(Integer iId);
+
+	public void removeLospruefplan(Integer iId);
+
+	public void updateLospruefplan(LospruefplanDto dto,
+			TheClientDto theClientDto);
+
+	public Integer createLospruefplan(LospruefplanDto dto,
+			TheClientDto theClientDto);
+
+	public void updatePruefergebnisse(ArrayList<PruefergebnisDto> dtos,Integer losablieferungIId,
+			TheClientDto theClientDto);
+
+	public ArrayList<LospruefplanDto> lospruefplanFindyByLosIId(Integer losIId);
+	public ArrayList<PruefergebnisDto>  pruefergebnisFindByLosablieferungIId(Integer losablieferungIId);
+	public void removePruefergebnisse(Integer losablieferungIId,
+			TheClientDto theClientDto);
+	public void vertauscheLospruefplan(Integer iId1, Integer iId2);
 
 }

@@ -32,8 +32,10 @@
  ******************************************************************************/
 package com.lp.server.partner.fastlanereader;
 
+import java.awt.Color;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.Icon;
 
@@ -44,6 +46,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
+import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartnerfunktionspr;
 import com.lp.server.partner.service.AnsprechpartnerFac;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.system.service.LocaleFac;
@@ -58,6 +61,7 @@ import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -94,8 +98,7 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -105,34 +108,45 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRAnsprechpartner ansprechpartner = (FLRAnsprechpartner) resultListIterator
-						.next();
+				FLRAnsprechpartner ansprechpartner = (FLRAnsprechpartner) resultListIterator.next();
 				rows[row][col++] = ansprechpartner.getI_id();
-				rows[row][col++] = ansprechpartner
-						.getFlrpartneransprechpartner().getAnrede_c_nr();
-				rows[row][col++] = ansprechpartner
-						.getFlrpartneransprechpartner().getC_titel();
-				rows[row][col++] = ansprechpartner
-						.getFlrpartneransprechpartner()
-						.getC_name1nachnamefirmazeile1();
-				rows[row][col++] = ansprechpartner
-						.getFlrpartneransprechpartner()
-						.getC_name2vornamefirmazeile2();
-				rows[row][col++] = ansprechpartner
-						.getFlrpartneransprechpartner().getC_ntitel();
 
+				String fkt = ansprechpartner.getFlransprechpartnerfunktion().getC_nr();
+
+				Set s = ansprechpartner.getFlransprechpartnerfunktion()
+						.getAnsprechpartnerfunktion_ansprechpartnerfunktionspr_set();
+				Iterator it = s.iterator();
+				while (it.hasNext()) {
+					FLRAnsprechpartnerfunktionspr spr = (FLRAnsprechpartnerfunktionspr) it.next();
+					if (spr.getLocale().getC_nr().equals(theClientDto.getLocUiAsString()) && spr.getC_bez() != null) {
+						fkt = spr.getC_bez();
+					}
+				}
+				rows[row][col++] = fkt;
+				rows[row][col++] = ansprechpartner.getFlrpartneransprechpartner().getAnrede_c_nr();
+				rows[row][col++] = ansprechpartner.getFlrpartneransprechpartner().getC_titel();
+				rows[row][col++] = ansprechpartner.getFlrpartneransprechpartner().getC_name2vornamefirmazeile2();
+				rows[row][col++] = ansprechpartner.getFlrpartneransprechpartner().getC_name1nachnamefirmazeile1();
+				rows[row][col++] = ansprechpartner.getFlrpartneransprechpartner().getC_ntitel();
+
+				rows[row][col++] = ansprechpartner.getC_abteilung();
 				if (ansprechpartner.getC_email() != null) {
 					rows[row][col++] = LocaleFac.STATUS_EMAIL;
 				} else {
 					rows[row][col++] = null;
 				}
 
-				rows[row++][col++] = ansprechpartner.getI_sort();
+				rows[row][col++] = ansprechpartner.getI_sort();
+
+				if (Helper.short2boolean(ansprechpartner.getB_versteckt())) {
+					rows[row][col++] = Color.LIGHT_GRAY;
+				}
+
+				row++;
 
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -151,8 +165,7 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -173,8 +186,8 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -185,8 +198,7 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -197,22 +209,32 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 
-					// ignorecase: 1 hier auf upper
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" lower(ansprechpartner."
-								+ filterKriterien[i].kritName + ")");
+					if (filterKriterien[i].kritName.equals("flrpartneransprechpartner."+PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
+						where.append(" (lower(ansprechpartner." + filterKriterien[i].kritName + ")");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase());
+						where.append(" OR lower(ansprechpartner.flrpartneransprechpartner.c_name2vornamefirmazeile2)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase());
+						where.append(" OR lower(ansprechpartner.flrpartneransprechpartner.c_kbez)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase() + ")");
 					} else {
-						where.append(" ansprechpartner."
-								+ filterKriterien[i].kritName);
-					}
 
-					where.append(" " + filterKriterien[i].operator);
+						// ignorecase: 1 hier auf upper
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" lower(ansprechpartner." + filterKriterien[i].kritName + ")");
+						} else {
+							where.append(" ansprechpartner." + filterKriterien[i].kritName);
+						}
 
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
-					} else {
-						where.append(" " + filterKriterien[i].value);
+						where.append(" " + filterKriterien[i].operator);
+
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" " + filterKriterien[i].value.toLowerCase());
+						} else {
+							where.append(" " + filterKriterien[i].value);
+						}
 					}
 				}
 			}
@@ -237,15 +259,13 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("ansprechpartner."
-									+ kriterien[i].kritName);
+							orderBy.append("ansprechpartner." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -299,8 +319,7 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 		return "from FLRAnsprechpartner ansprechpartner ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		this.getQuery().setSortKrit(sortierKriterien);
 
@@ -351,50 +370,41 @@ public class AnsprechpartnerHandler extends UseCaseHandler {
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, String.class,
-							Icon.class, Integer.class, },
-					new String[] {
-							"i_id",
-							getTextRespectUISpr("lp.anrede",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.titel",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.nachname",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.vorname",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.nachgestellt",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()), "", "S" },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_S, },
-					new String[] {
-							"i_id",
-							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER
-									+ "." + PartnerFac.FLR_PARTNER_ANREDE,
-							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER
-									+ "." + PartnerFac.FLR_PARTNER_TITEL,
-							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER
-									+ "."
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class, String.class,
+							String.class, String.class, Icon.class, Integer.class, Color.class },
+					new String[] { "i_id",
+							getTextRespectUISpr("lp.funktion", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.anrede", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.titel", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.vorname", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.nachname", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.nachgestellt", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("ansp.abteilung", theClientDto.getMandant(), theClientDto.getLocUi()),
+
+							getTextRespectUISpr("lp.email", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("part.sortierung", theClientDto.getMandant(), theClientDto.getLocUi()),
+							"" },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_S, 0 },
+					new String[] { "i_id", "flransprechpartnerfunktion.c_nr",
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER + "."
+									+ PartnerFac.FLR_PARTNER_ANREDE,
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER + "."
+									+ PartnerFac.FLR_PARTNER_TITEL,
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER + "."
 									+ PartnerFac.FLR_PARTNER_NAME2VORNAMEFIRMAZEILE2,
-							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER
-									+ "." + PartnerFac.FLR_PARTNER_NTITEL,
-							Facade.NICHT_SORTIERBAR,
-							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_I_SORT }));
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER + "."
+									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNERANSPRECHPARTNER + "."
+									+ PartnerFac.FLR_PARTNER_NTITEL,
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_C_ABTEILUNG,
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_C_EMAIL,
+							AnsprechpartnerFac.FLR_ANSPRECHPARTNER_I_SORT, "" },
+					new String[] { null, null, null, null, null, null, null, null, null, getTextRespectUISpr(
+							"part.sortierung.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()), null }));
 		}
 		return super.getTableInfo();
 	}

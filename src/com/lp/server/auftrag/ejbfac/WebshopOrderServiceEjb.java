@@ -36,17 +36,19 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.text.BreakIterator;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import javax.ejb.Local;
 import javax.ejb.Stateless;
 import javax.persistence.NoResultException;
 import javax.xml.bind.JAXBException;
 
 import org.xml.sax.SAXException;
 
+import com.lp.server.artikel.ejb.Artikel;
+import com.lp.server.artikel.ejb.ArtikelQuery;
 import com.lp.server.artikel.ejb.LagerbewegungQuery;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelsperrenDto;
@@ -55,6 +57,8 @@ import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.auftrag.service.WebshopOrderServiceFacLocal;
+import com.lp.server.auftrag.service.WebshopPartner;
 import com.lp.server.partner.ejb.Kundesoko;
 import com.lp.server.partner.ejb.KundesokoQuery;
 import com.lp.server.partner.ejb.Partner;
@@ -75,6 +79,7 @@ import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERITEMTEXT;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERPARTIES;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERPOSTEXTLIST;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERRESPONSE;
+import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERRESPONSEHEADTEXTLIST;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERRESPONSEITEM;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERRESPONSEITEMLIST;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLPARTY;
@@ -85,16 +90,16 @@ import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.VersandauftragDto;
-import com.lp.server.system.service.VersandwegCCPartnerDto;
-import com.lp.server.system.service.VersandwegCCPartnerDto.SokoAdresstyp;
+import com.lp.server.system.service.VersandwegPartnerCCDto;
+import com.lp.server.system.service.VersandwegPartnerCCDto.SokoAdresstyp;
 import com.lp.server.util.HelperWebshop;
 import com.lp.util.Helper;
 
-@Local
 @Stateless
-public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
+public class WebshopOrderServiceEjb extends WebshopOrderServiceBase implements WebshopOrderServiceFacLocal {
 
 	private final static int MAX_DESCRIPTION_LENGTH = 40 ;
 	
@@ -351,7 +356,7 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			try {
 				String bestellnr = getOrderAdapter().getBestellnummer() ;
 				auftragDtos = getAuftragFac().auftragFindByMandantCnrKundeIIdBestellnummerOhneExc(
-						kundeDto.getIId(), getAuthController().getWebClientDto().getMandant(), bestellnr, null) ;
+						kundeDto.getIId(), getAuthController().getWebClientDto().getMandant(), bestellnr) ;
 			} catch(RemoteException e) {				
 			}
 			
@@ -467,9 +472,16 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 								baseKundeDto.getMandantCNr(), getAuthController().getWebClientDto()) ;
 					if(lieferKundeDto == null) {
 						addUnknownAddress(prefixMessage +
-								" {1} existiert als Partner, ein Kunde existiert jedoch nicht", xmlAddress) ;
+								" {1} existiert als Partner, ein Kunde existiert jedoch nicht", xmlAddress);
+						return lieferKundeDto;
 					}
-					
+	
+					if(Helper.isTrue(lieferKundeDto.getBVersteckterlieferant())) {
+						myLogger.warn("Fuer den Partner (Id:" + foundPartner.getIId() + 
+								") gibt es einen versteckten Lieferanten (Id:" + lieferKundeDto.getIId() +"). Nicht gewaehlt.");
+						addUnknownAddress(prefixMessage + " {1} existiert als Partner, ein Kunde existiert jedoch nicht", xmlAddress);
+						lieferKundeDto = null;
+					}
 					return lieferKundeDto ;
 				}
 			} catch(NoResultException e) {				
@@ -700,7 +712,12 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			AuftragpositionDto positionDto = new AuftragpositionDto() ;
 			positionDto.setBelegIId((auftragDto.getIId())) ;
 			positionDto.setPositionsartCNr(AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE) ;
-			setBezeichnung(kundeDto, positionDto, xmlPosition.getARTICLEID().getDESCRIPTIONSHORT()) ;
+			// SP4111
+			String shortDescription = xmlPosition.getARTICLEID().getDESCRIPTIONSHORT() ;
+			if(shortDescription == null) {
+				shortDescription = cnr ;
+			}
+			setBezeichnung(kundeDto, positionDto, cnr) ;
 			
 			positionDto.setNMenge(xmlPosition.getQUANTITY()) ;
 			positionDto.setNOffeneMenge(xmlPosition.getQUANTITY()) ;
@@ -720,6 +737,10 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			positionDto.setNEinzelpreis(xmlPosition.getARTICLEPRICE().getPRICEAMOUNT()) ;
 			positionDto.setNNettoeinzelpreis(xmlPosition.getARTICLEPRICE().getPRICEAMOUNT()) ;
 			positionDto.setNBruttoeinzelpreis(xmlPosition.getARTICLEPRICE().getPRICEAMOUNT()) ;
+			// TODO Keine Aufschlaege/Rabatte aus dem Kunden uebernommen  ghp, 26.7.2019
+			positionDto.setNNettoeinzelpreisplusversteckteraufschlag(xmlPosition.getARTICLEPRICE().getPRICEAMOUNT());
+			positionDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(xmlPosition.getARTICLEPRICE().getPRICEAMOUNT());
+
 			positionDto.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(false)) ;
 //			positionDto.setBRabattsatzuebersteuert(Helper.boolean2Short(false)) ;
 //			positionDto.setBMwstsatzuebersteuert(Helper.boolean2Short(false)) ;
@@ -747,9 +768,19 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 					addChangeEntry(changeEntry) ;
 				}
 			}
-						
-			positionDto.setMwstsatzIId(kundeDto.getMwstsatzbezIId()) ;
+	
+/*			
+			MwstsatzDto mwstsatzDto = getMandantFac().mwstsatzFindByMwstsatzbezIIdAktuellster(
+					kundeDto.getMwstsatzbezIId(),getAuthController().getWebClientDto());
+*/
+			MwstsatzDto mwstsatzDto = getMandantFac().
+					mwstsatzZuDatumValidate(kundeDto.getMwstsatzbezIId(), 
+							auftragDto.getTBelegdatum(), getAuthController().getWebClientDto());
+			
+			positionDto.setMwstsatzIId(mwstsatzDto.getIId());
 			updateMwstBetraege(positionDto) ;
+//			positionDto = (AuftragpositionDto) mwstsatzBestimmenUndNeuBerechnen(positionDto, kundeDto.getIId(), 
+//					auftragDto.getTBelegdatum(), getAuthController().getWebClientDto());
 
 			Timestamp earliest = new Timestamp(
 					getDateFromDateStringWithDefault(xmlPosition.getDELIVERYDATE().getDELIVERYSTARTDATE()).getTime()) ;
@@ -793,13 +824,14 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 //			return minimum ;
 		}
 		
-		private BigDecimal getPrice(KundeDto kundeDto, AuftragDto auftragDto, ArtikelDto itemDto, BigDecimal quantity) {
+		private BigDecimal getPrice(KundeDto kundeDto, AuftragDto auftragDto, 
+				ArtikelDto itemDto, BigDecimal quantity, Integer mwstsatzId) {
 			java.sql.Date d = new java.sql.Date(auftragDto.getDBestelldatum().getTime()) ;
 			
 			VkpreisfindungDto vkpreisfindungDto = getVkPreisfindungFac().verkaufspreisfindung(
 					itemDto.getIId(), kundeDto.getIId(), quantity, d,
 					kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(), 
-					itemDto.getMwstsatzbezIId(), auftragDto.getCAuftragswaehrung(), getAuthController().getWebClientDto()) ;
+					mwstsatzId, auftragDto.getCAuftragswaehrung(), getAuthController().getWebClientDto()) ;
 
 			BigDecimal p = getPriceFromPreisfindung(vkpreisfindungDto) ;
 			return p ;
@@ -871,11 +903,19 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			
 			positionDto.setEinheitCNr(einheit) ;
 
-			if(null == itemDto.getMwstsatzbezIId()) {
-				itemDto.setMwstsatzbezIId(kundeDto.getMwstsatzbezIId()) ;
+			BigDecimal vkPrice = null;
+			Integer mwstsatzId = getMwstsatzId(itemDto, kundeDto,
+					auftragDto.getTBelegdatum(), getAuthController().getWebClientDto());
+			if(mwstsatzId != null) {
+				vkPrice = getPrice(kundeDto, auftragDto, itemDto, 
+						xmlPosition.getQUANTITY(), mwstsatzId) ;
+			} else {
+				vkPrice = new BigDecimal("0.00");
+				ChangeEntry<?> changeEntry = new ChangeEntry<BigDecimal>(vkPrice, vkPrice, 
+						"Es konnnte kein Preis ermittelt werden, weil kein Steuersatz ermittelt werden kann. Es wird {0} verwendet.") ;
+				addChangeEntry(changeEntry);				
 			}
-			
-			BigDecimal vkPrice = getPrice(kundeDto, auftragDto, itemDto, xmlPosition.getQUANTITY()) ;
+	
 			if(vkPrice == null) {
 				vkPrice = new BigDecimal("0.00") ;
 				ChangeEntry<?> changeEntry = new ChangeEntry<BigDecimal>(vkPrice, vkPrice, 
@@ -891,9 +931,12 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 				addChangeEntry(changeEntry) ;
 			}
 			
-			positionDto.setNEinzelpreis(vkPrice) ;
-			positionDto.setNNettoeinzelpreis(vkPrice) ;
-			positionDto.setNBruttoeinzelpreis(vkPrice) ;
+			positionDto.setNEinzelpreis(vkPrice);
+			positionDto.setNNettoeinzelpreis(vkPrice);
+			// TODO Keine Aufschlaege/Rabatte aus dem Kunden uebernommen  ghp, 26.7.2019
+			positionDto.setNNettoeinzelpreisplusversteckteraufschlag(vkPrice);
+			positionDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(vkPrice);
+			positionDto.setNBruttoeinzelpreis(vkPrice); 
 			positionDto.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(false)) ;
 //			positionDto.setBRabattsatzuebersteuert(Helper.boolean2Short(false)) ;
 //			positionDto.setBMwstsatzuebersteuert(Helper.boolean2Short(false)) ;
@@ -915,8 +958,12 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 				}
 			}
 			
-			positionDto.setMwstsatzIId(itemDto.getMwstsatzbezIId()) ;
-			updateMwstBetraege(positionDto);
+			positionDto = (AuftragpositionDto) mwstsatzBestimmenUndNeuBerechnen(positionDto, kundeDto.getIId(), 
+					auftragDto.getTBelegdatum(), getAuthController().getWebClientDto());
+
+// SP7555 mwstsatzBestimmenUndNeuBerechnen macht die ganze Magie
+//			positionDto.setMwstsatzIId(itemDto.getMwstsatzbezIId()) ;
+//			updateMwstBetraege(positionDto);
 			
 			Timestamp earliest = new Timestamp(
 					getDateFromDateStringWithDefault(xmlPosition.getDELIVERYDATE().getDELIVERYSTARTDATE()).getTime()) ;
@@ -933,21 +980,67 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			return getAuftragpositionFac().auftragpositionFindByPrimaryKeyOhneExc(positionIId) ;
 		}
 		
+		private Integer getMwstsatzId(ArtikelDto itemDto, KundeDto kundeDto, Timestamp belegDatum, TheClientDto theClientDto) {
+			boolean bDefaultMwstsatzAusArtikel = getParameterFac()
+					.getPositionskontierung(theClientDto.getMandant());
+
+			MwstsatzDto mwstsatzDesKundenDtoZumBelegdatum = getMandantFac()
+					.mwstsatzFindZuDatum(kundeDto.getMwstsatzbezIId(), belegDatum);
+			if(!bDefaultMwstsatzAusArtikel) {
+				return mwstsatzDesKundenDtoZumBelegdatum.getIId();				
+			}
+
+			// Wenn Kundensteuersatz = steuerfrei, dann gilt immer der Kundensteuersatz
+			if (mwstsatzDesKundenDtoZumBelegdatum.getFMwstsatz().doubleValue() == 0) {
+				return mwstsatzDesKundenDtoZumBelegdatum.getIId();
+			}
+			 
+			if (itemDto.getMwstsatzbezIId() != null) {
+				MwstsatzDto mwstsatzDesArtikelsZumBelegdatum = getMandantFac()
+						.mwstsatzFindZuDatum(itemDto.getMwstsatzbezIId(), belegDatum);
+				return mwstsatzDesArtikelsZumBelegdatum.getIId();
+			}
+			
+			return null;
+		}
+		
+		
 		private KundeDto getSokoKundeDto(KundeDto auftragsKundeDto, AuftragDto auftragDto) {
 			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(
 					auftragsKundeDto.getPartnerIId(), getAuthController().getWebClientDto()) ;
 			
-			VersandwegCCPartnerDto ccPartnerDto = (VersandwegCCPartnerDto)
-					getSystemFac().versandwegPartnerFindByPrimaryKey(
-							partnerDto.getVersandwegIId(), partnerDto.getIId()) ;
+//			VersandwegCCPartnerDto ccPartnerDto = (VersandwegCCPartnerDto)
+//					getSystemFac().versandwegPartnerFindByPrimaryKey(
+//							partnerDto.getVersandwegIId(), partnerDto.getIId()) ;
+			
+//			VersandwegPartnerCCDto ccPartnerDto = (VersandwegPartnerCCDto)
+//					getSystemFac().versandwegPartnerFindByVersandwegIdPartnerId(
+//							partnerDto.getVersandwegIId(), partnerDto.getIId(),
+//							getAuthController().getWebClientDto().getMandant()) ;
 
-			if(ccPartnerDto.getSokoAdresstyp() == SokoAdresstyp.AUFTRAGS_ADRESSE) return auftragsKundeDto ;
+//			VersandwegPartner versandwegPartner = VersandwegPartnerQuery
+//					.findByPartnerIIdVersandwegCnr(em, partnerDto.getIId(), 
+//							SystemFac.VersandwegType.CleverCureVerkauf, getAuthController().getWebClientDto().getMandant());
+
+//			Integer versandwegId = versandwegPartner == null ? null : versandwegPartner.getVersandwegId();
+//			if(versandwegId == null) {
+//				throw new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_AUFTRAG_VERSANDWEG_IM_PARTNER_NICHT_DEFINIERT,
+//						partnerDto.getIId().toString());				
+//			}
+			
+			VersandwegPartnerCCDto ccPartnerDto = (VersandwegPartnerCCDto)
+					getSystemFac().versandwegPartnerFindByVersandwegCnrPartnerId(
+							SystemFac.VersandwegType.CleverCureVerkauf, partnerDto.getIId(),
+							getAuthController().getWebClientDto().getMandant());
+			
+			if(ccPartnerDto.getSokoAdresstypEnum() == SokoAdresstyp.AUFTRAGS_ADRESSE) return auftragsKundeDto ;
 			
 			Integer kundeId = null ;
-			if(ccPartnerDto.getSokoAdresstyp() == SokoAdresstyp.LIEFER_ADRESSE) {
+			if(ccPartnerDto.getSokoAdresstypEnum() == SokoAdresstyp.LIEFER_ADRESSE) {
 				kundeId = auftragDto.getKundeIIdLieferadresse() ;
 			}
-			if(ccPartnerDto.getSokoAdresstyp() == SokoAdresstyp.RECHNUNGS_ADRESSE) {
+			if(ccPartnerDto.getSokoAdresstypEnum() == SokoAdresstyp.RECHNUNGS_ADRESSE) {
 				kundeId = auftragDto.getKundeIIdRechnungsadresse() ;
 			}
 			
@@ -966,15 +1059,27 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 				XMLXMLORDERRESPONSEITEMLIST xmlPositions = getXmlOrder().getORDERRESPONSEITEMLIST() ;
 				List<XMLXMLORDERRESPONSEITEM> xmlItems = xmlPositions.getORDERRESPONSEITEM() ;
 				for (XMLXMLORDERRESPONSEITEM xmlPosition : xmlItems) {
-					List<XMLXMLBUYERAID> buyerIds = xmlPosition.getARTICLEID().getBUYERAID() ;
-					if(buyerIds.size() == 0) continue ;
+					List<XMLXMLBUYERAID> buyerIds = xmlPosition.getARTICLEID().getBUYERAID();
+//					if(buyerIds.size() == 0) continue ;
+					if(buyerIds.size() == 0) {
+						String descriptionShort = xmlPosition
+								.getARTICLEID().getDESCRIPTIONSHORT();
+						if(Helper.isStringEmpty(descriptionShort)) {
+							ChangeEntry<?> changeEntry = new ChangeEntry<String>(
+									xmlPosition.getLINEITEMID(), "", 
+									"Es gibt weder eine kundenspezifische Artikelnummer, noch eine Handeingabe in LINE_ITEM_ID {0}. Bitte .xml prüfen");
+							addChangeEntry(changeEntry);
+							createPositionsForChangeEntries(auftragDto);
+							continue;
+						}
+					}
 
 					setupArtikelFinder(xmlPosition) ;
 					ArtikelDto itemDto = getArtikelFinder().findArtikel(sokoKundeDto, auftragDto) ;
 					
-					String itemCnr = buyerIds.get(0).getValue().trim() ;
-//					ArtikelDto itemDto = getArtikelFac().artikelFindByCNrOhneExc(itemCnr, getAuthController().getWebClientDto()) ;
+//					String itemCnr = buyerIds.get(0).getValue().trim() ;
 					if(itemDto == null) {
+						String itemCnr = getArtikelFinder().getUsedItemCnr();
 						AuftragpositionDto positionDto = createPositionHandeingabe(kundeDto, auftragDto, itemCnr, xmlPosition) ;
 						ChangeEntry<?> changeEntry = new ChangeEntry<String>(itemCnr, "", "Der Artikel {0} wurde nicht gefunden, es wurde eine Handeingabe erzeugt.") ;
 						addChangeEntry(changeEntry) ;
@@ -995,6 +1100,19 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 					
 					createPositionsForChangeEntries(auftragDto) ;
 				}		
+				
+				XMLXMLORDERRESPONSEHEADTEXTLIST headTextList = getXmlOrder().getORDERRESPONSEHEADTEXTLIST();
+				if(headTextList != null) {
+					List<XMLXMLORDERITEMTEXT> texts = headTextList.getORDERITEMTEXT();
+					for(XMLXMLORDERITEMTEXT itemText : texts) {						
+						if(!isEmptyString(itemText.getCCTEXTVALUE())) {
+							addChangeEntry(new ChangeEntry<String>(
+									itemText.getCCTEXTIDENTIFIER(), "",
+									"Kopftext: {0}, '<style forecolor=\"#ff0000\" isBold=\"true\">" + itemText.getCCTEXTVALUE() + "</style>'")) ;
+						}
+					}
+					createPositionsForChangeEntries(auftragDto) ;
+				}
 				
 				auftragDto.setDLiefertermin(getEarliestDeliveryTime()) ;
 				auftragDto.setDFinaltermin(getLatestDeliveryTime()) ;
@@ -1082,6 +1200,7 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 	class ArtikelFinder17632 implements ArtikelFinder {
 
 		private XMLXMLORDERRESPONSEITEM xmlItem ;
+		private String usedItemCnr;
 		
 		public ArtikelFinder17632(XMLXMLORDERRESPONSEITEM convertedItem) {
 			xmlItem = convertedItem ;
@@ -1090,17 +1209,265 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 		private XMLXMLORDERRESPONSEITEM getXmlItem() {
 			return xmlItem ;
 		}
+
+		public String getUsedItemCnr() {
+			return usedItemCnr;
+		}
+		
+		private String mapItemCnrEP(String fremdsystemnr,
+				String value, KundeDto kundeDto) {
+			if(value.startsWith("Y")) {
+				return fremdsystemnr + value.substring(1);
+			}
+
+			return null;
+		}
+	
+		private String mapItemCnrPA(String fremdsystemnr, 
+				String value, KundeDto kundeDto) {
+			// keine "-", " " im Suchstring. Datenbanksuche sucht ohne "-"
+//			return (fremdsystemnr + value).replace("-", "").replace(" ", "");
+			return fremdsystemnr + value;
+		}
+
+		private ArtikelDto findRevisionedItem(List<Artikel> items,
+				String prefix, String itemCnr, String indexNr) {
+			ArtikelDto itemDto = null;
+			String probedRevisions = "";
+			List<Artikel> probedItems = new ArrayList<Artikel>();
+			for (Artikel item : items) {
+				if(!item.getCNr().startsWith(prefix)) {
+					// falsch positiv wegen "PAHBS" (als HV Artikel) vs "PA-HBS"
+					continue;
+				}
+				
+				if(Helper.isTrue(item.getBVersteckt())) {
+					continue;
+				}
+
+				if(probedItems.size() > 0) {
+					probedRevisions += ", " ;
+				}
+				probedRevisions += emptyString(item.getCRevision());
+
+				probedItems.add(item);
+								
+				if(emptyString(item.getCRevision()).equals(indexNr)) {
+					itemDto = getArtikelFac().artikelFindByPrimaryKey(
+							item.getIId(), getAuthController().getWebClientDto());				
+					ChangeEntry<?> changeEntry = new ChangeEntry<String>(
+							itemCnr, itemDto.getCNr(), "ACHTUNG! Der Artikel '" + itemDto.getCNr() + 
+								"' wurde als {0} angefordert/bestellt.");
+					addChangeEntry(changeEntry);
+					break ;
+				}
+			}
+	
+			if(itemDto == null && probedItems.size() > 0) {
+				itemDto = getArtikelFac().artikelFindByPrimaryKey(
+						probedItems.get(0).getIId(), getAuthController().getWebClientDto()) ;
+				ChangeEntry<?> changeEntry = new ChangeEntry<String>(
+						itemCnr, itemDto.getCNr(), "ACHTUNG! Der Artikel '" + itemDto.getCNr() + 
+							"' wurde als {0} angefordert/bestellt.");
+				addChangeEntry(changeEntry);
+				changeEntry = new ChangeEntry<String>(
+						indexNr, probedRevisions, "ACHTUNG! Der Artikel '" + itemDto.getCNr() + 
+							"' wurde mit Index {0} angefordert, aber nur mit Revision(en) {1} gefunden.") ;
+				addChangeEntry(changeEntry) ;					
+			}
+
+			return itemDto;
+		}
+		
+		
+		private ArtikelDto findInexactItem(String prefix, String mappedItemCnr, String itemCnr, String indexNr, String mandantCnr) {
+			if (getMandantFac().hatZusatzfunktionZentralerArtikelstamm(
+					getAuthController().getWebClientDto())) {
+				mandantCnr = getSystemFac().getHauptmandant();
+			}
+
+			String searchItemCnr = mappedItemCnr.replace("-", "").replace(" ", "");
+			List<Artikel> items = ArtikelQuery.listArtikelnrSP8207(em, searchItemCnr, mandantCnr);
+			ArtikelDto itemDto = findRevisionedItem(items, prefix, itemCnr, indexNr);
+
+			return itemDto;
+		}
+	
+		private ArtikelDto findEPArtikel(String itemCnr, KundeDto kundeDto, String indexNr) throws RemoteException {
+			String mappedItemCnr = mapItemCnrEP("EP-", itemCnr, kundeDto);
+			if(mappedItemCnr == null) return null;
+		
+			ArtikelDto itemDto = findInexactItem("EP-", mappedItemCnr,
+					itemCnr, indexNr, kundeDto.getMandantCNr());
+/*			
+			ArtikelDto itemDto = getArtikelFac().artikelFindByCNrOhneExc(
+					mappedItemCnr, getAuthController().getWebClientDto());
+*/	
+			if(itemDto != null && Helper.isTrue(itemDto.getBVersteckt())) {
+				// Versteckter Artikel soll letztendlich Handeingabe werden
+				myLogger.warn("Der angeforderte Artikel '" + itemCnr + "' -> '" +
+						mappedItemCnr + "' ist versteckt (-> Handeingabe).");
+				return null;
+			}
+		
+			return itemDto;
+		}
+	
+			
+		private ArtikelDto findPAArtikel(String itemCnr, KundeDto kundeDto, String indexNr) {
+			String mappedItemCnr = mapItemCnrPA("PA-", itemCnr, kundeDto);
+			
+			ArtikelDto itemDto = findInexactItem("PA-", mappedItemCnr,
+					itemCnr, indexNr, kundeDto.getMandantCNr());
+/*			
+			String mandantCnr = kundeDto.getMandantCNr();
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					getAuthController().getWebClientDto())) {
+				mandantCnr = getSystemFac().getHauptmandant();
+			}
+
+			List<Artikel> items = ArtikelQuery.listArtikelnrSP8207(em, mappedItemCnr, mandantCnr);
+			ArtikelDto itemDto = null;
+			String probedRevisions = "";
+			for (Artikel item : items) {
+				if(!item.getCNr().startsWith("PA-")) {
+					// falsch positiv wegen "PAHBS" (als HV Artikel) vs "PA-HBS"
+					continue;
+				}
+				
+				if(Helper.isTrue(item.getBVersteckt())) {
+					continue;
+				}
+				
+				if(probedRevisions.length() > 0) {
+					probedRevisions += ", " ;
+				}
+
+				probedRevisions += emptyString(item.getCRevision());
+				if(emptyString(item.getCRevision()).equals(indexNr)) {
+					itemDto = getArtikelFac().artikelFindByPrimaryKey(
+							item.getIId(), getAuthController().getWebClientDto());				
+					ChangeEntry<?> changeEntry = new ChangeEntry<String>(
+							itemCnr, itemDto.getCNr(), "ACHTUNG! Der Artikel '" + itemDto.getCNr() + 
+								"' wurde als {0} angefordert.");
+					addChangeEntry(changeEntry);
+					break ;
+				}
+			}
+
+			if(itemDto == null && items.size() > 0) {
+				itemDto = getArtikelFac().artikelFindByPrimaryKey(
+						items.get(0).getIId(), getAuthController().getWebClientDto()) ;
+				ChangeEntry<?> changeEntry = new ChangeEntry<String>(
+						itemCnr, itemDto.getCNr(), "ACHTUNG! Der Artikel '" + itemDto.getCNr() + 
+							"' wurde als {0} angefordert.");
+				addChangeEntry(changeEntry);
+				changeEntry = new ChangeEntry<String>(
+						indexNr, probedRevisions, "ACHTUNG! Der Artikel '" + itemDto.getCNr() + 
+							"' wurde mit Index {0} angefordert, aber nur mit Revision(en) {1} gefunden.") ;
+				addChangeEntry(changeEntry) ;					
+			}
+*/
+			return itemDto;
+		}
+		
+		private ArtikelDto findMappedArtikel(String itemCnr, String indexNr, KundeDto kundeDto) throws RemoteException {
+			ArtikelDto itemDto = null;
+			String fremdsystemNr = emptyString(kundeDto.getCFremdsystemnr());
+			
+			if(itemDto == null && fremdsystemNr.contains("EP-")) {
+				myLogger.info("Beruecksichtige " + fremdsystemNr + ", Variante EP- bei der Artikelsuche");
+				itemDto = findEPArtikel(itemCnr, kundeDto, indexNr);				
+			}
+			
+			if(itemDto == null && fremdsystemNr.contains("PA-")) {
+				myLogger.info("Beruecksichtige " + fremdsystemNr + ", Variante PA- bei der Artikelsuche");
+				itemDto = findPAArtikel(itemCnr, kundeDto, indexNr);				
+			}
+			
+			if(itemDto != null) {
+				ArtikelsperrenDto sperrenDtos[] = getArtikelFac()
+						.artikelsperrenFindByArtikelIId(itemDto.getIId()) ;
+				if(sperrenDtos != null && sperrenDtos.length > 0) {
+					myLogger.warn("Der angeforderte Artikel '" +
+							itemCnr + "' -> '" + itemDto.getCNr() + "' ist gesperrt (-> Handeingabe).");							
+					return null;
+				}					
+			}
+
+/*
+			if("EP-".equals(fremdsystemNr) || "EP-PA-".equals(fremdsystemNr) || "PA-".equals(fremdsystemNr)) {
+				myLogger.info("Beruecksichtige " + fremdsystemNr + " bei der Artikelsuche");
+				
+				if(fremdsystemNr.startsWith("EP-")) {
+					itemDto = findEPArtikel(itemCnr, kundeDto, indexNr);					
+				}
+				
+				if(itemDto == null && ("EP-PA-".equals(fremdsystemNr) || "PA-".equals(fremdsystemNr))) {
+					itemDto = findPAArtikel(itemCnr, kundeDto, indexNr);
+				}
+
+				if(itemDto != null) {
+					ArtikelsperrenDto sperrenDtos[] = getArtikelFac()
+							.artikelsperrenFindByArtikelIId(itemDto.getIId()) ;
+					if(sperrenDtos != null && sperrenDtos.length > 0) {
+						myLogger.warn("Der angeforderte Artikel '" +
+								itemDto.getCNr() + "' ist gesperrt (-> Handeingabe).");
+						return null;
+					}					
+				}
+			}
+*/
+
+/*			
+			if("EP-".equals(kundeDto.getCFremdsystemnr())) {
+				String mappedItemCnr = mapItemCnrEP(itemCnr, kundeDto);
+				itemDto = getArtikelFac().artikelFindByCNrOhneExc(
+						mappedItemCnr, getAuthController().getWebClientDto());
+				if(itemDto != null && Helper.isTrue(itemDto.getBVersteckt())) {
+					// Versteckter Artikel soll letztendlich Handeingabe werden
+					myLogger.warn("Der angeforderte Artikel '" + itemCnr + "' -> '" +
+							mappedItemCnr + "' ist versteckt (-> Handeingabe).");
+					return null;
+				}
+
+				if(itemDto != null) {
+					ArtikelsperrenDto sperrenDtos[] = getArtikelFac()
+							.artikelsperrenFindByArtikelIId(itemDto.getIId()) ;
+					if(sperrenDtos != null && sperrenDtos.length > 0) {
+						myLogger.warn("Der angeforderte Artikel '" +
+								itemDto.getCNr() + "' ist gesperrt (-> Handeingabe).");
+						return null;
+					}					
+				}
+			}
+*/
+			
+			if(itemDto == null) {
+				itemDto = getArtikelFac().artikelFindByCNrOhneExc(
+						itemCnr, getAuthController().getWebClientDto());				
+			}
+			
+			return itemDto;
+		}
 		
 		@Override
 		public ArtikelDto findArtikel(KundeDto kundeDto, AuftragDto auftragDto) {
 //			if(isEmptyString(getXmlItem().getCCDRAWINGNR())) return null ;
 
 			String itemCnr = "" ;
+			boolean hasBuyerAid = false;
 			
 			// Mit der Buyer_AID versuchen
-			List<XMLXMLBUYERAID> xmlBuyerIds= getXmlItem().getARTICLEID().getBUYERAID() ;
+			List<XMLXMLBUYERAID> xmlBuyerIds= getXmlItem().getARTICLEID().getBUYERAID();
 			if(xmlBuyerIds != null && xmlBuyerIds.size() > 0) {
 				itemCnr = xmlBuyerIds.get(0).getValue() ;
+				hasBuyerAid = true;
+			}
+
+			if(isEmptyString(itemCnr)) {
+				itemCnr = emptyString(getXmlItem().getARTICLEID().getDESCRIPTIONSHORT());
 			}
 
 			if(isEmptyString(itemCnr)) {
@@ -1149,15 +1516,31 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			} 
 			
 			try {
+				if(itemDto == null && hasBuyerAid) {
+					String supplierItemCnr = getXmlItem().getARTICLEID().getSUPPLIERAID();
+					if(!Helper.isStringEmpty(supplierItemCnr)) {
+						itemDto = getArtikelFac().artikelFindByCNrOhneExc(
+								supplierItemCnr, getAuthController().getWebClientDto());
+						if(itemDto != null) {
+							ChangeEntry<?> changeEntry = new ChangeEntry<String>(
+									itemCnr, supplierItemCnr, "ACHTUNG! Der Artikel {0} wurde mittels Lieferantenartikelnummer {1} gefunden.") ;
+							addChangeEntry(changeEntry) ;							
+						}
+					}
+				}
+				
 				if(itemDto == null) {
-					itemDto = getArtikelFac().artikelFindByCNrOhneExc(itemCnr, getAuthController().getWebClientDto()) ;
+					itemDto = findMappedArtikel(itemCnr, indexNr, kundeDto);					
 				}
 				
 				if(itemDto != null && indexNr.length() > 0) {
 					if(!indexNr.equals(itemDto.getCRevision())) {
+						String baseMsg = "ACHTUNG! Der Artikel '" + itemCnr + "' wurde mit Index {0} angefordert, ";
+						String msg = isEmptyString(itemDto.getCRevision()) 
+								? (baseMsg + "hat aber keine Revision.")
+								: (baseMsg + "aber mit Revision {1} gefunden.");
 						ChangeEntry<?> changeEntry = new ChangeEntry<String>(
-								indexNr, itemDto.getCRevision(), "ACHTUNG! Der Artikel '" + itemCnr + 
-									"' wurde mit Index {0} angefordert, aber mit Revision {1} gefunden.") ;
+								indexNr, itemDto.getCRevision(), msg) ;
 						addChangeEntry(changeEntry) ;					
 					}
 				}
@@ -1198,6 +1581,7 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 				addChangeEntry(changedEntry);
 			}
 			
+			usedItemCnr = itemCnr;
 			return itemDto ;
 		}
 	}	

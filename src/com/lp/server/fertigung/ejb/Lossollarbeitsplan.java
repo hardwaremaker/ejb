@@ -38,19 +38,25 @@ import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
-@NamedQueries( {
+import com.lp.server.artikel.ejb.Artikel;
+
+@NamedQueries({
 		@NamedQuery(name = "LossollarbeitsplanfindByLosIId", query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 ORDER BY o.iArbeitsgangnummer ASC,o.iUnterarbeitsgang ASC"),
 		@NamedQuery(name = "LossollarbeitsplanfindByLossollmaterialIId", query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.lossollmaterialIId=?1"),
-		@NamedQuery(name = "LossollarbeitsplanfindByLosIIdIArbeitsgangnummer", query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 AND o.iArbeitsgangnummer=?2 ORDER BY o.iUnterarbeitsgang"),
+		@NamedQuery(name = LossollarbeitsplanQuery.ByLosIIdIArbeitsgangnummer, query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 AND o.iArbeitsgangnummer=?2 ORDER BY o.iUnterarbeitsgang"),
 		@NamedQuery(name = "LossollarbeitsplanfindByLosIIdIArbeitsgangnummerNaechsterHauptarbeitsgang", query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 AND o.iArbeitsgangnummer>?2 ORDER BY o.iArbeitsgangnummer,o.iUnterarbeitsgang"),
-		@NamedQuery(name = "LossollarbeitsplanfindByLosIIdIArbeitsgangnummerIUnterarbeitsgang", query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 AND o.iArbeitsgangnummer=?2 AND o.iUnterarbeitsgang=?3"),
+		@NamedQuery(name = LossollarbeitsplanQuery.ByLosIIdIArbeitsgangnummerIUnterarbeitsgang, query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 AND o.iArbeitsgangnummer=?2 AND o.iUnterarbeitsgang=?3"),
 		@NamedQuery(name = "LossollarbeitsplanejbSelectNextReihung", query = "SELECT MAX (arbeitsplan.iArbeitsgangnummer) FROM Lossollarbeitsplan AS arbeitsplan WHERE arbeitsplan.losIId = ?1"),
-		@NamedQuery(name = "LossollarbeitsplanfindByLosIIdArtikelIIdTaetigkeit", query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 AND o.artikelIIdTaetigkeit=?2 ORDER BY o.iArbeitsgangnummer ASC") })
+		@NamedQuery(name = "LossollarbeitsplanfindByLosIIdArtikelIIdTaetigkeit", query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o WHERE o.losIId=?1 AND o.artikelIIdTaetigkeit=?2 ORDER BY o.iArbeitsgangnummer ASC"),
+		@NamedQuery(name = LossollarbeitsplanQuery.ByLosIIdArtklaIIds, query = "SELECT OBJECT(o) FROM Lossollarbeitsplan o LEFT JOIN o.artikelTaetigkeit a WHERE o.losIId=:losId AND a.artklaIId IN (:artklaIds) ORDER BY o.iArbeitsgangnummer ASC,o.iUnterarbeitsgang ASC") })
 @Entity
 @Table(name = "FERT_LOSSOLLARBEITSPLAN")
 public class Lossollarbeitsplan implements Serializable {
@@ -69,19 +75,38 @@ public class Lossollarbeitsplan implements Serializable {
 
 	@Column(name = "I_ARBEITSGANGNUMMER")
 	private Integer iArbeitsgangnummer;
-	
+
 	@Column(name = "I_UNTERARBEITSGANG")
 	private Integer iUnterarbeitsgang;
 
 	@Column(name = "I_MASCHINENVERSATZTAGE")
 	private Integer iMaschinenversatztage;
-	
+
+	@Column(name = "I_MASCHINENVERSATZTAGE_AUS_STUECKLISTE")
+	private Integer iMaschinenversatztageAusStueckliste;
+
+	public Integer getIMaschinenversatztageAusStueckliste() {
+		return iMaschinenversatztageAusStueckliste;
+	}
+
+	public void setIMaschinenversatztageAusStueckliste(Integer iMaschinenversatztageAusStueckliste) {
+		this.iMaschinenversatztageAusStueckliste = iMaschinenversatztageAusStueckliste;
+	}
+
 	@Column(name = "I_MASCHINENVERSATZ_MS")
 	private Integer iMaschinenversatzMs;
-	
-	
-	
-	
+
+	@Column(name = "N_PPM")
+	private BigDecimal nPpm;
+
+	public BigDecimal getNPpm() {
+		return nPpm;
+	}
+
+	public void setNPpm(BigDecimal nPpm) {
+		this.nPpm = nPpm;
+	}
+
 	public Integer getIMaschinenversatzMs() {
 		return iMaschinenversatzMs;
 	}
@@ -90,9 +115,31 @@ public class Lossollarbeitsplan implements Serializable {
 		this.iMaschinenversatzMs = iMaschinenversatzMs;
 	}
 
+	@Column(name = "APKOMMENTAR_I_ID")
+	private Integer apkommentarIId;
+
+	public Integer getApkommentarIId() {
+		return apkommentarIId;
+	}
+
+	public void setApkommentarIId(Integer apkommentarIId) {
+		this.apkommentarIId = apkommentarIId;
+	}
+
+	@Column(name = "F_FORTSCHRITT")
+	private Double fFortschritt;
+
+	public Double getFFortschritt() {
+		return fFortschritt;
+	}
+
+	public void setFFortschritt(Double fFortschritt) {
+		this.fFortschritt = fFortschritt;
+	}
+
 	@Column(name = "LOSSOLLMATERIAL_I_ID")
 	private Integer lossollmaterialIId;
-	
+
 	public Integer getLossollmaterialIId() {
 		return lossollmaterialIId;
 	}
@@ -125,10 +172,10 @@ public class Lossollarbeitsplan implements Serializable {
 
 	@Column(name = "C_KOMENTAR")
 	private String cKomentar;
-	
+
 	@Column(name = "AGART_C_NR")
 	private String agartCNr;
-	
+
 	@Column(name = "I_AUFSPANNUNG")
 	private Integer iAufspannung;
 
@@ -148,6 +195,18 @@ public class Lossollarbeitsplan implements Serializable {
 		iAufspannung = aufspannung;
 	}
 
+	
+	@Column(name = "I_REIHUNG")
+	private Integer iReihung;
+	
+	public Integer getIReihung() {
+		return iReihung;
+	}
+
+	public void setIReihung(Integer iReihung) {
+		this.iReihung = iReihung;
+	}
+
 	@Column(name = "B_NACHTRAEGLICH")
 	private Short bNachtraeglich;
 
@@ -156,13 +215,10 @@ public class Lossollarbeitsplan implements Serializable {
 
 	@Column(name = "B_AUTOENDEBEIGEHT")
 	private Short bAutoendebeigeht;
-	
+
 	@Column(name = "B_NURMASCHINENZEIT")
 	private Short bNurmaschinenzeit;
 
-	
-	
-	
 	public Short getBNurmaschinenzeit() {
 		return bNurmaschinenzeit;
 	}
@@ -199,7 +255,6 @@ public class Lossollarbeitsplan implements Serializable {
 	@Column(name = "PERSONAL_I_ID_ZUGEORDNETER")
 	private Integer personalIIdZugeordneter;
 
-	
 	public Integer getPersonalIIdZugeordneter() {
 		return personalIIdZugeordneter;
 	}
@@ -208,8 +263,48 @@ public class Lossollarbeitsplan implements Serializable {
 		this.personalIIdZugeordneter = personalIIdZugeordneter;
 	}
 
+
+
 	@Column(name = "ARTIKEL_I_ID_TAETIGKEIT")
 	private Integer artikelIIdTaetigkeit;
+
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "ARTIKEL_I_ID_TAETIGKEIT", referencedColumnName = "I_ID", insertable = false, updatable = false)
+	private Artikel artikelTaetigkeit;
+	
+	@Column(name = "T_AGBEGINN_BERECHNET")
+	private Timestamp  tAgbeginnBerechnet;
+	
+	
+	public Timestamp getTAgbeginnBerechnet() {
+		return tAgbeginnBerechnet;
+	}
+
+	public void setTAgbeginnBerechnet(Timestamp tAgbeginnBerechnet) {
+		this.tAgbeginnBerechnet = tAgbeginnBerechnet;
+	}
+	
+	
+	@Column(name = "T_FERTIG")
+	private Timestamp  tFertig;
+	@Column(name = "PERSONAL_I_ID_FERTIG")
+	private Integer personalIIdFertig;
+	
+	public Timestamp getTFertig() {
+		return tFertig;
+	}
+
+	public void setTFertig(Timestamp tFertig) {
+		this.tFertig = tFertig;
+	}
+
+	public Integer getPersonalIIdFertig() {
+		return personalIIdFertig;
+	}
+
+	public void setPersonalIIdFertig(Integer personalIIdFertig) {
+		this.personalIIdFertig = personalIIdFertig;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -217,31 +312,29 @@ public class Lossollarbeitsplan implements Serializable {
 		super();
 	}
 
-	public Lossollarbeitsplan(Integer id,
-			Integer losIId,
-			Integer artikelIIdTaetigkeit2,
-			Long ruestzeit,
-			Long stueckzeit,
-			BigDecimal gesamtzeit,
-			Integer arbeitsgangnummer,
-			Integer personalIIdAendern2,
-			Short nachtraeglich,Short bFertig,Short autoendebeigeht,Short bNurmaschinenzeit) {
+	public Lossollarbeitsplan(Integer id, Integer losIId,
+			Integer artikelIIdTaetigkeit2, Long ruestzeit, Long stueckzeit,
+			BigDecimal gesamtzeit, Integer arbeitsgangnummer,
+			Integer personalIIdAendern2, Short nachtraeglich, Short bFertig,
+			Short autoendebeigeht, Short bNurmaschinenzeit, Integer iReihung) {
 		setIId(id);
-	    setLosIId(losIId);
-	    setArtikelIIdTaetigkeit(artikelIIdTaetigkeit2);
-	    setNGesamtzeit(gesamtzeit);
-	    setIArbeitsgangnummer(arbeitsgangnummer);
-	    setPersonalIIdAendern(personalIIdAendern2);
-	    setBNachtraeglich(nachtraeglich);
-	    // Setzen der NOT NULL felder
-	    Timestamp now = new Timestamp(System.currentTimeMillis());
-	    this.setTAendern(now);
-	    setLRuestzeit(ruestzeit);
-	    setLStueckzeit(stueckzeit);
-	    setBFertig(bFertig);
-	    setBAutoendebeigeht(autoendebeigeht);
-	    setBNurmaschinenzeit(bNurmaschinenzeit);
-	  
+		setLosIId(losIId);
+		setArtikelIIdTaetigkeit(artikelIIdTaetigkeit2);
+		setNGesamtzeit(gesamtzeit);
+		setIArbeitsgangnummer(arbeitsgangnummer);
+		setPersonalIIdAendern(personalIIdAendern2);
+		setBNachtraeglich(nachtraeglich);
+		// Setzen der NOT NULL felder
+		Timestamp now = new Timestamp(System.currentTimeMillis());
+		this.setTAendern(now);
+		setLRuestzeit(ruestzeit);
+		setLStueckzeit(stueckzeit);
+		setBFertig(bFertig);
+		setBAutoendebeigeht(autoendebeigeht);
+		setBNurmaschinenzeit(bNurmaschinenzeit);
+		setIReihung(iReihung);
+		
+
 	}
 
 	public Integer getIId() {

@@ -34,6 +34,7 @@ package com.lp.server.angebot.fastlanereader;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -44,19 +45,17 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
 import com.lp.server.angebot.fastlanereader.generated.FLRAngebotposition;
 import com.lp.server.angebot.service.AngebotDto;
 import com.lp.server.angebot.service.AngebotpositionDto;
 import com.lp.server.angebot.service.AngebotpositionFac;
-import com.lp.server.auftrag.fastlanereader.FLRAuftragPositionNumberAdapter;
-import com.lp.server.auftrag.fastlanereader.generated.FLRPositionenSichtAuftrag;
 import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
-import com.lp.server.system.jcr.service.JCRDocFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeAgPosition;
-import com.lp.server.system.jcr.service.docnode.DocNodeAngebot;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.Facade;
@@ -97,7 +96,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_ANGEBOTPOSITION = "flrangebotposition.";
-	public static final String FLR_ANGEBOTPOSITION_FROM_CLAUSE = " from FLRAngebotposition flrangebotposition ";
+	public static final String FLR_ANGEBOTPOSITION_FROM_CLAUSE = " from FLRAngebotposition flrangebotposition LEFT OUTER JOIN flrangebotposition.flrartikel flrartikel";
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -112,16 +111,35 @@ public class AngebotpositionHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			// myLogger.info("HQL: " + queryString);
 			Query query = session.createQuery(queryString);
 
-			List<FLRAngebotposition> resultFLrs = query.list() ; // ja, ich will alle(!) Datensaetze haben
+			List<Object[]> resultFLrs = query.list(); // ja, ich will
+																// alle(!)
+																// Datensaetze
+																// haben
+
+			// SP4186 ohne Kalkulatorische Artikel
+			List<FLRAngebotposition> resultFLrsPosnr = new ArrayList<FLRAngebotposition>();
+			Iterator it = resultFLrs.iterator();
+			while (it.hasNext()) {
+				Object[] o = (Object[])it.next();
+				FLRAngebotposition flr = (FLRAngebotposition) o[0];
+
+				// SP4186
+				if (flr.getFlrartikel() != null && Helper.short2boolean(flr.getFlrartikel().getB_kalkulatorisch())) {
+					continue;
+				}
+
+				resultFLrsPosnr.add(flr);
+
+			}
+
 			PositionNumberAdapter adapter = new FLRAngebotpositionNumberAdapter(
-					(List<FLRAngebotposition>) resultFLrs) ;
-			PositionNumberHandlerPaged numberHandler = new PositionNumberHandlerPaged(adapter) ;
-			
+					(List<FLRAngebotposition>) resultFLrsPosnr);
+			PositionNumberHandlerPaged numberHandler = new PositionNumberHandlerPaged(adapter);
+
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
 			List<?> resultList = query.list();
@@ -131,82 +149,81 @@ public class AngebotpositionHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 
-			int iNachkommastellenMenge = getMandantFac()
-					.getNachkommastellenMenge(mandantCNr);
-			int iNachkommastellenPreis = getMandantFac()
-					.getNachkommastellenPreisVK(mandantCNr);
-			
-			// darf Preise sehen.
-			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
-					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF, theClientDto);
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(mandantCNr);
 
+			// darf Preise sehen.
+			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF,
+					theClientDto);
 
 			while (resultListIterator.hasNext()) {
-				FLRAngebotposition position = (FLRAngebotposition) resultListIterator
-						.next();
-				rows[row][col++] = position.getI_id();
-//				rows[row][col++] = getAngebotpositionFac().getPositionNummer(position.getI_id());
-				rows[row][col++] = numberHandler.getPositionNummer(position.getI_id(), adapter);
-				String cAlternative = null;
+				Object[] o = (Object[]) resultListIterator.next();
+				FLRAngebotposition position = (FLRAngebotposition) o[0];
 
+				
+				
+				Object[] rowToAddCandidate = new Object[colCount];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")] = position.getI_id();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.nr")] = numberHandler.getPositionNummer(position.getI_id(), adapter);
+				rowToAddCandidate[getTableColumnInformation()
+						.getViewIndex("lp.menge")] = getUIObjectBigDecimalNachkommastellen(position.getN_menge(), iNachkommastellenMenge);
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.einheit")] =  position.getEinheit_c_nr() == null ? "" : position.getEinheit_c_nr().trim();
 				if (Helper.short2boolean(position.getB_alternative())) {
-					cAlternative = AngebotpositionFac.ANGEBOTPOSITION_ALTERNATIVE_SHORT;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("alternative")] = AngebotpositionFac.ANGEBOTPOSITION_ALTERNATIVE_SHORT;
 				}
-
-				rows[row][col++] = cAlternative;
-				rows[row][col++] = getUIObjectBigDecimalNachkommastellen(
-						position.getN_menge(), iNachkommastellenMenge);
-
-				rows[row][col++] = position.getEinheit_c_nr() == null ? ""
-						: position.getEinheit_c_nr().trim();
-
-				String sIdentnummer = "";
 				if (position.getFlrartikel() != null) {
-					sIdentnummer = position.getFlrartikel().getC_nr();
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.ident")] = position.getFlrartikel()
+							.getC_nr();
+					if (bReferenznummerInPositionen) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.referenznummer")] = position.getFlrartikel()
+								.getC_referenznr();
+
+					}
+
 				}
-				rows[row][col++] = sIdentnummer;
+
+				
+				
+				
+				
+				
+				
+				
+			
 				// in der Spalte Bezeichnung koennen verschiedene Dinge stehen
 				String sBezeichnung = null;
 
 				if (position.getTyp_c_nr() == null) {
-					if (position.getPositionart_c_nr().equals(
-							LocaleFac.POSITIONSART_TEXTEINGABE)) {
-						if (position.getX_textinhalt() != null
-								&& position.getX_textinhalt().length() > 0) {
-							sBezeichnung = Helper.strippHTML(position
-									.getX_textinhalt());
+					if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_TEXTEINGABE)) {
+						if (position.getX_textinhalt() != null && position.getX_textinhalt().length() > 0) {
+							sBezeichnung = Helper.strippHTML(position.getX_textinhalt());
 						}
-					} else if (position.getPositionart_c_nr().equals(
-							LocaleFac.POSITIONSART_SEITENUMBRUCH)) {
-						sBezeichnung = "["
-								+ getTextRespectUISpr("lp.seitenumbruch",
-										mandantCNr, locUI) + "]";
-					} else if (position.getPositionart_c_nr().equals(
-							LocaleFac.POSITIONSART_ENDSUMME)) {
-						sBezeichnung = "["
-								+ getTextRespectUISpr("lp.endsumme",
-										mandantCNr, locUI) + "]";
-					} else if (position.getPositionart_c_nr().equals(
-							LocaleFac.POSITIONSART_POSITION)) {
-						sBezeichnung = getTextRespectUISpr("lp.position",
-								mandantCNr, locUI)
-								+ " " + position.getC_bez();
-					} else if (position.getPositionart_c_nr().equals(
-							LocaleFac.POSITIONSART_TEXTBAUSTEIN)) {
+					} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_SEITENUMBRUCH)) {
+						sBezeichnung = "[" + getTextRespectUISpr("lp.seitenumbruch", mandantCNr, locUI) + "]";
+					} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_ENDSUMME)) {
+						sBezeichnung = "[" + getTextRespectUISpr("lp.endsumme", mandantCNr, locUI) + "]";
+					} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_POSITION)) {
+						sBezeichnung = getTextRespectUISpr("lp.position", mandantCNr, locUI) + " "
+								+ position.getC_bez();
+					} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_TEXTBAUSTEIN)) {
 						sBezeichnung = position.getFlrmediastandard().getC_nr();
-					} else if (position.getPositionart_c_nr().equals(
-							LocaleFac.POSITIONSART_IDENT)) {
+					} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_AGSTUECKLISTE)) {
+						sBezeichnung = position.getFlragstkl().getC_bez();
+						if (bReferenznummerInPositionen) {
+							rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.referenznummer")] = position.getFlragstkl()
+									.getC_zeichnungsnummer();
+
+						}
+					} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)) {
 						// die sprachabhaengig Artikelbezeichnung anzeigen
-						sBezeichnung = getArtikelFac()
-								.formatArtikelbezeichnungEinzeiligOhneExc(
-										position.getFlrartikel().getI_id(),
-										theClientDto.getLocUi());
+						sBezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExcUebersteuert(
+								position.getFlrartikel().getI_id(), theClientDto.getLocUi(),position.getC_bez(),position.getC_zbez());
 					} else if (position.getPositionart_c_nr()
 							.equals(LocaleFac.POSITIONSART_INTELLIGENTE_ZWISCHENSUMME)) {
-						sBezeichnung = "["
-								+ getTextRespectUISpr("angebot.intelligentezwischensumme",
-										mandantCNr, locUI) + "] " 
-								+ position.getC_bez() ;
+						sBezeichnung = "[" + getTextRespectUISpr("angebot.intelligentezwischensumme", mandantCNr, locUI)
+								+ "] " + Helper.emptyString(position.getC_bez());
 					} else {
 						// die restlichen Positionsarten
 						if (position.getC_bez() != null) {
@@ -215,105 +232,59 @@ public class AngebotpositionHandler extends UseCaseHandler {
 					}
 				} else {
 					if (position.getPosition_i_id() == null) {
-						if (position.getPositionart_c_nr().equals(
-								LocaleFac.POSITIONSART_POSITION)) {
-							sBezeichnung = getTextRespectUISpr("lp.position",
-									mandantCNr, locUI);
+						if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_POSITION)) {
+							sBezeichnung = getTextRespectUISpr("lp.position", mandantCNr, locUI);
 							if (position.getC_bez() != null) {
-								sBezeichnung = sBezeichnung + " "
-										+ position.getC_bez();
+								sBezeichnung = sBezeichnung + " " + position.getC_bez();
 							}
 						}
 					} else {
-						if (position.getPositionart_c_nr().equals(
-								LocaleFac.POSITIONSART_POSITION)) {
-							if (position.getTyp_c_nr().equals(
-									LocaleFac.POSITIONTYP_EBENE1)) {
-								sBezeichnung = getTextRespectUISpr(
-										"lp.position", mandantCNr, locUI);
+						if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_POSITION)) {
+							if (position.getTyp_c_nr().equals(LocaleFac.POSITIONTYP_EBENE1)) {
+								sBezeichnung = getTextRespectUISpr("lp.position", mandantCNr, locUI);
 							} else {
-								sBezeichnung = "  "
-										+ getTextRespectUISpr("lp.position",
-												mandantCNr, locUI);
+								sBezeichnung = "  " + getTextRespectUISpr("lp.position", mandantCNr, locUI);
 							}
 							if (position.getC_bez() != null) {
-								sBezeichnung = sBezeichnung + " "
-										+ position.getC_bez();
+								sBezeichnung = sBezeichnung + " " + position.getC_bez();
 							}
 						} else {
-							if (position.getPositionart_c_nr().equals(
-									LocaleFac.POSITIONSART_TEXTEINGABE)) {
-								if (position.getTyp_c_nr().equals(
-										LocaleFac.POSITIONTYP_EBENE1)) {
-									if (position.getX_textinhalt() != null
-											&& position.getX_textinhalt()
-													.length() > 0) {
-										sBezeichnung = " "
-												+ Helper.strippHTML(position
-														.getX_textinhalt());
+							if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_TEXTEINGABE)) {
+								if (position.getTyp_c_nr().equals(LocaleFac.POSITIONTYP_EBENE1)) {
+									if (position.getX_textinhalt() != null && position.getX_textinhalt().length() > 0) {
+										sBezeichnung = " " + Helper.strippHTML(position.getX_textinhalt());
 									}
 								}
-							} else if (position.getPositionart_c_nr().equals(
-									LocaleFac.POSITIONSART_SEITENUMBRUCH)) {
-								sBezeichnung = "["
-										+ getTextRespectUISpr(
-												"lp.seitenumbruch", mandantCNr,
-												locUI) + "]";
-							} else if (position.getPositionart_c_nr().equals(
-									LocaleFac.POSITIONSART_ENDSUMME)) {
-								sBezeichnung = "["
-										+ getTextRespectUISpr("lp.endsumme",
-												mandantCNr, locUI) + "]";
-							} else if (position.getPositionart_c_nr().equals(
-									LocaleFac.POSITIONSART_POSITION)) {
-								sBezeichnung = getTextRespectUISpr(
-										"lp.position", mandantCNr, locUI)
-										+ " " + position.getC_bez();
-							} else if (position.getPositionart_c_nr().equals(
-									LocaleFac.POSITIONSART_TEXTBAUSTEIN)) {
-								sBezeichnung = position.getFlrmediastandard()
-										.getC_nr();
-							} else if (position.getPositionart_c_nr().equals(
-									LocaleFac.POSITIONSART_IDENT)) {
-								if (position.getTyp_c_nr().equals(
-										LocaleFac.POSITIONTYP_EBENE1)) {
+							} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_SEITENUMBRUCH)) {
+								sBezeichnung = "[" + getTextRespectUISpr("lp.seitenumbruch", mandantCNr, locUI) + "]";
+							} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_ENDSUMME)) {
+								sBezeichnung = "[" + getTextRespectUISpr("lp.endsumme", mandantCNr, locUI) + "]";
+							} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_POSITION)) {
+								sBezeichnung = getTextRespectUISpr("lp.position", mandantCNr, locUI) + " "
+										+ position.getC_bez();
+							} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_TEXTBAUSTEIN)) {
+								sBezeichnung = position.getFlrmediastandard().getC_nr();
+							} else if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)) {
+								if (position.getTyp_c_nr().equals(LocaleFac.POSITIONTYP_EBENE1)) {
 									// die sprachabhaengig Artikelbezeichnung
 									// anzeigen
-									sBezeichnung = "  "
-											+ getArtikelFac()
-													.formatArtikelbezeichnungEinzeiligOhneExc(
-															position
-																	.getFlrartikel()
-																	.getI_id(),
-																	theClientDto
-																	.getLocUi());
-								} else if (position.getTyp_c_nr().equals(
-										LocaleFac.POSITIONTYP_EBENE2)) {
+									sBezeichnung = "  " + getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+											position.getFlrartikel().getI_id(), theClientDto.getLocUi());
+								} else if (position.getTyp_c_nr().equals(LocaleFac.POSITIONTYP_EBENE2)) {
 									// die sprachabhaengig Artikelbezeichnung
 									// anzeigen
-									sBezeichnung = "    "
-											+ getArtikelFac()
-													.formatArtikelbezeichnungEinzeiligOhneExc(
-															position
-																	.getFlrartikel()
-																	.getI_id(),
-																	theClientDto
-																	.getLocUi());
+									sBezeichnung = "    " + getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+											position.getFlrartikel().getI_id(), theClientDto.getLocUi());
 								}
 							} else {
-								if (position.getPositionart_c_nr().equals(
-										LocaleFac.POSITIONSART_HANDEINGABE)) {
-									if (position.getTyp_c_nr().equals(
-											LocaleFac.POSITIONTYP_EBENE1)) {
+								if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_HANDEINGABE)) {
+									if (position.getTyp_c_nr().equals(LocaleFac.POSITIONTYP_EBENE1)) {
 										if (position.getC_bez() != null) {
-											sBezeichnung = " "
-													+ position.getC_bez();
+											sBezeichnung = " " + position.getC_bez();
 										}
-									} else if (position.getTyp_c_nr().equals(
-											LocaleFac.POSITIONTYP_EBENE2)) {
+									} else if (position.getTyp_c_nr().equals(LocaleFac.POSITIONTYP_EBENE2)) {
 										if (position.getC_bez() != null) {
-											sBezeichnung = "  "
-													+ position.getC_bez();
+											sBezeichnung = "  " + position.getC_bez();
 										}
 									}
 								}
@@ -322,52 +293,54 @@ public class AngebotpositionHandler extends UseCaseHandler {
 					}
 				}
 
-				rows[row][col++] = sBezeichnung;
-				if (bDarfPreiseSehen) {			
-				BigDecimal bdNettogesamtpreis = null;
-				BigDecimal bdZeilensumme = null;
-				if (position.getPositionart_c_nr().equals(
-						LocaleFac.POSITIONSART_POSITION)) {
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.bezeichnung")] = sBezeichnung;
+				
+				if (bDarfPreiseSehen) {
+					BigDecimal bdNettogesamtpreis = null;
+					BigDecimal bdZeilensumme = null;
+					if (position.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_POSITION)) {
 
-					bdNettogesamtpreis = getUIObjectBigDecimalNachkommastellen(
-							getAngebotpositionFac().getGesamtpreisPosition(
-									position.getI_id(), theClientDto),
-							iNachkommastellenPreis);
-					if(!(bdNettogesamtpreis == null || position.getN_menge() == null)){
-						bdZeilensumme = bdNettogesamtpreis.multiply(position.getN_menge());
-					}
-				} else {
-					bdNettogesamtpreis = getUIObjectBigDecimalNachkommastellen(
-							position.getN_nettogesamtpreis(),
-							iNachkommastellenPreis);
-					if(!(position.getN_nettogesamtpreis() == null || position.getN_menge() == null)){
-						bdZeilensumme = position.getN_nettogesamtpreis().multiply(position.getN_menge());
-						if(position.getFlrverleih()!=null){
-							bdZeilensumme=bdZeilensumme.multiply(new BigDecimal(position.getFlrverleih().getF_faktor()));
+						bdNettogesamtpreis = getUIObjectBigDecimalNachkommastellen(
+								getAngebotpositionFac().getGesamtpreisPosition(position.getI_id(), theClientDto),
+								iNachkommastellenPreis);
+						if (!(bdNettogesamtpreis == null || position.getN_menge() == null)) {
+							bdZeilensumme = bdNettogesamtpreis.multiply(position.getN_menge());
+						}
+					} else {
+						bdNettogesamtpreis = getUIObjectBigDecimalNachkommastellen(position.getN_nettogesamtpreis(),
+								iNachkommastellenPreis);
+						if (!(position.getN_nettogesamtpreis() == null || position.getN_menge() == null)) {
+							bdZeilensumme = position.getN_nettogesamtpreis().multiply(position.getN_menge());
+							if (position.getFlrverleih() != null) {
+								bdZeilensumme = bdZeilensumme
+										.multiply(new BigDecimal(position.getFlrverleih().getF_faktor()));
+							}
 						}
 					}
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.preis")] = bdNettogesamtpreis;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.zeilensumme")] = bdZeilensumme;
 				}
-				rows[row][col++] = bdNettogesamtpreis;
-				rows[row][col++] = bdZeilensumme;
-				}else{
-					rows[row][col++] = null;
-					rows[row][col++] = null;
-				}
-				//Text
-				if(position.getX_textinhalt()  != null && !position.getX_textinhalt().equals("")){
-					rows[row][col++] = new Boolean(true);
+				// Text
+				if (position.getX_textinhalt() != null && !position.getX_textinhalt().equals("")) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.text")] = new Boolean(true);
 					String text = position.getX_textinhalt();
 					text = text.replaceAll("\n", "<br>");
 					text = "<html>" + text + "</html>";
 					tooltipData[row] = text;
-				}else{
-					rows[row][col++] = new Boolean(false);
+				} else {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.text")] = new Boolean(false);
 				}
+				
+				
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.medien.anzahl")] = getBelegartmediaFac()
+						.anzahlDerVorhandenenMedien(getUsecaseId(), position.getI_id(), theClientDto);
+				
+				rows[row] = rowToAddCandidate;
+				
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0,tooltipData);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0, tooltipData);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -386,8 +359,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -400,8 +372,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 				try {
 					session.close();
 				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE,
-							he);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE, he);
 				}
 			}
 		}
@@ -409,8 +380,8 @@ public class AngebotpositionHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -421,8 +392,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -432,8 +402,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_ANGEBOTPOSITION
-							+ filterKriterien[i].kritName);
+					where.append(" " + FLR_ANGEBOTPOSITION + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -459,15 +428,13 @@ public class AngebotpositionHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_ANGEBOTPOSITION
-									+ kriterien[i].kritName);
+							orderBy.append(FLR_ANGEBOTPOSITION + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -480,8 +447,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 				}
 				orderBy.append(FLR_ANGEBOTPOSITION)
 						// poseinfuegen: 0 default Sortierung nach iSort
-						.append(AngebotpositionFac.FLR_ANGEBOTPOSITION_I_SORT)
-						.append(" ASC ");
+						.append(AngebotpositionFac.FLR_ANGEBOTPOSITION_I_SORT).append(" ASC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_ANGEBOTPOSITION + "i_id") < 0) {
@@ -493,8 +459,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_ANGEBOTPOSITION).append("i_id")
-						.append(" ");
+				orderBy.append(" ").append(FLR_ANGEBOTPOSITION).append("i_id").append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -513,8 +478,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 		return FLR_ANGEBOTPOSITION_FROM_CLAUSE;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -526,8 +490,7 @@ public class AngebotpositionHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select " + FLR_ANGEBOTPOSITION + "i_id"
-						+ FLR_ANGEBOTPOSITION_FROM_CLAUSE
+				String queryString = "select " + FLR_ANGEBOTPOSITION + "i_id" + FLR_ANGEBOTPOSITION_FROM_CLAUSE
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -563,130 +526,103 @@ public class AngebotpositionHandler extends UseCaseHandler {
 	}
 
 	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
+	}
+
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 		try {
-			if (super.getTableInfo() == null) {
-				String mandantCNr = theClientDto.getMandant();
 
-				int iNachkommastellenMenge = getMandantFac()
-						.getNachkommastellenMenge(mandantCNr);
-				int iNachkommastellenPreis = getMandantFac()
-						.getNachkommastellenPreisVK(mandantCNr);
+			String mandantCNr = theClientDto.getMandant();
 
-				setTableInfo(new TableInfo(
-						new Class[] {
-								Integer.class,
-								Integer.class,
-								String.class,
-								super
-										.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								String.class,
-								String.class,
-								String.class,
-								super
-										.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-								super
-										.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-								Boolean.class
-										
-						},
-						new String[] {
-								"i_id",
-								getTextRespectUISpr("lp.nr", theClientDto
-										.getMandant(), theClientDto.getLocUi()),			
-								"",
-								getTextRespectUISpr("lp.menge", theClientDto
-										.getMandant(), theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.einheit", theClientDto
-										.getMandant(), theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.ident",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.bezeichnung", theClientDto
-										.getMandant(), theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.preis", theClientDto
-										.getMandant(), theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.zeilensumme", theClientDto
-												.getMandant(), theClientDto.getLocUi()),
-												getTextRespectUISpr(
-														"lp.text", 
-														theClientDto.getMandant(), 
-														theClientDto.getLocUi())	
-												},
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-								QueryParameters.FLR_BREITE_S,
-								// Spalte
-								// wird
-								// ausgeblendet
-								QueryParameters.FLR_BREITE_XXS,
-								getUIBreiteAbhaengigvonNachkommastellen(
-										QueryParameters.MENGE,
-										iNachkommastellenMenge), // Menge
-								QueryParameters.FLR_BREITE_XS,
-								getUIBreiteIdent(), //ident
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
-								// variabel
-								getUIBreiteAbhaengigvonNachkommastellen(
-										QueryParameters.PREIS,
-										iNachkommastellenPreis), // Preis
-								getUIBreiteAbhaengigvonNachkommastellen(
-												QueryParameters.PREIS,
-												iNachkommastellenPreis),
-												3
-						},
-						new String[] {
-								"i_id",
-								Facade.NICHT_SORTIERBAR,
-								Facade.NICHT_SORTIERBAR,
-								AngebotpositionFac.FLR_ANGEBOTPOSITION_N_MENGE,
-								AngebotpositionFac.FLR_ANGEBOTPOSITION_EINHEIT_C_NR,
-								Facade.NICHT_SORTIERBAR,
-								AngebotpositionFac.FLR_ANGEBOTPOSITION_C_BEZ,
-								AngebotpositionFac.FLR_ANGEBOTPOSITION_N_NETTOGESAMTPREIS,
-								Facade.NICHT_SORTIERBAR,
-								Facade.NICHT_SORTIERBAR}));
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(mandantCNr);
+
+			columns.add("i_id", Integer.class,"i_id",
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+
+			columns.add("lp.nr", Integer.class, getTextRespectUISpr("lp.nr", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR);
+			columns.add("alternative", String.class, "", QueryParameters.FLR_BREITE_XXS, Facade.NICHT_SORTIERBAR);
+			columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.menge", mandant, locUi),
+					getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.MENGE, iNachkommastellenMenge),
+					AngebotpositionFac.FLR_ANGEBOTPOSITION_N_MENGE);
+			columns.add("lp.einheit", String.class, getTextRespectUISpr("lp.einheit", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, AngebotpositionFac.FLR_ANGEBOTPOSITION_EINHEIT_C_NR);
+			columns.add("lp.ident", String.class, getTextRespectUISpr("lp.ident", mandant, locUi), getUIBreiteIdent(),
+					AngebotpositionFac.FLR_ANGEBOTPOSITION_FLRARTIKEL + ".c_nr");
+
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM,
+						AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL + ".c_referenznr");
 			}
 
-			return super.getTableInfo();
+			columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, AngebotpositionFac.FLR_ANGEBOTPOSITION_C_BEZ);
+			columns.add("lp.preis", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("lp.preis", mandant, locUi),
+					getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.PREIS, iNachkommastellenPreis),
+					AngebotpositionFac.FLR_ANGEBOTPOSITION_N_NETTOGESAMTPREIS);
+			columns.add("lp.zeilensumme", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("lp.zeilensumme", mandant, locUi),
+					getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.PREIS, iNachkommastellenPreis),
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.text", Boolean.class, getTextRespectUISpr("lp.text", mandant, locUi), 3,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.medien.anzahl", Integer.class, getTextRespectUISpr("lp.medien.anzahl", mandant, locUi), 3,
+					Facade.NICHT_SORTIERBAR);
 		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-			return null;
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
+		return columns;
+
 	}
-	
-	public PrintInfoDto getSDocPathAndPartner(Object key){
+
+	public PrintInfoDto getSDocPathAndPartner(Object key) {
 		AngebotDto angebotDto = null;
 		AngebotpositionDto angebotpositionDto = null;
 		KundeDto kundeDto = null;
 		PartnerDto partnerDto = null;
 		try {
-			angebotpositionDto = getAngebotpositionFac().angebotpositionFindByPrimaryKey((Integer) key,theClientDto);
+			angebotpositionDto = getAngebotpositionFac().angebotpositionFindByPrimaryKey((Integer) key, theClientDto);
 			angebotDto = getAngebotFac().angebotFindByPrimaryKey(angebotpositionDto.getBelegIId(), theClientDto);
 			kundeDto = getKundeFac().kundeFindByPrimaryKey(angebotDto.getKundeIIdAngebotsadresse(), theClientDto);
 			partnerDto = getPartnerFac().partnerFindByPrimaryKey(kundeDto.getPartnerIId(), theClientDto);
 		} catch (Exception e) {
-			//Nicht gefunden
+			// Nicht gefunden
 		}
-		if(angebotDto!=null && angebotpositionDto != null){
-//			String sPath= JCRDocFac.HELIUMV_NODE + "/" + 
-//				LocaleFac.BELEGART_ANGEBOT.trim() + 
-//				"/" +LocaleFac.BELEGART_ANGEBOT.trim()+"/" +
-//				angebotDto.getCNr().replace("/", ".")  + "/" +
-//				"Angebotpositionen/" +
-//				"Position " + angebotpositionDto.getIId();
+		if (angebotDto != null && angebotpositionDto != null) {
+			// String sPath= JCRDocFac.HELIUMV_NODE + "/" +
+			// LocaleFac.BELEGART_ANGEBOT.trim() +
+			// "/" +LocaleFac.BELEGART_ANGEBOT.trim()+"/" +
+			// angebotDto.getCNr().replace("/", ".") + "/" +
+			// "Angebotpositionen/" +
+			// "Position " + angebotpositionDto.getIId();
 			DocPath docPath = new DocPath(new DocNodeAgPosition(angebotpositionDto, angebotDto));
 			Integer iPartnerIId = null;
-			if(partnerDto!=null){
-				iPartnerIId= partnerDto.getIId();
+			if (partnerDto != null) {
+				iPartnerIId = partnerDto.getIId();
 			}
 			return new PrintInfoDto(docPath, iPartnerIId, getSTable());
 		} else {
 			return null;
 		}
 	}
-	
-	public String getSTable(){
+
+	public String getSTable() {
 		return "ANGEBOTSPOSITION";
 	}
 }

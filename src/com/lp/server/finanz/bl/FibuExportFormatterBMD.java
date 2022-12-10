@@ -42,8 +42,13 @@ import java.util.Calendar;
 
 import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuexportDto;
+import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.finanz.service.FinanzReportFac;
+import com.lp.server.finanz.service.FinanzServiceFac;
+import com.lp.server.finanz.service.FinanzServiceFac.ReversechargeArt;
+import com.lp.server.finanz.service.ReversechargeartDto;
 import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.system.ejbfac.HvCreatingCachingProvider;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.LpMailText;
@@ -93,11 +98,11 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 	private final static String P_SKONTO = "skonto";
 	//private final static String P_OPBETRAG = "opbetrag";
 	private final static String P_PERIODE = "periode";
-	//private final static String P_FWKURS = "fwkurs";
-	//private final static String P_FWFAKTOR = "fwfaktor";
-	//private final static String P_FWBETRAG = "fwbetrag";
-	//private final static String P_FWSTEUER = "fwsteuer";
-	//private final static String P_FWSKONTO = "fwskonto";
+	private final static String P_FWKURS = "fwkurs";
+	private final static String P_FWFAKTOR = "fwfaktor";
+	private final static String P_FWBETRAG = "fwbetrag";
+	private final static String P_FWSTEUER = "fwsteuer";
+	private final static String P_FWSKONTO = "fwskonto";
 	//private final static String P_FWOPBETRAG = "fwopbetrag";
 	//private final static String P_LANDKZ = "landkz";
 	//private final static String P_LKZKURS = "lkzkurs";
@@ -120,6 +125,7 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 	//private final static String P_GEGENBUCHKZ = "gegenbuchkz";
 	private final static String P_VERBUCHKZ = "verbuchkz";
 	private final static String P_PARTNER_KBZ = "partkbz";
+	private final static String P_PARTNER_NAME1 = "partname1";
 	
 	// skontopz | skontotage | skontopz2 | skontotage2 | valutadatum">
 
@@ -147,9 +153,40 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 	private final static String BUCOD_SOLL = "1";
 	private final static String BUCOD_HABEN = "2";
 
+	private boolean isNTCS = false;
+	private final static String STEUCOD_NTCS_VORSTEUER = "02";
+	private final static String STEUCOD_NTCS_IST_UMSATZSTEUER = "01";
+	private final static String STEUCOD_NTCS_SOLL_UMSATZSTEUER = "01";
+	private final static String STEUCOD_NTCS_EINKAUF_IG_ERWERB_KEINE_VORSTEUER = "08";
+	private final static String STEUCOD_NTCS_EINKAUF_IG_ERWERB_VORSTEUER = "09";
+	private final static String STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE = "19";
+	
+	private final static String P_WAEHRUNG = "waehrung";
+	
+	//SP8506
+	private final static String STEUCOD_NTCS_IST_UMSATZSTEUER_DRITTLAND = "05";
+	private final static String STEUCOD_NTCS_SOLL_UMSATZSTEUER_DRITTLAND = "05";
+	private final static String STEUCOD_NTCS_IG_LIEFERUNG = "07";
+	private final static String STEUCOD_IG_LIEFERUNG = "07";
+
+	//PJ21967
+	private final static String STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE_Bauleistung_19_1a_ = "29";
+	private final static String STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE_19_1b_ = "23";
+	private final static String STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE_19_1c_ = "26";
+	private final static String STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE_SCHROTT_19_1d = "59";
+	private final ReversechargeartCache reversechargeartCache;
+
 	protected FibuExportFormatterBMD(FibuExportKriterienDto exportKriterienDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		super(exportKriterienDto, theClientDto);
+		reversechargeartCache = new ReversechargeartCache();
+	}
+
+	public FibuExportFormatterBMD(FibuExportKriterienDto exportKriterienDto,
+			TheClientDto theClientDto, boolean isNTCS) {
+		super(exportKriterienDto, theClientDto);
+		this.isNTCS = isNTCS;
+		reversechargeartCache = new ReversechargeartCache();
 	}
 
 	protected String exportiereDaten(FibuexportDto[] fibuExportDtos)
@@ -296,20 +333,59 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 			if (fibuExportDtos[i].getBelegart().equals(FibuExportManager.BELEGART_ER)) {
 				if (bInnerGemeinschaftlich) {
 					if (fibuExportDtos[i].isBReverseCharge())
-						sSteuercode = STEUCOD_EINKAUF_REVERSE_CHARGE;
+						if (isNTCS)
+							// PJ21967
+							sSteuercode = getSteuercodeReverseChargeNTCS(fibuExportDtos[i]);
+						else
+							sSteuercode = STEUCOD_EINKAUF_REVERSE_CHARGE;
 					else
-						sSteuercode = STEUCOD_EINKAUF_IG_ERWERB_VORSTEUER;
+						if (isNTCS)
+							sSteuercode = STEUCOD_NTCS_EINKAUF_IG_ERWERB_VORSTEUER;
+						else
+							sSteuercode = STEUCOD_EINKAUF_IG_ERWERB_VORSTEUER;
 				} else {
-					sSteuercode = STEUCOD_VORSTEUER_ODER_KEINE_STEUER;
+					// PJ21967
+					if (fibuExportDtos[i].isBReverseCharge()) {
+						if (isNTCS) {
+							sSteuercode = getSteuercodeReverseChargeNTCS(fibuExportDtos[i]);
+						} else {
+							sSteuercode = STEUCOD_EINKAUF_REVERSE_CHARGE;
+						}
+					} else {
+						if (isNTCS)
+							sSteuercode = STEUCOD_NTCS_VORSTEUER;
+						else
+							sSteuercode = STEUCOD_VORSTEUER_ODER_KEINE_STEUER;
+					}
 				}
 			} else {
 				// Rechnung oder Gutschrift
 				if (fibuExportDtos[i].getBelegart().equals(
 						FibuExportManager.BELEGART_AR) || fibuExportDtos[i].getBelegart().equals(
 								FibuExportManager.BELEGART_GS)) {
-					sSteuercode = STEUCOD_IST_UMSATZSTEUER;
+					if (isNTCS)
+						if (fibuExportDtos[i].getLaenderartCNr().equals(FinanzFac.LAENDERART_DRITTLAND)) {
+							sSteuercode = STEUCOD_NTCS_IST_UMSATZSTEUER_DRITTLAND;
+						} else if (bInnerGemeinschaftlich) {
+							sSteuercode = STEUCOD_NTCS_IG_LIEFERUNG;
+						} else {
+							sSteuercode = STEUCOD_NTCS_IST_UMSATZSTEUER;
+						}
+					else
+						if (bInnerGemeinschaftlich) {
+							sSteuercode = STEUCOD_IG_LIEFERUNG;
+						} else {
+							sSteuercode = STEUCOD_IST_UMSATZSTEUER;
+						}
 				} else {
-					sSteuercode = STEUCOD_SOLL_UMSATZSTEUER;
+					if (isNTCS)
+						if (fibuExportDtos[i].getLaenderartCNr().equals(FinanzFac.LAENDERART_DRITTLAND)) {
+							sSteuercode = STEUCOD_NTCS_SOLL_UMSATZSTEUER_DRITTLAND;
+						} else {
+							sSteuercode = STEUCOD_NTCS_SOLL_UMSATZSTEUER;
+						}
+					else
+						sSteuercode = STEUCOD_SOLL_UMSATZSTEUER;
 				}
 			}
 			mt.addParameter(P_STEUCOD, sSteuercode);
@@ -392,6 +468,12 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 			}
 			
 			mt.addParameter(P_PERIODE, formatBetrag(c.get(Calendar.MONTH)+1, 2, 0));
+			
+			//--------------------------------------------------------------
+			// Fremdwaehrung (nur bei NTCS)
+			if (isNTCS)
+				mt.addParameter(P_WAEHRUNG, fibuExportDtos[i].getFremdwaehrung());
+			
 			//--------------------------------------------------------------
 			// FW Kurs
 			// Der Fremdwaehrungskurs musz nur bei FW-Buchungen uebergeben
@@ -401,36 +483,62 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 			// Da wir 6 Stellen verwenden, wird das Komma um eine Stelle
 			// nach links geschoben.
 			// Das wird durch den FW-Faktor dann wieder ausgeglichen.
-			/*
-			mt.addParameter(P_FWKURS, formatBetrag(fibuExportDtos[i]
-			                                                      .getKurs(), 7, 6));
-			*/
+			//
+			// Achtung: laut neuer Doku kann BMD jetzt 8 Vor- und 8 Nachkommastellen
+			// Es wird daher mit Faktor 1 exportiert
+			
+			mt.addParameter(P_FWKURS, formatBetrag(fibuExportDtos[i].getKurs(), 7, 6));
+			
 			//--------------------------------------------------------------
 			// FW Faktor
 			//--------------------------------------------------------------
-			//mt.addParameter(P_FWFAKTOR, "10"); // siehe FWKURS
+			mt.addParameter(P_FWFAKTOR, "1"); // siehe FWKURS
+			
 			//--------------------------------------------------------------
 			// FW Betrag
 			//--------------------------------------------------------------
-			/*
+			
+			//und das Vorzeichen umkehren
+			//FW Betrag ist Brutto
+			//bei IG Erwerb ist der FW Betrag Netto
+			BigDecimal fwbetragBrutto;
 			if (fibuExportDtos[i].getSollbetragFWBD() != null) {
-				mt.addParameter(P_FWBETRAG, formatBetrag(fibuExportDtos[i]
-				                                                        .getSollbetragFWBD(), 15, 2));
+				if (bInnerGemeinschaftlich)
+					fwbetragBrutto = fibuExportDtos[i].getSollbetragFWBD();
+				else
+					fwbetragBrutto = fibuExportDtos[i].getSollbetragFWBD().add(fibuExportDtos[i].getSteuerFWBD());
+				mt.addParameter(P_FWBETRAG, formatBetrag(fwbetragBrutto.negate(), 15, 2));
 			} else {
-				mt.addParameter(P_FWBETRAG, formatBetrag(fibuExportDtos[i]
-				                                                        .getHabenbetragFWBD(), 15, 2));
-			} */
+				if (bInnerGemeinschaftlich)
+					fwbetragBrutto = fibuExportDtos[i].getHabenbetragFWBD();
+				else
+					fwbetragBrutto = fibuExportDtos[i].getHabenbetragFWBD().add(fibuExportDtos[i].getSteuerFWBD());
+				mt.addParameter(P_FWBETRAG, formatBetrag(fwbetragBrutto, 15, 2));
+			}
+
 			//--------------------------------------------------------------
 			// Steuer
 			//--------------------------------------------------------------
-			/*
-			mt.addParameter(P_FWSTEUER, formatBetrag(fibuExportDtos[i]
-			                                                        .getSteuerBD(), 15, 2));
-			*/
+			if (fibuExportDtos[i].getBelegart().equals(
+					FibuExportManager.BELEGART_AR) || fibuExportDtos[i].getBelegart().equals(
+							FibuExportManager.BELEGART_GS)) {
+				mt.addParameter(P_FWSTEUER, formatBetrag(fibuExportDtos[i].getSteuerFWBD().negate(), 15, 2));
+			} else {
+				BigDecimal fwbdsteuer = new BigDecimal(0);
+				if (fibuExportDtos[i].getSteuerFWBD() != null)
+					fwbdsteuer = fibuExportDtos[i].getSteuerFWBD();
+				if (bInnerGemeinschaftlich)
+					// die IG Ust/Vst bucht negativ!
+					mt.addParameter(P_FWSTEUER, formatBetrag(fwbdsteuer.negate(), 15, 2));
+				else
+					mt.addParameter(P_FWSTEUER, formatBetrag(fwbdsteuer, 15, 2));
+			}
+			
 			//--------------------------------------------------------------
 			// Skonto
 			//--------------------------------------------------------------
-			//mt.addParameter(P_FWSKONTO, formatBetrag(0.0, 15, 2));
+			mt.addParameter(P_FWSKONTO, formatBetrag(0.0, 15, 2));
+			
 			//--------------------------------------------------------------
 			// OP Betrag
 			// Dieser Wert gibt an, wieviel vom Buchungsbetrag noch "offen"
@@ -474,16 +582,27 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 			// = Leerzeichen).
 			//--------------------------------------------------------------
 			//Text immer aus erstem Export Eintrag
+			// SP4720 Wir haben variablen Satzaufbau. Helper.cutString() macht
+			// einen trim(), deswegen sind die hier angegebenen Leerzeichen
+			// sowieso wieder weg. Die anderen .cutString() Verwendungen in 
+			// dieser Klasse werden nicht weiter modifizert.
+			String t = "";
 			if (fibuExportDtos[i].getText() != null) {
-				mt.addParameter(P_TEXT, Helper.cutString(fibuExportDtos[i].getText()
-			                                                        + "                    ", 18));
-			} else {
-				mt.addParameter(P_TEXT, "");
+//				t = Helper.cutString(fibuExportDtos[i].getText() + "                    ", 18);
+				t = Helper.cutString(fibuExportDtos[i].getText(), 72);
+				t = t.replace(";", ",");	// alle ; ersetzen da dies das Trennzeichen
 			}
+			mt.addParameter(P_TEXT, t);
+
 			//PJ 16322 zusaetzliche Felder
 			// Lieferantname
 			// Lieferantkurzbezeichnung
 			mt.addParameter(P_PARTNER_KBZ, fibuExportDtos[i].getPartnerDto().getCKbez());
+			
+			//PJ 22094 zusetzliche Felder
+			// Name1
+			mt.addParameter(P_PARTNER_NAME1, fibuExportDtos[i].getPartnerDto().getCName1nachnamefirmazeile1());
+			
 			//--------------------------------------------------------------
 			// Buchungs-Symbol
 			// Dieser Wert gibt an, unter welchem Buchungssymbol die
@@ -628,6 +747,19 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 		return sb.toString();
 	}
 
+	private String getSteuercodeReverseChargeNTCS(FibuexportDto expDto) {
+		String sSteuercode = STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE;
+		if(expDto.getReversechargeartId() != null) {
+			ReversechargeartDto rcartDto = reversechargeartCache.getValueOfKey(expDto.getReversechargeartId());
+			if (rcartDto.getCNr().equals(ReversechargeArt.SCHROTT)) {
+				sSteuercode = STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE_SCHROTT_19_1d;
+			} else if (rcartDto.getCNr().equals(ReversechargeArt.BAULEISTUNG)) {
+				sSteuercode = STEUCOD_NTCS_EINKAUF_REVERSE_CHARGE_Bauleistung_19_1a_;
+			}
+		}
+		return sSteuercode;
+	}
+	
 	protected String getXSLFile() {
 		return XSL_FILE_BMD;
 	}
@@ -650,17 +782,20 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 		mt.addParameter(P_SKONTO, P_SKONTO);
 		//mt.addParameter(P_OPBETRAG, P_OPBETRAG);
 		mt.addParameter(P_PERIODE, P_PERIODE);
-		//mt.addParameter(P_FWKURS, P_FWKURS);
-		//mt.addParameter(P_FWFAKTOR, P_FWFAKTOR);
-		//mt.addParameter(P_FWBETRAG, P_FWBETRAG);
-		//mt.addParameter(P_FWSTEUER, P_FWSTEUER);
-		//mt.addParameter(P_FWSKONTO, P_FWSKONTO);
+		if (isNTCS)
+			mt.addParameter(P_WAEHRUNG, P_WAEHRUNG);
+		mt.addParameter(P_FWKURS, P_FWKURS);
+		mt.addParameter(P_FWFAKTOR, P_FWFAKTOR);
+		mt.addParameter(P_FWBETRAG, P_FWBETRAG);
+		mt.addParameter(P_FWSTEUER, P_FWSTEUER);
+		mt.addParameter(P_FWSKONTO, P_FWSKONTO);
 		//mt.addParameter(P_FWOPBETRAG, P_FWOPBETRAG);
 		//mt.addParameter(P_LANDKZ, P_LANDKZ);
 		//mt.addParameter(P_LKZKURS, P_LKZKURS);
 		//mt.addParameter(P_LKZFAKTOR, P_LKZFAKTOR);
 		mt.addParameter(P_TEXT, P_TEXT);
 		mt.addParameter(P_PARTNER_KBZ, P_TEXT);
+		mt.addParameter(P_PARTNER_NAME1, P_TEXT);
 		mt.addParameter(P_SYMBOL, P_SYMBOL);
 		mt.addParameter(P_EXTBELEGNR, P_EXTBELEGNR);
 		mt.addParameter(P_ZZIEL, P_ZZIEL);
@@ -830,4 +965,18 @@ public class FibuExportFormatterBMD extends FibuExportFormatter {
 		}
 		return sUSTLand;
 	}
+
+	private class ReversechargeartCache extends HvCreatingCachingProvider<Integer, ReversechargeartDto> {
+		@Override
+		protected ReversechargeartDto provideValue(Integer key, Integer transformedKey) {
+			try {
+				return getFinanzServiceFac()
+					.reversechargeartFindByPrimaryKey(key, theClientDto);
+			} catch(RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+				return null;				
+			}
+		}		
+	}
+
 }

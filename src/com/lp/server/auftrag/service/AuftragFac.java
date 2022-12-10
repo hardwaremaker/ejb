@@ -32,21 +32,29 @@
  ******************************************************************************/
 package com.lp.server.auftrag.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.ejb.Remote;
+import javax.jcr.RepositoryException;
 import javax.naming.NamingException;
 
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.partner.service.KundeDto;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.service.IAktivierbarControlled;
 import com.lp.server.system.service.PaneldatenDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.HvOptional;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -76,6 +84,7 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public static final String FLR_AUFTRAG_WAEHRUNG_C_NR_AUFTRAGSWAEHRUNG = "waehrung_c_nr_auftragswaehrung";
 	public static final String FLR_AUFTRAG_B_ROHS = "b_rohs";
 	public static final String FLR_AUFTRAG_T_VERRECHENBAR = "t_verrechenbar";
+	public static final String FLR_AUFTRAG_T_AUFTRAGSFREIGABE = "t_auftragsfreigabe";
 	public static final String FLR_AUFTRAG_B_LIEFERTERMINUNVERBINDLICH = "b_lieferterminunverbindlich";
 	public static final String FLR_AUFTRAG_N_GESAMTAUFTRAGSWERT_IN_AUFTRAGSWAEHRUNG = "n_gesamtauftragswertinauftragswaehrung";
 	public static final String FLR_AUFTRAG_FLRKUNDE = "flrkunde";
@@ -94,6 +103,9 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public static final String FLR_AUFTRAG_FLRVERTRETER = "flrvertreter";
 	public static final String FLR_AUFTRAG_FLRAUFTRAGTEXTSUCHE = "flrauftragtextsuche";
 	public static final String FLR_AUFTRAG_FLRPERSONALANLEGER = "flrpersonalanleger";
+	public static final String FLR_AUFTRAG_FLRTEILNEHMER = "flrteilnehmer";
+	public static final String FLR_AUFTRAG_FLRTEILNEHER_PARTNER_ID = "flrteilnehmer_partnerid";
+	public static final String FLR_AUFTRAG_FLRTEILNEHER_PARTNER_ID_ODER_VERTRETER = "flrteilnehmer_partnerid_odervertreter";
 
 	// Laenge der Datenbankfelder
 	public static final int MAX_AUFT_AUFTRAG_AUFTRAGNUMMER_C_NR = 8;
@@ -129,9 +141,10 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public static String AUFT_UMSATZUEBERSICHT_EINGANG = "Eingegangene Auftraege";
 
 	/** ptkrit: 1 Die Eigenschaften fuer die FilterKriterien mussen festsetzen. */
-	public static final int ANZAHL_KRITERIEN_UMSATZUEBERSICHT = 2;
+	public static final int ANZAHL_KRITERIEN_UMSATZUEBERSICHT = 3;
 	public static final int UMSATZUEBERSICHT_IDX_KRIT_JAHR = 0;
 	public static final int UMSATZUEBERSICHT_IDX_KRIT_AUSWERTUNG = 1;
+	public static final int UMSATZUEBERSICHT_IDX_KRIT_PLUS_JAHRE = 2;
 
 	/** ptkrit: 1 Die Eigenschaften fuer die FilterKriterien mussen festsetzen. */
 	public static final int ANZAHL_KRITERIEN = 1;
@@ -140,6 +153,7 @@ public interface AuftragFac extends IAktivierbarControlled {
 	/** Die Auswertung kann erfolgen nach ... */
 	public static String KRIT_UEBERSICHT_GESCHAEFTSJAHR = "Geschaeftsjahr";
 	public static String KRIT_UEBERSICHT_KALENDERJAHR = "Kalenderjahr";
+	public static String KRIT_UEBERSICHT_PLUS_JAHRE = "Plusjahre";
 
 	public static final int ANZAHL_KRITERIEN_AUFTRAGZEITEN = 2;
 	public static final int IDX_KRIT_AUFTRAG = 1;
@@ -250,18 +264,15 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public AuftragDto auftragFindByMandantCNrCNrOhneExc(String cNrMandantI,
 			String cNrI);
 
-	public AuftragDto[] auftragFindByMandantCnrKundeIIdBestellnummerOhneExc(
-			Integer iIdKundeI, String cNrMandantI, String cBestellnummerI,
-			TheClientDto theClientDto) throws RemoteException;
-
 	public void pruefeUndSetzeAuftragstatusBeiAenderung(Integer iIdAuftragI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneMaterialwertGesamt(Integer iIdAuftragI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void terminVerschieben(Integer auftragIId, int iTage,
-			TheClientDto theClientDto);
+	public ArrayList<String> terminVerschieben(ArrayList<Integer> auftragIIds,
+			java.sql.Timestamp tLiefertermin, java.sql.Timestamp tFinaltermin,
+			java.sql.Timestamp tWunschtermin, boolean bMehrereAuftraege, TheClientDto theClientDto);
 
 	public ArrayList<KundeDto> getRechnungsadressenEinerAuftragsadresseSortiertNachHaeufigkeit(
 			Integer kundeIIdAuftragsadresse, TheClientDto theClientDto);
@@ -292,8 +303,8 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public AuftragpositionDto[] entferneKalkulatorischeArtikel(
 			AuftragpositionDto[] aAuftragpositionDto, TheClientDto theClientDto);
 
-	public BigDecimal berechneSummeSplittbetragAuftrag(Integer iIdAuftrag)
-			throws EJBExceptionLP, RemoteException;
+	public String[] berechneSummeSplittbetragAuftrag(Integer iIdAuftrag,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void updateAuftragVersteckt(Integer auftragIId,
 			TheClientDto theClientDto);
@@ -302,6 +313,7 @@ public interface AuftragFac extends IAktivierbarControlled {
 
 	public boolean aendereAuftragstatus(Integer pkAuftrag, String status,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
 	public void setzeAuftragstatusAufgrundAuftragpositionstati(
 			Integer iIdAuftragI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -386,8 +398,92 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public Integer vorhandenenLieferscheinEinesAuftagsHolenBzwNeuAnlegen(
 			Integer auftragIId, TheClientDto theClientDto);
 
-	public Integer erzeugeAuftragUeberSchnellanlage(AuftragDto auftragDto,
+	public Integer erzeugeAuftragpositionUeberSchnellanlage(Integer auftragIId,
 			ArtikelDto artikelDto, PaneldatenDto[] paneldatenDtos,
 			TheClientDto theClientDto);
+
+	public void auftragFreigeben(Integer auftragIId, TheClientDto theClientDto);
+
+	public void aendereRechnungsadresseProjeknummerBestellnummer(
+			AuftragDto auftragDto, TheClientDto theClientDto);
+
+	public void erzeugeAuftragAusBestellungeinesAnderenMandanten(
+			Integer bestellungIId, String mandantCNr_Zielmandant,
+			TheClientDto theClientDto_Quelle);
+
+	public AuftragDto istAuftragBeiAnderemMandantenHinterlegt(
+			Integer bestellungIId);
+
+	public void toggleAuftragsfreigabe(Integer auftragIId,
+			TheClientDto theClientDto);
+
+	public ArrayList<Integer> wiederholendeAuftraegeUmIndexAnpassen(
+			TheClientDto theClientDto);
+
+	public String wiederholendeAuftraegeMitPreisgueltigkeitAnpassen(
+			Timestamp tDatumPreisgueltigkeit, double dAbweichung,
+			TheClientDto theClientDto);
+
+	void repairAuftragZws5524(Integer auftragId, TheClientDto theClientDto) throws RemoteException;
+	List<Integer> repairAuftragZws5524GetList(TheClientDto theClientDto);
+
+	AuftragDto erzeugeAenderungsauftrag(Integer auftragIId, TheClientDto theClientDto);
+	public Map getListeDerErfasstenAuftraege(Integer angebotIId,
+			TheClientDto theClientDto);
+
+	String formatLieferadresseAuftrag(Integer auftragId, 
+			TheClientDto theClientDto) throws RemoteException;
+	String formatLieferadresse(Integer kundeId, 
+			Integer ansprechpartnerId, TheClientDto theClientDto)
+			throws RemoteException;
+	
+	public LieferstatusDto lieferstatusFindByPrimaryKey(Integer iId);
+	
+	public BigDecimal berechneOffenenWertEinesAuftrags(String auftragCNr, TheClientDto theClientDto);
+	
+	public int importiereSON_CSV(LinkedHashMap<String,   ArrayList<ImportSonCsvDto>> hmNachBestellnummerGruppiert, TheClientDto theClientDto);
+	
+	public int importiereWooCommerce_CSV(LinkedHashMap<String, ArrayList<ImportWooCommerceCsvDto>> hmNachBestellnummerGruppiert,
+			TheClientDto theClientDto);
+	
+	public void mindermengenzuschlagEntfernen(AuftragDto auftragDto, TheClientDto theClientDto);
+	
+	public int importiereVAT_XLSX(Integer kundeIId, Integer ansprechpartnerIId, LinkedHashMap<String, ArrayList<ImportVATXlsxDto>> hmNachBestellnummerGruppiert,
+			TheClientDto theClientDto);
+
+	/**
+	 * Einen neuen Auftrag aus einem bestehenden Auftrag erzeugen</p>
+	 * <p>Es werden auch die Positionen kopiert</p>
+	 * 
+	 * @param auftragId die Id des Quell-Auftrags
+	 * @param belegDatum optional kann das Belegdatum vorgegeben werden.
+	 *  Fehlt es, wird das aktuelle Datum verwendet 
+	 * @param theClientDto
+	 * @return die Id des neuen Auftrags
+	 */
+	Integer erzeugeAuftragAusAuftrag(Integer auftragId, HvOptional<Timestamp> belegDatum, Timestamp tLieferterminUebersteuert,  TheClientDto theClientDto);
+
+	AuftragDto[] auftragFindByMandantCnrKundeIIdBestellnummerOhneExc(Integer iIdKundeI, String cNrMandantI,
+			String cBestellnummerI) throws RemoteException;
+	
+	public void uebersteuereIntelligenteZwischensumme(Integer auftragpositionIId,
+			BigDecimal bdBetragInBelegwaehrungUebersteuert, TheClientDto theClientDto);
+	
+
+	/**
+	 * Fuer den Auftrag die Original-EDI-ORDERS Datei laden
+	 * 
+	 * @param auftragId
+	 * @param theClientDto
+	 * @return den EDI Dateiinhalt
+	 * @throws IOException
+	 * @throws RepositoryException
+	 */
+	String loadEdiFileBestellung(Integer auftragId, TheClientDto theClientDto) throws IOException, RepositoryException;
+
+	String loadEdiFileBestellungDto(AuftragDto auftragDto, TheClientDto theClientDto)
+			throws IOException, RepositoryException;
+	
+	DocPath getDocPathEdiImportFile(AuftragDto auftragDto);
 
 }

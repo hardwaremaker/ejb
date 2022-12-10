@@ -59,6 +59,18 @@ public class ReportAngebotJournalKriterienDto extends ReportJournalKriterienDto
 	private static final long serialVersionUID = 1L;
 	private boolean bNurErledigteAngebote;
 	private boolean bMitDetails;
+	
+	private boolean bSortiertNachNachfassterminNachrangig=false;
+	
+
+	public boolean isBSortiertNachNachfassterminNachrangig() {
+		return bSortiertNachNachfassterminNachrangig;
+	}
+
+	public void setBSortiertNachNachfassterminNachrangig(
+			boolean bSortiertNachNachfassterminNachrangig) {
+		this.bSortiertNachNachfassterminNachrangig = bSortiertNachNachfassterminNachrangig;
+	}
 
 	public boolean getBNurErledigteAngebote() {
 		return this.bNurErledigteAngebote;
@@ -92,5 +104,6 @@ public class ReportAngebotJournalKriterienDto extends ReportJournalKriterienDto
 		this.sBelegnummerVon = basiskritDtoI.sBelegnummerVon;
 		this.sBelegnummerBis = basiskritDtoI.sBelegnummerBis;
 		this.kundeIId = basiskritDtoI.kundeIId;
+		this.provisionsempfaengerIId = basiskritDtoI.provisionsempfaengerIId;
 	}
 }

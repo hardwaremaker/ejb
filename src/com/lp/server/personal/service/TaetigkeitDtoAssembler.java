@@ -60,6 +60,8 @@ public class TaetigkeitDtoAssembler {
 					.getCImportkennzeichen());
 			taetigkeitDto.setBUnterbrichtwarnmeldung(taetigkeit.getBUnterbrichtwarnmeldung());
 			taetigkeitDto.setBVersteckt(taetigkeit.getbVersteckt());
+			taetigkeitDto.setBDarfSelberBuchen(taetigkeit.getBDarfSelberBuchen());
+			taetigkeitDto.setAbwesenheitsartIId(taetigkeit.getAbwesenheitsartIId());
 
 		}
 		return taetigkeitDto;

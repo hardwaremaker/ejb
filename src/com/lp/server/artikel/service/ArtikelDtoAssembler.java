@@ -101,6 +101,8 @@ public class ArtikelDtoAssembler {
 					.getLandIIdUrsprungsland());
 			artikelDto.setFFertigungssatzgroesse(artikel
 					.getFFertigungssatzgroesse());
+			artikelDto.setFMaxfertigungssatzgroesse(artikel
+					.getFMaxfertigungssatzgroesse());
 			artikelDto.setIWartungsintervall(artikel.getIWartungsintervall());
 			artikelDto.setISofortverbrauch(artikel.getISofortverbrauch());
 			artikelDto.setCRevision(artikel.getCRevision());
@@ -133,6 +135,39 @@ public class ArtikelDtoAssembler {
 			artikelDto.setVorzugIId(artikel.getVorzugIId());
 			artikelDto.setCEccn(artikel.getCEccn());
 			artikelDto.setFFertigungsVpe(artikel.getFFertigungsVpe());
+			artikelDto.setBRahmenartikel(artikel.getBRahmenartikel());
+			artikelDto.setNVerschnittmenge(artikel.getNVerschnittmenge());
+			artikelDto.setVerpackungsmittelIId(artikel.getVerpackungsmittelIId());
+			artikelDto.setNVerpackungsmittelmenge(artikel.getNVerpackungsmittelmenge());
+			artikelDto.setNMindestverkaufsmenge(artikel.getNMindestverkaufsmenge());
+			artikelDto.setFMultiplikatorZugehoerigerartikel(artikel.getFMultiplikatorZugehoerigerartikel());
+			artikelDto.setBAzinabnachkalk(artikel.getBAzinabnachkalk());
+			artikelDto.setBKommissionieren(artikel.getBKommissionieren());
+			artikelDto.setBKeineLagerzubuchung(artikel.getBKeineLagerzubuchung());
+			artikelDto.setIExternerArbeitsgang(artikel.getIExternerArbeitsgang());
+			artikelDto.setILaengemaxSnrchnr(artikel.getILaengemaxSnrchnr());
+			artikelDto.setILaengeminSnrchnr(artikel.getILaengeminSnrchnr());
+			artikelDto.setBWepinfoAnAnforderer(artikel.getBWepinfoAnAnforderer());
+			artikelDto.setBVkpreispflichtig(artikel.getBVkpreispflichtig());
+			artikelDto.setIPassiveReisezeit(artikel.getIPassiveReisezeit());
+			artikelDto.setBSummeInBestellung(artikel.getBSummeInBestellung());
+			artikelDto.setBBevorzugt(artikel.getBBevorzugt());
+			artikelDto.setBMultiplikatorInvers(artikel.getBMultiplikatorInvers());
+			artikelDto.setBMultiplikatorAufrunden(artikel.getBMultiplikatorAufrunden());
+			artikelDto.setPersonalIIdFreigabe(artikel.getPersonalIIdFreigabe());
+			artikelDto.setTFreigabe(artikel.getTFreigabe());
+			artikelDto.setCFreigabeZuerueckgenommen(artikel.getCFreigabeZuerueckgenommen());
+			artikelDto.setBBewilligungspflichtig(artikel.getBBewilligungspflichtig());
+			artikelDto.setBMeldepflichtig(artikel.getBMeldepflichtig());
+			
+			artikelDto.setWaffenausfuehrungIId(artikel.getWaffenausfuehrungIId());
+			artikelDto.setWaffentypIId(artikel.getWaffentypIId());
+			artikelDto.setWaffentypFeinIId(artikel.getWaffentypFeinIId());
+			artikelDto.setWaffenkategorieIId(artikel.getWaffenkategorieIId());
+			artikelDto.setWaffenzusatzIId(artikel.getWaffenzusatzIId());
+			artikelDto.setWaffenkaliberIId(artikel.getWaffenkaliberIId());
+			artikelDto.setNPreisZugehoerigerartikel(artikel.getNPreisZugehoerigerartikel());
+			artikelDto.setLaseroberflaecheIId(artikel.getLaseroberflaecheIId());
 			
 		}
 		return artikelDto;

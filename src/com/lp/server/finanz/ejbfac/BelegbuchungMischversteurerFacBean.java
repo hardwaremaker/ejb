@@ -35,6 +35,7 @@ package com.lp.server.finanz.ejbfac;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.util.List;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -44,14 +45,18 @@ import javax.persistence.Query;
 
 import com.lp.server.finanz.bl.FibuExportManager;
 import com.lp.server.finanz.bl.FibuExportManagerFactory;
+import com.lp.server.finanz.bl.FinanzValidator;
 import com.lp.server.finanz.ejb.Belegbuchung;
 import com.lp.server.finanz.ejb.Konto;
 import com.lp.server.finanz.service.BelegbuchungDto;
+import com.lp.server.finanz.service.BelegbuchungMischversteuererFac;
 import com.lp.server.finanz.service.BuchungDto;
+import com.lp.server.finanz.service.BuchungInfoDto;
 import com.lp.server.finanz.service.BuchungdetailDto;
 import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuexportDto;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.finanz.service.SteuerkategorieDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.service.RechnungDto;
@@ -60,11 +65,12 @@ import com.lp.server.rechnung.service.RechnungartDto;
 import com.lp.server.rechnung.service.RechnungzahlungDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.HvOptional;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
-public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean {
+public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean  implements BelegbuchungMischversteuererFac{
 	@PersistenceContext
 	private EntityManager em;
 
@@ -80,7 +86,7 @@ public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean {
 	 * Anmerkung: bei Misch- und Istversteurer wird nichts getan!
 	 */
 	@Override
-	public BuchungDto verbucheRechnung(Integer rechnungIId,
+	public BuchungInfoDto verbucheRechnung(Integer rechnungIId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// bei Istversteurer wird die Rechnung nicht gebucht!
 		return null;
@@ -155,7 +161,16 @@ public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean {
 			RechnungDto rechnungDto = getRechnungDto(zahlungDto.getRechnungIId());
 			
 			// nur diese Zahlung verbuchen, da es kein Skonto gibt
-			buchungDto = verbucheZahlungSkonto(false, zahlungDto, rechnungDto, theClientDto);
+//			HvOptional<BelegbuchungDto> azZahlungBuchung =
+//					existsAnzahlungZahlungGegenbuchung(rechnungDto.getIId());
+			
+			HvOptional<RechnungDto> schlussrechnung = HvOptional.empty();
+			if (rechnungDto.isAnzahlungsRechnung()) {
+				schlussrechnung = findSchlussRechnung(rechnungDto.getAuftragIId());
+			}
+			
+			buchungDto = verbucheZahlungSkonto(false, zahlungDto, rechnungDto,
+					schlussrechnung, theClientDto);
 			
 			// anteilige Rechnung (Aufwand/Erloes) jetzt buchen mit Zahldatum 
 			if (buchungDto != null)
@@ -254,27 +269,19 @@ public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean {
 					EJBExceptionLP.FEHLER_FINANZ_BUCHUNG_NICHT_ERLAUBT_BUCHUNGSREGEL,
 					"Rechnungstyp f\u00FCr Fibu nicht definiert: Typ=" + rechnungtyp);
 			
-		PartnerDto partnerDto = null;
-		Konto debitorKonto = null;
-		try {
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(rechnungDto.getKundeIId(), theClientDto);
-			partnerDto = getPartnerFac().partnerFindByPrimaryKey(kundeDto.getPartnerIId(), theClientDto);
-			if (kundeDto.getIidDebitorenkonto() == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FINANZ_KEIN_DEBITORENKONTO_DEFINIERT,
-						"Kein Debitorenkonto: Kunde ID="
-								+ kundeDto.getIId());
-			}
-			debitorKonto = em.find(Konto.class,	kundeDto.getIidDebitorenkonto());
-			if (debitorKonto.getSteuerkategorieIId() == null)
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FINANZ_KEINE_STEUERKATEGORIE_DEFINIERT,
-						"Keine Steuerkategorie bei Debitorenkonto "
-								+ debitorKonto.getCNr());
-
-		} catch (Exception ex3) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex3);
-		}
+		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(rechnungDto.getKundeIId(), theClientDto);
+		FinanzValidator.debitorkontoDefinition(kundeDto);
+		PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(kundeDto.getPartnerIId(), theClientDto);
+		Konto debitorKonto = em.find(Konto.class,	kundeDto.getIidDebitorenkonto());
+		FinanzValidator.steuerkategorieDefinition(debitorKonto, rechnungDto);
+//			if (Helper.isStringEmpty(debitorKonto.getSteuerkategorieCNr())) {
+//				KontoDto debitorDto = KontoDtoAssembler.createDto(debitorKonto) ;
+//				throw EJBExcFactory.steuerkategorieDefinitionFehlt(rechnungDto, debitorDto) ;
+////				throw new EJBExceptionLP(
+////						EJBExceptionLP.FEHLER_FINANZ_KEINE_STEUERKATEGORIE_DEFINIERT,
+////						"Keine Steuerkategorie definiert bei Debitorenkonto "
+////								+ debitorKonto.getCNr());
+//			}
 		buchungDto = new BuchungDto();
 		buchungDto.setCBelegnummer(rechnungDto.getCNr());
 		buchungDto.setCText(partnerDto.getCName1nachnamefirmazeile1());
@@ -284,24 +291,51 @@ public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean {
 
 		BelegbuchungDto belegbuchungDto = new BelegbuchungDto();
 		belegbuchungDto.setBuchungIIdZahlung(buchungIIdZahlung);
-		BuchungdetailDto[] details = null;
-		Integer steuerkategorieIId = null;
-		if (Helper.short2boolean(rechnungDto.getBReversecharge()))
-			if (exportDaten[1].getDebitorenKontoIIdUebersteuert() == null)
-				steuerkategorieIId = debitorKonto.getSteuerkategorieIIdReverse();
-			else {
-				Konto debKontouebersteuert = em.find(Konto.class, exportDaten[1].getDebitorenKontoIIdUebersteuert());
-				steuerkategorieIId = debKontouebersteuert.getSteuerkategorieIIdReverse();
-			}
-		else
-			if (exportDaten[1].getDebitorenKontoIIdUebersteuert() == null)
-				steuerkategorieIId = debitorKonto.getSteuerkategorieIId();
-			else {
-				Konto debKontouebersteuert = em.find(Konto.class, exportDaten[1].getDebitorenKontoIIdUebersteuert());
-				steuerkategorieIId = debKontouebersteuert.getSteuerkategorieIId();
-			}
-		details = getBuchungdetailsVonExportDtos(exportDaten, steuerkategorieIId, true, false, false, theClientDto);
+		Integer debitorenKontoId = exportDaten[0].getKontoDto().getIId();
+		Integer debitorenKontoUebersteuertId = null ;
+		String steuerkategorieCnr = debitorKonto.getSteuerkategorieCNr() ;
+		Integer finanzamtIId = debitorKonto.getFinanzamtIId() ;
+		if(exportDaten[1].getDebitorenKontoIIdUebersteuert() != null) {
+			debitorenKontoUebersteuertId = exportDaten[1].getDebitorenKontoIIdUebersteuert() ;
+			Konto debKontouebersteuert = em.find(Konto.class, debitorenKontoUebersteuertId);			
+			steuerkategorieCnr = debKontouebersteuert.getSteuerkategorieCNr() ;
+			finanzamtIId = debKontouebersteuert.getFinanzamtIId() ;
+		}
+		
+//		if (isRechnungDtoReversecharge(rechnungDto)) {
+//			if (exportDaten[1].getDebitorenKontoIIdUebersteuert() == null) {
+//				steuerkategorieCnr = debitorKonto.getSteuerkategorieCNr() ;
+////				steuerkategorieIId = debitorKonto.getSteuerkategorieIIdReverse();
+//			} else {
+//				debitorenKontoUebersteuertId = exportDaten[1].getDebitorenKontoIIdUebersteuert() ;
+//				Konto debKontouebersteuert = em.find(Konto.class, debitorenKontoUebersteuertId);
+//				steuerkategorieCnr = debKontouebersteuert.getSteuerkategorieCNr() ;
+////				steuerkategorieIId = debKontouebersteuert.getSteuerkategorieIIdReverse();
+//			}
+//		} else {
+//			if (exportDaten[1].getDebitorenKontoIIdUebersteuert() == null) {
+//				steuerkategorieCnr = debitorKonto.getSteuerkategorieCNr() ;
+////				steuerkategorieIId = debitorKonto.getSteuerkategorieIId();
+//			} else {
+//				debitorenKontoUebersteuertId = exportDaten[1].getDebitorenKontoIIdUebersteuert() ;
+//				Konto debKontouebersteuert = em.find(Konto.class, debitorenKontoUebersteuertId);
+//				steuerkategorieCnr = debKontouebersteuert.getSteuerkategorieCNr() ;
+////				steuerkategorieIId = debKontouebersteuert.getSteuerkategorieIId();
+//			}
+//		}
+		
+		SteuerkategorieDto stkDto = 
+				getFinanzServiceFac().steuerkategorieFindByCNrFinanzamtIId(
+						steuerkategorieCnr, 
+						rechnungDto.getReversechargeartId(), 
+						finanzamtIId, theClientDto) ;
+		Integer steuerkategorieIId = stkDto.getIId() ;
+		
+		List<BuchungdetailDto> details = getBuchungdetailsVonExportDtos(exportDaten,
+				steuerkategorieIId, debitorenKontoId, debitorenKontoUebersteuertId, true, false, false, theClientDto);
 		details = skaliereDetails(details, rechnungDto, zahlungDto);
+		korrigiereRundungsUngenauigkeit(details, debitorenKontoId);
+
 		if (rechnungtyp.equals(RechnungFac.RECHNUNGTYP_RECHNUNG)) {
 			buchungDto.setBelegartCNr(LocaleFac.BELEGART_FIBU_RECHNUNG);
 			belegbuchungDto.setBelegartCNr(LocaleFac.BELEGART_RECHNUNG);
@@ -315,7 +349,9 @@ public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean {
 		if (details != null) {
 			try {
 				// Das Verbuchen einer Rechnung muss immer den Buchungsregeln entsprechen
-				buchungDto = getBuchenFac().buchen(buchungDto, details,	true, theClientDto);
+				BuchungdetailDto[] detailDtos = details.toArray(new BuchungdetailDto[0]) ;					
+				buchungDto = getBuchenFac().buchen(buchungDto, 
+						detailDtos, rechnungDto.getReversechargeartId(), true, theClientDto);
 
 				// in Tabelle buchungRechnung speichern
 				belegbuchungDto.setBuchungIId(buchungDto.getIId());
@@ -332,19 +368,20 @@ public class BelegbuchungMischversteurerFacBean extends BelegbuchungFacBean {
 		}
 	}
 
-	private BuchungdetailDto[] skaliereDetails(BuchungdetailDto[] details,
+	private List<BuchungdetailDto> skaliereDetails(List<BuchungdetailDto> details,
 			RechnungDto rechnungDto, RechnungzahlungDto zahlungDto) {
-		if (zahlungDto.getNBetrag().compareTo(rechnungDto.getNWert()) == 0)
-			return details;
-		else {
-			BigDecimal faktor = zahlungDto.getNBetrag().divide(rechnungDto.getNWert(), 100, BigDecimal.ROUND_HALF_EVEN);
-			for (int i=0; i<details.length; i++) {
-				details[i].setNBetrag(Helper.rundeKaufmaennisch(details[i].getNBetrag().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
-				if (details[i].getNUst().signum() != 0)
-					details[i].setNUst(Helper.rundeKaufmaennisch(details[i].getNUst().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
-			}		
+		if (zahlungDto.getNBetrag().compareTo(rechnungDto.getNWert()) == 0) {
 			return details;
 		}
+		
+		BigDecimal faktor = zahlungDto.getNBetrag().divide(rechnungDto.getNWert(), 100, BigDecimal.ROUND_HALF_EVEN);
+		for (int i=0; i<details.size() ; i++) {
+			BuchungdetailDto detail = details.get(i) ;
+			detail.setNBetrag(Helper.rundeKaufmaennisch(detail.getNBetrag().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
+			if (detail.getNUst().signum() != 0)
+				detail.setNUst(Helper.rundeKaufmaennisch(detail.getNUst().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
+		}		
+		return details;
 	}
 
 }

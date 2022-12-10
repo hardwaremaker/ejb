@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.eingangsrechnung.service;
@@ -43,8 +43,12 @@ import java.util.List;
 import javax.ejb.Remote;
 
 import com.lp.server.finanz.service.BankverbindungDto;
+import com.lp.server.rechnung.service.CoinRoundingResult;
+import com.lp.server.system.jcr.service.JCRDocDto;
+import com.lp.server.system.service.JxlImportErgebnis;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.EingangsrechnungId;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -54,7 +58,7 @@ public interface EingangsrechnungFac {
 
 	public final static String EINGANGSRECHNUNGART_ANZAHLUNG = "Anzahlung           ";
 	public final static String EINGANGSRECHNUNGART_EINGANGSRECHNUNG = "Eingangsrechnung    ";
-	public final static String EINGANGSRECHNUNGART_SCHLUSSZAHLUNG = "Schlusszahlung      ";
+	public final static String EINGANGSRECHNUNGART_SCHLUSSZAHLUNG = "Schlussrechnung     ";
 	public final static String EINGANGSRECHNUNGART_GUTSCHRIFT = "Gutschrift          ";
 	public final static String EINGANGSRECHNUNGART_ZUSATZKOSTEN = "Zusatzkosten        ";
 
@@ -159,6 +163,17 @@ public interface EingangsrechnungFac {
 	public final static String FLR_ZV_N_ZAHLBETRAG = "n_zahlbetrag";
 	public final static String FLR_ZV_FLREINGANGSRECHNUNG = "flreingangsrechnungreport";
 
+	// FLR Spaltennamen aus Hibernate Mapping
+	public static final String FLR_EINGANGSRECHNUNGTEXT_MANDANT_C_NR = "mandant_c_nr";
+	public static final String FLR_EINGANGSRECHNUNGTEXT_LOCALE_C_NR = "locale_c_nr";
+	public static final String FLR_EINGANGSRECHNUNGTEXT_X_TEXTINHALT = "c_textinhalt";
+	
+	static class FieldLength {
+		public static final int KUNDENDATEN = 12;
+		public static final int LIEFERANTENRECHNUNGSNR = 20;
+		public static final int TEXT = 40;
+	}
+	
 	public EingangsrechnungDto createEingangsrechnung(
 			EingangsrechnungDto erDtoI, TheClientDto theClientDto)
 			throws RemoteException, EJBExceptionLP;
@@ -196,9 +211,9 @@ public interface EingangsrechnungFac {
 	public EingangsrechnungDto[] eingangsrechnungFindByMandantLieferantIId(
 			String mandantCNr, Integer lieferantIId) throws EJBExceptionLP,
 			RemoteException;
-	
+
 	public EingangsrechnungDto eingangsrechnungFindByCNrMandantCNr(String cNr,
-			String mandantCNr);
+			String mandantCNr,	boolean bZusatzkosten);
 
 	public EingangsrechnungDto[] eingangsrechnungFindByMandantLieferantIIdOhneExc(
 			String mandantCNr, Integer lieferantIId) throws RemoteException;
@@ -254,19 +269,19 @@ public interface EingangsrechnungFac {
 	public BigDecimal berechneSummeOffenNettoInMandantenwaehrung(
 			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten);
-	
-	public BigDecimal berechneSummeUmsatzBrutto(TheClientDto theClientDto,
+
+	public BigDecimal berechneSummeUmsatzBrutto(TheClientDto theClientDto,Integer lieferantIId,
 			String sKriteriumDatum,	String sKriteriumWaehrung, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten) throws EJBExceptionLP, RemoteException;
 
-	public BigDecimal berechneSummeUmsatzNetto(TheClientDto theClientDto,
+	public BigDecimal berechneSummeUmsatzNetto(TheClientDto theClientDto,Integer lieferantIId,
 			String sKriteriumDatum,	String sKriteriumWaehrung, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneSummeAnzahlungenNichtVerrechnetNetto(TheClientDto theClientDto,
 			String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis) throws EJBExceptionLP, RemoteException;
-	
+
 	public BigDecimal berechneSummeAnzahlungenNichtVerrechnetBrutto(TheClientDto theClientDto,
 			String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis) throws EJBExceptionLP, RemoteException;
@@ -303,7 +318,7 @@ public interface EingangsrechnungFac {
 			EingangsrechnungzahlungDto eingangsrechnungzahlungDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public int wiederholendeZusatzkostenAnlegen(TheClientDto theClientDto);
+	public ZusatzkostenAnlegenResult wiederholendeZusatzkostenAnlegen(TheClientDto theClientDto);
 
 	public EingangsrechnungzahlungDto updateEingangsrechnungzahlung(
 			EingangsrechnungzahlungDto eingangsrechnungzahlungDto,
@@ -333,6 +348,9 @@ public interface EingangsrechnungFac {
 			Integer zahlungIIdAusgenommen) throws EJBExceptionLP,
 			RemoteException;
 
+	public BigDecimal getBezahltBetragUst(Integer eingangsrechnungIId,
+			Integer zahlungIIdAusgenommen);
+	
 	public BigDecimal getBezahltBetragUstFw(Integer eingangsrechnungIId,
 			Integer zahlungIIdAusgenommen) throws EJBExceptionLP,
 			RemoteException;
@@ -401,19 +419,75 @@ public interface EingangsrechnungFac {
 	public BigDecimal getBezahltKursdifferenzBetrag(
 			Integer eingangsrechnungIId, BigDecimal kursRechnung)
 			throws EJBExceptionLP, RemoteException;
-	
-	public void toggleZollimportpapiereErhalten(Integer eingangsrechnungIId, String cZollimportpapier, Integer eingangsrechnungIId_Zollimport, 
+
+	public void toggleZollimportpapiereErhalten(Integer eingangsrechnungIId, String cZollimportpapier, Integer eingangsrechnungIId_Zollimport,
 			TheClientDto theClientDto);
 
 	public BigDecimal getAnzahlungenGestelltZuSchlussrechnungUstFw(Integer erIId);
 
 	public BigDecimal getAnzahlungenGestelltZuSchlussrechnungFw(Integer erIId);
-	
+
 	public BigDecimal getAnzahlungenGestelltZuSchlussrechnung(Integer erIId);
 
 	public BigDecimal getAnzahlungenBezahltZuSchlussrechnungFw(Integer erIId);
-	
-	public BigDecimal getAnzahlungenBezahltZuSchlussrechnungUstFw(Integer erIId);
-	
 
+	public BigDecimal getAnzahlungenBezahltZuSchlussrechnungUstFw(Integer erIId);
+	public BigDecimal getAnzahlungenGestelltZuSchlussrechnungUst(Integer erIId);
+
+	public void eingangsrechnungAufAngelegtZuruecksetzen(
+			Integer eingangangsrechnungIId, TheClientDto theClientDto);
+	public void aktiviereBeleg(Integer eingangangsrechnungIId,
+			TheClientDto theClientDto);
+	public void updateKopfFusstextUebersteuert(Integer eingangsrechnungIId,
+			String cKopftext, String cFusstext, TheClientDto theClientDto);
+	
+	/**
+	 * Liefert eine Liste jener Stati, die es einem erlauben, zu einer Eingangsrechnung
+	 * eine Eingangsrechnungzahlung durchzufuehren
+	 * 
+	 * @return Liste der erlaubten Stati
+	 */
+	public List<String> getErlaubteStatiFuerEingangsrechnungZahlung();
+	
+	public BigDecimal getWertUstAnteiligZuEingangsrechnungUst(Integer erIId, BigDecimal bruttoBetrag);
+	
+	public VendidataImporterResult importXML(String xmlContent, boolean checkOnly, TheClientDto theClientDto);
+	
+	public void eingangsrechnungAuftragszuordnungAnteilsmaessigKopieren(
+			EingangsrechnungAuftragszuordnungDto[] eingangsrechnungAuftragszuordnungDto,
+			Integer eingangangsrechnungIId, TheClientDto theClientDto);
+	public void eingangsrechnungAuftragszuordnungExaktKopieren(
+			EingangsrechnungAuftragszuordnungDto[] eingangsrechnungAuftragszuordnungDto,
+			Integer eingangangsrechnungIId, TheClientDto theClientDto);
+	public Integer getZahlungsmoralZuEinemLieferanten(Integer lieferantIId,
+			Date dVon,
+			Date dBis,
+			TheClientDto theClientDto);
+
+	CoinRoundingResult calcMwstBetragFromBrutto(EingangsrechnungDto erDto, TheClientDto theClientDto);
+	CoinRoundingResult calcMwstBetragFromNetto(EingangsrechnungDto erDto, TheClientDto theClientDto);
+
+	EingangsrechnungDto getZuletztErstellteEingangsrechnung(String mandantCnr);
+
+	EingangsrechnungDto getZuletztErstellteEingangsrechnung(Integer geschaeftsjahr, String mandantCnr);
+
+	ErImportItemList20475 importXls20475(byte[] xlsFile, boolean checkOnly, TheClientDto theClientDto);
+
+	ErImportItem20475 importXls20475(ErImportItem20475 item, TheClientDto theClientDto) throws RemoteException;
+
+	EingangsrechnungDto createEingangsrechnungMitDokument(
+			EingangsrechnungDto erDto, Integer orderId, JCRDocDto jcrDto, TheClientDto theClientDto) throws RemoteException;
+
+	List<EingangsrechnungDto> eingangsrechnungFindByBelegdatumVonBis(Date von, Date bis, TheClientDto theClientDto);
+	
+	public JxlImportErgebnis importiereEingangsrechnungXLS(byte[] xlsFile,  TheClientDto theClientDto);
+	
+	public void updateEingangsrechnungFreigabedatum(Integer eingangsrechnungIId, java.sql.Date dFreigabedatum, TheClientDto theClientDto);
+
+	ErZahlungsempfaenger getErZahlungsempfaenger(EingangsrechnungId eingangsrechnungId, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+	
+	public void toggleEingangsrechnungGeprueft(Integer eingangsrechnungIId, TheClientDto theClientDto);
+	
+	
 }

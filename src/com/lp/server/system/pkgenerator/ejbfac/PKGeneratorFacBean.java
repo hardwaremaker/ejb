@@ -34,6 +34,7 @@ package com.lp.server.system.pkgenerator.ejbfac;
 
 import javax.annotation.Resource;
 import javax.ejb.SessionContext;
+import javax.ejb.Singleton;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.ejb.TransactionManagement;
@@ -41,8 +42,6 @@ import javax.ejb.TransactionManagementType;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.transaction.UserTransaction;
-
-import org.jboss.annotation.ejb.Service;
 
 import com.lp.server.system.pkgenerator.ejb.Sequence;
 import com.lp.server.system.pkgenerator.service.PKGeneratorFac;
@@ -68,8 +67,7 @@ import com.lp.util.EJBExceptionLP;
 /*
  * Achtung PK Generator ben&ouml;tigt eine eigene Transaction -> daher Bean Managed!
  */
-
-@Service
+@Singleton
 @TransactionManagement(TransactionManagementType.BEAN)
 public class PKGeneratorFacBean extends Facade implements PKGeneratorFac {
 
@@ -115,7 +113,7 @@ public class PKGeneratorFacBean extends Facade implements PKGeneratorFac {
 	 */
 
 	@TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
-	public Integer getNextPrimaryKey(String name) {
+	public synchronized Integer getNextPrimaryKey(String name) {
 		Sequence sequence = null;
 		try {
 			// Die Strings muessen Lower Case sein
@@ -204,8 +202,9 @@ public class PKGeneratorFacBean extends Facade implements PKGeneratorFac {
 					}
 				}
 			}
-			++entry.last;
-
+			
+			++entry.last;		
+	
 			// System.out.println("Tabelle "+name+" Key: "+entry.last +" Hash:" + this.hashCode());
 
 //			if (name.equals("land")) System.out.println("land_i_id: "+entry.last +" Hash:" + this.hashCode());
@@ -260,8 +259,13 @@ public class PKGeneratorFacBean extends Facade implements PKGeneratorFac {
 	 */
 	public void createSequenceIfNotExists(String name)
 		throws EJBExceptionLP {
+		createSequenceIfNotExists(name, null);
+	}
+
+	@Override
+	public void createSequenceIfNotExists(String name, Integer defaultValue) {
 		if (!existsSequence(name)) {
-			Sequence sq = new Sequence(name);
+			Sequence sq = defaultValue == null ? new Sequence(name) : new Sequence(name, defaultValue);
 			tx = stCtx.getUserTransaction(); 
 			try {
 				tx.begin();

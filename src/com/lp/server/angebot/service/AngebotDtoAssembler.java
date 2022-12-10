@@ -113,6 +113,16 @@ public class AngebotDtoAssembler {
 			angebotDto.setCLieferartort(angebot.getCLieferartort());
 			angebotDto.setProjektIId(angebot.getProjektIId());
 			angebotDto.setNKorrekturbetrag(angebot.getNKorrekturbetrag());
+			angebotDto.setTAenderungsangebot(angebot.getTAenderungsangebot());
+			angebotDto.setIVersion(angebot.getIVersion());
+			angebotDto.setKundeIIdLieferadresse(angebot.getKundeIIdLieferadresse());
+			angebotDto.setKundeIIdRechnungsadresse(angebot.getKundeIIdRechnungsadresse());
+			angebotDto.setAnsprechpartnerIIdLieferadresse(angebot.getAnsprechpartnerIIdLieferadresse());
+			angebotDto.setAnsprechpartnerIIdRechnungsadresse(angebot.getAnsprechpartnerIIdRechnungsadresse());
+			angebotDto.setPersonalIIdVertreter2(angebot.getPersonalIIdVertreter2());
+			angebotDto.setAkquisestatusIId(angebot.getAkquisestatusIId());
+			angebotDto.setBMindermengenzuschlag(angebot.getBMindermengenzuschlag());
+			angebotDto.setCKommission(angebot.getCKommission());
 		}
 		return angebotDto;
 	}

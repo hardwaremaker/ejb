@@ -37,8 +37,6 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 
-import com.lp.server.artikel.ejb.ArtikelkommentarartsprPK;
-
 
 @Embeddable
 public class SteuerkategoriekontoPK implements Serializable {

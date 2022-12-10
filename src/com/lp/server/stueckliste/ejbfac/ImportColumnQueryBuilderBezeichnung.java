@@ -32,7 +32,10 @@
  ******************************************************************************/
  package com.lp.server.stueckliste.ejbfac;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
 
 import com.lp.service.StklImportSpezifikation;
 
@@ -43,6 +46,8 @@ public class ImportColumnQueryBuilderBezeichnung implements
 			"OR LOWER({ALIAS}.c_zbez) LIKE LOWER('%{VALUE}%') " +
 			"OR LOWER({ALIAS}.c_zbez2) LIKE LOWER('%{VALUE}%'))";
 
+	private static final String QUERY_AND = 
+			" (LOWER(COALESCE({ALIAS}.c_bez,'')||' '||COALESCE({ALIAS}.c_zbez,'')||' '||COALESCE({ALIAS}.c_zbez2,'')) LIKE LOWER('%{VALUE}%')) ";
 	@Override
 	public boolean isTotalMatch() {
 		return false;
@@ -61,7 +66,16 @@ public class ImportColumnQueryBuilderBezeichnung implements
 	@Override
 	public String buildWhereQuery(String columnValue,
 			StklImportSpezifikation spez) {
-		return QUERY.replaceAll("\\{ALIAS\\}", ArtikelSpr).replaceAll("\\{VALUE\\}", columnValue.replaceAll("/", "%"));
+		String baseWhere = QUERY_AND.replaceAll("\\{ALIAS\\}", ArtikelSpr);
+		String[] values = columnValue.split(" +");
+	
+		List<String> wheres = new ArrayList<String>();
+		for (String value : values) {
+			wheres.add(baseWhere.replaceAll("\\{VALUE\\}", value.replaceAll("/", "%")));
+		}
+	
+		return StringUtils.join(wheres.iterator(), " AND ");
+//		return QUERY.replaceAll("\\{ALIAS\\}", ArtikelSpr).replaceAll("\\{VALUE\\}", columnValue.replaceAll("/", "%"));
 	}
 
 }

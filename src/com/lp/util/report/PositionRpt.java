@@ -32,11 +32,11 @@
  ******************************************************************************/
 package com.lp.util.report;
 
-import java.awt.Image;
-import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+
+import com.lp.util.LPDatenSubreport;
 
 public class PositionRpt implements Serializable {
 
@@ -52,6 +52,33 @@ public class PositionRpt implements Serializable {
 	String sZusatzbezeichnung;
 	String sZusatzbezeichnung2;
 	String sEccn;
+	
+	String artikelsetType;
+	
+	public String getArtikelsetType() {
+		return artikelsetType;
+	}
+
+	public void setArtikelsetType(String artikelsetType) {
+		this.artikelsetType = artikelsetType;
+	}
+
+	Boolean bMitPreisen=Boolean.FALSE;
+
+	public Boolean getBMitPreisen() {
+		return bMitPreisen;
+	}
+
+	public void setBMitPreisen(Boolean bMitPreisen) {
+		this.bMitPreisen = bMitPreisen;
+	}
+
+	public PositionRpt() {
+	}
+
+	public PositionRpt(String positionsartCnr) {
+		setSPositionsartCNr(positionsartCnr);
+	}
 
 	public String getSEccn() {
 		return sEccn;
@@ -69,8 +96,49 @@ public class PositionRpt implements Serializable {
 		this.sZusatzbezeichnung2 = sZusatzbezeichnung2;
 	}
 
+	private BigDecimal nDimMenge;
+
+	public BigDecimal getNDimMenge() {
+		return nDimMenge;
+	}
+
+	public void setNDimMenge(BigDecimal nDimMenge) {
+		this.nDimMenge = nDimMenge;
+	}
+
+	public BigDecimal getNDimHoehe() {
+		return nDimHoehe;
+	}
+
+	public void setNDimHoehe(BigDecimal nDimHoehe) {
+		this.nDimHoehe = nDimHoehe;
+	}
+
+	public BigDecimal getNDimBreite() {
+		return nDimBreite;
+	}
+
+	public void setNDimBreite(BigDecimal nDimBreite) {
+		this.nDimBreite = nDimBreite;
+	}
+
+	public BigDecimal getNDimTiefe() {
+		return nDimTiefe;
+	}
+
+	public void setNDimTiefe(BigDecimal nDimTiefe) {
+		this.nDimTiefe = nDimTiefe;
+	}
+
+	private BigDecimal nDimHoehe;
+
+	private BigDecimal nDimBreite;
+
+	private BigDecimal nDimTiefe;
+
 	BigDecimal bdMenge;
 	BigDecimal bdMaterialzuschlag;
+
 	public BigDecimal getBdMaterialzuschlag() {
 		return bdMaterialzuschlag;
 	}
@@ -82,7 +150,48 @@ public class PositionRpt implements Serializable {
 	String sEinheit;
 	Timestamp tTermin;
 	Double dRabatt;
+	Double dZusatzrabatt;
+	
+	private LPDatenSubreport subreportBelegartmedia=null;
+	
+	public LPDatenSubreport getSubreportBelegartmedia() {
+		return subreportBelegartmedia;
+	}
+
+	public void setSubreportBelegartmedia(LPDatenSubreport subreportBelegartmedia) {
+		this.subreportBelegartmedia = subreportBelegartmedia;
+	}
+
+	public Double getDZusatzrabatt() {
+		return dZusatzrabatt;
+	}
+
+	public void setDZusatzrabatt(Double dZusatzrabatt) {
+		this.dZusatzrabatt = dZusatzrabatt;
+	}
+
+	BigDecimal bdEinzelpreisPlusAufschlag;
+
+	public BigDecimal getBdEinzelpreisPlusAufschlag() {
+		return bdEinzelpreisPlusAufschlag;
+	}
+
+	public void setBdEinzelpreisPlusAufschlag(BigDecimal bdEinzelpreisPlusAufschlag) {
+		this.bdEinzelpreisPlusAufschlag = bdEinzelpreisPlusAufschlag;
+	}
+
 	BigDecimal bdPreis;
+
+	BigDecimal bdPreisPlusAufschlagMinusRabatt;
+
+	public BigDecimal getBdPreisPlusAufschlagMinusRabatt() {
+		return bdPreisPlusAufschlagMinusRabatt;
+	}
+
+	public void setBdPreisPlusAufschlagMinusRabatt(BigDecimal bdPreisPlusAufschlagMinusRabatt) {
+		this.bdPreisPlusAufschlagMinusRabatt = bdPreisPlusAufschlagMinusRabatt;
+	}
+
 	String sLieferantenArtikelnummer;
 	String sLieferantenArtikelbezeichnung;
 	String sText;
@@ -108,8 +217,7 @@ public class PositionRpt implements Serializable {
 	/**
 	 * Setzt die Positionsart der Position
 	 * 
-	 * @param sPositionsartCNr
-	 *            Die zu setzende Positionsart
+	 * @param sPositionsartCNr Die zu setzende Positionsart
 	 */
 	public void setSPositionsartCNr(String sPositionsartCNr) {
 		this.sPositionsartCNr = sPositionsartCNr;
@@ -126,8 +234,7 @@ public class PositionRpt implements Serializable {
 	/**
 	 * Setzt den Ident der Position
 	 * 
-	 * @param sIdent
-	 *            Der zu setzende Ident
+	 * @param sIdent Der zu setzende Ident
 	 */
 	public void setSIdent(String sIdent) {
 		this.sIdent = sIdent;
@@ -205,8 +312,7 @@ public class PositionRpt implements Serializable {
 		return sLieferantenArtikelnummer;
 	}
 
-	public void setSLieferantenArtikelbezeichnung(
-			String sLieferantenArtikelbezeichnung) {
+	public void setSLieferantenArtikelbezeichnung(String sLieferantenArtikelbezeichnung) {
 		this.sLieferantenArtikelbezeichnung = sLieferantenArtikelbezeichnung;
 	}
 
@@ -228,5 +334,11 @@ public class PositionRpt implements Serializable {
 
 	public byte[] getOImage() {
 		return oImage;
+	}
+
+	@Override
+	public String toString() {
+		return "\"{" + getSPositionsartCNr() + ",'" + getSIdent() + "','" + getSBezeichnung() + "'," + getBdPreis()
+				+ "}\"";
 	}
 }

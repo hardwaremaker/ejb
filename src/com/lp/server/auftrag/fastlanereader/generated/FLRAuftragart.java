@@ -52,10 +52,10 @@ public class FLRAuftragart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> auftragart_auftragart_set;
+	private Set<FLRAuftragartspr> auftragart_auftragart_set;
 
 	/** full constructor */
-	public FLRAuftragart(Integer i_sort, Set<?> auftragart_auftragart_set) {
+	public FLRAuftragart(Integer i_sort, Set<FLRAuftragartspr> auftragart_auftragart_set) {
 		this.i_sort = i_sort;
 		this.auftragart_auftragart_set = auftragart_auftragart_set;
 	}
@@ -65,7 +65,7 @@ public class FLRAuftragart implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRAuftragart(Set<?> auftragart_auftragart_set) {
+	public FLRAuftragart(Set<FLRAuftragartspr> auftragart_auftragart_set) {
 		this.auftragart_auftragart_set = auftragart_auftragart_set;
 	}
 
@@ -85,11 +85,11 @@ public class FLRAuftragart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getAuftragart_auftragart_set() {
+	public Set<FLRAuftragartspr> getAuftragart_auftragart_set() {
 		return this.auftragart_auftragart_set;
 	}
 
-	public void setAuftragart_auftragart_set(Set<?> auftragart_auftragart_set) {
+	public void setAuftragart_auftragart_set(Set<FLRAuftragartspr> auftragart_auftragart_set) {
 		this.auftragart_auftragart_set = auftragart_auftragart_set;
 	}
 

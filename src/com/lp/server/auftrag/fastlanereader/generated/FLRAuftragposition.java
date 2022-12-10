@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.auftrag.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
@@ -44,12 +12,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 /** @author Hibernate CodeGenerator */
 public class FLRAuftragposition implements Serializable {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = -6339105959017486542L;
-
-	/** identifier field */
+    /** identifier field */
     private Integer i_id;
 
     /** nullable persistent field */
@@ -110,6 +73,21 @@ public class FLRAuftragposition implements Serializable {
     private Date t_uebersteuerterliefertermin;
 
     /** nullable persistent field */
+    private Short b_gesehen;
+
+    /** nullable persistent field */
+    private Short b_hvmauebertragen;
+
+    /** nullable persistent field */
+    private Integer zwsvonposition_i_id;
+
+    /** nullable persistent field */
+    private Integer zwsbisposition_i_id;
+
+    /** nullable persistent field */
+    private BigDecimal zwsnettosumme;
+
+    /** nullable persistent field */
     private com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag;
 
     /** nullable persistent field */
@@ -121,14 +99,8 @@ public class FLRAuftragposition implements Serializable {
     /** nullable persistent field */
     private FLRVerleih flrverleih;
 
-    private Integer zwsvonposition_i_id ;
-    
-    private Integer zwsbisposition_i_id ;
-    
-    private BigDecimal n_zwsnettosumme ;
- 
     /** full constructor */
-    public FLRAuftragposition(Integer i_sort, String positionart_c_nr, String auftragpositionstatus_c_nr, String c_bez, String c_zbez, BigDecimal n_menge, BigDecimal n_offenemenge, BigDecimal n_offenerahmenmenge, String einheit_c_nr, BigDecimal n_nettogesamtpreis, BigDecimal n_bruttogesamtpreis, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, String x_textinhalt, Integer auftragposition_i_id_rahmenposition, Integer position_i_id, Integer position_i_id_artikelset, Integer mwstsatz_i_id, String typ_c_nr, Date t_uebersteuerterliefertermin, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, FLRVerleih flrverleih) {
+    public FLRAuftragposition(Integer i_sort, String positionart_c_nr, String auftragpositionstatus_c_nr, String c_bez, String c_zbez, BigDecimal n_menge, BigDecimal n_offenemenge, BigDecimal n_offenerahmenmenge, String einheit_c_nr, BigDecimal n_nettogesamtpreis, BigDecimal n_bruttogesamtpreis, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, String x_textinhalt, Integer auftragposition_i_id_rahmenposition, Integer position_i_id, Integer position_i_id_artikelset, Integer mwstsatz_i_id, String typ_c_nr, Date t_uebersteuerterliefertermin, Short b_gesehen, Short b_hvmauebertragen, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, FLRVerleih flrverleih) {
         this.i_sort = i_sort;
         this.positionart_c_nr = positionart_c_nr;
         this.auftragpositionstatus_c_nr = auftragpositionstatus_c_nr;
@@ -148,6 +120,11 @@ public class FLRAuftragposition implements Serializable {
         this.mwstsatz_i_id = mwstsatz_i_id;
         this.typ_c_nr = typ_c_nr;
         this.t_uebersteuerterliefertermin = t_uebersteuerterliefertermin;
+        this.b_gesehen = b_gesehen;
+        this.b_hvmauebertragen = b_hvmauebertragen;
+        this.zwsvonposition_i_id = zwsvonposition_i_id;
+        this.zwsbisposition_i_id = zwsbisposition_i_id;
+        this.zwsnettosumme = zwsnettosumme;
         this.flrauftrag = flrauftrag;
         this.flrartikel = flrartikel;
         this.flrmediastandard = flrmediastandard;
@@ -318,6 +295,46 @@ public class FLRAuftragposition implements Serializable {
         this.t_uebersteuerterliefertermin = t_uebersteuerterliefertermin;
     }
 
+    public Short getB_gesehen() {
+        return this.b_gesehen;
+    }
+
+    public void setB_gesehen(Short b_gesehen) {
+        this.b_gesehen = b_gesehen;
+    }
+
+    public Short getB_hvmauebertragen() {
+        return this.b_hvmauebertragen;
+    }
+
+    public void setB_hvmauebertragen(Short b_hvmauebertragen) {
+        this.b_hvmauebertragen = b_hvmauebertragen;
+    }
+
+    public Integer getZwsvonposition_i_id() {
+        return this.zwsvonposition_i_id;
+    }
+
+    public void setZwsvonposition_i_id(Integer zwsvonposition_i_id) {
+        this.zwsvonposition_i_id = zwsvonposition_i_id;
+    }
+
+    public Integer getZwsbisposition_i_id() {
+        return this.zwsbisposition_i_id;
+    }
+
+    public void setZwsbisposition_i_id(Integer zwsbisposition_i_id) {
+        this.zwsbisposition_i_id = zwsbisposition_i_id;
+    }
+
+    public BigDecimal getZwsnettosumme() {
+        return this.zwsnettosumme;
+    }
+
+    public void setZwsnettosumme(BigDecimal zwsnettosumme) {
+        this.zwsnettosumme = zwsnettosumme;
+    }
+
     public com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport getFlrauftrag() {
         return this.flrauftrag;
     }
@@ -350,30 +367,6 @@ public class FLRAuftragposition implements Serializable {
         this.flrverleih = flrverleih;
     }
 
-	public Integer getZwsvonposition_i_id() {
-		return zwsvonposition_i_id;
-	}
-
-	public void setZwsvonposition_i_id(Integer zwsvonposition_i_id) {
-		this.zwsvonposition_i_id = zwsvonposition_i_id;
-	}
-
-	public Integer getZwsbisposition_i_id() {
-		return zwsbisposition_i_id;
-	}
-
-	public void setZwsbisposition_i_id(Integer zwsbisposition_i_id) {
-		this.zwsbisposition_i_id = zwsbisposition_i_id;
-	}
-
-	public BigDecimal getZwsnettosumme() {
-		return n_zwsnettosumme;
-	}
-
-	public void setZwsnettosumme(BigDecimal n_zwsnettosumme) {
-		this.n_zwsnettosumme = n_zwsnettosumme;
-	}
-  
     public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())

@@ -112,7 +112,8 @@ public class ArbeitsplatzHandler extends UseCaseHandler {
 						.next();
 				rows[row][col++] = arbeitsplatz.getI_id();
 				rows[row][col++] = arbeitsplatz.getC_pcname();
-				rows[row++][col++] = arbeitsplatz.getC_standort();
+				rows[row][col++] = arbeitsplatz.getC_standort();
+				rows[row++][col++] = arbeitsplatz.getC_typ();
 
 				col = 0;
 			}
@@ -325,21 +326,24 @@ public class ArbeitsplatzHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class },
+					String.class, String.class, String.class },
 					new String[] {
 							"Id",
 							getTextRespectUISpr("system.pcname", mandantCNr,
 									locUI),
 							getTextRespectUISpr("system.standort", mandantCNr,
-									locUI) },
+									locUI),
+							getTextRespectUISpr("lp.typ", mandantCNr,
+									locUI)},
 
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
 					new String[] { "i_id", SystemFac.FLR_ARBEITSPLATZ_C_PCNAME,
-							SystemFac.FLR_ARBEITSPLATZ_C_STANDORT }));
+							SystemFac.FLR_ARBEITSPLATZ_C_STANDORT,SystemFac.FLR_ARBEITSPLATZ_C_TYP }));
 		}
 		return super.getTableInfo();
 	}

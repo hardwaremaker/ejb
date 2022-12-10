@@ -19,8 +19,8 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-
+<!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">--> 
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="com.lp.server.lieferschein.fastlanereader.generated">
 
 	<class name="FLRLieferschein" table="LS_LIEFERSCHEIN">
@@ -36,6 +36,10 @@
 			type="java.lang.String" />
 		<property name="c_lieferartort" column="C_LIEFERARTORT" type="java.lang.String" />
 		<property name="t_liefertermin" column="T_LIEFERTERMIN" type="java.sql.Timestamp" />
+		<property name="t_rueckgabetermin" column="T_RUECKGABETERMIN"
+			type="java.sql.Timestamp" />
+		<property name="t_manuellerledigt" column="T_MANUELLERLEDIGT"
+			type="java.sql.Timestamp" />
 		<property name="d_belegdatum" column="T_BELEGDATUM" type="java.sql.Timestamp" />
 		<property name="lieferscheinstatus_status_c_nr" column="LIEFERSCHEINSTATUS_C_NR"
 			type="java.lang.String" />
@@ -66,6 +70,8 @@
 		<property name="auftrag_i_id" column="AUFTRAG_I_ID" type="java.lang.Integer"
 			insert="false" update="false" />
 		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
+		<property name="x_internerkommentar"
+			column="X_INTERNERKOMMENTAR" type="java.lang.String" />
 		<property name="t_versandzeitpunkt" column="T_VERSANDZEITPUNKT"
 			type="java.sql.Timestamp" not-null="false" />
 		<property name="c_versandtype" column="C_VERSANDTYPE" type="java.lang.String" />
@@ -73,6 +79,8 @@
 			not-null="false" />
 		<property name="t_zollexportpapier" column="T_ZOLLEXPORTPAPIER"
 			type="java.util.Date" />
+		<property name="ansprechpartner_i_id_kunde" column="ANSPRECHPARTNER_I_ID_KUNDE"
+			type="java.lang.Integer" />
 		<many-to-one name="flrauftrag"
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag"
 			column="AUFTRAG_I_ID" unique="true" />
@@ -108,7 +116,12 @@
 		<many-to-one name="flrbegruendung"
 			class="com.lp.server.lieferschein.fastlanereader.generated.FLRBegruendung"
 			column="BEGRUENDUNG_I_ID" unique="true" insert="false" update="false" />
-
+		<many-to-one name="flrlieferscheintextsuche"
+			class="com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheintextsuche"
+			column="I_ID" insert="false" update="false" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
 		<set name="flrlieferscheinpositionen">
 			<key column="LIEFERSCHEIN_I_ID" />
 			<one-to-many
@@ -124,6 +137,20 @@
 			<one-to-many
 				class="com.lp.server.lieferschein.fastlanereader.generated.FLRVerkettet" />
 		</set>
+		<property name="laenderart_c_nr" column="LAENDERART_C_NR"
+			type="java.lang.String" />
+		<many-to-one name="flrspediteur"
+			class="com.lp.server.system.fastlanereader.generated.FLRSpediteur"
+			column="SPEDITEUR_I_ID" unique="true" insert="false" update="false" />		
+	</class>
+
+	<class name="FLRLieferscheintextsuche" table="LS_TEXTSUCHE">
+		<id name="i_id" column="I_ID" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="c_typ" column="C_TYP" type="java.lang.String" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_suche" column="C_SUCHE" type="java.lang.String" />
 	</class>
 
 	<class name="FLRLieferscheinReportAngelegte" table="LS_LIEFERSCHEIN">
@@ -166,11 +193,20 @@
 			type="java.lang.String" />
 		<property name="auftragposition_i_id" column="AUFTRAGPOSITION_I_ID"
 			type="java.lang.Integer" />
+		<property name="forecastposition_i_id" column="FORECASTPOSITION_I_ID"
+			type="java.lang.Integer" />
+		<property name="wareneingangsposition_i_id_anderermandant" column="WARENEINGANGSPOSITION_I_ID_ANDERERMANDANT"
+			type="java.lang.Integer" />
+			
 		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
 		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="c_zbez" column="C_ZBEZ" type="java.lang.String" />
 		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_nettoeinzelpreis" column="N_NETTOEINZELPREIS"
+			type="java.math.BigDecimal" />
+			<property name="n_nettoeinzelpreisplusversteckteraufschlag" column="N_NETTOEINZELPREISPLUSVERSTECKTERAUFSCHLAG"
 			type="java.math.BigDecimal" />
 		<property name="n_materialzuschlag" column="N_MATERIALZUSCHLAG"
 			type="java.math.BigDecimal" />
@@ -191,6 +227,9 @@
 		<many-to-one name="flrpositionensichtauftrag"
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRPositionenSichtAuftrag"
 			column="AUFTRAGPOSITION_I_ID" unique="true" insert="false" update="false" />
+		<many-to-one name="flrforecastposition"
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecastposition"
+			column="FORECASTPOSITION_I_ID" unique="true" insert="false" update="false" />
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" />
@@ -235,6 +274,78 @@
 	</class>
 
 
+	<class name="FLRPackstueck" table="LS_PACKSTUECK">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="l_nummer" column="L_NUMMER" type="java.lang.Long" />
+		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
+		<property name="lieferschein_i_id" column="LIEFERSCHEIN_I_ID"
+			type="java.lang.Integer" />
+		<property name="losablieferung_i_id" column="LOSABLIEFERUNG_I_ID"
+			type="java.lang.Integer" />
+		<property name="lieferscheinposition_i_id" column="LIEFERSCHEINPOSITION_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrlos"
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrlieferschein"
+			class="com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein"
+			column="LIEFERSCHEIN_I_ID" insert="false" update="false" />
+
+
+
+
+	</class>
+
+
+	<class name="FLRAusliefervorschlag" table="LS_AUSLIEFERVORSCHLAG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_verfuegbar" column="N_VERFUEGBAR" type="java.math.BigDecimal"
+			not-null="false" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal"
+			not-null="false" />
+		<property name="t_ausliefertermin" column="T_AUSLIEFERTERMIN"
+			type="java.sql.Timestamp" not-null="false" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="kunde_i_id" column="KUNDE_I_ID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="kunde_i_id_lieferadresse" column="KUNDE_I_ID_LIEFERADRESSE" type="java.lang.Integer"
+			not-null="false" />
+
+		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="i_belegartid" column="I_BELEGARTID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			not-null="false" />
+
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikelliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkunde"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkunde_lieferadresse"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID_LIEFERADRESSE" insert="false" update="false" />
+		<many-to-one name="flrbelegart"
+			class="com.lp.server.system.fastlanereader.generated.FLRBelegart"
+			column="BELEGART_C_NR" insert="false" update="false" />
+
+
+	</class>
+
 	<class name="FLRBegruendung" table="LS_BEGRUENDUNG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -262,7 +373,7 @@
 			class="com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein"
 			column="LIEFERSCHEIN_I_ID" unique="true" insert="false" update="false" />
 
-	
+
 	</class>
 
 	<class name="FLRLieferscheinart" table="LS_LIEFERSCHEINART">

@@ -52,10 +52,10 @@ public class FLRFunktion implements Serializable {
 	private String c_nr;
 
 	/** persistent field */
-	private Set<?> funktion_funktionspr_set;
+	private Set<FLRFunktionspr> funktion_funktionspr_set;
 
 	/** full constructor */
-	public FLRFunktion(String c_nr, Set<?> funktion_funktionspr_set) {
+	public FLRFunktion(String c_nr, Set<FLRFunktionspr> funktion_funktionspr_set) {
 		this.c_nr = c_nr;
 		this.funktion_funktionspr_set = funktion_funktionspr_set;
 	}
@@ -65,7 +65,7 @@ public class FLRFunktion implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRFunktion(Set<?> funktion_funktionspr_set) {
+	public FLRFunktion(Set<FLRFunktionspr> funktion_funktionspr_set) {
 		this.funktion_funktionspr_set = funktion_funktionspr_set;
 	}
 
@@ -85,11 +85,11 @@ public class FLRFunktion implements Serializable {
 		this.c_nr = c_nr;
 	}
 
-	public Set<?> getFunktion_funktionspr_set() {
+	public Set<FLRFunktionspr> getFunktion_funktionspr_set() {
 		return this.funktion_funktionspr_set;
 	}
 
-	public void setFunktion_funktionspr_set(Set<?> funktion_funktionspr_set) {
+	public void setFunktion_funktionspr_set(Set<FLRFunktionspr> funktion_funktionspr_set) {
 		this.funktion_funktionspr_set = funktion_funktionspr_set;
 	}
 

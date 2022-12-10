@@ -37,6 +37,7 @@ import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.partner.service.KundeDto;
 
 interface ArtikelFinder {
-	public ArtikelDto findArtikel(KundeDto kundeDto, AuftragDto auftragDto) ;
+	public ArtikelDto findArtikel(KundeDto kundeDto, AuftragDto auftragDto);
+	public String getUsedItemCnr();
 }
 

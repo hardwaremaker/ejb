@@ -34,71 +34,39 @@ package com.lp.server.system.automatikjob;
 
 import java.rmi.RemoteException;
 
-import javax.print.PrintService;
-import javax.print.PrintServiceLookup;
-
-import com.lp.server.system.ejbfac.ServerDruckerFacBean;
+import com.lp.server.system.ejbfac.HvPrinter;
 import com.lp.server.system.service.AutoRahmendetailbedarfdruckDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
 
 public class AutomatikjobRahmendetailbedarfdruck extends AutomatikjobBasis {
 
-	private boolean errorInJob;
-
-	private static final String NICHT_DRUCKEN = "Nicht Drucken";
-	
 	public AutomatikjobRahmendetailbedarfdruck(){
 		super();
 	}
 	public boolean performJob(TheClientDto theClientDto) {
 		myLogger.info("start Rahmendetailbedarfdruck");
-		errorInJob = false;
 		AutoRahmendetailbedarfdruckDto autoRahmendetailbedarfdruckDto = null;
-		JasperPrintLP print=null;
 		try {
 			autoRahmendetailbedarfdruckDto = getAutoRahmendetailbedarfdruckFac().autoAutoRahmendetailbedarfdruckFindByMandantCNr(theClientDto.getMandant());
+			if (autoRahmendetailbedarfdruckDto == null) return false;
 		} catch (RemoteException e) {
-			myLogger.error("Einstellungen f\u00FCr Job Rahmendetailbedarfdruck konnten nicht geladen werden\n" + e.getMessage());
-			errorInJob=true;
+			myLogger.error("Einstellungen f\u00FCr Job Rahmendetailbedarfdruck konnten nicht geladen werden", e);
+			return true;
 		}
+
 		try {
-			
-			if(autoRahmendetailbedarfdruckDto!=null){
-				print = getRahmenbedarfeFac().printAlleOffenenRahmenbedarfe(autoRahmendetailbedarfdruckDto.getBSortiertnachArtikel(), theClientDto);
-			}
+			JasperPrintLP print = getRahmenbedarfeFac().printAlleOffenenRahmenbedarfe(autoRahmendetailbedarfdruckDto.getBSortiertnachArtikel(), theClientDto);
+			HvPrinter hvPrinter = getServerDruckerFacLocal().createHvPrinter(autoRahmendetailbedarfdruckDto.getCDrucker());
+			if (getServerDruckerFacLocal().exists(hvPrinter))
+				getServerDruckerFacLocal().print(print, hvPrinter);
 		} catch (Exception e) {
-			myLogger.error("Der Druck Rahmendetailbedarf konnte nicht erstellt werden:\n" + e.getMessage());
-			errorInJob=true;
-		} 
-		if(print!=null){
-			PrintService[] printService = PrintServiceLookup
-			.lookupPrintServices(null, null);
-			int i = 0;
-			String usedPrinter = autoRahmendetailbedarfdruckDto
-			.getCDrucker();
-			if (usedPrinter.equals("Kein Drucker gefunden")) {
-				// do nothing there is no Printer
-			} else {
-				while (i < printService.length) {
-					if (!printService[i].getName().equals(usedPrinter)) {
-						i++;
-					} else {
-						if (!usedPrinter.equals(NICHT_DRUCKEN)) {
-							try {
-								ServerDruckerFacBean.print(print, printService[i]);
-							} catch (Throwable e) {
-								myLogger.error("Der Druck Rahmendetailbedarf konnte nicht an den Drucker gesendet werden:\n" +e.getMessage());
-								errorInJob=true;
-							}
-						}
-						break;
-					}
-				}
-			}
+			myLogger.error("Der Druck Rahmendetailbedarf konnte nicht erstellt oder gedruckt werden:", e);
+			return true;
 		}
+		
 		myLogger.info("ende Rahmendetailbedarfdruck");
-		return errorInJob;
+		return false;
 	}
 
 }

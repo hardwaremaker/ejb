@@ -49,6 +49,7 @@ public interface AnfrageReportFac {
 	public final static String REPORT_ANFRAGE = "anf_anfrage.jasper";
 	public final static String REPORT_ANFRAGESTATISTIK = "anf_anfragestatistik.jasper";
 	public final static String REPORT_ANFRAGE_LIEFERDATENUEBERSICHT = "anf_lieferdatenuebersicht.jasper";
+	public final static String REPORT_BIETERUEBERSICHT = "anf_bieteruebersicht.jasper";
 
 	public static int REPORT_ANFRAGE_POSITION = 0;
 	public static int REPORT_ANFRAGE_IDENT = 1;
@@ -85,7 +86,21 @@ public interface AnfrageReportFac {
 	public final static int REPORT_ANFRAGE_ARTIKEL_MATERIALGEWICHT = 32;
 	public final static int REPORT_ANFRAGE_ARTIKEL_KURS_MATERIALZUSCHLAG = 33;
 	public final static int REPORT_ANFRAGE_ARTIKEL_DATUM_MATERIALZUSCHLAG = 34;
-	public final static int REPORT_ANFRAGE_ANZAHL_SPALTEN = 35;
+	public final static int REPORT_ANFRAGE_ERSATZARTIKEL = 35;
+	public final static int REPORT_ANFRAGE_ARTIKEL_HERSTELLERNUMMER = 36;
+	public final static int REPORT_ANFRAGE_ARTIKEL_HERSTELLERBEZEICHNUNG = 37;
+	public final static int REPORT_ANFRAGE_ARTIKEL_HERSTELLER_KURZBEZEICHNUNG = 38;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_KOMMENTAR = 39;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_LOS_STKLKBEZ = 40;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_LOS_STKLBEZ = 41;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_LOSNUMMER = 42;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_LOS_STKLNUMMER = 43;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_LOS_KOMMENTAR = 44;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_LOS_PROJEKT = 45;
+	public final static int REPORT_ANFRAGE_SOLLMATERIAL_SUBREPORT_ARBEITSGAENGE = 46;
+	public final static int REPORT_ANFRAGE_ARTIKEL_INDEX = 47;
+	public final static int REPORT_ANFRAGE_ARTIKEL_REVISION = 48;
+	public final static int REPORT_ANFRAGE_ANZAHL_SPALTEN = 49;
 
 	public static int REPORT_ANFRAGESTATISTIK_CNR = 0;
 	public static int REPORT_ANFRAGESTATISTIK_KUNDE = 1;
@@ -94,6 +109,11 @@ public interface AnfrageReportFac {
 	public static int REPORT_ANFRAGESTATISTIK_ANGEBOTENEMENGE = 4;
 	public static int REPORT_ANFRAGESTATISTIK_ANGEBOTENERPREIS = 5;
 	public static int REPORT_ANFRAGESTATISTIK_LIEFERZEIT = 6;
+	public static int REPORT_ANFRAGESTATISTIK_ARTIKELNUMMER = 7;
+	public static int REPORT_ANFRAGESTATISTIK_ARTIKELBEZEICHNUNG = 8;
+	public static int REPORT_ANFRAGESTATISTIK_ARTIKELZUSATZBEZEICHNUNG = 9;
+	public static int REPORT_ANFRAGESTATISTIK_ERSATZARTIKEL = 10;
+	public static int REPORT_ANFRAGESTATISTIK_ANZAHL_SPALTEN = 11;
 
 	public final static int REPORT_LIEFERDATEN_ARTIKELCNR = 0;
 	public final static int REPORT_LIEFERDATEN_LIEFERMENGE = 1;
@@ -104,16 +124,37 @@ public interface AnfrageReportFac {
 	public final static int REPORT_LIEFERDATEN_LIEFERANTNAME = 6;
 	public final static int REPORT_LIEFERDATEN_ANFRAGECNR = 7;
 	public final static int REPORT_LIEFERDATEN_ANFRAGECBEZ = 8;
+	public final static int REPORT_LIEFERDATEN_LIEFERADRESSENAME = 9;
+	public final static int REPORT_LIEFERDATEN_ERSATZARTIKEL = 10;
+	public final static int REPORT_LIEFERDATEN_ARTIKELCNR_ORIGINAL = 11;
+	public final static int REPORT_LIEFERDATEN_BILLIGSTER_ARTIKEL = 12;
+	public final static int REPORT_LIEFERDATEN_SCHNELLSTER_ARTIKEL = 13;
+	public final static int REPORT_LIEFERDATEN_LIEF1PREIS = 14;
+	public final static int REPORT_LIEFERDATEN_LIEF1GUELTIGAB = 15;
+	public final static int REPORT_LIEFERDATEN_LIEF1FIXKOSTEN = 16;
+	public final static int REPORT_LIEFERDATEN_LIEF1LIEFERANT = 17;
+	public final static int REPORT_LIEFERDATEN_ANZAHL_SPALTEN = 18;
 
-	public JasperPrintLP[] printAnfrage(Integer iIdAnfrageI,
-			Integer iAnzahlKopienI, Boolean bMitLogo, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public final static int REPORT_BIETERUEBERSICHT_POSNR = 0;
+	public final static int REPORT_BIETERUEBERSICHT_ARTIKELNUMMER = 1;
+	public final static int REPORT_BIETERUEBERSICHT_BEZEICHNUNG = 2;
+	public final static int REPORT_BIETERUEBERSICHT_ZUSATZBEZEICHNUNG = 3;
+	public final static int REPORT_BIETERUEBERSICHT_ZUSATZBEZEICHNUNG2 = 4;
+	public final static int REPORT_BIETERUEBERSICHT_EINHEIT = 5;
+	public final static int REPORT_BIETERUEBERSICHT_MENGE = 6;
+	public final static int REPORT_BIETERUEBERSICHT_PREIS = 7;
+	public final static int REPORT_BIETERUEBERSICHT_SUBREPORT_LIEFERANTEN = 8;
+	public final static int REPORT_BIETERUEBERSICHT_BILLIGSTER_PREIS = 9;
+	public final static int REPORT_BIETERUEBERSICHT_ANZAHL_SPALTEN = 10;
 
-	public JasperPrintLP printAnfragestatistik(
-			ReportAnfragestatistikKriterienDto reportAnfragestatistikKriterienDtoI,
+	public JasperPrintLP[] printAnfrage(Integer iIdAnfrageI, Integer iAnzahlKopienI, Boolean bMitLogo,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printLieferdatenuebersicht(
-			ReportAnfragelieferdatenuebersichtKriterienDto kritDtoI,
+	public JasperPrintLP printAnfragestatistik(ReportAnfragestatistikKriterienDto reportAnfragestatistikKriterienDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printLieferdatenuebersicht(ReportAnfragelieferdatenuebersichtKriterienDto kritDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printBieteruebersicht(Integer anfrageIId, TheClientDto theClientDto);
 }

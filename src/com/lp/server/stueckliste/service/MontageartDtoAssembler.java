@@ -47,6 +47,7 @@ public class MontageartDtoAssembler {
 			montageartDto.setCBez(montageart.getCBez());
 			montageartDto.setMandantCNr(montageart.getMandantCNr());
 			montageartDto.setISort(montageart.getISort());
+			montageartDto.setArtikelIId(montageart.getArtikelIId());
 		}
 		return montageartDto;
 	}

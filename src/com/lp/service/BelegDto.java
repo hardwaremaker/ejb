@@ -316,7 +316,7 @@ public abstract class BelegDto implements Serializable {
 		this.tManuellerledigt = tManuellerledigt;
 	}
 
-	private Integer projektIId;
+	protected Integer projektIId;
 
 	public Integer getProjektIId() {
 		return projektIId;

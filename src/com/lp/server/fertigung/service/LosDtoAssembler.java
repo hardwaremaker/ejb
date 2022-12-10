@@ -56,32 +56,25 @@ public class LosDtoAssembler {
 			losDto.setNLosgroesse(los.getNLosgroesse());
 			losDto.setPartnerIIdFertigungsort(los.getPartnerIIdFertigungsort());
 			losDto.setPersonalIIdTechniker(los.getPersonalIIdTechniker());
-			losDto.setTProduktionsende(new Date(los.getTProduktionsende()
-					.getTime()));
-			losDto.setTProduktionsbeginn(new Date(los.getTProduktionsbeginn()
-					.getTime()));
+			losDto.setTProduktionsende(new Date(los.getTProduktionsende().getTime()));
+			losDto.setTProduktionsbeginn(new Date(los.getTProduktionsbeginn().getTime()));
 			losDto.setTAusgabe(los.getTAusgabe());
 			losDto.setPersonalIIdAusgabe(los.getPersonalIIdAusgabe());
 			losDto.setTErledigt(los.getTErledigt());
 			losDto.setPersonalIIdErledigt(los.getPersonalIIdErledigt());
 			losDto.setTProduktionsstop(los.getTProduktionsstop());
-			losDto.setPersonalIIdProduktionsstop(los
-					.getPersonalIIdProduktionsstop());
+			losDto.setPersonalIIdProduktionsstop(los.getPersonalIIdProduktionsstop());
 			losDto.setTLeitstandstop(los.getTLeitstandstop());
-			losDto.setPersonalIIdLeitstandstop(los
-					.getPersonalIIdLeitstandstop());
+			losDto.setPersonalIIdLeitstandstop(los.getPersonalIIdLeitstandstop());
 			losDto.setLagerIIdZiel(los.getLagerIIdZiel());
 			losDto.setStatusCNr(los.getStatusCNr());
-			losDto.setTAktualisierungstueckliste(los
-					.getTAktualisierungstueckliste());
-			losDto.setTAktualisierungarbeitszeit(los
-					.getTAktualisierungarbeitszeit());
+			losDto.setTAktualisierungstueckliste(los.getTAktualisierungstueckliste());
+			losDto.setTAktualisierungarbeitszeit(los.getTAktualisierungarbeitszeit());
 			losDto.setPersonalIIdAnlegen(los.getPersonalIIdAnlegen());
 			losDto.setTAnlegen(los.getTAnlegen());
 			losDto.setPersonalIIdAendern(los.getPersonalIIdAendern());
 			losDto.setTAendern(los.getTAendern());
-			losDto.setPersonalIIdManuellerledigt(los
-					.getPersonalIIdManuellerledigt());
+			losDto.setPersonalIIdManuellerledigt(los.getPersonalIIdManuellerledigt());
 			losDto.setTManuellerledigt(los.getTManuellerledigt());
 			losDto.setXText(los.getXText());
 			losDto.setCZusatznummer(los.getCZusatznummer());
@@ -96,7 +89,15 @@ public class LosDtoAssembler {
 			losDto.setTMaterialvollstaendig(los.getTMaterialvollstaendig());
 			losDto.setPersonalIIdMaterialvollstaendig(los.getPersonalIIdMaterialvollstaendig());
 			losDto.setProjektIId(los.getProjektIId());
-			
+
+			losDto.setTVpEtikettengedruckt(los.getTVpEtikettengedruckt());
+			losDto.setPersonalIIdVpEtikettengedruckt(los.getPersonalIIdVpEtikettengedruckt());
+			losDto.setForecastpositionIId(los.getForecastpositionIId());
+			losDto.setCSchachtelplan(los.getCSchachtelplan());
+			losDto.setPersonalIIdNachtraeglichGeoeffnet(los.getPersonalIIdNachtraeglichGeoeffnet());
+			losDto.setTNachtraeglichGeoeffnet(los.getTNachtraeglichGeoeffnet());
+			losDto.setCAbposnr(los.getCAbposnr());
+			losDto.setLagerplatzIId(los.getLagerplatzIId());
 		}
 		return losDto;
 	}

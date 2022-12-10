@@ -59,6 +59,18 @@ public class Lohnartstundenfaktor implements Serializable {
 	@Column(name = "F_FAKTOR")
 	private Double fFaktor;
 
+	
+	@Column(name = "SCHICHTZEIT_I_ID")
+	private Integer schichtzeitIId;
+	
+	public Integer getSchichtzeitIId() {
+		return schichtzeitIId;
+	}
+
+	public void setSchichtzeitIId(Integer schichtzeitIId) {
+		this.schichtzeitIId = schichtzeitIId;
+	}
+
 	@Column(name = "TAGESART_I_ID")
 	private Integer tagesartIId;
 	
@@ -68,6 +80,30 @@ public class Lohnartstundenfaktor implements Serializable {
 
 	public void setTagesartIId(Integer tagesartIId) {
 		this.tagesartIId = tagesartIId;
+	}
+
+	@Column(name = "ZEITMODELL_I_ID")
+	private Integer zeitmodellIId;
+	
+	public Integer getZeitmodellIId() {
+		return this.zeitmodellIId;
+	}
+
+	public void setZeitmodellIId(Integer zeitmodellIId) {
+		this.zeitmodellIId = zeitmodellIId;
+	}
+	
+	
+	@Column(name = "TAETIGKEIT_I_ID")
+	private Integer taetigkeitIId;
+	
+	
+	public Integer getTaetigkeitIId() {
+		return taetigkeitIId;
+	}
+
+	public void setTaetigkeitIId(Integer taetigkeitIId) {
+		this.taetigkeitIId = taetigkeitIId;
 	}
 
 	private static final long serialVersionUID = 1L;

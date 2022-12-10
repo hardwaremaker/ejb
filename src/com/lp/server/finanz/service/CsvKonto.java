@@ -135,7 +135,7 @@ public class CsvKonto extends KontoDto {
 	}
 
 	public String getSteuerart() {
-		return steuerart;
+		return steuerart == null ? steuerart : steuerart.trim();
 	}
 
 	public void setSteuerart(String steuerart) {

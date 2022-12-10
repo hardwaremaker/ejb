@@ -33,6 +33,7 @@
 package com.lp.server.system.fastlanereader.generated;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -53,10 +54,10 @@ public class FLRWechselkurs implements Serializable {
 	private FLRWechselkursPK id_comp;
 
 	/** nullable persistent field */
-	private Float n_kurs;
+	private BigDecimal n_kurs;
 
 	/** full constructor */
-	public FLRWechselkurs(FLRWechselkursPK id_comp, Float n_kurs) {
+	public FLRWechselkurs(FLRWechselkursPK id_comp, BigDecimal n_kurs) {
 		this.id_comp = id_comp;
 		this.n_kurs = n_kurs;
 	}
@@ -78,11 +79,11 @@ public class FLRWechselkurs implements Serializable {
 		this.id_comp = id_comp;
 	}
 
-	public Float getN_kurs() {
+	public BigDecimal getN_kurs() {
 		return this.n_kurs;
 	}
 
-	public void setN_kurs(Float n_kurs) {
+	public void setN_kurs(BigDecimal n_kurs) {
 		this.n_kurs = n_kurs;
 	}
 

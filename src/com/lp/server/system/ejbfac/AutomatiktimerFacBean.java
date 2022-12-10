@@ -35,8 +35,10 @@ package com.lp.server.system.ejbfac;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.List;
 
 import javax.annotation.Resource;
 import javax.ejb.Stateless;
@@ -48,33 +50,45 @@ import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
-import com.lp.server.benutzer.service.LogonFac;
 import com.lp.server.personal.service.BetriebskalenderDto;
 import com.lp.server.personal.service.PersonalDto;
-import com.lp.server.personal.service.PersonalFac;
+import com.lp.server.system.automatikjob.Automatikjob4VendingExport;
+import com.lp.server.system.automatikjob.AutomatikjobArbeitszeitstatusPDFDruck;
+import com.lp.server.system.automatikjob.AutomatikjobAuslieferlistePDFDruck;
 import com.lp.server.system.automatikjob.AutomatikjobBasis;
+import com.lp.server.system.automatikjob.AutomatikjobBedarfsuebernahmeOffene;
 import com.lp.server.system.automatikjob.AutomatikjobBestellvorschlagberechnung;
 import com.lp.server.system.automatikjob.AutomatikjobBestellvorschlagdruck;
 import com.lp.server.system.automatikjob.AutomatikjobBestellvorschlagverdichtung;
 import com.lp.server.system.automatikjob.AutomatikjobFehlmengendruck;
+import com.lp.server.system.automatikjob.AutomatikjobInternebestellungberechnen;
 import com.lp.server.system.automatikjob.AutomatikjobKassenimport;
+import com.lp.server.system.automatikjob.AutomatikjobKpiPdfDruck;
+import com.lp.server.system.automatikjob.AutomatikjobLoseerledigen;
+import com.lp.server.system.automatikjob.AutomatikjobLumiquote;
 import com.lp.server.system.automatikjob.AutomatikjobMahnen;
 import com.lp.server.system.automatikjob.AutomatikjobMahnungsversand;
+import com.lp.server.system.automatikjob.AutomatikjobMailAblageIMAP;
+import com.lp.server.system.automatikjob.AutomatikjobMailversand;
+import com.lp.server.system.automatikjob.AutomatikjobMonatsabrechnungVersand;
+import com.lp.server.system.automatikjob.AutomatikjobMonatsabrechnungVersandAbteilungen;
+import com.lp.server.system.automatikjob.AutomatikjobNachtraeglichGeoeffneteLosErledigen;
 import com.lp.server.system.automatikjob.AutomatikjobPaternoster;
 import com.lp.server.system.automatikjob.AutomatikjobRahmenbedarfePruefen;
 import com.lp.server.system.automatikjob.AutomatikjobRahmendetailbedarfdruck;
 import com.lp.server.system.automatikjob.AutomatikjobSofortverbrauch;
+import com.lp.server.system.automatikjob.AutomatikjobWEJournal;
+import com.lp.server.system.automatikjob.AutomatikjobWebabfrageArtikellieferant;
+import com.lp.server.system.ejb.Automatikjobs;
+import com.lp.server.system.ejb.AutomatikjobsQuery;
 import com.lp.server.system.ejb.Automatiktimer;
 import com.lp.server.system.service.AutomatikjobDto;
-import com.lp.server.system.service.AutomatikjobFac;
+import com.lp.server.system.service.AutomatikjobDtoAssembler;
 import com.lp.server.system.service.AutomatikjobtypeDto;
-import com.lp.server.system.service.AutomatikjobtypeFac;
 import com.lp.server.system.service.AutomatiktimerDto;
 import com.lp.server.system.service.AutomatiktimerDtoAssembler;
 import com.lp.server.system.service.AutomatiktimerFac;
 import com.lp.server.system.service.TheClientDto;
-import com.lp.server.system.service.TheClientFac;
-import com.lp.server.system.service.VersandFac;
 import com.lp.server.system.service.VersandauftragDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.logger.ILPLogger;
@@ -84,8 +98,11 @@ import com.lp.util.Helper;
 
 @Stateless
 public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
+	private static final long loneHourInMillis = 60 * 60 * 1000;
+	private static final long loneDayInMillis = loneHourInMillis * 24;
 
-	@Resource javax.ejb.TimerService timerService;
+	@Resource 
+	javax.ejb.TimerService timerService;
 
 	@PersistenceContext
 	private EntityManager em;
@@ -93,22 +110,9 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 	protected final ILPLogger myLogger = LPLogService.getInstance().getLogger(
 			AutomatikjobBasis.class);
 
-	private LogonFac logonFac;
-	private TheClientFac theClientFac;
-	private PersonalFac personalFac;
-	private VersandFac versandFac;
-	private AutomatikjobDto automatikjobDto;
-	private AutomatikjobFac automatikjobFac;
-	private AutomatikjobtypeFac automatikjobtypeFac;
-
+//	private AutomatikjobDto automatikjobDto;
 	private TheClientDto theClientDto;
-
-
-
-	protected final static String sUsername = "lpwebappzemecs";
-	protected final static String sUser = sUsername + "|Automatik|";
-	protected final static char[] cPasswd = new char[] {
-		'l', 'p', 'w', 'e', 'b', 'a', 'p', 'p', 'z', 'e', 'm', 'e', 'c', 's'};
+	private String lastMandantCnr;
 
 	@Timeout
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
@@ -116,17 +120,11 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 		myLogger.info("Automatik start");
 		//prepare next Timeout in 1 day
 		timer.cancel();
-		boolean bPerform = true;
-		Date tTimeStarted = getDate();
-		long loneHourInMillis = 60 * 60 * 1000;
-		long loneDayInMillis = loneHourInMillis * 24;
 		try {
 			setTimer(loneDayInMillis);
 		} catch (RemoteException e) {
 			myLogger.error(e.getMessage());
 		}
-		boolean bDayIsNonWorkingDay = false;
-		boolean bLastDayOfMonth = checkLastDayOfMonth();
 		//Check if Automatik is activated
 		Integer iEnabled = 0;
 		try {
@@ -136,180 +134,161 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 			myLogger.error("Die Konfiguration f\u00FCr den Timer konnte nicht gefunden werden");
 		}
 		if (iEnabled != 0) {
-			// jobtype pasternoster
-			Integer jobtypPasternoster = null;
-			AutomatikjobtypeDto jobtypDto = null;
-			try {
-				jobtypDto = getAutomatikjobtypeFac().automatikjobtypeFindByCJobType(
-						AutomatiktimerFac.JOBTYPE_PATERNOSTERABFRAGE_TYPE);
-				jobtypPasternoster = jobtypDto.getIId();
-			} catch (Throwable t) {
-				//
-			}
-			
-			//fetch Jobs like sorted
-			int iActJob = 0;
-
-			try {
-				theClientFac = getTheClientFac();
-				automatikjobFac = getAutomatikjobFac();
-				automatikjobtypeFac = getAutomatikjobtypeFac();
-				theClientFac = getTheClientFac();
-				logonFac = getLogonFac();
-			}
-			catch (Throwable t) {
-				myLogger.error("Fehler bei der Initialisierung der Daten");
-			}
-			try {
-				automatikjobDto = automatikjobFac.automatikjobFindByISort(iActJob);
-			}
-			catch (Throwable t) {
-				myLogger.error("Es konnten keine automatischen Jobs gefunden werden");
-			}
-			//Login
-			try {
-				theClientDto = logonFac.logon(sUser, 
-						Helper.getMD5Hash((sUsername + new String(cPasswd)).toCharArray()), 
-						Helper.string2Locale("deAT      "), null,
-						getTimestamp());
-			}
-			catch (Throwable t) {
-				myLogger.error("Der verwendete Benutzer konnte sich nicht anmelden");
-			}
-			
-			Automatiktimer autoTimer = null;
-			Time performHour;
-			try {
-				autoTimer = em.find(Automatiktimer.class, new Integer(0));
-			} catch (Exception e) {
-				myLogger.error("Automatiktimer ID=0 konnte nicht gefunden werden");
-			}
-			if (autoTimer == null)
-				// nicht gesetzt, aktuellen Zeitpunkt nehmen 
-				performHour = new Time(System.currentTimeMillis());
-			else
-				// sonst Zeit aus Bean
-				performHour = autoTimer.getTTimetoperform();
-
-			String MandantCNr = null;
-			try {
-				MandantCNr = theClientDto.getMandant();
-				bDayIsNonWorkingDay = checkNonWorkingDay(performHour, theClientDto);
-			}
-			catch (Throwable t) {
-				myLogger.error("Der Standardmandant konnte nicht gefunden werden");
-			}
-			try {
-				logonFac.logout(theClientDto);
-			} catch (Throwable t) {
-				myLogger.error("Fehler beim abmelden des Benutzers");
-			}
-			
-			while (automatikjobDto != null) {
-				if (!automatikjobDto.getCMandantCNr().equals(MandantCNr)) {
-					//Change Mandant if necessary
-					MandantCNr = automatikjobDto.getCMandantCNr();
-					myLogger.info(MandantCNr);
-					try {
-						theClientDto = logonFac.logon(sUser,
-								Helper.getMD5Hash((sUsername + new String(cPasswd)).toCharArray()), 
-								Helper.string2Locale("deAT      "),
-								MandantCNr, theClientDto,
-								getTimestamp());
-					}
-					catch (Throwable t) {
-						myLogger.error("Das wechseln des Mandants schlug fehl");
-					}
-					try {
-						MandantCNr = theClientDto.getMandant();
-						bDayIsNonWorkingDay = checkNonWorkingDay(performHour, theClientDto);
-					}
-					catch (Throwable t) {
-						myLogger.error("Der Mandant wurde nicht gefunden");
-					}
-				}
-				//Abfrage ob der Job aktiviert ist
-				if (automatikjobDto.getBActive() == 0) {
-					bPerform = false;
-				}
-				else {
-					//Abfrage ob der Intervall bis zur naechsten ausfuehrung stimmt
-					if(automatikjobDto.getDLastperformed() == null){
-						//Job wurde noch nie durchgefuehrt...
-						automatikjobDto.setDLastperformed(new Date(0));
-					}
-					long intervalTime = loneDayInMillis * automatikjobDto.getIIntervall();
-					long lLastperform = automatikjobDto.getDLastperformed().getTime();
-					long lLastPlusIntervall = lLastperform + intervalTime;
-					Date dLastPlusIntervall = new Date(lLastPlusIntervall);
-					if (! (dLastPlusIntervall.equals(getDate()) ||
-							dLastPlusIntervall.before(getDate()))) {
-						bPerform = false;
-					}
-					else {
-						//Wenn der Intervall stimmt jedoch ein Feiertag folgt
-						if (bDayIsNonWorkingDay) {
-							if (automatikjobDto.getBPerformOnNonWOrkingDays() == 0) {
-								bPerform = false;
-							}
-						}
-					}
-					//Wenn der Monatsletzte ist und es ein Monatsjob ist fuehre diesen aus
-					if (bLastDayOfMonth) {
-						if (automatikjobDto.getBMonthjob() != 0) {
-							bPerform = true;
-						}
-					}
-				}
-				
-				if ((jobtypPasternoster != null) && (automatikjobDto.getIAutomatikjobtypeIid().equals(jobtypPasternoster))) {
-					// Paternosterjobs nicht ausfuehren, werden von AutoPaternosterFacBean durchgefuehrt
-					bPerform = false;
-				}
-				
-				//Wenn der Job auszufuehren ist
-				if (bPerform) {
-					AutomatikjobBasis automatikjobBasis = getClassForJobType(automatikjobDto.
-							getIAutomatikjobtypeIid());
-					//ausfuehren des aktuellen Jobs
-					if (automatikjobBasis.performJob(theClientDto)) {
-						sendMailToUser();
-					} else {
-						automatikjobDto.setDLastperformed(tTimeStarted);
-						automatikjobDto.setDNextperform(new Date(automatikjobDto.
-								getDLastperformed().getTime() +
-								(automatikjobDto.getIIntervall() *
-										loneDayInMillis)));
-					}
-					try {
-						automatikjobFac.updateAutomatikjob(automatikjobDto);
-					}
-					catch (RemoteException ex1) {
-						myLogger.error("Fehler beim beenden des Jobs");
-					}
-				}
-				bPerform = true;
-				iActJob++;
-				try {
-					automatikjobDto = automatikjobFac.automatikjobFindByISort(iActJob);
-				}
-				catch (Exception oNFEx) {
-					automatikjobDto = null;
-				}
-				try {
-					logonFac.logout(theClientDto);
-				}
-				catch (Throwable t) {
-					myLogger.error("Fehler beim abmelden des Benutzers");
-				}
-
-			}
+			processJobs();
 		}
 		myLogger.info("Automatik ende");
 	}
 
-	public AutomatiktimerDto automatiktimerFindByPrimaryKey(Integer id)
-	throws RemoteException {
+	private boolean changeToMandant(String newMandantCnr) {
+		if (newMandantCnr.equals(lastMandantCnr)) {
+			return true;
+		}
+		
+		try {
+			theClientDto = getLogonFac().logonIntern(
+				getMandantFac().getLocaleDesHauptmandanten(), newMandantCnr);
+			lastMandantCnr = theClientDto.getMandant();
+			return true;
+		} catch (Throwable t) {
+			myLogger.error("Der interne Logon in Mandant " + newMandantCnr + " schlug fehl.", t);
+			return false;
+		}
+	}
+	
+	private void processJobsOld() {
+		Timestamp tTimeStarted = getTimestamp();
+		boolean bDayIsNonWorkingDay = false;
+		boolean bLastDayOfMonth = checkLastDayOfMonth();
+		//Login
+		try {
+			theClientDto = getLogonFac().logonIntern(getMandantFac().getLocaleDesHauptmandanten(), null);
+		} catch (Throwable t) {
+			myLogger.error("Der verwendete Benutzer konnte sich nicht anmelden", t);
+		}
+		
+		Automatiktimer autoTimer = null;
+		Time performHour;
+		try {
+			autoTimer = em.find(Automatiktimer.class, new Integer(0));
+		} catch (Exception e) {
+			myLogger.error("Automatiktimer ID=0 konnte nicht gefunden werden", e);
+		}
+		if (autoTimer == null)
+			// nicht gesetzt, aktuellen Zeitpunkt nehmen 
+			performHour = new Time(System.currentTimeMillis());
+		else
+			// sonst Zeit aus Bean
+			performHour = autoTimer.getTTimetoperform();
+
+		String mandantCNr = null;
+		try {
+			mandantCNr = theClientDto.getMandant();
+			bDayIsNonWorkingDay = checkNonWorkingDay(performHour, theClientDto);
+		} catch (Throwable t) {
+			myLogger.error("Der Standardmandant konnte nicht gefunden werden", t);
+		}
+
+		try {
+			getLogonFac().logout(theClientDto);
+		} catch (Throwable t) {
+			myLogger.error("Fehler beim Abmelden des Benutzers", t);
+		}
+
+		AutomatikjobDto[] jobs = listActiveJobs();
+		for (AutomatikjobDto automatikjobDto : jobs) {
+			boolean bPerform = true;
+			if (!automatikjobDto.getCMandantCNr().equals(mandantCNr)) {
+				//Change Mandant if necessary
+				mandantCNr = automatikjobDto.getCMandantCNr();
+				myLogger.info(mandantCNr);
+				try {
+					theClientDto = getLogonFac().logonIntern(
+						getMandantFac().getLocaleDesHauptmandanten(), mandantCNr);
+				} catch (Throwable t) {
+					myLogger.error("Das wechseln des Mandants schlug fehl", t);
+				}
+				try {
+					mandantCNr = theClientDto.getMandant();
+					bDayIsNonWorkingDay = checkNonWorkingDay(performHour, theClientDto);
+				} catch (Throwable t) {
+					myLogger.error("Der Mandant wurde nicht gefunden", t);
+				}
+			}
+			//Abfrage ob der Intervall bis zur naechsten ausfuehrung stimmt
+			if(automatikjobDto.getDLastperformed() == null){
+				//Job wurde noch nie durchgefuehrt...
+				automatikjobDto.setDLastperformed(new Timestamp(0));
+			}
+			long intervalTime = loneDayInMillis * automatikjobDto.getIIntervall();
+			long lLastperform = automatikjobDto.getDLastperformed().getTime();
+			long lLastPlusIntervall = lLastperform + intervalTime;
+			Date dLastPlusIntervall = new Date(lLastPlusIntervall);
+			if (! (dLastPlusIntervall.equals(getDate()) ||
+					dLastPlusIntervall.before(getDate()))) {
+				bPerform = false;
+			} else {
+				//Wenn der Intervall stimmt jedoch ein Feiertag folgt
+				if (bDayIsNonWorkingDay) {
+					if (automatikjobDto.getBPerformOnNonWOrkingDays() == 0) {
+						bPerform = false;
+					}
+				}
+			}
+			
+			//Wenn der Monatsletzte ist und es ein Monatsjob ist fuehre diesen aus
+			if (bLastDayOfMonth) {
+				if (automatikjobDto.getBMonthjob() != 0) {
+					bPerform = true;
+				}
+			}
+			
+			//Wenn der Job auszufuehren ist
+			if (bPerform) {
+				AutomatikjobBasis automatikjobBasis = getClassForJobType(automatikjobDto.
+						getIAutomatikjobtypeIid());
+				//ausfuehren des aktuellen Jobs
+				if (automatikjobBasis.performJob(theClientDto)) {
+					sendMailToUser();
+				} else {
+					automatikjobDto.setDLastperformed(Helper.cutTimestamp(tTimeStarted));
+					automatikjobDto.setDNextperform(Helper.cutTimestamp(new Timestamp(automatikjobDto.
+							getDLastperformed().getTime() +
+							(automatikjobDto.getIIntervall() *
+									loneDayInMillis))));
+				}
+				try {
+					getAutomatikjobFac().updateAutomatikjob(automatikjobDto);
+				} catch (RemoteException ex1) {
+					myLogger.error("Fehler beim Beenden des Jobs", ex1);
+				}
+			}
+				
+			try {
+				getLogonFac().logout(theClientDto);
+			} catch (Throwable t) {
+				myLogger.error("Fehler beim Abmelden des Benutzers", t);
+			}			
+		}		
+	}
+	
+
+	/** 
+	 * Alle aktivierten tageweisen Jobs (Standard Automatikjob)</br>
+	 * <p>Hier erfolgt bewusst die Umwandlung der Entities in Dtos, mit
+	 * der Hoffnung, dass die Entities moeglichst rasch aus dem 
+	 * Transaktionsmanager entfernt werden. Die Jobs koennen durchaus 
+	 * auch laenger laufen.
+	 * 
+	 * @return eine Liste aller aktivierten Standard-Jobs nach ISORT 
+	 */
+	private AutomatikjobDto[] listActiveJobs() {
+		List<Automatikjobs> jobs = AutomatikjobsQuery
+				.listByActiveScheduler(em, true, Scheduler.AUTOMATIKJOB);
+		return AutomatikjobDtoAssembler.createDtos(jobs);
+	}
+	
+	public AutomatiktimerDto automatiktimerFindByPrimaryKey(
+			Integer id) throws RemoteException {
 		Automatiktimer automatiktimer = em.find(Automatiktimer.class, id);
 		if(automatiktimer==null){
 			return null;
@@ -317,10 +296,12 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 		return assembleAutomatiktimerDto(automatiktimer);
 	}
 
-	public void createAutomatiktimer(AutomatiktimerDto automatiktimerDto)
-	throws RemoteException {
-		Automatiktimer automatiktimer = em.find(Automatiktimer.class,automatiktimerDto.getIId());
-		automatiktimer = setAutomatiktimerFromAutomatiktimerDto(automatiktimer, automatiktimerDto);
+	public void createAutomatiktimer(
+			AutomatiktimerDto automatiktimerDto) throws RemoteException {
+		Automatiktimer automatiktimer = em.find(
+				Automatiktimer.class,automatiktimerDto.getIId());
+		automatiktimer = setAutomatiktimerFromAutomatiktimerDto(
+				automatiktimer, automatiktimerDto);
 		em.persist(automatiktimer);
 		em.flush();
 
@@ -348,14 +329,11 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 
 
 	public void setTimer(long millisTillStart) throws RemoteException {
-		Collection<?> timers = timerService.getTimers();
-		Object[] actTimers = timers.toArray();
-		for (int i = 0; i < actTimers.length; i++) {
-			Timer timer = (Timer) actTimers[i];
+		Collection<Timer> timers = timerService.getTimers();
+		for (Timer timer : timers) {
 			timer.cancel();
 		}
-		timerService.createTimer(millisTillStart, null); ;
-
+		timerService.createTimer(millisTillStart, null);
 	}
 
 
@@ -365,7 +343,6 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 		automatiktimer = setAutomatiktimerFromAutomatiktimerDto(automatiktimer, automatiktimerDto);
 		em.persist(automatiktimer);
 		em.flush();
-
 	}
 
 
@@ -377,7 +354,6 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 			em.persist(automatiktimer);
 			em.flush();
 		}
-
 	}
 
 	private boolean checkNonWorkingDay(Time performHour, TheClientDto theClientDto) {
@@ -405,8 +381,8 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 		}
 
 		try {
-			personalFac = getPersonalFac();
-			BetriebskalenderDto calDto = personalFac.betriebskalenderFindByMandantCNrDDatum(
+			BetriebskalenderDto calDto = getPersonalFac()
+				.betriebskalenderFindByMandantCNrDDatum(
 					getTimestamp(), theClientDto.getMandant(), theClientDto);
 			//TagesartIId 18 = Feiertag
 			if (calDto.getTagesartIId() == 18) {
@@ -418,30 +394,6 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 		}
 		return false;
 	}
-/*	
-	@Deprecated
-	private boolean checkNonWorkingDay(TheClientDto theClientDto) {
-		Calendar cal = Calendar.getInstance();
-		if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
-				|| cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
-			return true;
-		}
-
-		try {
-			personalFac = getPersonalFac();
-			BetriebskalenderDto calDto = personalFac.betriebskalenderFindByMandantCNrDDatum(
-					getTimestamp(), theClientDto.getMandant(), theClientDto);
-			//TagesartIId 18 = Feiertag
-			if (calDto.getTagesartIId() == 18) {
-				return true;
-			}
-		}
-		catch (Throwable t) {
-			return false;
-		}
-		return false;
-	}
-*/
 	
 	private boolean checkLastDayOfMonth() {
 		Calendar cal = Calendar.getInstance();
@@ -453,13 +405,12 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 
 	private void sendMailToUser() {
 		try {
-			versandFac = getVersandFac();
 			VersandauftragDto versandauftragDto = new VersandauftragDto();
 			versandauftragDto.setOInhalt(null);
 			versandauftragDto.setBEmpfangsbestaetigung(new Short("0"));
 			String mailtext = "Dieses E-mail benachrichtigt Sie dar\u00FCber, dass ein Fehler w\u00E4hrend der Ausf\u00FChrung der automatischen Jobs aufgetreten ist. Bitte \u00FCberpr\u00FCfen Sie das Logfile ihres Helium V Servers.";
 			versandauftragDto.setCText(mailtext);
-			PersonalDto persDto = personalFac.personalFindByPrimaryKey(
+			PersonalDto persDto = getPersonalFac().personalFindByPrimaryKey(
 					theClientDto.getIDPersonal(), theClientDto);
 			String sAbsender = persDto.getPartnerDto().getCEmail();
 			versandauftragDto.setCAbsenderadresse(sAbsender);
@@ -467,19 +418,19 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 			versandauftragDto.setCEmpfaenger(sAbsender);
 			String sBetreff = "Automatische Jobs Helium V -  Es ist ein Fehler aufgetreten.";
 			versandauftragDto.setCBetreff(sBetreff);
-			versandFac.createVersandauftrag(versandauftragDto,false,theClientDto);
+			getVersandFac().createVersandauftrag(versandauftragDto,false,theClientDto);
 		}
 		catch (Throwable t) {
-			myLogger.error("Fehler beim versenden der Fehlerbenachrichtigung");
+			myLogger.error("Fehler beim Versenden der Fehlerbenachrichtigung", t);
 		}
-
 	}
 
 
 	private AutomatikjobBasis getClassForJobType(int iJobtype) {
 		try {
-			AutomatikjobtypeDto automatikjobtypeDto = automatikjobtypeFac.
-			automatikjobtypeFindByPrimaryKey(iJobtype);
+			AutomatikjobtypeDto automatikjobtypeDto = 
+					getAutomatikjobtypeFac()
+						.automatikjobtypeFindByPrimaryKey(iJobtype);
 			if (automatikjobtypeDto.getCJobtype().equals(JOBTYPE_NO_TYPE)) {
 				return null;
 			}
@@ -489,12 +440,26 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 			if (automatikjobtypeDto.getCJobtype().equals(JOBTYPE_MAHNEN_TYPE)) {
 				return new AutomatikjobMahnen();
 			}
+			if (automatikjobtypeDto.getCJobtype().equals(JOBTYPE_LOSEERLEDIGEN)) {
+				return new AutomatikjobLoseerledigen();
+			}
 			if (automatikjobtypeDto.getCJobtype().equals(JOBTYPE_MAHNUNGSVERSAND_TYPE)) {
 				return new AutomatikjobMahnungsversand();
 			}
+			if (automatikjobtypeDto.getCJobtype().equals(JOBTYPE_MONATSABRECHNUNGVERSAND_TYPE)) {
+				return new AutomatikjobMonatsabrechnungVersand();
+			}
+			if (automatikjobtypeDto.getCJobtype().equals(JOBTYPE_MONATSABRECHNUNGVERSAND_ABTEILUNGEN_TYPE)) {
+				return new AutomatikjobMonatsabrechnungVersandAbteilungen();
+			}
+			
 			if (automatikjobtypeDto.getCJobtype().equals(
 					JOBTYPE_BESTELLVORSCHLAGBERECHNUNG_TYPE)) {
 				return new AutomatikjobBestellvorschlagberechnung();
+			}
+			if (automatikjobtypeDto.getCJobtype().equals(
+					JOBTYPE_INTERNEBESTELLUNGBERECHNUNG_TYPE)) {
+				return new AutomatikjobInternebestellungberechnen();
 			}
 			if (automatikjobtypeDto.getCJobtype().equals(
 					JOBTYPE_BESTELLVORSCHLAGVERDICHTUNG_TYPE)) {
@@ -519,6 +484,40 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 			if(automatikjobtypeDto.getCJobtype().equals(JOBTYPE_IMPORTKASSENFILES_TYPE)){
 				return new AutomatikjobKassenimport();
 			}
+			if (JOBTYPE_LUMIQUOTE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobLumiquote();
+			}
+			
+			if (JOBTYPE_AUSLIEFERLISTEPDFDRUCK_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobAuslieferlistePDFDruck();
+			}
+			if (JOBTYPE_4VENDINGXMLEXPORT_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new Automatikjob4VendingExport();
+			}
+			if (JOBTYPE_NACHTRAEGLICH_GEOEFFNETE_LOSE_ERLEDIGEN_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobNachtraeglichGeoeffneteLosErledigen();
+			}
+			if (JOBTYPE_ARBEITSZEITSTATUSPDF_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobArbeitszeitstatusPDFDruck();
+			}
+			if (JOBTYPE_WARENEINGANGSJOURNALPDF_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobWEJournal();
+			}
+			if (JOBTYPE_ARTIKELLIEFERANT_WEBABFRAGE_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobWebabfrageArtikellieferant();
+			}
+			if(JOBTYPE_KPIREPORTPDFDRUCK_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobKpiPdfDruck();
+			}
+			if (JOBTYPE_BEDARFSUEBERNAHMEOFFENJOURNAL_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobBedarfsuebernahmeOffene();
+			}
+			if (JOBTYPE_MAILVERSAND_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobMailversand();
+			}
+			if (JOBTYPE_MAILIMAPABLAGE_TYPE.equals(automatikjobtypeDto.getCJobtype())) {
+				return new AutomatikjobMailAblageIMAP();
+			}
 		}
 		catch (RemoteException ex) {
 		}
@@ -532,7 +531,105 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 		automatiktimer.setTTimetoperform(automatiktimerDto.getTTimetoperform());
 		return automatiktimer;
 	}
+	
 	private AutomatiktimerDto assembleAutomatiktimerDto(Automatiktimer automatiktimer) {
 		return AutomatiktimerDtoAssembler.createDto(automatiktimer);
 	}
+
+	private void processJobs() {
+		Automatiktimer autoTimer = null;
+		try {
+			autoTimer = em.find(Automatiktimer.class, new Integer(0));
+		} catch (Exception e) {
+			myLogger.error("Automatiktimer ID=0 konnte nicht gefunden werden", e);
+			return;
+		}
+		
+		final Time performHour = autoTimer == null 
+				? new Time(System.currentTimeMillis()) 
+						: autoTimer.getTTimetoperform();
+
+		HvCreatingCachingProvider<String,Boolean> isNonWorkingDaysCache = new HvCreatingCachingProvider<String, Boolean>() {
+			protected Boolean provideValue(String key, String transformedKey) {
+				return checkNonWorkingDay(performHour, theClientDto);
+			}
+		};
+
+		lastMandantCnr = null;
+		Timestamp tTimeStarted = getTimestamp();
+		AutomatikjobDto[] jobs = listActiveJobs();
+		for (AutomatikjobDto listedJobDto : jobs) {
+			AutomatikjobDto automatikjobDto = null;
+			try {
+				// Neu laden, koennte sich geaendert haben
+				automatikjobDto = getAutomatikjobFac().automatikjobFindByPrimaryKey(listedJobDto.getIId());
+				if (!changeToMandant(automatikjobDto.getCMandantCNr())) {
+					continue;
+				}
+				if (!shouldRunJob(automatikjobDto, isNonWorkingDaysCache)) {
+					continue;
+				}
+				
+				AutomatikjobBasis automatikjobBasis = getClassForJobType(automatikjobDto.
+						getIAutomatikjobtypeIid());
+				//ausfuehren des aktuellen Jobs
+				if (automatikjobBasis.performJob(theClientDto)) {
+					sendMailToUser();
+				} else {
+					automatikjobDto.setDLastperformed(Helper.cutTimestamp(tTimeStarted));
+					automatikjobDto.setDNextperform(Helper.cutTimestamp(new Timestamp(automatikjobDto.
+							getDLastperformed().getTime() +
+							(automatikjobDto.getIIntervall() *
+									loneDayInMillis))));
+				}
+			} catch (RemoteException e) {
+			}
+			
+			try {
+				if (automatikjobDto != null) {
+					getAutomatikjobFac().updateAutomatikjob(automatikjobDto);
+				}
+			} catch (RemoteException ex1) {
+				myLogger.error("Fehler beim Beenden des Jobs", ex1);
+			}
+				
+			try {
+				getLogonFac().logout(theClientDto);
+			} catch (Throwable t) {
+				myLogger.error("Fehler beim Abmelden des Benutzers", t);
+			}			
+		}		
+	}
+
+	private boolean shouldRunJob(AutomatikjobDto jobDto,
+			HvCreatingCachingProvider<String, Boolean> isNonWorkingDaysCache) {
+		//Wenn der Monatsletzte ist und es ein Monatsjob ist fuehre diesen aus
+		if (checkLastDayOfMonth()
+				&& jobDto.getBMonthjob() != 0) {
+			return true;
+		}
+		
+		if (isNonWorkingDaysCache.getValueOfKey(theClientDto.getMandant())
+				&& jobDto.getBPerformOnNonWOrkingDays() == 0) {
+			return false;
+		}
+		
+		//Abfrage ob der Intervall bis zur naechsten ausfuehrung stimmt
+		if(jobDto.getDLastperformed() == null){
+			//Job wurde noch nie durchgefuehrt...
+			jobDto.setDLastperformed(new Timestamp(0));
+		}
+		long intervalTime = loneDayInMillis * jobDto.getIIntervall();
+		long lLastperform = jobDto.getDLastperformed().getTime();
+		long lLastPlusIntervall = lLastperform + intervalTime;
+		Date dLastPlusIntervall = new Date(lLastPlusIntervall);
+		if (! (dLastPlusIntervall.equals(getDate()) ||
+				dLastPlusIntervall.before(getDate()))) {
+			return false;
+		}
+		
+		return true;
+	}
+	
+	
 }

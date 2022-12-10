@@ -37,10 +37,29 @@ import com.lp.server.partner.service.IAddressContact;
 public interface IAuftragFLRData {
 	Boolean hasInternerKommentar() ;
 	void setInternerKommentar(Boolean value) ;
+	String getInternerKommentarText();
+	void setInternerKommentarText(String internerKommentar);
 	
 	Boolean hasExternerKommentar() ;
 	void setExternerKommentar(Boolean value) ;
+	String getExternerKommentarText();
+	void setExternerKommentarText(String externerKommentar);
 	
 	IAddressContact getAddressContact() ;
 	void setAddressContact(IAddressContact addressContact) ;	
+	
+	Integer getKundeIIdAuftragsadresse();
+	void setKundeIIdAuftragsadresse(Integer kundeIId);
+	
+	Integer getKundeIIdRechnungsadresse();
+	void setKundeIIdRechnungsadresse(Integer kundeIId);
+	
+	Integer getKundeIIdLieferadresse();
+	void setKundeIIdLieferadresse(Integer kundeIId);
+	
+	String getVertreterKurzzeichen();
+	void setVertreterKurzzeichen(String vertreterKurzzeichen);
+	
+	String getStatusCnr();
+	void setStatusCnr(String statusCnr);
 }

@@ -80,5 +80,5 @@ public interface AutoPaternosterFac {
 	
 	public boolean isPaternosterVerfuegbar();
 	
-
+	Collection<Paternoster> paternosterFindByMandant(String mandantCnr);
 }

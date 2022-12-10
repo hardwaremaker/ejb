@@ -34,6 +34,7 @@ package com.lp.server.personal.ejb;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
@@ -43,7 +44,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "ZeitmodellfindByCNrMandantCNr", query = "SELECT OBJECT(C) FROM Zeitmodell c WHERE c.cNr = ?1 AND  c.mandantCNr = ?2") })
+@NamedQueries({ @NamedQuery(name = "ZeitmodellfindByCNrMandantCNr", query = "SELECT OBJECT(C) FROM Zeitmodell c WHERE c.cNr = ?1 AND  c.mandantCNr = ?2"),
+	@NamedQuery(name = "ZeitmodellfindByBFirmenzeitmodellMandantCNr", query = "SELECT OBJECT(C) FROM Zeitmodell c WHERE c.bFirmenzeitmodell = ?1 AND  c.mandantCNr = ?2")})
 @Entity
 @Table(name = "PERS_ZEITMODELL")
 public class Zeitmodell implements Serializable {
@@ -54,6 +56,51 @@ public class Zeitmodell implements Serializable {
 	@Column(name = "C_NR")
 	private String cNr;
 
+	@Column(name = "U_GUTSCHRIFT_KOMMT")
+	private Time uGutschriftKommt;
+
+	@Column(name = "U_GUTSCHRIFT_GEHT")
+	private Time uGutschriftGeht;
+	
+	public Time getUGutschriftKommt() {
+		return uGutschriftKommt;
+	}
+
+	public void setUGutschriftKommt(Time uGutschriftKommt) {
+		this.uGutschriftKommt = uGutschriftKommt;
+	}
+
+	public Time getUGutschriftGeht() {
+		return uGutschriftGeht;
+	}
+
+	public void setUGutschriftGeht(Time uGutschriftGeht) {
+		this.uGutschriftGeht = uGutschriftGeht;
+	}
+
+	@Column(name = "B_UNPRODUKTIV_ALS_PAUSE")
+	private Short bUnproduktivAlsPause;
+
+	
+	public Short getBUnproduktivAlsPause() {
+		return bUnproduktivAlsPause;
+	}
+
+	public void setBUnproduktivAlsPause(Short bUnproduktivAlsPause) {
+		this.bUnproduktivAlsPause = bUnproduktivAlsPause;
+	}
+
+	@Column(name = "B_FEIERTAG_AM_NAECHSTEN_TAG")
+	private Short bFeiertagAmNaechstenTag;
+	
+	public Short getBFeiertagAmNaechstenTag() {
+		return bFeiertagAmNaechstenTag;
+	}
+
+	public void setBFeiertagAmNaechstenTag(Short bFeiertagAmNaechstenTag) {
+		this.bFeiertagAmNaechstenTag = bFeiertagAmNaechstenTag;
+	}
+	
 	@Column(name = "B_TEILZEIT")
 	private Short bTeilzeit;
 
@@ -62,6 +109,28 @@ public class Zeitmodell implements Serializable {
 
 	@Column(name = "B_FEIERTAGSSOLL_ADDIEREN")
 	private Short bFeiertagssollAddieren;
+
+	@Column(name = "B_FIRMENZEITMODELL")
+	private Short bFirmenzeitmodell;
+
+	public Short getBFirmenzeitmodell() {
+		return bFirmenzeitmodell;
+	}
+
+	public void setBFirmenzeitmodell(Short bFirmenzeitmodell) {
+		this.bFirmenzeitmodell = bFirmenzeitmodell;
+	}
+
+	@Column(name = "N_MAXIMALE_MEHRZEIT")
+	private BigDecimal nMaximaleMehrzeit;
+	
+	public BigDecimal getNMaximaleMehrzeit() {
+		return nMaximaleMehrzeit;
+	}
+
+	public void setNMaximaleMehrzeit(BigDecimal nMaximaleMehrzeit) {
+		this.nMaximaleMehrzeit = nMaximaleMehrzeit;
+	}
 
 	@Column(name = "N_MAXIMALES_WOCHENIST")
 	private BigDecimal nMaximalesWochenist;
@@ -113,6 +182,17 @@ public class Zeitmodell implements Serializable {
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
+	@Column(name = "SCHICHT_I_ID")
+	private Integer schichtIId;
+
+	public Integer getSchichtIId() {
+		return schichtIId;
+	}
+
+	public void setSchichtIId(Integer schichtIId) {
+		this.schichtIId = schichtIId;
+	}
+
 	@Column(name = "F_URLAUBSTAGEPROWOCHE")
 	private Double fUrlaubstageprowoche;
 
@@ -155,7 +235,8 @@ public class Zeitmodell implements Serializable {
 	public Zeitmodell(Integer id, String mandant2, String nr,
 			Integer personalIIdAendern2, Double fUrlaubstageprowoche,
 			Short bDynamisch, Integer iMinutenabzug,
-			Short bFeiertagssollAddieren, Short bFixepauseTrotzkommtgeht) {
+			Short bFeiertagssollAddieren, Short bFixepauseTrotzkommtgeht,
+			Short bFirmenzeitmodell, Short bUnproduktivAlsPause,Short bFeiertagAmNaechstenTag) {
 		setIId(id);
 		setMandantCNr(mandant2);
 		setCNr(nr);
@@ -168,6 +249,9 @@ public class Zeitmodell implements Serializable {
 		setIMinutenabzug(iMinutenabzug);
 		setBFeiertagssollAddieren(bFeiertagssollAddieren);
 		setBFixepauseTrotzkommtgeht(bFixepauseTrotzkommtgeht);
+		setBFirmenzeitmodell(bFirmenzeitmodell);
+		setBUnproduktivAlsPause(bUnproduktivAlsPause);
+		setBFeiertagAmNaechstenTag(bFeiertagAmNaechstenTag);
 	}
 
 	public Integer getIId() {

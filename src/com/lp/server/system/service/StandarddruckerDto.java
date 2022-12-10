@@ -100,7 +100,16 @@ public class StandarddruckerDto implements Serializable {
 		this.iId = iId;
 	}
 	
-	
+	private String cDruckerKopien;
+
+	public String getCDruckerKopien() {
+		return cDruckerKopien;
+	}
+
+	public void setCDruckerKopien(String cDruckerKopien) {
+		this.cDruckerKopien = cDruckerKopien;
+	}
+
 
 	public String getMandantCNr() {
 		return this.mandantCNr;

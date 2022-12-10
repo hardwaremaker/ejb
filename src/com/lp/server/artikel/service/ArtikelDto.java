@@ -36,6 +36,8 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
+
 import com.lp.server.artikel.ejb.Artgru;
 import com.lp.server.artikel.ejb.Artkla;
 import com.lp.server.artikel.ejb.Material;
@@ -60,6 +62,254 @@ public class ArtikelDto implements Serializable, IIId {
 	private Integer artgruIId;
 	private Integer artklaIId;
 
+	private Integer laseroberflaecheIId;
+	
+
+	public Integer getLaseroberflaecheIId() {
+		return laseroberflaecheIId;
+	}
+
+	public void setLaseroberflaecheIId(Integer laseroberflaecheIId) {
+		this.laseroberflaecheIId = laseroberflaecheIId;
+	}
+
+	
+	private BigDecimal nPreisZugehoerigerartikel;
+
+	public BigDecimal getNPreisZugehoerigerartikel() {
+		return nPreisZugehoerigerartikel;
+	}
+
+	public void setNPreisZugehoerigerartikel(BigDecimal nPreisZugehoerigerartikel) {
+		this.nPreisZugehoerigerartikel = nPreisZugehoerigerartikel;
+	}
+
+	private Integer waffenkaliberIId;
+
+	public Integer getWaffenkaliberIId() {
+		return waffenkaliberIId;
+	}
+
+	public void setWaffenkaliberIId(Integer waffenkaliberIId) {
+		this.waffenkaliberIId = waffenkaliberIId;
+	}
+
+	public Integer getWaffentypIId() {
+		return waffentypIId;
+	}
+
+	public void setWaffentypIId(Integer waffentypIId) {
+		this.waffentypIId = waffentypIId;
+	}
+
+	public Integer getWaffentypFeinIId() {
+		return waffentypFeinIId;
+	}
+
+	public void setWaffentypFeinIId(Integer waffentypFeinIId) {
+		this.waffentypFeinIId = waffentypFeinIId;
+	}
+
+	public Integer getWaffenkategorieIId() {
+		return waffenkategorieIId;
+	}
+
+	public void setWaffenkategorieIId(Integer waffenkategorieIId) {
+		this.waffenkategorieIId = waffenkategorieIId;
+	}
+
+	public Integer getWaffenzusatzIId() {
+		return waffenzusatzIId;
+	}
+
+	public void setWaffenzusatzIId(Integer waffenzusatzIId) {
+		this.waffenzusatzIId = waffenzusatzIId;
+	}
+
+	public Integer getWaffenausfuehrungIId() {
+		return waffenausfuehrungIId;
+	}
+
+	public void setWaffenausfuehrungIId(Integer waffenausfuehrungIId) {
+		this.waffenausfuehrungIId = waffenausfuehrungIId;
+	}
+
+	private Integer waffentypIId;
+	private Integer waffentypFeinIId;
+	private Integer waffenkategorieIId;
+	private Integer waffenzusatzIId;
+	private Integer waffenausfuehrungIId;
+
+	private Short bMeldepflichtig;
+
+	public Short getBMeldepflichtig() {
+		return bMeldepflichtig;
+	}
+
+	public void setBMeldepflichtig(Short bMeldepflichtig) {
+		this.bMeldepflichtig = bMeldepflichtig;
+	}
+
+	public Short getBBewilligungspflichtig() {
+		return bBewilligungspflichtig;
+	}
+
+	public void setBBewilligungspflichtig(Short bBewilligungspflichtig) {
+		this.bBewilligungspflichtig = bBewilligungspflichtig;
+	}
+
+	private Short bBewilligungspflichtig;
+
+	private String cFreigabeZuerueckgenommen;
+
+	public String getCFreigabeZuerueckgenommen() {
+		return cFreigabeZuerueckgenommen;
+	}
+
+	public void setCFreigabeZuerueckgenommen(String cFreigabeZuerueckgenommen) {
+		this.cFreigabeZuerueckgenommen = cFreigabeZuerueckgenommen;
+	}
+
+	private Integer personalIIdFreigabe;
+
+	private Timestamp tFreigabe;
+
+	public Integer getPersonalIIdFreigabe() {
+		return personalIIdFreigabe;
+	}
+
+	public void setPersonalIIdFreigabe(Integer personalIIdFreigabe) {
+		this.personalIIdFreigabe = personalIIdFreigabe;
+	}
+
+	public Timestamp getTFreigabe() {
+		return tFreigabe;
+	}
+
+	public void setTFreigabe(Timestamp tFreigabe) {
+		this.tFreigabe = tFreigabe;
+	}
+
+	private Short bMultiplikatorInvers;
+
+	public Short getBMultiplikatorInvers() {
+		return bMultiplikatorInvers;
+	}
+
+	public void setBMultiplikatorInvers(Short bMultiplikatorInvers) {
+		this.bMultiplikatorInvers = bMultiplikatorInvers;
+	}
+
+	public Short getBMultiplikatorAufrunden() {
+		return bMultiplikatorAufrunden;
+	}
+
+	public void setBMultiplikatorAufrunden(Short bMultiplikatorAufrunden) {
+		this.bMultiplikatorAufrunden = bMultiplikatorAufrunden;
+	}
+
+	private Short bMultiplikatorAufrunden;
+
+	private Short bBevorzugt;
+
+	public Short getBBevorzugt() {
+		return bBevorzugt;
+	}
+
+	public void setBBevorzugt(Short bBevorzugt) {
+		this.bBevorzugt = bBevorzugt;
+	}
+
+	private Integer iPassiveReisezeit;
+
+	public Integer getIPassiveReisezeit() {
+		return iPassiveReisezeit;
+	}
+
+	public void setIPassiveReisezeit(Integer iPassiveReisezeit) {
+		this.iPassiveReisezeit = iPassiveReisezeit;
+	}
+
+	private Integer iLaengeminSnrchnr;
+
+	public Integer getILaengeminSnrchnr() {
+		return iLaengeminSnrchnr;
+	}
+
+	public void setILaengeminSnrchnr(Integer iLaengeminSnrchnr) {
+		this.iLaengeminSnrchnr = iLaengeminSnrchnr;
+	}
+
+	public Integer getILaengemaxSnrchnr() {
+		return iLaengemaxSnrchnr;
+	}
+
+	public void setILaengemaxSnrchnr(Integer iLaengemaxSnrchnr) {
+		this.iLaengemaxSnrchnr = iLaengemaxSnrchnr;
+	}
+
+	private Integer iLaengemaxSnrchnr;
+
+	private Integer iExternerArbeitsgang;
+
+	public Integer getIExternerArbeitsgang() {
+		return iExternerArbeitsgang;
+	}
+
+	public void setIExternerArbeitsgang(Integer iExternerArbeitsgang) {
+		this.iExternerArbeitsgang = iExternerArbeitsgang;
+	}
+
+	private BigDecimal nMindestverkaufsmenge;
+
+	public BigDecimal getNMindestverkaufsmenge() {
+		return nMindestverkaufsmenge;
+	}
+
+	public void setNMindestverkaufsmenge(BigDecimal nMindestverkaufsmenge) {
+		this.nMindestverkaufsmenge = nMindestverkaufsmenge;
+	}
+
+	private BigDecimal nVerpackungsmittelmenge;
+
+	public BigDecimal getNVerpackungsmittelmenge() {
+		return nVerpackungsmittelmenge;
+	}
+
+	public void setNVerpackungsmittelmenge(BigDecimal nVerpackungsmittelmenge) {
+		this.nVerpackungsmittelmenge = nVerpackungsmittelmenge;
+	}
+
+	private Integer verpackungsmittelIId;
+
+	public Integer getVerpackungsmittelIId() {
+		return verpackungsmittelIId;
+	}
+
+	public void setVerpackungsmittelIId(Integer verpackungsmittelIId) {
+		this.verpackungsmittelIId = verpackungsmittelIId;
+	}
+
+	private Short bKeineLagerzubuchung;
+
+	public Short getBKeineLagerzubuchung() {
+		return bKeineLagerzubuchung;
+	}
+
+	public void setBKeineLagerzubuchung(Short bKeineLagerzubuchung) {
+		this.bKeineLagerzubuchung = bKeineLagerzubuchung;
+	}
+
+	private Short bRahmenartikel;
+
+	public Short getBRahmenartikel() {
+		return bRahmenartikel;
+	}
+
+	public void setBRahmenartikel(Short bRahmenartikel) {
+		this.bRahmenartikel = bRahmenartikel;
+	}
+
 	private Double fFertigungsVpe;
 
 	public Double getFFertigungsVpe() {
@@ -78,6 +328,25 @@ public class ArtikelDto implements Serializable, IIId {
 
 	public void setCEccn(String cEccn) {
 		this.cEccn = cEccn;
+	}
+
+	private Double fMultiplikatorZugehoerigerartikel;
+	private Short bAzinabnachkalk;
+
+	public Double getFMultiplikatorZugehoerigerartikel() {
+		return fMultiplikatorZugehoerigerartikel;
+	}
+
+	public void setFMultiplikatorZugehoerigerartikel(Double fMultiplikatorZugehoerigerartikel) {
+		this.fMultiplikatorZugehoerigerartikel = fMultiplikatorZugehoerigerartikel;
+	}
+
+	public Short getBAzinabnachkalk() {
+		return bAzinabnachkalk;
+	}
+
+	public void setBAzinabnachkalk(Short bAzinabnachkalk) {
+		this.bAzinabnachkalk = bAzinabnachkalk;
 	}
 
 	private Double fUeberproduktion;
@@ -138,6 +407,16 @@ public class ArtikelDto implements Serializable, IIId {
 
 	public void setFDetailprozentmindeststand(Double fDetailprozentmindeststand) {
 		this.fDetailprozentmindeststand = fDetailprozentmindeststand;
+	}
+
+	private Short bKommissionieren;
+
+	public Short getBKommissionieren() {
+		return bKommissionieren;
+	}
+
+	public void setBKommissionieren(Short bKommissionieren) {
+		this.bKommissionieren = bKommissionieren;
 	}
 
 	private Short bBestellmengeneinheitInvers;
@@ -282,6 +561,36 @@ public class ArtikelDto implements Serializable, IIId {
 	private Integer iWartungsintervall;
 	private Integer iSofortverbrauch;
 
+	private Short bVkpreispflichtig;
+
+	public Short getBVkpreispflichtig() {
+		return bVkpreispflichtig;
+	}
+
+	public void setBVkpreispflichtig(Short bVkpreispflichtig) {
+		this.bVkpreispflichtig = bVkpreispflichtig;
+	}
+
+	private Short bWepinfoAnAnforderer;
+
+	public Short getBWepinfoAnAnforderer() {
+		return bWepinfoAnAnforderer;
+	}
+
+	public void setBWepinfoAnAnforderer(Short bWepinfoAnAnforderer) {
+		this.bWepinfoAnAnforderer = bWepinfoAnAnforderer;
+	}
+
+	private Short bSummeInBestellung;
+
+	public Short getBSummeInBestellung() {
+		return bSummeInBestellung;
+	}
+
+	public void setBSummeInBestellung(Short bSummeInBestellung) {
+		this.bSummeInBestellung = bSummeInBestellung;
+	}
+
 	private Double fAufschlagProzent;
 	private BigDecimal nAufschlagBetrag;
 
@@ -291,6 +600,16 @@ public class ArtikelDto implements Serializable, IIId {
 
 	public void setFAufschlagProzent(Double fAufschlagProzent) {
 		this.fAufschlagProzent = fAufschlagProzent;
+	}
+
+	private BigDecimal nVerschnittmenge;
+
+	public BigDecimal getNVerschnittmenge() {
+		return nVerschnittmenge;
+	}
+
+	public void setNVerschnittmenge(BigDecimal nVerschnittmenge) {
+		this.nVerschnittmenge = nVerschnittmenge;
 	}
 
 	public BigDecimal getNAufschlagBetrag() {
@@ -449,6 +768,18 @@ public class ArtikelDto implements Serializable, IIId {
 		this.fFertigungssatzgroesse = fFertigungssatzgroesse;
 	}
 
+	private Double fMaxfertigungssatzgroesse;
+
+	
+	public Double getFMaxfertigungssatzgroesse() {
+		return fMaxfertigungssatzgroesse;
+	}
+
+	public void setFMaxfertigungssatzgroesse(Double fMaxfertigungssatzgroesse) {
+		this.fMaxfertigungssatzgroesse = fMaxfertigungssatzgroesse;
+	}
+
+	
 	public Double getFVerpackungsmenge() {
 		return fVerpackungsmenge;
 	}
@@ -888,36 +1219,31 @@ public class ArtikelDto implements Serializable, IIId {
 				: that.cArtikelnrhersteller.equals(this.cArtikelnrhersteller))) {
 			return false;
 		}
-		if (!(that.artgruIId == null ? this.artgruIId == null : that.artgruIId
-				.equals(this.artgruIId))) {
+		if (!(that.artgruIId == null ? this.artgruIId == null : that.artgruIId.equals(this.artgruIId))) {
 			return false;
 		}
-		if (!(that.artklaIId == null ? this.artklaIId == null : that.artklaIId
-				.equals(this.artklaIId))) {
+		if (!(that.artklaIId == null ? this.artklaIId == null : that.artklaIId.equals(this.artklaIId))) {
 			return false;
 		}
 		if (!(that.artikelartCNr == null ? this.artikelartCNr == null
 				: that.artikelartCNr.equals(this.artikelartCNr))) {
 			return false;
 		}
-		if (!(that.einheitCNr == null ? this.einheitCNr == null
-				: that.einheitCNr.equals(this.einheitCNr))) {
+		if (!(that.einheitCNr == null ? this.einheitCNr == null : that.einheitCNr.equals(this.einheitCNr))) {
 			return false;
 		}
 		if (!(that.bSeriennrtragend == null ? this.bSeriennrtragend == null
 				: that.bSeriennrtragend.equals(this.bSeriennrtragend))) {
 			return false;
 		}
-		if (!(that.cReferenznr == null ? this.cReferenznr == null
-				: that.cReferenznr.equals(this.cReferenznr))) {
+		if (!(that.cReferenznr == null ? this.cReferenznr == null : that.cReferenznr.equals(this.cReferenznr))) {
 			return false;
 		}
 		if (!(that.fLagermindest == null ? this.fLagermindest == null
 				: that.fLagermindest.equals(this.fLagermindest))) {
 			return false;
 		}
-		if (!(that.fLagersoll == null ? this.fLagersoll == null
-				: that.fLagersoll.equals(this.fLagersoll))) {
+		if (!(that.fLagersoll == null ? this.fLagersoll == null : that.fLagersoll.equals(this.fLagersoll))) {
 			return false;
 		}
 		if (!(that.fVerpackungsmenge == null ? this.fVerpackungsmenge == null
@@ -932,28 +1258,24 @@ public class ArtikelDto implements Serializable, IIId {
 				: that.fVerschnittbasis.equals(this.fVerschnittbasis))) {
 			return false;
 		}
-		if (!(that.fJahresmenge == null ? this.fJahresmenge == null
-				: that.fJahresmenge.equals(this.fJahresmenge))) {
+		if (!(that.fJahresmenge == null ? this.fJahresmenge == null : that.fJahresmenge.equals(this.fJahresmenge))) {
 			return false;
 		}
 		if (!(that.mwstsatzbezIId == null ? this.mwstsatzbezIId == null
 				: that.mwstsatzbezIId.equals(this.mwstsatzbezIId))) {
 			return false;
 		}
-		if (!(that.materialIId == null ? this.materialIId == null
-				: that.materialIId.equals(this.materialIId))) {
+		if (!(that.materialIId == null ? this.materialIId == null : that.materialIId.equals(this.materialIId))) {
 			return false;
 		}
-		if (!(that.fGewichtkg == null ? this.fGewichtkg == null
-				: that.fGewichtkg.equals(this.fGewichtkg))) {
+		if (!(that.fGewichtkg == null ? this.fGewichtkg == null : that.fGewichtkg.equals(this.fGewichtkg))) {
 			return false;
 		}
 		if (!(that.fMaterialgewicht == null ? this.fMaterialgewicht == null
 				: that.fMaterialgewicht.equals(this.fMaterialgewicht))) {
 			return false;
 		}
-		if (!(that.bAntistatic == null ? this.bAntistatic == null
-				: that.bAntistatic.equals(this.bAntistatic))) {
+		if (!(that.bAntistatic == null ? this.bAntistatic == null : that.bAntistatic.equals(this.bAntistatic))) {
 			return false;
 		}
 		if (!(that.artikelIIdZugehoerig == null ? this.artikelIIdZugehoerig == null
@@ -961,8 +1283,7 @@ public class ArtikelDto implements Serializable, IIId {
 			return false;
 		}
 		if (!(that.fVertreterprovisionmax == null ? this.fVertreterprovisionmax == null
-				: that.fVertreterprovisionmax
-						.equals(this.fVertreterprovisionmax))) {
+				: that.fVertreterprovisionmax.equals(this.fVertreterprovisionmax))) {
 			return false;
 		}
 		if (!(that.fMinutenfaktor1 == null ? this.fMinutenfaktor1 == null
@@ -974,8 +1295,7 @@ public class ArtikelDto implements Serializable, IIId {
 			return false;
 		}
 		if (!(that.fMindestdeckungsbeitrag == null ? this.fMindestdeckungsbeitrag == null
-				: that.fMindestdeckungsbeitrag
-						.equals(this.fMindestdeckungsbeitrag))) {
+				: that.fMindestdeckungsbeitrag.equals(this.fMindestdeckungsbeitrag))) {
 			return false;
 		}
 		if (!(that.cVerkaufseannr == null ? this.cVerkaufseannr == null
@@ -994,16 +1314,14 @@ public class ArtikelDto implements Serializable, IIId {
 				: that.iGarantiezeit.equals(this.iGarantiezeit))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
@@ -1011,16 +1329,18 @@ public class ArtikelDto implements Serializable, IIId {
 			return false;
 		}
 		if (!(that.fFertigungssatzgroesse == null ? this.fFertigungssatzgroesse == null
-				: that.fFertigungssatzgroesse
-						.equals(this.fFertigungssatzgroesse))) {
+				: that.fFertigungssatzgroesse.equals(this.fFertigungssatzgroesse))) {
+			return false;
+		}
+		if (!(that.fMaxfertigungssatzgroesse == null ? this.fMaxfertigungssatzgroesse == null
+				: that.fMaxfertigungssatzgroesse.equals(this.fMaxfertigungssatzgroesse))) {
 			return false;
 		}
 		return true;
 	}
 
 	public boolean istArtikelSnrOderchargentragend() {
-		if (Helper.short2boolean(getBSeriennrtragend())
-				|| Helper.short2boolean(getBChargennrtragend())) {
+		if (Helper.short2boolean(getBSeriennrtragend()) || Helper.short2boolean(getBChargennrtragend())) {
 			return true;
 		} else {
 			return false;
@@ -1041,11 +1361,9 @@ public class ArtikelDto implements Serializable, IIId {
 			}
 			if (getArtikelsprDto() != null) {
 
-				if (getArtikelsprDto().getCBez() != null
-						&& getArtikelsprDto().getCBez().length() > 0) {
+				if (getArtikelsprDto().getCBez() != null && getArtikelsprDto().getCBez().length() > 0) {
 					sbBez.append(" " + getArtikelsprDto().getCBez());
-				} else if (getArtikelsprDto().getCZbez() != null
-						&& getArtikelsprDto().getCZbez().length() > 0) {
+				} else if (getArtikelsprDto().getCZbez() != null && getArtikelsprDto().getCZbez().length() > 0) {
 					sbBez.append(" " + getArtikelsprDto().getCZbez());
 				}
 			}
@@ -1063,12 +1381,36 @@ public class ArtikelDto implements Serializable, IIId {
 			}
 			if (getArtikelsprDto() != null) {
 
-				if (getArtikelsprDto().getCBez() != null
-						&& getArtikelsprDto().getCBez().length() > 0) {
+				if (getArtikelsprDto().getCBez() != null && getArtikelsprDto().getCBez().length() > 0) {
 					sbBez.append(" " + getArtikelsprDto().getCBez());
 				}
-				if (getArtikelsprDto().getCZbez() != null
-						&& getArtikelsprDto().getCZbez().length() > 0) {
+				if (getArtikelsprDto().getCZbez() != null && getArtikelsprDto().getCZbez().length() > 0) {
+					sbBez.append(" " + getArtikelsprDto().getCZbez());
+				}
+			}
+
+		}
+
+		return sbBez.toString();
+	}
+
+	public String formatArtikelbezeichnungMitZusatzbezeichnungUndReferenznummer() {
+		StringBuffer sbBez = new StringBuffer();
+		if (getCNr() != null && getArtikelartCNr() != null) {
+			if (!getArtikelartCNr().equals(ArtikelFac.ARTIKELART_HANDARTIKEL)) {
+				sbBez.append(getCNr());
+
+				if (getCReferenznr() != null) {
+					sbBez.append(", " + getCReferenznr() + ", ");
+				}
+
+			}
+			if (getArtikelsprDto() != null) {
+
+				if (getArtikelsprDto().getCBez() != null && getArtikelsprDto().getCBez().length() > 0) {
+					sbBez.append(" " + getArtikelsprDto().getCBez());
+				}
+				if (getArtikelsprDto().getCZbez() != null && getArtikelsprDto().getCZbez().length() > 0) {
 					sbBez.append(" " + getArtikelsprDto().getCZbez());
 				}
 			}
@@ -1087,12 +1429,10 @@ public class ArtikelDto implements Serializable, IIId {
 	public String formatBezeichnung() {
 		StringBuffer sbBez = new StringBuffer();
 		if (getArtikelsprDto() != null) {
-			if (getArtikelsprDto().getCBez() != null
-					&& getArtikelsprDto().getCBez().length() > 0) {
+			if (getArtikelsprDto().getCBez() != null && getArtikelsprDto().getCBez().length() > 0) {
 				sbBez.append(getArtikelsprDto().getCBez());
 				// MR 20080109: ZBez an CBez anhaengen, nur wenn CBez vorhanden
-				if (getArtikelsprDto().getCZbez() != null
-						&& getArtikelsprDto().getCZbez().length() > 0) {
+				if (getArtikelsprDto().getCZbez() != null && getArtikelsprDto().getCZbez().length() > 0) {
 					sbBez.append(" " + getArtikelsprDto().getCZbez());
 				}
 			}
@@ -1109,6 +1449,60 @@ public class ArtikelDto implements Serializable, IIId {
 			return null;
 		}
 
+	}
+
+	@HvDtoLogIgnore
+	public String getCBezAusSpr() {
+
+		if (getArtikelsprDto() != null) {
+			return getArtikelsprDto().getCBez();
+		} else {
+			return null;
+		}
+
+	}
+
+	@HvDtoLogIgnore
+	public String getCZBezAusSpr() {
+
+		if (getArtikelsprDto() != null) {
+			return getArtikelsprDto().getCZbez();
+		} else {
+			return null;
+		}
+
+	}
+
+	@HvDtoLogIgnore
+	public String getCZBez2AusSpr() {
+
+		if (getArtikelsprDto() != null) {
+			return getArtikelsprDto().getCZbez2();
+		} else {
+			return null;
+		}
+
+	}
+
+	@HvDtoLogIgnore
+	public String getCKBezAusSpr() {
+
+		if (getArtikelsprDto() != null) {
+			return getArtikelsprDto().getCKbez();
+		} else {
+			return null;
+		}
+
+	}
+
+	/**
+	 * Ist es ein Arbeitszeitartikel?
+	 * 
+	 * @return true wenn es sich um einen Arbeitszeitartikel handelt
+	 */
+	@HvDtoLogIgnore
+	public boolean isArbeitszeit() {
+		return ArtikelFac.ARTIKELART_ARBEITSZEIT.equals(getArtikelartCNr());
 	}
 
 	public int hashCode() {

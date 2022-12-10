@@ -37,6 +37,8 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
 
+import javax.persistence.Column;
+
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 
 public class WareneingangspositionDto implements Serializable {
@@ -63,6 +65,16 @@ public class WareneingangspositionDto implements Serializable {
 	private Integer herstellerIId;
 	private Integer landIId;
 	private List<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge = null;
+	
+	private Integer iRn;
+
+	public Integer getIRn() {
+		return iRn;
+	}
+
+	public void setIRn(Integer iRn) {
+		this.iRn = iRn;
+	}
 	
 	private Integer artikelIIdFuerNeuAnlageAusWEP=null;
 
@@ -186,6 +198,25 @@ public class WareneingangspositionDto implements Serializable {
 		this.bestellpositionIId = bestellpositionIId;
 	}
 
+	private BigDecimal nBreiteInMm;
+	private BigDecimal nTiefeInMm;
+	
+	public BigDecimal getNBreiteInMm() {
+		return nBreiteInMm;
+	}
+
+	public void setNBreiteInMm(BigDecimal nBreiteInMm) {
+		this.nBreiteInMm = nBreiteInMm;
+	}
+
+	public BigDecimal getNTiefeInMm() {
+		return nTiefeInMm;
+	}
+
+	public void setNTiefeInMm(BigDecimal nTiefeInMm) {
+		this.nTiefeInMm = nTiefeInMm;
+	}
+	
 	public Timestamp getTAnlegen() {
 		return tAnlegen;
 	}

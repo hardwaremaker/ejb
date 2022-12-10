@@ -54,6 +54,9 @@ public class BankverbindungDto implements Serializable, IModificationData {
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
 	private boolean bInLiquiditaetsVorschau;
+	private String cSepaVerzeichnis;
+	private boolean bFuerSepaLastschrift;
+	private boolean bAlsGeldtransitkonto;
 
 	public Integer getIId() {
 		return iId;
@@ -119,6 +122,16 @@ public class BankverbindungDto implements Serializable, IModificationData {
 		this.tAnlegen = tAnlegen;
 	}
 
+	private Integer iStellenAuszugsnummer;
+
+	public Integer getIStellenAuszugsnummer() {
+		return iStellenAuszugsnummer;
+	}
+
+	public void setIStellenAuszugsnummer(Integer iStellenAuszugsnummer) {
+		this.iStellenAuszugsnummer = iStellenAuszugsnummer;
+	}
+
 	public Integer getPersonalIIdAnlegen() {
 		return personalIIdAnlegen;
 	}
@@ -142,13 +155,21 @@ public class BankverbindungDto implements Serializable, IModificationData {
 	public void setPersonalIIdAendern(Integer personalIIdAendern) {
 		this.personalIIdAendern = personalIIdAendern;
 	}
-	
+
 	public boolean isbInLiquiditaetsVorschau() {
 		return bInLiquiditaetsVorschau;
 	}
 
 	public void setbInLiquiditaetsVorschau(boolean bInLiquiditaetsVorschau) {
 		this.bInLiquiditaetsVorschau = bInLiquiditaetsVorschau;
+	}
+
+	public String getCSepaVerzeichnis() {
+		return cSepaVerzeichnis;
+	}
+
+	public void setCSepaVerzeichnis(String cSepaVerzeichnis) {
+		this.cSepaVerzeichnis = cSepaVerzeichnis;
 	}
 
 	@Override
@@ -159,25 +180,14 @@ public class BankverbindungDto implements Serializable, IModificationData {
 		result = prime * result + ((bankIId == null) ? 0 : bankIId.hashCode());
 		result = prime * result + ((cBez == null) ? 0 : cBez.hashCode());
 		result = prime * result + ((cIban == null) ? 0 : cIban.hashCode());
-		result = prime * result
-				+ ((cKontonummer == null) ? 0 : cKontonummer.hashCode());
+		result = prime * result + ((cKontonummer == null) ? 0 : cKontonummer.hashCode());
 		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
-		result = prime * result
-				+ ((kontoIId == null) ? 0 : kontoIId.hashCode());
-		result = prime * result
-				+ ((mandantCNr == null) ? 0 : mandantCNr.hashCode());
-		result = prime
-				* result
-				+ ((personalIIdAendern == null) ? 0 : personalIIdAendern
-						.hashCode());
-		result = prime
-				* result
-				+ ((personalIIdAnlegen == null) ? 0 : personalIIdAnlegen
-						.hashCode());
-		result = prime * result
-				+ ((tAendern == null) ? 0 : tAendern.hashCode());
-		result = prime * result
-				+ ((tAnlegen == null) ? 0 : tAnlegen.hashCode());
+		result = prime * result + ((kontoIId == null) ? 0 : kontoIId.hashCode());
+		result = prime * result + ((mandantCNr == null) ? 0 : mandantCNr.hashCode());
+		result = prime * result + ((personalIIdAendern == null) ? 0 : personalIIdAendern.hashCode());
+		result = prime * result + ((personalIIdAnlegen == null) ? 0 : personalIIdAnlegen.hashCode());
+		result = prime * result + ((tAendern == null) ? 0 : tAendern.hashCode());
+		result = prime * result + ((tAnlegen == null) ? 0 : tAnlegen.hashCode());
 		return result;
 	}
 
@@ -264,6 +274,22 @@ public class BankverbindungDto implements Serializable, IModificationData {
 		returnString += ", " + tAendern;
 		returnString += ", " + personalIIdAendern;
 		return returnString;
+	}
+
+	public boolean isbFuerSepaLastschrift() {
+		return bFuerSepaLastschrift;
+	}
+
+	public void setbFuerSepaLastschrift(boolean bFuerSepaLastschrift) {
+		this.bFuerSepaLastschrift = bFuerSepaLastschrift;
+	}
+
+	public boolean isbAlsGeldtransitkonto() {
+		return bAlsGeldtransitkonto;
+	}
+
+	public void setbAlsGeldtransitkonto(boolean bAlsGeldtransitkonto) {
+		this.bAlsGeldtransitkonto = bAlsGeldtransitkonto;
 	}
 
 }

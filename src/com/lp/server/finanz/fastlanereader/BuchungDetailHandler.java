@@ -2,44 +2,45 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
 
 import java.awt.Color;
-import java.awt.Font;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.swing.Icon;
 
@@ -57,6 +58,7 @@ import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchung;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchungDetail;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
 import com.lp.server.finanz.service.BuchenFac;
+import com.lp.server.finanz.service.BuchungDetailSummary;
 import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.system.service.LocaleFac;
@@ -87,21 +89,19 @@ import com.lp.util.Pair;
  * </p>
  * <p>
  * </p>
- * 
+ *
  * @author MB
  * @version 1.0
  */
 
 public class BuchungDetailHandler extends UseCaseHandler {
-	/**
-	 * 
-	 */
 
 	// private static final String getSumForSelectedIIds = "SELECT "
 	private static final long serialVersionUID = 1L;
 
 	String trennzeichen = "";
 	Integer stellenBelegnummer = 7;
+	Boolean azkSummeFehlerhaft = false;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -124,14 +124,21 @@ public class BuchungDetailHandler extends UseCaseHandler {
 			query.setMaxResults(pageSize);
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
-			Object[][] rows = new Object[resultList.size()][colCount];
+			Object[][] rows = new Object[resultList.size()][colCount+1];
 			String[] tooltipData = new String[resultList.size()];
 			int row = 0;
 			int col = 0;
+
+			FLRFinanzBuchungDetail buchungDetail = null;
+			FLRFinanzBuchung buchung = null;
+			Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+
 			while (resultListIterator.hasNext()) {
 				Object o[] = (Object[]) resultListIterator.next();
-				FLRFinanzBuchungDetail buchungDetail = (FLRFinanzBuchungDetail) o[0];
-				FLRFinanzBuchung buchung = buchungDetail.getFlrbuchung();
+//				FLRFinanzBuchungDetail buchungDetail = (FLRFinanzBuchungDetail) o[0];
+				buchungDetail = (FLRFinanzBuchungDetail) o[0];
+//				FLRFinanzBuchung buchung = buchungDetail.getFlrbuchung();
+				buchung = buchungDetail.getFlrbuchung();
 
 				rows[row][col++] = buchungDetail.getI_id();
 				rows[row][col++] = buchung.getD_buchungsdatum();
@@ -168,10 +175,10 @@ public class BuchungDetailHandler extends UseCaseHandler {
 					rows[row][col++] = null;
 				}
 
-				if (buchungDetail.getKommentar() != null) {
-					rows[row][col++] = !buchungDetail.getKommentar().isEmpty();
-					tooltipData[row] = buchungDetail.getKommentar().isEmpty() ? null
-							: Helper.removeStyles(buchungDetail.getKommentar());
+				if (buchungDetail.getC_kommentar() != null) {
+					rows[row][col++] = !buchungDetail.getC_kommentar().isEmpty();
+					tooltipData[row] = buchungDetail.getC_kommentar().isEmpty() ? null
+							: Helper.removeStyles(buchungDetail.getC_kommentar());
 				} else {
 					rows[row][col++] = false;
 				}
@@ -180,11 +187,45 @@ public class BuchungDetailHandler extends UseCaseHandler {
 				} else {
 					rows[row][col++] = null;
 				}
+
+				if (buchungDetail.getI_ausziffern() != null) {
+					map.put(buchungDetail.getI_ausziffern(), row);
+				}
+
 				row++;
 				col = 0;
 			}
+
+			azkSummeFehlerhaft = false;
+			for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
+				Integer azk = entry.getKey();
+				BigDecimal azkSaldo = getBuchenFac().getSaldoVonKontoByAusziffern(
+						buchungDetail.getKonto_i_id(),
+						buchung.getGeschaeftsjahr_i_geschaeftsjahr(),
+						azk,
+						theClientDto);
+
+				if (azkSaldo.signum() != 0) {
+					for (int i = 0; i < rows.length; i++) {
+						if(azk.equals(rows[i][11])) {
+							rows[i][14] = Color.RED;
+						}
+					}
+					azkSummeFehlerhaft = true;
+				}
+
+			}
+
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
 					endIndex, 0, tooltipData);
+
+			if(buchungDetail != null) {
+				result.setResultData(getSummary(azkSummeFehlerhaft,
+						buchung.getGeschaeftsjahr_i_geschaeftsjahr(), buchungDetail.getKonto_i_id()));
+			} else {
+				result.setResultData(new BuchungDetailSummary());
+			}
+
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -197,9 +238,36 @@ public class BuchungDetailHandler extends UseCaseHandler {
 		return result;
 	}
 
+	private BuchungDetailSummary getSummary(boolean azkSummeFehlerhaft, Integer geschaeftsJahr, Integer kontoId) {
+		BigDecimal saldo = getBuchenFac().getSaldoVonKontoMitEB(kontoId,
+				geschaeftsJahr, -1, theClientDto);
+
+		if (!azkSummeFehlerhaft) {
+			List<Integer> list = getBuchenFac().getAlleAzk(
+					kontoId,
+					geschaeftsJahr,
+					-1,
+					theClientDto);
+
+			for (Integer entry : list) {
+				BigDecimal azkSaldo = getBuchenFac().getSaldoVonKontoByAusziffern(
+						kontoId,
+						geschaeftsJahr,
+						entry, // azk
+						theClientDto);
+				if (azkSaldo.signum() != 0) {
+					azkSummeFehlerhaft = true;
+					break ;
+				}
+			}
+		}
+
+		return new BuchungDetailSummary(azkSummeFehlerhaft, saldo) ;
+	}
+
 	/**
 	 * gets the total number of rows represented by the current query.
-	 * 
+	 *
 	 * @see UseCaseHandler#getRowCountFromDataBase()
 	 * @return int
 	 */
@@ -212,7 +280,7 @@ public class BuchungDetailHandler extends UseCaseHandler {
 	/**
 	 * builds the where clause of the HQL (Hibernate Query Language) statement
 	 * using the current query.
-	 * 
+	 *
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
@@ -276,7 +344,7 @@ public class BuchungDetailHandler extends UseCaseHandler {
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 * 
+	 *
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
@@ -359,7 +427,7 @@ public class BuchungDetailHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 * 
+	 *
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
@@ -371,7 +439,7 @@ public class BuchungDetailHandler extends UseCaseHandler {
 	/**
 	 * sorts the data described by the current query using the specified sort
 	 * criterias. The current query is also updated with the new sort criterias.
-	 * 
+	 *
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
 	 * @param sortierKriterien
@@ -430,7 +498,7 @@ public class BuchungDetailHandler extends UseCaseHandler {
 
 	/**
 	 * gets information about the Kontentable.
-	 * 
+	 *
 	 * @return TableInfo
 	 */
 	public TableInfo getTableInfo() {
@@ -480,7 +548,7 @@ public class BuchungDetailHandler extends UseCaseHandler {
 							getTextRespectUISpr("fb.ausziffern", mandantCNr,
 									locUI),
 							getTextRespectUISpr("fb.storno", mandantCNr, locUI),
-							getTextRespectUISpr("lp.kommentar", mandantCNr,
+							getTextRespectUISpr("finanz.kommentar.short", mandantCNr,
 									locUI) },
 
 					new int[] {
@@ -521,7 +589,10 @@ public class BuchungDetailHandler extends UseCaseHandler {
 							FinanzFac.FLR_BUCHUNGDETAIL_I_AUSZIFFERN,
 							FinanzFac.FLR_BUCHUNGDETAIL_FLRBUCHUNG + "."
 									+ FinanzFac.FLR_BUCHUNG_T_STORNIERT,
-							FinanzFac.FLR_BUCHUNGDETAIL_KOMMENTAR }));
+							FinanzFac.FLR_BUCHUNGDETAIL_KOMMENTAR },
+					new String[]{ null, null, null, null, null, null, null, null,null, null, null, null, null,
+							getTextRespectUISpr("finanz.kommentar.tooltip", mandantCNr,locUI) }
+					));
 		}
 		return super.getTableInfo();
 	}
@@ -566,4 +637,9 @@ public class BuchungDetailHandler extends UseCaseHandler {
 
 		return pairs;
 	}
+
+	public Boolean isAzkSummeFehlerhaft() {
+		return azkSummeFehlerhaft;
+	}
+
 }

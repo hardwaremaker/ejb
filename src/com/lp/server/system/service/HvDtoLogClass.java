@@ -39,34 +39,60 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-
 /**
  * Das ganze DTO protokollieren
  * @author Gerold
  */
 public @interface HvDtoLogClass {
-	public final static String STUECKLISTE             = "Stueckliste" ;
-	public final static String STUECKLISTE_POSITION    = "Stuecklisteposition" ;
-	public final static String STUECKLISTE_ARBEITSPLAN = "Stuecklistearbeitsplan" ;
-	public final static String ARTIKEL                 = "Artikel" ;
-	public final static String ARTIKEL_SPR             = "Artikelspr" ;
-	public final static String PARAMETERMANDANT        = "Parametermandant" ;
-	public final static String ZEITDATEN               = "Zeitdaten" ;
-	public final static String LIEFERSCHEIN            = "Lieferschein" ;
-	public final static String EINGANGSRECHNUNG        = "Eingangsrechnung" ;
-	public final static String ZEITABSCHLUSS           = "Zeitabschluss" ;
-	public final static String KONTO                   = "Konto" ;
+	public final static String STUECKLISTE = "Stueckliste";
+	public final static String STUECKLISTE_POSITION = "Stuecklisteposition";
+	public final static String STUECKLISTE_POSERSATZ = "Posersatz";
+	public final static String STUECKLISTE_ARBEITSPLAN = "Stuecklistearbeitsplan";
+	public final static String ARTIKEL = "Artikel";
+	public final static String ARTIKEL_SPR = "Artikelspr";
+	public final static String PARAMETERMANDANT = "Parametermandant";
+	public final static String ZEITDATEN = "Zeitdaten";
+	public final static String LIEFERSCHEIN = "Lieferschein";
+	public final static String EINGANGSRECHNUNG = "Eingangsrechnung";
+	public final static String ZEITABSCHLUSS = "Zeitabschluss";
+	public final static String KONTO = "Konto";
+	public final static String KASSENBUCH = "Kassenbuch";
+	public final static String ANSPRECHPARTNER = "Ansprechpartner";
+	public final static String PARTNER = "Partner";
+	public final static String NEWSLETTERGRUND = "Newslettergrund";
+	public final static String BESTELLPOSITION = "Bestellposition";
+	public final static String BESTELLUNG = "Bestellung";
+	public final static String MATERIALZUSCHLAG = "Materialzuschlag";
+
+	public final static String BENUTZER = "Benutzer";
+	public final static String BENUTZERMANDANTSYSTEMROLLE = "Benutzermandantsystemrolle";
+	public final static String SYSTEMROLLE = "Systemrolle";
+	public final static String LAGERROLLE = "Lagerrolle";
+	public final static String FERTIGUNGSGRUPPEROLLE = "Fertigungsgrupperolle";
+	public final static String ROLLERECHT = "Rollerecht";
+	public final static String PANELDATEN = "Paneldaten";
+	public final static String LOS = "Los";
+	public final static String LOSABLIEFERUNG = "Losablieferung";
 	
+	public final static String LIEFERANT = "Lieferant";
+	public final static String KUNDE = "Kunde";
+	public final static String PERSONAL = "Personal";
+	public final static String BANK = "Bank";
+
 	/*
 	 * Der Name der Entity, beispielsweise "Artikel", oder auch ArtikelDto
 	 */
-	String name() ;
-	
+	String name();
+
 	/**
 	 * Der Name nach dem gefiltert werden kann/soll.</br>
-	 * <p>Im Falle einer Stuecklistenposition beispielsweise "Stueckliste"</p>
-	 * <p>Wenn nicht anders angegeben, entspricht das dem <code>name()</code>
+	 * <p>
+	 * Im Falle einer Stuecklistenposition beispielsweise "Stueckliste"
+	 * </p>
+	 * <p>
+	 * Wenn nicht anders angegeben, entspricht das dem <code>name()</code>
+	 * 
 	 * @return der Name des Filters
 	 */
-	String filtername() default "" ;
+	String filtername() default "";
 }

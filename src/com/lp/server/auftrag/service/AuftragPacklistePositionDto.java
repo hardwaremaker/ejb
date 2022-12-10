@@ -44,11 +44,49 @@ import com.lp.util.LPDatenSubreport;
 public class AuftragPacklistePositionDto implements Serializable {
 	private static final long serialVersionUID = -503814038537104642L;
 
+	
+	private boolean bGesehen=false;
+	
+	public boolean isbGesehen() {
+		return bGesehen;
+	}
+
+	public void setBGesehen(boolean bGesehen) {
+		this.bGesehen = bGesehen;
+	}
+
 	private String ident;
 	private String bezeichnung;
+	private String kurzbezeichnung;
+	private String referenznummer;
+	public String getKurzbezeichnung() {
+		return kurzbezeichnung;
+	}
+
+	public void setKurzbezeichnung(String kurzbezeichnung) {
+		this.kurzbezeichnung = kurzbezeichnung;
+	}
+
+	public String getReferenznummer() {
+		return referenznummer;
+	}
+
+	public void setReferenznummer(String referenznummer) {
+		this.referenznummer = referenznummer;
+	}
+
 	private BigDecimal gesamtMenge;
 	private BigDecimal offeneMenge;
-	private BigDecimal lagerstand;
+	private BigDecimal lagerstandAbbuchungslager;
+	private BigDecimal lagerstandAllerLaeger;
+	public BigDecimal getLagerstandAllerLaeger() {
+		return lagerstandAllerLaeger;
+	}
+
+	public void setLagerstandAllerLaeger(BigDecimal lagerstandAllerLaeger) {
+		this.lagerstandAllerLaeger = lagerstandAllerLaeger;
+	}
+
 	private BigDecimal fiktiverLagerstand;
 	private String lagerplatz;
 	private Image kommentarImage;
@@ -78,6 +116,56 @@ public class AuftragPacklistePositionDto implements Serializable {
 	private String verpackungsEAN;
 	private Double verpackungsmenge;
 	private String positionsStatus;
+	
+	
+	private String bezeichnungEinzeln;
+	private String zusatzbezeichnungEinzeln;
+	
+	private Integer positionsnummer;
+	private Integer auftragspositionIId;
+	
+
+	public Integer getPositionsnummer() {
+		return positionsnummer;
+	}
+
+	public void setPositionsnummer(Integer positionsnummer) {
+		this.positionsnummer = positionsnummer;
+	}
+
+	public Integer getAuftragspositionIId() {
+		return auftragspositionIId;
+	}
+
+	public void setAuftragspositionIId(Integer auftragspositionIId) {
+		this.auftragspositionIId = auftragspositionIId;
+	}
+
+	private String setArtikelTyp;
+	
+	public String getSetArtikelTyp() {
+		return setArtikelTyp;
+	}
+
+	public void setSetArtikelTyp(String setArtikelTyp) {
+		this.setArtikelTyp = setArtikelTyp;
+	}
+
+	public String getBezeichnungEinzeln() {
+		return bezeichnungEinzeln;
+	}
+
+	public void setBezeichnungEinzeln(String bezeichnungEinzeln) {
+		this.bezeichnungEinzeln = bezeichnungEinzeln;
+	}
+
+	public String getZusatzbezeichnungEinzeln() {
+		return zusatzbezeichnungEinzeln;
+	}
+
+	public void setZusatzbezeichnungEinzeln(String zusatzbezeichnungEinzeln) {
+		this.zusatzbezeichnungEinzeln = zusatzbezeichnungEinzeln;
+	}
 
 	public String getPositionsStatus() {
 		return positionsStatus;
@@ -95,7 +183,8 @@ public class AuftragPacklistePositionDto implements Serializable {
 		row[AuftragReportFac.REPORT_PACKLISTE_BEZEICHNUNG] = bezeichnung;
 		row[AuftragReportFac.REPORT_PACKLISTE_GESAMTMENGE] = gesamtMenge;
 		row[AuftragReportFac.REPORT_PACKLISTE_OFFENEMENGE] = offeneMenge;
-		row[AuftragReportFac.REPORT_PACKLISTE_LAGERSTAND] = lagerstand;
+		row[AuftragReportFac.REPORT_PACKLISTE_LAGERSTAND] = lagerstandAbbuchungslager;
+		row[AuftragReportFac.REPORT_PACKLISTE_LAGERSTAND_ALLER_LAEGER] = lagerstandAllerLaeger;
 		row[AuftragReportFac.REPORT_PACKLISTE_LAGERORT] = lagerplatz;
 		row[AuftragReportFac.REPORT_PACKLISTE_GEWICHT] = gewicht;
 		row[AuftragReportFac.REPORT_PACKLISTE_RASTER_LIEGEND] = rasterLiegend;
@@ -126,6 +215,14 @@ public class AuftragPacklistePositionDto implements Serializable {
 		row[AuftragReportFac.REPORT_PACKLISTE_ARBEITSGAENGE] = arbeitsgaenge;
 		row[AuftragReportFac.REPORT_PACKLISTE_MENGENTEILER] = mengenTeiler;
 		row[AuftragReportFac.REPORT_PACKLISTE_POSITIONSSTATUS] = positionsStatus;
+		row[AuftragReportFac.REPORT_PACKLISTE_BEZEICHNUNG_EINZELN] = bezeichnungEinzeln;
+		row[AuftragReportFac.REPORT_PACKLISTE_ZUSATZBEZEICHNUNG_EINZELN] = zusatzbezeichnungEinzeln;
+		row[AuftragReportFac.REPORT_PACKLISTE_SETARTIKEL_TYP] = setArtikelTyp;
+		row[AuftragReportFac.REPORT_PACKLISTE_POSITIONSNUMMER] = positionsnummer;
+		row[AuftragReportFac.REPORT_PACKLISTE_AUFTRAGPOSITION_I_ID] = auftragspositionIId;
+		row[AuftragReportFac.REPORT_PACKLISTE_GESEHEN] = bGesehen;
+		row[AuftragReportFac.REPORT_PACKLISTE_KURZBEZEICHNUNG] = kurzbezeichnung;
+		row[AuftragReportFac.REPORT_PACKLISTE_REFERENZNUMMER] = referenznummer;
 		return row;
 
 	}
@@ -135,9 +232,15 @@ public class AuftragPacklistePositionDto implements Serializable {
 		AuftragPacklistePositionDto pos = new AuftragPacklistePositionDto();
 		pos.setIdent(ident);
 		pos.setBezeichnung(bezeichnung);
+		pos.setKurzbezeichnung(kurzbezeichnung);
+		pos.setReferenznummer(referenznummer);
+		pos.setBezeichnung(bezeichnung);
+		pos.setBezeichnungEinzeln(bezeichnungEinzeln);
+		pos.setZusatzbezeichnungEinzeln(zusatzbezeichnungEinzeln);
+		pos.setBezeichnung(bezeichnung);
 		pos.setGesamtMenge(gesamtMenge);
 		pos.setOffeneMenge(offeneMenge);
-		pos.setLagerstand(lagerstand);
+		pos.setLagerstand(lagerstandAbbuchungslager);
 		pos.setFiktiverLagerstand(fiktiverLagerstand);
 		pos.setLagerplatz(lagerplatz);
 		if (kommentarImage != null) {
@@ -214,11 +317,11 @@ public class AuftragPacklistePositionDto implements Serializable {
 	}
 
 	public BigDecimal getLagerstand() {
-		return lagerstand;
+		return lagerstandAbbuchungslager;
 	}
 
 	public void setLagerstand(BigDecimal lagerstand) {
-		this.lagerstand = lagerstand;
+		this.lagerstandAbbuchungslager = lagerstand;
 	}
 
 	public BigDecimal getFiktiverLagerstand() {

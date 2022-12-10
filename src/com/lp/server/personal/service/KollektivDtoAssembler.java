@@ -57,6 +57,12 @@ public class KollektivDtoAssembler {
 			kollektivDto.setUBlockzeitbis(kollektiv.getUBlockzeitbis());
 			kollektivDto.setNFaktoruestd200(kollektiv.getNFaktoruestd200());
 			kollektivDto.setN200prozentigeab(kollektiv.getN200prozentigeab());
+			kollektivDto.setIBerechnungsbasis(kollektiv.getIBerechnungsbasis());
+			kollektivDto.setbWochengesamtsicht(kollektiv
+					.getbWochengesamtsicht());
+			kollektivDto.setCAbrechungsart(kollektiv.getCAbrechungsart());
+			kollektivDto.setBFeiertagsueberstundenAbSoll(kollektiv.getBFeiertagsueberstundenAbSoll());
+			kollektivDto.setIFaktorPassiveReisezeit(kollektiv.getIFaktorPassiveReisezeit());
 		}
 		return kollektivDto;
 	}

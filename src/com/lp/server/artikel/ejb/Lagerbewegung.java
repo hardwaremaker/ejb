@@ -61,7 +61,13 @@ import javax.persistence.Table;
 		@NamedQuery(name = Lagerbewegung.QueryFindSnrAbgang, query = "SELECT OBJECT(C) FROM Lagerbewegung c WHERE c.cSeriennrchargennr = ?1 AND c.bAbgang=1 AND c.bHistorie=0 AND c.nMenge>0"),
 		@NamedQuery(name = "LagerbewegungfindByBelegartCNrIBelegartid", query = "SELECT OBJECT(C) FROM Lagerbewegung c WHERE c.cBelegartnr = ?1 AND c.iBelegartid = ?2"),
 		@NamedQuery(name = LagerbewegungQuery.ByLagerbewegungfindByArtikelIIdBAbgangBelegdatumCount, 
-			query = "SELECT COUNT(C) FROM Lagerbewegung c WHERE c.artikelIId = :artikelId AND c.bAbgang=1 AND c.bVollstaendigverbraucht < 1 AND c.tBelegdatum > :belegDatum")
+			query = "SELECT COUNT(C) FROM Lagerbewegung c WHERE c.artikelIId = :artikelId AND c.bAbgang=1 AND c.bVollstaendigverbraucht < 1 AND c.tBelegdatum > :belegDatum"),
+		@NamedQuery(name = LagerbewegungQuery.ByBelegartCNrArtikelIIdCSeriennrchargennr, 
+			query = "SELECT OBJECT(C) FROM Lagerbewegung c WHERE c.bHistorie=0 AND c.nMenge>0 AND c.cBelegartnr=:belegartnr AND c.artikelIId=:artikelId AND c.cSeriennrchargennr=:serienChargennr ORDER BY c.nMenge ASC"),
+		@NamedQuery(name = LagerbewegungQuery.ByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIds, 
+			query = "SELECT OBJECT(C) FROM Lagerbewegung c WHERE c.bHistorie=0 AND c.nMenge>0 AND c.cBelegartnr=:belegartnr AND c.artikelIId=:artikelId AND c.cSeriennrchargennr=:serienChargennr AND c.iBelegartid IN (:belegartids) ORDER BY c.nMenge ASC"),
+		@NamedQuery(name = LagerbewegungQuery.ByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge, 
+		query = "SELECT OBJECT(C) FROM Lagerbewegung c WHERE c.bHistorie=0 AND c.nMenge>0 AND c.cBelegartnr=:belegartnr AND c.artikelIId=:artikelId AND c.cSeriennrchargennr=:serienChargennr AND c.iBelegartid IN (:belegartids) AND c.bAbgang=1 ORDER BY c.nMenge ASC")
 		})
 @Entity
 @Table(name = "WW_LAGERBEWEGUNG")
@@ -171,6 +177,29 @@ public class Lagerbewegung implements Serializable {
 
 	@Column(name = "LAGER_I_ID")
 	private Integer lagerIId;
+
+	@Column(name = "GEBINDE_I_ID")
+	private Integer gebindeIId;
+
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
+	}
+	
+	@Column(name = "N_GEBINDEMENGE")
+	private BigDecimal nGebindemenge;
+	
+	
+	public BigDecimal getNGebindemenge() {
+		return nGebindemenge;
+	}
+
+	public void setNGebindemenge(BigDecimal nGebindemenge) {
+		this.nGebindemenge = nGebindemenge;
+	}
 
 	private static final long serialVersionUID = 1L;
 

@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.rechnung.ejb;
@@ -44,12 +44,16 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "RechnungzahlungfindByRechnungIId", query = "SELECT OBJECT(o) FROM Rechnungzahlung o WHERE o.rechnungIId=?1 ORDER BY o.tZahldatum ASC, o.iId ASC"),
+import com.lp.server.system.service.ITablenames;
+
+@NamedQueries( { 
+	@NamedQuery(name = "RechnungzahlungfindByRechnungIId", query = "SELECT OBJECT(o) FROM Rechnungzahlung o WHERE o.rechnungIId=?1 ORDER BY o.tZahldatum ASC, o.iId ASC"),
 	@NamedQuery(name = "RechnungzahlungfindByRechnungIIdAbsteigendSortiert", query = "SELECT OBJECT(o) FROM Rechnungzahlung o WHERE o.rechnungIId=?1 ORDER BY o.tZahldatum DESC, o.iId DESC"),
-	@NamedQuery(name = "RechnungzahlungfindByRechnungIIdZahlungsartCNr", query = "SELECT OBJECT(o) FROM Rechnungzahlung o WHERE o.rechnungIId=?1 AND o.zahlungsartCNr=?2")
+	@NamedQuery(name = "RechnungzahlungfindByRechnungIIdZahlungsartCNr", query = "SELECT OBJECT(o) FROM Rechnungzahlung o WHERE o.rechnungIId=?1 AND o.zahlungsartCNr=?2"),
+	@NamedQuery(name = RechnungzahlungQuery.ByIAuszug, query = "SELECT OBJECT(o) FROM Rechnungzahlung o WHERE o.iAuszug=?1"),
 	})
 @Entity
-@Table(name = "RECH_RECHNUNGZAHLUNG")
+@Table(name = ITablenames.RECH_RECHNUNGZAHLUNG)
 public class Rechnungzahlung implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -111,15 +115,15 @@ public class Rechnungzahlung implements Serializable {
 
 	@Column(name = "BUCHUNGDETAIL_I_ID")
 	private Integer buchungdetailIId;
-	
+
 	public Integer getBuchungdetailIId() {
 		return buchungdetailIId;
 	}
-	
+
 	public void setBuchungdetailIId(Integer buchungdetailIId) {
 		this.buchungdetailIId = buchungdetailIId;
 	}
-	
+
 	public Integer getEingangsrechnungIId() {
 		return eingangsrechnungIId;
 	}
@@ -130,10 +134,13 @@ public class Rechnungzahlung implements Serializable {
 
 	@Column(name = "EINGANGSRECHNUNG_I_ID")
 	private Integer eingangsrechnungIId;
-	
-	
+
+
 	@Column(name = "ZAHLUNGSART_C_NR")
 	private String zahlungsartCNr;
+
+	@Column(name = "C_KOMMENTAR")
+	private String cKommentar;
 
 	private static final long serialVersionUID = 1L;
 
@@ -322,6 +329,14 @@ public class Rechnungzahlung implements Serializable {
 
 	public void setZahlungsartCNr(String zahlungsartCNr) {
 		this.zahlungsartCNr = zahlungsartCNr;
+	}
+
+	public String getCKommentar(){
+		return this.cKommentar;
+	}
+
+	public void setCKommentar(String cKommentar){
+		this.cKommentar = cKommentar;
 	}
 
 }

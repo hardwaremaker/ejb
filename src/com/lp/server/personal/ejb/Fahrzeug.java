@@ -55,6 +55,28 @@ public class Fahrzeug implements Serializable {
 	private String cBez;
 	@Column(name = "C_KENNZEICHEN")
 	private String cKennzeichen;
+	
+	@Column(name = "B_VERSTECKT")
+	private Short bVersteckt;
+	
+	public Short getBVersteckt() {
+		return this.bVersteckt;
+	}
+
+	public void setBVersteckt(Short bVersteckt) {
+		this.bVersteckt = bVersteckt;
+	}
+	
+	@Column(name = "FAHRZEUGVERWENDUNGSART_C_NR")
+	private String fahrzeugverwendungsartCNr;
+
+	public String getFahrzeugverwendungsartCNr() {
+		return fahrzeugverwendungsartCNr;
+	}
+
+	public void setFahrzeugverwendungsartCNr(String fahrzeugverwendungsartCNr) {
+		this.fahrzeugverwendungsartCNr = fahrzeugverwendungsartCNr;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -62,11 +84,13 @@ public class Fahrzeug implements Serializable {
 		super();
 	}
 
-	public Fahrzeug(Integer id,String mandantCNr, String cBez,String cKennzeichen) {
+	public Fahrzeug(Integer id,String mandantCNr, String cBez,String cKennzeichen, String fahrzeugverwendungsartCNr, Short versteckt) {
 		setCBez(cBez);
 		setMandantCNr(mandantCNr);
 		setIId(id);
 		setCKennzeichen(cKennzeichen);
+		setFahrzeugverwendungsartCNr(fahrzeugverwendungsartCNr);
+		setBVersteckt(versteckt);
 		
 	}
 

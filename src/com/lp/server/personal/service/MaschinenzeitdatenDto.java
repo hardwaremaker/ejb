@@ -35,6 +35,8 @@ package com.lp.server.personal.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import com.lp.util.Helper;
+
 public class MaschinenzeitdatenDto implements Serializable{
 	public Integer getIId() {
 		return iId;
@@ -42,6 +44,18 @@ public class MaschinenzeitdatenDto implements Serializable{
 	public void setIId(Integer id) {
 		iId = id;
 	}
+	
+	private Short bParallel = Helper.boolean2Short(false);
+
+	public Short getBParallel() {
+		return bParallel;
+	}
+
+	public void setBParallel(Short bParallel) {
+		this.bParallel = bParallel;
+	}
+
+	
 	public Timestamp getTVon() {
 		return tVon;
 	}
@@ -90,7 +104,33 @@ public class MaschinenzeitdatenDto implements Serializable{
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
 	}
+	private Integer personalIIdErledigt;
+	private Timestamp tErledigt;
+	private Double fVerrechenbar;
 
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
 	private Integer iId;
 	private Timestamp tVon;
 	private Timestamp tBis;
@@ -114,5 +154,17 @@ public class MaschinenzeitdatenDto implements Serializable{
 	public void setPersonalIIdGestartet(Integer personalIIdGestartet) {
 		this.personalIIdGestartet = personalIIdGestartet;
 	}
+	
+	
+	private Integer losIId_WennBeiManuellerBedinungAufkeinenAGGebuchtwurde;
+
+	public Integer getLosIId_WennBeiManuellerBedinungAufkeinenAGGebuchtwurde() {
+		return losIId_WennBeiManuellerBedinungAufkeinenAGGebuchtwurde;
+	}
+	public void setLosIId_WennBeiManuellerBedinungAufkeinenAGGebuchtwurde(
+			Integer losIId_WennBeiManuellerBedinungAufkeinenAGGebuchtwurde) {
+		this.losIId_WennBeiManuellerBedinungAufkeinenAGGebuchtwurde = losIId_WennBeiManuellerBedinungAufkeinenAGGebuchtwurde;
+	}
+	
 
 }

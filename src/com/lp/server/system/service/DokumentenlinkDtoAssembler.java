@@ -51,6 +51,10 @@ public class DokumentenlinkDtoAssembler {
 			dokumentenlinkDto.setMandantCNr(dokumentenlink.getMandantCNr());
 			dokumentenlinkDto.setBPfadabsolut(dokumentenlink.getBPfadabsolut());
 			dokumentenlinkDto.setBUrl(dokumentenlink.getBUrl());
+			dokumentenlinkDto.setBPfadAusArbeitsplatzparameter(dokumentenlink
+					.getBPfadAusArbeitsplatzparameter());
+			dokumentenlinkDto.setBTitel(dokumentenlink.getBTitel());
+			dokumentenlinkDto.setRechtCNr(dokumentenlink.getRechtCNr());
 		}
 		return dokumentenlinkDto;
 	}

@@ -40,12 +40,17 @@ import java.util.LinkedHashMap;
 import javax.ejb.Remote;
 
 import com.lp.server.finanz.ejb.MahnstufePK;
+import com.lp.server.rechnung.service.LastschriftvorschlagDto;
+import com.lp.server.rechnung.service.LastschriftvorschlagKomplettDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
 public interface MahnwesenFac {
+	public final static String LASTSCHRIFT_EXPORT_SEPA_ORDNER = "Sepaexport";
+	public final static String LASTSCHRIFT_EXPORT_SEPA_FILENAME = "lastschrift_export_sepa.xml";
+
 	public MahnlaufDto createMahnlaufMitMahnvorschlag(TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
@@ -147,4 +152,53 @@ public interface MahnwesenFac {
 
 	public java.sql.Date getAktuellesMahndatumEinerRechnung(
 			Integer rechnungIId, TheClientDto theClientDto);
+	
+	LastschriftvorschlagDto updateLastschriftvorschlag(LastschriftvorschlagDto dto, TheClientDto theClientDto);
+	
+	String generateCAuftraggeberreferenzAndUpdateLastschriftvorschlag(
+			LastschriftvorschlagDto dto, TheClientDto theClientDto);
+	
+	LastschriftvorschlagDto lastschriftvorschlagFindByPrimaryKey(
+			Integer lastschriftvorschlagIId) throws EJBExceptionLP;
+	
+	/**
+	 * Liefert den angeforderten Lastschriftvorschlag samt den zus&auml;tzlichen Daten
+	 * der betroffenen Rechnung, des Kunden und Bankverbindung
+	 * 
+	 * @param lastschriftvorschlagIId
+	 * @param theClientDto
+	 * @return
+	 * @throws EJBExceptionLP
+	 * @throws RemoteException
+	 */
+	LastschriftvorschlagKomplettDto lastschriftvorschlagKomplettFindByPrimaryKey(
+			Integer lastschriftvorschlagIId, TheClientDto theClientDto) 
+			throws EJBExceptionLP, RemoteException;
+	
+	BigDecimal getGesamtwertEinesLastschriftvorschlaglaufs(Integer mahnlaufIId, 
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	
+	void removeLastschriftvorschlag(Integer iId) throws EJBExceptionLP;
+	
+	SepaXmlExportResult exportiereLastschriftvorschlaege(Integer mahnlaufIId, TheClientDto theClientDto);
+
+	String getLastschriftvorschlagSepaExportFilename(TheClientDto theClient);
+
+	void archiviereLastschriftvorschlag(Integer mahnlaufIId, String xml, TheClientDto theClientDto);
+
+	Boolean isLastschriftvorschlagOffen(Integer mahnlaufIId);
+	
+	Integer createLastschriftvorschlag(LastschriftvorschlagDto lastschriftvorschlagDto, 
+			TheClientDto theClientDto);
+	
+	void removeMahnlaufIgnoriereGespeicherteLastschriften(MahnlaufDto mahnlaufDto,
+			TheClientDto theClientDto) throws RemoteException;
+	
+	boolean isLastschriftvorschlagExportierbar(Integer mahnlaufIId);
+	
+	void macheLastschriftvorschlagRueckgaengig(Integer lastschriftvorschlagIId);
+	
+	public int anzahlDerOffenenRechnungenMitMahnstufeGroesser(Integer kundeIId,int iMahnstufe,TheClientDto theClientDto);
+
+	String getDefaultLastschriftVerwendungszweck(RechnungDto rechnungDto, TheClientDto theClientDto);
 }

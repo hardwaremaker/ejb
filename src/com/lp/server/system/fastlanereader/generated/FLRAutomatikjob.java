@@ -65,15 +65,18 @@ public class FLRAutomatikjob implements Serializable {
 	/** nullable persistent field */
 	private Integer i_intervall;
 
+	private Integer i_scheduler;
+	
 	/** full constructor */
 	public FLRAutomatikjob(Integer i_sort, String c_name, String mandant_c_nr,
-			String c_beschreibung, String b_active, Integer i_intervall) {
+			String c_beschreibung, String b_active, Integer i_intervall, Integer i_scheduler) {
 		this.i_sort = i_sort;
 		this.c_name = c_name;
 		this.mandant_c_nr = mandant_c_nr;
 		this.c_beschreibung = c_beschreibung;
 		this.b_active = b_active;
 		this.i_intervall = i_intervall;
+		this.i_scheduler = i_scheduler;
 	}
 
 	/** default constructor */
@@ -138,6 +141,14 @@ public class FLRAutomatikjob implements Serializable {
 
 	public String toString() {
 		return new ToStringBuilder(this).append("i_id", getI_id()).toString();
+	}
+	
+	public Integer getI_scheduler() {
+		return i_scheduler;
+	}
+	
+	public void setI_scheduler(Integer i_scheduler) {
+		this.i_scheduler = i_scheduler;
 	}
 
 }

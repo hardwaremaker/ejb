@@ -43,10 +43,13 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.auftrag.fastlanereader.generated.FLRMeilensteinspr;
 import com.lp.server.auftrag.fastlanereader.generated.FLRZahlungsplan;
+import com.lp.server.auftrag.fastlanereader.generated.FLRZahlungsplanmeilenstein;
 import com.lp.server.auftrag.fastlanereader.generated.FLRZeitplan;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragteilnehmerFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -85,6 +88,20 @@ public class ZahlungsplanHandler extends UseCaseHandler {
 	public static final String FLR_ZAHLUNGSPLAN = "flrzahlungsplan.";
 	public static final String FLR_ZAHLUNGSPLAN_FROM_CLAUSE = " from FLRZahlungsplan flrzahlungsplan ";
 
+	private String findSpr(String sLocaleI, Iterator<?> iterUebersetzungenI) {
+
+		String sUebersetzung = null;
+		while (iterUebersetzungenI.hasNext()) {
+			FLRMeilensteinspr religionspr = (FLRMeilensteinspr) iterUebersetzungenI
+					.next();
+			if (religionspr.getLocale().getC_nr().compareTo(sLocaleI) == 0) {
+				sUebersetzung = religionspr.getC_bez();
+				break;
+			}
+		}
+		return sUebersetzung;
+	}
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
@@ -112,10 +129,24 @@ public class ZahlungsplanHandler extends UseCaseHandler {
 						.next();
 				rows[row][col++] = zeitplan.getI_id();
 
-				rows[row][col++] = Helper.addiereTageZuDatum(zeitplan
-						.getFlrauftrag().getT_liefertermin(), -zeitplan
-						.getI_tage_vor_liefertermin());
+				rows[row][col++] = zeitplan.getT_termin();
 				rows[row][col++] = zeitplan.getN_betrag();
+
+				if (zeitplan.getFlrzahlungsplanmeilenstein().size() > 0) {
+
+					FLRZahlungsplanmeilenstein zm = (FLRZahlungsplanmeilenstein) zeitplan
+							.getFlrzahlungsplanmeilenstein().iterator().next();
+					rows[row][col++] = findSpr(
+							Helper.locale2String(theClientDto.getLocUi()), zm
+									.getFlrmeilenstein()
+									.getMeilensteinspr_set().iterator());
+					rows[row][col++] = zm.getC_kommentar();
+					if (zm.getT_erledigt() == null) {
+						rows[row][col++] = new Boolean(false);
+					} else {
+						rows[row][col++] = new Boolean(true);
+					}
+				}
 
 				row++;
 				col = 0;
@@ -229,7 +260,7 @@ public class ZahlungsplanHandler extends UseCaseHandler {
 					orderBy.append(", ");
 				}
 				orderBy.append(FLR_ZAHLUNGSPLAN)
-						.append(AuftragServiceFac.FLR_ZAHLUNGSPLAN_I_TAGE_VOR_LIEFERTERMIN)
+						.append(AuftragServiceFac.FLR_ZAHLUNGSPLAN_T_TERMIN)
 						.append(" ASC ");
 				sortAdded = true;
 			}
@@ -320,22 +351,37 @@ public class ZahlungsplanHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					java.sql.Date.class, BigDecimal.class, }, new String[] {
+					java.sql.Date.class, BigDecimal.class, String.class,
+					String.class, Boolean.class, }, new String[] {
 					"i_id",
 					getTextRespectUISpr("auft.zeitplan.termin", mandantCNr,
 							locUI),
 
 					getTextRespectUISpr("auft.zahlungsplan.betrag", mandantCNr,
-							locUI), },
+							locUI),
+					getTextRespectUISpr(
+							"auft.zahlungsplanmeilenstein.meilenstein",
+							mandantCNr, locUI),
+					getTextRespectUISpr(
+							"auft.zahlungsplanmeilenstein.kommentar",
+							mandantCNr, locUI),
+					getTextRespectUISpr(
+							"auft.zahlungsplanmeilenstein.erledigt",
+							mandantCNr, locUI) },
 
-			new int[] { -1, // diese Spalte wird ausgeblendet
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
 					QueryParameters.FLR_BREITE_M,
 
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					QueryParameters.FLR_BREITE_PREIS,
+					QueryParameters.FLR_BREITE_L,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_PREIS },
 
-			new String[] { "i_id",
-					AuftragServiceFac.FLR_ZAHLUNGSPLAN_I_TAGE_VOR_LIEFERTERMIN,
-					AuftragServiceFac.FLR_ZAHLUNGSPLAN_N_BETRAG }));
+			new String[] { "i_id", AuftragServiceFac.FLR_ZAHLUNGSPLAN_T_TERMIN,
+					AuftragServiceFac.FLR_ZAHLUNGSPLAN_N_BETRAG,
+					Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
+					Facade.NICHT_SORTIERBAR }));
 		}
 
 		return super.getTableInfo();

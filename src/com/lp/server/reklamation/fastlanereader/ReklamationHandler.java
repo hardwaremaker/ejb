@@ -32,6 +32,10 @@
  ******************************************************************************/
 package com.lp.server.reklamation.fastlanereader;
 
+import java.awt.Color;
+import java.math.BigDecimal;
+import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -44,6 +48,8 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.auftrag.fastlanereader.AuftragHandler;
+import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.LieferantFac;
@@ -52,9 +58,14 @@ import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.reklamation.fastlanereader.generated.FLRReklamation;
 import com.lp.server.reklamation.service.ReklamationDto;
 import com.lp.server.reklamation.service.ReklamationFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeReklamation;
 import com.lp.server.system.jcr.service.docnode.DocPath;
+import com.lp.server.system.service.MandantFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -68,8 +79,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Montageart implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Montageart implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -90,6 +101,8 @@ public class ReklamationHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	boolean bProjekttitelInAG_AB = false;
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
@@ -102,8 +115,7 @@ public class ReklamationHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -111,73 +123,83 @@ public class ReklamationHandler extends UseCaseHandler {
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
-			int col = 0;
+
 			while (resultListIterator.hasNext()) {
-				// FLRReklamation reklamation = (FLRReklamation)
-				// resultListIterator.next();
+
 				Object[] o = (Object[]) resultListIterator.next();
 
 				FLRReklamation reklamation = (FLRReklamation) o[0];
 
-				rows[row][col++] = reklamation.getI_id();
-				rows[row][col++] = reklamation.getC_nr();
+				Object[] rowToAddCandidate = new Object[colCount];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")] = reklamation.getI_id();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.belegartnummer")] = reklamation
+						.getC_nr();
 
 				if (reklamation.getFlrlos() != null) {
 					if (reklamation.getFlrlos().getFlrauftrag() != null) {
-						rows[row][col++] = reklamation.getFlrlos()
-								.getFlrauftrag().getFlrkunde().getFlrpartner()
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.kunde")] = reklamation
+								.getFlrlos().getFlrauftrag().getFlrkunde().getFlrpartner()
 								.getC_name1nachnamefirmazeile1();
 
 					} else {
-						rows[row][col++] = null;
+						if (reklamation.getFlrkunde() != null) {
+							rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.kunde")] = reklamation
+									.getFlrkunde().getFlrpartner().getC_name1nachnamefirmazeile1();
+
+						}
 
 					}
 				} else {
 					if (reklamation.getFlrkunde() != null) {
-						rows[row][col++] = reklamation.getFlrkunde()
-								.getFlrpartner()
-								.getC_name1nachnamefirmazeile1();
-
-					} else {
-						rows[row][col++] = null;
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.kunde")] = reklamation
+								.getFlrkunde().getFlrpartner().getC_name1nachnamefirmazeile1();
 
 					}
 				}
 
 				if (reklamation.getFlrlieferant() != null) {
-					rows[row][col++] = reklamation.getFlrlieferant()
-							.getFlrpartner().getC_name1nachnamefirmazeile1();
-
-				} else {
-					rows[row][col++] = null;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.lieferant")] = reklamation
+							.getFlrlieferant().getFlrpartner().getC_name1nachnamefirmazeile1();
 
 				}
 
-				if (reklamation.getFlrmaschine() != null) {
-					rows[row][col++] = reklamation.getFlrmaschine()
-							.getFlrmaschinengruppe().getC_bez();
-				} else {
-					rows[row][col++] = null;
-
+				if (bMaschinenzeiterfassung) {
+					if (reklamation.getFlrmaschine() != null) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.maschinengruppe")] = reklamation
+								.getFlrmaschine().getFlrmaschinengruppe().getC_bez();
+					}
 				}
 
 				if (reklamation.getFlrartikel() != null) {
-					rows[row][col++] = reklamation.getFlrartikel().getC_nr();
-					rows[row][col++] = o[1];
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.artikel")] = reklamation
+							.getFlrartikel().getC_nr();
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.bezeichnung")] = o[1];
+
 				} else {
-					rows[row][col++] = null;
-					rows[row][col++] = reklamation.getC_handartikel();
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.bezeichnung")] = reklamation
+							.getC_handartikel();
 				}
 
-				rows[row][col++] = reklamation.getC_grund();
-				rows[row][col++] = reklamation.getT_belegdatum();
-				rows[row++][col++] = getStatusMitUebersetzung(reklamation
-						.getStatus_c_nr());
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.grund")] = reklamation.getC_grund();
 
-				col = 0;
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("rekla.kdreklanr")] = reklamation
+						.getC_kdreklanr();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("rekla.kndlsnr")] = reklamation
+						.getC_kdlsnr();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.belegdatum")] = reklamation
+						.getT_belegdatum();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.status")] = getStatusMitUebersetzung(
+						reklamation.getStatus_c_nr());
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.kommentar")] = getKommentarart(
+						reklamation.getX_kommentar());
+
+				rows[row] = rowToAddCandidate;
+
+				row++;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -199,8 +221,8 @@ public class ReklamationHandler extends UseCaseHandler {
 			session = setFilter(session);
 			String queryString = "select count(*) from FLRReklamation reklamation left join reklamation.flrkunde.flrpartner as flrkd "
 					+ " left join reklamation.flrlieferant.flrpartner as flrlf "
-					+ "  LEFT OUTER JOIN reklamation.flrartikel.artikelsprset AS aspr "
-					+ this.buildWhereClause();
+					+ " left join reklamation.flrprojekt as flrprojekt "
+					+ "  LEFT OUTER JOIN reklamation.flrartikel.artikelsprset AS aspr " + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -218,9 +240,50 @@ public class ReklamationHandler extends UseCaseHandler {
 		return rowCount;
 	}
 
+	private void buildKundeLieferantFilter(FilterKriterium filterKriterium, StringBuffer where) {
+		ParametermandantDto parameter = null;
+		try {
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter.getCWertAsObject();
+		
+		if (bSuchenInklusiveKbez) {
+
+			where.append(" ((lower(flrkd.c_name1nachnamefirmazeile1)");
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + filterKriterium.value.toLowerCase());
+			where.append(" OR lower(flrkd.c_kbez)");
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + filterKriterium.value.toLowerCase() + ")");
+
+			where.append(" OR (lower(flrlf.c_name1nachnamefirmazeile1)");
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + filterKriterium.value.toLowerCase());
+			where.append(" OR lower(flrlf.c_kbez)");
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + filterKriterium.value.toLowerCase() + "))");
+
+		} else {
+			
+			
+			where.append(" (lower(flrkd.c_name1nachnamefirmazeile1)");
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + filterKriterium.value.toLowerCase());
+			where.append(" OR lower(flrlf.c_name1nachnamefirmazeile1)");
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + filterKriterium.value.toLowerCase() + ")");
+			
+	
+
+		}
+	}
+
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -231,8 +294,7 @@ public class ReklamationHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -242,19 +304,69 @@ public class ReklamationHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(reklamation."
-								+ filterKriterien[i].kritName + ")");
+
+					if (filterKriterien[i].kritName.equals("c_nr")) {
+						try {
+							String sValue = super.buildWhereBelegnummer(filterKriterien[i], false);
+							// Belegnummernsuche auch in "altem" Jahr, wenn im
+							// neuen noch keines vorhanden ist
+							if (!istBelegnummernInJahr("FLRReklamation", sValue)) {
+								sValue = super.buildWhereBelegnummer(filterKriterien[i], true);
+							}
+							where.append(" " + "reklamation." + filterKriterien[i].kritName);
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + sValue);
+						} catch (Throwable ex) {
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(ex));
+						}
+					} else if (filterKriterien[i].kritName.equals("c_projekt")) {
+
+						where.append("");
+						where.append(buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+								"reklamation." + filterKriterien[i].kritName, filterKriterien[i].isBIgnoreCase()));
+					} else if (filterKriterien[i].kritName.equals("c_grund")) {
+
+						where.append("");
+						where.append(buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+								"reklamation." + filterKriterien[i].kritName, filterKriterien[i].isBIgnoreCase()));
+					} else if (filterKriterien[i].kritName.equals("x_grund_lang")) {
+
+						where.append(" (");
+						where.append(buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+								"reklamation." + filterKriterien[i].kritName, filterKriterien[i].isBIgnoreCase()));
+
+						// 19915
+						if (bProjekttitelInAG_AB) {
+							where.append(" OR ");
+							where.append(
+									buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+											"flrprojekt.c_titel", filterKriterien[i].isBIgnoreCase()));
+						}
+
+						where.append(") ");
+
+					} else if (filterKriterien[i].kritName.equals("c_kdreklanr")) {
+
+						where.append(" ( reklamation.c_kdreklanr LIKE " + filterKriterien[i].value
+								+ " OR reklamation.c_kdlsnr LIKE " + filterKriterien[i].value + ")");
+
+					} else if (filterKriterien[i].kritName.equals("KUNDE_LIEFERANT")) {
+
+						buildKundeLieferantFilter(filterKriterien[i], where);
+
 					} else {
-						where.append(" reklamation."
-								+ filterKriterien[i].kritName);
-					}
-					where.append(" " + filterKriterien[i].operator);
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
-					} else {
-						where.append(" " + filterKriterien[i].value);
+
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" upper(reklamation." + filterKriterien[i].kritName + ")");
+						} else {
+							where.append(" reklamation." + filterKriterien[i].kritName);
+						}
+						where.append(" " + filterKriterien[i].operator);
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" " + filterKriterien[i].value.toUpperCase());
+						} else {
+							where.append(" " + filterKriterien[i].value);
+						}
 					}
 				}
 			}
@@ -279,15 +391,13 @@ public class ReklamationHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("reklamation."
-									+ kriterien[i].kritName);
+							orderBy.append("reklamation." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -320,6 +430,8 @@ public class ReklamationHandler extends UseCaseHandler {
 		return orderBy.toString();
 	}
 
+	private boolean bMaschinenzeiterfassung = false;
+
 	/**
 	 * get the basic from clause for the HQL statement.
 	 * 
@@ -331,12 +443,12 @@ public class ReklamationHandler extends UseCaseHandler {
 				+ " left join reklamation.flrkunde.flrpartner as flrkd "
 				+ " left join reklamation.flrlieferant.flrpartner as flrlf "
 				+ " left join reklamation.flrmaschine as flrmaschine "
+				+ " left join reklamation.flrprojekt as flrprojekt "
 				+ "  LEFT OUTER JOIN reklamation.flrartikel.artikelsprset AS aspr ";
 
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -352,8 +464,9 @@ public class ReklamationHandler extends UseCaseHandler {
 				String queryString = "select reklamation.i_id from FLRReklamation reklamation left join reklamation.flrkunde.flrpartner as flrkd "
 						+ " left join reklamation.flrlieferant.flrpartner as flrlf "
 						+ " left join reklamation.flrmaschine as flrmaschine "
-						+ "  LEFT OUTER JOIN reklamation.flrartikel.artikelsprset AS aspr "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+						+ " left join reklamation.flrprojekt as flrprojekt "
+						+ "  LEFT OUTER JOIN reklamation.flrartikel.artikelsprset AS aspr " + this.buildWhereClause()
+						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -387,67 +500,73 @@ public class ReklamationHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, String.class,
-							String.class, String.class, java.util.Date.class,
-							Icon.class, },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("bes.belegartnummer",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.kunde", mandantCNr, locUI),
-							getTextRespectUISpr("lp.lieferant", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.maschinengruppe",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.artikel", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.grund", mandantCNr, locUI),
-							getTextRespectUISpr("bes.belegdatum", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.status", mandantCNr, locUI), },
-					new int[] {
-							-1,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST
-							},
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
 
-					new String[] {
-							"i_id",
-							"c_nr",
-							ReklamationFac.FLR_REKLAMATION_FRLKUNDE
-									+ "."
-									+ KundeFac.FLR_PARTNER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
+		TableColumnInformation columns = new TableColumnInformation();
 
-							ReklamationFac.FLR_REKLAMATION_FLRLIEFERANT
-									+ "."
-									+ LieferantFac.FLR_PARTNER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-							"flrmaschine.flrmaschinengruppe.c_bez",
-							ReklamationFac.FLR_REKLAMATION_FLRARTIKEL + ".c_nr",
-							Facade.NICHT_SORTIERBAR,
-							ReklamationFac.FLR_REKLAMATION_C_GRUND,
-							ReklamationFac.FLR_REKLAMATION_T_BELEGDATUM,
-							ReklamationFac.FLR_REKLAMATION_STATUS_C_NR }));
+		columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+		columns.add("bes.belegartnummer", String.class, getTextRespectUISpr("bes.belegartnummer", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "c_nr");
+		columns.add("lp.kunde", String.class, getTextRespectUISpr("lp.kunde", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, ReklamationFac.FLR_REKLAMATION_FRLKUNDE + "."
+						+ KundeFac.FLR_PARTNER + "." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
+		columns.add("lp.lieferant", String.class, getTextRespectUISpr("lp.lieferant", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, ReklamationFac.FLR_REKLAMATION_FLRLIEFERANT + "."
+						+ LieferantFac.FLR_PARTNER + "." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
+
+		if (bMaschinenzeiterfassung) {
+			columns.add("lp.maschinengruppe", String.class, getTextRespectUISpr("lp.maschinengruppe", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, "flrmaschine.flrmaschinengruppe.c_bez");
 		}
 
-		return super.getTableInfo();
+		columns.add("lp.artikel", String.class, getTextRespectUISpr("lp.artikel", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, ReklamationFac.FLR_REKLAMATION_FLRARTIKEL + ".c_nr");
+		columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+		columns.add("lp.grund", String.class, getTextRespectUISpr("lp.grund", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, ReklamationFac.FLR_REKLAMATION_C_GRUND);
+
+		columns.add("rekla.kdreklanr", String.class, getTextRespectUISpr("rekla.kdreklanr", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "c_kdreklanr");
+		columns.add("rekla.kndlsnr", String.class, getTextRespectUISpr("rekla.kndlsnr", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "c_kdlsnr");
+
+		columns.add("bes.belegdatum", java.util.Date.class, getTextRespectUISpr("bes.belegdatum", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, ReklamationFac.FLR_REKLAMATION_T_BELEGDATUM);
+		columns.add("lp.status", Icon.class, getTextRespectUISpr("lp.status", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, ReklamationFac.FLR_REKLAMATION_STATUS_C_NR);
+		columns.add("lp.kommentar", String.class, getTextRespectUISpr("lp.kommentar", mandant, locUi), 1,
+				Facade.NICHT_SORTIERBAR);
+
+		return columns;
+	}
+
+	public TableInfo getTableInfo() {
+
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		bMaschinenzeiterfassung = getMandantFac()
+				.hatZusatzfunktionberechtigung(MandantFac.ZUSATZFUNKTION_MASCHINENZEITERFASSUNG, theClientDto);
+
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_PROJEKT_TITEL_IN_AG_AB_PROJEKT);
+			bProjekttitelInAG_AB = (Boolean) parameter.getCWertAsObject();
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
+
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
@@ -455,21 +574,18 @@ public class ReklamationHandler extends UseCaseHandler {
 		KundeDto kundeDto = null;
 		PartnerDto partnerDto = null;
 		try {
-			reklamationDto = getReklamationFac().reklamationFindByPrimaryKey(
-					(Integer) key);
-			kundeDto = getKundeFac().kundeFindByPrimaryKey(
-					reklamationDto.getKundeIId(), theClientDto);
-			partnerDto = getPartnerFac().partnerFindByPrimaryKey(
-					kundeDto.getPartnerIId(), theClientDto);
+			reklamationDto = getReklamationFac().reklamationFindByPrimaryKey((Integer) key);
+			kundeDto = getKundeFac().kundeFindByPrimaryKey(reklamationDto.getKundeIId(), theClientDto);
+			partnerDto = getPartnerFac().partnerFindByPrimaryKey(kundeDto.getPartnerIId(), theClientDto);
 		} catch (Exception e) {
 			// Nicht gefunden
 		}
 		if (reklamationDto != null) {
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_REKLAMATION.trim() + "/"
-//					+ LocaleFac.BELEGART_REKLAMATION.trim() + "/"
-//					+ reklamationDto.getCNr().replace("/", ".");
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_REKLAMATION.trim() + "/"
+			// + LocaleFac.BELEGART_REKLAMATION.trim() + "/"
+			// + reklamationDto.getCNr().replace("/", ".");
 			DocPath docPath = new DocPath(new DocNodeReklamation(reklamationDto));
 			Integer iPartnerIId = null;
 			if (partnerDto != null) {

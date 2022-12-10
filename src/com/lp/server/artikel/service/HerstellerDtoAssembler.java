@@ -46,6 +46,7 @@ public class HerstellerDtoAssembler {
 			herstellerDto.setCNr(hersteller.getCNr());
 			herstellerDto.setPartnerIId(hersteller.getPartnerIId());
 			herstellerDto.setIId(hersteller.getIId());
+			herstellerDto.setCLeadIn(hersteller.getCLeadIn());
 		}
 		return herstellerDto;
 	}

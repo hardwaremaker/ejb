@@ -44,7 +44,8 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "ZeitstiftfindByMandantCNr", query = "SELECT OBJECT(C) FROM Zeitstift c WHERE  c.mandantCNr = ?1 ORDER BY c.cNr ASC"),
 		@NamedQuery(name = "ZeitstiftfindByCNr", query = "SELECT OBJECT(C) FROM Zeitstift c WHERE  c.cNr = ?1"),
-		@NamedQuery(name = "ZeitstiftfindByPersonalIId", query = "SELECT OBJECT(C) FROM Zeitstift c WHERE  c.personalIId = ?1") })
+		@NamedQuery(name = "ZeitstiftfindByPersonalIId", query = "SELECT OBJECT(C) FROM Zeitstift c WHERE  c.personalIId = ?1"),
+		@NamedQuery(name = "ZeitstiftfindByPersonalIIdCTyp", query = "SELECT OBJECT(C) FROM Zeitstift c WHERE  c.personalIId = ?1 AND c.cTyp = ?2")})
 @Entity
 @Table(name = "PERS_ZEITSTIFT")
 public class Zeitstift implements Serializable {

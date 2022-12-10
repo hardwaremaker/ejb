@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 
 import javax.ejb.Remote;
 import javax.jcr.AccessDeniedException;
@@ -94,6 +95,7 @@ public interface JCRDocFac {
 	public final static String DEFAULT_KOPIE_BELEGART = "kopiertes Dokument";
 	public final static String DEFAULT_VERSANDAUFTRAG_BELEGART = "Versandauftrag";
 	public final static String DEFAULT_VERSANDAUFTRAG_GRUPPE = "Versandauftrag";
+	public final static String DEFAULT_EMAIL_BELEGART = "E-Mail";
 
 	/**
 	 * Argument n&uuml;tzlich f&uuml;r <code>runPflege(TheClientDto, String...args)</code><br>
@@ -148,13 +150,15 @@ public interface JCRDocFac {
 	public void fuehreDokumenteZusammen(LieferantDto zielDto, LieferantDto quellDto);
 	public void fuehreDokumenteZusammen(PartnerDto zielDto, PartnerDto quellDto);
 	
-	public void addNewDocumentOrNewVersionOfDocument(JCRDocDto jcrDocDto, TheClientDto theClientDto);
-	
 	public void setVisibilityOfDocument(String basePath, String versionPath, boolean hidden);
 
-	public void addNewDocumentOrNewVersionOfDocumentWithinTransaction(
+	void addNewDocumentOrNewVersionOfDocument(
+			JCRDocDto jcrDocDto, TheClientDto theClientDto);
+	void addNewDocumentOrNewVersionOfDocumentWithinTransaction(
 			JCRDocDto jcrDocDto, TheClientDto theClientDto) ;
-
+	void addNewDocumentOrNewVersionOfDocumentWithinTransaction(
+			List<JCRDocDto> dtos, TheClientDto theClientDto);
+	
 	public Node getNode(String sFullPath);
 
 	public void removeNode(String path) throws ItemNotFoundException,
@@ -169,7 +173,7 @@ public interface JCRDocFac {
 	 * Der Operator * steht f&uuml;r alle Ordner die in dieser Ebene vorhanden sind.<br>
 	 * Der Operator # zum Schluss gibt an, dass auch alle Unterordner durchsucht werden sollten.
 	 */
-	public ArrayList<JCRDocDto> getAllJCRDocs(String path, int limit);
+//	public ArrayList<JCRDocDto> getAllJCRDocs(String path, int limit);
 
 	public ArrayList<DocNodeVersion> getAllVersions(JCRDocDto jcrDocDto);
 
@@ -256,4 +260,31 @@ public interface JCRDocFac {
 	public void deaktiviereArchivierung(
 			String mandantCNr, String CReportname);
 	
+	public void verschiebeBzwKopiereDokumentInAnderenDocPath(DocPath quellePath, DocPath zielPath);
+	
+	void updateVersionOfDocument(
+			JCRDocDto jcrDocDto, String jcrVersion, TheClientDto theClientDto);
+	
+	void updateVersionOfDocumentWithinTransaction(
+			JCRDocDto jcrDocDto, String jcrVersion, TheClientDto theClientDto);
+
+	DocNodeVersion getLastVersionOfJcrDoc(JCRDocDto jcrDocDto);
+
+	DokumentgruppierungDto dokumentgruppierungfindbyPrimaryKeyOhneExc(
+			DokumentgruppierungPK dokumentgruppierungPK);
+
+	DokumentbelegartDto dokumentbelegartfindbyPrimaryKeyOhneExc(
+			DokumentbelegartPK dokumentbelegartPK);
+
+	void saveVersandanhangsAsDocument(List<VersandanhangDto> dtos, 
+			boolean clearContent, TheClientDto theClientDto)
+			throws RemoteException;
+	
+	public void verschiebeBzwKopiereDokumentInAnderenDocPath(DocPath quellePath, DocPath zielPath, boolean withSubNodes);
+
+	void saveVersandauftragsAsDocument(List<VersandauftragDto> versandauftraege, boolean setOInhaltNull,
+			TheClientDto theClientDto) throws RemoteException;
+
+	TreeMap<String, List<JCRDocDto>> getLosablieferungsDokumente(Integer losId, String filterDokuBelegart,
+			String filterGruppierung, boolean alleVersionen, TheClientDto theClientDto) throws RemoteException;
 }

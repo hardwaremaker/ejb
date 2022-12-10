@@ -70,6 +70,7 @@ import com.lp.server.bestellung.service.BestellpositionDto;
 import com.lp.server.bestellung.service.BestellpositionFac;
 import com.lp.server.bestellung.service.BestellungDto;
 import com.lp.server.bestellung.service.BestellungFac;
+import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.LocaleFac;
@@ -77,6 +78,7 @@ import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 @Stateless
 public class ArtikelbestelltFacBean extends Facade implements
@@ -292,7 +294,8 @@ public class ArtikelbestelltFacBean extends Facade implements
 							+ artikelbestelltDto.toString());
 		}
 		/** Alter Wert + neuer Relativer Wert = neuer Wert */
-		BigDecimal valueNeu = artikelbestellt.getNMenge().add(artikelbestelltDto.getNMenge());
+		BigDecimal valueNeu = artikelbestellt.getNMenge().add(
+				artikelbestelltDto.getNMenge());
 
 		artikelbestellt.setNMenge(valueNeu);
 		artikelbestellt.setArtikelIId(artikelbestelltDto.getArtikelIId());
@@ -393,8 +396,127 @@ public class ArtikelbestelltFacBean extends Facade implements
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public BigDecimal getAnzahlBestellt(Integer artikelIId)
-			throws EJBExceptionLP {
+	public BigDecimal getAnzahlBestellt(Integer artikelIId) {
+		return getAnzahlBestellt(artikelIId, null);
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public BigDecimal getWareUnterwegsEinerBestellposition(
+			Integer bestellpositionIId, TheClientDto theClientDto) {
+
+		Session session = null;
+
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		session = factory.openSession();
+
+		String sQuery = "SELECT sum(w.flrlieferscheinposition.n_menge) from FLRWarezwischenmandanten w WHERE w.lieferscheinposition_i_id IS NOT NULL AND w.bestellposition_i_id="
+				+ bestellpositionIId;
+
+		org.hibernate.Query q = session.createQuery(sQuery);
+		List l = q.list();
+
+		Iterator<?> iter = l.iterator();
+		BigDecimal unterwegs = new BigDecimal(0);
+		if (iter.hasNext()) {
+			unterwegs = (BigDecimal) iter.next();
+
+		}
+		if (unterwegs == null) {
+			unterwegs = new BigDecimal(0);
+		}
+
+		return unterwegs;
+
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public BigDecimal getWareUnterwegsEinesArtikels(Integer artikelIId,
+			TheClientDto theClientDto) {
+
+		Session session = null;
+
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		session = factory.openSession();
+
+		String sQuery = "SELECT sum(w.flrlieferscheinposition.n_menge) from FLRWarezwischenmandanten w WHERE w.lieferscheinposition_i_id IS NOT NULL AND w.flrbestellposition.flrartikel.i_id="
+				+ artikelIId
+				+ " AND w.flrbestellposition.flrbestellung.mandant_c_nr='"
+				+ theClientDto.getMandant() + "'";
+
+		org.hibernate.Query q = session.createQuery(sQuery);
+		List l = q.list();
+
+		Iterator<?> iter = l.iterator();
+		BigDecimal unterwegs = new BigDecimal(0);
+		if (iter.hasNext()) {
+			unterwegs = (BigDecimal) iter.next();
+
+		}
+		if (unterwegs == null) {
+			unterwegs = new BigDecimal(0);
+		}
+
+		return unterwegs;
+
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public BigDecimal getAnzahlBestelltEinesMandanten(Integer artikelIId,
+			String mandantCNr) {
+
+		Session session = null;
+
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		session = factory.openSession();
+
+		String sQuery = "SELECT ab FROM  FLRArtikelbestellt ab WHERE ab.flrartikel.i_id="
+				+ artikelIId
+				+ " AND ab.flrbestellposition.flrbestellung.mandant_c_nr='"
+				+ mandantCNr + "'";
+
+		org.hibernate.Query q = session.createQuery(sQuery);
+		List l = q.list();
+
+		Iterator<?> iter = l.iterator();
+		BigDecimal f = new BigDecimal(0);
+		while (iter.hasNext()) {
+			FLRArtikelbestellt flrArtikelbestellt = (FLRArtikelbestellt) iter
+					.next();
+
+			f = f.add(flrArtikelbestellt.getN_menge());
+
+		}
+
+		return f;
+
+	}
+
+	
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public ArrayList<ArtikelbestelltDto> getArtikelbestelltDtos(Integer artikelIId) {
+		Query query = em.createNamedQuery("ArtikelbestelltfindByArtikelIId");
+		query.setParameter(1, artikelIId);
+		Collection<?> allAuftragreservierungen = query.getResultList();
+		Iterator<?> iter = allAuftragreservierungen.iterator();
+		
+
+		 ArrayList<ArtikelbestelltDto> bestelltDtos=new ArrayList<ArtikelbestelltDto>();
+		
+		
+		
+		while (iter.hasNext()) {
+			Artikelbestellt artikelbestelltTemp = (Artikelbestellt) iter.next();
+			
+			bestelltDtos.add(ArtikelbestelltDtoAssembler.createDto(artikelbestelltTemp));
+			
+		}
+		
+		return bestelltDtos;
+	}
+	
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public BigDecimal getAnzahlBestellt(Integer artikelIId,
+			Integer partnerIIdStandort) throws EJBExceptionLP {
 		myLogger.entry();
 		if (artikelIId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -413,6 +535,51 @@ public class ArtikelbestelltFacBean extends Facade implements
 		while (iter.hasNext()) {
 			Artikelbestellt artikelbestelltTemp = (Artikelbestellt) iter.next();
 
+			if (partnerIIdStandort != null) {
+				BestellpositionDto bsposDto = getBestellpositionFac()
+						.bestellpositionFindByPrimaryKeyOhneExc(
+								artikelbestelltTemp.getIBelegartpositionid());
+				if (bsposDto != null) {
+					try {
+						BestellungDto bsDto = getBestellungFac()
+								.bestellungFindByPrimaryKey(
+										bsposDto.getBestellungIId());
+
+						// Lieferant holen
+						LieferantDto lieferantDto = getLieferantFac()
+								.lieferantFindByPrimaryKeySmall(
+										bsDto.getLieferantIIdBestelladresse());
+
+						// Wenn der Standort ungleich der
+						// Lieferadresse, dann
+						// auslassen
+						if (bsDto.getPartnerIIdLieferadresse() == null
+								|| !bsDto.getPartnerIIdLieferadresse().equals(
+										partnerIIdStandort)) {
+
+							// PJ18849 Auch noch mit dem
+							// Zubuchungslager des Lieferanten
+							// abgleichen
+							Integer partnerIIdStandortZubuchungslager = getLagerFac()
+									.getPartnerIIdStandortEinesLagers(
+											(lieferantDto
+													.getLagerIIdZubuchungslager()));
+
+							if (partnerIIdStandortZubuchungslager != null
+									&& partnerIIdStandortZubuchungslager
+											.equals(partnerIIdStandort)) {
+
+							} else {
+								continue;
+							}
+						}
+
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+				}
+			}
+
 			if (artikelbestelltTemp.getNMenge() != null) {
 				f = f.add(artikelbestelltTemp.getNMenge());
 			}
@@ -424,6 +591,36 @@ public class ArtikelbestelltFacBean extends Facade implements
 		// throw new EJBExceptionLP(EJBExceptionLP.
 		// FEHLER_BEI_FIND, ex);
 		// }
+
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public BigDecimal getAnzahlInternBestellt(Integer artikelIId) {
+
+		Session session = null;
+
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		session = factory.openSession();
+
+		String sQuery = "SELECT sum(b.n_menge) FROM FLRArtikelbestellt b WHERE b.flrartikel.i_id="
+				+ artikelIId
+				+ " AND b.flrbestellposition.flrbestellung.flrlieferant.flrpartner.i_id IN ( SELECT m.partner_i_id  FROM FLRMandant m ) ";
+
+		org.hibernate.Query q = session.createQuery(sQuery);
+		List l = q.list();
+
+		Iterator<?> iter = l.iterator();
+		BigDecimal f = new BigDecimal(0);
+
+		if (iter.hasNext()) {
+			f = (BigDecimal) iter.next();
+		}
+
+		if (f == null) {
+			f = new BigDecimal(0);
+		}
+
+		return f;
 
 	}
 
@@ -487,10 +684,10 @@ public class ArtikelbestelltFacBean extends Facade implements
 								bestposDto.getBestellungIId());
 				boolean bRahmenbestellung = bsDto.getBestellungartCNr().equals(
 						BestellungFac.BESTELLUNGART_RAHMENBESTELLUNG_C_NR);
-				boolean bBestellungStorniert = bsDto.getStatusCNr()
-						.equals(BestellungFac.BESTELLSTATUS_STORNIERT);
-				boolean bBestellungErledigt = bsDto.getStatusCNr()
-						.equals(BestellungFac.BESTELLSTATUS_ERLEDIGT);
+				boolean bBestellungStorniert = bsDto.getStatusCNr().equals(
+						BestellungFac.BESTELLSTATUS_STORNIERT);
+				boolean bBestellungErledigt = bsDto.getStatusCNr().equals(
+						BestellungFac.BESTELLSTATUS_ERLEDIGT);
 				boolean bBestellpositionErledigt = bestposDto
 						.getBestellpositionstatusCNr()
 						.equals(BestellpositionFac.BESTELLPOSITIONSTATUS_ERLEDIGT);
@@ -546,7 +743,8 @@ public class ArtikelbestelltFacBean extends Facade implements
 	 * Bestelltliste pruefen. 1. Bestehende Eintraege. 2. Bestellungen pruefen,
 	 * ob die Bestelltwerte richtig eingetragen sind.
 	 * 
-	 * @param theClientDto der aktuelle Benutzer 
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 */
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -572,9 +770,6 @@ public class ArtikelbestelltFacBean extends Facade implements
 					.createCriteria(FLRBestellposition.class);
 			org.hibernate.Criteria best = besPos
 					.createCriteria(BestellpositionFac.FLR_BESTELLPOSITION_FLRBESTELLUNG);
-			// Filter auf den Mandanten
-			best.add(Restrictions.eq(BestellungFac.FLR_BESTELLUNG_MANDANT_C_NR,
-					theClientDto.getMandant()));
 			// keine Rahmenbestellungen.
 			best.add(Restrictions.not(Restrictions.eq(
 					BestellungFac.FLR_BESTELLUNG_BESTELLUNGART_C_NR,
@@ -692,7 +887,6 @@ public class ArtikelbestelltFacBean extends Facade implements
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		BigDecimal bdReserviert = new BigDecimal(0);
 		Hashtable<String, Object> retHashtable = new Hashtable<String, Object>();
-		String sBestellungCNr = null;
 		Collection<String> aBestellungsCNr = new ArrayList<String>();
 		Session session = null;
 		try {
@@ -813,4 +1007,48 @@ public class ArtikelbestelltFacBean extends Facade implements
 		return aFLRArtikelbestellt;
 	}
 
+	public boolean gibtEsPositiveArtikelbestelltNachStichtag(
+			Integer artikelIId, java.sql.Date dLiefertermin) {
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT ab FROM FLRArtikelbestellt ab WHERE ab.n_menge >0 AND ab.flrartikel.i_id="
+				+ artikelIId
+				+ " AND ( ab.t_liefertermin>='"
+				+ Helper.formatDateWithSlashes(dLiefertermin)
+				+ "' OR ab.flrbestellposition.t_auftragsbestaetigungstermin>='"
+				+ Helper.formatDateWithSlashes(dLiefertermin) + "' )";
+
+		org.hibernate.Query q = session.createQuery(sQuery);
+		List l = q.list();
+
+		BigDecimal bdSumme = BigDecimal.ZERO;
+
+		Iterator<?> iter = l.iterator();
+		while (iter.hasNext()) {
+
+			FLRArtikelbestellt ab = (FLRArtikelbestellt) iter.next();
+
+			// Wenn AB-Termin, dann zaehlt dieser
+			if (ab.getFlrbestellposition().getT_auftragsbestaetigungstermin() != null) {
+				if (ab.getFlrbestellposition()
+						.getT_auftragsbestaetigungstermin().getTime() >= dLiefertermin
+						.getTime()) {
+					bdSumme=bdSumme.add(ab.getN_menge());
+				}
+			} else {
+				if (ab.getT_liefertermin().getTime() >= dLiefertermin.getTime()) {
+					bdSumme=bdSumme.add(ab.getN_menge());
+				}
+			}
+
+		}
+
+		if (bdSumme.doubleValue() > 0) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
 }

@@ -46,6 +46,8 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelkommentarDto;
 import com.lp.server.artikel.service.ArtikelkommentarsprDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
+import com.lp.server.artikel.service.WebArtikelkommentarDto;
+import com.lp.server.artikel.service.WebshopShopgroupOnly;
 import com.lp.server.partner.ejb.BmeCatTransformerBase;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.util.HelperWebshop;
@@ -119,23 +121,33 @@ public class BmeCatTransformer extends BmeCatTransformerBase {
 		if(null == kommentarDto) return null ;
 		
 		Element mimeInfo = d.createElement("MIME_INFO") ;
-		
-		Element mime = d.createElement("MIME") ;
+		Element mime = prepareOneMimeInfo(d, kommentarDto) ;
 		mimeInfo.appendChild(mime) ;
+
+		List<ArtikelkommentarDto> imageKommentarDtos = findImages(kommentare, kommentarDto) ; 
+		for (ArtikelkommentarDto artikelkommentarDto : imageKommentarDtos) {
+			mime = prepareOneMimeInfo(d, artikelkommentarDto) ;
+			mimeInfo.appendChild(mime) ;
+		}
+	
+		return mimeInfo ;
+	}
+	
+	private Element prepareOneMimeInfo(Document d, ArtikelkommentarDto artikelkommentarDto) {
+		Element mime = d.createElement("MIME") ;
 		
 		Element mimeType = d.createElement("MIME_TYPE") ;
-		mimeType.appendChild(d.createTextNode(kommentarDto.getDatenformatCNr().trim())) ;
+		mimeType.appendChild(d.createTextNode(artikelkommentarDto.getDatenformatCNr().trim())) ;
 		mime.appendChild(mimeType) ;
 		
 		Element mimeSource = d.createElement("MIME_SOURCE") ;
-		mimeSource.appendChild(d.createTextNode(buildImageUrl(kommentarDto))) ;
+		mimeSource.appendChild(d.createTextNode(buildImageUrl(artikelkommentarDto))) ;
 		mime.appendChild(mimeSource) ; 
 		
 		Element mimePurpose = d.createElement("MIME_PURPOSE") ;
 		mimePurpose.appendChild(d.createTextNode("normal")) ;
 		mime.appendChild(mimePurpose) ;
-		
-		return mimeInfo ;
+		return mime ;
 	}
 	
 	private Element prepareProductDetails(Document d, ArtikelDto artikelDto, List<BmeCatKommentar> kommentare) {
@@ -184,8 +196,7 @@ public class BmeCatTransformer extends BmeCatTransformerBase {
 	}
 	
 	private String buildImageUrl(ArtikelkommentarDto artikelkommentarDto) {
-		return artikelkommentarDto.getIId().toString() + 
-				"-" + artikelkommentarDto.getArtikelkommentarsprDto().getCDateiname() ;
+		return new WebArtikelkommentarDto(artikelkommentarDto).getImageUrl() ;
 	}
 	
 	private ArtikelkommentarsprDto findRemarks(List<BmeCatKommentar> kommentare) {
@@ -227,6 +238,22 @@ public class BmeCatTransformer extends BmeCatTransformerBase {
 		}
 		
 		return null ;
+	}
+	
+	private List<ArtikelkommentarDto> findImages(List<BmeCatKommentar> kommentare, ArtikelkommentarDto alreadyKnown) {
+		List<ArtikelkommentarDto> entries = new ArrayList<ArtikelkommentarDto>() ;
+		
+		for (BmeCatKommentar bmecatKommentar : kommentare) {
+			ArtikelkommentarDto artikelkommentarDto = bmecatKommentar.getKommentarDto() ;
+			if(artikelkommentarDto.getDatenformatCNr().startsWith("image/")) {
+				if(null != artikelkommentarDto.getArtikelkommentarsprDto() && 
+						!artikelkommentarDto.getIId().equals(alreadyKnown.getIId())) {
+					entries.add(artikelkommentarDto) ;
+				}
+			}
+		}
+		
+		return entries ;
 	}
 	
 	private void setLanguageAttribute(Element e, String value) {

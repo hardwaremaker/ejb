@@ -40,10 +40,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
-import com.lp.server.system.ejb.AutoBestellvorschlag;
 import com.lp.server.system.ejb.AutoRahmendetailbedarfdruck;
 import com.lp.server.system.pkgenerator.PKConst;
-import com.lp.server.system.service.AutoBestellvorschlagDto;
 import com.lp.server.system.service.AutoRahmendetailbedarfdruckDto;
 import com.lp.server.system.service.AutoRahmendetailbedarfdruckFac;
 import com.lp.server.system.service.AutoRahmendetaildruckDtoAssembler;

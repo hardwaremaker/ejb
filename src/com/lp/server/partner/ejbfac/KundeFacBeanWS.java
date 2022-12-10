@@ -46,66 +46,81 @@ import javax.xml.ws.BindingType;
 import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.soap.MTOM;
 
-import org.jboss.wsf.spi.annotation.WebContext;
+//import org.jboss.wsf.spi.annotation.WebContext;
 
+import com.lp.server.partner.service.WebshopCustomerResult;
+import com.lp.server.partner.service.WebshopCustomerServiceFacLocal;
+import com.lp.server.partner.service.WebshopCustomerServiceInterface;
+import com.lp.server.partner.service.WebshopCustomersResult;
+import com.lp.server.partner.service.WebshopPricelistResult;
+import com.lp.server.partner.service.WebshopPricelistsResult;
 import com.lp.server.system.service.WebshopAuthHeader;
 import com.lp.server.util.Facade;
 import com.lp.server.util.logger.webservice.WebserviceCallInterceptor;
 
 @Stateless
 @MTOM
-@WebService(name="IWebshop2CustomerServices", serviceName="HeliumVCustomerService")
+// @WebService(name = "IWebshop2CustomerServices", serviceName = "HeliumVCustomerService")
+@WebService
 @SOAPBinding(style = Style.DOCUMENT, use = Use.LITERAL, parameterStyle = ParameterStyle.WRAPPED)
 @BindingType(value = "http://schemas.xmlsoap.org/wsdl/soap/http?mtom=true")
-@WebContext (urlPattern="/version1/KundeFacBeanRest")  
+// @WebContext(urlPattern = "/version1/KundeFacBeanRest")
 @Interceptors(WebserviceCallInterceptor.class)
-public class KundeFacBeanWS extends Facade implements WebshopCustomerServiceInterface {
-	private WebshopCustomerServiceFacLocal delegate ;
+public class KundeFacBeanWS extends Facade implements
+		WebshopCustomerServiceInterface {
+	private WebshopCustomerServiceFacLocal delegate;
 
 	@Resource
-	WebServiceContext context ;
+	WebServiceContext context;
 
 	public KundeFacBeanWS() {
-		delegate = getWebshopCustomerServiceFac() ;
+
 	}
 
 	@Override
 	@WebMethod
 	public WebshopCustomersResult getCustomers(
 			@WebParam WebshopAuthHeader header) {
-		return delegate.getCustomers(header);
+		return getDelegate().getCustomers(header);
+	}
+
+	private WebshopCustomerServiceFacLocal getDelegate() {
+		if (delegate == null) {
+			delegate = getWebshopCustomerServiceFac();
+		}
+		return delegate;
+
 	}
 
 	@Override
 	@WebMethod
 	public WebshopCustomerResult getCustomerById(
 			@WebParam WebshopAuthHeader header,
-			@WebParam(name="customerId") Integer id) {
-		return delegate.getCustomerById(header, id) ;
+			@WebParam(name = "customerId") Integer id) {
+		return getDelegate().getCustomerById(header, id);
 	}
 
 	@Override
 	@WebMethod
 	public WebshopCustomersResult getCustomersChanged(
 			@WebParam WebshopAuthHeader header,
-			@WebParam(name="changedDateTime") String changedDateTime) {
-		return delegate.getCustomersChanged(header, changedDateTime);
+			@WebParam(name = "changedDateTime") String changedDateTime) {
+		return getDelegate().getCustomersChanged(header, changedDateTime);
 	}
 
 	@Override
 	@WebMethod
 	public WebshopPricelistResult getPricelistById(
 			@WebParam WebshopAuthHeader header,
-			@WebParam(name="pricelistId") Integer id) {
-		return delegate.getPricelistById(header, id);
+			@WebParam(name = "pricelistId") Integer id) {
+		return getDelegate().getPricelistById(header, id);
 	}
 
 	@Override
 	@WebMethod
 	public WebshopPricelistsResult getPricelists(
 			@WebParam WebshopAuthHeader header) {
-		return delegate.getPricelists(header) ;
+		return getDelegate().getPricelists(header);
 	}
-	
-	
+
 }

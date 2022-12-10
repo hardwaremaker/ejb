@@ -43,14 +43,17 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.anfrage.service.AnfrageServiceFac;
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries( {
 		@NamedQuery(name = "AnfragefindByMandant", query = "SELECT OBJECT (o) FROM Anfrage o WHERE o.mandantCNr=?1 ORDER BY o.cNr"),
-		@NamedQuery(name = "AnfragefindByAnfrageIIdLiefergruppenanfrage", query = "SELECT OBJECT (o) FROM Anfrage o WHERE o.anfrageIIdLiefergruppenanfrage=?1"),
+		@NamedQuery(name = "AnfragefindByAnfrageIIdLiefergruppenanfrage", query = "SELECT OBJECT (o) FROM Anfrage o WHERE o.anfrageIIdLiefergruppenanfrage=?1 AND o.anfragestatusCNr <>'"+AnfrageServiceFac.ANFRAGESTATUS_STORNIERT+"' ORDER BY o.cNr"),
 		@NamedQuery(name = "AnfragefindByLieferantIIdAnfrageadresseMandantCNr", query = "SELECT OBJECT (O) FROM Anfrage o WHERE o.lieferantIIdAnfrageadresse=?1 AND  o.mandantCNr=?2"),
 		@NamedQuery(name = "AnfragefindByAnsprechpartnerlieferantIIdMandantCNr", query = "SELECT OBJECT (O) FROM Anfrage o WHERE o.ansprechpartnerIIdLieferant=?1 AND  o.mandantCNr=?2"), 
 		@NamedQuery(name = Anfrage.QueryFindByCnrMandantCnr, query = "SELECT OBJECT (O) FROM Anfrage o WHERE o.cNr = :cnr AND o.mandantCNr= :mandant")})
 @Entity
-@Table(name = "ANF_ANFRAGE")
+@Table(name = ITablenames.ANF_ANFRAGE)
 public class Anfrage implements Serializable {
 	public final static String QueryFindByCnrMandantCnr = "AnfrageFindByCnrMandantCNr";
 	
@@ -73,6 +76,16 @@ public class Anfrage implements Serializable {
 	@Column(name = "F_WECHSELKURSMANDANTWAEHRUNGZUANFRAGEWAEHRUNG")
 	private Double fWechselkursmandantwaehrungzuanfragewaehrung;
 
+	@Column(name = "T_ABGABETERMIN")
+	private Timestamp tAbgabetermin;
+	public Timestamp getTAbgabetermin() {
+		return tAbgabetermin;
+	}
+
+	public void setTAbgabetermin(Timestamp tAbgabetermin) {
+		this.tAbgabetermin = tAbgabetermin;
+	}
+
 	@Column(name = "T_ANLIEFERTERMIN")
 	private Timestamp tAnliefertermin;
 
@@ -84,6 +97,37 @@ public class Anfrage implements Serializable {
 
 	@Column(name = "N_TRANSPORTKOSTENINANFRAGEWAEHRUNG")
 	private BigDecimal nTransportkosteninanfragewaehrung;
+	
+	@Column(name = "N_ZOLLKOSTENINANFRAGEWAEHRUNG")
+	private BigDecimal nZollkosteninanfragewaehrung;
+	public BigDecimal getNZollkosteninanfragewaehrung() {
+		return nZollkosteninanfragewaehrung;
+	}
+
+	public void setNZollkosteninanfragewaehrung(BigDecimal nZollkosteninanfragewaehrung) {
+		this.nZollkosteninanfragewaehrung = nZollkosteninanfragewaehrung;
+	}
+
+	public BigDecimal getNBankspeseninanfragewaehrung() {
+		return nBankspeseninanfragewaehrung;
+	}
+
+	public void setNBankspeseninanfragewaehrung(BigDecimal nBankspeseninanfragewaehrung) {
+		this.nBankspeseninanfragewaehrung = nBankspeseninanfragewaehrung;
+	}
+
+	public BigDecimal getNSonstigespeseninanfragewaehrung() {
+		return nSonstigespeseninanfragewaehrung;
+	}
+
+	public void setNSonstigespeseninanfragewaehrung(BigDecimal nSonstigespeseninanfragewaehrung) {
+		this.nSonstigespeseninanfragewaehrung = nSonstigespeseninanfragewaehrung;
+	}
+
+	@Column(name = "N_BANKSPESENINANFRAGEWAEHRUNG")
+	private BigDecimal nBankspeseninanfragewaehrung;
+	@Column(name = "N_SONSTIGESPESENINANFRAGEWAEHRUNG")
+	private BigDecimal nSonstigespeseninanfragewaehrung;
 
 	@Column(name = "X_KOPFTEXTUEBERSTEUERT")
 	private String xKopftextuebersteuert;
@@ -109,6 +153,29 @@ public class Anfrage implements Serializable {
 	@Column(name = "ANFRAGE_I_ID_LIEFERGRUPPENANFRAGE")
 	private Integer anfrageIIdLiefergruppenanfrage;
 
+	
+	@Column(name = "PARTNER_I_ID_LIEFERADRESSE")
+	private Integer partnerIIdLieferadresse;
+	@Column(name = "ANSPRECHPARTNER_I_ID_LIEFERADRESSE")
+	private Integer ansprechpartnerIIdLieferadresse;
+
+	public Integer getAnsprechpartnerIIdLieferadresse() {
+		return this.ansprechpartnerIIdLieferadresse;
+	}
+
+	public void setAnsprechpartnerIIdLieferadresse(
+			Integer ansprechpartnerIIdLieferadresse) {
+		this.ansprechpartnerIIdLieferadresse = ansprechpartnerIIdLieferadresse;
+	}
+	
+	public Integer getPartnerIIdLieferadresse() {
+		return this.partnerIIdLieferadresse;
+	}
+
+	public void setPartnerIIdLieferadresse(Integer partnerIIdLieferadresse) {
+		this.partnerIIdLieferadresse = partnerIIdLieferadresse;
+	}
+	
 	@Column(name = "ANFRAGEERLEDIGUNGSGRUND_I_ID")
 	private Integer anfrageerledigungsgrundIId;
 	
@@ -184,6 +251,17 @@ public class Anfrage implements Serializable {
 	
 	@Column(name = "T_ANGEBOTGUELTIGBIS")
 	private Timestamp tAngebotgueltigbis;
+	
+	@Column(name = "T_PREISGUELTIGAB")
+	private Timestamp tPreisgueltigab;
+
+	public Timestamp getTPreisgueltigab() {
+		return tPreisgueltigab;
+	}
+
+	public void setTPreisgueltigab(Timestamp tPreisgueltigab) {
+		this.tPreisgueltigab = tPreisgueltigab;
+	}
 
 	public Timestamp getTAngebotdatum() {
 		return tAngebotdatum;
@@ -200,6 +278,19 @@ public class Anfrage implements Serializable {
 	public void setTAngebotgueltigbis(Timestamp angebotgueltigbis) {
 		tAngebotgueltigbis = angebotgueltigbis;
 	}
+	
+	@Column(name = "PERSONAL_I_ID_ANFRAGER")
+	private Integer personalIIdAnfrager;
+
+	
+	public Integer getPersonalIIdAnfrager() {
+		return personalIIdAnfrager;
+	}
+
+	public void setPersonalIIdAnfrager(Integer personalIIdAnfrager) {
+		this.personalIIdAnfrager = personalIIdAnfrager;
+	}
+
 	@Column(name = "PROJEKT_I_ID")
 	private Integer projektIId;
 	
@@ -236,7 +327,7 @@ public class Anfrage implements Serializable {
 			Integer kostenstelleIId, Double allgemeinerrabattsatz,
 			BigDecimal transportkosteninanfragewaehrung,
 			Integer belegtextIIdKopftext, Integer belegtextIIdFusstext,
-			Integer personalIIdAnlegen2, Integer personalIIdAendern2) {
+			Integer personalIIdAnlegen2, Integer personalIIdAendern2,BigDecimal nZollkosteninanfragewaehrung,BigDecimal nBankspeseninanfragewaehrung,BigDecimal nSonstigespeseninanfragewaehrung) {
 		setIId(id);
 		Timestamp t = new Timestamp(System.currentTimeMillis());
 		this.setTAnlegen(t);
@@ -256,6 +347,9 @@ public class Anfrage implements Serializable {
 		setAnfragetextIIdFusstext(belegtextIIdFusstext);
 		setPersonalIIdAnlegen(personalIIdAnlegen2);
 		setPersonalIIdAendern(personalIIdAendern2);
+		setNBankspeseninanfragewaehrung(nBankspeseninanfragewaehrung);
+		setNSonstigespeseninanfragewaehrung(nSonstigespeseninanfragewaehrung);
+		setNZollkosteninanfragewaehrung(nZollkosteninanfragewaehrung);
 	}
 
 	public Integer getIId() {

@@ -303,8 +303,12 @@ public class ZusatzkostenHandler extends UseCaseHandler {
 									filterKriterien[i], false);
 							// Belegnummernsuche auch in "altem" Jahr, wenn im
 							// neuen noch keines vorhanden ist
-							if (!istBelegnummernInJahr("FLREingangsrechnung",
-									sValue)) {
+							if (!istBelegnummernInJahr(
+									"FLREingangsrechnung",
+									sValue,
+									"eingangsrechnungart_c_nr='"
+											+ EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN
+											+ "'")) {
 								sValue = super.buildWhereBelegnummer(
 										filterKriterien[i], true);
 							}
@@ -594,16 +598,15 @@ public class ZusatzkostenHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.fb", mandantCNr, locUI) },
 					new int[] {
 							-1, // ausgeblendet
-							1,
-							QueryParameters.FLR_BREITE_M,
+							1, QueryParameters.FLR_BREITE_M,
 							-1,
 							// ortimhandler: 4 breite -1
 							-1,
 							QueryParameters.FLR_BREITE_M,
-							
+
 							QueryParameters.FLR_BREITE_XS, // status
-							QueryParameters.FLR_BREITE_XS,
-							-1, QueryParameters.FLR_BREITE_PREIS,
+							QueryParameters.FLR_BREITE_XS, -1,
+							QueryParameters.FLR_BREITE_PREIS,
 							QueryParameters.FLR_BREITE_WAEHRUNG, 3 },
 					new String[] {
 							EingangsrechnungFac.FLR_ER_I_ID,
@@ -655,12 +658,13 @@ public class ZusatzkostenHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (eingangsrechnungDto != null) {
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_EINGANGSRECHNUNG.trim() + "/"
-//					+ LocaleFac.BELEGART_EINGANGSRECHNUNG.trim() + "/"
-//					+ eingangsrechnungDto.getCNr().replace("/", ".");
-			DocPath docPath = new DocPath(new DocNodeEingangsrechnung(eingangsrechnungDto));
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_EINGANGSRECHNUNG.trim() + "/"
+			// + LocaleFac.BELEGART_EINGANGSRECHNUNG.trim() + "/"
+			// + eingangsrechnungDto.getCNr().replace("/", ".");
+			DocPath docPath = new DocPath(new DocNodeEingangsrechnung(
+					eingangsrechnungDto));
 			Integer iPartnerIId = null;
 			if (partnerDto != null) {
 				iPartnerIId = partnerDto.getIId();

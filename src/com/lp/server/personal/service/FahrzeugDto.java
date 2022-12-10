@@ -44,6 +44,26 @@ public class FahrzeugDto implements Serializable {
 	private String mandantCNr;
 	private Integer iId;
 
+	private String fahrzeugverwendungsartCNr;
+
+	public String getFahrzeugverwendungsartCNr() {
+		return fahrzeugverwendungsartCNr;
+	}
+
+	public void setFahrzeugverwendungsartCNr(String fahrzeugverwendungsartCNr) {
+		this.fahrzeugverwendungsartCNr = fahrzeugverwendungsartCNr;
+	}
+
+	private Short bVersteckt;
+
+	public Short getBVersteckt() {
+		return this.bVersteckt;
+	}
+
+	public void setBVersteckt(Short bVersteckt) {
+		this.bVersteckt = bVersteckt;
+	}
+
 	public String getCBez() {
 		return cBez;
 	}

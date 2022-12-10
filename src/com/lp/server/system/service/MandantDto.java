@@ -68,6 +68,145 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 	private Integer mwstsatzIIdStandarddrittlandmwstsatz;
 	private Integer kundeIIdStueckliste;
 	private Integer partnerIIdFinanzamt;
+
+	private Short bPreislisteFuerNeukunde;
+	
+	public Short getBPreislisteFuerNeukunde() {
+		return bPreislisteFuerNeukunde;
+	}
+
+	public void setBPreislisteFuerNeukunde(Short bPreislisteFuerNeukunde) {
+		this.bPreislisteFuerNeukunde = bPreislisteFuerNeukunde;
+	}
+
+	
+	private Short bAgbAnhang;
+
+	public Short getBAgbAnhang() {
+		return bAgbAnhang;
+	}
+
+	public void setBAgbAnhang(Short bAgbAnhang) {
+		this.bAgbAnhang = bAgbAnhang;
+	}
+
+	public Short getBAgbAngebot() {
+		return bAgbAngebot;
+	}
+
+	public void setBAgbAngebot(Short bAgbAngebot) {
+		this.bAgbAngebot = bAgbAngebot;
+	}
+
+	public Short getBAgbAuftrag() {
+		return bAgbAuftrag;
+	}
+
+	public void setBAgbAuftrag(Short bAgbAuftrag) {
+		this.bAgbAuftrag = bAgbAuftrag;
+	}
+
+	public Short getBAgbLieferschein() {
+		return bAgbLieferschein;
+	}
+
+	public void setBAgbLieferschein(Short bAgbLieferschein) {
+		this.bAgbLieferschein = bAgbLieferschein;
+	}
+
+	public Short getBAgbRechnung() {
+		return bAgbRechnung;
+	}
+
+	public void setBAgbRechnung(Short bAgbRechnung) {
+		this.bAgbRechnung = bAgbRechnung;
+	}
+
+	public Short getBAgbAnfrage() {
+		return bAgbAnfrage;
+	}
+
+	public void setBAgbAnfrage(Short bAgbAnfrage) {
+		this.bAgbAnfrage = bAgbAnfrage;
+	}
+
+	public Short getBAgbBestellung() {
+		return bAgbBestellung;
+	}
+
+	public void setBAgbBestellung(Short bAgbBestellung) {
+		this.bAgbBestellung = bAgbBestellung;
+	}
+
+	private Short bAgbAngebot;
+	private Short bAgbAuftrag;
+	private Short bAgbLieferschein;
+	private Short bAgbRechnung;
+	private Short bAgbAnfrage;
+	private Short bAgbBestellung;
+
+	private Integer iMaxpersonen;
+
+	private String cIntrastatRegion;
+	
+	public Integer getIMaxpersonen() {
+		return iMaxpersonen;
+	}
+
+	public void setIMaxpersonen(Integer iMaxpersonen) {
+		this.iMaxpersonen = iMaxpersonen;
+	}
+
+	private Integer zahlungszielIIdAnzahlung;
+
+	public Integer getZahlungszielIIdAnzahlung() {
+		return zahlungszielIIdAnzahlung;
+	}
+
+	public void setZahlungszielIIdAnzahlung(Integer zahlungszielIIdAnzahlung) {
+		this.zahlungszielIIdAnzahlung = zahlungszielIIdAnzahlung;
+	}
+
+	private Integer verrechnungsmodellIId;
+
+	public Integer getVerrechnungsmodellIId() {
+		return verrechnungsmodellIId;
+	}
+
+	public void setVerrechnungsmodellIId(Integer verrechnungsmodellIId) {
+		this.verrechnungsmodellIId = verrechnungsmodellIId;
+	}
+
+	private String waehrungCNrZusaetzlich;
+
+	public String getWaehrungCNrZusaetzlich() {
+		return waehrungCNrZusaetzlich;
+	}
+
+	public void setWaehrungCNrZusaetzlich(String waehrungCNrZusaetzlich) {
+		this.waehrungCNrZusaetzlich = waehrungCNrZusaetzlich;
+	}
+
+	private String cGlauebiger;
+
+	public String getCGlauebiger() {
+		return cGlauebiger;
+	}
+
+	public void setCGlauebiger(String cGlauebiger) {
+		this.cGlauebiger = cGlauebiger;
+	}
+
+	private Integer lagerIIdZiellager;
+
+	public Integer getLagerIIdZiellager() {
+		return lagerIIdZiellager;
+	}
+
+	public void setLagerIIdZiellager(Integer lagerIIdZiellager) {
+		this.lagerIIdZiellager = lagerIIdZiellager;
+	}
+
 	private Integer jahreRueckdatierbar;
 
 	public void setJahreRueckdatierbar(Integer jahreRueckdatierbar) {
@@ -90,8 +229,7 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		return mwstsatzIIdStandarddrittlandmwstsatz;
 	}
 
-	public void setMwstsatzbezIIdStandarddrittlandmwstsatz(
-			Integer mwstsatzIIdStandarddrittlandmwstsatz) {
+	public void setMwstsatzbezIIdStandarddrittlandmwstsatz(Integer mwstsatzIIdStandarddrittlandmwstsatz) {
 		this.mwstsatzIIdStandarddrittlandmwstsatz = mwstsatzIIdStandarddrittlandmwstsatz;
 	}
 
@@ -150,8 +288,7 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		return mwstsatzbezIIdStandardinlandmwstsatz;
 	}
 
-	public void setMwstsatzbezIIdStandardinlandmwstsatz(
-			Integer mwstsatzbezIIdStandardinlandmwstsatz) {
+	public void setMwstsatzbezIIdStandardinlandmwstsatz(Integer mwstsatzbezIIdStandardinlandmwstsatz) {
 		this.mwstsatzbezIIdStandardinlandmwstsatz = mwstsatzbezIIdStandardinlandmwstsatz;
 	}
 
@@ -159,8 +296,7 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		return mwstsatzbezIIdStandardauslandmwstsatz;
 	}
 
-	public void setMwstsatzbezIIdStandardauslandmwstsatz(
-			Integer mwstsatzbezIIdStandardauslandmwstsatz) {
+	public void setMwstsatzbezIIdStandardauslandmwstsatz(Integer mwstsatzbezIIdStandardauslandmwstsatz) {
 		this.mwstsatzbezIIdStandardauslandmwstsatz = mwstsatzbezIIdStandardauslandmwstsatz;
 	}
 
@@ -327,16 +463,13 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr))) {
 			return false;
 		}
-		if (!(that.cKbez == null ? this.cKbez == null : that.cKbez
-				.equals(this.cKbez))) {
+		if (!(that.cKbez == null ? this.cKbez == null : that.cKbez.equals(this.cKbez))) {
 			return false;
 		}
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId))) {
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId))) {
 			return false;
 		}
-		if (!(that.waehrungCNr == null ? this.waehrungCNr == null
-				: that.waehrungCNr.equals(this.waehrungCNr))) {
+		if (!(that.waehrungCNr == null ? this.waehrungCNr == null : that.waehrungCNr.equals(this.waehrungCNr))) {
 			return false;
 		}
 		if (!(that.spediteurIIdKunde == null ? this.spediteurIIdKunde == null
@@ -364,34 +497,27 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 			return false;
 		}
 		if (!(that.vkpfArtikelpreislisteIId == null ? this.vkpfArtikelpreislisteIId == null
-				: that.vkpfArtikelpreislisteIId
-						.equals(this.vkpfArtikelpreislisteIId))) {
+				: that.vkpfArtikelpreislisteIId.equals(this.vkpfArtikelpreislisteIId))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
-		if (!(that.iAnlegen == null ? this.iAnlegen == null : that.iAnlegen
-				.equals(this.iAnlegen))) {
+		if (!(that.iAnlegen == null ? this.iAnlegen == null : that.iAnlegen.equals(this.iAnlegen))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
-		if (!(that.iAendern == null ? this.iAendern == null : that.iAendern
-				.equals(this.iAendern))) {
+		if (!(that.iAendern == null ? this.iAendern == null : that.iAendern.equals(this.iAendern))) {
 			return false;
 		}
 		if (!(that.mwstsatzbezIIdStandardinlandmwstsatz == null ? this.mwstsatzbezIIdStandardinlandmwstsatz == null
-				: that.mwstsatzbezIIdStandardinlandmwstsatz
-						.equals(this.mwstsatzbezIIdStandardinlandmwstsatz))) {
+				: that.mwstsatzbezIIdStandardinlandmwstsatz.equals(this.mwstsatzbezIIdStandardinlandmwstsatz))) {
 			return false;
 		}
 		if (!(that.mwstsatzbezIIdStandardauslandmwstsatz == null ? this.mwstsatzbezIIdStandardauslandmwstsatz == null
-				: that.mwstsatzbezIIdStandardauslandmwstsatz
-						.equals(this.mwstsatzbezIIdStandardauslandmwstsatz))) {
+				: that.mwstsatzbezIIdStandardauslandmwstsatz.equals(this.mwstsatzbezIIdStandardauslandmwstsatz))) {
 			return false;
 		}
 		if (!(that.iBankverbindung == null ? this.iBankverbindung == null
@@ -406,6 +532,11 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 				: that.jahreRueckdatierbar.equals(this.jahreRueckdatierbar))) {
 			return false;
 		}
+		if (!(that.cIntrastatRegion == null ? this.cIntrastatRegion == null 
+				: that.cIntrastatRegion.equals(this.cIntrastatRegion))) {
+			return false;
+		}
+
 		return true;
 	}
 
@@ -426,13 +557,12 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		result = 37 * result + this.iAnlegen.hashCode();
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.iAendern.hashCode();
-		result = 37 * result
-				+ this.mwstsatzbezIIdStandardinlandmwstsatz.hashCode();
-		result = 37 * result
-				+ this.mwstsatzbezIIdStandardauslandmwstsatz.hashCode();
+		result = 37 * result + this.mwstsatzbezIIdStandardinlandmwstsatz.hashCode();
+		result = 37 * result + this.mwstsatzbezIIdStandardauslandmwstsatz.hashCode();
 		result = 37 * result + this.iBankverbindung.hashCode();
 		result = 37 * result + this.partnerIIdFinanzamt.hashCode();
 		result = 37 * result + this.jahreRueckdatierbar.hashCode();
+		result = 37 * result + this.cIntrastatRegion.hashCode();
 		return result;
 	}
 
@@ -494,5 +624,13 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 
 	public Integer getPartnerIIdFinanzamt() {
 		return partnerIIdFinanzamt;
+	}
+
+	public String getCIntrastatRegion() {
+		return cIntrastatRegion;
+	}
+
+	public void setCIntrastatRegion(String cIntrastatRegion) {
+		this.cIntrastatRegion = cIntrastatRegion;
 	}
 }

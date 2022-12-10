@@ -72,8 +72,11 @@ public class FLRFinanzErgebnisgruppe implements Serializable {
     /** nullable persistent field */
     private com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe flrergebnisgruppe_summe;
 
+    /** nullable persistent field */
+    private Short b_jahresgewinn;
+
     /** full constructor */
-    public FLRFinanzErgebnisgruppe(String mandant_c_nr, String c_bez, Integer ergebnisgruppe_i_id_summe, Short b_summe_negativ, Short b_invertiert, Short b_bilanzgruppe, Short b_prozentbasis, Integer i_typ, Integer i_reihung, com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe flrergebnisgruppe_summe) {
+    public FLRFinanzErgebnisgruppe(String mandant_c_nr, String c_bez, Integer ergebnisgruppe_i_id_summe, Short b_summe_negativ, Short b_invertiert, Short b_bilanzgruppe, Short b_prozentbasis, Integer i_typ, Integer i_reihung, com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe flrergebnisgruppe_summe, Short b_jahresgewinn) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_bez = c_bez;
         this.ergebnisgruppe_i_id_summe = ergebnisgruppe_i_id_summe;
@@ -84,6 +87,7 @@ public class FLRFinanzErgebnisgruppe implements Serializable {
         this.i_typ = i_typ;
         this.i_reihung = i_reihung;
         this.flrergebnisgruppe_summe = flrergebnisgruppe_summe;
+        this.b_jahresgewinn = b_jahresgewinn;
     }
 
     /** default constructor */
@@ -177,6 +181,15 @@ public class FLRFinanzErgebnisgruppe implements Serializable {
     public void setFlrergebnisgruppe_summe(com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe flrergebnisgruppe_summe) {
         this.flrergebnisgruppe_summe = flrergebnisgruppe_summe;
     }
+
+    public Short getB_jahresgewinn() {
+        return this.b_jahresgewinn;
+    }
+
+    public void setB_jahresgewinn(Short b_jahresgewinn) {
+        this.b_jahresgewinn = b_jahresgewinn;
+    }
+
 
     public String toString() {
         return new ToStringBuilder(this)

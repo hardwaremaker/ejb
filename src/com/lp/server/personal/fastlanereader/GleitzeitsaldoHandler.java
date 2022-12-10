@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.personal.fastlanereader;
 
+import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -42,7 +44,9 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.personal.fastlanereader.generated.FLRGleitzeitsaldo;
+import com.lp.server.personal.service.KollektivDto;
 import com.lp.server.personal.service.PersonalFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -103,13 +107,56 @@ public class GleitzeitsaldoHandler extends UseCaseHandler {
 				rows[row][col++] = defaultMonths[gleitzeitsaldo.getI_monat()
 						.intValue()];
 				rows[row][col++] = gleitzeitsaldo.getN_saldo();
+				
+				
+				Integer kollektivIId = getPersonalFac()
+						.personalFindByPrimaryKey(
+								gleitzeitsaldo.getPersonal_i_id(),
+								theClientDto).getKollektivIId();
+				
+				BigDecimal bdErrechneteNormalstunden = BigDecimal.ZERO;
+				
+				if (kollektivIId != null) {
+					try {
+						KollektivDto kDto = getPersonalFac()
+								.kollektivFindByPrimaryKey(kollektivIId);
+
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(gleitzeitsaldo.getN_saldomehrstunden()
+										.multiply(kDto.getNFaktormehrstd()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(gleitzeitsaldo.getN_saldouest200().multiply(
+										kDto.getNFaktoruestd200()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(gleitzeitsaldo.getN_saldouestfrei100()
+										.multiply(kDto.getNFaktoruestd100()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(gleitzeitsaldo.getN_saldouestpflichtig100()
+										.multiply(kDto.getNFaktoruestd100()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(gleitzeitsaldo.getN_saldouestfrei50()
+										.multiply(kDto.getNFaktoruestd50()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(gleitzeitsaldo.getN_saldouestpflichtig50()
+										.multiply(kDto.getNFaktoruestd50()));
+
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+				}
+
+				rows[row][col++] = bdErrechneteNormalstunden;
+				
+				
+				
 				rows[row][col++] = gleitzeitsaldo.getN_saldomehrstunden();
 				rows[row][col++] = gleitzeitsaldo.getN_saldouestfrei50();
 				rows[row][col++] = gleitzeitsaldo.getN_saldouestpflichtig50();
 				rows[row][col++] = gleitzeitsaldo.getN_saldouestfrei100();
 				rows[row][col++] =  gleitzeitsaldo
 				.getN_saldouestpflichtig100();
-				rows[row++][col++] = gleitzeitsaldo.getN_saldouest200();
+				rows[row][col++] = gleitzeitsaldo.getN_saldouest200();
+				rows[row++][col++] = gleitzeitsaldo.getN_gz_saldo_mit_uestd_in_normalstunden();
 
 				col = 0;
 			}
@@ -313,6 +360,8 @@ public class GleitzeitsaldoHandler extends UseCaseHandler {
 							java.math.BigDecimal.class,
 							java.math.BigDecimal.class,
 							java.math.BigDecimal.class,
+							java.math.BigDecimal.class,
+							java.math.BigDecimal.class,
 							java.math.BigDecimal.class },
 					new String[] {
 							"Id",
@@ -323,6 +372,9 @@ public class GleitzeitsaldoHandler extends UseCaseHandler {
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("lp.saldo",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("pers.gleitzeitsaldo.uest.in.normalstunden",
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("lp.mehrstd",
@@ -346,10 +398,14 @@ public class GleitzeitsaldoHandler extends UseCaseHandler {
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("pers.gleitzeitsaldo.200",
 									theClientDto.getMandant(),
-									theClientDto.getLocUi()) },
+									theClientDto.getLocUi()),getTextRespectUISpr("pers.gleitzeitsaldo.gzsaldo.mituest.in.normalstunden",
+											theClientDto.getMandant(),
+											theClientDto.getLocUi()) },
 
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -365,12 +421,14 @@ public class GleitzeitsaldoHandler extends UseCaseHandler {
 							PersonalFac.FLR_GLEITZEITSALDO_I_JAHR,
 							PersonalFac.FLR_GLEITZEITSALDO_I_MONAT,
 							PersonalFac.FLR_GLEITZEITSALDO_N_SALDO,
+							Facade.NICHT_SORTIERBAR,
 							PersonalFac.FLR_GLEITZEITSALDO_N_SALDOMEHRST,
 							PersonalFac.FLR_GLEITZEITSALDO_N_SALDOUESTFREI50,
 							PersonalFac.FLR_GLEITZEITSALDO_N_SALDOUESTPFLICHTIG50,
 							PersonalFac.FLR_GLEITZEITSALDO_N_SALDOUESTFREI100,
 							PersonalFac.FLR_GLEITZEITSALDO_N_SALDOUESTPFLICHTIG100,
-							PersonalFac.FLR_GLEITZEITSALDO_N_SALDOUEST200 }));
+							PersonalFac.FLR_GLEITZEITSALDO_N_SALDOUEST200,
+							PersonalFac.FLR_GLEITZEITSALDO_N_GZ_SALDO_MIT_UESTD_IN_NORMALSTUNDEN }));
 
 		}
 		return super.getTableInfo();

@@ -38,12 +38,14 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.rechnung.ejb.Rechnungposition;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 
 public class RechnungPositionDtoAssembler {
 	public static RechnungPositionDto createDto(
 			Rechnungposition rechnungPosition) {
 		RechnungPositionDto rechnungPositionDto = new RechnungPositionDto();
 		if (rechnungPosition != null) {
+			rechnungPositionDto.setUsecaseIIdQuelle(QueryParameters.UC_ID_RECHNUNGPOSITION);
 			rechnungPositionDto.setIId(rechnungPosition.getIId());
 			rechnungPositionDto.setRechnungIId(rechnungPosition
 					.getRechnungIId());
@@ -120,6 +122,13 @@ public class RechnungPositionDtoAssembler {
 					.getNMaterialzuschlag());
 			rechnungPositionDto.setNMaterialzuschlagKurs(rechnungPosition.getNMaterialzuschlagKurs());
 			rechnungPositionDto.setTMaterialzuschlagDatum(rechnungPosition.getTMaterialzuschlagDatum());
+			rechnungPositionDto.setPositionIIdZugehoerig(rechnungPosition.getPositionIIdZugehoerig());
+			
+			rechnungPositionDto.setNDimBreite(rechnungPosition.getNDimBreite());
+			rechnungPositionDto.setNDimHoehe(rechnungPosition.getNDimHoehe());
+			rechnungPositionDto.setNDimTiefe(rechnungPosition.getNDimTiefe());
+			rechnungPositionDto.setNDimMenge(rechnungPosition.getNDimMenge());
+			
 		}
 		return rechnungPositionDto;
 	}

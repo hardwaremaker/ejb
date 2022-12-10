@@ -51,24 +51,24 @@ import java.util.NoSuchElementException;
  * recalc() ... die Gestehungspreise neu berechnet Iterator ... liefert einen
  * Iterator auf die Update-SQL Commands
  * 
- * Beispiel SQL f&uuml;r Hibernate:
- * "select  I_ID, B_ABGANG, SUM(N_MENGE) as N_MENGE, N_EINSTANDSPREIS, N_GESTEHUNGSPREIS, LAGER_I_ID, T_BUCHUNGSZEIT "
- * + "from WW_LAGERBEWEGUNG " +
- * "where LAGER_I_ID=? and ARTIKEL_I_ID=? and B_ABGANG=0 and B_HISTORIE=0 " +
- * "group by LAGER_I_ID, T_BUCHUNGSZEIT, I_ID, B_ABGANG, N_EINSTANDSPREIS, N_GESTEHUNGSPREIS "
- * + "union " +
- * "select I_ID, B_ABGANG, SUM(U.N_VERBRAUCHTEMENGE) as MENGE, N_EINSTANDSPREIS, U.N_GESTEHUNGSPREIS, LAGER_I_ID, T_BUCHUNGSZEIT "
- * +
- * "from WW_LAGERBEWEGUNG B inner join WW_LAGERABGANGURSPRUNG U on U.I_LAGERBEWEGUNGID = B.I_ID_BUCHUNG "
+ * Beispiel SQL f&uuml;r Hibernate: "select I_ID, B_ABGANG, SUM(N_MENGE) as
+ * N_MENGE, N_EINSTANDSPREIS, N_GESTEHUNGSPREIS, LAGER_I_ID, T_BUCHUNGSZEIT " +
+ * "from WW_LAGERBEWEGUNG " + "where LAGER_I_ID=? and ARTIKEL_I_ID=? and
+ * B_ABGANG=0 and B_HISTORIE=0 " + "group by LAGER_I_ID, T_BUCHUNGSZEIT, I_ID,
+ * B_ABGANG, N_EINSTANDSPREIS, N_GESTEHUNGSPREIS " + "union " + "select I_ID,
+ * B_ABGANG, SUM(U.N_VERBRAUCHTEMENGE) as MENGE, N_EINSTANDSPREIS,
+ * U.N_GESTEHUNGSPREIS, LAGER_I_ID, T_BUCHUNGSZEIT " + "from WW_LAGERBEWEGUNG B
+ * inner join WW_LAGERABGANGURSPRUNG U on U.I_LAGERBEWEGUNGID = B.I_ID_BUCHUNG "
  * + " where LAGER_I_ID=? and ARTIKEL_I_ID=? and B_ABGANG=1 and B_HISTORIE=0 " +
- * "group by LAGER_I_ID, B.T_BUCHUNGSZEIT, B.I_ID, B_ABGANG, N_EINSTANDSPREIS, U.N_GESTEHUNGSPREIS "
- * + "order by LAGER_I_ID, T_BUCHUNGSZEIT, B_ABGANG";
+ * "group by LAGER_I_ID, B.T_BUCHUNGSZEIT, B.I_ID, B_ABGANG, N_EINSTANDSPREIS,
+ * U.N_GESTEHUNGSPREIS " + "order by LAGER_I_ID, T_BUCHUNGSZEIT, B_ABGANG";
  * 
- * &Auml;nderung zur Vermeidung von falscher Berechnung bei negativem Lagerstand:
- * Aufgrund der Tatsache das Abbuchungen keine Uhrzeit im Belegdatum haben kann
- * es zu einem Lagerwert trotz Lagermenge 0 kommen. Daher wird bei Lagermenge 0
- * auch der Lagerwert auf 0 gesetzt. Zus&auml;tzlich wird falls der neu berechnete
- * Gestehungspreis negativ werden sollte der vorherige Wert verwendet.
+ * &Auml;nderung zur Vermeidung von falscher Berechnung bei negativem
+ * Lagerstand: Aufgrund der Tatsache das Abbuchungen keine Uhrzeit im Belegdatum
+ * haben kann es zu einem Lagerwert trotz Lagermenge 0 kommen. Daher wird bei
+ * Lagermenge 0 auch der Lagerwert auf 0 gesetzt. Zus&auml;tzlich wird falls der
+ * neu berechnete Gestehungspreis negativ werden sollte der vorherige Wert
+ * verwendet.
  * 
  * @author Adi
  * 
@@ -86,8 +86,7 @@ public class ArtikelGestehungspreisCalc {
 	/**
 	 * Konstruktor mit Statistikdaten
 	 * 
-	 * @param data
-	 *            Hibernate Resultlist
+	 * @param data Hibernate Resultlist
 	 */
 	public ArtikelGestehungspreisCalc(List<?> data) {
 		ArrayList<ArtikelStatistik> aas = null;
@@ -143,8 +142,7 @@ public class ArtikelGestehungspreisCalc {
 	 * @param nGestPreisAnfang
 	 * @return true bei Erfolg
 	 */
-	public boolean doRecalc(BigDecimal nMengeAnfang, BigDecimal nWertAnfang,
-			BigDecimal nGestPreisAnfang) {
+	public boolean doRecalc(BigDecimal nMengeAnfang, BigDecimal nWertAnfang, BigDecimal nGestPreisAnfang) {
 		Iterator<ArrayList<ArtikelStatistik>> itlager = aaslager.iterator();
 		while (itlager.hasNext()) {
 			ArrayList<ArtikelStatistik> aas = itlager.next();
@@ -162,11 +160,11 @@ public class ArtikelGestehungspreisCalc {
 	 * @param nMengeAnfang
 	 * @param nWertAnfang
 	 * @param nGestPreisAnfang
-	 * @return true bei Erfolg false wenn die Daten mehrere Lager beinhalten
-	 *         oder falsches Lager gew&auml;hlt wurde
+	 * @return true bei Erfolg false wenn die Daten mehrere Lager beinhalten oder
+	 *         falsches Lager gew&auml;hlt wurde
 	 */
-	public boolean doRecalc(Integer lagerIId, BigDecimal nMengeAnfang,
-			BigDecimal nWertAnfang, BigDecimal nGestPreisAnfang) {
+	public boolean doRecalc(Integer lagerIId, BigDecimal nMengeAnfang, BigDecimal nWertAnfang,
+			BigDecimal nGestPreisAnfang) {
 		if (getLageranzahl() > 1) // nur erlaubt bei Daten fuer ein Lager
 			return false;
 
@@ -184,8 +182,7 @@ public class ArtikelGestehungspreisCalc {
 		return true;
 	}
 
-	private void doRecalcEinLager(BigDecimal nMengeAnfang,
-			BigDecimal nWertAnfang, BigDecimal nGestPreisAnfang,
+	private void doRecalcEinLager(BigDecimal nMengeAnfang, BigDecimal nWertAnfang, BigDecimal nGestPreisAnfang,
 			ArrayList<ArtikelStatistik> aas) {
 		Iterator<ArtikelStatistik> it = aas.iterator();
 		// BigDecimal nMengeKummuliert = (nWertAnfang.doubleValue()==0 ? new
@@ -205,8 +202,7 @@ public class ArtikelGestehungspreisCalc {
 					ArtikelStatistik as = it.next();
 					if (!as.bAbgang)
 						break;
-					if (as.nGestehungspreis != null
-							&& as.nGestehungspreis.doubleValue() > 0) {
+					if (as.nGestehungspreis != null && as.nGestehungspreis.doubleValue() > 0) {
 						nGestehungspreis = as.nGestehungspreis;
 						break;
 					}
@@ -220,30 +216,25 @@ public class ArtikelGestehungspreisCalc {
 			if (as.bAbgang) {
 				// Abbuchung: Lagerwert und Lagermenge vermindern
 				nMengeKummuliert = nMengeKummuliert.subtract(as.nMenge);
-				nWertKummuliert = nWertKummuliert.subtract(as.nMenge
-						.multiply(nGestehungspreis));
+				nWertKummuliert = nWertKummuliert.subtract(as.nMenge.multiply(nGestehungspreis));
 				as.nGestehungspreisBerechnet = nGestehungspreis;
 			} else {
 				// Zubuchung: Lagerwert und Lagermenge erhoehen
 				BigDecimal nMengeKummuliertAlt = nMengeKummuliert;
 				nMengeKummuliert = nMengeKummuliert.add(as.nMenge);
-				nWertKummuliert = nWertKummuliert.add(as.nMenge
-						.multiply(as.nEinstandspreis));
+				nWertKummuliert = nWertKummuliert.add(as.nMenge.multiply(as.nEinstandspreis));
 				// es gibt noch eine Lagermenge -> neuen Gestehungspreis
 				// berechnen
 				if (nMengeKummuliert.doubleValue() != 0) {
-					if (nMengeKummuliert.doubleValue() > 0
-							&& nMengeKummuliertAlt.doubleValue() < 0) {
+					if (nMengeKummuliert.doubleValue() > 0 && nMengeKummuliertAlt.doubleValue() < 0) {
 						// bei Nulldurchgang der Menge von - auf + wird der
 						// Gestehungspreis auf
 						// Einstandpreis gesetzt und der Lagerwert entsprechend
 						// berechnet
 						nGestehungspreisNeu = as.nEinstandspreis;
-						nWertKummuliert = nMengeKummuliert
-								.multiply(nGestehungspreisNeu);
+						nWertKummuliert = nMengeKummuliert.multiply(nGestehungspreisNeu);
 					} else {
-						nGestehungspreisNeu = nWertKummuliert.divide(
-								nMengeKummuliert, iScale,
+						nGestehungspreisNeu = nWertKummuliert.divide(nMengeKummuliert, iScale,
 								BigDecimal.ROUND_HALF_EVEN);
 					}
 				}
@@ -254,7 +245,7 @@ public class ArtikelGestehungspreisCalc {
 				if (nGestehungspreisNeu.doubleValue() >= 0) {
 					nGestehungspreis = nGestehungspreisNeu;
 				}
-				as.nGestehungspreisBerechnet = nGestehungspreis.setScale(iScale);
+				as.nGestehungspreisBerechnet = nGestehungspreis.setScale(iScale,BigDecimal.ROUND_HALF_EVEN);
 			}
 			// wenn Lagermenge 0 ist auch den Lagerwert auf 0 setzen
 			// (wegen Rundungsfehlern und Rueckdatierung)
@@ -264,24 +255,22 @@ public class ArtikelGestehungspreisCalc {
 				// Einstand setzen
 				// (z.B. Lieferschein vordatiert vor Losablieferung)
 				if (nGestehungspreis.signum() == 0) {
-					if ((as.nEinstandspreis != null)
-							&& (as.nEinstandspreis.doubleValue() != 0)) {
+					if ((as.nEinstandspreis != null) && (as.nEinstandspreis.doubleValue() != 0)) {
 						nGestehungspreis = as.nEinstandspreis;
-						as.nGestehungspreisBerechnet = nGestehungspreis.setScale(iScale);
+						as.nGestehungspreisBerechnet = nGestehungspreis.setScale(iScale, BigDecimal.ROUND_HALF_EVEN);
 						if (hasDataError())
 							as.bForceUpdate = true;
 					}
 				}
 			}
 			/*
-			 * geht nicht so wegen Zubuchung mit 0-Preis!!! // wenn Lagerwert 0
-			 * ist auch die Lagermenge auf 0 setzen if
-			 * (nWertKummuliert.doubleValue() == 0) { nMengeKummuliert = new
-			 * BigDecimal(0); // wenn es eine vordatierte Abbuchung ist so muss
-			 * der Gestehungspreis aus der Zubuchung geholt werden if
+			 * geht nicht so wegen Zubuchung mit 0-Preis!!! // wenn Lagerwert 0 ist auch die
+			 * Lagermenge auf 0 setzen if (nWertKummuliert.doubleValue() == 0) {
+			 * nMengeKummuliert = new BigDecimal(0); // wenn es eine vordatierte Abbuchung
+			 * ist so muss der Gestehungspreis aus der Zubuchung geholt werden if
 			 * (as.bAbgang && hasDataError()) if
-			 * (as.nGestehungspreisBerechnet.compareTo(nGestehungspreis) != 0)
-			 * as.bNeedPreis = true; }
+			 * (as.nGestehungspreisBerechnet.compareTo(nGestehungspreis) != 0) as.bNeedPreis
+			 * = true; }
 			 */
 			as.nMengeKummuliert = nMengeKummuliert;
 			as.nWertKummuliert = nWertKummuliert;
@@ -316,11 +305,10 @@ public class ArtikelGestehungspreisCalc {
 	}
 
 	/**
-	 * Datenfehlerpr&uuml;fung f&uuml;r ein Lager zur Zeit wird nur gepr&uuml;ft ob die Daten
-	 * mit einem Zugang beginnen
+	 * Datenfehlerpr&uuml;fung f&uuml;r ein Lager zur Zeit wird nur gepr&uuml;ft ob
+	 * die Daten mit einem Zugang beginnen
 	 * 
-	 * @param nummer
-	 *            Nummer des Lagers in den Daten (Achtung: nicht die IId)
+	 * @param nummer Nummer des Lagers in den Daten (Achtung: nicht die IId)
 	 * @return true bei Fehler
 	 */
 	public boolean hasDataError(int nummer) {
@@ -356,10 +344,10 @@ public class ArtikelGestehungspreisCalc {
 	}
 
 	/**
-	 * &UUml;berpr&uuml;fung ob einer der Gestehungspreise f&uuml;r ein Lager falsch ist
+	 * &UUml;berpr&uuml;fung ob einer der Gestehungspreise f&uuml;r ein Lager falsch
+	 * ist
 	 * 
-	 * @param nummer
-	 *            Nummer des Lagers in den Daten (Achtung: nicht die IId)
+	 * @param nummer Nummer des Lagers in den Daten (Achtung: nicht die IId)
 	 * @return true bei Fehler
 	 */
 	public boolean hasGestPreisDiff(int nummer) {
@@ -406,9 +394,9 @@ public class ArtikelGestehungspreisCalc {
 	/**
 	 * Maximale Differenz des Gestehungspreis f&uuml;r ein Lager abrufen
 	 * 
-	 * @param nummer
-	 *            Nummer des Lagers in den Daten (Achtung: nicht die IId)
-	 * @return maximale Differenz des Gestehungspreises f&uuml;r das angegebene Lager
+	 * @param nummer Nummer des Lagers in den Daten (Achtung: nicht die IId)
+	 * @return maximale Differenz des Gestehungspreises f&uuml;r das angegebene
+	 *         Lager
 	 */
 	public BigDecimal getMaxDiff(int nummer) {
 		if (!isCalculated)
@@ -527,13 +515,10 @@ public class ArtikelGestehungspreisCalc {
 			sb.append(iId.toString() + "\t");
 			sb.append(new Boolean(bAbgang).toString() + "\t");
 			sb.append(nMenge == null ? "\t" : nMenge.toString() + "\t");
-			sb.append(nEinstandspreis == null ? "\t" : nEinstandspreis
-					.toString() + "\t");
-			sb.append(nGestehungspreis == null ? "\t" : nGestehungspreis
-					.toString() + "\t");
+			sb.append(nEinstandspreis == null ? "\t" : nEinstandspreis.toString() + "\t");
+			sb.append(nGestehungspreis == null ? "\t" : nGestehungspreis.toString() + "\t");
 			sb.append(iLagerId == null ? "\t" : iLagerId.toString() + "\t");
-			sb.append(nGestehungspreisBerechnet == null ? "\t"
-					: nGestehungspreisBerechnet.toString() + "\t");
+			sb.append(nGestehungspreisBerechnet == null ? "\t" : nGestehungspreisBerechnet.toString() + "\t");
 			sb.append(new Boolean(isChanged()).toString() + "\t");
 			sb.append(nMengeKummuliert == null ? "\t" : nMengeKummuliert + "\t");
 			sb.append(nWertKummuliert == null ? "\t" : nWertKummuliert + "\t");
@@ -604,8 +589,7 @@ public class ArtikelGestehungspreisCalc {
 								// Ablieferungen updaten
 								sSqlForce = sSqlForce.append(as.iId);
 						}
-					} else if (nGestPreis
-							.compareTo(as.nGestehungspreisBerechnet) == 0) {
+					} else if (nGestPreis.compareTo(as.nGestehungspreisBerechnet) == 0) {
 						if (as.bNeedPreis) {
 							// Abgang braucht den Gestehungspreis aus der
 							// Zubuchung
@@ -663,34 +647,25 @@ public class ArtikelGestehungspreisCalc {
 		return tmp;
 	}
 
-	private void add2Update(ArrayList<String> tmp, StringBuffer sSql,
-			BigDecimal nGestPreis) {
+	private void add2Update(ArrayList<String> tmp, StringBuffer sSql, BigDecimal nGestPreis) {
 		if (sSql.length() != 0) {
 			StringBuffer sTemp = new StringBuffer(sSql.toString());
 			sSql = sSql.insert(0,
-					"UPDATE WW_LAGERBEWEGUNG SET N_GESTEHUNGSPREIS="
-							+ nGestPreis.toString() + " WHERE I_ID IN (");
+					"UPDATE WW_LAGERBEWEGUNG SET N_GESTEHUNGSPREIS=" + nGestPreis.toString() + " WHERE I_ID IN (");
 			sSql = sSql.append(");");
 			tmp.add(sSql.toString());
 
-			sTemp = sTemp
-					.insert(0,
-							"UPDATE WW_LAGERABGANGURSPRUNG SET N_GESTEHUNGSPREIS="
-									+ nGestPreis.toString()
-									+ " WHERE I_LAGERBEWEGUNGID IN (SELECT I_ID_BUCHUNG FROM WW_LAGERBEWEGUNG WHERE I_ID IN(");
+			sTemp = sTemp.insert(0, "UPDATE WW_LAGERABGANGURSPRUNG SET N_GESTEHUNGSPREIS=" + nGestPreis.toString()
+					+ " WHERE I_LAGERBEWEGUNGID IN (SELECT I_ID_BUCHUNG FROM WW_LAGERBEWEGUNG WHERE I_ID IN(");
 			sTemp = sTemp.append("));");
 			tmp.add(sTemp.toString());
 		}
 	}
 
-	private void add2UpdateAblieferung(ArrayList<String> tmp,
-			StringBuffer sSql, BigDecimal nGestPreis) {
+	private void add2UpdateAblieferung(ArrayList<String> tmp, StringBuffer sSql, BigDecimal nGestPreis) {
 		if (sSql.length() != 0) {
-			sSql = sSql
-					.insert(0,
-							"UPDATE WW_LAGERABGANGURSPRUNG SET N_GESTEHUNGSPREIS="
-									+ nGestPreis.toString()
-									+ " WHERE I_LAGERBEWEGUNGIDURSPRUNG IN (SELECT I_ID_BUCHUNG FROM WW_LAGERBEWEGUNG WHERE I_ID IN(");
+			sSql = sSql.insert(0, "UPDATE WW_LAGERABGANGURSPRUNG SET N_GESTEHUNGSPREIS=" + nGestPreis.toString()
+					+ " WHERE I_LAGERBEWEGUNGIDURSPRUNG IN (SELECT I_ID_BUCHUNG FROM WW_LAGERBEWEGUNG WHERE I_ID IN(");
 			sSql = sSql.append("));");
 			tmp.add(sSql.toString());
 		}
@@ -702,8 +677,8 @@ public class ArtikelGestehungspreisCalc {
 			for (int i = 0; i < s.length; i++) {
 				String sUpd = "UPDATE WW_LAGERABGANGURSPRUNG SET N_GESTEHUNGSPREIS="
 						+ "(SELECT N_GESTEHUNGSPREIS FROM WW_LAGERBEWEGUNG WHERE B_HISTORIE=0 AND I_ID_BUCHUNG = WW_LAGERABGANGURSPRUNG.I_LAGERBEWEGUNGIDURSPRUNG) "
-						+ "WHERE I_LAGERBEWEGUNGID = (SELECT I_ID_BUCHUNG FROM WW_LAGERBEWEGUNG WHERE I_ID="
-						+ s[i] + ");";
+						+ "WHERE I_LAGERBEWEGUNGID = (SELECT I_ID_BUCHUNG FROM WW_LAGERBEWEGUNG WHERE I_ID=" + s[i]
+						+ ");";
 				tmp.add(sUpd + "\n");
 			}
 		}
@@ -790,8 +765,7 @@ public class ArtikelGestehungspreisCalc {
 		int anzahl = this.getLageranzahl();
 		for (int i = 0; i < anzahl; i++) {
 			int j = filename.indexOf(".", 1);
-			String filetmp = filename.substring(0, j) + "_" + i
-					+ filename.substring(j);
+			String filetmp = filename.substring(0, j) + "_" + i + filename.substring(j);
 			File f = new File(filetmp);
 			try {
 				FileOutputStream fo = new FileOutputStream(f);
@@ -852,12 +826,9 @@ public class ArtikelGestehungspreisCalc {
 		int anzahl = this.getLageranzahl();
 		for (int i = 0; i < anzahl; i++) {
 			sb.append("Lager" + i + " (IId:" + getLagerIId(i) + ")\r\n");
-			sb.append("\tDatenfehler:\t"
-					+ (this.hasDataError(i) ? "Ja" : "Nein") + "\r\n");
-			sb.append("\tGestehungspreisfehler:\t"
-					+ (this.hasGestPreisDiff(i) ? "Ja" : "Nein") + "\r\n");
-			sb.append("\tMax. Differnz:\t" + this.getMaxDiff(i).toString()
-					+ "\r\n");
+			sb.append("\tDatenfehler:\t" + (this.hasDataError(i) ? "Ja" : "Nein") + "\r\n");
+			sb.append("\tGestehungspreisfehler:\t" + (this.hasGestPreisDiff(i) ? "Ja" : "Nein") + "\r\n");
+			sb.append("\tMax. Differnz:\t" + this.getMaxDiff(i).toString() + "\r\n");
 		}
 		return sb.toString();
 	}

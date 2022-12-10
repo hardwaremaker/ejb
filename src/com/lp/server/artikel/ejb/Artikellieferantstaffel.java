@@ -49,7 +49,8 @@ import javax.persistence.Table;
 		@NamedQuery(name = "ArtikellieferantstaffelfindbyArtikellieferantIIdFMengeUK", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge=?2"),
 		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 ORDER BY o.nMenge DESC"),
 		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIIdFMengeTPreisgueltigab", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge=?2 AND o.tPreisgueltigab=?3"),
-		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIIdFMengeTPreisgueltigabKleiner", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge=?2 AND o.tPreisgueltigab<=?3 AND (o.tPreisgueltigbis >= ?3  OR o.tPreisgueltigbis IS NULL) ORDER BY o.tPreisgueltigab DESC") })
+		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIIdFMengeTPreisgueltigabKleiner", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge=?2 AND o.tPreisgueltigab<=?3 AND (o.tPreisgueltigbis >= ?3  OR o.tPreisgueltigbis IS NULL) ORDER BY o.tPreisgueltigab DESC"),
+		@NamedQuery(name = ArtikellieferantstaffelQuery.ByArtikellieferantIIdGueltigZuDatum, query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = :artliefid AND o.tPreisgueltigab <= :date AND (o.tPreisgueltigbis >= :date  OR o.tPreisgueltigbis IS NULL)") })
 @Entity
 @Table(name = "WW_ARTIKELLIEFERANTSTAFFEL")
 public class Artikellieferantstaffel implements Serializable {
@@ -66,6 +67,17 @@ public class Artikellieferantstaffel implements Serializable {
 	@Column(name = "F_RABATT")
 	private Double fRabatt;
 
+	@Column(name = "ANFRAGEPOSITIONLIEFERDATEN_I_ID")
+	private Integer anfragepositionlieferdatenIId;
+
+	public Integer getAnfragepositionlieferdatenIId() {
+		return anfragepositionlieferdatenIId;
+	}
+
+	public void setAnfragepositionlieferdatenIId(Integer anfragepositionIId) {
+		this.anfragepositionlieferdatenIId = anfragepositionIId;
+	}
+	
 	@Column(name = "N_NETTOPREIS")
 	private BigDecimal nNettopreis;
 
@@ -87,6 +99,55 @@ public class Artikellieferantstaffel implements Serializable {
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
+	
+	@Column(name = "C_BEZBEILIEFERANT")
+	private String cBezbeilieferant;
+	
+	public String getCBezbeilieferant() {
+		return this.cBezbeilieferant;
+	}
+
+	public void setCBezbeilieferant(String cBezbeilieferant) {
+		this.cBezbeilieferant = cBezbeilieferant;
+	}
+	
+
+	@Column(name = "C_ARTIKELNRLIEFERANT")
+	private String cArtikelnrlieferant;
+	
+	
+
+	public String getCArtikelnrlieferant() {
+		return this.cArtikelnrlieferant;
+	}
+
+	public void setCArtikelnrlieferant(String cArtikelnrlieferant) {
+		this.cArtikelnrlieferant = cArtikelnrlieferant;
+	}
+	
+	@Column(name = "EINHEIT_C_NR_VPE")
+	private String einheitCNrVpe;
+
+	
+	public String getEinheitCNrVpe() {
+		return einheitCNrVpe;
+	}
+
+	public void setEinheitCNrVpe(String einheitCNrVpe) {
+		this.einheitCNrVpe = einheitCNrVpe;
+	}
+
+	
+	@Column(name = "C_ANGEBOTNUMMER")
+	private String cAngebotnummer;
+	public String getCAngebotnummer() {
+		return cAngebotnummer;
+	}
+
+	public void setCAngebotnummer(String angebotnummer) {
+		cAngebotnummer = angebotnummer;
+	}
+	
 	public Timestamp getTAendern() {
 		return tAendern;
 	}

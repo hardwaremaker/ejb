@@ -38,10 +38,20 @@ import java.sql.Timestamp;
 
 import org.w3c.dom.Document;
 
+import com.lp.server.artikel.ejb.Lager;
+import com.lp.server.partner.ejb.Branche;
+import com.lp.server.partner.ejb.Newslettergrund;
+import com.lp.server.partner.ejb.Partnerklasse;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCBez;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.system.service.HvDtoLogIgnore;
 import com.lp.server.system.service.LandplzortDto;
+import com.lp.server.util.IIId;
 import com.lp.server.util.IModificationData;
 
-public class PartnerDto implements Serializable, IModificationData {
+@HvDtoLogClass(name = HvDtoLogClass.PARTNER)
+public class PartnerDto implements Serializable, IIId, IModificationData {
 
 	/**
 	 * 
@@ -106,13 +116,11 @@ public class PartnerDto implements Serializable, IModificationData {
 
 	private Integer personalAendernIId;
 
-
 	private LandplzortDto landplzortDto;
 
 	private LandplzortDto landplzortDto_Postfach;
 
 	private BankDto bankDto;
-
 
 	private Integer landIIdAbweichendesustland;
 	private Integer lagerIIdZiellager;
@@ -120,16 +128,16 @@ public class PartnerDto implements Serializable, IModificationData {
 	private String cAdressart;
 	private String cEori;
 
-	
 	private String cFax;
 	private String cTelefon;
 	private String cHandy;
 	private String cDirektfax;
 	private String cHomepage;
 	private String cEmail;
-	
-	private Integer versandwegIId ;
-	
+
+	private Integer versandwegIId;
+	private GeodatenDto geodatenDto;
+
 	public String getCFax() {
 		return cFax;
 	}
@@ -296,6 +304,7 @@ public class PartnerDto implements Serializable, IModificationData {
 		this.cPostfach = cPostfach;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Branche.class)
 	public Integer getBrancheIId() {
 		return brancheIId;
 	}
@@ -304,6 +313,7 @@ public class PartnerDto implements Serializable, IModificationData {
 		this.brancheIId = brancheIId;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Partnerklasse.class)
 	public Integer getPartnerklasseIId() {
 		return partnerklasseIId;
 	}
@@ -340,8 +350,7 @@ public class PartnerDto implements Serializable, IModificationData {
 		return dGeburtsdatumansprechpartner;
 	}
 
-	public void setDGeburtsdatumansprechpartner(
-			Date dGeburtsdatumansprechpartner) {
+	public void setDGeburtsdatumansprechpartner(Date dGeburtsdatumansprechpartner) {
 		this.dGeburtsdatumansprechpartner = dGeburtsdatumansprechpartner;
 	}
 
@@ -393,6 +402,17 @@ public class PartnerDto implements Serializable, IModificationData {
 		this.cGerichtsstand = cGerichtsstand;
 	}
 
+	private Integer newslettergrundIId;
+
+	public void setNewslettergrundIId(Integer newslettergrundIId) {
+		this.newslettergrundIId = newslettergrundIId;
+	}
+
+	@HvDtoLogIdCBez(entityClass = Newslettergrund.class)
+	public Integer getNewslettergrundIId() {
+		return newslettergrundIId;
+	}
+
 	public Short getBVersteckt() {
 		return bVersteckt;
 	}
@@ -401,6 +421,7 @@ public class PartnerDto implements Serializable, IModificationData {
 		this.bVersteckt = bVersteckt;
 	}
 
+	@HvDtoLogIgnore
 	public Timestamp getTAnlegen() {
 		return tAnlegen;
 	}
@@ -409,22 +430,7 @@ public class PartnerDto implements Serializable, IModificationData {
 		this.tAnlegen = tAnlegen;
 	}
 
-	/**
-	 * @deprecated use #getPersonalIIdAnlegen.
-	 * @return die IId des Personals welches den Satz angelegt hat
-	 */
-	public Integer getPersonalAnlegenIId() {
-		return personalAnlegenIId;
-	}
-
-	/**
-	 * @deprecated use {@link #setPersonalIIdAnlegen(Integer)}
-	 * @param personalAnlegenIId
-	 */
-	public void setPersonalAnlegenIId(Integer personalAnlegenIId) {
-		this.personalAnlegenIId = personalAnlegenIId;
-	}
-
+	@HvDtoLogIgnore
 	public Timestamp getTAendern() {
 		return tAendern;
 	}
@@ -433,23 +439,8 @@ public class PartnerDto implements Serializable, IModificationData {
 		this.tAendern = tAendern;
 	}
 
-	/**
-	 * @deprecated use {@link #getPersonalIIdAendern()}
-	 * @return die IId jenes Personals welches den Satz geaendert hat
-	 */
-	public Integer getPersonalAendernIId() {
-		return personalAendernIId;
-	}
-
-	/**
-	 * @deprecated use {@link #setPersonalIIdAendern(Integer)}
-	 * @param personalAendernIId
-	 */
-	public void setPersonalAendernIId(Integer personalAendernIId) {
-		this.personalAendernIId = personalAendernIId;
-	}
-
 	@Override
+	@HvDtoLogIgnore
 	public Integer getPersonalIIdAnlegen() {
 		return personalAnlegenIId;
 	}
@@ -460,6 +451,7 @@ public class PartnerDto implements Serializable, IModificationData {
 	}
 
 	@Override
+	@HvDtoLogIgnore
 	public Integer getPersonalIIdAendern() {
 		return personalAendernIId;
 	}
@@ -481,39 +473,32 @@ public class PartnerDto implements Serializable, IModificationData {
 			return false;
 		}
 		if (!(that.localeCNrKommunikation == null ? this.localeCNrKommunikation == null
-				: that.localeCNrKommunikation
-						.equals(this.localeCNrKommunikation))) {
+				: that.localeCNrKommunikation.equals(this.localeCNrKommunikation))) {
 			return false;
 		}
 		if (!(that.partnerartCNr == null ? this.partnerartCNr == null
 				: that.partnerartCNr.equals(this.partnerartCNr))) {
 			return false;
 		}
-		if (!(that.cKbez == null ? this.cKbez == null : that.cKbez
-				.equals(this.cKbez))) {
+		if (!(that.cKbez == null ? this.cKbez == null : that.cKbez.equals(this.cKbez))) {
 			return false;
 		}
-		if (!(that.anredeCNr == null ? this.anredeCNr == null : that.anredeCNr
-				.equals(this.anredeCNr))) {
+		if (!(that.anredeCNr == null ? this.anredeCNr == null : that.anredeCNr.equals(this.anredeCNr))) {
 			return false;
 		}
 		if (!(that.cName1nachnamefirmazeile1 == null ? this.cName1nachnamefirmazeile1 == null
-				: that.cName1nachnamefirmazeile1
-						.equals(this.cName1nachnamefirmazeile1))) {
+				: that.cName1nachnamefirmazeile1.equals(this.cName1nachnamefirmazeile1))) {
 			return false;
 		}
 		if (!(that.cName2vornamefirmazeile2 == null ? this.cName2vornamefirmazeile2 == null
-				: that.cName2vornamefirmazeile2
-						.equals(this.cName2vornamefirmazeile2))) {
+				: that.cName2vornamefirmazeile2.equals(this.cName2vornamefirmazeile2))) {
 			return false;
 		}
 		if (!(that.cName3vorname2abteilung == null ? this.cName3vorname2abteilung == null
-				: that.cName3vorname2abteilung
-						.equals(this.cName3vorname2abteilung))) {
+				: that.cName3vorname2abteilung.equals(this.cName3vorname2abteilung))) {
 			return false;
 		}
-		if (!(that.cStrasse == null ? this.cStrasse == null : that.cStrasse
-				.equals(this.cStrasse))) {
+		if (!(that.cStrasse == null ? this.cStrasse == null : that.cStrasse.equals(this.cStrasse))) {
 			return false;
 		}
 		if (!(that.landplzortIId == null ? this.landplzortIId == null
@@ -524,12 +509,10 @@ public class PartnerDto implements Serializable, IModificationData {
 				: that.landplzortIIdPostfach.equals(this.landplzortIIdPostfach))) {
 			return false;
 		}
-		if (!(that.cPostfach == null ? this.cPostfach == null : that.cPostfach
-				.equals(this.cPostfach))) {
+		if (!(that.cPostfach == null ? this.cPostfach == null : that.cPostfach.equals(this.cPostfach))) {
 			return false;
 		}
-		if (!(that.brancheIId == null ? this.brancheIId == null
-				: that.brancheIId.equals(this.brancheIId))) {
+		if (!(that.brancheIId == null ? this.brancheIId == null : that.brancheIId.equals(this.brancheIId))) {
 			return false;
 		}
 		if (!(that.partnerklasseIId == null ? this.partnerklasseIId == null
@@ -540,17 +523,14 @@ public class PartnerDto implements Serializable, IModificationData {
 				: that.partnerIIdVater.equals(this.partnerIIdVater))) {
 			return false;
 		}
-		if (!(that.cUid == null ? this.cUid == null : that.cUid
-				.equals(this.cUid))) {
+		if (!(that.cUid == null ? this.cUid == null : that.cUid.equals(this.cUid))) {
 			return false;
 		}
-		if (!(that.xBemerkung == null ? this.xBemerkung == null
-				: that.xBemerkung.equals(this.xBemerkung))) {
+		if (!(that.xBemerkung == null ? this.xBemerkung == null : that.xBemerkung.equals(this.xBemerkung))) {
 			return false;
 		}
 		if (!(that.dGeburtsdatumansprechpartner == null ? this.dGeburtsdatumansprechpartner == null
-				: that.dGeburtsdatumansprechpartner
-						.equals(this.dGeburtsdatumansprechpartner))) {
+				: that.dGeburtsdatumansprechpartner.equals(this.dGeburtsdatumansprechpartner))) {
 			return false;
 		}
 		if (!(that.rechtsformIId == null ? this.rechtsformIId == null
@@ -565,34 +545,78 @@ public class PartnerDto implements Serializable, IModificationData {
 				: that.cFirmenbuchnr.equals(this.cFirmenbuchnr))) {
 			return false;
 		}
-		if (!(that.cTitel == null ? this.cTitel == null : that.cTitel
-				.equals(this.cTitel))) {
+		if (!(that.cTitel == null ? this.cTitel == null : that.cTitel.equals(this.cTitel))) {
 			return false;
 		}
 		if (!(that.cGerichtsstand == null ? this.cGerichtsstand == null
 				: that.cGerichtsstand.equals(this.cGerichtsstand))) {
 			return false;
 		}
-		if (!(that.bVersteckt == null ? this.bVersteckt == null
-				: that.bVersteckt.equals(this.bVersteckt))) {
+		if (!(that.bVersteckt == null ? this.bVersteckt == null : that.bVersteckt.equals(this.bVersteckt))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
 		if (!(that.personalAnlegenIId == null ? this.personalAnlegenIId == null
 				: that.personalAnlegenIId.equals(this.personalAnlegenIId))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
 		if (!(that.personalAendernIId == null ? this.personalAendernIId == null
 				: that.personalAendernIId.equals(this.personalAendernIId))) {
 			return false;
 		}
+
+		if (!(that.cEmail == null ? this.cEmail == null : that.cEmail.equals(this.cEmail))) {
+			return false;
+		}
+		if (!(that.cTelefon == null ? this.cTelefon == null : that.cTelefon.equals(this.cTelefon))) {
+			return false;
+		}
+		if (!(that.cFax == null ? this.cFax == null : that.cFax.equals(this.cFax))) {
+			return false;
+		}
+		if (!(that.cHomepage == null ? this.cHomepage == null : that.cHomepage.equals(this.cHomepage))) {
+			return false;
+		}
+		if (!(that.cDirektfax == null ? this.cDirektfax == null : that.cDirektfax.equals(this.cDirektfax))) {
+			return false;
+		}
+		if (!(that.newslettergrundIId == null ? this.newslettergrundIId == null
+				: that.newslettergrundIId.equals(this.newslettergrundIId))) {
+			return false;
+		}
+
+		if (!(that.cIln == null ? this.cIln == null : that.cIln.equals(this.cIln))) {
+			return false;
+		}
+		if (!(that.cEori == null ? this.cEori == null : that.cEori.equals(this.cEori))) {
+			return false;
+		}
+		if (!(that.cFilialnummer == null ? this.cFilialnummer == null
+				: that.cFilialnummer.equals(this.cFilialnummer))) {
+			return false;
+		}
+		if (!(that.cNtitel == null ? this.cNtitel == null : that.cNtitel.equals(this.cNtitel))) {
+			return false;
+		}
+		if (!(that.fGmtversatz == null ? this.fGmtversatz == null : that.fGmtversatz.equals(this.fGmtversatz))) {
+			return false;
+		}
+		if (!(that.cAdressart == null ? this.cAdressart == null : that.cAdressart.equals(this.cAdressart))) {
+			return false;
+		}
+		if (!(that.lagerIIdZiellager == null ? this.lagerIIdZiellager == null : that.lagerIIdZiellager.equals(this.lagerIIdZiellager))) {
+			return false;
+		}
+		if (!(that.landIIdAbweichendesustland == null ? this.landIIdAbweichendesustland == null : that.landIIdAbweichendesustland.equals(this.landIIdAbweichendesustland))) {
+			return false;
+		}
+
+
 		return true;
 	}
 
@@ -731,6 +755,26 @@ public class PartnerDto implements Serializable, IModificationData {
 		return ret.trim();
 	}
 
+	// lt. SP7876
+	public String formatFixTitelVornameNachnameNTitel() {
+		String ret = "";
+
+		if (getCTitel() != null) {
+			ret += " " + getCTitel().trim();
+		}
+		if (getCName2vornamefirmazeile2() != null) {
+			ret += " " + getCName2vornamefirmazeile2().trim();
+		}
+		if (getCName1nachnamefirmazeile1() != null) {
+			ret += " " + getCName1nachnamefirmazeile1().trim();
+		}
+		if (getCNtitel() != null) {
+			ret += " " + getCNtitel().trim();
+		}
+		return ret.trim();
+
+	}
+
 	/**
 	 * @deprecated MB. use PartnerFac.formatFixAnredeTitelName2Name1(PartnerDto)
 	 * 
@@ -790,10 +834,8 @@ public class PartnerDto implements Serializable, IModificationData {
 		// }
 		// }
 		String sAnredeCNr = getAnredeCNr();
-		if (sAnredeCNr != null
-				&& !sAnredeCNr.equals("")
-				&& (sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_FRAU) || sAnredeCNr
-						.equals(PartnerFac.PARTNER_ANREDE_HERR))) {
+		if (sAnredeCNr != null && !sAnredeCNr.equals("") && (sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_FRAU)
+				|| sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_HERR))) {
 			// herr frau
 			ret = formatFixAnredeTitelName2Name1();
 		} else {
@@ -807,18 +849,16 @@ public class PartnerDto implements Serializable, IModificationData {
 	/**
 	 * Formatiert Vorname, Nachname, je nach Partnerart.
 	 * 
-	 * @return wenn person: getCName2vornamefirmazeile2
-	 *         getCName1nachnamefirmazeile1 sonst (zB.firma):
-	 *         getCName1nachnamefirmazeile1 getCName2vornamefirmazeile2
+	 * @return wenn person: getCName2vornamefirmazeile2 getCName1nachnamefirmazeile1
+	 *         sonst (zB.firma): getCName1nachnamefirmazeile1
+	 *         getCName2vornamefirmazeile2
 	 */
 	public String formatName() {
 		String ret = "";
 
 		String sAnredeCNr = getAnredeCNr();
-		if (sAnredeCNr != null
-				&& !sAnredeCNr.equals("")
-				&& (sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_FRAU) || sAnredeCNr
-						.equals(PartnerFac.PARTNER_ANREDE_HERR))) {
+		if (sAnredeCNr != null && !sAnredeCNr.equals("") && (sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_FRAU)
+				|| sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_HERR))) {
 			// herr frau
 			ret = formatFixName2Name1();
 		} else {
@@ -839,9 +879,8 @@ public class PartnerDto implements Serializable, IModificationData {
 	public String formatTitelAnrede() {
 		String ret = "";
 
-		if (getPartnerartCNr() != null
-				&& ((getPartnerartCNr().equals(PartnerFac.PARTNERART_PERSON) || getPartnerartCNr()
-						.equals(PartnerFac.PARTNERART_ANSPRECHPARTNER)))) {
+		if (getPartnerartCNr() != null && ((getPartnerartCNr().equals(PartnerFac.PARTNERART_PERSON)
+				|| getPartnerartCNr().equals(PartnerFac.PARTNERART_ANSPRECHPARTNER)))) {
 			if (getAnredeCNr() != null) {
 				ret += getAnredeCNr().trim();
 			}
@@ -876,29 +915,35 @@ public class PartnerDto implements Serializable, IModificationData {
 	public String formatLKZPLZOrt() {
 		String ret = null;
 		if (landplzortDto != null) {
-			ret = (landplzortDto.getLandDto().getCLkz() != null ? landplzortDto
-					.getLandDto().getCLkz() + "-" : "")
-					+ (landplzortDto.getCPlz() != null ? landplzortDto
-							.getCPlz() + " " : "")
-					+ (landplzortDto.getOrtDto().getCName() != null ? landplzortDto
-							.getOrtDto().getCName() : "");
+			ret = (landplzortDto.getLandDto().getCLkz() != null ? landplzortDto.getLandDto().getCLkz() + "-" : "")
+					+ (landplzortDto.getCPlz() != null ? landplzortDto.getCPlz() + " " : "")
+					+ (landplzortDto.getOrtDto().getCName() != null ? landplzortDto.getOrtDto().getCName() : "");
 		}
 		return (ret == null || ret.equals("-")) ? null : ret;
+	}
+
+	public String formatLKZ() {
+		if (landplzortDto != null && landplzortDto.getLandDto() != null) {
+			return landplzortDto.getLandDto().getCLkz();
+		} else {
+			return null;
+		}
+
 	}
 
 	public void setLandplzortDto_Postfach(LandplzortDto landplzortDto_Postfach) {
 		this.landplzortDto_Postfach = landplzortDto_Postfach;
 	}
 
+	@HvDtoLogIgnore
 	public LandplzortDto getLandplzortDto() {
 		return landplzortDto;
 	}
 
+	@HvDtoLogIgnore
 	public LandplzortDto getLandplzortDto_Postfach() {
 		return landplzortDto_Postfach;
 	}
-
-
 
 	public byte[] getOBild() {
 		return oBild;
@@ -908,6 +953,7 @@ public class PartnerDto implements Serializable, IModificationData {
 		return landIIdAbweichendesustland;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Lager.class)
 	public Integer getLagerIIdZiellager() {
 		return lagerIIdZiellager;
 	}
@@ -927,8 +973,6 @@ public class PartnerDto implements Serializable, IModificationData {
 	public void setLandplzortDto(LandplzortDto landplzortDto) {
 		this.landplzortDto = landplzortDto;
 	}
-
-
 
 	public void setOBild(byte[] oBild) {
 		this.oBild = oBild;
@@ -953,17 +997,24 @@ public class PartnerDto implements Serializable, IModificationData {
 	public void setCAdressart(String cAdressart) {
 		this.cAdressart = cAdressart;
 	}
-	
-	
-	public void setBVersteckt(boolean value) { 
-		bVersteckt = new Short((short) (value ? 1 : 0)) ;
+
+	public void setBVersteckt(boolean value) {
+		bVersteckt = new Short((short) (value ? 1 : 0));
 	}
-	
+
 	public Integer getVersandwegIId() {
 		return versandwegIId;
 	}
 
 	public void setVersandwegIId(Integer versandwegIId) {
 		this.versandwegIId = versandwegIId;
-	}	
+	}
+
+	public void setGeodatenDto(GeodatenDto geodatenDto) {
+		this.geodatenDto = geodatenDto;
+	}
+
+	public GeodatenDto getGeodatenDto() {
+		return geodatenDto;
+	}
 }

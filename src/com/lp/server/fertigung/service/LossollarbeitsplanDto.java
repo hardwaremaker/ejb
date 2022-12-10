@@ -36,12 +36,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
-import javax.persistence.Column;
-
 import com.lp.service.BelegpositionDto;
 
-public class LossollarbeitsplanDto extends BelegpositionDto implements
-		Serializable {
+public class LossollarbeitsplanDto extends BelegpositionDto implements Serializable {
 	/**
 	 * 
 	 */
@@ -63,8 +60,71 @@ public class LossollarbeitsplanDto extends BelegpositionDto implements
 	private Integer iUnterarbeitsgang;
 	private Short bAutoendebeigeht;
 	private Short bNurmaschinenzeit;
+
+	private Timestamp  tAgbeginnBerechnet;
+	
+	
+	public Timestamp getTAgbeginnBerechnet() {
+		return tAgbeginnBerechnet;
+	}
+
+	public void setTAgbeginnBerechnet(Timestamp tAgbeginnBerechnet) {
+		this.tAgbeginnBerechnet = tAgbeginnBerechnet;
+	}
+
+	
+	private Integer iReihung;
+
+	public Integer getIReihung() {
+		return iReihung;
+	}
+
+	public void setIReihung(Integer iReihung) {
+		this.iReihung = iReihung;
+	}
+
+	private Integer iMaschinenversatztageAusStueckliste;
+
+	public Integer getIMaschinenversatztageAusStueckliste() {
+		return iMaschinenversatztageAusStueckliste;
+	}
+
+	public void setIMaschinenversatztageAusStueckliste(Integer iMaschinenversatztageAusStueckliste) {
+		this.iMaschinenversatztageAusStueckliste = iMaschinenversatztageAusStueckliste;
+	}
+
 	private Integer iMaschinenversatztage;
 	private Integer personalIIdZugeordneter;
+
+	private BigDecimal nPpm;
+
+	public BigDecimal getNPpm() {
+		return nPpm;
+	}
+
+	public void setNPpm(BigDecimal nPpm) {
+		this.nPpm = nPpm;
+	}
+
+	private Integer apkommentarIId;
+
+	public Integer getApkommentarIId() {
+		return apkommentarIId;
+	}
+
+	public void setApkommentarIId(Integer apkommentarIId) {
+		this.apkommentarIId = apkommentarIId;
+	}
+
+	private Double fFortschritt;
+
+	public Double getFFortschritt() {
+		return fFortschritt;
+	}
+
+	public void setFFortschritt(Double fFortschritt) {
+		this.fFortschritt = fFortschritt;
+	}
 
 	private Integer lossollmaterialIId;
 
@@ -172,13 +232,11 @@ public class LossollarbeitsplanDto extends BelegpositionDto implements
 	}
 
 	public BigDecimal getStueckzeit() {
-		return new BigDecimal(getLStueckzeit()).divide(new BigDecimal(3600000),
-				4, BigDecimal.ROUND_HALF_EVEN);
+		return new BigDecimal(getLStueckzeit()).divide(new BigDecimal(3600000), 4, BigDecimal.ROUND_HALF_EVEN);
 	}
 
 	public BigDecimal getRuestzeit() {
-		return new BigDecimal(getLRuestzeit()).divide(new BigDecimal(3600000),
-				4, BigDecimal.ROUND_HALF_EVEN);
+		return new BigDecimal(getLRuestzeit()).divide(new BigDecimal(3600000), 4, BigDecimal.ROUND_HALF_EVEN);
 	}
 
 	public Long getLStueckzeit() {
@@ -263,6 +321,25 @@ public class LossollarbeitsplanDto extends BelegpositionDto implements
 		this.iMaschinenversatzMs = iMaschinenversatzMs;
 	}
 
+	private Timestamp tFertig;
+	private Integer personalIIdFertig;
+
+	public Timestamp getTFertig() {
+		return tFertig;
+	}
+
+	public void setTFertig(Timestamp tFertig) {
+		this.tFertig = tFertig;
+	}
+
+	public Integer getPersonalIIdFertig() {
+		return personalIIdFertig;
+	}
+
+	public void setPersonalIIdFertig(Integer personalIIdFertig) {
+		this.personalIIdFertig = personalIIdFertig;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -271,20 +348,16 @@ public class LossollarbeitsplanDto extends BelegpositionDto implements
 		LossollarbeitsplanDto that = (LossollarbeitsplanDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.losIId == null ? this.losIId == null : that.losIId
-				.equals(this.losIId)))
+		if (!(that.losIId == null ? this.losIId == null : that.losIId.equals(this.losIId)))
 			return false;
 		if (!(that.artikelIIdTaetigkeit == null ? this.artikelIIdTaetigkeit == null
 				: that.artikelIIdTaetigkeit.equals(this.artikelIIdTaetigkeit)))
 			return false;
-		if (!(that.lRuestzeit == null ? this.lRuestzeit == null
-				: that.lRuestzeit.equals(this.lRuestzeit)))
+		if (!(that.lRuestzeit == null ? this.lRuestzeit == null : that.lRuestzeit.equals(this.lRuestzeit)))
 			return false;
-		if (!(that.lStueckzeit == null ? this.lStueckzeit == null
-				: that.lStueckzeit.equals(this.lStueckzeit)))
+		if (!(that.lStueckzeit == null ? this.lStueckzeit == null : that.lStueckzeit.equals(this.lStueckzeit)))
 			return false;
-		if (!(that.nGesamtzeit == null ? this.nGesamtzeit == null
-				: that.nGesamtzeit.equals(this.nGesamtzeit)))
+		if (!(that.nGesamtzeit == null ? this.nGesamtzeit == null : that.nGesamtzeit.equals(this.nGesamtzeit)))
 			return false;
 		if (!(that.iArbeitsgangnummer == null ? this.iArbeitsgangnummer == null
 				: that.iArbeitsgangnummer.equals(this.iArbeitsgangnummer)))
@@ -292,14 +365,11 @@ public class LossollarbeitsplanDto extends BelegpositionDto implements
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
-		if (!(that.xText == null ? this.xText == null : that.xText
-				.equals(this.xText)))
+		if (!(that.xText == null ? this.xText == null : that.xText.equals(this.xText)))
 			return false;
-		if (!(that.cKomentar == null ? this.cKomentar == null : that.cKomentar
-				.equals(this.cKomentar)))
+		if (!(that.cKomentar == null ? this.cKomentar == null : that.cKomentar.equals(this.cKomentar)))
 			return false;
 		if (!(that.bNachtraeglich == null ? this.bNachtraeglich == null
 				: that.bNachtraeglich.equals(this.bNachtraeglich)))

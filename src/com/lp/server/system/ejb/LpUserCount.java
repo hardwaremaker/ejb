@@ -55,6 +55,17 @@ public class LpUserCount implements Serializable {
 	public static final String QueryAnzahlSystemrolle = "QueryAnzahlSystemrolle";
 	
 	@Id
+	@Column(name = "I_ID")
+	private Integer iId;
+	
+	public Integer getIId() {
+		return this.iId;
+	}
+
+	public void setIId(Integer iId) {
+		this.iId = iId;
+	}
+	
 	@Column(name = "T_ZEITPUNKT")
 	private Timestamp tZeitpunkt;
 

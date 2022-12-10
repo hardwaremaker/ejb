@@ -59,7 +59,7 @@ public interface LieferantReportFac {
 	public JasperPrintLP printArtikeldesLieferanten(Integer lieferantIId,
 			boolean bSortiertNachBezeichnung, boolean bMitVersteckten,
 			boolean bSortiertNachLieferant, boolean bNurLagerbewirtschaftete,
-			java.sql.Timestamp tStichtag, TheClientDto theClientDto)
+			java.sql.Timestamp tStichtag, boolean bMitStaffelpreisen, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public JasperPrintLP printLieferantenliste(TheClientDto theClientDto,

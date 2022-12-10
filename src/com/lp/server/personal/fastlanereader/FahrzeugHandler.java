@@ -43,6 +43,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.personal.fastlanereader.generated.FLRFahrzeug;
+import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -72,8 +73,7 @@ public class FahrzeugHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 			session = setFilter(session);
@@ -93,22 +93,18 @@ public class FahrzeugHandler extends UseCaseHandler {
 				rows[row][col++] = flrFahrzeug.getI_id();
 				rows[row][col++] = flrFahrzeug.getC_bez();
 				rows[row][col++] = flrFahrzeug.getC_kennzeichen();
+				rows[row][col++] = flrFahrzeug.getFahrzeugverwendungsart_c_nr().trim();
 
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		}
 
 		catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
@@ -121,8 +117,7 @@ public class FahrzeugHandler extends UseCaseHandler {
 			session = factory.openSession();
 			session = setFilter(session);
 
-			String queryString = "SELECT COUNT(*) FROM FLRFahrzeug AS fahrzeug "
-					+ buildWhereClause();
+			String queryString = "SELECT COUNT(*) FROM FLRFahrzeug AS fahrzeug " + buildWhereClause();
 
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -132,20 +127,14 @@ public class FahrzeugHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
-			}
+			closeSession(session);
 		}
 		return rowCount;
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -156,8 +145,7 @@ public class FahrzeugHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -167,9 +155,18 @@ public class FahrzeugHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(filterKriterien[i].kritName);
-					where.append(" " + filterKriterien[i].operator);
-					where.append(" " + filterKriterien[i].value);
+
+					if (filterKriterien[i].kritName.equals(PersonalFac.FILTER_BERECHTIGTE_FAHRZEUGE)) {
+						where.append(" (fahrzeug.fahrzeugverwendungsart_c_nr='"
+								+ PersonalFac.FAHRZEUGVERWENDUNGSART_POOLFAHRZEUG + "'");
+						where.append(
+								" OR fahrzeug.i_id IN (SELECT pv.fahrzeug_i_id FROM FLRPersonalfahrzeug pv WHERE pv.personal_i_id="
+										+ filterKriterien[i].value + ")) ");
+					} else {
+						where.append(" " + filterKriterien[i].kritName);
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value);
+					}
 				}
 			}
 			if (filterAdded) {
@@ -240,8 +237,7 @@ public class FahrzeugHandler extends UseCaseHandler {
 		return " FROM FLRFahrzeug AS fahrzeug ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -254,16 +250,14 @@ public class FahrzeugHandler extends UseCaseHandler {
 			try {
 				session = factory.openSession();
 				session = setFilter(session);
-				String queryString = getFromClause() + buildWhereClause()
-						+ buildOrderByClause();
+				String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
 
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
-						FLRFahrzeug material = (FLRFahrzeug) scrollableResult
-								.get(0);
+						FLRFahrzeug material = (FLRFahrzeug) scrollableResult.get(0);
 						Integer iId = material.getI_id();
 						if (selectedId.equals(iId)) {
 							rowNumber = scrollableResult.getRowNumber();
@@ -274,11 +268,7 @@ public class FahrzeugHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-				}
+				closeSession(session);
 			}
 		}
 
@@ -296,22 +286,17 @@ public class FahrzeugHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.kfzkennzeichen",
-									mandantCNr, locUI) },
+			setTableInfo(new TableInfo(new Class[] { Integer.class, String.class, String.class, String.class },
+					new String[] { "Id", getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.kfzkennzeichen", mandantCNr, locUI),
+							getTextRespectUISpr("pers.fahrzeug.verwendungsart", mandantCNr, locUI) },
 
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
-					new String[] { "fahrzeug.i_id", "fahrzeug.c_bez",
-							"fahrzeug.c_kennzeichen" }));
+					new String[] { "fahrzeug.i_id", "fahrzeug.c_bez", "fahrzeug.c_kennzeichen",
+							"fahrzeug.fahrzeugverwendungsart_c_nr" }));
 		}
 		return super.getTableInfo();
 	}

@@ -34,8 +34,13 @@ package com.lp.server.stueckliste.service;
 
 import java.io.Serializable;
 
+import com.lp.server.artikel.ejb.Artikel;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.util.IIId;
 
-public class PosersatzDto implements Serializable {
+@HvDtoLogClass(name=HvDtoLogClass.STUECKLISTE_POSERSATZ, filtername=HvDtoLogClass.STUECKLISTE)
+public class PosersatzDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
@@ -52,6 +57,8 @@ public class PosersatzDto implements Serializable {
 	public void setStuecklistepositionIId(Integer stuecklistepositionIId) {
 		this.stuecklistepositionIId = stuecklistepositionIId;
 	}
+	
+	@HvDtoLogIdCnr(entityClass=Artikel.class)
 	public Integer getArtikelIIdErsatz() {
 		return artikelIIdErsatz;
 	}

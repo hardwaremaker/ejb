@@ -32,11 +32,16 @@
  ******************************************************************************/
 package com.lp.server.fertigung.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.text.DateFormatSymbols;
+import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+
+import javax.swing.Icon;
 
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
@@ -47,11 +52,17 @@ import com.lp.server.auftrag.service.AuftragzeitenDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.LosgutschlechtDto;
+import com.lp.server.partner.service.KundeFac;
+import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.personal.service.AbschnittEinerReiseDto;
+import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.personal.service.ZeiterfassungFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -134,99 +145,163 @@ public class LossollarbeitsplanHandler extends UseCaseHandler {
 			if (bZuvieleZeitbuchungen == false) {
 				mannZeiten = getZeiterfassungFac().getAllZeitenEinesBeleges(
 						LocaleFac.BELEGART_LOS, losIId, null, null, null, null,
-						false, false, theClientDto);
+						ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL, theClientDto);
 			}
 
 			AuftragzeitenDto[] maschinenZeiten = getZeiterfassungFac()
 					.getAllMaschinenzeitenEinesBeleges(losIId, null, null,
 							null, theClientDto);
+			
+			String[] kurzeWochentage = new DateFormatSymbols(theClientDto.getLocUi()).getShortWeekdays();
+			
 
 			while (resultListIterator.hasNext()) {
 				FLRLossollarbeitsplan loszeit = (FLRLossollarbeitsplan) resultListIterator
 						.next();
-				rows[row][col++] = loszeit.getI_id();
+
+				Object[] rowToAddCandidate = new Object[colCount];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"i_id")] = loszeit.getI_id();
+
 				if (Helper.short2boolean(loszeit.getB_nachtraeglich()) == true) {
 					// Nachtraeglich hinzugefuegte Arbeitsgaenge
-					rows[row][col++] = "N";
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.art")] = "N";
 				} else {
 					// Arbeitsgaenge, die aus der Stueckliste uebernommen wurden
-					rows[row][col++] = "S";
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.art")] = "S";
 				}
-				rows[row][col++] = loszeit.getI_arbeitsgangsnummer();
-				rows[row][col++] = loszeit.getI_unterarbeitsgang();
-				rows[row][col++] = loszeit.getI_maschinenversatztage();
-				// Maschinen-identifikationsnummer
-				if (loszeit.getFlrmaschine() != null) {
-					rows[row][col++] = loszeit.getFlrmaschine()
-							.getC_identifikationsnr();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"fert.ag")] = loszeit.getI_arbeitsgangsnummer();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"fert.uag")] = loszeit.getI_unterarbeitsgang();
+				
+				//PJ21850
+				java.util.Date tAgBeginn=null;
+				
+				if (loszeit.getI_maschinenversatztage() == null) {
+					tAgBeginn = loszeit.getFlrlos().getT_produktionsbeginn();
 				} else {
-					rows[row][col++] = "";
+					tAgBeginn= Helper.addiereTageZuDatum(
+									loszeit.getFlrlos().getT_produktionsbeginn(), loszeit.getI_maschinenversatztage());
+				}
+				
+				Calendar cal = Calendar.getInstance();
+				cal.setTimeInMillis(tAgBeginn.getTime());
+				
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"fert.agbeginn")] =Helper.formatDatum(tAgBeginn, theClientDto.getLocUi())+" ("+kurzeWochentage[cal.get(Calendar.DAY_OF_WEEK)]+")" ;
+				
+
+				
+				
+				
+				
+				
+				if (loszeit.getFlrmaschine() != null) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.maschine")] = loszeit.getFlrmaschine()
+							.getC_identifikationsnr();
 				}
 
 				if (bMaschinenbezeichnungStattArtikelbezeichnung) {
 					if (loszeit.getFlrmaschine() != null) {
-						rows[row][col++] = loszeit.getFlrmaschine().getC_bez();
-					} else {
-						rows[row][col++] = "";
+
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("lp.bezeichnung")] = loszeit
+								.getFlrmaschine().getC_bez();
+
 					}
 
 					if (bStueckrueckmeldung) {
 
-						rows[row][col++] = loszeit.getC_kommentar();
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("lp.kommentar")] = loszeit
+								.getC_kommentar();
 					}
-					rows[row][col++] = loszeit.getFlrartikel().getC_nr();
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.ident")] = loszeit.getFlrartikel().getC_nr();
 				} else {
-					rows[row][col++] = loszeit.getFlrartikel().getC_nr();
-					rows[row][col++] = getArtikelFac()
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.ident")] = loszeit.getFlrartikel().getC_nr();
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.bezeichnung")] = getArtikelFac()
 							.artikelFindByPrimaryKeySmall(
 									loszeit.getFlrartikel().getI_id(),
 									theClientDto).formatBezeichnung();
 				}
 
-				rows[row][col++] = loszeit.getN_gesamtzeit();
-				BigDecimal bdZeit = new BigDecimal(0);
+				if (Helper.short2boolean(loszeit.getB_nurmaschinenzeit()) == false) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.dauer.person")] = loszeit.getN_gesamtzeit();
+				}
+
+				if (loszeit.getFlrmaschine() != null) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.dauer.maschine")] = loszeit.getN_gesamtzeit();
+				}
+
+				BigDecimal bdZeitPerson = new BigDecimal(0);
+
+				BigDecimal bdZeitMaschine = new BigDecimal(0);
 
 				if (bZuvieleZeitbuchungen == false) {
 
 					for (int i = 0; i < mannZeiten.length; i++) {
 						if (loszeit.getI_id().equals(
 								mannZeiten[i].getBelegpositionIId())) {
-							bdZeit = bdZeit.add(new BigDecimal(mannZeiten[i]
-									.getDdDauer().doubleValue()));
+							bdZeitPerson = bdZeitPerson.add(new BigDecimal(
+									mannZeiten[i].getDdDauer().doubleValue()));
 						}
 					}
 
 					for (int i = 0; i < maschinenZeiten.length; i++) {
 						if (loszeit.getI_id().equals(
 								maschinenZeiten[i].getBelegpositionIId())) {
-							bdZeit = bdZeit.add(new BigDecimal(
+							bdZeitMaschine = bdZeitMaschine.add(new BigDecimal(
 									maschinenZeiten[i].getDdDauer()
 											.doubleValue()));
 						}
 					}
 
 				} else {
-					bdZeit = new BigDecimal(-1);
+					bdZeitPerson = new BigDecimal(-1);
+					bdZeitMaschine = new BigDecimal(-1);
 				}
 
-				rows[row][col++] = bdZeit;
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.ist.person")] = bdZeitPerson;
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.ist.maschine")] = bdZeitMaschine;
 				// Optional: Stueckrueckmeldung
 				if (bStueckrueckmeldung) {
-					BigDecimal bdLosgroesse = loszeit.getFlrlos()
-							.getN_losgroesse();
 
 					BigDecimal[] bdGutSchlechtInarbeit = getFertigungFac()
 							.getGutSchlechtInarbeit(loszeit.getI_id(),
 									theClientDto);
 
-					rows[row][col++] = bdGutSchlechtInarbeit[0];
-					rows[row][col++] = bdGutSchlechtInarbeit[1];
-					rows[row][col++] = bdGutSchlechtInarbeit[2];
-					rows[row][col++] = bdGutSchlechtInarbeit[3];
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.gut")] = bdGutSchlechtInarbeit[0];
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.schlecht")] = bdGutSchlechtInarbeit[1];
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.inarbeit")] = bdGutSchlechtInarbeit[2];
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.offen")] = bdGutSchlechtInarbeit[3];
 
 				}
-				rows[row][col++] = Helper.short2Boolean(loszeit.getB_fertig());
 
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"fert.fortschritt")] = loszeit.getF_fortschritt();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.fertig")] = Helper.short2Boolean(loszeit
+						.getB_fertig());
+
+				rows[row] = rowToAddCandidate;
 				row++;
 				col = 0;
 			}
@@ -415,286 +490,133 @@ public class LossollarbeitsplanHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			// Wenn die Stueckrueckmeldung aktiviert ist, gibts zusaetzliche
-			// Spalten
-			try {
-				bStueckrueckmeldung = getMandantFac()
-						.hatZusatzfunktionberechtigung(
-								MandantFac.ZUSATZFUNKTION_STUECKRUECKMELDUNG,
-								theClientDto);
+	private TableColumnInformation createColumnInformation(String mandant,
+			Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_FERTIGUNG,
-								ParameterFac.PARAMETER_MASCHINENBEZEICHNUNG_ANZEIGEN);
-				bMaschinenbezeichnungStattArtikelbezeichnung = (Boolean) parameter
-						.getCWertAsObject();
+		columns.add("i_id", Integer.class, "i_id", -1, "i_id");
 
-			} catch (RemoteException ex) {
-				throwEJBExceptionLPRespectOld(ex);
-			}
+		columns.add("lp.art", String.class,
+				getTextRespectUISpr("lp.art", mandant, locUi), 3,
+				Facade.NICHT_SORTIERBAR);
+		columns.add("fert.ag", Integer.class,
+				getTextRespectUISpr("fert.ag", mandant, locUi), 3,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ARBEITSGANGNUMMER);
+		columns.add("fert.uag", Integer.class,
+				getTextRespectUISpr("fert.uag", mandant, locUi), 3,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_UNTERARBEITSGANG);
+		columns.add("fert.agbeginn", String.class,
+				getTextRespectUISpr("fert.agbeginn", mandant, locUi), 5,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_MASCHINENVERSATZTAGE);
+		columns.add("lp.maschine", String.class,
+				getTextRespectUISpr("lp.maschine", mandant, locUi), 3,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE + "."
+						+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR);
+
+		if (bMaschinenbezeichnungStattArtikelbezeichnung) {
+
+			columns.add("lp.bezeichnung", String.class,
+					getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM,
+					FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE + ".c_bez");
 			if (bStueckrueckmeldung) {
-
-				if (bMaschinenbezeichnungStattArtikelbezeichnung) {
-
-					setTableInfo(new TableInfo(
-							new Class[] { Integer.class, String.class,
-									Integer.class, Integer.class,
-									Integer.class, String.class, String.class,
-									String.class, String.class,
-									BigDecimal.class, BigDecimal.class,
-									BigDecimal.class, BigDecimal.class,
-									BigDecimal.class, BigDecimal.class,
-									Boolean.class },
-							new String[] {
-									"i_id",
-									getTextRespectUISpr("lp.art", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.ag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.uag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.agbeginn",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.maschine",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.bezeichnung",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.kommentar",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.ident", mandantCNr,
-											locUI),
-
-									getTextRespectUISpr("lp.dauer", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.ist", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.gut", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.schlecht",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.inarbeit",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.offen", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.fertig",
-											mandantCNr, locUI) },
-							new int[] {
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									3, 3, 3, 3, 3,
-									QueryParameters.FLR_BREITE_XM,
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_PREIS,
-									QueryParameters.FLR_BREITE_PREIS, 10, 10,
-									10, 10, QueryParameters.FLR_BREITE_S },
-							new String[] {
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ID,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ARBEITSGANGNUMMER,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_UNTERARBEITSGANG,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_MASCHINENVERSATZTAGE,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE
-											+ "."
-											+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE
-											+ ".c_bez",
-									"c_kommentar",
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRARTIKEL
-											+ ".c_nr",
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_N_GESAMTZEIT,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_B_FERTIG }));
-				} else {
-
-					setTableInfo(new TableInfo(
-							new Class[] { Integer.class, String.class,
-									Integer.class, Integer.class,
-									Integer.class, String.class, String.class,
-									String.class, BigDecimal.class,
-									BigDecimal.class, BigDecimal.class,
-									BigDecimal.class, BigDecimal.class,
-									BigDecimal.class, Boolean.class },
-							new String[] {
-									"i_id",
-									getTextRespectUISpr("lp.art", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.ag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.uag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.agbeginn",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.maschine",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.ident", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.bezeichnung",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.dauer", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.ist", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.gut", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.schlecht",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.inarbeit",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.offen", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.fertig",
-											mandantCNr, locUI) },
-							new int[] {
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									3, 3, 3, 3, 3,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_PREIS,
-									QueryParameters.FLR_BREITE_PREIS, 10, 10,
-									10, 10, QueryParameters.FLR_BREITE_S },
-							new String[] {
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ID,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ARBEITSGANGNUMMER,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_UNTERARBEITSGANG,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_MASCHINENVERSATZTAGE,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE
-											+ "."
-											+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRARTIKEL
-											+ ".c_nr",
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_N_GESAMTZEIT,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_B_FERTIG }));
-				}
-			} else {
-
-				if (bMaschinenbezeichnungStattArtikelbezeichnung) {
-					setTableInfo(new TableInfo(
-							new Class[] { Integer.class, String.class,
-									Integer.class, Integer.class,
-									Integer.class, String.class, String.class,
-									String.class, BigDecimal.class,
-									BigDecimal.class, Boolean.class },
-							new String[] {
-									"i_id",
-									getTextRespectUISpr("lp.art", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.ag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.uag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.agbeginn",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.maschine",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.bezeichnung",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.ident", mandantCNr,
-											locUI),
-
-									getTextRespectUISpr("lp.dauer", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.ist", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.fertig",
-											mandantCNr, locUI) },
-							new int[] {
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									3, 3, 3, 3, 3,
-									QueryParameters.FLR_BREITE_XM,
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_PREIS,
-									QueryParameters.FLR_BREITE_PREIS,
-									QueryParameters.FLR_BREITE_S },
-							new String[] {
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ID,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ARBEITSGANGNUMMER,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_UNTERARBEITSGANG,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_MASCHINENVERSATZTAGE,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE
-											+ "."
-											+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE
-											+ ".c_bez",
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRARTIKEL
-											+ ".c_nr",
-
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_N_GESAMTZEIT,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_B_FERTIG }));
-				} else {
-
-					setTableInfo(new TableInfo(
-							new Class[] { Integer.class, String.class,
-									Integer.class, Integer.class,
-									Integer.class, String.class, String.class,
-									String.class, BigDecimal.class,
-									BigDecimal.class, Boolean.class },
-							new String[] {
-									"i_id",
-									getTextRespectUISpr("lp.art", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.ag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.uag", mandantCNr,
-											locUI),
-									getTextRespectUISpr("fert.agbeginn",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.maschine",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.ident", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.bezeichnung",
-											mandantCNr, locUI),
-									getTextRespectUISpr("lp.dauer", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.ist", mandantCNr,
-											locUI),
-									getTextRespectUISpr("lp.fertig",
-											mandantCNr, locUI) },
-							new int[] {
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									3, 3, 3, 3, 3,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_PREIS,
-									QueryParameters.FLR_BREITE_PREIS,
-									QueryParameters.FLR_BREITE_S },
-							new String[] {
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ID,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_ARBEITSGANGNUMMER,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_UNTERARBEITSGANG,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_I_MASCHINENVERSATZTAGE,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRMASCHINE
-											+ "."
-											+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRARTIKEL
-											+ ".c_nr",
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_N_GESAMTZEIT,
-									Facade.NICHT_SORTIERBAR,
-									FertigungFac.FLR_LOSSOLLARBEITSPLAN_B_FERTIG }));
-				}
+				columns.add("lp.kommentar", String.class,
+						getTextRespectUISpr("lp.kommentar", mandant, locUi),
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						"c_kommentar");
 			}
+
+			columns.add("lp.ident", String.class,
+					getTextRespectUISpr("lp.ident", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRARTIKEL + ".c_nr");
+
+		} else {
+			columns.add("lp.ident", String.class,
+					getTextRespectUISpr("lp.ident", mandant, locUi),
+					QueryParameters.FLR_BREITE_M,
+					FertigungFac.FLR_LOSSOLLARBEITSPLAN_FLRARTIKEL + ".c_nr");
+			columns.add("lp.bezeichnung", String.class,
+					getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, Facade.NICHT_SORTIERBAR);
 		}
-		return super.getTableInfo();
+
+		columns.add("lp.dauer.person", BigDecimal.class,
+				getTextRespectUISpr("lp.dauer.person", mandant, locUi),
+				QueryParameters.FLR_BREITE_PREIS,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_N_GESAMTZEIT);
+		columns.add("lp.ist.person", BigDecimal.class,
+				getTextRespectUISpr("lp.ist", mandant, locUi),
+				QueryParameters.FLR_BREITE_PREIS, Facade.NICHT_SORTIERBAR);
+
+		columns.add("lp.dauer.maschine", BigDecimal.class,
+				getTextRespectUISpr("lp.dauer.maschine", mandant, locUi),
+				QueryParameters.FLR_BREITE_PREIS,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_N_GESAMTZEIT);
+		columns.add("lp.ist.maschine", BigDecimal.class,
+				getTextRespectUISpr("lp.ist", mandant, locUi),
+				QueryParameters.FLR_BREITE_PREIS, Facade.NICHT_SORTIERBAR);
+
+		if (bStueckrueckmeldung) {
+
+			columns.add("lp.gut", BigDecimal.class,
+					getTextRespectUISpr("lp.gut", mandant, locUi), 10,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.schlecht", BigDecimal.class,
+					getTextRespectUISpr("lp.schlecht", mandant, locUi), 10,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.inarbeit", BigDecimal.class,
+					getTextRespectUISpr("lp.inarbeit", mandant, locUi), 10,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.offen", BigDecimal.class,
+					getTextRespectUISpr("lp.offen", mandant, locUi), 10,
+					Facade.NICHT_SORTIERBAR);
+		}
+		columns.add("fert.fortschritt", Double.class,
+				getTextRespectUISpr("fert.fortschritt", mandant, locUi),
+				QueryParameters.FLR_BREITE_S,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_F_FORTSCHRITT);
+		columns.add("lp.fertig", Boolean.class,
+				getTextRespectUISpr("lp.fertig", mandant, locUi),
+				QueryParameters.FLR_BREITE_S,
+				FertigungFac.FLR_LOSSOLLARBEITSPLAN_B_FERTIG);
+
+		return columns;
+	}
+
+	private void setupParameters() {
+		try {
+			bStueckrueckmeldung = getMandantFac()
+					.hatZusatzfunktionberechtigung(
+							MandantFac.ZUSATZFUNKTION_STUECKRUECKMELDUNG,
+							theClientDto);
+
+			ParametermandantDto parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_FERTIGUNG,
+							ParameterFac.PARAMETER_MASCHINENBEZEICHNUNG_ANZEIGEN);
+			bMaschinenbezeichnungStattArtikelbezeichnung = (Boolean) parameter
+					.getCWertAsObject();
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setupParameters();
+		setTableColumnInformation(createColumnInformation(
+				theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(),
+				c.getDbColumNames(), c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 }

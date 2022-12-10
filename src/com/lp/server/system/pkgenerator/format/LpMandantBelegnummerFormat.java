@@ -52,25 +52,42 @@ package com.lp.server.system.pkgenerator.format;
 public class LpMandantBelegnummerFormat extends LpDefaultBelegnummerFormat {
 	protected int stellenMandantKuerzel;
 
-	public LpMandantBelegnummerFormat(int stellenGeschaeftsjahr,
-			char trennzeichen, int stellenMandantKuerzel, int stellenLfdNummer) {
-		super(stellenGeschaeftsjahr, trennzeichen, stellenLfdNummer);
+	public LpMandantBelegnummerFormat(int stellenGeschaeftsjahr, char trennzeichen, int stellenMandantKuerzel,
+			int stellenLfdNummer, int stellenZufall) {
+		super(stellenGeschaeftsjahr, trennzeichen, stellenLfdNummer, stellenZufall);
 		this.stellenMandantKuerzel = stellenMandantKuerzel;
 	}
 
 	public int getStellenMandantKuerzel() {
 		return stellenMandantKuerzel;
 	}
-	
+
 	public String format(LpBelegnummer lpBelegnummer) {
-		String result = dfGeschaeftsjahr.format(lpBelegnummer
-				.getGeschaeftsJahr());
+		String result = dfGeschaeftsjahr.format(lpBelegnummer.getGeschaeftsJahr());
+
+		if (lpBelegnummer.getGeschaeftsJahr() == -1) {
+			result = "___________".substring(0, getStellenGeschaeftsjahr());
+		}
+
 		result = result + trennzeichen;
-		result = result
-				+ lpBelegnummer.getMandantKuerzel().substring(0,
-						stellenMandantKuerzel);
+		result = result + lpBelegnummer.getMandantKuerzel().substring(0, stellenMandantKuerzel);
 		result = result + dfBelegNummer.format(lpBelegnummer.getBelegNummer());
 		return result;
 	}
 
+	public String formatMitStellenZufall(LpBelegnummer lpBelegnummer) {
+		String result = dfGeschaeftsjahr.format(lpBelegnummer.getGeschaeftsJahr());
+		result = result + trennzeichen;
+		result = result + lpBelegnummer.getMandantKuerzel().substring(0, stellenMandantKuerzel);
+
+		// PJ20114
+		Integer belegnummer = lpBelegnummer.getBelegNummer();
+		if (stellenZufall > 0) {
+			belegnummer = belegnummer * (int) Math.pow(10, stellenZufall);
+			belegnummer += (int) (Math.random() * (int) Math.pow(10, stellenZufall));
+		}
+
+		result = result + dfBelegNummer.format(belegnummer);
+		return result;
+	}
 }

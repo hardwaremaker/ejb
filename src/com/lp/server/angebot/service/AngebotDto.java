@@ -38,10 +38,10 @@ import java.util.Calendar;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.system.service.LocaleFac;
-import com.lp.service.BelegDto;
+import com.lp.server.util.IVersionable;
 import com.lp.service.BelegVerkaufDto;
 
-public class AngebotDto extends BelegVerkaufDto implements Cloneable {
+public class AngebotDto extends BelegVerkaufDto implements Cloneable, IVersionable {
 	/**
 	 * 
 	 */
@@ -69,6 +69,38 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 	private Timestamp tRealisierungstermin;
 	private Double fAuftragswahrscheinlichkeit;
 	private String xAblageort;
+	private Timestamp tAenderungsangebot;
+	private Integer iAenderungsangebotVersion;
+
+	private Short bMindermengenzuschlag;
+
+	public Short getBMindermengenzuschlag() {
+		return this.bMindermengenzuschlag;
+	}
+
+	public void setBMindermengenzuschlag(Short bMindermengenzuschlag) {
+		this.bMindermengenzuschlag = bMindermengenzuschlag;
+	}
+
+	private String cKommission;
+
+	public String getCKommission() {
+		return cKommission;
+	}
+
+	public void setCKommission(String kommission) {
+		cKommission = kommission;
+	}
+
+	private Integer personalIIdVertreter2;
+
+	public Integer getPersonalIIdVertreter2() {
+		return personalIIdVertreter2;
+	}
+
+	public void setPersonalIIdVertreter2(Integer personalIIdVertreter2) {
+		this.personalIIdVertreter2 = personalIIdVertreter2;
+	}
 
 	public String getCKundenanfrage() {
 		return cKundenanfrage;
@@ -93,13 +125,44 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 	private String xExternerkommentar;
 	private String xInternerkommentar;
 
-	/*
-	 * private Timestamp tGedruckt; private Integer personalIIdStorniert;
-	 * private Timestamp tStorniert; private Integer personalIIdManuellerledigt;
-	 * private Timestamp tManuellerledigt; private Integer personalIIdAnlegen;
-	 * private Timestamp tAnlegen; private Integer personalIIdAendern; private
-	 * Timestamp tAendern;
-	 */
+	private Integer kundeIIdRechnungsadresse;
+
+	public Integer getKundeIIdRechnungsadresse() {
+		return kundeIIdRechnungsadresse;
+	}
+
+	public void setKundeIIdRechnungsadresse(Integer kundeIIdRechnungsadresse) {
+		this.kundeIIdRechnungsadresse = kundeIIdRechnungsadresse;
+	}
+
+	public Integer getKundeIIdLieferadresse() {
+		return kundeIIdLieferadresse;
+	}
+
+	public void setKundeIIdLieferadresse(Integer kundeIIdLieferadresse) {
+		this.kundeIIdLieferadresse = kundeIIdLieferadresse;
+	}
+
+	public Integer getAnsprechpartnerIIdRechnungsadresse() {
+		return ansprechpartnerIIdRechnungsadresse;
+	}
+
+	public void setAnsprechpartnerIIdRechnungsadresse(Integer ansprechpartnerIIdRechnungsadresse) {
+		this.ansprechpartnerIIdRechnungsadresse = ansprechpartnerIIdRechnungsadresse;
+	}
+
+	public Integer getAnsprechpartnerIIdLieferadresse() {
+		return ansprechpartnerIIdLieferadresse;
+	}
+
+	public void setAnsprechpartnerIIdLieferadresse(Integer ansprechpartnerIIdLieferadresse) {
+		this.ansprechpartnerIIdLieferadresse = ansprechpartnerIIdLieferadresse;
+	}
+
+	private Integer kundeIIdLieferadresse;
+
+	private Integer ansprechpartnerIIdRechnungsadresse;
+	private Integer ansprechpartnerIIdLieferadresse;
 
 	public Timestamp getTAnfragedatum() {
 		return tAnfragedatum;
@@ -185,8 +248,7 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 		return fAuftragswahrscheinlichkeit;
 	}
 
-	public void setFAuftragswahrscheinlichkeit(
-			Double fAuftragswahrscheinlichkeit) {
+	public void setFAuftragswahrscheinlichkeit(Double fAuftragswahrscheinlichkeit) {
 		this.fAuftragswahrscheinlichkeit = fAuftragswahrscheinlichkeit;
 	}
 
@@ -232,6 +294,47 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 		this.cLieferartort = cLieferartort;
 	}
 
+	public Timestamp getTAenderungsangebot() {
+		return tAenderungsangebot;
+	}
+
+	public void setTAenderungsangebot(Timestamp tAenderungsangebot) {
+		this.tAenderungsangebot = tAenderungsangebot;
+	}
+
+	public Integer getIVersion() {
+		return iAenderungsangebotVersion;
+	}
+
+	public void setIVersion(Integer iVersion) {
+		this.iAenderungsangebotVersion = iVersion;
+	}
+
+	@Override
+	public boolean hasVersion() {
+		return getIVersion() != null;
+	}
+
+	@Override
+	public Timestamp getTVersion() {
+		return getTAenderungsangebot();
+	}
+
+	@Override
+	public void setTVersion(Timestamp tVersion) {
+		setTAenderungsangebot(tVersion);
+	}
+
+	private Integer akquisestatusIId;
+
+	public Integer getAkquisestatusIId() {
+		return akquisestatusIId;
+	}
+
+	public void setAkquisestatusIId(Integer akquisestatusIId) {
+		this.akquisestatusIId = akquisestatusIId;
+	}
+
 	public String toString() {
 		String returnString = super.toString();
 		returnString += ", " + tAnfragedatum;
@@ -259,7 +362,13 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 		angebotDto.tAngebotsgueltigkeitbis = this.tAngebotsgueltigkeitbis;
 		angebotDto.kundeIIdAngebotsadresse = this.kundeIIdAngebotsadresse;
 		angebotDto.ansprechpartnerIIdKunde = this.ansprechpartnerIIdKunde;
+		angebotDto.kundeIIdLieferadresse = this.kundeIIdLieferadresse;
+		angebotDto.ansprechpartnerIIdLieferadresse = this.ansprechpartnerIIdLieferadresse;
+		angebotDto.kundeIIdRechnungsadresse = this.kundeIIdRechnungsadresse;
+		angebotDto.ansprechpartnerIIdRechnungsadresse = this.ansprechpartnerIIdRechnungsadresse;
+
 		angebotDto.personalIIdVertreter = this.personalIIdVertreter;
+		angebotDto.personalIIdVertreter2 = this.personalIIdVertreter2;
 		angebotDto.iLieferzeitinstunden = this.iLieferzeitinstunden;
 		angebotDto.angeboteinheitCNr = this.angeboteinheitCNr;
 		// AngeboterledigungsgrundCNr null
@@ -271,6 +380,10 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 		angebotDto.nKorrekturbetrag = this.nKorrekturbetrag;
 		angebotDto.fProjektierungsRabattsatz = this.fProjektierungsRabattsatz;
 		angebotDto.iGarantie = this.iGarantie;
+		angebotDto.bMindermengenzuschlag = this.bMindermengenzuschlag;
+		
+		angebotDto.cLieferartort = this.cLieferartort;
+		
 		// IMS 1775 spezieller Kopf- und Fusstext sollen uebernommen werden
 		angebotDto.setXKopftextuebersteuert(getXKopftextuebersteuert());
 		angebotDto.setXFusstextuebersteuert(getXFusstextuebersteuert());
@@ -289,17 +402,20 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 		auftragDto.setKundeIIdAuftragsadresse(this.kundeIIdAngebotsadresse);
 		auftragDto.setAnsprechpartnerIId(this.ansprechpartnerIIdKunde);
 		auftragDto.setPersonalIIdVertreter(this.personalIIdVertreter);
-		auftragDto.setKundeIIdLieferadresse(auftragDto
-				.getKundeIIdAuftragsadresse());
-		auftragDto.setKundeIIdRechnungsadresse(auftragDto
-				.getKundeIIdAuftragsadresse());
+		auftragDto.setPersonalIIdVertreter2(this.personalIIdVertreter2);
+		auftragDto.setKundeIIdLieferadresse(this.kundeIIdLieferadresse);
+		auftragDto.setKundeIIdRechnungsadresse(this.kundeIIdRechnungsadresse);
+
+		auftragDto.setAnsprechpartnerIIdLieferadresse(ansprechpartnerIIdLieferadresse);
+		auftragDto.setAnsprechpartnerIIdRechnungsadresse(ansprechpartnerIIdRechnungsadresse);
+
 		auftragDto.setCBezProjektbezeichnung(this.getCBez());
+		auftragDto.setCKommission(this.getCKommission());
 		auftragDto.setProjektIId(this.getProjektIId());
 		auftragDto.setDBestelldatum(new Timestamp(System.currentTimeMillis()));
 		// bestellnummer, bestelldatum, sonderrabattsatz null
 		auftragDto.setCAuftragswaehrung(this.getWaehrungCNr());
-		auftragDto.setFWechselkursmandantwaehrungzubelegwaehrung(this
-				.getFWechselkursmandantwaehrungzubelegwaehrung());
+		auftragDto.setFWechselkursmandantwaehrungzubelegwaehrung(this.getFWechselkursmandantwaehrungzubelegwaehrung());
 
 		int iLieferzeitinWochen = iLieferzeitinstunden / 168;
 		// SP1570
@@ -320,11 +436,12 @@ public class AngebotDto extends BelegVerkaufDto implements Cloneable {
 		auftragDto.setFAllgemeinerRabattsatz(this.getFAllgemeinerRabattsatz());
 		auftragDto.setFProjektierungsrabattsatz(this.fProjektierungsRabattsatz);
 		auftragDto.setLieferartIId(this.getLieferartIId());
+		auftragDto.setCLieferartort(this.getCLieferartort());
 		auftragDto.setZahlungszielIId(this.getZahlungszielIId());
 		auftragDto.setSpediteurIId(this.getSpediteurIId());
 		auftragDto.setIGarantie(this.iGarantie);
-		auftragDto
-				.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT); // initial
+		auftragDto.setBMindermengenzuschlag(this.bMindermengenzuschlag);
+		auftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT); // initial
 		// ist
 		// der
 		// Auftrag

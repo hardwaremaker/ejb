@@ -34,6 +34,7 @@ package com.lp.server.angebotstkl.ejb;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -44,7 +45,9 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 		@NamedQuery(name = "EinkaufsangebotpositionejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Einkaufsangebotposition AS o WHERE o.einkaufsangebotIId=?1"),
-		@NamedQuery(name = "EinkaufsangebotpositionfindByEinkaufsangebotIId", query = "SELECT OBJECT (o) FROM Einkaufsangebotposition o WHERE o.einkaufsangebotIId=?1 ORDER BY o.iSort") })
+		@NamedQuery(name = "EinkaufsangebotpositionfindByEinkaufsangebotIId", query = "SELECT OBJECT (o) FROM Einkaufsangebotposition o WHERE o.einkaufsangebotIId=?1 ORDER BY o.iSort"),
+		@NamedQuery(name = "EinkaufsangebotpositionIIdfindByEinkaufsangebotIId", query = "SELECT o.iId FROM Einkaufsangebotposition o WHERE o.einkaufsangebotIId=?1 ORDER BY o.iSort")
+		})
 @Entity
 @Table(name = "AS_EINKAUFSANGEBOTPOSITION")
 public class Einkaufsangebotposition implements Serializable {
@@ -71,7 +74,29 @@ public class Einkaufsangebotposition implements Serializable {
 
 	@Column(name = "C_ZBEZ")
 	private String cZbez;
+	
+	@Column(name = "C_ZBEZ2")
+	private String cZbez2;
 
+	public String getCZbez2() {
+		return cZbez2;
+	}
+
+	public void setCZbez2(String cZbez2) {
+		this.cZbez2 = cZbez2;
+	}
+
+	@Column(name = "I_LFDNUMMER")
+	private Integer iLfdnummer;
+	
+	public Integer getILfdnummer() {
+		return this.iLfdnummer;
+	}
+
+	public void setILfdnummer(Integer iLfdnummer) {
+		this.iLfdnummer = iLfdnummer;
+	}
+	
 	@Column(name = "B_ARTIKELBEZEICHNUNGUEBERSTEUERT")
 	private Short bArtikelbezeichnunguebersteuert;
 
@@ -117,8 +142,128 @@ public class Einkaufsangebotposition implements Serializable {
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
 
+	@Column(name = "HERSTELLER_I_ID")
+	private Integer herstellerIId;
+	
+	@Column(name = "LIEFERANT_I_ID")
+	private Integer lieferantIId;
+	
+	@Column(name = "POSITIONLIEFERANT_I_ID_UEBERSTEUERT_MENGE1")
+	private Integer positionlieferantIIdUebersteuertMenge1;
+	public Integer getPositionlieferantIIdUebersteuertMenge1() {
+		return positionlieferantIIdUebersteuertMenge1;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge1(Integer positionlieferantIIdUebersteuertMenge1) {
+		this.positionlieferantIIdUebersteuertMenge1 = positionlieferantIIdUebersteuertMenge1;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge2() {
+		return positionlieferantIIdUebersteuertMenge2;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge2(Integer positionlieferantIIdUebersteuertMenge2) {
+		this.positionlieferantIIdUebersteuertMenge2 = positionlieferantIIdUebersteuertMenge2;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge3() {
+		return positionlieferantIIdUebersteuertMenge3;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge3(Integer positionlieferantIIdUebersteuertMenge3) {
+		this.positionlieferantIIdUebersteuertMenge3 = positionlieferantIIdUebersteuertMenge3;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge4() {
+		return positionlieferantIIdUebersteuertMenge4;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge4(Integer positionlieferantIIdUebersteuertMenge4) {
+		this.positionlieferantIIdUebersteuertMenge4 = positionlieferantIIdUebersteuertMenge4;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge5() {
+		return positionlieferantIIdUebersteuertMenge5;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge5(Integer positionlieferantIIdUebersteuertMenge5) {
+		this.positionlieferantIIdUebersteuertMenge5 = positionlieferantIIdUebersteuertMenge5;
+	}
+
+	@Column(name = "POSITIONLIEFERANT_I_ID_UEBERSTEUERT_MENGE2")
+	private Integer positionlieferantIIdUebersteuertMenge2;
+	@Column(name = "POSITIONLIEFERANT_I_ID_UEBERSTEUERT_MENGE3")
+	private Integer positionlieferantIIdUebersteuertMenge3;
+	@Column(name = "POSITIONLIEFERANT_I_ID_UEBERSTEUERT_MENGE4")
+	private Integer positionlieferantIIdUebersteuertMenge4;
+	@Column(name = "POSITIONLIEFERANT_I_ID_UEBERSTEUERT_MENGE5")
+	private Integer positionlieferantIIdUebersteuertMenge5;
+	
+	
+	@Column(name = "T_LETZTEWEBABFRAGE")
+	private Timestamp tLetztewebabfrage;
+	
+	
 	@Column(name = "C_POSITION")
 	private String cPosition;
+
+	@Column(name = "C_BUYERURL")
+	private String cBuyerurl;
+
+	@Column(name = "C_ARTIKELBEZHERSTELLER")
+	private String cArtikelbezhersteller;
+	
+	public String getCArtikelbezhersteller() {
+		return this.cArtikelbezhersteller;
+	}
+
+	public void setCArtikelbezhersteller(String cArtikelbezhersteller) {
+		this.cArtikelbezhersteller = cArtikelbezhersteller;
+	}
+
+	
+	@Column(name = "C_ARTIKELNRHERSTELLER")
+	private String cArtikelnrhersteller;
+	
+	public String getCArtikelnrhersteller() {
+		return cArtikelnrhersteller;
+	}
+
+	public void setCArtikelnrhersteller(String cArtikelnrhersteller) {
+		this.cArtikelnrhersteller = cArtikelnrhersteller;
+	}
+
+	public Integer getHerstellerIId() {
+		return herstellerIId;
+	}
+
+	public void setHerstellerIId(Integer herstellerIId) {
+		this.herstellerIId = herstellerIId;
+	}
+
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
+	}
+
+	public Timestamp getTLetztewebabfrage() {
+		return tLetztewebabfrage;
+	}
+
+	public void setTLetztewebabfrage(Timestamp tLetztewebabfrage) {
+		this.tLetztewebabfrage = tLetztewebabfrage;
+	}
+
+	public String getCBuyerurl() {
+		return cBuyerurl;
+	}
+
+	public void setCBuyerurl(String cBuyerurl) {
+		this.cBuyerurl = cBuyerurl;
+	}
 
 	@Column(name = "C_INTERNEBEMERKUNG")
 	private String cInternebemerkung;

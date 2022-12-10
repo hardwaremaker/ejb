@@ -153,14 +153,14 @@ public abstract class DocNodeJCR extends DocNodeBase {
 	}
 
 	@Override
-	protected final void applyPropertiesSub(Node node)
+	protected final void loadFromImpl(Node node)
 			throws RepositoryException {
 		belegart = node.getProperty(NODEPROPERTY_BELEGART).getString();
 		applyPropertiesJCRSub(node);
 	}
 
 	@Override
-	protected final void persistSub(Node node) throws RepositoryException {
+	protected final void persistToImpl(Node node) throws RepositoryException {
 		node.setProperty(NODEPROPERTY_BELEGART, belegart);
 		persistJCRSub(node);
 	}

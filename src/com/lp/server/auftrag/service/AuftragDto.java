@@ -34,16 +34,18 @@ package com.lp.server.auftrag.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.Timestamp;
 
+import com.lp.server.angebot.service.AngebotDto;
+import com.lp.server.angebot.service.AngebotServiceFac;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinFac;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.SystemFac;
+import com.lp.server.util.IVersionable;
 import com.lp.service.BelegVerkaufDto;
 
-public class AuftragDto extends BelegVerkaufDto implements Serializable,
-		Cloneable {
+public class AuftragDto extends BelegVerkaufDto implements Serializable, Cloneable, IVersionable {
 	/**
 	 * 
 	 */
@@ -64,14 +66,73 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	private String cBestellnummer;
 	private Timestamp dBestelldatum;
 	private String cAuftragswaehrung;
+	private Integer verrechenbarIId;
+	private Integer iAenderungsauftragVersion;
+
+	private String cKommission;
+
+	public String getCKommission() {
+		return cKommission;
+	}
+
+	public void setCKommission(String kommission) {
+		cKommission = kommission;
+	}
+
+	private Integer verrechnungsmodellIId;
+
+	public Integer getVerrechnungsmodellIId() {
+		return verrechnungsmodellIId;
+	}
+
+	public void setVerrechnungsmodellIId(Integer verrechnungsmodellIId) {
+		this.verrechnungsmodellIId = verrechnungsmodellIId;
+	}
+
+	public Integer getVerrechenbarIId() {
+		return verrechenbarIId;
+	}
+
+	public void setVerrechenbarIId(Integer verrechenbarIId) {
+		this.verrechenbarIId = verrechenbarIId;
+	}
+
+	private BigDecimal nIndexanpassung;
+
+	public BigDecimal getNIndexanpassung() {
+		return nIndexanpassung;
+	}
+
+	public void setNIndexanpassung(BigDecimal nIndexanpassung) {
+		this.nIndexanpassung = nIndexanpassung;
+	}
+
+	private java.sql.Timestamp tAuftragsfreigabe;
+
+	private Integer personalIIdAuftragsfreigabe;
+
+	public java.sql.Timestamp getTAuftragsfreigabe() {
+		return tAuftragsfreigabe;
+	}
+
+	public void setTAuftragsfreigabe(java.sql.Timestamp tAuftragsfreigabe) {
+		this.tAuftragsfreigabe = tAuftragsfreigabe;
+	}
+
+	public Integer getPersonalIIdAuftragsfreigabe() {
+		return personalIIdAuftragsfreigabe;
+	}
+
+	public void setPersonalIIdAuftragsfreigabe(Integer personalIIdAuftragsfreigabe) {
+		this.personalIIdAuftragsfreigabe = personalIIdAuftragsfreigabe;
+	}
 
 	private Integer personalIIdVerrechenbar;
 	private Timestamp tVerrechenbar;
 
-	private Timestamp tResponse ;
-	private Integer personalIIdResponse ;
-	
-	
+	private Timestamp tResponse;
+	private Integer personalIIdResponse;
+
 	public Timestamp getTVerrechenbar() {
 		return tVerrechenbar;
 	}
@@ -87,7 +148,47 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	public void setPersonalIIdVerrechenbar(Integer personalIIdVerrechenbar) {
 		this.personalIIdVerrechenbar = personalIIdVerrechenbar;
 	}
-	
+
+	private Integer bestellungIIdAndererMandant;
+
+	public Integer getBestellungIIdAndererMandant() {
+		return bestellungIIdAndererMandant;
+	}
+
+	public void setBestellungIIdAndererMandant(Integer bestellungIIdAndererMandant) {
+		this.bestellungIIdAndererMandant = bestellungIIdAndererMandant;
+	}
+
+	private Timestamp tAenderungsauftrag;
+
+	public Timestamp getTAenderungsauftrag() {
+		return tAenderungsauftrag;
+	}
+
+	public void setTAenderungsauftrag(Timestamp tAenderungsauftrag) {
+		this.tAenderungsauftrag = tAenderungsauftrag;
+	}
+
+	private BigDecimal nPraemie;
+
+	public BigDecimal getNPraemie() {
+		return nPraemie;
+	}
+
+	public void setNPraemie(BigDecimal nPraemie) {
+		this.nPraemie = nPraemie;
+	}
+
+	private Timestamp tLaufterminBis;
+
+	public Timestamp getTLaufterminBis() {
+		return tLaufterminBis;
+	}
+
+	public void setTLaufterminBis(Timestamp tLaufterminBis) {
+		this.tLaufterminBis = tLaufterminBis;
+	}
+
 	// wir zur zeit nicht verwendet
 	// private Double fSonderrabattsatz;
 	// private Double dWechselkursMandantWaehrungZuAuftragswaehrung;
@@ -99,15 +200,23 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	private Short bPoenale;
 	private Short bRoHs;
 	private Integer iLeihtage;
-	private Integer lieferartIId;
-	private Integer zahlungszielIId;
-	private Integer spediteurIId;
+
+	private Short bMindermengenzuschlag;
+
+	public Short getBMindermengenzuschlag() {
+		return this.bMindermengenzuschlag;
+	}
+
+	public void setBMindermengenzuschlag(Short bMindermengenzuschlag) {
+		this.bMindermengenzuschlag = bMindermengenzuschlag;
+	}
+
 	private Integer iGarantie;
 	private BigDecimal nGesamtauftragswertInAuftragswaehrung;
 	private BigDecimal nMaterialwertInMandantenwaehrung;
 	private BigDecimal nRohdeckungInMandantenwaehrung;
 	private BigDecimal nRohdeckungaltInMandantenwaehrung;
-	
+
 	private Timestamp tGedruckt;
 	private Integer personalIIdStorniert;
 	private Timestamp tStorniert;
@@ -127,6 +236,28 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	private String xInternerkommentar;
 	private Timestamp tLauftermin;
 	private String wiederholungsintervallCNr;
+
+	private Integer personalIIdVertreter2;
+
+	public Integer getPersonalIIdVertreter2() {
+		return personalIIdVertreter2;
+	}
+
+	public void setPersonalIIdVertreter2(Integer personalIIdVertreter2) {
+		this.personalIIdVertreter2 = personalIIdVertreter2;
+	}
+
+	private Timestamp tWunschtermin;
+	private String laenderartCnr;
+
+	public Timestamp getTWunschtermin() {
+		return tWunschtermin;
+	}
+
+	public void setTWunschtermin(Timestamp tWunschtermin) {
+		this.tWunschtermin = tWunschtermin;
+	}
+
 	private Double fErfuellungsgrad;
 
 	private Integer ansprechpartnerIIdRechnungsadresse;
@@ -135,8 +266,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		return ansprechpartnerIIdRechnungsadresse;
 	}
 
-	public void setAnsprechpartnerIIdRechnungsadresse(
-			Integer ansprechpartnerIIdRechnungsadresse) {
+	public void setAnsprechpartnerIIdRechnungsadresse(Integer ansprechpartnerIIdRechnungsadresse) {
 		this.ansprechpartnerIIdRechnungsadresse = ansprechpartnerIIdRechnungsadresse;
 	}
 
@@ -160,8 +290,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		return ansprechpartnerIIdLieferadresse;
 	}
 
-	public void setAnsprechpartnerIIdLieferadresse(
-			Integer ansprechpartnerIIdLieferadresse) {
+	public void setAnsprechpartnerIIdLieferadresse(Integer ansprechpartnerIIdLieferadresse) {
 		this.ansprechpartnerIIdLieferadresse = ansprechpartnerIIdLieferadresse;
 	}
 
@@ -331,8 +460,8 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	 * public Double getDWechselkursMandantWaehrungZuAuftragswaehrung() { return
 	 * dWechselkursMandantWaehrungZuAuftragswaehrung; }
 	 * 
-	 * public void setDWechselkursMandantWaehrungZuAuftragswaehrung(Double kurs)
-	 * { dWechselkursMandantWaehrungZuAuftragswaehrung = kurs; }
+	 * public void setDWechselkursMandantWaehrungZuAuftragswaehrung(Double kurs) {
+	 * dWechselkursMandantWaehrungZuAuftragswaehrung = kurs; }
 	 * 
 	 * public Double getFSonderrabattsatz() { return fSonderrabattsatz; }
 	 * 
@@ -403,36 +532,32 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		this.iLeihtage = iLeihtage;
 	}
 
+	private java.sql.Timestamp tFreigabe;
+
+	private Integer personalIIdFreigabe;
+
+	public java.sql.Timestamp getTFreigabe() {
+		return tFreigabe;
+	}
+
+	public void setTFreigabe(java.sql.Timestamp tFreigabe) {
+		this.tFreigabe = tFreigabe;
+	}
+
+	public Integer getPersonalIIdFreigabe() {
+		return personalIIdFreigabe;
+	}
+
+	public void setPersonalIIdFreigabe(Integer personalIIdFreigabe) {
+		this.personalIIdFreigabe = personalIIdFreigabe;
+	}
+
 	public Double getFVersteckterAufschlag() {
 		return fVersteckterAufschlag;
 	}
 
 	public void setFVersteckterAufschlag(Double fVersteckterAufschlag) {
 		this.fVersteckterAufschlag = fVersteckterAufschlag;
-	}
-
-	public Integer getLieferartIId() {
-		return lieferartIId;
-	}
-
-	public void setLieferartIId(Integer lieferartIId) {
-		this.lieferartIId = lieferartIId;
-	}
-
-	public Integer getZahlungszielIId() {
-		return zahlungszielIId;
-	}
-
-	public void setZahlungszielIId(Integer zahlungszielIId) {
-		this.zahlungszielIId = zahlungszielIId;
-	}
-
-	public Integer getSpediteurIId() {
-		return spediteurIId;
-	}
-
-	public void setSpediteurIId(Integer spediteurIId) {
-		this.spediteurIId = spediteurIId;
 	}
 
 	public Integer getIGarantie() {
@@ -447,8 +572,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		return nRohdeckungInMandantenwaehrung;
 	}
 
-	public void setNRohdeckungInMandantenwaehrung(
-			BigDecimal nRohdeckungInMandantenwaehrung) {
+	public void setNRohdeckungInMandantenwaehrung(BigDecimal nRohdeckungInMandantenwaehrung) {
 		this.nRohdeckungInMandantenwaehrung = nRohdeckungInMandantenwaehrung;
 	}
 
@@ -456,8 +580,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		return nGesamtauftragswertInAuftragswaehrung;
 	}
 
-	public void setNGesamtauftragswertInAuftragswaehrung(
-			BigDecimal nGesamtauftragswertInAuftragswaehrung) {
+	public void setNGesamtauftragswertInAuftragswaehrung(BigDecimal nGesamtauftragswertInAuftragswaehrung) {
 		this.nGesamtauftragswertInAuftragswaehrung = nGesamtauftragswertInAuftragswaehrung;
 	}
 
@@ -465,8 +588,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		return nMaterialwertInMandantenwaehrung;
 	}
 
-	public void setNMaterialwertInMandantenwaehrung(
-			BigDecimal nMaterialwertInMandantenwaehrung) {
+	public void setNMaterialwertInMandantenwaehrung(BigDecimal nMaterialwertInMandantenwaehrung) {
 		this.nMaterialwertInMandantenwaehrung = nMaterialwertInMandantenwaehrung;
 	}
 
@@ -630,8 +752,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		this.fErfuellungsgrad = fErfuellungsgrad;
 	}
 
-	public void setNRohdeckungaltInMandantenwaehrung(
-			BigDecimal nRohdeckungaltInMandantenwaehrung) {
+	public void setNRohdeckungaltInMandantenwaehrung(BigDecimal nRohdeckungaltInMandantenwaehrung) {
 		this.nRohdeckungaltInMandantenwaehrung = nRohdeckungaltInMandantenwaehrung;
 	}
 
@@ -640,8 +761,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	}
 
 	private String cLieferartort;
-	
-	
+
 	public String getCLieferartort() {
 		return cLieferartort;
 	}
@@ -649,8 +769,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	public void setCLieferartort(String cLieferartort) {
 		this.cLieferartort = cLieferartort;
 	}
-	
-	
+
 	public Timestamp getTResponse() {
 		return tResponse;
 	}
@@ -667,6 +786,14 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		this.personalIIdResponse = personalIIdResponse;
 	}
 
+	public Integer getIVersion() {
+		return iAenderungsauftragVersion;
+	}
+
+	public void setIVersion(Integer iVersion) {
+		this.iAenderungsauftragVersion = iVersion;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -681,21 +808,18 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr))) {
 			return false;
 		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr))) {
 			return false;
 		}
 		if (!(that.auftragartCNr == null ? this.auftragartCNr == null
 				: that.auftragartCNr.equals(this.auftragartCNr))) {
 			return false;
 		}
-		if (!(that.belegartCNr == null ? this.belegartCNr == null
-				: that.belegartCNr.equals(this.belegartCNr))) {
+		if (!(that.belegartCNr == null ? this.belegartCNr == null : that.belegartCNr.equals(this.belegartCNr))) {
 			return false;
 		}
 		if (!(that.kundeIIdAuftragsadresse == null ? this.kundeIIdAuftragsadresse == null
-				: that.kundeIIdAuftragsadresse
-						.equals(this.kundeIIdAuftragsadresse))) {
+				: that.kundeIIdAuftragsadresse.equals(this.kundeIIdAuftragsadresse))) {
 			return false;
 		}
 		if (!(that.ansprechpartnerIId == null ? this.ansprechpartnerIId == null
@@ -711,13 +835,11 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 			return false;
 		}
 		if (!(that.kundeIIdRechnungsadresse == null ? this.kundeIIdRechnungsadresse == null
-				: that.kundeIIdRechnungsadresse
-						.equals(this.kundeIIdRechnungsadresse))) {
+				: that.kundeIIdRechnungsadresse.equals(this.kundeIIdRechnungsadresse))) {
 			return false;
 		}
 		if (!(that.cBezProjektbezeichnung == null ? this.cBezProjektbezeichnung == null
-				: that.cBezProjektbezeichnung
-						.equals(this.cBezProjektbezeichnung))) {
+				: that.cBezProjektbezeichnung.equals(this.cBezProjektbezeichnung))) {
 			return false;
 		}
 		if (!(that.cBestellnummer == null ? this.cBestellnummer == null
@@ -737,29 +859,23 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 			return false;
 		}
 		if (!(that.bLieferterminUnverbindlich == null ? this.bLieferterminUnverbindlich == null
-				: that.bLieferterminUnverbindlich
-						.equals(this.bLieferterminUnverbindlich))) {
+				: that.bLieferterminUnverbindlich.equals(this.bLieferterminUnverbindlich))) {
 			return false;
 		}
-		if (!(that.dFinaltermin == null ? this.dFinaltermin == null
-				: that.dFinaltermin.equals(this.dFinaltermin))) {
+		if (!(that.dFinaltermin == null ? this.dFinaltermin == null : that.dFinaltermin.equals(this.dFinaltermin))) {
 			return false;
 		}
-		if (!(that.kostIId == null ? this.kostIId == null : that.kostIId
-				.equals(this.kostIId))) {
+		if (!(that.kostIId == null ? this.kostIId == null : that.kostIId.equals(this.kostIId))) {
 			return false;
 		}
 		if (!(that.bTeillieferungMoeglich == null ? this.bTeillieferungMoeglich == null
-				: that.bTeillieferungMoeglich
-						.equals(this.bTeillieferungMoeglich))) {
+				: that.bTeillieferungMoeglich.equals(this.bTeillieferungMoeglich))) {
 			return false;
 		}
-		if (!(that.bPoenale == null ? this.bPoenale == null : that.bPoenale
-				.equals(this.bPoenale))) {
+		if (!(that.bPoenale == null ? this.bPoenale == null : that.bPoenale.equals(this.bPoenale))) {
 			return false;
 		}
-		if (!(that.iLeihtage == null ? this.iLeihtage == null : that.iLeihtage
-				.equals(this.iLeihtage))) {
+		if (!(that.iLeihtage == null ? this.iLeihtage == null : that.iLeihtage.equals(this.iLeihtage))) {
 			return false;
 		}
 		if (!(that.fVersteckterAufschlag == null ? this.fVersteckterAufschlag == null
@@ -767,60 +883,48 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 			return false;
 		}
 		if (!(that.fAllgemeinerRabattsatz == null ? this.fAllgemeinerRabattsatz == null
-				: that.fAllgemeinerRabattsatz
-						.equals(this.fAllgemeinerRabattsatz))) {
+				: that.fAllgemeinerRabattsatz.equals(this.fAllgemeinerRabattsatz))) {
 			return false;
 		}
 		if (!(that.fProjektierungsRabattsatz == null ? this.fProjektierungsRabattsatz == null
-				: that.fProjektierungsRabattsatz
-						.equals(this.fProjektierungsRabattsatz))) {
+				: that.fProjektierungsRabattsatz.equals(this.fProjektierungsRabattsatz))) {
 			return false;
 		}
-		if (!(that.lieferartIId == null ? this.lieferartIId == null
-				: that.lieferartIId.equals(this.lieferartIId))) {
+		if (!(that.lieferartIId == null ? this.lieferartIId == null : that.lieferartIId.equals(this.lieferartIId))) {
 			return false;
 		}
 		if (!(that.zahlungszielIId == null ? this.zahlungszielIId == null
 				: that.zahlungszielIId.equals(this.zahlungszielIId))) {
 			return false;
 		}
-		if (!(that.spediteurIId == null ? this.spediteurIId == null
-				: that.spediteurIId.equals(this.spediteurIId))) {
+		if (!(that.spediteurIId == null ? this.spediteurIId == null : that.spediteurIId.equals(this.spediteurIId))) {
 			return false;
 		}
-		if (!(that.iGarantie == null ? this.iGarantie == null : that.iGarantie
-				.equals(this.iGarantie))) {
+		if (!(that.iGarantie == null ? this.iGarantie == null : that.iGarantie.equals(this.iGarantie))) {
 			return false;
 		}
 		if (!(that.nRohdeckungInMandantenwaehrung == null ? this.nRohdeckungInMandantenwaehrung == null
-				: that.nRohdeckungInMandantenwaehrung
-						.equals(this.nRohdeckungInMandantenwaehrung))) {
+				: that.nRohdeckungInMandantenwaehrung.equals(this.nRohdeckungInMandantenwaehrung))) {
 			return false;
 		}
 		if (!(that.nGesamtauftragswertInAuftragswaehrung == null ? this.nGesamtauftragswertInAuftragswaehrung == null
-				: that.nGesamtauftragswertInAuftragswaehrung
-						.equals(this.nGesamtauftragswertInAuftragswaehrung))) {
+				: that.nGesamtauftragswertInAuftragswaehrung.equals(this.nGesamtauftragswertInAuftragswaehrung))) {
 			return false;
 		}
 		if (!(that.nMaterialwertInMandantenwaehrung == null ? this.nMaterialwertInMandantenwaehrung == null
-				: that.nMaterialwertInMandantenwaehrung
-						.equals(this.nMaterialwertInMandantenwaehrung))) {
+				: that.nMaterialwertInMandantenwaehrung.equals(this.nMaterialwertInMandantenwaehrung))) {
 			return false;
 		}
-		if (!(that.statusCNr == null ? this.statusCNr == null
-				: that.statusCNr.equals(this.statusCNr))) {
+		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr.equals(this.statusCNr))) {
 			return false;
 		}
-		if (!(that.tBelegdatum == null ? this.tBelegdatum == null
-				: that.tBelegdatum.equals(this.tBelegdatum))) {
+		if (!(that.tBelegdatum == null ? this.tBelegdatum == null : that.tBelegdatum.equals(this.tBelegdatum))) {
 			return false;
 		}
-		if (!(that.tGedruckt == null ? this.tGedruckt == null : that.tGedruckt
-				.equals(this.tGedruckt))) {
+		if (!(that.tGedruckt == null ? this.tGedruckt == null : that.tGedruckt.equals(this.tGedruckt))) {
 			return false;
 		}
-		if (!(that.tErledigt == null ? this.tErledigt == null : that.tErledigt
-				.equals(this.tErledigt))) {
+		if (!(that.tErledigt == null ? this.tErledigt == null : that.tErledigt.equals(this.tErledigt))) {
 			return false;
 		}
 		if (!(that.personalIIdErledigt == null ? this.personalIIdErledigt == null
@@ -831,16 +935,14 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 				: that.personalIIdStorniert.equals(this.personalIIdStorniert))) {
 			return false;
 		}
-		if (!(that.tStorniert == null ? this.tStorniert == null
-				: that.tStorniert.equals(this.tStorniert))) {
+		if (!(that.tStorniert == null ? this.tStorniert == null : that.tStorniert.equals(this.tStorniert))) {
 			return false;
 		}
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
@@ -848,8 +950,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 			return false;
 		}
 
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
 		if (!(that.cKopftextUebersteuert == null ? this.cKopftextUebersteuert == null
@@ -860,17 +961,18 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 				: that.cFusstextUebersteuert.equals(this.cFusstextUebersteuert))) {
 			return false;
 		}
-		if (!(that.tLauftermin == null ? this.tLauftermin == null
-				: that.tLauftermin.equals(this.tLauftermin))) {
+		if (!(that.tLauftermin == null ? this.tLauftermin == null : that.tLauftermin.equals(this.tLauftermin))) {
 			return false;
 		}
 		if (!(that.wiederholungsintervallCNr == null ? this.wiederholungsintervallCNr == null
-				: that.wiederholungsintervallCNr
-						.equals(this.wiederholungsintervallCNr))) {
+				: that.wiederholungsintervallCNr.equals(this.wiederholungsintervallCNr))) {
 			return false;
 		}
 		if (!(that.fErfuellungsgrad == null ? this.fErfuellungsgrad == null
 				: that.fErfuellungsgrad.equals(this.fErfuellungsgrad))) {
+			return false;
+		}
+		if (!(that.getIVersion() == null ? getIVersion() == null : that.getIVersion().equals(getIVersion()))) {
 			return false;
 		}
 		return true;
@@ -892,8 +994,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		result = 37 * result + this.cBestellnummer.hashCode();
 		result = 37 * result + this.dBestelldatum.hashCode();
 		result = 37 * result + this.cAuftragswaehrung.hashCode();
-		result = 37 * result
-				+ this.fWechselkursmandantwaehrungzubelegwaehrung.hashCode();
+		result = 37 * result + this.fWechselkursmandantwaehrungzubelegwaehrung.hashCode();
 		// result = 37 * result + this.fSonderrabattsatz.hashCode();
 		result = 37 * result + this.dLiefertermin.hashCode();
 		result = 37 * result + this.bLieferterminUnverbindlich.hashCode();
@@ -909,8 +1010,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		result = 37 * result + this.zahlungszielIId.hashCode();
 		result = 37 * result + this.spediteurIId.hashCode();
 		result = 37 * result + this.iGarantie.hashCode();
-		result = 37 * result
-				+ this.nGesamtauftragswertInAuftragswaehrung.hashCode();
+		result = 37 * result + this.nGesamtauftragswertInAuftragswaehrung.hashCode();
 		result = 37 * result + this.nRohdeckungInMandantenwaehrung.hashCode();
 		result = 37 * result + this.nMaterialwertInMandantenwaehrung.hashCode();
 		result = 37 * result + this.statusCNr.hashCode();
@@ -1009,6 +1109,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		auftragDto.bLieferterminUnverbindlich = this.bLieferterminUnverbindlich;
 		auftragDto.dFinaltermin = this.dFinaltermin;
 		auftragDto.kostIId = this.kostIId;
+		auftragDto.projektIId = this.projektIId;
 		auftragDto.bTeillieferungMoeglich = this.bTeillieferungMoeglich;
 		auftragDto.bPoenale = this.bPoenale;
 		auftragDto.bRoHs = this.bRoHs;
@@ -1018,6 +1119,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		auftragDto.fAllgemeinerRabattsatz = this.fAllgemeinerRabattsatz;
 		auftragDto.fProjektierungsRabattsatz = this.fProjektierungsRabattsatz;
 		auftragDto.lieferartIId = this.lieferartIId;
+		auftragDto.cLieferartort = this.cLieferartort;
 		auftragDto.zahlungszielIId = this.zahlungszielIId;
 		auftragDto.spediteurIId = this.spediteurIId;
 		auftragDto.iGarantie = this.iGarantie;
@@ -1029,7 +1131,10 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		// angelegt
 		auftragDto.tErledigt = null;
 		auftragDto.personalIIdErledigt = null;
+		auftragDto.tAuftragsfreigabe = null;
+		auftragDto.personalIIdAuftragsfreigabe = null;
 		auftragDto.tBelegdatum = new Timestamp(System.currentTimeMillis()); // jetzt
+
 		// !
 		// Auftragswerte null
 		// tGedruckt, Anlegen, Aendern, Stornieren, Manuell erledigen null
@@ -1040,7 +1145,14 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		auftragDto.setXExternerkommentar(getXExternerkommentar());
 		auftragDto.setXInternerkommentar(getXInternerkommentar());
 		auftragDto.setBMitzusammenfassung(getBMitzusammenfassung());
+		auftragDto.setBMindermengenzuschlag(getBMindermengenzuschlag());
 		auftragDto.setLagerIIdAbbuchungslager(getLagerIIdAbbuchungslager());
+		auftragDto.setVerrechenbarIId(getVerrechenbarIId());
+		auftragDto.setVerrechnungsmodellIId(getVerrechnungsmodellIId());
+
+		// SP8608
+		auftragDto.tLauftermin = new Timestamp(System.currentTimeMillis());
+		auftragDto.wiederholungsintervallCNr = this.getWiederholungsintervallCNr();
 
 		return auftragDto;
 	}
@@ -1051,8 +1163,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		// iId, rechnungIId, cNr, angebotIId null
 		lieferscheinDto.setMandantCNr(getMandantCNr());
 		lieferscheinDto.setLieferscheinartCNr(LieferscheinFac.LSART_AUFTRAG);
-		lieferscheinDto
-				.setStatusCNr(LieferscheinFac.LSSTATUS_ANGELEGT);
+		lieferscheinDto.setStatusCNr(LieferscheinFac.LSSTATUS_ANGELEGT);
 		lieferscheinDto.setBelegartCNr(LocaleFac.BELEGART_LIEFERSCHEIN);
 		lieferscheinDto.setBVerrechenbar(new Short((short) 1));
 		lieferscheinDto.setTBelegdatum(new Timestamp(System.currentTimeMillis())); // jetzt
@@ -1065,16 +1176,14 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		}
 
 		if (getAnsprechpartnerIIdLieferadresse() != null) {
-			lieferscheinDto
-					.setAnsprechpartnerIId(getAnsprechpartnerIIdLieferadresse());
+			lieferscheinDto.setAnsprechpartnerIId(getAnsprechpartnerIIdLieferadresse());
 		}
 
-		lieferscheinDto
-				.setKundeIIdRechnungsadresse(getKundeIIdRechnungsadresse());
-		lieferscheinDto
-		.setAnsprechpartnerIIdRechnungsadresse(getAnsprechpartnerIIdRechnungsadresse());
+		lieferscheinDto.setKundeIIdRechnungsadresse(getKundeIIdRechnungsadresse());
+		lieferscheinDto.setAnsprechpartnerIIdRechnungsadresse(getAnsprechpartnerIIdRechnungsadresse());
 		lieferscheinDto.setPersonalIIdVertreter(personalIIdVertreter);
 		lieferscheinDto.setCBestellnummer(getCBestellnummer());
+		lieferscheinDto.setCKommission(getCKommission());
 		lieferscheinDto.setCBezProjektbezeichnung(getCBezProjektbezeichnung());
 		lieferscheinDto.setProjektIId(getProjektIId());
 		// lagerIID am Client setzen
@@ -1084,26 +1193,103 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		lieferscheinDto.setFVersteckterAufschlag(getFVersteckterAufschlag());
 		// MB IMS 1532 da der LS keinen Projektrabatt hat, werden fuer den LS
 		// allgemeiner Rabatt und Projektrabatt zusammengefasst
-		Double dRabattsatz = new Double(
-				100.0 - ((1.0 - (getFAllgemeinerRabattsatz().doubleValue() / 100.0))
-						* (1.0 - (getFProjektierungsrabattsatz().doubleValue() / 100.0)) * 100.0));
+		Double dRabattsatz = new Double(100.0 - ((1.0 - (getFAllgemeinerRabattsatz().doubleValue() / 100.0))
+				* (1.0 - (getFProjektierungsrabattsatz().doubleValue() / 100.0)) * 100.0));
 		// lieferscheinDto.setFAllgemeinerRabatt(getFAllgemeinerRabattsatz());
 		lieferscheinDto.setFAllgemeinerRabattsatz(dRabattsatz);
-		// nGesamtwertInLieferscheinwaehrung, nGestehungswertInMandantenwaehrung
-		// null
-		lieferscheinDto.setBMindermengenzuschlag(new Short((short) 0));
 		lieferscheinDto.setIAnzahlPakete(new Integer(0));
 		lieferscheinDto.setFGewichtLieferung(new Double(0));
 
 		lieferscheinDto.setLieferartIId(getLieferartIId());
+		lieferscheinDto.setCLieferartort(getCLieferartort());
 		lieferscheinDto.setZahlungszielIId(getZahlungszielIId());
 		lieferscheinDto.setSpediteurIId(getSpediteurIId());
 
 		lieferscheinDto.setWaehrungCNr(getCAuftragswaehrung());
+		lieferscheinDto.setLaenderartCnr(getLaenderartCnr());
 		// wechselkurs, kopftext, fusstext am Client bestimmen
 		// der Rest null
 
 		return lieferscheinDto;
 	}
 
+	public AngebotDto cloneAsAngebotDto() {
+		AngebotDto angebotDto = new AngebotDto();
+
+		// iId, rechnungIId, cNr, angebotIId null
+		angebotDto.setMandantCNr(getMandantCNr());
+		angebotDto.setStatusCNr(AngebotServiceFac.ANGEBOTSTATUS_ANGELEGT);
+		angebotDto.setArtCNr(AngebotServiceFac.ANGEBOTART_FREI);
+		angebotDto.setAngeboteinheitCNr(SystemFac.EINHEIT_WOCHE);
+		angebotDto.setILieferzeitinstunden(0);
+		angebotDto.setBelegartCNr(LocaleFac.BELEGART_ANGEBOT);
+
+		angebotDto.setTBelegdatum(new Timestamp(System.currentTimeMillis())); // jetzt
+		// !
+		angebotDto.setKundeIIdAngebotsadresse(kundeIIdAuftragsadresse);
+		angebotDto.setKundeIIdLieferadresse(kundeIIdLieferadresse);
+		angebotDto.setKundeIIdRechnungsadresse(kundeIIdRechnungsadresse);
+
+		// nun dann kann der Ansprechpartner uebernommen werden
+		angebotDto.setAnsprechpartnerIIdKunde(getAnsprechparnterIId());
+		angebotDto.setAnsprechpartnerIIdLieferadresse(getAnsprechpartnerIIdLieferadresse());
+		angebotDto.setAnsprechpartnerIIdRechnungsadresse(getAnsprechpartnerIIdRechnungsadresse());
+
+		angebotDto.setPersonalIIdVertreter(personalIIdVertreter);
+		angebotDto.setPersonalIIdVertreter2(personalIIdVertreter2);
+
+		angebotDto.setFAuftragswahrscheinlichkeit(0D);
+		angebotDto.setIGarantie(0);
+
+		angebotDto.setCBez(getCBezProjektbezeichnung());
+		angebotDto.setProjektIId(getProjektIId());
+		// lagerIID am Client setzen
+		angebotDto.setKostenstelleIId(getKostIId());
+
+		// rueckgabetermin null
+		angebotDto.setFVersteckterAufschlag(getFVersteckterAufschlag());
+		// MB IMS 1532 da der LS keinen Projektrabatt hat, werden fuer den LS
+		// allgemeiner Rabatt und Projektrabatt zusammengefasst
+		Double dRabattsatz = new Double(100.0 - ((1.0 - (getFAllgemeinerRabattsatz().doubleValue() / 100.0))
+				* (1.0 - (getFProjektierungsrabattsatz().doubleValue() / 100.0)) * 100.0));
+		// lieferscheinDto.setFAllgemeinerRabatt(getFAllgemeinerRabattsatz());
+		angebotDto.setFAllgemeinerRabattsatz(dRabattsatz);
+		// nGesamtwertInLieferscheinwaehrung, nGestehungswertInMandantenwaehrung
+		// null
+
+		angebotDto.setLieferartIId(getLieferartIId());
+		angebotDto.setZahlungszielIId(getZahlungszielIId());
+		angebotDto.setSpediteurIId(getSpediteurIId());
+
+		angebotDto.setBMindermengenzuschlag(getBMindermengenzuschlag());
+
+		angebotDto.setWaehrungCNr(getCAuftragswaehrung());
+		// wechselkurs, kopftext, fusstext am Client bestimmen
+		// der Rest null
+
+		return angebotDto;
+	}
+
+	@Override
+	public boolean hasVersion() {
+		return getIVersion() != null;
+	}
+
+	@Override
+	public Timestamp getTVersion() {
+		return getTAenderungsauftrag();
+	}
+
+	@Override
+	public void setTVersion(Timestamp tVersion) {
+		setTAenderungsauftrag(tVersion);
+	}
+
+	public String getLaenderartCnr() {
+		return laenderartCnr;
+	}
+
+	public void setLaenderartCnr(String laenderartCnr) {
+		this.laenderartCnr = laenderartCnr;
+	}
 }

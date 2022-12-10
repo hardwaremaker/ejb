@@ -34,7 +34,7 @@ package com.lp.server.personal.ejbfac;
 
 import java.math.BigDecimal;
 
-import com.lp.server.personal.ejb.ReisekostenDiaetenScript;
+import com.lp.server.personal.service.ReisekostenDto;
 import com.lp.server.personal.service.ZeiterfassungReportFac;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
@@ -46,8 +46,8 @@ public class ReisekostenScript extends LPScriptEngine {
 		super(systemFac, theClientDto) ;
 	}
 
-	public BigDecimal getValue(ReisekostenDiaetenScript reisekostenDiaetenScript, String scriptName) {
-		put("reisekostenDiaetenScript", reisekostenDiaetenScript) ;
+	public BigDecimal getValue(ReisekostenDto reisekostenDto, String scriptName) {
+		put("reisekostenDto", reisekostenDto) ;
 
 		BigDecimal d = null ;
 		try {
@@ -59,6 +59,7 @@ public class ReisekostenScript extends LPScriptEngine {
 					EJBExceptionLP.FEHLER_SCRIPT_NICHT_AUSFUEHRBAR,
 						scriptName + " " + t.getMessage());
 		}
+
 		return d ;
 	}
 

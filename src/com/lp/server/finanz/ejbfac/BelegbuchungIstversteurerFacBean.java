@@ -34,6 +34,7 @@ package com.lp.server.finanz.ejbfac;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.List;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -44,14 +45,17 @@ import javax.persistence.Query;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungzahlungDto;
+import com.lp.server.finanz.bl.FinanzValidator;
 import com.lp.server.finanz.ejb.Belegbuchung;
 import com.lp.server.finanz.ejb.Konto;
 import com.lp.server.finanz.service.BelegbuchungDto;
+import com.lp.server.finanz.service.BelegbuchungIstversteurerFac;
 import com.lp.server.finanz.service.BuchenFac;
 import com.lp.server.finanz.service.BuchungDto;
 import com.lp.server.finanz.service.BuchungdetailDto;
 import com.lp.server.finanz.service.FibuexportDto;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.finanz.service.SteuerkategorieDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.service.RechnungFac;
@@ -61,7 +65,7 @@ import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
-public class BelegbuchungIstversteurerFacBean extends BelegbuchungMischversteurerFacBean {
+public class BelegbuchungIstversteurerFacBean extends BelegbuchungMischversteurerFacBean implements BelegbuchungIstversteurerFac {
 	@PersistenceContext
 	private EntityManager em;
 
@@ -215,23 +219,18 @@ public class BelegbuchungIstversteurerFacBean extends BelegbuchungMischversteure
 		BuchungDto buchungDto = null;
 		FibuexportDto[] exportDaten = getExportDatenRechnung(eingangsrechnungDto, theClientDto);
 			
-		PartnerDto partnerDto = null;
-		Konto kreditorKonto = null;
-		try {
-			LieferantDto lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(
-								eingangsrechnungDto.getLieferantIId(), theClientDto);
-			partnerDto = getPartnerFac().partnerFindByPrimaryKey(lieferantDto.getPartnerIId(), theClientDto);
-			if (lieferantDto.getKontoIIdKreditorenkonto() == null) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_KEIN_KREDITORENKONTO_DEFINIERT,
-							"Kein Kreditorenkonto: Lieferant ID=" + lieferantDto.getIId());
-			}
-			kreditorKonto = em.find(Konto.class, lieferantDto.getKontoIIdKreditorenkonto());
-			if (kreditorKonto.getSteuerkategorieIId() == null)
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_KEINE_STEUERKATEGORIE_DEFINIERT,
-							"Keine Steuerkategorie bei Kreditorenkonto " + kreditorKonto.getCNr());
-		} catch (Exception ex3) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex3);
-		}
+		LieferantDto lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(
+				eingangsrechnungDto.getLieferantIId(), theClientDto);
+		FinanzValidator.kreditorkontoDefinition(lieferantDto);
+		Konto kreditorKonto = em.find(Konto.class, lieferantDto.getKontoIIdKreditorenkonto());
+		FinanzValidator.steuerkategorieDefinition(kreditorKonto, eingangsrechnungDto);
+		PartnerDto  partnerDto = getPartnerFac().partnerFindByPrimaryKey(lieferantDto.getPartnerIId(), theClientDto);
+//			if (Helper.isStringEmpty(kreditorKonto.getSteuerkategorieCNr())) {
+//				KontoDto kreditorDto = KontoDtoAssembler.createDto(kreditorKonto) ;
+//				throw EJBExcFactory.steuerkategorieDefinitionFehlt(eingangsrechnungDto, kreditorDto) ;
+////				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_KEINE_STEUERKATEGORIE_DEFINIERT,
+////						"Keine Steuerkategorie definiert bei Kreditorenkonto " + kreditorKonto.getCNr());				
+//			}
 		
 		buchungDto = new BuchungDto();
 		buchungDto.setCBelegnummer(eingangsrechnungDto.getCNr());
@@ -245,10 +244,17 @@ public class BelegbuchungIstversteurerFacBean extends BelegbuchungMischversteure
 
 		BelegbuchungDto belegbuchungDto = new BelegbuchungDto();
 		belegbuchungDto.setBuchungIIdZahlung(buchungIIdZahlung);
-		BuchungdetailDto[] details = null;
 
-		Integer steuerkategorieIId = kreditorKonto.getSteuerkategorieIId();
-		details = getBuchungdetailsVonExportDtos(exportDaten, steuerkategorieIId, false, Helper.short2boolean(eingangsrechnungDto.getBIgErwerb()),Helper.short2boolean(eingangsrechnungDto.getBReversecharge()), theClientDto);
+//		Integer steuerkategorieIId = kreditorKonto.getSteuerkategorieIId();
+		SteuerkategorieDto stkDto = 
+				getFinanzServiceFac().steuerkategorieFindByCNrFinanzamtIId(
+						kreditorKonto.getSteuerkategorieCNr(), 
+						eingangsrechnungDto.getReversechargeartId(), 
+						kreditorKonto.getFinanzamtIId(), theClientDto) ;
+		Integer steuerkategorieIId = stkDto.getIId() ;		
+		boolean reversecharge = isEingangsrechnungDtoReversecharge(eingangsrechnungDto) ;
+		List<BuchungdetailDto> details = getBuchungdetailsVonExportDtos(
+				exportDaten, steuerkategorieIId, null, null, false, Helper.short2boolean(eingangsrechnungDto.getBIgErwerb()), reversecharge, theClientDto);
 		details = skaliereDetails(details, eingangsrechnungDto, zahlungDto);
 		if (eingangsrechnungDto.getEingangsrechnungartCNr().equals(EingangsrechnungFac.EINGANGSRECHNUNGART_EINGANGSRECHNUNG)
 					|| eingangsrechnungDto.getEingangsrechnungartCNr().equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)) {
@@ -275,7 +281,9 @@ public class BelegbuchungIstversteurerFacBean extends BelegbuchungMischversteure
 						}
 					}
 				}
-				buchungDto = getBuchenFac().buchen(buchungDto, details, true, theClientDto);
+				BuchungdetailDto[] detailDtos = details.toArray(new BuchungdetailDto[0]) ;					
+				buchungDto = getBuchenFac().buchen(buchungDto, detailDtos, 
+						eingangsrechnungDto.getReversechargeartId(), true, theClientDto);
 				// in Tabelle buchungRechnung speichern
 				belegbuchungDto.setBuchungIId(buchungDto.getIId());
 				belegbuchungDto.setIBelegiid(eingangsrechnungDto.getIId());
@@ -291,33 +299,40 @@ public class BelegbuchungIstversteurerFacBean extends BelegbuchungMischversteure
 		}
 	}
 
-	private BuchungdetailDto[] skaliereDetails(BuchungdetailDto[] details,
+	private List<BuchungdetailDto> skaliereDetails(
+			List<BuchungdetailDto> details,
 			EingangsrechnungDto eingangsrechnungDto,
 			EingangsrechnungzahlungDto zahlungDto) {
 		BigDecimal faktor = zahlungDto.getNBetrag().divide(eingangsrechnungDto.getNBetrag(), 100, BigDecimal.ROUND_HALF_EVEN);
-		BigDecimal saldo = new BigDecimal(0);
-		BigDecimal betragMax = new BigDecimal(0);
+		BigDecimal saldo = BigDecimal.ZERO ;
+		BigDecimal betragMax = BigDecimal.ZERO ;
 		int betragMaxIndex = -1;
-		for (int i=0; i<details.length; i++) {
-			details[i].setNBetrag(Helper.rundeKaufmaennisch(details[i].getNBetrag().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
-			if (details[i].getNUst().signum() != 0)
-				details[i].setNUst(Helper.rundeKaufmaennisch(details[i].getNUst().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
-			if (details[i].getBuchungdetailartCNr().equals(BuchenFac.SollBuchung))
-				saldo = saldo.add(details[i].getNBetrag());
+		
+		for (int i=0; i<details.size(); i++) {
+			BuchungdetailDto detail = details.get(i) ;
+			detail.setNBetrag(Helper.rundeKaufmaennisch(detail.getNBetrag().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
+			if (detail.getNUst().signum() != 0)
+				detail.setNUst(Helper.rundeKaufmaennisch(detail.getNUst().multiply(faktor), FinanzFac.NACHKOMMASTELLEN));
+			if (detail.getBuchungdetailartCNr().equals(BuchenFac.SollBuchung))
+				saldo = saldo.add(detail.getNBetrag());
 			else
-				saldo = saldo.subtract(details[i].getNBetrag());
+				saldo = saldo.subtract(detail.getNBetrag());
 			if (i > 0)
-				if (details[i].getNBetrag().compareTo(betragMax)==1) {
-					betragMax = details[i].getNBetrag();
+				if (detail.getNBetrag().compareTo(betragMax)==1) {
+					betragMax = detail.getNBetrag();
 					betragMaxIndex = i;
 				}
 		}
-		if (saldo.signum() != 0)
+		if (saldo.signum() != 0) {
 			// hoechsten Betrag anpassen
-			if (details[betragMaxIndex].getBuchungdetailartCNr().equals(BuchenFac.SollBuchung))
-				details[betragMaxIndex].setNBetrag(details[betragMaxIndex].getNBetrag().subtract(saldo));
-			else
-				details[betragMaxIndex].setNBetrag(details[betragMaxIndex].getNBetrag().add(saldo));
+			BuchungdetailDto detail = details.get(betragMaxIndex) ;
+			if (detail.getBuchungdetailartCNr().equals(BuchenFac.SollBuchung)) {
+				detail.setNBetrag(detail.getNBetrag().subtract(saldo));
+			} else {
+				detail.setNBetrag(detail.getNBetrag().add(saldo));
+			}
+		}
+		
 		return details;
 	}
 

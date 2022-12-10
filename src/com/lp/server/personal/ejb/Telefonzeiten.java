@@ -74,6 +74,38 @@ public class Telefonzeiten implements Serializable {
 	@Column(name = "PERSONAL_I_ID")
 	private Integer personalIId;
 	
+	@Column(name = "C_TELEFONNR_GEWAEHLT")
+	private String cTelefonnrGewaehlt;
+	
+	public String getCTelefonnrGewaehlt() {
+		return cTelefonnrGewaehlt;
+	}
+
+	public void setCTelefonnrGewaehlt(String cTelefonnrGewaehlt) {
+		this.cTelefonnrGewaehlt = cTelefonnrGewaehlt;
+	}
+
+	@Column(name = "ANGEBOT_I_ID")
+	private Integer angebotIId;
+	public Integer getAngebotIId() {
+		return angebotIId;
+	}
+
+	public void setAngebotIId(Integer angebotIId) {
+		this.angebotIId = angebotIId;
+	}
+
+	public Integer getAuftragIId() {
+		return auftragIId;
+	}
+
+	public void setAuftragIId(Integer auftragIId) {
+		this.auftragIId = auftragIId;
+	}
+
+	@Column(name = "AUFTRAG_I_ID")
+	private Integer auftragIId;
+	
 	@Column(name = "PROJEKT_I_ID")
 	private Integer projektIId;
 	
@@ -84,18 +116,119 @@ public class Telefonzeiten implements Serializable {
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
 	}
+	
+	@Column(name = "PERSONAL_I_ID_ERLEDIGT")
+	private Integer personalIIdErledigt;
+	
+	@Column(name = "T_ERLEDIGT")
+	private Timestamp tErledigt;
+	
+	@Column(name = "F_VERRECHENBAR")
+	private Double fVerrechenbar;
+	
+	
+	@Column(name = "C_TITEL")
+	private String cTitel;
+	
+	public String getCTitel() {
+		return cTitel;
+	}
+
+	public void setCTitel(String titel) {
+		cTitel = titel;
+	}
+	
+	@Column(name = "PERSONAL_I_ID_ZUGEWIESENER")
+	private Integer personalIIdZugewiesener;
+	@Column(name = "KONTAKTART_I_ID")
+	private Integer kontaktartIId;
+	@Column(name = "T_WIEDERVORLAGE")
+	private Timestamp tWiedervorlage;
+	@Column(name = "T_WIEDERVORLAGE_ERLEDIGT")
+	private Timestamp tWiedervorlageErledigt;
+
+	public Timestamp getTWiedervorlage() {
+		return tWiedervorlage;
+	}
+
+	
+
+	public void setTWiedervorlage(Timestamp wiedervorlage) {
+		tWiedervorlage = wiedervorlage;
+	}
+
+	public void setTWiedervorlageErledigt(Timestamp wiedervorlageErledigt) {
+		tWiedervorlageErledigt = wiedervorlageErledigt;
+	}
+
+	public Timestamp getTWiedervorlageErledigt() {
+		return tWiedervorlageErledigt;
+	}
+	
+	
+	public Integer getPersonalIIdZugewiesener() {
+		return personalIIdZugewiesener;
+	}
+
+	public void setPersonalIIdZugewiesener(Integer personalIIdZugewiesener) {
+		this.personalIIdZugewiesener = personalIIdZugewiesener;
+	}
+
+	public Integer getKontaktartIId() {
+		return kontaktartIId;
+	}
+
+	public void setKontaktartIId(Integer kontaktartIId) {
+		this.kontaktartIId = kontaktartIId;
+	}
+
+	@Column(name = "F_DAUER_UEBERSTEUERT")
+	private Double fDauerUebersteuert;
+	
+	public Double getFDauerUebersteuert() {
+		return fDauerUebersteuert;
+	}
+
+	public void setFDauerUebersteuert(Double fDauerUebersteuert) {
+		this.fDauerUebersteuert = fDauerUebersteuert;
+	}
+	
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public Telefonzeiten() {
 		super();
 	}
 
-	public Telefonzeiten(Integer id, Integer personalIId, Timestamp von,
-			String kommentarext) {
+	public Telefonzeiten(Integer id, Integer personalIId, Timestamp von, Integer personalIIdZugewiesener) {
 		setIId(id);
 		setPersonalIId(personalIId);
 		setTVon(von);
-		setXKommentarext(kommentarext);
+		setPersonalIIdZugewiesener(personalIIdZugewiesener);
+		
 	}
 
 	public Integer getIId() {

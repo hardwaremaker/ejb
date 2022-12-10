@@ -38,10 +38,15 @@ import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+
+import com.lp.server.forecast.service.FclieferadresseNoka;
+import com.lp.server.system.service.ITablenames;
 
 @NamedQueries({
 		@NamedQuery(name = "LieferscheinfindByBelegdatumVonBelegdatumBis", query = "SELECT OBJECT (o) FROM Lieferschein o WHERE o.tBelegdatum>=?1 AND o.tBelegdatum<=?2"),
@@ -53,9 +58,11 @@ import javax.persistence.Table;
 		@NamedQuery(name = "LieferscheinfindByKundeIIdRechnungsadresseMandantCNr", query = "SELECT OBJECT (O) FROM Lieferschein o WHERE o.kundeIIdRechnungsadresse=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "LieferscheinfindByAnsprechpartnerIIdMandantCNr", query = "SELECT OBJECT (O) FROM Lieferschein o WHERE o.ansprechpartnerIIdKunde=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "LieferscheinfindByCNrMandantCNr", query = "SELECT OBJECT (O) FROM Lieferschein o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = "LieferscheinfindByAnsprechpartnerIIdRechnungsadresseMandantCNr", query = "SELECT OBJECT (O) FROM Lieferschein o WHERE o.ansprechpartnerIIdRechnungsadresse=?1 AND o.mandantCNr=?2") })
+		@NamedQuery(name = "LieferscheinfindByAnsprechpartnerIIdRechnungsadresseMandantCNr", query = "SELECT OBJECT (O) FROM Lieferschein o WHERE o.ansprechpartnerIIdRechnungsadresse=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = LieferscheinQuery.ByKundeIIdLieferadresseMandantCNrBelegdatum, query = "SELECT OBJECT (O) FROM Lieferschein o WHERE o.kundeIIdLieferadresse=:kundeId AND o.mandantCNr=:mandant AND o.tBelegdatum=:belegdatum"),
+		@NamedQuery(name = LieferscheinQuery.ByKundeIIdLieferadresseMandantCNrStatusCNr, query = "SELECT OBJECT (O) FROM Lieferschein o WHERE o.kundeIIdLieferadresse=:kundeId AND o.mandantCNr=:mandant AND o.lieferscheinstatusCNr=:statusCnr")})
 @Entity
-@Table(name = "LS_LIEFERSCHEIN")
+@Table(name = ITablenames.LS_LIEFERSCHEIN)
 public class Lieferschein implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -97,9 +104,6 @@ public class Lieferschein implements Serializable {
 	@Column(name = "T_RUECKGABETERMIN")
 	private Timestamp tRueckgabetermin;
 
-	@Column(name = "B_MINDERMENGENZUSCHLAG")
-	private Short bMindermengenzuschlag;
-
 	@Column(name = "I_ANZAHLPAKETE")
 	private Integer iAnzahlpakete;
 
@@ -108,6 +112,20 @@ public class Lieferschein implements Serializable {
 
 	@Column(name = "C_VERSANDNUMMER")
 	private String cVersandnummer;
+
+	@Column(name = "C_VERSANDNUMMER2")
+	private String cVersandnummer2;
+
+	@Column(name = "X_INTERNERKOMMENTAR")
+	private String xInternerkommentar;
+	
+	public String getXInternerkommentar() {
+		return xInternerkommentar;
+	}
+
+	public void setXInternerkommentar(String xInternerkommentar) {
+		this.xInternerkommentar = xInternerkommentar;
+	}
 
 	@Column(name = "X_KOPFTEXTUEBERSTEUERT")
 	private String xKopftextuebersteuert;
@@ -138,6 +156,9 @@ public class Lieferschein implements Serializable {
 
 	@Column(name = "PROJEKT_I_ID")
 	private Integer projektIId;
+
+	@Column(name = "LAENDERART_C_NR")
+	private String laenderartCnr;
 
 	public Integer getProjektIId() {
 		return projektIId;
@@ -241,6 +262,10 @@ public class Lieferschein implements Serializable {
 
 	@Column(name = "C_VERSANDTYPE")
 	private String cVersandtype;
+	
+	@Column(name = "I_KOMMISSIONIERTYP")
+	@Enumerated(EnumType.ORDINAL)
+	private FclieferadresseNoka iKommissioniertyp;
 
 	public String getCKommission() {
 		return cKommission;
@@ -286,7 +311,7 @@ public class Lieferschein implements Serializable {
 
 	@Column(name = "C_ZOLLEXPORTPAPIER")
 	private String cZollexportpapier;
-
+	
 	public String getCZollexportpapier() {
 		return cZollexportpapier;
 	}
@@ -361,7 +386,6 @@ public class Lieferschein implements Serializable {
 		setBVerrechenbar(verrechenbar);
 		setFAllgemeinerrabatt(allgemeinerrabatt);
 		setFVersteckteraufschlag(versteckteraufschlag);
-		setBMindermengenzuschlag(mindermengenzuschlag);
 		setIAnzahlpakete(anzahlpakete);
 		setFGewichtlieferung(gewichtlieferung);
 		setBelegartCNr(belegartLieferschein);
@@ -412,7 +436,6 @@ public class Lieferschein implements Serializable {
 		this.setBVerrechenbar(new Short((short) 1));
 		this.setFAllgemeinerrabatt(new Double(0));
 		this.setFVersteckteraufschlag(new Double(0));
-		this.setBMindermengenzuschlag(new Short((short) 0));
 		this.setIAnzahlpakete(new Integer(0));
 		this.setFGewichtlieferung(new Double(0));
 
@@ -528,14 +551,6 @@ public class Lieferschein implements Serializable {
 		this.tRueckgabetermin = tRueckgabetermin;
 	}
 
-	public Short getBMindermengenzuschlag() {
-		return this.bMindermengenzuschlag;
-	}
-
-	public void setBMindermengenzuschlag(Short bMindermengenzuschlag) {
-		this.bMindermengenzuschlag = bMindermengenzuschlag;
-	}
-
 	public Integer getIAnzahlpakete() {
 		return this.iAnzahlpakete;
 	}
@@ -558,6 +573,14 @@ public class Lieferschein implements Serializable {
 
 	public void setCVersandnummer(String cVersandnummer) {
 		this.cVersandnummer = cVersandnummer;
+	}
+
+	public String getCVersandnummer2() {
+		return this.cVersandnummer2;
+	}
+
+	public void setCVersandnummer2(String cVersandnummer2) {
+		this.cVersandnummer2 = cVersandnummer2;
 	}
 
 	public String getXKopftextuebersteuert() {
@@ -834,5 +857,20 @@ public class Lieferschein implements Serializable {
 	public void setPersonalIIdLieferaviso(Integer personalIIdLieferaviso) {
 		this.personalIIdLieferaviso = personalIIdLieferaviso;
 	}
-
+	
+	public void setIKommissioniertyp(FclieferadresseNoka iKommissioniertyp) {
+		this.iKommissioniertyp = iKommissioniertyp;
+	}
+	
+	public FclieferadresseNoka getIKommissioniertyp() {
+		return iKommissioniertyp;
+	}
+	
+	public void setLaenderartCnr(String laenderartCnr) {
+		this.laenderartCnr = laenderartCnr;
+	}
+	
+	public String getLaenderartCnr() {
+		return laenderartCnr;
+	}
 }

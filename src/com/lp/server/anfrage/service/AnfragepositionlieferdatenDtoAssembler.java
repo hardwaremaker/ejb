@@ -41,64 +41,39 @@ import java.util.List;
 import com.lp.server.anfrage.ejb.Anfragepositionlieferdaten;
 
 public class AnfragepositionlieferdatenDtoAssembler {
-	public static AnfragepositionlieferdatenDto createDto(
-			Anfragepositionlieferdaten anfragepositionlieferdaten) {
+	public static AnfragepositionlieferdatenDto createDto(Anfragepositionlieferdaten anfragepositionlieferdaten) {
 		AnfragepositionlieferdatenDto anfragepositionlieferdatenDto = new AnfragepositionlieferdatenDto();
 		if (anfragepositionlieferdaten != null) {
-			anfragepositionlieferdatenDto.setIId(anfragepositionlieferdaten
-					.getIId());
+			anfragepositionlieferdatenDto.setIId(anfragepositionlieferdaten.getIId());
+			anfragepositionlieferdatenDto.setAnfragepositionIId(anfragepositionlieferdaten.getAnfragepositionIId());
+			anfragepositionlieferdatenDto.setIAnlieferzeit(anfragepositionlieferdaten.getIAnlieferzeit());
+			anfragepositionlieferdatenDto.setNAnliefermenge(anfragepositionlieferdaten.getNAnliefermenge());
+			anfragepositionlieferdatenDto.setNNettogesamtpreis(anfragepositionlieferdaten.getNNettogesamtpreis());
 			anfragepositionlieferdatenDto
-					.setAnfragepositionIId(anfragepositionlieferdaten
-							.getAnfragepositionIId());
-			anfragepositionlieferdatenDto
-					.setIAnlieferzeit(anfragepositionlieferdaten
-							.getIAnlieferzeit());
-			anfragepositionlieferdatenDto
-					.setNAnliefermenge(anfragepositionlieferdaten
-							.getNAnliefermenge());
-			anfragepositionlieferdatenDto
-					.setNNettogesamtpreis(anfragepositionlieferdaten
-							.getNNettogesamtpreis());
-			anfragepositionlieferdatenDto
-					.setNNettogesamtpreisminusrabatt(anfragepositionlieferdaten
-							.getNNettogesamtpreisminusrabatt());
-			anfragepositionlieferdatenDto
-					.setBErfasst(anfragepositionlieferdaten.getBErfasst());
+					.setNNettogesamtpreisminusrabatt(anfragepositionlieferdaten.getNNettogesamtpreisminusrabatt());
+			anfragepositionlieferdatenDto.setBErfasst(anfragepositionlieferdaten.getBErfasst());
 
-			
-			anfragepositionlieferdatenDto
-			.setCArtikelnrlieferant(anfragepositionlieferdaten.getCArtikelnrlieferant());
-			anfragepositionlieferdatenDto
-			.setCBezbeilieferant(anfragepositionlieferdaten.getCBezbeilieferant());
-			anfragepositionlieferdatenDto
-			.setNMindestbestellmenge(anfragepositionlieferdaten.getNMindestbestellmenge());
-			anfragepositionlieferdatenDto
-			.setNStandardmenge(anfragepositionlieferdaten.getNStandardmenge());
-			anfragepositionlieferdatenDto
-			.setNVerpackungseinheit(anfragepositionlieferdaten.getNVerpackungseinheit());
-			anfragepositionlieferdatenDto
-			.setZertifikatartIId(anfragepositionlieferdaten.getZertifikatartIId());
+			anfragepositionlieferdatenDto.setCArtikelnrlieferant(anfragepositionlieferdaten.getCArtikelnrlieferant());
+			anfragepositionlieferdatenDto.setCBezbeilieferant(anfragepositionlieferdaten.getCBezbeilieferant());
+			anfragepositionlieferdatenDto.setNMindestbestellmenge(anfragepositionlieferdaten.getNMindestbestellmenge());
+			anfragepositionlieferdatenDto.setNStandardmenge(anfragepositionlieferdaten.getNStandardmenge());
+			anfragepositionlieferdatenDto.setNVerpackungseinheit(anfragepositionlieferdaten.getNVerpackungseinheit());
+			anfragepositionlieferdatenDto.setZertifikatartIId(anfragepositionlieferdaten.getZertifikatartIId());
+			anfragepositionlieferdatenDto.setTPreisgueltigab(anfragepositionlieferdaten.getTPreisgueltigab());
 
-
-			
-			
 		}
 		return anfragepositionlieferdatenDto;
 	}
 
-	public static AnfragepositionlieferdatenDto[] createDtos(
-			Collection<?> anfragepositionlieferdatens) {
+	public static AnfragepositionlieferdatenDto[] createDtos(Collection<?> anfragepositionlieferdatens) {
 		List<AnfragepositionlieferdatenDto> list = new ArrayList<AnfragepositionlieferdatenDto>();
 		if (anfragepositionlieferdatens != null) {
 			Iterator<?> iterator = anfragepositionlieferdatens.iterator();
 			while (iterator.hasNext()) {
-				list
-						.add(createDto((Anfragepositionlieferdaten) iterator
-								.next()));
+				list.add(createDto((Anfragepositionlieferdaten) iterator.next()));
 			}
 		}
-		AnfragepositionlieferdatenDto[] returnArray = new AnfragepositionlieferdatenDto[list
-				.size()];
+		AnfragepositionlieferdatenDto[] returnArray = new AnfragepositionlieferdatenDto[list.size()];
 		return (AnfragepositionlieferdatenDto[]) list.toArray(returnArray);
 	}
 }

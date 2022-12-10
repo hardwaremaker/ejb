@@ -35,7 +35,6 @@ package com.lp.server.system.service;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
-
 public class ZahlungszielDto implements Serializable {
 	/**
 	 * 
@@ -82,6 +81,14 @@ public class ZahlungszielDto implements Serializable {
 		this.bInzahlungsvorschlagberuecksichtigen = bInzahlungsvorschlagberuecksichtigen;
 	}
 
+	public String getBezeichnung() {
+		if(zahlungszielsprDto!=null && zahlungszielsprDto.getCBezeichnung()!=null) {
+			return zahlungszielsprDto.getCBezeichnung();
+		}else {
+			return cBez;
+		}
+	}
+	
 	public String getCBez() {
 		return cBez;
 	}
@@ -146,6 +153,16 @@ public class ZahlungszielDto implements Serializable {
 		this.bVersteckt = bVersteckt;
 	}
 
+	private Short bLastschrift;
+
+	public Short getBLastschrift() {
+		return bLastschrift;
+	}
+
+	public void setBLastschrift(Short bLastschrift) {
+		this.bLastschrift = bLastschrift;
+	}
+
 	private Short bStichtag;
 
 	private Short bStichtagMonatsletzter;
@@ -168,6 +185,18 @@ public class ZahlungszielDto implements Serializable {
 		this.bStichtagMonatsletzter = bStichtagMonatsletzter;
 	}
 
+	private BigDecimal nAnzahlungProzent;
+	
+	
+	public BigDecimal getNAnzahlungProzent() {
+		return nAnzahlungProzent;
+	}
+
+	public void setNAnzahlungProzent(BigDecimal nAnzahlungProzent) {
+		this.nAnzahlungProzent = nAnzahlungProzent;
+	}
+
+	
 	public Integer getIStichtag() {
 		return iStichtag;
 	}
@@ -184,6 +213,25 @@ public class ZahlungszielDto implements Serializable {
 		this.iFolgemonat = iFolgemonat;
 	}
 
+	private Integer iFolgemonatSkontotage1;
+	
+	public Integer getIFolgemonatSkontotage1() {
+		return iFolgemonatSkontotage1;
+	}
+
+	public void setIFolgemonatSkontotage1(Integer iFolgemonatSkontotage1) {
+		this.iFolgemonatSkontotage1 = iFolgemonatSkontotage1;
+	}
+
+	public Integer getIFolgemonatSkontotage2() {
+		return iFolgemonatSkontotage2;
+	}
+
+	public void setIFolgemonatSkontotage2(Integer iFolgemonatSkontotage2) {
+		this.iFolgemonatSkontotage2 = iFolgemonatSkontotage2;
+	}
+
+	private Integer iFolgemonatSkontotage2;
 	
 	public boolean equals(Object obj) {
 		if (this == obj) {

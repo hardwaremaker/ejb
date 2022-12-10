@@ -43,13 +43,23 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+import com.lp.server.util.IVersionable;
+
 @NamedQueries({
 		@NamedQuery(name = "AngebotfindByKundeIIdAngebotsadresseMandantCNr", query = "SELECT OBJECT (O) FROM Angebot o WHERE o.kundeIIdAngebotsadresse=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "AngebotfindByAnsprechpartnerIIdKundeMandantCNr", query = "SELECT OBJECT (O) FROM Angebot o WHERE o.ansprechpartnerIIdKunde=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "AngebotfindByKundeIIdLieferadresseMandantCNr", query = "SELECT OBJECT (O) FROM Angebot o WHERE o.kundeIIdLieferadresse=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "AngebotfindByProjektIId", query = "SELECT OBJECT (O) FROM Angebot o WHERE o.projektIId=?1"),
+		@NamedQuery(name = "AngebotfindByKundeIIdRechnungsadresseMandantCNr", query = "SELECT OBJECT (O) FROM Angebot o WHERE o.kundeIIdRechnungsadresse=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "AngebotfindByAnsprechpartnerIIdRechnungsadresseMandantCNr", query = "SELECT OBJECT (O) FROM Angebot o WHERE o.ansprechpartnerIIdRechnungsadresse=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "AngebotfindByAnsprechpartnerIIdLieferadresseMandantCNr", query = "SELECT OBJECT (O) FROM Angebot o WHERE o.ansprechpartnerIIdLieferadresse=?1 AND o.mandantCNr=?2"),
+
+
 		@NamedQuery(name = Angebot.QueryFindByCnrMandantCnr, query = "SELECT OBJECT (O) FROM Angebot o WHERE o.cNr = :cnr AND o.mandantCNr= :mandant")})
 @Entity
-@Table(name = "ANGB_ANGEBOT")
-public class Angebot implements Serializable {
+@Table(name = ITablenames.ANGB_ANGEBOT)
+public class Angebot implements Serializable, IVersionable {
 	public final static String QueryFindByCnrMandantCnr = "AngebotfindByCnrMandantCNr" ;
 	
 	@Id
@@ -100,7 +110,39 @@ public class Angebot implements Serializable {
 
 	@Column(name = "I_GARANTIE")
 	private Integer iGarantie;
+	
+	@Column(name = "C_KOMMISSION")
+	private String cKommission;
+	
+	public String getCKommission() {
+		return cKommission;
+	}
 
+	public void setCKommission(String kommission) {
+		cKommission = kommission;
+	}
+	
+	@Column(name = "AKQUISESTATUS_I_ID")
+	private Integer akquisestatusIId;
+
+	public Integer getAkquisestatusIId() {
+		return akquisestatusIId;
+	}
+
+	public void setAkquisestatusIId(Integer akquisestatusIId) {
+		this.akquisestatusIId = akquisestatusIId;
+	}
+
+	@Column(name = "B_MINDERMENGENZUSCHLAG")
+	private Short bMindermengenzuschlag;
+	public Short getBMindermengenzuschlag() {
+		return this.bMindermengenzuschlag;
+	}
+
+	public void setBMindermengenzuschlag(Short bMindermengenzuschlag) {
+		this.bMindermengenzuschlag = bMindermengenzuschlag;
+	}
+	
 	@Column(name = "N_GESAMTANGEBOTSWERTINANGEBOTSWAEHRUNG")
 	private BigDecimal nGesamtangebotswertinangebotswaehrung;
 
@@ -221,6 +263,49 @@ public class Angebot implements Serializable {
 	@Column(name = "KUNDE_I_ID_ANGEBOTSADRESSE")
 	private Integer kundeIIdAngebotsadresse;
 
+	@Column(name = "KUNDE_I_ID_RECHNUNGSADRESSE")
+	private Integer kundeIIdRechnungsadresse;
+
+	public Integer getKundeIIdRechnungsadresse() {
+		return kundeIIdRechnungsadresse;
+	}
+
+	public void setKundeIIdRechnungsadresse(Integer kundeIIdRechnungsadresse) {
+		this.kundeIIdRechnungsadresse = kundeIIdRechnungsadresse;
+	}
+
+	public Integer getKundeIIdLieferadresse() {
+		return kundeIIdLieferadresse;
+	}
+
+	public void setKundeIIdLieferadresse(Integer kundeIIdLieferadresse) {
+		this.kundeIIdLieferadresse = kundeIIdLieferadresse;
+	}
+
+	public Integer getAnsprechpartnerIIdRechnungsadresse() {
+		return ansprechpartnerIIdRechnungsadresse;
+	}
+
+	public void setAnsprechpartnerIIdRechnungsadresse(Integer ansprechpartnerIIdRechnungsadresse) {
+		this.ansprechpartnerIIdRechnungsadresse = ansprechpartnerIIdRechnungsadresse;
+	}
+
+	public Integer getAnsprechpartnerIIdLieferadresse() {
+		return ansprechpartnerIIdLieferadresse;
+	}
+
+	public void setAnsprechpartnerIIdLieferadresse(Integer ansprechpartnerIIdLieferadresse) {
+		this.ansprechpartnerIIdLieferadresse = ansprechpartnerIIdLieferadresse;
+	}
+
+	@Column(name = "KUNDE_I_ID_LIEFERADRESSE")
+	private Integer kundeIIdLieferadresse;
+
+	@Column(name = "ANSPRECHPARTNER_I_ID_RECHNUNGSADRESSE")
+	private Integer ansprechpartnerIIdRechnungsadresse;
+	@Column(name = "ANSPRECHPARTNER_I_ID_LIEFERADRESSE")
+	private Integer ansprechpartnerIIdLieferadresse;
+	
 	@Column(name = "PERSONAL_I_ID_STORNIERT")
 	private Integer personalIIdStorniert;
 
@@ -232,6 +317,17 @@ public class Angebot implements Serializable {
 
 	@Column(name = "PERSONAL_I_ID_VERTRETER")
 	private Integer personalIIdVertreter;
+
+	@Column(name = "PERSONAL_I_ID_VERTRETER2")
+	private Integer personalIIdVertreter2;
+
+	public Integer getPersonalIIdVertreter2() {
+		return personalIIdVertreter2;
+	}
+
+	public void setPersonalIIdVertreter2(Integer personalIIdVertreter2) {
+		this.personalIIdVertreter2 = personalIIdVertreter2;
+	}
 
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
@@ -252,13 +348,19 @@ public class Angebot implements Serializable {
 
 	@Column(name = "C_KUNDENANFRAGE")
 	private String cKundenanfrage;
+	
+	@Column(name = "T_AENDERUNGSANGEBOT")
+	private Timestamp tAenderungsangebot;
+	
+	@Column(name = "I_AENDERUNGSANGEBOT_VERSION")
+	private Integer iAenderungsangebotVersion;
 
 	private static final long serialVersionUID = 1L;
 
 	public Angebot(Integer iId, String cNr, String mandantCNr, String artCNr,
 			String statusCNr, String belegartCNr, Timestamp tBelegdatum,
 			Timestamp tAnfragedatum, Timestamp tAngebotsgueltigkeitbis,
-			Integer kundeIIdAngebotsadresse, Integer personalIIdVertreter,
+			Integer kundeIIdAngebotsadresse, Integer kundeIIdRechnungsadresse, Integer kundeIIdLieferadresse, Integer personalIIdVertreter,
 			String waehrungCNrAngebotswaehrung,
 			Double fWechselkursmandantwaehrungzuangebotswaehrung,
 			String angeboteinheitCNr, Integer kostenstelleIId,
@@ -267,7 +369,7 @@ public class Angebot implements Serializable {
 			Double fProjektierungsrabattsatz, Integer lieferartIId,
 			Integer zahlungszielIId, Integer spediteurIId, Integer iGarantie,
 			Integer personalIIdAnlegen, Integer personalIIdAendern,
-			Short bMitzusammenfassung) {
+			Short bMitzusammenfassung,Short bMindermengenzuschlag) {
 
 		Timestamp t = new Timestamp(System.currentTimeMillis());
 		this.setTAnlegen(t);
@@ -282,6 +384,8 @@ public class Angebot implements Serializable {
 		setTAnfragedatum(tAnfragedatum);
 		setTAngebotsgueltigkeitbis(tAngebotsgueltigkeitbis);
 		setKundeIIdAngebotsadresse(kundeIIdAngebotsadresse);
+		setKundeIIdLieferadresse(kundeIIdLieferadresse);
+		setKundeIIdRechnungsadresse(kundeIIdRechnungsadresse);
 		setPersonalIIdVertreter(personalIIdVertreter);
 		setWaehrungCNrAngebotswaehrung(waehrungCNrAngebotswaehrung);
 		setFWechselkursmandantwaehrungzuangebotswaehrung(fWechselkursmandantwaehrungzuangebotswaehrung);
@@ -299,6 +403,7 @@ public class Angebot implements Serializable {
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
 		setBMitzusammenfassung(bMitzusammenfassung);
+		setBMindermengenzuschlag(bMindermengenzuschlag);
 	}
 
 	public Angebot() {
@@ -693,4 +798,34 @@ public class Angebot implements Serializable {
 		return cVersandtype;
 	}
 
+	public Timestamp getTAenderungsangebot() {
+		return tAenderungsangebot;
+	}
+	
+	public void setTAenderungsangebot(Timestamp tAenderungsangebot) {
+		this.tAenderungsangebot = tAenderungsangebot;
+	}
+	
+	public Integer getIVersion() {
+		return iAenderungsangebotVersion;
+	}
+	
+	public void setIVersion(Integer iVersion) {
+		this.iAenderungsangebotVersion = iVersion;
+	}
+
+	@Override
+	public boolean hasVersion() {
+		return getIVersion() != null;
+	}
+
+	@Override
+	public Timestamp getTVersion() {
+		return getTAenderungsangebot();
+	}
+
+	@Override
+	public void setTVersion(Timestamp tVersion) {
+		setTAenderungsangebot(tVersion);
+	}
 }

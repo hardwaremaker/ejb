@@ -41,12 +41,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries( {
-		@NamedQuery(name = "ZusatzstatusfindByMandantCNrCBez", query = "SELECT OBJECT(o) FROM Zusatzstatus o WHERE o.mandantCNr=?1 AND o.cBez=?2"),
+		@NamedQuery(name = ZusatzstatusQuery.ByMandantCNrCBez, query = "SELECT OBJECT(o) FROM Zusatzstatus o WHERE o.mandantCNr=?1 AND o.cBez=?2"),
 		@NamedQuery(name = "ZusatzstatusfindByMandantCNr", query = "SELECT OBJECT(o) FROM Zusatzstatus o WHERE o.mandantCNr=?1 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "ZusatzstatusejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Zusatzstatus o WHERE o.mandantCNr = ?1") })
 @Entity
-@Table(name = "FERT_ZUSATZSTATUS")
+@Table(name = ITablenames.FERT_ZUSATZSTATUS)
 public class Zusatzstatus implements Serializable {
 	@Id
 	@Column(name = "I_ID")

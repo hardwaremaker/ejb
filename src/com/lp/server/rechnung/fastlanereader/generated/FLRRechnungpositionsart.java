@@ -37,6 +37,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 
+import com.lp.server.system.fastlanereader.generated.FLRPositionsartspr;
+
 /** @author Hibernate CodeGenerator */
 public class FLRRechnungpositionsart implements Serializable {
 	
@@ -53,11 +55,11 @@ public class FLRRechnungpositionsart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> rechnungpositionsart_positionsart_set;
+	private Set<FLRPositionsartspr> rechnungpositionsart_positionsart_set;
 
 	/** full constructor */
 	public FLRRechnungpositionsart(String positionsart_c_nr, Integer i_sort,
-			Set<?> rechnungpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> rechnungpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.i_sort = i_sort;
 		this.rechnungpositionsart_positionsart_set = rechnungpositionsart_positionsart_set;
@@ -69,7 +71,7 @@ public class FLRRechnungpositionsart implements Serializable {
 
 	/** minimal constructor */
 	public FLRRechnungpositionsart(String positionsart_c_nr,
-			Set<?> rechnungpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> rechnungpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.rechnungpositionsart_positionsart_set = rechnungpositionsart_positionsart_set;
 	}
@@ -90,12 +92,12 @@ public class FLRRechnungpositionsart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getRechnungpositionsart_positionsart_set() {
+	public Set<FLRPositionsartspr> getRechnungpositionsart_positionsart_set() {
 		return this.rechnungpositionsart_positionsart_set;
 	}
 
 	public void setRechnungpositionsart_positionsart_set(
-			Set<?> rechnungpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> rechnungpositionsart_positionsart_set) {
 		this.rechnungpositionsart_positionsart_set = rechnungpositionsart_positionsart_set;
 	}
 

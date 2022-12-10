@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchungDetail;
+import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
 import com.lp.server.finanz.service.BuchenFac;
 import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.finanz.service.IBuchungsjournalExportFormatter;
@@ -71,7 +72,7 @@ public class BuchungsjournalExportHVRawFormatter implements
 	@Override
 	public List<String> getExportLines() {
 		List<String> output = new ArrayList<String>();
-		output.add("Datum\tBuchung\tBelegnummer\tBuchungsart\tKonto\tKontonamen\tKontotyp\tSoll\tHaben\tStorniert");
+		output.add("Datum\tBuchung\tBelegnummer\tBuchungsart\tKonto\tKontonamen\tKontotyp\tSoll\tHaben\tStorniert\tGegenkonto\tGegenkontoname");
 		if(!mitStornierte)
 			output.add("ACHTUNG: Ohne Stornobuchungen\t\t\t\t\t\t\t\t\t");
 		SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
@@ -83,7 +84,8 @@ public class BuchungsjournalExportHVRawFormatter implements
 			boolean haben = detail.getBuchungdetailart_c_nr().equals(BuchenFac.HabenBuchung);
 			String buchungsart = buchungsartKz.get(detail.getFlrbuchung().getBuchungsart_c_nr());
 			if(buchungsart == null) throw new EJBExceptionLP(new Exception("kein Kurzzeichen fuer Buchungsart "+ detail.getFlrbuchung().getBuchungsart_c_nr()));
-			output.add(String.format("%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
+			FLRFinanzKonto gegenkonto = detail.getFlrgegenkonto();
+			output.add(String.format("%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
 					dateFormat.format(detail.getFlrbuchung().getD_buchungsdatum()),
 					detail.getBuchung_i_id(),
 					detail.getFlrbuchung().getC_belegnummer(),
@@ -93,10 +95,11 @@ public class BuchungsjournalExportHVRawFormatter implements
 					detail.getFlrkonto().getKontotyp_c_nr(),
 					haben?"":decimalFormat.format(detail.getN_betrag()),
 					haben?decimalFormat.format(detail.getN_betrag()):"",
-					detail.getFlrbuchung().getT_storniert() == null ? "0":"1"
+					detail.getFlrbuchung().getT_storniert() == null ? "0":"1",
+					gegenkonto != null ? gegenkonto.getC_nr() : "",
+					gegenkonto != null ? gegenkonto.getC_bez() : ""
 					));
 		}
 		return output;
 	}
-
 }

@@ -43,11 +43,13 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.util.IBelegVerkaufEntity;
 import com.lp.server.util.IISort;
 import com.lp.server.util.IPositionIIdArtikelset;
 import com.lp.server.util.IZwsPosition;
 
-@NamedQueries( {
+@NamedQueries({
 		@NamedQuery(name = "RechnungPositionfindByRechnungIId", query = "SELECT OBJECT(o) FROM Rechnungposition o WHERE o.rechnungIId=?1 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "RechnungPositionfindByLieferscheinIId", query = "SELECT OBJECT(o) FROM Rechnungposition o WHERE o.lieferscheinIId=?1"),
 		@NamedQuery(name = "RechnungPositionfindByArtikelIId", query = "SELECT OBJECT(o) FROM Rechnungposition o WHERE o.artikelIId=?1"),
@@ -57,18 +59,23 @@ import com.lp.server.util.IZwsPosition;
 		@NamedQuery(name = "RechnungpositionfindByPositionartCNr", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.positionsartCNr=?1 AND o.nMenge IS NOT NULL"),
 		@NamedQuery(name = "RechnungpositionfindByRechnungIIdPositionsartCNr", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.rechnungIId=?1 AND o.positionsartCNr=?2 ORDER BY o.iSort"),
 		@NamedQuery(name = "RechnungPositionejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Rechnungposition AS o WHERE o.rechnungIId = ?1"),
-		@NamedQuery(name = "RechnungPositionfindRechnungIIdISort", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.rechnungIId=?1 AND o.iSort=?2") ,
+		@NamedQuery(name = "RechnungPositionfindRechnungIIdISort", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.rechnungIId=?1 AND o.iSort=?2"),
 		@NamedQuery(name = "RechnungPositionfindByPositionIId", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.positionIId=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0"),
+		@NamedQuery(name = "RechnungPositionfindByPositionIIdZugehoerig", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.positionIIdZugehoerig=?1 AND o.nMenge IS NOT NULL ORDER BY o.iSort"),
 		@NamedQuery(name = "RechnungPositionfindByPositionIIdArtikelset", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.positionIIdArtikelset=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "getWertRechnungpositionartPosition", query = "SELECT sum(o.nMenge*o.nNettoeinzelpreisplusaufschlag) FROM Rechnungposition o WHERE o.positionIId=?1 AND o.positionsartCNr IN (?2,?3)"),
 		@NamedQuery(name = "RechnungPositionfindPositionIIdISort", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.positionIId=?1 AND o.iSort=?2"),
-		@NamedQuery(name = Rechnungposition.QueryFindIZwsByVonBisIId, query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.zwsVonPosition= :iid OR o.zwsBisPosition= :iid")  })
+		@NamedQuery(name = Rechnungposition.QueryFindIZwsByVonBisIId, query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.zwsVonPosition= :iid OR o.zwsBisPosition= :iid"),
+		@NamedQuery(name = RechnungpositionQuery.ByRechnungIIdLieferscheinpositionen, query = "SELECT OBJECT(o) FROM Rechnungposition o WHERE o.rechnungIId= :iid AND o.positionsartCNr = '"
+				+ RechnungFac.POSITIONSART_RECHNUNG_LIEFERSCHEIN
+				+ "' ORDER BY o.iSort ASC") })
 @Entity
 @Table(name = "RECH_RECHNUNGPOSITION")
-public class Rechnungposition implements Serializable, IISort, IPositionIIdArtikelset, IZwsPosition {
-	
-	public final static String QueryFindIZwsByVonBisIId = "RechnungpositionFindIZwsByVonBisIId" ;
-	
+public class Rechnungposition implements Serializable, IISort,
+		IPositionIIdArtikelset, IZwsPosition, IBelegVerkaufEntity {
+
+	public final static String QueryFindIZwsByVonBisIId = "RechnungpositionFindIZwsByVonBisIId";
+
 	private static final long serialVersionUID = -4927863990321643083L;
 
 	@Id
@@ -161,22 +168,65 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
-	
+
 	@Column(name = "B_NETTOPREISUEBERSTEUERT")
 	private Short bNettopreisuebersteuert;
-	
+
 	@Column(name = "KOSTENTRAEGER_I_ID")
 	private Integer kostentraegerIId;
-	
+
 	@Column(name = "ZWSVONPOSITION_I_ID")
-	private Integer zwsVonPosition ;
+	private Integer zwsVonPosition;
 
 	@Column(name = "ZWSBISPOSITION_I_ID")
-	private Integer zwsBisPosition ;
+	private Integer zwsBisPosition;
+
+	@Column(name = "N_DIM_MENGE")
+	private BigDecimal nDimMenge;
+	public BigDecimal getNDimMenge() {
+		return nDimMenge;
+	}
+
+	public void setNDimMenge(BigDecimal nDimMenge) {
+		this.nDimMenge = nDimMenge;
+	}
+
+	public BigDecimal getNDimHoehe() {
+		return nDimHoehe;
+	}
+
+	public void setNDimHoehe(BigDecimal nDimHoehe) {
+		this.nDimHoehe = nDimHoehe;
+	}
+
+	public BigDecimal getNDimBreite() {
+		return nDimBreite;
+	}
+
+	public void setNDimBreite(BigDecimal nDimBreite) {
+		this.nDimBreite = nDimBreite;
+	}
+
+	public BigDecimal getNDimTiefe() {
+		return nDimTiefe;
+	}
+
+	public void setNDimTiefe(BigDecimal nDimTiefe) {
+		this.nDimTiefe = nDimTiefe;
+	}
+
+	@Column(name = "N_DIM_HOEHE")
+	private BigDecimal nDimHoehe;
+
+	@Column(name = "N_DIM_BREITE")
+	private BigDecimal nDimBreite;
+
+	@Column(name = "N_DIM_TIEFE")
+	private BigDecimal nDimTiefe;
 	
 	@Column(name = "C_LVPOSITION")
 	private String cLvposition;
-	
+
 	public String getCLvposition() {
 		return cLvposition;
 	}
@@ -184,10 +234,10 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 	public void setCLvposition(String cLvposition) {
 		this.cLvposition = cLvposition;
 	}
-	
+
 	@Column(name = "N_MATERIALZUSCHLAG")
 	private BigDecimal nMaterialzuschlag;
-	
+
 	public BigDecimal getNMaterialzuschlag() {
 		return nMaterialzuschlag;
 	}
@@ -195,10 +245,9 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 	public void setNMaterialzuschlag(BigDecimal materialzuschlag) {
 		nMaterialzuschlag = materialzuschlag;
 	}
-	
+
 	@Column(name = "T_MATERIALZUSCHLAG_DATUM")
-	private Timestamp tMaterialzuschlagDatum ;
-	
+	private Timestamp tMaterialzuschlagDatum;
 
 	public Timestamp getTMaterialzuschlagDatum() {
 		return tMaterialzuschlagDatum;
@@ -209,9 +258,8 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 	}
 
 	@Column(name = "N_MATERIALZUSCHLAG_KURS")
-	private BigDecimal nMaterialzuschlagKurs ;
+	private BigDecimal nMaterialzuschlagKurs;
 
-	
 	public BigDecimal getNMaterialzuschlagKurs() {
 		return nMaterialzuschlagKurs;
 	}
@@ -219,13 +267,13 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 	public void setNMaterialzuschlagKurs(BigDecimal nMaterialzuschlagKurs) {
 		this.nMaterialzuschlagKurs = nMaterialzuschlagKurs;
 	}
-	@Column(name = "N_ZWSNETTOSUMME") 
-	private BigDecimal zwsNettoSumme ;
-	
+
+	@Column(name = "N_ZWSNETTOSUMME")
+	private BigDecimal zwsNettoSumme;
+
 	@Column(name = "B_ZWSPOSITIONSPREISZEIGEN")
-	private Short bZwsPositionspreisZeigen ;
-	
-	
+	private Short bZwsPositionspreisZeigen;
+
 	public Integer getKostentraegerIId() {
 		return kostentraegerIId;
 	}
@@ -233,6 +281,7 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 	public void setKostentraegerIId(Integer kostentraegerIId) {
 		this.kostentraegerIId = kostentraegerIId;
 	}
+
 	public Integer getVerleihIId() {
 		return verleihIId;
 	}
@@ -243,7 +292,7 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 
 	@Column(name = "VERLEIH_I_ID")
 	private Integer verleihIId;
-	
+
 	@Column(name = "POSITION_I_ID_ARTIKELSET")
 	private Integer positionIIdArtikelset;
 
@@ -255,21 +304,31 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 		this.positionIIdArtikelset = positionIIdArtikelset;
 	}
 
-	
+	@Column(name = "POSITION_I_ID_ZUGEHOERIG")
+	private Integer positionIIdZugehoerig;
+
+	public Integer getPositionIIdZugehoerig() {
+		return positionIIdZugehoerig;
+	}
+
+	public void setPositionIIdZugehoerig(Integer positionIIdZugehoerig) {
+		this.positionIIdZugehoerig = positionIIdZugehoerig;
+	}
+
 	public Rechnungposition() {
 		super();
 	}
 
 	public Rechnungposition(Integer id, Integer rechnungIId, Integer sort,
 			Short drucken, Short rabattsatzuebersteuert,
-			Short mwstsatzuebersteuert,Short bNettopreisuebersteuert) {
+			Short mwstsatzuebersteuert, Short bNettopreisuebersteuert) {
 		setIId(id);
 		setRechnungIId(rechnungIId);
 		setISort(sort);
 		setBDrucken(drucken);
 		setBRabattsatzuebersteuert(rabattsatzuebersteuert);
 		setBMwstsatzuebersteuert(mwstsatzuebersteuert);
-		setBNettopreisuebersteuert(bNettopreisuebersteuert); 
+		setBNettopreisuebersteuert(bNettopreisuebersteuert);
 	}
 
 	public Integer getIId() {
@@ -514,7 +573,7 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 	public void setArtikelIId(Integer artikelIId) {
 		this.artikelIId = artikelIId;
 	}
-	
+
 	public Short getBNettopreisuebersteuert() {
 		return this.bNettopreisuebersteuert;
 	}
@@ -553,5 +612,52 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 
 	public void setBZwsPositionspreisZeigen(Short bZwsPositionpreisZeigen) {
 		this.bZwsPositionspreisZeigen = bZwsPositionpreisZeigen;
+	}
+
+	@Override
+	public BigDecimal getNNettogesamtpreisplusversteckteraufschlagminusrabatte() {
+		return getNNettoeinzelpreisplusaufschlagminusrabatt();
+	}
+
+	@Override
+	public void setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
+			BigDecimal nNettogesamtpreisplusversteckteraufschlagminusrabatte) {
+		setNNettoeinzelpreisplusaufschlagminusrabatt(nNettogesamtpreisplusversteckteraufschlagminusrabatte);
+	}
+
+	@Override
+	public void setNNettogesamtpreisplusversteckteraufschlag(BigDecimal nettogesamt) {
+		setNNettoeinzelpreisplusaufschlag(nettogesamt);
+	}
+
+	@Override
+	public void setNMwstbetrag(BigDecimal mwstbetrag) {
+	}
+
+	@Override
+	public void setNRabattbetrag(BigDecimal rabattbetrag) {
+	}
+
+	
+	@Override
+	public BigDecimal getNNettogesamtpreisplusversteckteraufschlag() {
+		return getNNettoeinzelpreisplusaufschlag();
+	}
+
+	@Override
+	public void setNBruttogesamtpreis(BigDecimal bruttogesamt) {
+	}
+
+	@Override
+	public BigDecimal getNBruttogesamtpreis() {
+		return BigDecimal.ZERO;
+	}
+
+	@Override
+	public BigDecimal getNNettogesamtpreis() {
+		return getNNettoeinzelpreis();
+	}
+	@Override
+	public void setNNettogesamtpreis(BigDecimal nettoGesamt) {
 	}
 }

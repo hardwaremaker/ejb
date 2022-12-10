@@ -43,14 +43,19 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
 import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellposition;
 import com.lp.server.bestellung.service.BestellpositionDto;
 import com.lp.server.bestellung.service.BestellpositionFac;
 import com.lp.server.bestellung.service.BestellungDto;
+import com.lp.server.bestellung.service.BestellungFac;
+import com.lp.server.bestellung.service.BestellungServiceFac;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeBestPosition;
 import com.lp.server.system.jcr.service.docnode.DocPath;
@@ -100,8 +105,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 	 * gets the page of data for the specified row using the current
 	 * queryParameters.
 	 * 
-	 * @param rowIndex
-	 *            the index of the row that should be contained in the page.
+	 * @param rowIndex the index of the row that should be contained in the page.
 	 * @return the data page for the specified row.
 	 * @throws EJBExceptionLP
 	 */
@@ -119,8 +123,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -133,138 +136,137 @@ public class Bestellpositionhandler extends UseCaseHandler {
 			int col = 0;
 
 			// darf Preise sehen.
-			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
-					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF, theClientDto);
+			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF,
+					theClientDto);
 
-			int iNachkommastellenMenge = getMandantFac()
-					.getNachkommastellenMenge(mandantCNr);
-			int iNachkommastellenPreis = getMandantFac()
-					.getNachkommastellenPreisEK(mandantCNr);
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisEK(mandantCNr);
 
 			BestellungDto bestDto = null;
 
 			while (resultListIterator.hasNext()) {
-				FLRBestellposition position = (FLRBestellposition) resultListIterator
-						.next();
+				Object[] o = (Object[]) resultListIterator.next();
+				FLRBestellposition position = (FLRBestellposition) o[0];
 
-				rows[row][col++] = position.getI_id();
-				rows[row][col++] = getBestellpositionFac()
+				Object[] rowToAddCandidate = new Object[colCount];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")] = position.getI_id();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.nr")] = getBestellpositionFac()
 						.getPositionNummerReadOnly(position.getI_id());
-				rows[row][col++] = getUIObjectBigDecimalNachkommastellen(
-						position.getN_menge(), iNachkommastellenMenge);
-				if (position.getEinheit_c_nr() != null) {
-					rows[row][col++] = position.getEinheit_c_nr().trim();
-				} else {
-					rows[row][col++] = position.getEinheit_c_nr();
-				}
-				String sIdentnummer = "";
+				rowToAddCandidate[getTableColumnInformation()
+						.getViewIndex("bes.menge")] = getUIObjectBigDecimalNachkommastellen(position.getN_menge(),
+								iNachkommastellenMenge);
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"bes.einheit")] = position.getEinheit_c_nr() == null ? "" : position.getEinheit_c_nr().trim();
+
 				if (position.getFlrartikel() != null) {
-					sIdentnummer = position.getFlrartikel().getC_nr();
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.ident")] = position.getFlrartikel()
+							.getC_nr();
+					if (bReferenznummerInPositionen) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.referenznummer")] = position
+								.getFlrartikel().getC_referenznr();
+
+					}
+
 				}
-				rows[row][col++] = sIdentnummer;
+
+				
+
 				// in der Spalte Bezeichnung koennen verschiedene Dinge stehen
 				String sBezeichnung = null;
 
-				if (position.getBestellpositionart_c_nr().equals(
-						LocaleFac.POSITIONSART_TEXTEINGABE)) {
-					if (position.getC_textinhalt() != null
-							&& position.getC_textinhalt().length() > 0) {
-						sBezeichnung = Helper.strippHTML(position
-								.getC_textinhalt());
+				if (position.getBestellpositionart_c_nr().equals(LocaleFac.POSITIONSART_TEXTEINGABE)) {
+					if (position.getC_textinhalt() != null && position.getC_textinhalt().length() > 0) {
+						sBezeichnung = Helper.strippHTML(position.getC_textinhalt());
 					}
-				} else if (position.getBestellpositionart_c_nr().equals(
-						LocaleFac.POSITIONSART_SEITENUMBRUCH)) {
-					sBezeichnung = "["
-							+ getTextRespectUISpr("lp.seitenumbruch",
-									mandantCNr, locUI) + "]";
-				} else if (position.getBestellpositionart_c_nr().equals(
-						LocaleFac.POSITIONSART_TEXTBAUSTEIN)) {
+				} else if (position.getBestellpositionart_c_nr().equals(LocaleFac.POSITIONSART_SEITENUMBRUCH)) {
+					sBezeichnung = "[" + getTextRespectUISpr("lp.seitenumbruch", mandantCNr, locUI) + "]";
+				} else if (position.getBestellpositionart_c_nr().equals(LocaleFac.POSITIONSART_TEXTBAUSTEIN)) {
 					sBezeichnung = position.getFlrmediastandard().getC_nr();
-				} else if (position.getBestellpositionart_c_nr().equals(
-						LocaleFac.POSITIONSART_IDENT)) {
+				} else if (position.getBestellpositionart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)) {
 					// die sprachabhaengig Artikelbezeichnung anzeigen
-					sBezeichnung = getArtikelFac()
-							.formatArtikelbezeichnungEinzeiligOhneExc(
-									position.getFlrartikel().getI_id(),
-									theClientDto.getLocUi());
+					sBezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExcUebersteuert(
+							position.getFlrartikel().getI_id(), theClientDto.getLocUi(),position.getC_bezeichnung(),position.getC_zusatzbezeichnung());
 				} else {
 					// die uebersteuerte bezeichnung
 					if (position.getC_bezeichnung() != null) {
 						sBezeichnung = position.getC_bezeichnung();
 					}
 				}
-				rows[row][col++] = sBezeichnung;
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.bezeichnung")] = sBezeichnung;
 				boolean bPreisOK = true;
 				if (bDarfPreiseSehen) {
 					if (bPreisueberwachung && position.getFlrartikel() != null) {
 
 						if (bestDto == null) {
 							bestDto = getBestellungFac()
-									.bestellungFindByPrimaryKey(
-											position.getFlrbestellung()
-													.getI_id());
+									.bestellungFindByPrimaryKey(position.getFlrbestellung().getI_id());
 						}
 
-						ArtikellieferantDto alDto = getArtikelFac()
-								.getArtikelEinkaufspreis(
-										position.getFlrartikel().getI_id(),
-										bestDto.getLieferantIIdBestelladresse(),
-										position.getN_menge(),
-										bestDto.getWaehrungCNr(),
-										bestDto.getDBelegdatum(), theClientDto);
+						ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(
+								position.getFlrartikel().getI_id(), bestDto.getLieferantIIdBestelladresse(),
+								position.getN_menge(), bestDto.getWaehrungCNr(), bestDto.getDBelegdatum(),
+								theClientDto);
 
 						if (alDto != null && alDto.getNNettopreis() != null) {
 
-							if (!Helper.rundeKaufmaennisch(
-									alDto.getNNettopreis(),
-									iNachkommastellenPreis).equals(
-									Helper.rundeKaufmaennisch(
-											position.getN_nettogesamtpreis(),
-											iNachkommastellenPreis))) {
+							if (!Helper.rundeKaufmaennisch(alDto.getNNettopreis(), iNachkommastellenPreis).equals(Helper
+									.rundeKaufmaennisch(position.getN_nettogesamtpreis(), iNachkommastellenPreis))) {
 								bPreisOK = false;
 							}
 
 						}
 					}
 
-					if(position.getN_nettogesamtpreis() == null || position.getN_menge() == null) {
-						rows[row][col++] = null;						
-						rows[row][col++] = null;						
+					if (position.getN_nettogesamtpreis() == null || position.getN_menge() == null) {
+
 					} else {
-						rows[row][col++] = getUIObjectBigDecimalNachkommastellen(
-								position.getN_nettogesamtpreis(),
-								iNachkommastellenPreis);						
-						rows[row][col++] = getUIObjectBigDecimalNachkommastellen(
-								position.getN_nettogesamtpreis().multiply(
-										position.getN_menge()),
-								iNachkommastellenPreis);
+
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("bes.preis")] = getUIObjectBigDecimalNachkommastellen(
+										position.getN_nettogesamtpreis(), iNachkommastellenPreis);
+
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("lp.zeilensumme")] = getUIObjectBigDecimalNachkommastellen(
+										position.getN_nettogesamtpreis().multiply(position.getN_menge()),
+										iNachkommastellenPreis);
+
 					}
-				} else {
-					rows[row][col++] = null;
-					rows[row][col++] = null;
 				}
-				rows[row][col++] = position.getBestellpositionstatus_c_nr();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.status")] = position
+						.getBestellpositionstatus_c_nr();
 				// Text
-				if (position.getC_textinhalt() != null
-						&& !position.getC_textinhalt().equals("")) {
-					rows[row][col++] = new Boolean(true);
+				if (position.getC_textinhalt() != null && !position.getC_textinhalt().equals("")) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.text")] = new Boolean(true);
 					String text = position.getC_textinhalt();
 					text = text.replaceAll("\n", "<br>");
 					text = "<html>" + text + "</html>";
 					tooltipData[row] = text;
 				} else {
-					rows[row][col++] = new Boolean(false);
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.text")] = new Boolean(false);
 				}
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.medien.anzahl")] = getBelegartmediaFac()
+						.anzahlDerVorhandenenMedien(getUsecaseId(), position.getI_id(), theClientDto);
+
 				
-				if(bPreisOK==false){
-					rows[row][col++] = Color.RED;
+				if (bPreisOK == false) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = Color.RED;
+				} else {
+					// SP6086
+					if (position.getFlrbestellung().getBestellungart_c_nr()
+							.equals(BestellungFac.BESTELLUNGART_ABRUFBESTELLUNG_C_NR)
+							&& position.getBestellposition_i_id_rahmenposition() == null) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = Color.RED;
+					}
+
 				}
-				
+				rows[row] = rowToAddCandidate;
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0, tooltipData);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0, tooltipData);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -284,8 +286,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -301,8 +302,8 @@ public class Bestellpositionhandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -313,8 +314,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -350,8 +350,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -368,13 +367,10 @@ public class Bestellpositionhandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("position.")
-						.append(BestellpositionFac.FLR_BESTELLPOSITION_I_SORT)
-						.append(" ASC ");
+				orderBy.append("position.").append(BestellpositionFac.FLR_BESTELLPOSITION_I_SORT).append(" ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("position."
-					+ BestellpositionFac.FLR_BESTELLPOSITION_I_SORT) < 0) {
+			if (orderBy.indexOf("position." + BestellpositionFac.FLR_BESTELLPOSITION_I_SORT) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -383,9 +379,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" position.")
-						.append(BestellpositionFac.FLR_BESTELLPOSITION_I_SORT)
-						.append(" ");
+				orderBy.append(" position.").append(BestellpositionFac.FLR_BESTELLPOSITION_I_SORT).append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -401,107 +395,81 @@ public class Bestellpositionhandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRBestellposition position ";
+		return "from FLRBestellposition position LEFT OUTER JOIN position.flrartikel flrartikel  ";
 	}
 
-	/**
-	 * gets information such as column names an column types used for the table
-	 * on the client side.
-	 * 
-	 * @return the information needed to create the client side table.
-	 */
-	public TableInfo getTableInfo() {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 		try {
-			if (super.getTableInfo() == null) {
+			String mandantCNr = theClientDto.getMandant();
 
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_BESTELLUNG,
-								ParameterFac.PARAMETER_PREISUEBERWACHUNG);
-				bPreisueberwachung = (Boolean) parameter.getCWertAsObject();
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisEK(mandantCNr);
 
-				String mandantCNr = theClientDto.getMandant();
+			columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
 
-				int iNachkommastellenMenge = getMandantFac()
-						.getNachkommastellenMenge(mandantCNr);
-				int iNachkommastellenPreis = getMandantFac()
-						.getNachkommastellenPreisEK(mandantCNr);
+			columns.add("lp.nr", Integer.class, getTextRespectUISpr("lp.nr", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR);
+			columns.add("bes.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("bes.menge", mandant, locUi),
+					getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.MENGE, iNachkommastellenMenge),
+					BestellpositionFac.FLR_BESTELLPOSITION_N_MENGE);
+			columns.add("bes.einheit", String.class, getTextRespectUISpr("bes.einheit", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, BestellpositionFac.FLR_BESTELLPOSITION_EINHEIT_C_NR);
+			columns.add("lp.ident", String.class, getTextRespectUISpr("lp.ident", mandant, locUi), getUIBreiteIdent(),
+					BestellpositionFac.FLR_BESTELLPOSITION_FLRARTIKEL + ".c_nr");
 
-				setTableInfo(new TableInfo(
-						new Class[] {
-								Integer.class,
-								Integer.class,
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								String.class,
-								String.class,
-								String.class,
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-								String.class, Boolean.class, Color.class },
-						new String[] {
-								"i_id",
-								getTextRespectUISpr("lp.nr",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.menge",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.einheit",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.ident",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.bezeichnung",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.preis",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.zeilensumme",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.status",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.text",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()), "" },
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-								// Spalte
-								// wird
-								// ausgeblendet
-								QueryParameters.FLR_BREITE_S,
-								getUIBreiteAbhaengigvonNachkommastellen(
-										QueryParameters.MENGE,
-										iNachkommastellenMenge),// Menge
-								QueryParameters.FLR_BREITE_XS, // z.B. Woche
-								getUIBreiteIdent(), //ident
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
-								// variabel
-								getUIBreiteAbhaengigvonNachkommastellen(
-										QueryParameters.PREIS,
-										iNachkommastellenPreis), // Preis
-								getUIBreiteAbhaengigvonNachkommastellen(
-										QueryParameters.PREIS,
-										iNachkommastellenPreis),
-								QueryParameters.FLR_BREITE_M, 3, 0 },
-
-						new String[] {
-								"i_id",
-								Facade.NICHT_SORTIERBAR,
-								BestellpositionFac.FLR_BESTELLPOSITION_N_MENGE,
-								BestellpositionFac.FLR_BESTELLPOSITION_EINHEIT_C_NR,
-								Facade.NICHT_SORTIERBAR,
-								BestellpositionFac.FLR_BESTELLPOSITION_C_BEZEICHNUNG,
-								BestellpositionFac.FLR_BESTELLPOSITION_N_NETTOGESAMTPREIS,
-								Facade.NICHT_SORTIERBAR,
-								"bestellpositionstatus_c_nr",
-								Facade.NICHT_SORTIERBAR, "" }));
-
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM,
+						BestellpositionFac.FLR_BESTELLPOSITION_FLRARTIKEL + ".c_referenznr");
 			}
-			return super.getTableInfo();
+
+			columns.add("bes.bezeichnung", String.class, getTextRespectUISpr("bes.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, BestellpositionFac.FLR_BESTELLPOSITION_C_BEZEICHNUNG);
+			columns.add("bes.preis", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("bes.preis", mandant, locUi),
+					getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.PREIS, iNachkommastellenPreis),
+					BestellpositionFac.FLR_BESTELLPOSITION_N_NETTOGESAMTPREIS);
+			columns.add("lp.zeilensumme", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("lp.zeilensumme", mandant, locUi),
+					getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.PREIS, iNachkommastellenPreis),
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.status", String.class, getTextRespectUISpr("lp.status", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, "bestellpositionstatus_c_nr");
+			columns.add("lp.text", Boolean.class, getTextRespectUISpr("lp.text", mandant, locUi), 3,
+					Facade.NICHT_SORTIERBAR);
+			
+			columns.add("lp.medien.anzahl", Integer.class, getTextRespectUISpr("lp.medien.anzahl", mandant, locUi), 3,
+					Facade.NICHT_SORTIERBAR);
+			
+			columns.add("Color", Color.class, "", 1, Facade.NICHT_SORTIERBAR);
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_BESTELLUNG, ParameterFac.PARAMETER_PREISUEBERWACHUNG);
+			bPreisueberwachung = (Boolean) parameter.getCWertAsObject();
+
+			if (info != null)
+				return info;
+
+			setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+			TableColumnInformation c = getTableColumnInformation();
+			info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+					c.getHeaderToolTips());
+			setTableInfo(info);
+			return info;
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 			return null;
@@ -509,20 +477,17 @@ public class Bestellpositionhandler extends UseCaseHandler {
 	}
 
 	/**
-	 * sorts the data of the current query using the specified criterias and
-	 * returns the page of data where the row of selectedId is contained.
+	 * sorts the data of the current query using the specified criterias and returns
+	 * the page of data where the row of selectedId is contained.
 	 * 
-	 * @param sortierKriterien
-	 *            the new sort criterias.
-	 * @param selectedId
-	 *            the id of the entity that should be included in the result
-	 *            page.
+	 * @param sortierKriterien the new sort criterias.
+	 * @param selectedId       the id of the entity that should be included in the
+	 *                         result page.
 	 * @return the sorted data containing the page where the entity with the
 	 *         specified id is located.
 	 * @throws EJBExceptionLP
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		this.getQuery().setSortKrit(sortierKriterien);
 
@@ -535,8 +500,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select position." + "i_id"
-						+ " from FLRBestellposition position "
+				String queryString = "select position." + "i_id" + " from FLRBestellposition position "
 						+ this.buildWhereClause() + this.buildOrderByClause();
 
 				Query query = session.createQuery(queryString);
@@ -575,15 +539,12 @@ public class Bestellpositionhandler extends UseCaseHandler {
 		LieferantDto lieferantDto = null;
 		PartnerDto partnerDto = null;
 		try {
-			bestPosDto = getBestellpositionFac()
-					.bestellpositionFindByPrimaryKey((Integer) key);
-			bestDto = getBestellungFac().bestellungFindByPrimaryKey(
-					bestPosDto.getBestellungIId());
-			lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(
-					bestDto.getLieferantIIdBestelladresse(), theClientDto);
+			bestPosDto = getBestellpositionFac().bestellpositionFindByPrimaryKey((Integer) key);
+			bestDto = getBestellungFac().bestellungFindByPrimaryKey(bestPosDto.getBestellungIId());
+			lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(bestDto.getLieferantIIdBestelladresse(),
+					theClientDto);
 			if (lieferantDto != null) {
-				partnerDto = getPartnerFac().partnerFindByPrimaryKey(
-						lieferantDto.getPartnerIId(), theClientDto);
+				partnerDto = getPartnerFac().partnerFindByPrimaryKey(lieferantDto.getPartnerIId(), theClientDto);
 			}
 		} catch (Exception e) {
 			// Nicht gefunden
@@ -595,8 +556,7 @@ public class Bestellpositionhandler extends UseCaseHandler {
 			// + bestDto.getBelegartCNr().trim() + "/"
 			// + bestDto.getCNr().replace("/", ".") + "/"
 			// + "Bestellpositionen/" + "Position " + bestPosDto.getIId();
-			DocPath docPath = new DocPath(new DocNodeBestPosition(bestPosDto,
-					bestDto));
+			DocPath docPath = new DocPath(new DocNodeBestPosition(bestPosDto, bestDto));
 			Integer sPartnerIId = null;
 			if (partnerDto != null) {
 				sPartnerIId = partnerDto.getIId();

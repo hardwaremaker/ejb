@@ -45,8 +45,11 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "BankverbindungfindByKontoIId", query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.kontoIId=?1"),
 		@NamedQuery(name = "BankverbindungfindByBankIId", query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bankIId=?1"),
-		@NamedQuery(name = "BankverbindungfindByBankIIdMandantCNrCKontonummer", query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bankIId=?1 AND o.mandantCNr=?2 AND o.cKontonummer=?3"),
-		@NamedQuery(name = Bankverbindung.BankverbindungFindForLiquiditaetsvorschau, query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bInLiquiditaetsvorschau=1 AND o.mandantCNr=:mandant") })
+		@NamedQuery(name = BankverbindungQuery.ByBankIIdMandantCNrCKontonummer, query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bankIId=?1 AND o.mandantCNr=?2 AND o.cKontonummer=?3"),
+		@NamedQuery(name = Bankverbindung.BankverbindungFindForLiquiditaetsvorschau, query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bInLiquiditaetsvorschau=1 AND o.mandantCNr=:mandant"),
+		@NamedQuery(name = BankverbindungQuery.ByMandantCNr, query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.mandantCNr=:mandant"),
+		@NamedQuery(name = BankverbindungQuery.ByMandantCNrBFuerSepaLastschrift, query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.mandantCNr=:mandant AND o.bFuerSepaLastschrift=:fuerSepaLastschrift"),
+		@NamedQuery(name = BankverbindungQuery.ByBankIIdMandantCNrCIban, query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bankIId=:bank AND o.mandantCNr=:mandant AND o.cIban=:iban")})
 @Entity
 @Table(name = "FB_BANKVERBINDUNG")
 public class Bankverbindung implements Serializable {
@@ -88,6 +91,26 @@ public class Bankverbindung implements Serializable {
 	
 	@Column(name = "B_IN_LIQUIDITAETSVORSCHAU")
 	private Short bInLiquiditaetsvorschau;
+	
+	@Column(name = "C_SEPAVERZEICHNIS")
+	private String cSepaVerzeichnis;
+	
+	@Column(name = "B_FUER_SEPALASTSCHRIFT")
+	private Short bFuerSepaLastschrift;
+	
+	@Column(name = "B_ALS_GELDTRANSITKONTO")
+	private Short bAlsGeldtransitkonto;
+
+	@Column(name = "I_STELLEN_AUSZUGSNUMMER")
+	private Integer iStellenAuszugsnummer;
+	
+	public Integer getIStellenAuszugsnummer() {
+		return iStellenAuszugsnummer;
+	}
+
+	public void setIStellenAuszugsnummer(Integer iStellenAuszugsnummer) {
+		this.iStellenAuszugsnummer = iStellenAuszugsnummer;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -97,7 +120,8 @@ public class Bankverbindung implements Serializable {
 
 	public Bankverbindung(Integer id, java.lang.String mandantCNr,
 			Integer bankIId, Integer kontoIId,
-			Integer personalIIdAnlegen, Integer personalIIdAendern) {
+			Integer personalIIdAnlegen, Integer personalIIdAendern,
+			Short bFuerSepaLastschrift) {
 		setIId(id);
 		// Setzen der NOT NULL FELDER
 	    Timestamp now=new Timestamp(System.currentTimeMillis());
@@ -108,6 +132,7 @@ public class Bankverbindung implements Serializable {
 		setKontoIId(kontoIId);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
+		setbFuerSepaLastschrift(bFuerSepaLastschrift);
 	}
 
 	public Integer getIId() {
@@ -206,4 +231,27 @@ public class Bankverbindung implements Serializable {
 		this.bInLiquiditaetsvorschau = bInLiquiditaetsvorschau;
 	}
 
+	public String getCSepaVerzeichnis() {
+		return cSepaVerzeichnis;
+	}
+
+	public void setCSepaVerzeichnis(String cSepaVerzeichnis) {
+		this.cSepaVerzeichnis = cSepaVerzeichnis;
+	}
+	
+	public Short getbFuerSepaLastschrift() {
+		return bFuerSepaLastschrift;
+	}
+	
+	public void setbFuerSepaLastschrift(Short bFuerSepaLastschrift) {
+		this.bFuerSepaLastschrift = bFuerSepaLastschrift;
+	}
+	
+	public Short getbAlsGeldtransitkonto() {
+		return bAlsGeldtransitkonto;
+	}
+	
+	public void setbAlsGeldtransitkonto(Short bAlsGeldtransitkonto) {
+		this.bAlsGeldtransitkonto = bAlsGeldtransitkonto;
+	}
 }

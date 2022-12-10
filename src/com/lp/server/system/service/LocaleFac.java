@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -44,6 +45,7 @@ import javax.ejb.Remote;
 import com.lp.server.system.ejb.FunktionsprPK;
 import com.lp.server.system.ejb.LieferartsprPK;
 import com.lp.server.system.ejb.PositionsartsprPK;
+import com.lp.server.util.WoerterbuchEintragIId;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -56,6 +58,12 @@ public interface LocaleFac {
 	public static String LIEFERART_FREI_HAUS = "Frei Haus";
 	public static String LIEFERART_PER_POST = "Per Post";
 	public static String LIEFERART_UNFREI = "Unfrei";
+	
+	//PJ19705
+	public static Integer LIEFERART_LIEFERORT_AUS_KONDITIONEN = 0;
+	public static Integer LIEFERART_LIEFERORT_AUS_MANDANTENADRESSE = 1;
+	public static Integer LIEFERART_LIEFERORT_AUS_LIEFERADRESSE = 2;
+	
 
 	// Wichtige Locale-Strings
 	public static final String LP_LOCALE_DE_AT = "deAT      ";
@@ -67,6 +75,8 @@ public interface LocaleFac {
 	public static final String LP_LOCALE_EN_GB = "enGB      ";
 	public static final String LP_LOCALE_JA = "jaJP      ";
 	public static final String LP_LOCALE_CH = "deCH      ";
+	
+	public static final String WOERTERBUCH_LOCALE_ALL = "all";
 
 	// Feldlaengen
 	public static final int MAX_BELEGART = 15;
@@ -95,6 +105,7 @@ public interface LocaleFac {
 	public static final String BELEGART_LIEFERANT = "Lieferant      ";
 	public static final String BELEGART_ARTIKEL = "Artikel        ";
 	public static final String BELEGART_PERSONAL = "Personal       ";
+	public static final String BELEGART_PERSONAL2 = "Personal2      ";
 	public static final String BELEGART_ZEITERFASSUNG = "Zeiterfassung  ";
 	public static final String BELEGART_FINANZBUCHHALTUNG = "Finanzbuchhaltg";
 	public static final String BELEGART_SYSTEM = "System         ";
@@ -111,15 +122,30 @@ public interface LocaleFac {
 	public static final String BELEGART_INSERAT =        "Inserat        ";
 	public static final String BELEGART_EMAIL =          "Email          ";
 	public static final String BELEGART_ZUSATZKOSTEN =   "Zusatzkosten   ";
-
+	public static final String BELEGART_FORECAST =   	 "Forecast       ";
+	public static final String BELEGART_NACHRICHTEN =    "Nachrichten    ";
+	public static final String BELEGART_EINKAUFSANGEBOT =   "Einkaufsangebot";
+	public static final String BELEGART_GEODATENANZEIGE = "Geodatenanzeige";
+	public static final String BELEGART_DASHBOARD = "Dashboard";
+	public static final String BELEGART_COCKPIT = "Cockpit";
+	
+	// SP8324 Schlussrechnung ist "virtuell"
+	// Es gibt keinen Beleg mit Schlussrechnung, er wird jedoch fuer die Trennung 
+	// zwischen Belegbuchung und (integrierter) Fibubuchung benoetigt
+	public static final String BELEGART_SCHLUSSRECHNUNG    = "Schlussrechnung";
+	public static final String BELEGART_ANZAHLUNGSRECHNUNG = "Anzahlungsrechn";
+	
 	// Belegarten in der Fibu (FB_BELEGART)
-	public static final String BELEGART_FIBU_RECHNUNG = "Rechnung       ";
-	public static final String BELEGART_FIBU_EINGANGSRECHNUNG = "Eingangsrechng ";
-	public static final String BELEGART_FIBU_GUTSCHRIFT = "Gutschrift     ";
+	public static final String BELEGART_FIBU_RECHNUNG           = "Rechnung       ";
+	public static final String BELEGART_FIBU_EINGANGSRECHNUNG   = "Eingangsrechng ";
+	public static final String BELEGART_FIBU_GUTSCHRIFT         = "Gutschrift     ";
+	public static final String BELEGART_FIBU_SCHLUSSRECHNUNG    = BELEGART_SCHLUSSRECHNUNG;
+	public static final String BELEGART_FIBU_ANZAHLUNGSRECHNUNG = BELEGART_ANZAHLUNGSRECHNUNG;
 	
 	// Wechselkurs
 	public static final int ANZAHL_VORKOMMASTELLEN_WECHSELKURS = 3;
-	public static final int ANZAHL_NACHKOMMASTELLEN_WECHSELKURS = 6;
+//	public static final int ANZAHL_NACHKOMMASTELLEN_WECHSELKURS = 6;
+	public static final int ANZAHL_NACHKOMMASTELLEN_WECHSELKURS = 13;
 
 	// Positionsarten
 	public static final String POSITIONSART_IDENT = "Ident          ";
@@ -209,6 +235,8 @@ public interface LocaleFac {
 	public static final String STATUS_ERSCHIENEN = "Erschienen     ";
 	public static final String STATUS_VERRECHENBAR="Verrechenbar   ";
 	public static final String STATUS_GELESEN     ="Gelesen        ";
+	public static final String STATUS_GESPEICHERT ="Gespeichert    ";
+	public static final String STATUS_ABLIEFERPREISE = "Ablieferpreise ";
 
 	public static final String POSITIONTYP_ALLES = "Alles";
 	public static final String POSITIONTYP_VERDICHTET = "Verdichtet";
@@ -489,6 +517,33 @@ public interface LocaleFac {
 			String currency1I, String currency2I, Date dDatumI, TheClientDto theClient)
 			throws EJBExceptionLP, RemoteException;
 	
+	public WoerterbuchEintragIId createWoerterbuchEintrag(WoerterbuchEintragDto eintrag, TheClientDto theClientDto);
+	
+	public WoerterbuchEintragDto woerterbuchEintragFindByPrimaryKey(WoerterbuchEintragIId id, TheClientDto theClientDto);
+	
+	public void updateWoerterbuchEintrag(WoerterbuchEintragDto dto, TheClientDto theClientDto);
+	
+	public void deleteWoerterbuchEintrag(WoerterbuchEintragIId id, TheClientDto theClientDto);
+	
+	public List<WoerterbuchEintragDto> getAllWoerterbuchEintraegeZuSprache(String locale, TheClientDto theClientDto);
+	
+	/**
+	 * Erstellt, aendert und loescht mehrere WoerterbuchEintraege. Wenn eine
+	 * operation nicht durchgef&uuml;hrt werden soll, kann die Liste leer oder null
+	 * sein. <br>
+	 * Diese Funktion gibt eine Liste der neu angelegten WoerterbuchEintragDtos
+	 * zur&uuml;ck. <br>
+	 * 
+	 * 
+	 * @param toCreate
+	 * @param toUpdate
+	 * @param toDelete
+	 * @param theClientDto
+	 * @return
+	 */
+	public List<WoerterbuchEintragDto> woerterbuchEintragBatchCRUD(List<WoerterbuchEintragDto> toCreate, List<WoerterbuchEintragDto> toUpdate,
+			List<WoerterbuchEintragDto> toDelete, TheClientDto theClientDto);
+	
 	/**
 	 * Die Bezeichnung einer Status-Kennung liefern sofern vorhanden, ansonsten die CNR
 	 * @param statusCnr
@@ -496,4 +551,9 @@ public interface LocaleFac {
 	 * @return Die Bezeichnung einer Status-Kennung liefern sofern vorhanden, ansonsten die CNR
 	 */
 	String getStatusCBez(String statusCnr, TheClientDto theClientDto) ;	
+	
+	FunktionDto funktionFindByCnr(String cnr, TheClientDto theClientDto) throws EJBExceptionLP;
+
+	WaehrungDto waehrungFindByPrimaryKeyWithNull(String cnr);
+
 }

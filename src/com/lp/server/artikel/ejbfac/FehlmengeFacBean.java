@@ -35,6 +35,7 @@ package com.lp.server.artikel.ejbfac;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -61,17 +62,20 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
 import com.lp.server.artikel.ejb.Artikelfehlmenge;
+import com.lp.server.artikel.ejb.Fasession;
+import com.lp.server.artikel.ejb.Fasessioneintrag;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelbestellt;
-import com.lp.server.artikel.fastlanereader.generated.FLRArtikelreservierung;
 import com.lp.server.artikel.fastlanereader.generated.FLRFehlmenge;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelfehlmengeDto;
 import com.lp.server.artikel.service.ArtikelfehlmengeDtoAssembler;
+import com.lp.server.artikel.service.FasessionDto;
 import com.lp.server.artikel.service.FehlmengeFac;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
+import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.bestellung.service.BestellpositionDto;
 import com.lp.server.bestellung.service.BestellungDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial;
@@ -79,8 +83,9 @@ import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosistmaterialDto;
 import com.lp.server.fertigung.service.LoslagerentnahmeDto;
+import com.lp.server.fertigung.service.LossollarbeitsplanDto;
 import com.lp.server.fertigung.service.LossollmaterialDto;
-import com.lp.server.lieferschein.ejb.Lieferscheinposition;
+import com.lp.server.lieferschein.ejb.Lieferschein;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinFac;
 import com.lp.server.lieferschein.service.LieferscheinpositionDto;
@@ -105,48 +110,38 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 	@Resource
 	private SessionContext context;
 
-	public void createArtikelfehlmenge(ArtikelfehlmengeDto artikelfehlmengeDto)
-			throws EJBExceptionLP {
+	public void createArtikelfehlmenge(ArtikelfehlmengeDto artikelfehlmengeDto) throws EJBExceptionLP {
 		// primary key
-		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
-				PKConst.PK_FEHLMENGE);
+		Integer iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_FEHLMENGE);
 		artikelfehlmengeDto.setIId(iId);
 		try {
-			Artikelfehlmenge artikelfehlmenge = new Artikelfehlmenge(
-					artikelfehlmengeDto.getIId(),
-					artikelfehlmengeDto.getCBelegartnr(),
-					artikelfehlmengeDto.getIBelegartpositionid(),
-					artikelfehlmengeDto.getArtikelIId(),
-					artikelfehlmengeDto.getNMenge(),
+			Artikelfehlmenge artikelfehlmenge = new Artikelfehlmenge(artikelfehlmengeDto.getIId(),
+					artikelfehlmengeDto.getCBelegartnr(), artikelfehlmengeDto.getIBelegartpositionid(),
+					artikelfehlmengeDto.getArtikelIId(), artikelfehlmengeDto.getNMenge(),
 					artikelfehlmengeDto.getTLiefertermin());
 			em.persist(artikelfehlmenge);
 			em.flush();
-			setArtikelfehlmengeFromArtikelfehlmengeDto(artikelfehlmenge,
-					artikelfehlmengeDto);
+			setArtikelfehlmengeFromArtikelfehlmengeDto(artikelfehlmenge, artikelfehlmengeDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 	}
 
-	private void removeArtikelfehlmenge(ArtikelfehlmengeDto artikelfehlmengeDto)
-			throws EJBExceptionLP {
+	private void removeArtikelfehlmenge(ArtikelfehlmengeDto artikelfehlmengeDto) throws EJBExceptionLP {
 		// try {
 		if (artikelfehlmengeDto != null) {
 			Integer iId = artikelfehlmengeDto.getIId();
 			Artikelfehlmenge toRemove = em.find(Artikelfehlmenge.class, iId);
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						"Fehler bei removeArtikelfehlmenge. Es gibt keine iid "
-								+ iId + "\ndto.toString: "
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						"Fehler bei removeArtikelfehlmenge. Es gibt keine iid " + iId + "\ndto.toString: "
 								+ artikelfehlmengeDto.toString());
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 		}
 		// }
@@ -155,21 +150,17 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		// }
 	}
 
-	private void updateArtikelfehlmenge(ArtikelfehlmengeDto artikelfehlmengeDto)
-			throws EJBExceptionLP {
+	private void updateArtikelfehlmenge(ArtikelfehlmengeDto artikelfehlmengeDto) throws EJBExceptionLP {
 		if (artikelfehlmengeDto != null) {
 			Integer iId = artikelfehlmengeDto.getIId();
 			// try {
-			Artikelfehlmenge artikelfehlmenge = em.find(Artikelfehlmenge.class,
-					iId);
+			Artikelfehlmenge artikelfehlmenge = em.find(Artikelfehlmenge.class, iId);
 			if (artikelfehlmenge == null) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
-						"Fehler bei updateArtikelfehlmenge. Es gibt keine iid "
-								+ iId + "\ndto.toString: "
+						"Fehler bei updateArtikelfehlmenge. Es gibt keine iid " + iId + "\ndto.toString: "
 								+ artikelfehlmengeDto.toString());
 			}
-			setArtikelfehlmengeFromArtikelfehlmengeDto(artikelfehlmenge,
-					artikelfehlmengeDto);
+			setArtikelfehlmengeFromArtikelfehlmengeDto(artikelfehlmenge, artikelfehlmengeDto);
 			// }
 			// catch (FinderException ex) {
 			// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, ex);
@@ -177,21 +168,18 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		}
 	}
 
-	public void aktualisiereFehlmenge(String belegartCNr,
-			Integer belegpositionIId, boolean throwExceptionWhenCreate,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	public void aktualisiereFehlmenge(String belegartCNr, Integer belegpositionIId, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		// try {
 		if (belegartCNr.equals(LocaleFac.BELEGART_LOS)) {
 			// die position holen
-			LossollmaterialDto losmat = getFertigungFac()
-					.lossollmaterialFindByPrimaryKeyOhneExc(belegpositionIId);
+			LossollmaterialDto losmat = getFertigungFac().lossollmaterialFindByPrimaryKeyOhneExc(belegpositionIId);
 			if (losmat == null) {
 				// entweder falsche id uebergeben oder die position wurde gerade
 				// geloescht
 				// also auch den eintrag in der fehlmengenliste loeschen
 				try {
-					removeArtikelfehlmenge(LocaleFac.BELEGART_LOS,
-							belegpositionIId);
+					removeArtikelfehlmenge(LocaleFac.BELEGART_LOS, belegpositionIId);
 
 				} catch (Throwable ex) {
 					// nix tun
@@ -203,25 +191,20 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 
 			// nur fuer Artikel
 			if (losmat.getArtikelIId() != null) {
-				LosDto losDto = getFertigungFac().losFindByPrimaryKey(
-						losmat.getLosIId());
+				LosDto losDto = getFertigungFac().losFindByPrimaryKey(losmat.getLosIId());
 				boolean bFehlmengeZulaessig = true;
 				if (losDto.getStatusCNr().equals(FertigungFac.STATUS_STORNIERT)
-						|| losDto.getStatusCNr().equals(
-								FertigungFac.STATUS_ANGELEGT)
-						|| losDto.getStatusCNr().equals(
-								FertigungFac.STATUS_ERLEDIGT)) {
+						|| losDto.getStatusCNr().equals(FertigungFac.STATUS_ANGELEGT)
+						|| losDto.getStatusCNr().equals(FertigungFac.STATUS_ERLEDIGT)) {
 					bFehlmengeZulaessig = false;
 				}
 				// Eintrag suchen
 				ArtikelfehlmengeDto aFehlmengeDto = null;
 				try {
-					Query query = em
-							.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
+					Query query = em.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
 					query.setParameter(1, LocaleFac.BELEGART_LOS);
 					query.setParameter(2, losmat.getIId());
-					Artikelfehlmenge aFehlmenge = (Artikelfehlmenge) query
-							.getSingleResult();
+					Artikelfehlmenge aFehlmenge = (Artikelfehlmenge) query.getSingleResult();
 					aFehlmengeDto = assembleArtikelfehlmengeDto(aFehlmenge);
 					aFehlmengeDto.setArtikelIId(losmat.getArtikelIId());
 					// fuer Stati, in denen es keine Fehlmengen gibt, wird der
@@ -241,19 +224,18 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 				if (bFehlmengeZulaessig) {
 					java.sql.Date dTermin;
 
-					BigDecimal bdAusgegeben = getFertigungFac()
-							.getAusgegebeneMenge(losmat.getIId(), null,
-									theClientDto);
+					BigDecimal bdAusgegeben = getFertigungFac().getAusgegebeneMenge(losmat.getIId(), null,
+							theClientDto);
 
 					if (losmat.getNMenge().compareTo(new BigDecimal(0)) > 0) {
-						// Positive Fehlmenge: produktionsstart
-						dTermin = losDto.getTProduktionsbeginn();
 
-						if (losmat.getNMenge().subtract(bdAusgegeben)
-								.doubleValue() > 0) {
+						// PJ20837
+						dTermin = getFertigungFac().getProduktionsbeginnAnhandZugehoerigemArbeitsgang(
+								losDto.getTProduktionsbeginn(), losmat.getIId(), theClientDto);
 
-							aFehlmengeDto.setNMenge(losmat.getNMenge()
-									.subtract(bdAusgegeben));
+						if (losmat.getNMenge().subtract(bdAusgegeben).doubleValue() > 0) {
+
+							aFehlmengeDto.setNMenge(losmat.getNMenge().subtract(bdAusgegeben));
 						} else {
 							aFehlmengeDto.setNMenge(new BigDecimal(0));
 							if (aFehlmengeDto.getIId() != null) {
@@ -265,12 +247,10 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 					} else {
 						// Negative Fehlmenge: produktionsende
 						dTermin = losDto.getTProduktionsende();
-						BigDecimal fehlmenge = losmat.getNMenge().abs()
-								.subtract(bdAusgegeben.abs());
+						BigDecimal fehlmenge = losmat.getNMenge().abs().subtract(bdAusgegeben.abs());
 
 						if (fehlmenge.doubleValue() > 0) {
-							aFehlmengeDto.setNMenge(losmat.getNMenge()
-									.subtract(bdAusgegeben));
+							aFehlmengeDto.setNMenge(losmat.getNMenge().subtract(bdAusgegeben));
 						} else {
 							aFehlmengeDto.setNMenge(new BigDecimal(0));
 						}
@@ -278,15 +258,13 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 					}
 
 					// PJ17994
-					dTermin = Helper.addiereTageZuDatum(dTermin,
-							losmat.getIBeginnterminoffset());
+					dTermin = Helper.addiereTageZuDatum(dTermin, losmat.getIBeginnterminoffset());
 					aFehlmengeDto.setTLiefertermin(dTermin);
 
 					// eintraege mit menge 0 loeschen bzw. gar nicht speichern
 					if (aFehlmengeDto.getNMenge().compareTo(new BigDecimal(0)) == 0) {
 						if (aFehlmengeDto.getIId() != null) {
-							removeArtikelfehlmenge(
-									aFehlmengeDto.getCBelegartnr(),
+							removeArtikelfehlmenge(aFehlmengeDto.getCBelegartnr(),
 									aFehlmengeDto.getIBelegartpositionid());
 						} else {
 							// steht eh nicht in der db
@@ -294,12 +272,6 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 					} else {
 						if (aFehlmengeDto.getIId() == null) {
 							// ein neuer -> anlegen
-							if (throwExceptionWhenCreate) {
-								throw new EJBExceptionLP(
-										EJBExceptionLP.FEHLER_FERTIGUNG_AUSGABE_ES_WUERDEN_FEHLMENGEN_ENTSTEHEN,
-										"FEHLER_FERTIGUNG_AUSGABE_ES_WUERDEN_FEHLMENGEN_ENTSTEHEN");
-							}
-
 							createArtikelfehlmenge(aFehlmengeDto);
 						} else {
 							// steht eh nicht in der db
@@ -310,21 +282,16 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 					// wenn nicht zulaessig, dann loeschen.
 
 					try {
-						Query query = em
-								.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
+						Query query = em.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
 						query.setParameter(1, aFehlmengeDto.getCBelegartnr());
-						query.setParameter(2,
-								aFehlmengeDto.getIBelegartpositionid());
-						Artikelfehlmenge fehlmenge = (Artikelfehlmenge) query
-								.getSingleResult();
+						query.setParameter(2, aFehlmengeDto.getIBelegartpositionid());
+						Artikelfehlmenge fehlmenge = (Artikelfehlmenge) query.getSingleResult();
 						if (fehlmenge != null) {
 							try {
 								em.remove(fehlmenge);
 								em.flush();
 							} catch (EntityExistsException ex2) {
-								throw new EJBExceptionLP(
-										EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-										ex2);
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex2);
 							}
 						}
 					} catch (NoResultException ex1) {
@@ -342,26 +309,34 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		}
 	}
 
-	public ArtikelfehlmengeDto artikelfehlmengeFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public FasessionDto fasessionFindByPrimaryKey(Integer iId) {
 		try {
-			Artikelfehlmenge artikelfehlmenge = em.find(Artikelfehlmenge.class,
-					iId);
-			if (artikelfehlmenge == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						"Fehler bei artikelfehlmengeFindByPrimaryKey. Es gibt keine iid "
-								+ iId);
-			}
-			return assembleArtikelfehlmengeDto(artikelfehlmenge);
+			Fasession fasession = em.find(Fasession.class, iId);
+			FasessionDto dto = new FasessionDto();
+			dto.setIId(fasession.getIId());
+			dto.setPersonalIId(fasession.getPersonalIId());
+			dto.settBeginn(fasession.getTBeginn());
+			dto.settGedruckt(fasession.getTGedruckt());
+			return dto;
 		} catch (Exception ex) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
 		}
 	}
 
-	public ArtikelfehlmengeDto[] artikelfehlmengeFindByArtikelIId(
-			Integer artikelIId) throws EJBExceptionLP {
+	public ArtikelfehlmengeDto artikelfehlmengeFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
+		try {
+			Artikelfehlmenge artikelfehlmenge = em.find(Artikelfehlmenge.class, iId);
+			if (artikelfehlmenge == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						"Fehler bei artikelfehlmengeFindByPrimaryKey. Es gibt keine iid " + iId);
+			}
+			return assembleArtikelfehlmengeDto(artikelfehlmenge);
+		} catch (Exception ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
+		}
+	}
+
+	public ArtikelfehlmengeDto[] artikelfehlmengeFindByArtikelIId(Integer artikelIId) throws EJBExceptionLP {
 		// try {
 		Query query = em.createNamedQuery("ArtikelfehlmengefindByArtikelIId");
 		query.setParameter(1, artikelIId);
@@ -379,33 +354,27 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		// }
 	}
 
-	private void setArtikelfehlmengeFromArtikelfehlmengeDto(
-			Artikelfehlmenge artikelfehlmenge,
+	private void setArtikelfehlmengeFromArtikelfehlmengeDto(Artikelfehlmenge artikelfehlmenge,
 			ArtikelfehlmengeDto artikelfehlmengeDto) {
 		artikelfehlmenge.setCBelegartnr(artikelfehlmengeDto.getCBelegartnr());
-		artikelfehlmenge.setIBelegartpositionid(artikelfehlmengeDto
-				.getIBelegartpositionid());
+		artikelfehlmenge.setIBelegartpositionid(artikelfehlmengeDto.getIBelegartpositionid());
 		artikelfehlmenge.setArtikelIId(artikelfehlmengeDto.getArtikelIId());
 		artikelfehlmenge.setNMenge(artikelfehlmengeDto.getNMenge());
-		artikelfehlmenge.setTLiefertermin(artikelfehlmengeDto
-				.getTLiefertermin());
+		artikelfehlmenge.setTLiefertermin(artikelfehlmengeDto.getTLiefertermin());
 		em.merge(artikelfehlmenge);
 		em.flush();
 	}
 
-	private ArtikelfehlmengeDto assembleArtikelfehlmengeDto(
-			Artikelfehlmenge artikelfehlmenge) {
+	private ArtikelfehlmengeDto assembleArtikelfehlmengeDto(Artikelfehlmenge artikelfehlmenge) {
 		return ArtikelfehlmengeDtoAssembler.createDto(artikelfehlmenge);
 	}
 
-	private ArtikelfehlmengeDto[] assembleArtikelfehlmengeDtos(
-			Collection<?> artikelfehlmenges) {
+	private ArtikelfehlmengeDto[] assembleArtikelfehlmengeDtos(Collection<?> artikelfehlmenges) {
 		List<ArtikelfehlmengeDto> list = new ArrayList<ArtikelfehlmengeDto>();
 		if (artikelfehlmenges != null) {
 			Iterator<?> iterator = artikelfehlmenges.iterator();
 			while (iterator.hasNext()) {
-				Artikelfehlmenge artikelfehlmenge = (Artikelfehlmenge) iterator
-						.next();
+				Artikelfehlmenge artikelfehlmenge = (Artikelfehlmenge) iterator.next();
 				list.add(assembleArtikelfehlmengeDto(artikelfehlmenge));
 			}
 		}
@@ -413,26 +382,53 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		return (ArtikelfehlmengeDto[]) list.toArray(returnArray);
 	}
 
-	public BigDecimal getAnzahlFehlmengeEinesArtikels(Integer artikelIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BigDecimal getAnzahlFehlmengeEinesArtikels(Integer artikelIId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
+		return getAnzahlFehlmengeEinesArtikels(artikelIId, theClientDto, null);
+	}
+
+	public BigDecimal getAnzahlFehlmengeEinesArtikels(Integer artikelIId, TheClientDto theClientDto,
+			Integer partnerIIdStandort) {
 		BigDecimal bdFehlmenge = new BigDecimal(0);
 
-		ArrayList<?> al = getFehlmengen(artikelIId, theClientDto.getMandant(),
-				theClientDto);
+		ArrayList<?> al = getFehlmengen(artikelIId, theClientDto.getMandant(), theClientDto);
 
 		for (int i = 0; i < al.size(); i++) {
 			FLRFehlmenge flr = (FLRFehlmenge) al.get(i);
-			bdFehlmenge = bdFehlmenge.add(flr.getN_menge());
+
+			if (partnerIIdStandort == null) {
+				bdFehlmenge = bdFehlmenge.add(flr.getN_menge());
+			} else {
+				if (flr.getFlrlossollmaterial() != null) {
+					try {
+						LoslagerentnahmeDto[] lolaDtos = getFertigungFac()
+								.loslagerentnahmeFindByLosIId(flr.getFlrlossollmaterial().getLos_i_id());
+
+						if (lolaDtos.length > 0) {
+							Integer parnterIIdStandortLos = getLagerFac()
+									.getPartnerIIdStandortEinesLagers(lolaDtos[0].getLagerIId());
+
+							if (parnterIIdStandortLos.equals(partnerIIdStandort)) {
+
+								// Wenn Standort gleich
+								bdFehlmenge = bdFehlmenge.add(flr.getN_menge());
+							}
+
+						}
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+				}
+			}
+
 		}
 		return bdFehlmenge;
 	}
 
-	public BigDecimal getAnzahlderPositivenFehlmengenEinesArtikels(
-			Integer artikelIId, TheClientDto theClientDto) {
+	public BigDecimal getAnzahlderPositivenFehlmengenEinesArtikels(Integer artikelIId, TheClientDto theClientDto) {
 		BigDecimal bdFehlmenge = new BigDecimal(0);
 
-		ArrayList<?> al = getFehlmengen(artikelIId, theClientDto.getMandant(),
-				theClientDto);
+		ArrayList<?> al = getFehlmengen(artikelIId, theClientDto.getMandant(), theClientDto);
 
 		for (int i = 0; i < al.size(); i++) {
 			FLRFehlmenge flr = (FLRFehlmenge) al.get(i);
@@ -443,14 +439,13 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		return bdFehlmenge;
 	}
 
-	public TreeMap<String, BigDecimal> fuelleFehlmengenDesAnderenMandantenNach(
-			String mandantCNr_Zielmandant, java.sql.Timestamp tStichtag,
-			TheClientDto theClientDto) {
+	@org.jboss.ejb3.annotation.TransactionTimeout(1000)
+	public TreeMap<String, BigDecimal> fuelleFehlmengenDesAnderenMandantenNach(String mandantCNr_Zielmandant,
+			java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
 
 		TreeMap<String, BigDecimal> snrChnrArtikelAusgelassen = new TreeMap<String, BigDecimal>();
 
-		tStichtag = Helper.cutTimestamp(new java.sql.Timestamp(tStichtag
-				.getTime() + 24 * 3600000));
+		tStichtag = Helper.cutTimestamp(Helper.addiereTageZuTimestamp(tStichtag, 1));
 
 		try {
 
@@ -465,10 +460,8 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 			Session session = factory.openSession();
 
 			String sQuery = " SELECT sum(fm.n_menge),  artikel_i_id FROM FLRFehlmenge fm WHERE fm.flrlossollmaterial.flrlos.mandant_c_nr='"
-					+ mandantCNr_Zielmandant
-					+ "' AND fm.n_menge >0 AND fm.t_liefertermin<'"
-					+ Helper.formatTimestampWithSlashes(tStichtag)
-					+ "' GROUP BY fm.artikel_i_id";
+					+ mandantCNr_Zielmandant + "' AND fm.n_menge >0 AND fm.t_liefertermin<'"
+					+ Helper.formatTimestampWithSlashes(tStichtag) + "' GROUP BY fm.artikel_i_id";
 
 			org.hibernate.Query query = session.createQuery(sQuery);
 
@@ -483,8 +476,7 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 				BigDecimal summeFehlmenge = (BigDecimal) o[0];
 				Integer artikelIId = (Integer) o[1];
 
-				hmArtikelMitFehlmengenUndReservierungen.put(artikelIId,
-						summeFehlmenge);
+				hmArtikelMitFehlmengenUndReservierungen.put(artikelIId, summeFehlmenge);
 
 			}
 			session.close();
@@ -505,75 +497,56 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 
 				// SP2968
 				// Reservierungen hinzufuegen
-				BigDecimal bdReserviert = getReservierungFac()
-						.getAnzahlReservierungen(artikelIId, tStichtag,
-								mandantCNr_Zielmandant);
+				BigDecimal bdReserviert = getReservierungFac().getAnzahlReservierungen(artikelIId, tStichtag,
+						mandantCNr_Zielmandant);
 
 				if (bdReserviert.doubleValue() > 0) {
 					// Wenn noch nicht in Liste
-					if (!hmArtikelMitFehlmengenUndReservierungen
-							.containsKey(artikelIId)) {
-						hmArtikelMitFehlmengenUndReservierungen.put(artikelIId,
-								bdReserviert);
+					if (!hmArtikelMitFehlmengenUndReservierungen.containsKey(artikelIId)) {
+						hmArtikelMitFehlmengenUndReservierungen.put(artikelIId, bdReserviert);
 					} else {
-						BigDecimal bdVorhanden = hmArtikelMitFehlmengenUndReservierungen
-								.get(artikelIId);
-						hmArtikelMitFehlmengenUndReservierungen.put(artikelIId,
-								bdVorhanden.add(bdReserviert));
+						BigDecimal bdVorhanden = hmArtikelMitFehlmengenUndReservierungen.get(artikelIId);
+						hmArtikelMitFehlmengenUndReservierungen.put(artikelIId, bdVorhanden.add(bdReserviert));
 					}
 				}
 			}
 
 			session.close();
 
-			Iterator itHm = hmArtikelMitFehlmengenUndReservierungen.keySet()
-					.iterator();
+			Iterator itHm = hmArtikelMitFehlmengenUndReservierungen.keySet().iterator();
 			while (itHm.hasNext()) {
 
 				Integer artikelIId = (Integer) itHm.next();
 
 				// SP2991
-				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-						artikelIId, theClientDto);
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
 				if (Helper.short2Boolean(aDto.getBLagerbewirtschaftet()) == true) {
 
 					BigDecimal summeFehlmengeUndReservierungen = (BigDecimal) hmArtikelMitFehlmengenUndReservierungen
 							.get(artikelIId);
 
-					BigDecimal bdLagerstandQuellmandant = getLagerFac()
-							.getLagerstand(artikelIId,
-									lagerDto_Hautptlager_Quellmandant.getIId(),
-									theClientDto);
-					ArtikelDto artikelDto = getArtikelFac()
-							.artikelFindByPrimaryKeySmall(artikelIId,
-									theClientDto);
+					BigDecimal bdLagerstandQuellmandant = getLagerFac().getLagerstand(artikelIId,
+							lagerDto_Hautptlager_Quellmandant.getIId(), theClientDto);
+					ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
 
-					BigDecimal bdLagerstandBeiZielMandant = getLagerFac()
-							.getLagerstand(artikelIId,
-									lagerDto_Hautptlager_Zielmandant.getIId(),
-									theClientDto);
+					BigDecimal bdLagerstandBeiZielMandant = getLagerFac().getLagerstand(artikelIId,
+							lagerDto_Hautptlager_Zielmandant.getIId(), theClientDto);
 
-					BigDecimal bdBestellt = getSummeBestellungenZielmandant(
-							mandantCNr_Zielmandant, tStichtag, artikelIId);
+					BigDecimal bdBestellt = getSummeBestellungenZielmandant(mandantCNr_Zielmandant, tStichtag,
+							artikelIId);
 
 					// Bestelltliste abziehen
-					summeFehlmengeUndReservierungen = summeFehlmengeUndReservierungen
-							.subtract(bdBestellt);
+					summeFehlmengeUndReservierungen = summeFehlmengeUndReservierungen.subtract(bdBestellt);
 
 					// Nur wenn bei Zielmandant nicht genug auf Lager ist
-					if (bdLagerstandBeiZielMandant.doubleValue() < summeFehlmengeUndReservierungen
-							.doubleValue()
+					if (bdLagerstandBeiZielMandant.doubleValue() < summeFehlmengeUndReservierungen.doubleValue()
 							&& bdLagerstandQuellmandant.doubleValue() > 0
-							&& Helper.short2boolean(artikelDto
-									.getBLagerbewirtschaftet())) {
+							&& Helper.short2boolean(artikelDto.getBLagerbewirtschaftet())) {
 
-						if (Helper.short2boolean(artikelDto
-								.getBSeriennrtragend()) == true
-								|| Helper.short2boolean(artikelDto
-										.getBChargennrtragend()) == true) {
+						if (Helper.short2boolean(artikelDto.getBSeriennrtragend()) == true
+								|| Helper.short2boolean(artikelDto.getBChargennrtragend()) == true) {
 
-							snrChnrArtikelAusgelassen.put(
-									artikelDto.formatArtikelbezeichnung(),
+							snrChnrArtikelAusgelassen.put(artikelDto.formatArtikelbezeichnung(),
 									summeFehlmengeUndReservierungen);
 
 						} else {
@@ -585,15 +558,13 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 
 								BigDecimal bdUmbuchen = BigDecimal.ZERO;
 
-								if (bdLagerstandQuellmandant.doubleValue() >= bdAbzubuchendeMenge
-										.doubleValue()) {
+								if (bdLagerstandQuellmandant.doubleValue() >= bdAbzubuchendeMenge.doubleValue()) {
 
 									bdUmbuchen = bdAbzubuchendeMenge;
 									bdAbzubuchendeMenge = BigDecimal.ZERO;
 								} else {
 									bdUmbuchen = bdLagerstandQuellmandant;
-									bdAbzubuchendeMenge = bdAbzubuchendeMenge
-											.subtract(bdLagerstandQuellmandant);
+									bdAbzubuchendeMenge = bdAbzubuchendeMenge.subtract(bdLagerstandQuellmandant);
 								}
 
 								if (bdUmbuchen.doubleValue() > 0) {
@@ -602,156 +573,102 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 									// =
 									// Mandant
 
-									MandantDto mDto = getMandantFac()
-											.mandantFindByPrimaryKey(
-													mandantCNr_Zielmandant,
-													theClientDto);
+									MandantDto mDto = getMandantFac().mandantFindByPrimaryKey(mandantCNr_Zielmandant,
+											theClientDto);
 
-									KundeDto kDto_Quellmandant = getKundeFac()
-											.kundeFindByiIdPartnercNrMandantOhneExc(
-													mDto.getPartnerIId(),
-													theClientDto.getMandant(),
-													theClientDto);
+									KundeDto kDto_Quellmandant = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(
+											mDto.getPartnerIId(), theClientDto.getMandant(), theClientDto);
 
 									if (kDto_Quellmandant != null) {
 
 										if (lieferscheinIId_Ziellager == null) {
 
 											LieferscheinDto lieferscheinDto = new LieferscheinDto();
-											lieferscheinDto
-													.setKundeIIdLieferadresse(kDto_Quellmandant
-															.getIId());
-											lieferscheinDto
-													.setKundeIIdRechnungsadresse(kDto_Quellmandant
-															.getIId());
-											lieferscheinDto
-													.setLieferscheinartCNr(LieferscheinFac.LSART_FREI);
-											lieferscheinDto
-													.setPersonalIIdVertreter(theClientDto
-															.getIDPersonal());
+											lieferscheinDto.setKundeIIdLieferadresse(kDto_Quellmandant.getIId());
+											lieferscheinDto.setKundeIIdRechnungsadresse(kDto_Quellmandant.getIId());
+											lieferscheinDto.setLieferscheinartCNr(LieferscheinFac.LSART_FREI);
+											lieferscheinDto.setPersonalIIdVertreter(theClientDto.getIDPersonal());
 
-											lieferscheinDto
-													.setLagerIId(lagerDto_Hautptlager_Quellmandant
-															.getIId());
+											lieferscheinDto.setLagerIId(lagerDto_Hautptlager_Quellmandant.getIId());
 
 											// Ziellager
-											lieferscheinDto
-													.setZiellagerIId(lagerDto_Hautptlager_Zielmandant
-															.getIId());
+											lieferscheinDto.setZiellagerIId(lagerDto_Hautptlager_Zielmandant.getIId());
 
+											lieferscheinDto.setWaehrungCNr(theClientDto.getSMandantenwaehrung());
 											lieferscheinDto
-													.setWaehrungCNr(theClientDto
-															.getSMandantenwaehrung());
-											lieferscheinDto
-													.setFWechselkursmandantwaehrungzubelegwaehrung(new Double(
-															1));
+													.setFWechselkursmandantwaehrungzubelegwaehrung(new Double(1));
 
-											lieferscheinDto
-													.setTBelegdatum(Helper
-															.cutTimestamp(new java.sql.Timestamp(
-																	System.currentTimeMillis())));
-											lieferscheinDto
-													.setMandantCNr(theClientDto
-															.getMandant());
+											lieferscheinDto.setTBelegdatum(Helper
+													.cutTimestamp(new java.sql.Timestamp(System.currentTimeMillis())));
+											lieferscheinDto.setMandantCNr(theClientDto.getMandant());
 
-											if (kDto_Quellmandant
-													.getKostenstelleIId() != null) {
+											if (kDto_Quellmandant.getKostenstelleIId() != null) {
 												lieferscheinDto
-														.setKostenstelleIId(kDto_Quellmandant
-																.getKostenstelleIId());
+														.setKostenstelleIId(kDto_Quellmandant.getKostenstelleIId());
 											} else {
-												lieferscheinDto
-														.setKostenstelleIId(mDto
-																.getIIdKostenstelle());
+												lieferscheinDto.setKostenstelleIId(mDto.getIIdKostenstelle());
 											}
 
-											lieferscheinDto
-													.setStatusCNr(LocaleFac.STATUS_ANGELEGT);
+											lieferscheinDto.setStatusCNr(LocaleFac.STATUS_ANGELEGT);
 
-											lieferscheinDto
-													.setLieferartIId(kDto_Quellmandant
-															.getLieferartIId());
-											lieferscheinDto
-													.setSpediteurIId(kDto_Quellmandant
-															.getSpediteurIId());
-											lieferscheinDto
-													.setZahlungszielIId(kDto_Quellmandant
-															.getZahlungszielIId());
+											lieferscheinDto.setLieferartIId(kDto_Quellmandant.getLieferartIId());
+											lieferscheinDto.setSpediteurIId(kDto_Quellmandant.getSpediteurIId());
+											lieferscheinDto.setZahlungszielIId(kDto_Quellmandant.getZahlungszielIId());
 
 											lieferscheinIId_Ziellager = getLieferscheinFac()
-													.createLieferschein(
-															lieferscheinDto,
-															theClientDto);
+													.createLieferschein(lieferscheinDto, theClientDto);
 
 										}
 
-										MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
-												.mwstsatzFindByMwstsatzbezIIdAktuellster(
-														kDto_Quellmandant
-																.getMwstsatzbezIId(),
-														theClientDto);
+										Lieferschein ls = em.find(Lieferschein.class, lieferscheinIId_Ziellager);
+										Timestamp belegDatum = ls.getTBelegdatum();
+
+//										MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
+//												.mwstsatzFindByMwstsatzbezIIdAktuellster(
+//														kDto_Quellmandant.getMwstsatzbezIId(), theClientDto);
+										MwstsatzDto mwstsatzDtoAktuell = getMandantFac().mwstsatzZuDatumValidate(
+												kDto_Quellmandant.getMwstsatzbezIId(), belegDatum, theClientDto);
+
 										// Position anlegen
 										LieferscheinpositionDto lieferscheinposDto = new LieferscheinpositionDto();
-										lieferscheinposDto
-												.setLieferscheinIId(lieferscheinIId_Ziellager);
-										lieferscheinposDto
-												.setPositionsartCNr(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT);
-										lieferscheinposDto
-												.setNMenge(bdUmbuchen);
+										lieferscheinposDto.setLieferscheinIId(lieferscheinIId_Ziellager);
+										lieferscheinposDto.setPositionsartCNr(
+												LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT);
+										lieferscheinposDto.setNMenge(bdUmbuchen);
 
 										VkpreisfindungDto vkpreisfindungDto = getVkPreisfindungFac()
-												.verkaufspreisfindung(
-														artikelDto.getIId(),
-														kDto_Quellmandant
-																.getIId(),
+												.verkaufspreisfindung(artikelDto.getIId(), kDto_Quellmandant.getIId(),
 														bdUmbuchen,
-														new Date(
-																System.currentTimeMillis()),
-														kDto_Quellmandant
-																.getVkpfArtikelpreislisteIIdStdpreisliste(),
-														mwstsatzDtoAktuell
-																.getIId(),
-														theClientDto
-																.getSMandantenwaehrung(),
-														theClientDto);
+//														new Date(System.currentTimeMillis()),
+														new Date(belegDatum.getTime()),
+														kDto_Quellmandant.getVkpfArtikelpreislisteIIdStdpreisliste(),
+														mwstsatzDtoAktuell.getIId(),
+														theClientDto.getSMandantenwaehrung(), theClientDto);
 
 										VerkaufspreisDto kundenVKPreisDto = Helper
 												.getVkpreisBerechnet(vkpreisfindungDto);
 										BigDecimal preis = BigDecimal.ZERO;
 										BigDecimal materialzuschlag = BigDecimal.ZERO;
 
-										if (kundenVKPreisDto != null
-												&& kundenVKPreisDto.nettopreis != null) {
+										if (kundenVKPreisDto != null && kundenVKPreisDto.nettopreis != null) {
 											preis = kundenVKPreisDto.nettopreis;
 										}
 
-										if (kundenVKPreisDto != null
-												&& kundenVKPreisDto.bdMaterialzuschlag != null) {
+										if (kundenVKPreisDto != null && kundenVKPreisDto.bdMaterialzuschlag != null) {
 											materialzuschlag = kundenVKPreisDto.bdMaterialzuschlag;
 											lieferscheinposDto
 													.setNMaterialzuschlag(kundenVKPreisDto.bdMaterialzuschlag);
 										}
 
-										lieferscheinposDto
-												.setNEinzelpreis(preis);
+										lieferscheinposDto.setNEinzelpreis(preis);
 
-										lieferscheinposDto
-												.setNNettoeinzelpreis(preis
-														.add(materialzuschlag));
-
+										lieferscheinposDto.setNNettoeinzelpreis(preis.add(materialzuschlag));
 
 										lieferscheinposDto.setFRabattsatz(0.0);
-										lieferscheinposDto
-												.setFZusatzrabattsatz(0.0);
-										lieferscheinposDto
-												.setBNettopreisuebersteuert(Helper
-														.boolean2Short(false));
-										lieferscheinposDto
-												.setArtikelIId(artikelDto
-														.getIId());
-										lieferscheinposDto
-												.setEinheitCNr(artikelDto
-														.getEinheitCNr());
+										lieferscheinposDto.setFZusatzrabattsatz(0.0);
+										lieferscheinposDto.setBNettopreisuebersteuert(Helper.boolean2Short(false));
+										lieferscheinposDto.setArtikelIId(artikelDto.getIId());
+										lieferscheinposDto.setEinheitCNr(artikelDto.getEinheitCNr());
 
 										// Ausser der Kunde hat MWST-Satz mit
 										// 0%,
@@ -759,32 +676,19 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 										// dieser
 										// verwendet werden
 
-										BigDecimal mwstBetrag = new BigDecimal(
-												0);
+										BigDecimal mwstBetrag = new BigDecimal(0);
+
+										lieferscheinposDto.setMwstsatzIId(mwstsatzDtoAktuell.getIId());
+
+										mwstBetrag = preis.add(materialzuschlag).multiply(
+												new BigDecimal(mwstsatzDtoAktuell.getFMwstsatz()).movePointLeft(2));
 
 										lieferscheinposDto
-												.setMwstsatzIId(mwstsatzDtoAktuell
-														.getIId());
+												.setNBruttoeinzelpreis(preis.add(materialzuschlag).add(mwstBetrag));
+										lieferscheinposDto.setNMwstbetrag(mwstBetrag);
 
-										mwstBetrag = preis
-												.add(materialzuschlag)
-												.multiply(
-														new BigDecimal(
-																mwstsatzDtoAktuell
-																		.getFMwstsatz())
-																.movePointLeft(2));
-
-										lieferscheinposDto
-												.setNBruttoeinzelpreis(preis
-														.add(materialzuschlag)
-														.add(mwstBetrag));
-										lieferscheinposDto
-												.setNMwstbetrag(mwstBetrag);
-
-										getLieferscheinpositionFac()
-												.createLieferscheinposition(
-														lieferscheinposDto,
-														true, theClientDto);
+										getLieferscheinpositionFac().createLieferscheinposition(lieferscheinposDto,
+												true, theClientDto);
 
 									} else {
 										// FEHLERMELDUNG
@@ -808,14 +712,12 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 
 	}
 
-	public BigDecimal getSummeBestellungenZielmandant(
-			String mandantCNr_Zielmandant, java.sql.Timestamp tStichtag,
+	public BigDecimal getSummeBestellungenZielmandant(String mandantCNr_Zielmandant, java.sql.Timestamp tStichtag,
 			Integer artikelIId) throws RemoteException {
 		BigDecimal bdBestellt = BigDecimal.ZERO;
 
 		Collection<FLRArtikelbestellt> c = (Collection<FLRArtikelbestellt>) getArtikelbestelltFac()
-				.getArtikelbestellt(artikelIId, null,
-						new Date(tStichtag.getTime()));
+				.getArtikelbestellt(artikelIId, null, new Date(tStichtag.getTime()));
 
 		Iterator itBest = c.iterator();
 		while (itBest.hasNext()) {
@@ -824,13 +726,10 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 			if (flr.getC_belegartnr().equals(LocaleFac.BELEGART_BESTELLUNG)) {
 
 				BestellpositionDto bestposDto = getBestellpositionFac()
-						.bestellpositionFindByPrimaryKeyOhneExc(
-								flr.getI_belegartpositionid());
+						.bestellpositionFindByPrimaryKeyOhneExc(flr.getI_belegartpositionid());
 				if (bestposDto != null) {
 
-					BestellungDto besDto = getBestellungFac()
-							.bestellungFindByPrimaryKey(
-									bestposDto.getBelegIId());
+					BestellungDto besDto = getBestellungFac().bestellungFindByPrimaryKey(bestposDto.getBelegIId());
 
 					if (besDto.getMandantCNr().equals(mandantCNr_Zielmandant)) {
 						bdBestellt = bdBestellt.add(flr.getN_menge());
@@ -844,8 +743,7 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		return bdBestellt;
 	}
 
-	public TreeMap<?, ?> alleFehlmengenDesMandantenAufloesen(
-			TheClientDto theClientDto) {
+	public Integer alleFehlmengenDesMandantenAufloesen(TheClientDto theClientDto) {
 
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = factory.openSession();
@@ -859,106 +757,73 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 			// Filter nach Mandant
 			c.createCriteria(ArtikelFac.FLR_FEHLMENGE_FLRLOSSOLLMATERIAL)
 					.createCriteria(FertigungFac.FLR_LOSSOLLMATERIAL_FLRLOS)
-					.add(Restrictions.eq(FertigungFac.FLR_LOS_MANDANT_C_NR,
-							theClientDto.getMandant()))
-					.addOrder(
-							Order.asc(FertigungFac.FLR_LOS_T_PRODUKTIONSBEGINN));
-			c.add(Restrictions.gt(ArtikelFac.FLR_FEHLMENGE_N_MENGE,
-					BigDecimal.ZERO));
+					.add(Restrictions.eq(FertigungFac.FLR_LOS_MANDANT_C_NR, theClientDto.getMandant()))
+					.addOrder(Order.asc(FertigungFac.FLR_LOS_T_PRODUKTIONSBEGINN));
+			c.add(Restrictions.gt(ArtikelFac.FLR_FEHLMENGE_N_MENGE, BigDecimal.ZERO));
 
 			List<?> list = c.list();
 			Iterator it = list.iterator();
 			while (it.hasNext()) {
 				FLRFehlmenge fm = (FLRFehlmenge) it.next();
 
-				if (Helper.short2boolean(fm.getFlrartikel()
-						.getB_seriennrtragend()) == false) {
-					if (Helper.short2boolean(fm.getFlrartikel()
-							.getB_chargennrtragend()) == false) {
+				if (Helper.short2boolean(fm.getFlrartikel().getB_seriennrtragend()) == false) {
+					if (Helper.short2boolean(fm.getFlrartikel().getB_chargennrtragend()) == false) {
 						BigDecimal bdAbzubuchendeMenge = fm.getN_menge();
 
 						LossollmaterialDto sollDto = getFertigungFac()
-								.lossollmaterialFindByPrimaryKey(
-										fm.getFlrlossollmaterial().getI_id());
-						ArtikelDto artikelDto = getArtikelFac()
-								.artikelFindByPrimaryKeySmall(
-										fm.getArtikel_i_id(), theClientDto);
-						LosDto losDto = getFertigungFac().losFindByPrimaryKey(
-								fm.getFlrlossollmaterial().getFlrlos()
-										.getI_id());
+								.lossollmaterialFindByPrimaryKey(fm.getFlrlossollmaterial().getI_id());
+						ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(fm.getArtikel_i_id(),
+								theClientDto);
+						LosDto losDto = getFertigungFac()
+								.losFindByPrimaryKey(fm.getFlrlossollmaterial().getFlrlos().getI_id());
 
 						LoslagerentnahmeDto[] loslagerentnahmeDtos = getFertigungFac()
 								.loslagerentnahmeFindByLosIId(losDto.getIId());
 
 						for (int i = 0; i < loslagerentnahmeDtos.length; i++) {
-							BigDecimal bdLagerstand = getLagerFac()
-									.getLagerstand(
-											fm.getArtikel_i_id(),
-											loslagerentnahmeDtos[i]
-													.getLagerIId(),
-											theClientDto);
+
+							// SP4361
+							BigDecimal bdLagerstand = null;
+							if (Helper.short2boolean(fm.getFlrartikel().getB_lagerbewirtschaftet())) {
+								bdLagerstand = getLagerFac().getLagerstand(fm.getArtikel_i_id(),
+										loslagerentnahmeDtos[i].getLagerIId(), theClientDto);
+							} else {
+								bdLagerstand = new BigDecimal(9999999);
+							}
 
 							if (bdLagerstand.doubleValue() > 0) {
 
 								LosistmaterialDto losistmaterialDto = new LosistmaterialDto();
-								losistmaterialDto.setLossollmaterialIId(sollDto
-										.getIId());
-								losistmaterialDto
-										.setLagerIId(loslagerentnahmeDtos[i]
-												.getLagerIId());
+								losistmaterialDto.setLossollmaterialIId(sollDto.getIId());
+								losistmaterialDto.setLagerIId(loslagerentnahmeDtos[i].getLagerIId());
 
-								if (bdLagerstand.doubleValue() >= bdAbzubuchendeMenge
-										.doubleValue()) {
-									losistmaterialDto
-											.setNMenge(bdAbzubuchendeMenge);
+								if (bdLagerstand.doubleValue() >= bdAbzubuchendeMenge.doubleValue()) {
+									losistmaterialDto.setNMenge(bdAbzubuchendeMenge);
 									bdAbzubuchendeMenge = BigDecimal.ZERO;
 								} else {
 									losistmaterialDto.setNMenge(bdLagerstand);
-									bdAbzubuchendeMenge = bdAbzubuchendeMenge
-											.subtract(bdLagerstand);
+									bdAbzubuchendeMenge = bdAbzubuchendeMenge.subtract(bdLagerstand);
 								}
-								losistmaterialDto.setBAbgang(Helper
-										.boolean2Short(true));
+								losistmaterialDto.setBAbgang(Helper.boolean2Short(true));
 
-								getFertigungFac().gebeMaterialNachtraeglichAus(
-										sollDto, losistmaterialDto, null, true,
+								getFertigungFac().gebeMaterialNachtraeglichAus(sollDto, losistmaterialDto, null, true,
 										theClientDto);
 
 								LagerDto lagerDto = getLagerFac()
-										.lagerFindByPrimaryKey(
-												loslagerentnahmeDtos[i]
-														.getLagerIId());
+										.lagerFindByPrimaryKey(loslagerentnahmeDtos[i].getLagerIId());
 
 								AufgeloesteFehlmengenDto aufgeloesteFehlmengenDto = new AufgeloesteFehlmengenDto();
-								aufgeloesteFehlmengenDto
-										.setArtikelDto(artikelDto);
-								aufgeloesteFehlmengenDto
-										.setArtikelCNr(artikelDto.getCNr());
+								aufgeloesteFehlmengenDto.setArtikelDto(artikelDto);
+								aufgeloesteFehlmengenDto.setArtikelCNr(artikelDto.getCNr());
 								aufgeloesteFehlmengenDto.setLagerDto(lagerDto);
-								aufgeloesteFehlmengenDto.setLagerCNr(lagerDto
-										.getCNr());
+								aufgeloesteFehlmengenDto.setLagerCNr(lagerDto.getCNr());
 								aufgeloesteFehlmengenDto.setLosDto(losDto);
-								aufgeloesteFehlmengenDto.setLosCNr(losDto
-										.getCNr());
-								aufgeloesteFehlmengenDto
-										.setAufgeloesteMenge(losistmaterialDto
-												.getNMenge());
+								aufgeloesteFehlmengenDto.setLosCNr(losDto.getCNr());
+								aufgeloesteFehlmengenDto.setAufgeloesteMenge(losistmaterialDto.getNMenge());
 								aufgeloesteFehlmengenDto.setSSeriennrChnr(null);
 								aufgeloesteFehlmengenDto.setLosDto(losDto);
 
-								if (tmAufgeloesteFehlmengen.containsKey(losDto
-										.getCNr())) {
-									ArrayList<AufgeloesteFehlmengenDto> al = (ArrayList<AufgeloesteFehlmengenDto>) tmAufgeloesteFehlmengen
-											.get(losDto.getCNr());
-									al.add(aufgeloesteFehlmengenDto);
-									tmAufgeloesteFehlmengen.put(
-											losDto.getCNr(), al);
-								} else {
-									ArrayList<AufgeloesteFehlmengenDto> al = new ArrayList<AufgeloesteFehlmengenDto>();
-									al.add(aufgeloesteFehlmengenDto);
-									tmAufgeloesteFehlmengen.put(
-											losDto.getCNr(), al);
-								}
+								addAufgeloesteFehlmengeZuSession(aufgeloesteFehlmengenDto, theClientDto);
 
 								if (bdAbzubuchendeMenge.doubleValue() <= 0) {
 									break;
@@ -975,24 +840,22 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 			throwEJBExceptionLPRespectOld(e);
 		}
 
-		return tmAufgeloesteFehlmengen;
+		return istOffeneFasessionVorhanden(theClientDto);
 	}
 
-	public ArrayList getFehlmengen(Integer artikelIId, String mandantCNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public ArrayList getFehlmengen(Integer artikelIId, String mandantCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		Session session = null;
 		try {
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
 			Criteria c = session.createCriteria(FLRFehlmenge.class);
 			// Filter nach Artikel
-			c.add(Restrictions.eq(ArtikelFac.FLR_FEHLMENGE_ARTIKEL_I_ID,
-					artikelIId));
+			c.add(Restrictions.eq(ArtikelFac.FLR_FEHLMENGE_ARTIKEL_I_ID, artikelIId));
 			// Filter nach Mandant
 			c.createCriteria(ArtikelFac.FLR_FEHLMENGE_FLRLOSSOLLMATERIAL)
 					.createCriteria(FertigungFac.FLR_LOSSOLLMATERIAL_FLRLOS)
-					.add(Restrictions.eq(FertigungFac.FLR_LOS_MANDANT_C_NR,
-							mandantCNr));
+					.add(Restrictions.eq(FertigungFac.FLR_LOS_MANDANT_C_NR, mandantCNr));
 			// Sortierung nach Liefertermin
 			c.addOrder(Order.asc(ArtikelFac.FLR_FEHLMENGE_T_LIEFERTERMIN));
 			List<?> list = c.list();
@@ -1004,31 +867,225 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		}
 	}
 
-	public ArtikelfehlmengeDto artikelfehlmengeFindByBelegartCNrBelegartPositionIId(
-			String belegartCNr, Integer belegartpositionIId)
-			throws EJBExceptionLP {
+	public Integer istOffeneFasessionVorhanden(TheClientDto theClientDto) {
+		Query query = em.createNamedQuery(Fasession.FindOffeneSession);
+		query.setParameter(1, theClientDto.getIDPersonal());
+
+		Collection<?> cl = query.getResultList();
+
+		if (cl.size() > 0) {
+
+			Integer fasessionIId = ((Fasession) cl.iterator().next()).getIId();
+
+			Query query2 = em.createNamedQuery(Fasessioneintrag.FindByFasessionIId);
+			query2.setParameter(1, fasessionIId);
+
+			Collection<?> cl2 = query2.getResultList();
+
+			// SP4459
+			if (cl2.size() > 0) {
+				return fasessionIId;
+			} else {
+				schliesseAufgeloesteFehlmengenSessionAb(fasessionIId, theClientDto);
+				return null;
+			}
+
+		} else {
+			return null;
+		}
+	}
+
+	public TreeMap getAufgeloesteFehlmengenEinerSession(Integer fasessionIId, TheClientDto theClientDto) {
+
+		TreeMap<String, ArrayList> tmAufgeloesteFehlmengen = new TreeMap<String, ArrayList>();
+
+		Query query = em.createNamedQuery(Fasessioneintrag.FindByFasessionIId);
+		query.setParameter(1, fasessionIId);
+
+		Collection<?> cl = query.getResultList();
+
+		Iterator it = cl.iterator();
+		while (it.hasNext()) {
+			Fasessioneintrag eintrag = (Fasessioneintrag) it.next();
+
+			try {
+
+				AufgeloesteFehlmengenDto aufgeloesteFehlmengenDto = new AufgeloesteFehlmengenDto();
+				String key = "";
+				if (eintrag.getAuftragIId() != null) {
+					AuftragDto aDto = getAuftragFac().auftragFindByPrimaryKey(eintrag.getAuftragIId());
+					key = "A" + aDto.getCNr();
+
+					aufgeloesteFehlmengenDto.setAuftagDto(aDto);
+
+				} else if (eintrag.getLosIId() != null) {
+					LosDto lDto = getFertigungFac().losFindByPrimaryKey(eintrag.getLosIId());
+					key = "L" + lDto.getCNr();
+					aufgeloesteFehlmengenDto.setLosDto(lDto);
+					aufgeloesteFehlmengenDto.setLosCNr(lDto.getCNr());
+
+					if (eintrag.getArtikelIIdOffenerag() != null) {
+						ArtikelDto aDtoOffenerAg = getArtikelFac()
+								.artikelFindByPrimaryKey(eintrag.getArtikelIIdOffenerag(), theClientDto);
+						aufgeloesteFehlmengenDto.setArtikelDtoErsterOffenerAG(aDtoOffenerAg);
+
+						key += " " + aDtoOffenerAg.getCNr();
+
+					}
+
+				}
+
+				if (eintrag.getLieferscheinIId() != null) {
+
+					aufgeloesteFehlmengenDto.setLieferscheinDto(
+							getLieferscheinFac().lieferscheinFindByPrimaryKey(eintrag.getLieferscheinIId()));
+
+				}
+
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKey(eintrag.getArtikelIId(), theClientDto);
+
+				LagerDto lagerDto = getLagerFac().lagerFindByPrimaryKey(eintrag.getLagerIId());
+
+				BigDecimal bdLagerstand = null;
+				if (aDto.isLagerbewirtschaftet()) {
+					bdLagerstand = getLagerFac().getLagerstand(eintrag.getArtikelIId(), lagerDto.getIId(),
+							theClientDto);
+				} else {
+					bdLagerstand = new BigDecimal(9999999);
+				}
+
+				aufgeloesteFehlmengenDto.setTAnlegen(eintrag.getTAnlegen());
+
+				aufgeloesteFehlmengenDto.setKurzzeichenPersonalAnlegen(getPersonalFac()
+						.personalFindByPrimaryKeySmall(eintrag.getPersonalIIdAnlegen()).getCKurzzeichen());
+
+				aufgeloesteFehlmengenDto.setArtikelDto(aDto);
+				aufgeloesteFehlmengenDto.setArtikelCNr(aDto.getCNr());
+				aufgeloesteFehlmengenDto.setLagerDto(lagerDto);
+				aufgeloesteFehlmengenDto.setLagerstand(bdLagerstand);
+				aufgeloesteFehlmengenDto.setLagerCNr(lagerDto.getCNr());
+				aufgeloesteFehlmengenDto.setAufgeloesteMenge(eintrag.getNMenge());
+				aufgeloesteFehlmengenDto.setSSeriennrChnr(Helper.erzeugeStringArrayAusString(eintrag.getCSnrchnr()));
+
+				if (tmAufgeloesteFehlmengen.containsKey(key)) {
+					ArrayList<AufgeloesteFehlmengenDto> al = (ArrayList<AufgeloesteFehlmengenDto>) tmAufgeloesteFehlmengen
+							.get(key);
+					al.add(aufgeloesteFehlmengenDto);
+					tmAufgeloesteFehlmengen.put(key, al);
+				} else {
+					ArrayList<AufgeloesteFehlmengenDto> al = new ArrayList<AufgeloesteFehlmengenDto>();
+					al.add(aufgeloesteFehlmengenDto);
+					tmAufgeloesteFehlmengen.put(key, al);
+				}
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+
+		return tmAufgeloesteFehlmengen;
+	}
+
+	public void addAufgeloesteFehlmengeZuSession(AufgeloesteFehlmengenDto dto, TheClientDto theClientDto) {
+
+		// Zuerst pruefen obe s fuer mich eine offen Session gibt
+
+		Query query = em.createNamedQuery(Fasession.FindOffeneSession);
+		query.setParameter(1, theClientDto.getIDPersonal());
+
+		Collection<?> cl = query.getResultList();
+
+		Fasession fasession = null;
+
+		if (cl.size() > 0) {
+			// zu vorhandener hinzufuegen
+			fasession = (Fasession) cl.iterator().next();
+
+		} else {
+			// Eine neue anlegen
+
+			Integer iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_FASESSION);
+
+			fasession = new Fasession(iId, theClientDto.getIDPersonal(), new Timestamp(System.currentTimeMillis()));
+			em.persist(fasession);
+			em.flush();
+		}
+
+		// Nun Eintrag hinzufuegen
+		Fasessioneintrag fasessioneintrag = new Fasessioneintrag(
+				getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_FASESSIONEINTRAG), fasession.getIId(),
+				dto.getArtikelDto().getIId(), dto.getLagerDto().getIId(), dto.getAufgeloesteMenge(),
+				theClientDto.getIDPersonal(), new Timestamp(System.currentTimeMillis()));
+
+		if (dto.getLieferscheinDto() != null) {
+			fasessioneintrag.setLieferscheinIId(dto.getLieferscheinDto().getIId());
+		}
+
+		if (dto.getAuftagDto() != null) {
+			fasessioneintrag.setAuftragIId(dto.getAuftagDto().getIId());
+		} else if (dto.getLosDto() != null) {
+			fasessioneintrag.setLosIId(dto.getLosDto().getIId());
+
+			// PJ20182
+			try {
+				LossollarbeitsplanDto[] sollarbeitsplanDtos = getFertigungFac()
+						.lossollarbeitsplanFindByLosIId(dto.getLosDto().getIId());
+
+				if (sollarbeitsplanDtos.length > 0) {
+					for (int i = 0; i < sollarbeitsplanDtos.length; i++) {
+						LossollarbeitsplanDto saDto = sollarbeitsplanDtos[i];
+						if (Helper.short2boolean(saDto.getBFertig()) == false) {
+							fasessioneintrag.setArtikelIIdOffenerag(saDto.getArtikelIIdTaetigkeit());
+							break;
+						}
+					}
+				}
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+
+		if (dto.getSSeriennrChnr() != null) {
+			fasessioneintrag.setCSnrchnr(Helper.erzeugeStringAusStringArray(dto.getSSeriennrChnr()));
+		}
+
+		em.persist(fasessioneintrag);
+		em.flush();
+
+	}
+
+	public void schliesseAufgeloesteFehlmengenSessionAb(Integer fasessionIId, TheClientDto theClientDto) {
+
+		Fasession fasession = em.find(Fasession.class, fasessionIId);
+
+		if (fasession.getTGedruckt() == null) {
+			fasession.setTGedruckt(new Timestamp(System.currentTimeMillis()));
+
+			em.persist(fasession);
+			em.flush();
+		}
+
+	}
+
+	public ArtikelfehlmengeDto artikelfehlmengeFindByBelegartCNrBelegartPositionIId(String belegartCNr,
+			Integer belegartpositionIId) throws EJBExceptionLP {
 		// myLogger.entry();
 		if (belegartpositionIId == null || belegartCNr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartpositionIId == null || belegartCNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartpositionIId == null || belegartCNr == null"));
 		}
 		// try {
-		Query query = em
-				.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
+		Query query = em.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartpositionIId);
 		// @todo getSingleResult oder getResultList ?
-		Artikelfehlmenge artikelfehlmenge = (Artikelfehlmenge) query
-				.getSingleResult();
+		Artikelfehlmenge artikelfehlmenge = (Artikelfehlmenge) query.getSingleResult();
 		if (artikelfehlmenge == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FIND,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
 					"Fehler bei artikelfehlmengeFindByBelegartCNrBelegartPositionIId. Es gibt keine Artikelfehlmenge"
-							+ "mit belegartpositionIId "
-							+ belegartpositionIId
-							+ " und belegart " + belegartCNr);
+							+ "mit belegartpositionIId " + belegartpositionIId + " und belegart " + belegartCNr);
 		}
 		return assembleArtikelfehlmengeDto(artikelfehlmenge);
 		// }
@@ -1037,52 +1094,41 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 		// }
 	}
 
-	public ArtikelfehlmengeDto artikelfehlmengeFindByBelegartCNrBelegartPositionIIdOhneExc(
-			String belegartCNr, Integer belegartpositionIId)
-			throws EJBExceptionLP {
+	public ArtikelfehlmengeDto artikelfehlmengeFindByBelegartCNrBelegartPositionIIdOhneExc(String belegartCNr,
+			Integer belegartpositionIId) throws EJBExceptionLP {
 		if (belegartpositionIId == null || belegartCNr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartpositionIId == null || belegartCNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartpositionIId == null || belegartCNr == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
+			Query query = em.createNamedQuery("ArtikelfehlmengefindByBelegartCNrBelegartPositionIId");
 			query.setParameter(1, belegartCNr);
 			query.setParameter(2, belegartpositionIId);
-			Artikelfehlmenge artikelfehlmenge = (Artikelfehlmenge) query
-					.getSingleResult();
+			Artikelfehlmenge artikelfehlmenge = (Artikelfehlmenge) query.getSingleResult();
 			return assembleArtikelfehlmengeDto(artikelfehlmenge);
 		} catch (NoResultException ex) {
 			return null;
 		}
 	}
 
-	private void removeArtikelfehlmenge(String belegartCNr,
-			Integer belegartpositionIId) throws EJBExceptionLP {
+	private void removeArtikelfehlmenge(String belegartCNr, Integer belegartpositionIId) throws EJBExceptionLP {
 		myLogger.entry();
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("belegartCNr == null || belegartpositionIId == null"));
 		}
-		ArtikelfehlmengeDto a = artikelfehlmengeFindByBelegartCNrBelegartPositionIId(
-				belegartCNr, belegartpositionIId);
+		ArtikelfehlmengeDto a = artikelfehlmengeFindByBelegartCNrBelegartPositionIId(belegartCNr, belegartpositionIId);
 		removeArtikelfehlmenge(a);
 	}
 
 	/**
 	 * Fehlmengen komplett neu erzeugen
 	 * 
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param theClientDto der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public void pruefeFehlmengen(TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void pruefeFehlmengen(TheClientDto theClientDto) throws EJBExceptionLP {
 		Session session = null;
 		try {
 			session = FLRSessionFactory.getFactory().openSession();
@@ -1094,8 +1140,7 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 			session = FLRSessionFactory.getFactory().openSession();
 
 			Criteria cLosmat = session.createCriteria(FLRLossollmaterial.class);
-			Criteria cLos = cLosmat
-					.createCriteria(FertigungFac.FLR_LOSSOLLMATERIAL_FLRLOS);
+			Criteria cLos = cLosmat.createCriteria(FertigungFac.FLR_LOSSOLLMATERIAL_FLRLOS);
 			// Filter nach Status
 			Collection<String> cStati = new LinkedList<String>();
 			cStati.add(FertigungFac.STATUS_AUSGEGEBEN);
@@ -1108,10 +1153,8 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 			List<?> listLosmat = cLosmat.list();
 			for (Iterator<?> iter = listLosmat.iterator(); iter.hasNext();) {
 				FLRLossollmaterial item = (FLRLossollmaterial) iter.next();
-				BigDecimal bdAusgegeben = getFertigungFac()
-						.getAusgegebeneMenge(item.getI_id(), null, theClientDto);
-				BigDecimal bdFehlmenge = item.getN_menge().subtract(
-						bdAusgegeben.abs());
+				BigDecimal bdAusgegeben = getFertigungFac().getAusgegebeneMenge(item.getI_id(), null, theClientDto);
+				BigDecimal bdFehlmenge = item.getN_menge().subtract(bdAusgegeben.abs());
 
 				// gibt es ein Fehlmenge?
 				if (bdFehlmenge.compareTo(new BigDecimal(0)) > 0) {
@@ -1121,24 +1164,22 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 					fmDto.setCBelegartnr(LocaleFac.BELEGART_LOS);
 					fmDto.setIBelegartpositionid(item.getI_id());
 					fmDto.setNMenge(bdFehlmenge);
-					fmDto.setTLiefertermin(new java.sql.Date(item.getFlrlos()
-							.getT_produktionsbeginn().getTime()));
+					fmDto.setTLiefertermin(new java.sql.Date(item.getFlrlos().getT_produktionsbeginn().getTime()));
+
+					/// PJ20837
+					java.sql.Date dTermin = getFertigungFac().getProduktionsbeginnAnhandZugehoerigemArbeitsgang(
+							new java.sql.Date(item.getFlrlos().getT_produktionsbeginn().getTime()), item.getI_id(),
+							theClientDto);
 
 					// PJ17994
-					fmDto.setTLiefertermin(Helper.addiereTageZuDatum(
-							new java.sql.Date(item.getFlrlos()
-									.getT_produktionsbeginn().getTime()),
-							item.getI_beginnterminoffset()));
+					fmDto.setTLiefertermin(Helper.addiereTageZuDatum(dTermin, item.getI_beginnterminoffset()));
 
-					context.getBusinessObject(FehlmengeFac.class)
-							.createArtikelfehlmenge(fmDto);
-					myLogger.warn(theClientDto.getIDUser(),
-							"Fehlmenge nachgetragen: " + fmDto);
+					context.getBusinessObject(FehlmengeFac.class).createArtikelfehlmenge(fmDto);
+					myLogger.warn(theClientDto.getIDUser(), "Fehlmenge nachgetragen: " + fmDto);
 
 				} else {
 
-					BigDecimal fehlmenge = item.getN_menge().abs()
-							.subtract(bdAusgegeben.abs());
+					BigDecimal fehlmenge = item.getN_menge().abs().subtract(bdAusgegeben.abs());
 
 					if (fehlmenge.doubleValue() > 0) {
 						ArtikelfehlmengeDto fmDto = new ArtikelfehlmengeDto();
@@ -1146,18 +1187,14 @@ public class FehlmengeFacBean extends Facade implements FehlmengeFac {
 						fmDto.setCBelegartnr(LocaleFac.BELEGART_LOS);
 						fmDto.setIBelegartpositionid(item.getI_id());
 
-						fmDto.setNMenge(item.getN_menge()
-								.subtract(bdAusgegeben));
+						fmDto.setNMenge(item.getN_menge().subtract(bdAusgegeben));
 						// PJ17994
 						fmDto.setTLiefertermin(Helper.addiereTageZuDatum(
-								new java.sql.Date(item.getFlrlos()
-										.getT_produktionsende().getTime()),
+								new java.sql.Date(item.getFlrlos().getT_produktionsende().getTime()),
 								item.getI_beginnterminoffset()));
 
-						context.getBusinessObject(FehlmengeFac.class)
-								.createArtikelfehlmenge(fmDto);
-						myLogger.warn(theClientDto.getIDUser(),
-								"Fehlmenge nachgetragen: " + fmDto);
+						context.getBusinessObject(FehlmengeFac.class).createArtikelfehlmenge(fmDto);
+						myLogger.warn(theClientDto.getIDUser(), "Fehlmenge nachgetragen: " + fmDto);
 					}
 				}
 			}

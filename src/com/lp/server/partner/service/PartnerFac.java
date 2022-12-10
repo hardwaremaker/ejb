@@ -33,14 +33,17 @@
 package com.lp.server.partner.service;
 
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
 import javax.ejb.Remote;
 
-import com.lp.server.partner.ejb.PASelektionPK;
 import com.lp.server.partner.ejb.PartnerartsprPK;
+import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
@@ -98,6 +101,9 @@ public interface PartnerFac {
 
 	public static final String FLR_PARTNER_SERIENBRIEF_C_BEZ = "c_bez";
 	public static final String FLR_PARTNER_SERIENBRIEF_C_WANN = "t_aendern";
+	
+	public static final String FLR_NEWSLETTERGRUND_C_BEZ = "c_bez";
+	public static final String FLR_NEWSLETTERGRUND_B_ANGEMELDET = "b_angemeldet";
 
 	public static final String FLR_SERIENBRIEFSELEKTION_SERIENBRIEF_I_ID = "serienbrief_i_id";
 	public static final String FLR_SERIENBRIEFSELEKTION_SELEKTION_I_ID = "selektion_i_id";
@@ -155,6 +161,7 @@ public interface PartnerFac {
 	// Adressart
 	public static final String ADRESSART_LIEFERADRESSE = "L";
 	public static final String ADRESSART_FILIALADRESSE = "F";
+	public static final String ADRESSART_RECHNUNGSADRESSE = "R";
 
 	// Feldlaengen: Kommunikationsart
 	public static int MAX_KOMMART_BEZEICHNUNG = 80;
@@ -170,7 +177,8 @@ public interface PartnerFac {
 	public static int MAX_POSTFACH = 15;
 	public static int MAX_FIRMENBUCHNR = 50;
 	public static int MAX_GERICHTSSTAND = 40;
-	public static int MAX_BRANCHE = 40;
+	public static int MAX_BRANCHE = 120;
+	public static int MAX_ILN = 15;
 
 	public static final String PART_ZUSAMMENFUEHREN_MODUS_PARTNER = "partner";
 	public static final String PART_ZUSAMMENFUEHREN_MODUS_ANSPRECHPARTNER = "ansprechpartner";
@@ -381,28 +389,17 @@ public interface PartnerFac {
 	public String formatBriefAnrede(PartnerDto partnerDto, Locale loI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public PASelektionPK createPASelektion(PASelektionDto pASelektionDto,
+	public Integer createPASelektion(PASelektionDto pASelektionDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void importierePartner(PartnerImportDto[] daten,
-			TheClientDto theClientDto, boolean bErzeugeKunde, boolean bErzeugeLieferant)
-			throws RemoteException;
-
-	public String pruefeCSVImport(PartnerImportDto[] daten,
-			TheClientDto theClientDto) throws RemoteException;
-
-	public void removePASelektion(PASelektionPK pASelektionPKI,
+	public void removePASelektion(PASelektionDto pASelektionDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void updatePASelektion(PASelektionDto pASelektionDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void updatePASelektionPartner(PASelektionDto pASelektionDto,
-			Integer iOldPartnerIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
 
-	public PASelektionDto pASelektionFindByPrimaryKey(
-			PASelektionPK pASelektionPKI, TheClientDto theClientDto)
+	public PASelektionDto pASelektionFindByPrimaryKey(Integer iId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public PASelektionDto[] pASelektionFindByPartnerIId(Integer partnerIId)
@@ -444,6 +441,11 @@ public interface PartnerFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public String partnerkommFindOhneExec(Integer iIdPartnerI,
+			Integer iIdPartnerAnsprechpartnerI, String cNrKommunikationsartI,
+			String cNrMandantI, TheClientDto theClientDto)
+			throws RemoteException;
+
+	public String partnerkommFindOhneAnpassungOhneExec(Integer iIdPartnerI,
 			Integer iIdPartnerAnsprechpartnerI, String cNrKommunikationsartI,
 			String cNrMandantI, TheClientDto theClientDto)
 			throws RemoteException;
@@ -569,4 +571,51 @@ public interface PartnerFac {
 	 */
 	PartnerDto partnerFindByAnsprechpartnerId(Integer ansprechpartnerId, 
 			TheClientDto theClientDto) throws EJBExceptionLP ;	
+	
+	public Integer getDefaultMWSTSatzIIdAnhandLand(LandDto landDto,
+			TheClientDto theClientDto);
+
+	Integer createGeodaten(GeodatenDto geodatenDto);
+
+	void removeGeodaten(Integer geodatenIId);
+
+	void updateGeodaten(GeodatenDto geodatenDto);
+
+	GeodatenDto geodatenFindByPartnerIIdOhneExc(Integer partnerIId);
+
+	void createGeodaten(List<GeodatenDto> createList);
+	
+	public void empfaengerlisteAlsKontakteBeiPartnernEintragen(String titel,
+			SerienbriefEmpfaengerDto[] empfaenger, Timestamp tKontakt,
+			Timestamp tWiedervorlage, Integer kontaktartIId,Integer personalIIdZugewiesener,
+			TheClientDto theClientDto);
+	
+	public void telefonnummerFuerTapiSynchronisieren(Integer partnerIId, Integer ansprechpartnerIId,
+			TheClientDto theClientDto);
+	
+	/**
+	 * Ermittelt alle Partner die die angegebene Telefonnummer haben
+	 * 
+	 * @param telefonnummer die gesuchte Telefonnummer
+	 * @param modified wurde die Telefonnummer von extern veraendert? Falls true, wird
+	 * die interne Logik zur Suche der Telefonnummer nicht verwendet
+	 * @param theClientDto
+	 * @return eine (leere) Liste von Partnerinformationen zur gesuchten Telefonnummer
+	 */
+	List<TelefonSuchergebnisDto> findeTelefonnummer(
+			String telefonnummer, boolean modified, TheClientDto theClientDto);
+	
+	public void reassignPartnerkommentarBeimZusammenfuehren(Integer partnerIId_Ziel, Integer partnerIId_Quelle,
+			boolean bKunde, TheClientDto theClientDto) ;
+	
+	public ArrayList<AdressbuchExportDto> getDatenFuerAdressbuchExport(int iMaximaleAanzahl, TheClientDto theClientDto);
+	
+	public ArrayList<AdressbuchExportDto> getDatenFuerAdressbuchExport(int iMaximaleAanzahl, String cEmailAdresse, TheClientDto theClientDto);
+	
+	public void adressdatensatzEinesPartnersAlsExportiertMarkieren(Integer partnerIId,Integer ansprechpartnerIId, String cEmailAdresse, String exchangeId);
+	
+	public void testAdressdatenexport(TheClientDto theClientDto);
+	
+	public void testAdressdatenexport(String cEmailAdresse, TheClientDto theClientDto);
+	
 }

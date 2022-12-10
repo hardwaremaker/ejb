@@ -67,6 +67,15 @@ public class LossollmaterialDtoAssembler {
 					.getLossollmaterialIIdOriginal());
 			lossollmaterialDto.setIBeginnterminoffset(lossollmaterial
 					.getIBeginnterminoffset());
+			lossollmaterialDto.setBRuestmenge(lossollmaterial.getBRuestmenge());
+			lossollmaterialDto.setNMengeStklPos(lossollmaterial.getNMengeStklPos());
+			lossollmaterialDto.setEinheitCNrStklPos(lossollmaterial.getEinheitCNrStklPos());
+			lossollmaterialDto.setBDringend(lossollmaterial.getBDringend());
+			lossollmaterialDto.setNMengeProLos(lossollmaterial.getNMengeProLos());
+			lossollmaterialDto.setTExportBeginn(lossollmaterial.getTExportBeginn());
+			lossollmaterialDto.setTExportEnde(lossollmaterial.getTExportEnde());
+			lossollmaterialDto.setCFehlercode(lossollmaterial.getCFehlercode());
+			lossollmaterialDto.setCFehlertext(lossollmaterial.getCFehlertext());
 		}
 		return lossollmaterialDto;
 	}

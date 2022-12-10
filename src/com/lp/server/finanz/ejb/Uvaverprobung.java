@@ -42,13 +42,15 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries( 
 		{ @NamedQuery(name = "UvaverprobungfindLastByFinanzamtIIdMandant", query = "SELECT OBJECT(o) FROM Uvaverprobung o WHERE o.finanzamtIId=?1 AND o.mandantCNr=?2 order by o.iGeschaeftsjahr DESC, o.iMonat DESC"),
 		  @NamedQuery(name = "UvaverprobungfindByGeschaeftsjahrMonatFinanzamtMandant", query = "SELECT OBJECT(o) FROM Uvaverprobung o WHERE o.iGeschaeftsjahr=?1 AND o.iMonat=?2 AND o.finanzamtIId=?3 AND o.mandantCNr=?4"),
 		  @NamedQuery(name = "UvaverprobungfindAll", query = "SELECT OBJECT(o) FROM Uvaverprobung o WHERE o.mandantCNr=?1")})
 
 @Entity
-@Table(name = "FB_UVAVERPROBUNG")
+@Table(name = ITablenames.FB_UVAVERPROBUNG)
 public class Uvaverprobung implements Serializable {
 	@Id
 	@Column(name = "I_ID")

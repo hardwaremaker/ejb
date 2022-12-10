@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.webapp.zemecs;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
@@ -98,11 +99,21 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemServicesFac;
 import com.lp.server.system.service.TextDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.barcode.HvBarcodeDecoder;
 import com.lp.webapp.frame.Command;
 import com.lp.webapp.frame.TheApp;
+
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRExporter;
+import net.sf.jasperreports.engine.JRExporterParameter;
+import net.sf.jasperreports.engine.export.HtmlExporter;
+import net.sf.jasperreports.engine.export.JRHtmlExporterParameter;
+import net.sourceforge.jtds.util.Logger;
 
 /**
  * <p>
@@ -129,6 +140,8 @@ public class CommandZE extends Command {
 	private static final String sUser = "lpwebappzemecs";
 	private static final String hashedPassword = Helper.getMD5Hash(sUser + "lpwebappzemecs").toString();
 
+	private String BACK_FROM_REPORT = "BACK_FROM_REPORT";
+
 	private String mutex = "";
 
 	public CommandZE(String sJSPI) {
@@ -138,8 +151,7 @@ public class CommandZE extends Command {
 	/**
 	 * getCommand
 	 * 
-	 * @param request
-	 *            HttpServletRequest
+	 * @param request HttpServletRequest
 	 * @return String
 	 */
 	protected String getCommand(HttpServletRequest request) {
@@ -171,8 +183,7 @@ public class CommandZE extends Command {
 		return null;
 	}
 
-	public synchronized String execute(HttpServletRequest request,
-			HttpServletResponse response) throws Exception {
+	public synchronized String execute(HttpServletRequest request, HttpServletResponse response) throws Exception {
 
 		super.execute(request, response);
 
@@ -197,29 +208,43 @@ public class CommandZE extends Command {
 		}
 
 		if (locale != null && locale.length() > 3) {
-			localeLogon = new Locale(locale.substring(0, 2), locale.substring(
-					2, 4));
+			localeLogon = new Locale(locale.substring(0, 2), locale.substring(2, 4));
 		}
 
 		TheClientDto theclientDto = null;
 		synchronized (mutex) {
-			mandant = mandant == null ? null :
-				(mandant.isEmpty() ? null : mandant);
-			
-			theclientDto = getLogonFac().logon(
-					Helper.getFullUsername(sUser), hashedPassword.toCharArray(),
-					localeLogon, mandant,
-					new Timestamp(System.currentTimeMillis()));
+			mandant = mandant == null ? null : (mandant.isEmpty() ? null : mandant);
+
+			/*
+			 * theclientDto = getLogonFac().logon(Helper.getFullUsername(sUser),
+			 * hashedPassword.toCharArray(), localeLogon, mandant, new
+			 * Timestamp(System.currentTimeMillis()));
+			 */
+
+			theclientDto = getLogonFac().logonIntern(localeLogon, mandant);
 
 			if (mandant == null) {
-				BenutzerDto benutzerDto = getBenutzerFac()
-						.benutzerFindByCBenutzerkennung(
-								sUser, hashedPassword);
+				BenutzerDto benutzerDto = getBenutzerFac().benutzerFindByCBenutzerkennung(sUser, hashedPassword);
 				mandant = benutzerDto.getMandantCNrDefault();
 			}
 		}
 
 		getTheClient(request, response).setTheClientDto(theclientDto);
+
+		// PJ21080
+		if (getTheClient(request, response).getData() != null) {
+
+			HashMap<String, Serializable> hmParameter = (HashMap<String, Serializable>) getTheClient(request, response)
+					.getData();
+			if (hmParameter.containsKey(BACK_FROM_REPORT)) {
+				command = TheApp.CMD_ZE_BDESTATION;
+				hmParameter.remove(BACK_FROM_REPORT);
+				getTheClient(request, response).setData(hmParameter);
+				setSJSPNext("bdestation.jsp");
+				return getSJSPNext();
+			}
+
+		}
 
 		if (command.equals(TheApp.CMD_ZE_BDESTATION)) {
 			String ausweis = request.getParameter("ausweis");
@@ -227,28 +252,23 @@ public class CommandZE extends Command {
 
 			if (ausweis != null && ausweis.length() > 1) {
 				// Personal suchen
-				PersonalDto personalDto = getPersonalFac()
-						.personalFindByCAusweis(ausweis.substring(2));
+				PersonalDto personalDto = getPersonalFac().personalFindByCAusweis(ausweis.substring(2));
 				if (personalDto != null) {
-					personalDto.setPartnerDto(getPartnerFac()
-							.partnerFindByPrimaryKey(
-									personalDto.getPartnerIId(), theclientDto));
+					personalDto.setPartnerDto(
+							getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIId(), theclientDto));
 
 					HashMap<String, Serializable> hmParameter = new HashMap<String, Serializable>();
 					ZeitdatenDto zeitdatenDto = new ZeitdatenDto();
-					zeitdatenDto.setCWowurdegebucht("BDE-Station "
-							+ request.getRemoteHost());
+					zeitdatenDto.setCWowurdegebucht("BDE-Station " + request.getRemoteHost());
 					zeitdatenDto.setPersonalIId(personalDto.getIId());
 					hmParameter.put("zeitdaten", zeitdatenDto);
-					hmParameter.put("person", personalDto.getPartnerDto()
-							.formatFixTitelName1Name2());
+					hmParameter.put("person", personalDto.getPartnerDto().formatFixTitelName1Name2());
 					getTheClient(request, response).setData(hmParameter);
 					setSJSPNext("bdestation2.jsp");
 					return getSJSPNext();
 				} else {
-					getTheClient(request, response).setSMsg(
-							"Ausweis " + ausweis
-									+ " bei diesem Mandanten nicht gefunden! ");
+					getTheClient(request, response)
+							.setSMsg("Ausweis " + ausweis + " bei diesem Mandanten nicht gefunden! ");
 				}
 			} else {
 				getTheClient(request, response).setSMsg("");
@@ -256,56 +276,40 @@ public class CommandZE extends Command {
 		}
 		if (command.equals(TheApp.CMD_ZE_BDESTATION2)) {
 
-			HashMap<String, Serializable> hmParameter = (HashMap<String, Serializable>) getTheClient(
-					request, response).getData();
-			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter
-					.get("zeitdaten");
+			HashMap<String, Serializable> hmParameter = (HashMap<String, Serializable>) getTheClient(request, response)
+					.getData();
+			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter.get("zeitdaten");
 			zeitdatenDto.setTZeit(new Timestamp(System.currentTimeMillis()));
 
 			String option = request.getParameter("option");
 			getTheClient(request, response).setSMsg("");
 
-			ParametermandantDto parameterBdeMitTaetigkeitDto = getParameterFac()
-					.getMandantparameter(mandant,
-							ParameterFac.KATEGORIE_PERSONAL,
-							ParameterFac.PARAMETER_BDE_MIT_TAETIGKEIT);
+			ParametermandantDto parameterBdeMitTaetigkeitDto = getParameterFac().getMandantparameter(mandant,
+					ParameterFac.KATEGORIE_PERSONAL, ParameterFac.PARAMETER_BDE_MIT_TAETIGKEIT);
 
-			Boolean bBdeMitTaetigkeit = (Boolean) parameterBdeMitTaetigkeitDto
-					.getCWertAsObject();
+			Boolean bBdeMitTaetigkeit = (Boolean) parameterBdeMitTaetigkeitDto.getCWertAsObject();
 			com.lp.server.artikel.service.ArtikelDto artikelDtoDefaultArbeiztszeit = null;
 
 			if (bBdeMitTaetigkeit == false) {
-				ParametermandantDto parameterDtoDefaultarbeitszeit = getParameterFac()
-						.getMandantparameter(
-								mandant,
-								ParameterFac.KATEGORIE_ALLGEMEIN,
-								ParameterFac.PARAMETER_DEFAULT_ARBEITSZEITARTIKEL);
+				ParametermandantDto parameterDtoDefaultarbeitszeit = getParameterFac().getMandantparameter(mandant,
+						ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_DEFAULT_ARBEITSZEITARTIKEL);
 
-				if (parameterDtoDefaultarbeitszeit != null
-						&& parameterDtoDefaultarbeitszeit.getCWert() != null
-						&& !parameterDtoDefaultarbeitszeit.getCWert().trim()
-								.equals("")) {
+				if (parameterDtoDefaultarbeitszeit != null && parameterDtoDefaultarbeitszeit.getCWert() != null
+						&& !parameterDtoDefaultarbeitszeit.getCWert().trim().equals("")) {
 					try {
 						artikelDtoDefaultArbeiztszeit = getArtikelFac()
-								.artikelFindByCNr(
-										parameterDtoDefaultarbeitszeit
-												.getCWert(),
-										theclientDto);
-						zeitdatenDto
-								.setArtikelIId(artikelDtoDefaultArbeiztszeit
-										.getIId());
+								.artikelFindByCNr(parameterDtoDefaultarbeitszeit.getCWert(), theclientDto);
+						zeitdatenDto.setArtikelIId(artikelDtoDefaultArbeiztszeit.getIId());
 
 					} catch (RemoteException ex2) {
-						myLogger.error("Default-Arbeitszeitartikel "
-								+ parameterDtoDefaultarbeitszeit.getCWert()
+						myLogger.error("Default-Arbeitszeitartikel " + parameterDtoDefaultarbeitszeit.getCWert()
 								+ " nicht vorhanden.", ex2);
 						setSJSPNext("bdestation.jsp");
 						return getSJSPNext();
 					}
 
 				} else {
-					myLogger.error("Default-Arbeitszeitartikel "
-							+ parameterDtoDefaultarbeitszeit.getCWert()
+					myLogger.error("Default-Arbeitszeitartikel " + parameterDtoDefaultarbeitszeit.getCWert()
 							+ " nicht definiert.");
 					setSJSPNext("bdestation.jsp");
 					return getSJSPNext();
@@ -315,23 +319,17 @@ public class CommandZE extends Command {
 			if (option != null && option.length() > 2) {
 
 				// Auftrag
-				if (option.substring(0, 2).equals("$A")
-						|| option.substring(0, 3).equals("$EA")) {
+				if (option.substring(0, 2).equals("$A") || option.substring(0, 3).equals("$EA")) {
 					try {
 
-						ParametermandantDto parameterDto = getParameterFac()
-								.getMandantparameter(
-										mandant,
-										ParameterFac.KATEGORIE_ALLGEMEIN,
-										ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_GESCHAEFTSJAHR);
+						ParametermandantDto parameterDto = getParameterFac().getMandantparameter(mandant,
+								ParameterFac.KATEGORIE_ALLGEMEIN,
+								ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_GESCHAEFTSJAHR);
 
 						if (parameterDto != null) {
-							if (parameterDto.getCWert() != null
-									&& parameterDto.getCWert().equals("4")) {
+							if (parameterDto.getCWert() != null && parameterDto.getCWert().equals("4")) {
 								if (option.charAt(4) == 47) {
-									option = "$A"
-											+ Helper.konvertiereDatum2StelligAuf4Stellig(option
-													.substring(2, 4))
+									option = "$A" + Helper.konvertiereDatum2StelligAuf4Stellig(option.substring(2, 4))
 											+ option.substring(4);
 								}
 							}
@@ -339,45 +337,30 @@ public class CommandZE extends Command {
 						AuftragDto auftragDto = null;
 						if (option.substring(0, 2).equals("$A")) {
 
-							auftragDto = getAuftragFac()
-									.auftragFindByMandantCNrCNr(mandant,
-											option.substring(2), theclientDto);
+							auftragDto = getAuftragFac().auftragFindByMandantCNrCNr(mandant, option.substring(2),
+									theclientDto);
 						} else {
-							auftragDto = getAuftragFac()
-									.auftragFindByMandantCNrCNr(mandant,
-											option.substring(3), theclientDto);
+							auftragDto = getAuftragFac().auftragFindByMandantCNrCNr(mandant, option.substring(3),
+									theclientDto);
 
 						}
 
 						AuftragpositionDto[] auftragpositionDtos = getAuftragpositionFac()
-								.auftragpositionFindByAuftrag(
-										auftragDto.getIId());
+								.auftragpositionFindByAuftrag(auftragDto.getIId());
 
-						if (auftragDto
-								.getStatusCNr()
+						if (auftragDto.getStatusCNr()
 								.equals(com.lp.server.auftrag.service.AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT)) {
 							setSJSPNext("bdestation.jsp");
-							getTheClient(request, response).setSMsg(
-									"Auf Auftrag "
-											+ option.substring(2)
-											+ " mit Status "
-											+ auftragDto.getStatusCNr()
-													.trim()
-											+ " darf nicht gebucht werden! ");
+							getTheClient(request, response)
+									.setSMsg("Auf Auftrag " + option.substring(2) + " mit Status "
+											+ auftragDto.getStatusCNr().trim() + " darf nicht gebucht werden! ");
 							return getSJSPNext();
 						} else {
-							if (auftragpositionDtos != null
-									&& auftragpositionDtos.length > 0) {
-								zeitdatenDto
-										.setIBelegartpositionid(auftragpositionDtos[0]
-												.getIId());
-								zeitdatenDto
-										.setIBelegartid(auftragpositionDtos[0]
-												.getBelegIId());
-								zeitdatenDto
-										.setCBelegartnr(LocaleFac.BELEGART_AUFTRAG);
-								hmParameter.put("beleg",
-										"A" + option.substring(2));
+							if (auftragpositionDtos != null && auftragpositionDtos.length > 0) {
+								zeitdatenDto.setIBelegartpositionid(auftragpositionDtos[0].getIId());
+								zeitdatenDto.setIBelegartid(auftragpositionDtos[0].getBelegIId());
+								zeitdatenDto.setCBelegartnr(LocaleFac.BELEGART_AUFTRAG);
+								hmParameter.put("beleg", "A" + option.substring(2));
 
 								MaschineDto maschineDto = new MaschineDto();
 								maschineDto.setCBez("");
@@ -387,37 +370,27 @@ public class CommandZE extends Command {
 
 									if (bBdeMitTaetigkeit == false) {
 										setSJSPNext("bdestation.jsp");
-										getTheClient(request, response)
-												.setSMsg(
-														getMeldungGebuchtFuerBDE(
-																getTheClient(
-																		request,
-																		response)
-																		.getData(),
-																artikelDtoDefaultArbeiztszeit
-																		.getCNr(),
-																theclientDto));
+										getTheClient(request, response).setSMsg(
+												getMeldungGebuchtFuerBDE(getTheClient(request, response).getData(),
+														artikelDtoDefaultArbeiztszeit.getCNr(), theclientDto));
 
-										getZeiterfassungsFac().createZeitdaten(
-												zeitdatenDto, true, true,
-												false, false, theclientDto);
+										getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false,
+												theclientDto);
 										return getSJSPNext();
 
 									} else {
 										setSJSPNext("bdestation4.jsp");
 									}
 								} else {
-									hmParameter.put("beleg",
-											"A" + option.substring(3));
+									hmParameter.put("beleg", "A" + option.substring(3));
 									setSJSPNext("bdestation3gutschlecht.jsp");
 
 								}
 
 								return getSJSPNext();
 							} else {
-								getTheClient(request, response).setSMsg(
-										"Auftrag " + option.substring(2)
-												+ " hat keine Positionen! ");
+								getTheClient(request, response)
+										.setSMsg("Auftrag " + option.substring(2) + " hat keine Positionen! ");
 								setSJSPNext("bdestation.jsp");
 								return getSJSPNext();
 							}
@@ -425,31 +398,22 @@ public class CommandZE extends Command {
 
 					} catch (EJBExceptionLP ex) {
 						getTheClient(request, response)
-								.setSMsg(
-										"Auftrag '"
-												+ option.substring(2)
-												+ "' bei diesem Mandanten nicht gefunden! ");
+								.setSMsg("Auftrag '" + option.substring(2) + "' bei diesem Mandanten nicht gefunden! ");
 						setSJSPNext("bdestation.jsp");
 						return getSJSPNext();
 					}
 				} // Los
-				else if (option.substring(0, 2).equals("$L")
-						|| option.substring(0, 3).equals("$EL")) {
+				else if (option.substring(0, 2).equals("$L") || option.substring(0, 3).equals("$EL")) {
 					try {
 
-						ParametermandantDto parameterDto = getParameterFac()
-								.getMandantparameter(
-										mandant,
-										ParameterFac.KATEGORIE_ALLGEMEIN,
-										ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_GESCHAEFTSJAHR);
+						ParametermandantDto parameterDto = getParameterFac().getMandantparameter(mandant,
+								ParameterFac.KATEGORIE_ALLGEMEIN,
+								ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_GESCHAEFTSJAHR);
 
 						if (parameterDto != null) {
-							if (parameterDto.getCWert() != null
-									&& parameterDto.getCWert().equals("4")) {
+							if (parameterDto.getCWert() != null && parameterDto.getCWert().equals("4")) {
 								if (option.charAt(4) == 47) {
-									option = "$L"
-											+ Helper.konvertiereDatum2StelligAuf4Stellig(option
-													.substring(2, 4))
+									option = "$L" + Helper.konvertiereDatum2StelligAuf4Stellig(option.substring(2, 4))
 											+ option.substring(4);
 								}
 							}
@@ -458,37 +422,26 @@ public class CommandZE extends Command {
 						com.lp.server.fertigung.service.LosDto losDto = null;
 
 						if (option.substring(0, 2).equals("$L")) {
-							losDto = getFertigungFac().losFindByCNrMandantCNr(
-									option.substring(2), mandant);
+							losDto = getFertigungFac().losFindByCNrMandantCNr(option.substring(2), mandant);
 
 						} else {
-							losDto = getFertigungFac().losFindByCNrMandantCNr(
-									option.substring(3), mandant);
+							losDto = getFertigungFac().losFindByCNrMandantCNr(option.substring(3), mandant);
 
 						}
 
 						// WH 18-01-2006: Los benoetigt keine Positionen
 
-						if (losDto
-								.getStatusCNr()
-								.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_ANGELEGT)
-								|| losDto
-										.getStatusCNr()
+						if (losDto.getStatusCNr().equals(com.lp.server.fertigung.service.FertigungFac.STATUS_ANGELEGT)
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_AUSGEGEBEN)
-								|| losDto
-										.getStatusCNr()
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_GESTOPPT)
-								|| losDto
-										.getStatusCNr()
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_ERLEDIGT)
-								|| losDto
-										.getStatusCNr()
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_STORNIERT)) {
-							getTheClient(request, response).setSMsg(
-									"Auf Los " + option.substring(2)
-											+ " mit Status "
-											+ losDto.getStatusCNr().trim()
-											+ " darf nicht gebucht werden! ");
+							getTheClient(request, response).setSMsg("Auf Los " + option.substring(2) + " mit Status "
+									+ losDto.getStatusCNr().trim() + " darf nicht gebucht werden! ");
 							setSJSPNext("bdestation.jsp");
 							return getSJSPNext();
 						} else {
@@ -497,32 +450,22 @@ public class CommandZE extends Command {
 
 							if (option.substring(0, 2).equals("$L")) {
 
-								hmParameter.put("beleg",
-										"L" + option.substring(2));
+								hmParameter.put("beleg", "L" + option.substring(2));
 
 								if (bBdeMitTaetigkeit == false) {
 									setSJSPNext("bdestation.jsp");
 									getTheClient(request, response)
-											.setSMsg(
-													getMeldungGebuchtFuerBDE(
-															getTheClient(
-																	request,
-																	response)
-																	.getData(),
-															artikelDtoDefaultArbeiztszeit
-																	.getCNr(),
-															theclientDto));
+											.setSMsg(getMeldungGebuchtFuerBDE(getTheClient(request, response).getData(),
+													artikelDtoDefaultArbeiztszeit.getCNr(), theclientDto));
 
-									getZeiterfassungsFac().createZeitdaten(
-											zeitdatenDto, true, true, true,
-											true, theclientDto);
+									getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, true, true,
+											theclientDto);
 									return getSJSPNext();
 								} else {
 									setSJSPNext("bdestation3.jsp");
 								}
 							} else {
-								hmParameter.put("beleg",
-										"L" + option.substring(3));
+								hmParameter.put("beleg", "L" + option.substring(3));
 								setSJSPNext("bdestation3gutschlecht.jsp");
 							}
 
@@ -531,243 +474,310 @@ public class CommandZE extends Command {
 						}
 					} catch (EJBExceptionLP ex) {
 						getTheClient(request, response)
-								.setSMsg(
-										"Los '"
-												+ option.substring(2)
-												+ "' bei diesem Mandanten nicht gefunden! ");
+								.setSMsg("Los '" + option.substring(2) + "' bei diesem Mandanten nicht gefunden! ");
 						setSJSPNext("bdestation.jsp");
 						return getSJSPNext();
 					}
 
 				} // Kombi-Code
 				else if (option.length() > 1
-						&& option.substring(0, 2).equals("$V")) {
+						&& (option.substring(0, 2).equals("$V") || option.substring(0, 2).equals("$W"))) {
 					setSJSPNext("bdestation.jsp");
 
-					if (option.length() < 12) {
+					HTMLBDEBarcodeVisitor dv = new HTMLBDEBarcodeVisitor();
+					HvBarcodeDecoder hvbc = getSystemFac().createHvBarcodeDecoder(theclientDto.getMandant());
+					hvbc.acceptBarcodeVisitor(dv);
+					hvbc.decode(option);
 
-						getTheClient(request, response).setSMsg(
-								"Kombicode muss 10-Stellig sein ");
-						return getSJSPNext();
+					String losnummer = null;
+					String maschine = "  ";
+
+					String taetigkeit = null;
+					Integer arbeitsgang = null;
+					Integer unterarbeitsgang = null;
+
+					boolean bMaschineStop = false;
+
+					// $V
+					if (dv.getLosKombiAg() != null && dv.getLosKombiAg().size() > 0) {
+
+						losnummer = dv.getLosKombiAg().get(0).getLosCnr();
+
+						try {
+							if (dv.getLosKombiAg().get(0).getArbeitsgangNr() != null) {
+								arbeitsgang = new Integer(dv.getLosKombiAg().get(0).getArbeitsgangNr());
+							} else {
+								getTheClient(request, response)
+										.setSMsg("Im Kombi-Code muss ein Arbeitsgang angegeben werden!");
+								return getSJSPNext();
+							}
+						} catch (NumberFormatException e) {
+							// Arbeitsgang muss numerisch sein
+							getTheClient(request, response).setSMsg("Arbeitsgang '"
+									+ dv.getLosKombiAg().get(0).getArbeitsgangNr() + "' muss numerisch sein");
+							return getSJSPNext();
+						}
+						try {
+							if (dv.getLosKombiAg().get(0).getUnterarbeitsgangNr() != null) {
+								unterarbeitsgang = new Integer(dv.getLosKombiAg().get(0).getUnterarbeitsgangNr());
+							}
+						} catch (NumberFormatException e) {
+							// Arbeitsgang muss numerisch sein
+							getTheClient(request, response).setSMsg("Unterarbeitsgang '"
+									+ dv.getLosKombiAg().get(0).getUnterarbeitsgangNr() + "' muss numerisch sein");
+							return getSJSPNext();
+						}
+
+						maschine = dv.getLosKombiAg().get(0).getMaschineCnr();
+					}
+					// $W
+					else if (dv.getLosKombiTaetigkeit() != null && dv.getLosKombiTaetigkeit().size() > 0) {
+						losnummer = dv.getLosKombiTaetigkeit().get(0).getLosCnr();
+						taetigkeit = dv.getLosKombiTaetigkeit().get(0).getTaetigkeitCnr();
+						maschine = dv.getLosKombiTaetigkeit().get(0).getMaschineCnr();
+					} // $V + Maschine-Stop
+					else if (dv.getMaschineStopp() != null && dv.getMaschineStopp().size() > 0) {
+
+						losnummer = dv.getMaschineStopp().get(0).getLosCnr();
+
+						try {
+							if (dv.getMaschineStopp().get(0).getArbeitsgangNr() != null) {
+								arbeitsgang = new Integer(dv.getMaschineStopp().get(0).getArbeitsgangNr());
+							} else {
+								getTheClient(request, response)
+										.setSMsg("Im Kombi-Code muss ein Arbeitsgang angegeben werden!");
+								return getSJSPNext();
+							}
+						} catch (NumberFormatException e) {
+							// Arbeitsgang muss numerisch sein
+							getTheClient(request, response).setSMsg("Arbeitsgang '"
+									+ dv.getMaschineStopp().get(0).getArbeitsgangNr() + "' muss numerisch sein");
+							return getSJSPNext();
+						}
+						try {
+							if (dv.getMaschineStopp().get(0).getUnterarbeitsgangNr() != null) {
+								unterarbeitsgang = new Integer(dv.getMaschineStopp().get(0).getUnterarbeitsgangNr());
+							}
+						} catch (NumberFormatException e) {
+							// Arbeitsgang muss numerisch sein
+							getTheClient(request, response).setSMsg("Unterarbeitsgang '"
+									+ dv.getMaschineStopp().get(0).getUnterarbeitsgangNr() + "' muss numerisch sein");
+							return getSJSPNext();
+						}
+
+						maschine = dv.getMaschineStopp().get(0).getMaschineCnr();
+
+						bMaschineStop = true;
+
 					}
 
 					try {
 
-						ParametermandantDto parameter = getParameterFac()
-								.getMandantparameter(
-										theclientDto.getMandant(),
-										ParameterFac.KATEGORIE_FERTIGUNG,
-										ParameterFac.PARAMETER_LOSNUMMER_AUFTRAGSBEZOGEN);
-						int iVerlaengerungLosnummer = 0;
-						if ((Integer) parameter.getCWertAsObject() >= 1) {
-							iVerlaengerungLosnummer = 2;
-						}
-
 						com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
-								.losFindByCNrMandantCNr(
-										option.substring(2,
-												12 + iVerlaengerungLosnummer),
-										mandant);
+								.losFindByCNrMandantCNr(losnummer, mandant);
 
 						// WH 18-01-2006: Los benoetigt keine Positionen
 
-						if (losDto
-								.getStatusCNr()
-								.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_ANGELEGT)
-								|| losDto
-										.getStatusCNr()
+						if (losDto.getStatusCNr().equals(com.lp.server.fertigung.service.FertigungFac.STATUS_ANGELEGT)
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_AUSGEGEBEN)
-								|| losDto
-										.getStatusCNr()
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_GESTOPPT)
-								|| losDto
-										.getStatusCNr()
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_ERLEDIGT)
-								|| losDto
-										.getStatusCNr()
+								|| losDto.getStatusCNr()
 										.equals(com.lp.server.fertigung.service.FertigungFac.STATUS_STORNIERT)) {
-							getTheClient(request, response).setSMsg(
-									"Auf Los " + option.substring(2)
-											+ " mit Status "
-											+ losDto.getStatusCNr().trim()
-											+ " darf nicht gebucht werden! ");
+							getTheClient(request, response).setSMsg("Auf Los " + losnummer + " mit Status "
+									+ losDto.getStatusCNr().trim() + " darf nicht gebucht werden! ");
 						} else {
 							zeitdatenDto.setIBelegartid(losDto.getIId());
 							zeitdatenDto.setCBelegartnr(LocaleFac.BELEGART_LOS);
-
-							String maschine = option.substring(
-									12 + iVerlaengerungLosnummer,
-									14 + iVerlaengerungLosnummer);
-
-							String taetigkeit = option
-									.substring(14 + iVerlaengerungLosnummer);
 
 							MaschineDto maschineDto = new MaschineDto();
 							maschineDto.setCBez(maschine);
 							hmParameter.put("maschine", maschineDto);
 
-							hmParameter
-									.put("beleg",
-											"L"
-													+ option.substring(
-															2,
-															12 + iVerlaengerungLosnummer));
+							hmParameter.put("beleg", "L" + losnummer);
 
-							com.lp.server.artikel.service.ArtikelDto artikelDto = null;
-							try {
-								artikelDto = getArtikelFac().artikelFindByCNr(
-										taetigkeit, theclientDto);
+							// Arbeitsgang suchen
 
-								zeitdatenDto.setArtikelIId(getArtikelFac()
-										.artikelFindByCNr(taetigkeit,
-												theclientDto).getIId());
+							LossollarbeitsplanDto saDto = null;
 
-							} catch (RemoteException ex2) {
-								getTheClient(request, response).setSMsg(
-										"T\u00E4tigkeit '" + taetigkeit
-												+ "' nicht gefunden! ");
-								return getSJSPNext();
-							}
+							if (option.substring(0, 2).equals("$V")) {
+								// entweder nach AG-Nummern
+								List<LossollarbeitsplanDto> saDtos = getFertigungFac()
+										.lossollarbeitsplanFindByLosIIdArbeitsgangnummer(losDto.getIId(), arbeitsgang);
 
-							com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtos = getFertigungFac()
-									.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(
-											losDto.getIId(),
-											artikelDto.getIId());
+								if (saDtos != null && saDtos.size() > 0) {
 
-							if (dtos != null && dtos.length > 0) {
+									for (int i = 0; i < saDtos.size(); i++) {
+										LossollarbeitsplanDto saDtoLocal = saDtos.get(i);
 
-								if (!maschine.trim().equals("")
-										&& !maschine.equals("--")) {
-
-									try {
-										Integer maschineIId = getZeiterfassungsFac()
-												.maschineFindByCIdentifikationsnr(
-														maschine).getIId();
-
-										com.lp.server.fertigung.service.LossollarbeitsplanDto[] sollaDtos = getFertigungFac()
-												.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(
-														zeitdatenDto
-																.getIBelegartid(),
-														zeitdatenDto
-																.getArtikelIId());
-
-										if (sollaDtos != null
-												&& sollaDtos.length > 0) {
-											MaschinenzeitdatenDto maschinenzeitdatenDto = new MaschinenzeitdatenDto();
-											maschinenzeitdatenDto
-													.setLossollarbeitsplanIId(sollaDtos[0]
-															.getIId());
-											maschinenzeitdatenDto
-													.setMaschineIId(maschineIId);
-											maschinenzeitdatenDto
-													.setPersonalIIdGestartet(zeitdatenDto
-															.getPersonalIId());
-											maschinenzeitdatenDto
-													.setTVon(zeitdatenDto
-															.getTZeit());
-											getZeiterfassungsFac()
-													.createMaschinenzeitdaten(
-															maschinenzeitdatenDto,
-															theclientDto);
+										if (unterarbeitsgang == null && saDtoLocal.getIUnterarbeitsgang() == null) {
+											saDto = saDtoLocal;
+											break;
+										} else if (unterarbeitsgang != null
+												&& unterarbeitsgang.equals(saDtoLocal.getIUnterarbeitsgang())) {
+											saDto = saDtoLocal;
+											break;
 										}
 
-									} catch (RemoteException ex2) {
+									}
+
+								}
+
+								if (bMaschineStop) {
+									try {
+
+										if (saDto != null) {
+											Integer maschineIId = getZeiterfassungsFac()
+													.maschineFindByCIdentifikationsnr(maschine).getIId();
+
+											getZeiterfassungsFac().maschineStop(maschineIId, saDto.getIId(),
+													new Timestamp(System.currentTimeMillis()), theclientDto);
+
+										}
+
 										getTheClient(request, response)
-												.setSMsg(
-														"Maschine '"
-																+ maschine
-																+ "' nicht gefunden! ");
+												.setSMsg("Maschinenstop auf Los " + losnummer + " gebucht.");
+										return getSJSPNext();
+
+									} catch (EJBExceptionLP ex2) {
+										getTheClient(request, response)
+												.setSMsg("Maschine '" + maschine + "' nicht gefunden! ");
 										return getSJSPNext();
 									}
 								}
 
-								// PJ 15388
-								if (maschine.equals("--")) {
-									hmParameter.put("fertig", "");
-									if (dtos != null && dtos.length > 0) {
+							} else {
+								// oder nach Taetigkeit
 
-										LossollarbeitsplanDto dto = dtos[0];
-										dto.setBFertig(Helper
-												.boolean2Short(true));
+								com.lp.server.artikel.service.ArtikelDto artikelDto = null;
+								try {
+									artikelDto = getArtikelFac().artikelFindByCNr(taetigkeit, theclientDto);
 
-										try {
-											getFertigungFac()
-													.updateLossollarbeitsplan(
-															dto, theclientDto);
-											getTheClient(request, response)
-													.setSMsg(
-															getMeldungGebuchtFuerBDE(
-																	getTheClient(
-																			request,
-																			response)
-																			.getData(),
-																	taetigkeit
-																			.substring(2),
-																	theclientDto));
-											return getSJSPNext();
-										} catch (EJBExceptionLP ex2) {
-											getTheClient(request, response)
-													.setSMsg(
-															"Fehler beim Buchen!");
-											return getSJSPNext();
-										}
+									zeitdatenDto.setArtikelIId(artikelDto.getIId());
+
+								} catch (EJBExceptionLP ex2) {
+									getTheClient(request, response)
+											.setSMsg("T\u00E4tigkeit '" + taetigkeit + "' nicht gefunden! ");
+									return getSJSPNext();
+								}
+
+								com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtos = getFertigungFac()
+										.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(losDto.getIId(),
+												artikelDto.getIId());
+
+								if (dtos != null && dtos.length > 0) {
+									saDto = dtos[0];
+								} else {
+									com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtosErstePosition = getFertigungFac()
+											.lossollarbeitsplanFindByLosIId(losDto.getIId());
+									if (dtosErstePosition != null && dtosErstePosition.length > 0) {
+										zeitdatenDto.setIBelegartpositionid(dtosErstePosition[0].getIId());
+										saDto = dtosErstePosition[0];
+									} else {
+										// Bemerkung
+										getTheClient(request, response)
+												.setSMsg("Los " + losnummer + " hat keine Positionen");
+										return getSJSPNext();
+
+									}
+								}
+
+							}
+
+							if (saDto == null) {
+
+								if (option.substring(0, 2).equals("$V")) {
+
+									if (unterarbeitsgang == null) {
+										getTheClient(request, response)
+												.setSMsg("Es konnte kein Arbeitsgang mit der Nummer '" + arbeitsgang
+														+ "' gefunden werden! ");
+										return getSJSPNext();
 									} else {
 										getTheClient(request, response)
-												.setSMsg(
-														"Das Los "
-																+ option.substring(
-																		2,
-																		12 + iVerlaengerungLosnummer)
-																+ " hat keinen entsprechen Arbeitsgang mit der Artikelnummer "
-																+ taetigkeit
-																		.substring(2));
+												.setSMsg("Es konnte kein Arbeitsgang mit der Nummer '" + arbeitsgang
+														+ "." + "' gefunden werden! ");
 										return getSJSPNext();
 									}
-								}
 
-								zeitdatenDto.setIBelegartpositionid(dtos[0]
-										.getIId());
-							} else {
-								com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtosErstePosition = getFertigungFac()
-										.lossollarbeitsplanFindByLosIId(
-												losDto.getIId());
-								if (dtosErstePosition != null
-										&& dtosErstePosition.length > 0) {
-									zeitdatenDto
-											.setIBelegartpositionid(dtosErstePosition[0]
-													.getIId());
 								} else {
-									// Bemerkung
-									getTheClient(request, response).setSMsg(
-											"Los " + option.substring(2)
-													+ " hat keine Positionen");
+									getTheClient(request, response)
+											.setSMsg("Es konnte kein Arbeitsgang mit der T\\u00E4tigkeit '" + taetigkeit
+													+ " gefunden werden! ");
 									return getSJSPNext();
+								}
+							}
 
+							taetigkeit = getArtikelFac()
+									.artikelFindByPrimaryKeySmall(saDto.getArtikelIIdTaetigkeit(), theclientDto)
+									.getCNr();
+							zeitdatenDto.setArtikelIId(saDto.getArtikelIIdTaetigkeit());
+							zeitdatenDto.setIBelegartpositionid(saDto.getIId());
+
+							if (!maschine.trim().equals("") && !maschine.equals("--")) {
+
+								try {
+									Integer maschineIId = getZeiterfassungsFac()
+											.maschineFindByCIdentifikationsnr(maschine).getIId();
+
+									MaschinenzeitdatenDto maschinenzeitdatenDto = new MaschinenzeitdatenDto();
+									maschinenzeitdatenDto.setLossollarbeitsplanIId(saDto.getIId());
+									maschinenzeitdatenDto.setMaschineIId(maschineIId);
+									maschinenzeitdatenDto.setPersonalIIdGestartet(zeitdatenDto.getPersonalIId());
+									maschinenzeitdatenDto.setTVon(zeitdatenDto.getTZeit());
+									getZeiterfassungsFac().createMaschinenzeitdaten(maschinenzeitdatenDto,
+											theclientDto);
+
+								} catch (EJBExceptionLP ex2) {
+									getTheClient(request, response)
+											.setSMsg("Maschine '" + maschine + "' nicht gefunden! ");
+									return getSJSPNext();
+								}
+							}
+
+							// PJ 15388
+							if (maschine.equals("--")) {
+								hmParameter.put("fertig", "");
+								if (saDto != null) {
+
+									LossollarbeitsplanDto dto = saDto;
+									dto.setBFertig(Helper.boolean2Short(true));
+
+									try {
+										getFertigungFac().updateLossollarbeitsplan(dto, theclientDto);
+										getTheClient(request, response).setSMsg(
+												getMeldungGebuchtFuerBDE(getTheClient(request, response).getData(),
+														taetigkeit.substring(2), theclientDto));
+										return getSJSPNext();
+									} catch (EJBExceptionLP ex2) {
+										getTheClient(request, response).setSMsg("Fehler beim Buchen!");
+										return getSJSPNext();
+									}
+								} else {
+									getTheClient(request, response).setSMsg("Das Los " + losnummer
+											+ " hat keinen entsprechen Arbeitsgang mit der Artikelnummer "
+											+ taetigkeit.substring(2));
+									return getSJSPNext();
 								}
 							}
 
 							try {
-								getZeiterfassungsFac().createZeitdaten(
-										zeitdatenDto, true, true, true,
-										false, theclientDto);
-								getTheClient(request, response).setSMsg(
-										getMeldungGebuchtFuerBDE(
-												getTheClient(request, response)
-														.getData(), taetigkeit,
-												theclientDto));
+								getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, true, false,
+										theclientDto);
+								getTheClient(request, response).setSMsg(getMeldungGebuchtFuerBDE(
+										getTheClient(request, response).getData(), taetigkeit, theclientDto));
 
 							} catch (EJBExceptionLP ex2) {
-								getTheClient(request, response).setSMsg(
-										"Fehler beim Buchen!");
+								getTheClient(request, response).setSMsg("Fehler beim Buchen!");
 								return getSJSPNext();
 							}
 						}
 					} catch (EJBExceptionLP ex) {
 						getTheClient(request, response)
-								.setSMsg(
-										"Los '"
-												+ option.substring(2)
-												+ "' bei diesem Mandanten nicht gefunden! ");
+								.setSMsg("Los '" + losnummer + "' bei diesem Mandanten nicht gefunden! ");
 						return getSJSPNext();
 
 					}
@@ -777,8 +787,7 @@ public class CommandZE extends Command {
 
 					if (option.substring(1).equals("SALDO")) {
 
-						java.sql.Timestamp ts = new java.sql.Timestamp(
-								System.currentTimeMillis() - 3600000 * 24);
+						java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis() - 3600000 * 24);
 						ts = com.lp.util.Helper.cutTimestamp(ts);
 
 						Calendar c = Calendar.getInstance();
@@ -786,32 +795,24 @@ public class CommandZE extends Command {
 
 						String saldoMitUrlaub = "";
 						try {
-							saldoMitUrlaub = getZeiterfassungsFac()
-									.erstelleMonatsAbrechnungFuerBDE(
-											zeitdatenDto.getPersonalIId(),
-											new Integer(c.get(Calendar.YEAR)),
-											new Integer(c.get(Calendar.MONTH)),
-											false,
-											new java.sql.Date(ts.getTime()),
-											theclientDto, true, false);
+							saldoMitUrlaub = getZeiterfassungsFac().erstelleMonatsAbrechnungFuerBDE(
+									zeitdatenDto.getPersonalIId(), new Integer(c.get(Calendar.YEAR)),
+									new Integer(c.get(Calendar.MONTH)), false, new java.sql.Date(ts.getTime()),
+									theclientDto, true, false);
 
 						} catch (EJBExceptionLP ex7) {
 
 							if (ex7.getCause() instanceof EJBExceptionLP) {
-								EJBExceptionLP e = (EJBExceptionLP) ex7
-										.getCause();
+								EJBExceptionLP e = (EJBExceptionLP) ex7.getCause();
 								if (e != null
 										&& e.getCode() == EJBExceptionLP.FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM) {
 									getTheClient(request, response)
-											.setSMsg(
-													new String(
-															"FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM"));
+											.setSMsg(new String("FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM"));
 									return getSJSPNext();
 
 								}
 							}
-							getTheClient(request, response).setSMsg(
-									new String(ex7.getMessage()));
+							getTheClient(request, response).setSMsg(new String(ex7.getMessage()));
 							setSJSPNext("bdestation.jsp");
 
 						}
@@ -823,47 +824,98 @@ public class CommandZE extends Command {
 
 					} else if (option.substring(1).equals("TAGESSALDO")) {
 
-						java.sql.Timestamp ts = new java.sql.Timestamp(
-								System.currentTimeMillis() - 3600000 * 24);
+						java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis() - 3600000 * 24);
 
-						Double d = getZeiterfassungsFac()
-								.berechneTagesArbeitszeit(
-										zeitdatenDto.getPersonalIId(),
-										new java.sql.Date(System
-												.currentTimeMillis()),
-										theclientDto);
+						Double d = getZeiterfassungsFac().berechneTagesArbeitszeit(zeitdatenDto.getPersonalIId(),
+								new java.sql.Date(System.currentTimeMillis()), theclientDto);
 
 						StringBuffer sb = new StringBuffer();
 						sb.append("Tagesarbeitszeit bis jetzt: "
-								+ Helper.rundeKaufmaennisch(
-										new BigDecimal(d.doubleValue()), 2)
-										.doubleValue() + "h");
+								+ Helper.rundeKaufmaennisch(new BigDecimal(d.doubleValue()), 2).doubleValue() + "h");
 						sb.append("\r\n");
 
 						getTheClient(request, response).setSMsg(new String(sb));
 						setSJSPNext("bdestation.jsp");
 						return getSJSPNext();
 
+					} else if (option.substring(1).startsWith("X0")) {
+
+						// PJ21080
+
+						String artikelnummer = option.substring(3);
+
+						ArtikelDto aDto = getArtikelFac().artikelFindByCNrMandantCNrOhneExc(artikelnummer, mandant);
+
+						if (aDto != null) {
+							try {
+								JasperPrintLP jasperprint = getArtikelReportFac().printArtikelstammblatt(aDto.getIId(),
+										theclientDto);
+								convertJasperPrintToHTML(request, response, localeLogon, jasperprint);
+								hmParameter.put(BACK_FROM_REPORT, BACK_FROM_REPORT);
+								getTheClient(request, response).setData(hmParameter);
+								setSJSPNext("bdestation.jsp");
+								return getSJSPNext();
+
+							} catch (JRException ex) {
+								response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ex.getMessage());
+							}
+						} else {
+							StringBuffer sb = new StringBuffer();
+							sb.append("Artikel '" + artikelnummer + "' nicht gefunden!");
+							sb.append("\r\n");
+							getTheClient(request, response).setSMsg(new String(sb));
+							setSJSPNext("bdestation.jsp");
+							return getSJSPNext();
+						}
+
+					} else if (option.substring(1).startsWith("X1")) {
+
+						// PJ21080
+
+						String losnummer = option.substring(3);
+
+						com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
+								.losFindByCNrMandantCNrOhneExc(losnummer, mandant);
+
+						if (losDto != null) {
+							try {
+								JasperPrintLP jasperprint = getFertigungReportFac()
+										.printNachkalkulation(losDto.getIId(), theclientDto);
+								convertJasperPrintToHTML(request, response, localeLogon, jasperprint);
+								hmParameter.put(BACK_FROM_REPORT, BACK_FROM_REPORT);
+								getTheClient(request, response).setData(hmParameter);
+								setSJSPNext("bdestation.jsp");
+								return getSJSPNext();
+
+							} catch (JRException ex) {
+								response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ex.getMessage());
+							}
+						} else {
+							StringBuffer sb = new StringBuffer();
+							sb.append("Los '" + losnummer + "' bei diesem Mandanten nicht gefunden!");
+							sb.append("\r\n");
+							getTheClient(request, response).setSMsg(new String(sb));
+							setSJSPNext("bdestation.jsp");
+							return getSJSPNext();
+						}
+
 					} else {
 
 						try {
 							TaetigkeitDto taetigkeitDto = getZeiterfassungsFac()
-									.taetigkeitFindByCNr(option.substring(1),
-											theclientDto);
+									.taetigkeitFindByCNr(Helper.fitString2Length( option.substring(1),15,' '), theclientDto);
 
-							zeitdatenDto.setTaetigkeitIId(taetigkeitDto
-									.getIId());
-							getZeiterfassungsFac().createZeitdaten(
-									zeitdatenDto, true, true, true,
-									false, theclientDto);
-							getTheClient(request, response).setSMsg(
-									getMeldungGebuchtFuerBDE(hmParameter,
-											option.substring(1), theclientDto));
+							zeitdatenDto.setTaetigkeitIId(taetigkeitDto.getIId());
+							getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, true, false, theclientDto);
+							getTheClient(request, response)
+									.setSMsg(getMeldungGebuchtFuerBDE(hmParameter, option.substring(1), theclientDto));
 						} catch (EJBExceptionLP ex1) {
-							getTheClient(request, response).setSMsg(
-									"Sondert\u00E4tigkeit '"
-											+ option.substring(1)
-											+ "' nicht gefunden! ");
+							getTheClient(request, response)
+									.setSMsg("Sondert\u00E4tigkeit '" + option.substring(1) + "' nicht gefunden! ");
+						} catch (Throwable ex1) {
+							ex1.printStackTrace();
+							getTheClient(request, response)
+									.setSMsg("Sondert\u00E4tigkeit '" + option.substring(1) + "' nicht gefunden! ");
 						}
 						hmParameter.put("zeitdaten", zeitdatenDto);
 						setSJSPNext("bdestation.jsp");
@@ -876,10 +928,9 @@ public class CommandZE extends Command {
 
 		} else if (command.equals(TheApp.CMD_ZE_BDESTATION3)) {
 
-			HashMap<String, Serializable> hmParameter = (HashMap<String, Serializable>) getTheClient(
-					request, response).getData();
-			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter
-					.get("zeitdaten");
+			HashMap<String, Serializable> hmParameter = (HashMap<String, Serializable>) getTheClient(request, response)
+					.getData();
+			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter.get("zeitdaten");
 			zeitdatenDto.setTZeit(new Timestamp(System.currentTimeMillis()));
 
 			String option = request.getParameter("option");
@@ -893,34 +944,25 @@ public class CommandZE extends Command {
 
 					if (beleg.substring(0, 1).equals("L")) {
 						com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
-								.losFindByCNrMandantCNr(beleg.substring(1),
-										mandant);
+								.losFindByCNrMandantCNr(beleg.substring(1), mandant);
 
 						ZeitverteilungDto zeitverteilungDto = new ZeitverteilungDto();
 						zeitverteilungDto.setLosIId(losDto.getIId());
-						zeitverteilungDto.setTZeit(new Timestamp(System
-								.currentTimeMillis()));
-						zeitverteilungDto.setPersonalIId(zeitdatenDto
-								.getPersonalIId());
+						zeitverteilungDto.setTZeit(new Timestamp(System.currentTimeMillis()));
+						zeitverteilungDto.setPersonalIId(zeitdatenDto.getPersonalIId());
 						try {
-							getZeiterfassungsFac().createZeitverteilung(
-									zeitverteilungDto, theclientDto);
+							getZeiterfassungsFac().createZeitverteilung(zeitverteilungDto, theclientDto);
 						} catch (EJBExceptionLP e) {
 							hmParameter.remove("beleg");
+							getTheClient(request, response).setData(hmParameter);
 							getTheClient(request, response)
-									.setData(hmParameter);
-							getTheClient(request, response)
-									.setSMsg(
-											"Los '"
-													+ losDto.getCNr()
-													+ "' wurde bereits mit $PLUS gebucht");
+									.setSMsg("Los '" + losDto.getCNr() + "' wurde bereits mit $PLUS gebucht");
 							setSJSPNext("bdestation2.jsp");
 							return getSJSPNext();
 						}
 
 					} else {
-						getTheClient(request, response).setSMsg(
-								"$PLUS ist nur f\u00FCr Lose m\u00F6glich.");
+						getTheClient(request, response).setSMsg("$PLUS ist nur f\u00FCr Lose m\u00F6glich.");
 						setSJSPNext("bdestation.jsp");
 						return getSJSPNext();
 					}
@@ -931,10 +973,8 @@ public class CommandZE extends Command {
 					return getSJSPNext();
 
 				} else if (option.equals("$STORNO")) {
-					getZeiterfassungsFac()
-							.removeZeitverteilungByPersonalIIdUndTag(
-									zeitdatenDto.getPersonalIId(),
-									new Timestamp(System.currentTimeMillis()));
+					getZeiterfassungsFac().removeZeitverteilungByPersonalIIdUndTag(zeitdatenDto.getPersonalIId(),
+							new Timestamp(System.currentTimeMillis()));
 					hmParameter.remove("beleg");
 					getTheClient(request, response).setData(hmParameter);
 					setSJSPNext("bdestation2.jsp");
@@ -943,67 +983,49 @@ public class CommandZE extends Command {
 					String beleg = (String) hmParameter.get("beleg");
 					if (beleg.substring(0, 1).equals("L")) {
 						com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
-								.losFindByCNrMandantCNr(beleg.substring(1),
-										mandant);
+								.losFindByCNrMandantCNr(beleg.substring(1), mandant);
 
 						if (losDto.getStuecklisteIId() != null) {
 							Integer artikelIId = getStuecklisteFac()
-									.stuecklisteFindByPrimaryKey(
-											losDto.getStuecklisteIId(),
-											theclientDto).getArtikelIId();
+									.stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theclientDto)
+									.getArtikelIId();
 
-							SperrenDto sDto = getArtikelFac()
-									.sperrenFindBDurchfertigung(theclientDto);
+							SperrenDto sDto = getArtikelFac().sperrenFindBDurchfertigung(theclientDto);
 
 							if (sDto != null) {
 
 								ArtikelsperrenDto aspDtoVorhanden = getArtikelFac()
-										.artikelsperrenFindByArtikelIIdSperrenIIdOhneExc(
-												artikelIId, sDto.getIId());
+										.artikelsperrenFindByArtikelIIdSperrenIIdOhneExc(artikelIId, sDto.getIId());
 								if (aspDtoVorhanden == null) {
 									ArtikelsperrenDto spDto = new ArtikelsperrenDto();
 									spDto.setArtikelIId(artikelIId);
 									spDto.setSperrenIId(sDto.getIId());
 
 									PersonalDto pDto = getPersonalFac()
-											.personalFindByPrimaryKey(
-													zeitdatenDto
-															.getPersonalIId(),
-													theclientDto);
+											.personalFindByPrimaryKey(zeitdatenDto.getPersonalIId(), theclientDto);
 
-									String grund = beleg
-											+ " "
-											+ pDto.getPartnerDto()
-													.getCName1nachnamefirmazeile1()
-											+ " "
-											+ pDto.getPartnerDto()
-													.getCName2vornamefirmazeile2();
+									String grund = beleg + " " + pDto.getPartnerDto().getCName1nachnamefirmazeile1()
+											+ " " + pDto.getPartnerDto().getCName2vornamefirmazeile2();
 
 									if (grund.length() > 80) {
 										grund = grund.substring(0, 79);
 									}
 
 									spDto.setCGrund(grund);
-									getArtikelFac().createArtikelsperren(spDto,
-											theclientDto);
+									getArtikelFac().createArtikelsperren(spDto, theclientDto);
 									getTheClient(request, response)
-											.setSMsg(
-													"Los "
-															+ losDto.getCNr()
-															+ " durch Fertigung gesperrt.");
+											.setSMsg("Los " + losDto.getCNr() + " durch Fertigung gesperrt.");
 									setSJSPNext("bdestation.jsp");
 									return getSJSPNext();
 								} else {
 									getTheClient(request, response)
-											.setSMsg(
-													"St\u00FCckliste bereits durch Fertigung gesperrt.");
+											.setSMsg("St\u00FCckliste bereits durch Fertigung gesperrt.");
 									setSJSPNext("bdestation.jsp");
 									return getSJSPNext();
 								}
 							} else {
 								getTheClient(request, response)
-										.setSMsg(
-												"Fertigungssperre in Grunddaten nicht definiert.");
+										.setSMsg("Fertigungssperre in Grunddaten nicht definiert.");
 								setSJSPNext("bdestation.jsp");
 								return getSJSPNext();
 							}
@@ -1031,17 +1053,14 @@ public class CommandZE extends Command {
 						String maschine = option.substring(2);
 
 						try {
-							MaschineDto maschineDto = getZeiterfassungsFac()
-									.maschineFindByCIdentifikationsnr(maschine);
+							MaschineDto maschineDto = getZeiterfassungsFac().maschineFindByCIdentifikationsnr(maschine);
 							hmParameter.put("zeitdaten", zeitdatenDto);
 							hmParameter.put("maschine", maschineDto);
 							setSJSPNext("bdestation4.jsp");
 							return getSJSPNext();
 
 						} catch (EJBExceptionLP ex2) {
-							getTheClient(request, response).setSMsg(
-									"Maschine '" + maschine
-											+ "' nicht gefunden! ");
+							getTheClient(request, response).setSMsg("Maschine '" + maschine + "' nicht gefunden! ");
 							return getSJSPNext();
 						}
 
@@ -1052,17 +1071,14 @@ public class CommandZE extends Command {
 
 						com.lp.server.artikel.service.ArtikelDto artikelDto = null;
 						try {
-							artikelDto = getArtikelFac().artikelFindByCNr(
-									taetigkeit, theclientDto);
+							artikelDto = getArtikelFac().artikelFindByCNr(taetigkeit, theclientDto);
 
-							zeitdatenDto.setArtikelIId(getArtikelFac()
-									.artikelFindByCNr(taetigkeit, theclientDto)
-									.getIId());
+							zeitdatenDto
+									.setArtikelIId(getArtikelFac().artikelFindByCNr(taetigkeit, theclientDto).getIId());
 
 						} catch (EJBExceptionLP ex2) {
-							getTheClient(request, response).setSMsg(
-									"T\u00E4tigkeit '" + taetigkeit
-											+ "' nicht gefunden! ");
+							getTheClient(request, response)
+									.setSMsg("T\u00E4tigkeit '" + taetigkeit + "' nicht gefunden! ");
 							return getSJSPNext();
 						}
 
@@ -1070,14 +1086,10 @@ public class CommandZE extends Command {
 
 						if (beleg.substring(0, 1).equals("L")) {
 							com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
-									.losFindByCNrMandantCNr(beleg.substring(1),
-											mandant);
+									.losFindByCNrMandantCNr(beleg.substring(1), mandant);
 
-							ZeitverteilungDto[] zvDtos = getZeiterfassungsFac()
-									.zeitverteilungFindByPersonalIIdUndTag(
-											zeitdatenDto.getPersonalIId(),
-											new Timestamp(System
-													.currentTimeMillis()));
+							ZeitverteilungDto[] zvDtos = getZeiterfassungsFac().zeitverteilungFindByPersonalIIdUndTag(
+									zeitdatenDto.getPersonalIId(), new Timestamp(System.currentTimeMillis()));
 							if (zvDtos != null & zvDtos.length > 0) {
 
 								if (zvDtos[0].getArtikelIId() == null) {
@@ -1087,55 +1099,40 @@ public class CommandZE extends Command {
 									zv.setLosIId(losDto.getIId());
 									zv.setArtikelIId(artikelDto.getIId());
 									try {
-										getZeiterfassungsFac()
-												.createZeitverteilung(zv,
-														theclientDto);
+										getZeiterfassungsFac().createZeitverteilung(zv, theclientDto);
 									} catch (EJBExceptionLP e) {
 										hmParameter.remove("beleg");
-										getTheClient(request, response)
-												.setData(hmParameter);
-										getTheClient(request, response)
-												.setSMsg(
-														"Los '"
-																+ losDto.getCNr()
-																+ "' wurde bereits mit $PLUS gebucht");
+										getTheClient(request, response).setData(hmParameter);
+										getTheClient(request, response).setSMsg(
+												"Los '" + losDto.getCNr() + "' wurde bereits mit $PLUS gebucht");
 										setSJSPNext("bdestation2.jsp");
 										return getSJSPNext();
 									}
 
 									hmParameter.remove("beleg");
-									getTheClient(request, response).setData(
-											hmParameter);
+									getTheClient(request, response).setData(hmParameter);
 									getTheClient(request, response)
-											.setSMsg(
-													"Beginnbuchungen f\u00FCr 'Zeitverteilung' abgeschlossen");
+											.setSMsg("Beginnbuchungen f\u00FCr 'Zeitverteilung' abgeschlossen");
 									setSJSPNext("bdestation.jsp");
 									return getSJSPNext();
 								}
 							}
 
 							com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtos = getFertigungFac()
-									.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(
-											losDto.getIId(),
+									.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(losDto.getIId(),
 											artikelDto.getIId());
 
 							if (dtos != null && dtos.length > 0) {
-								zeitdatenDto.setIBelegartpositionid(dtos[0]
-										.getIId());
+								zeitdatenDto.setIBelegartpositionid(dtos[0].getIId());
 							} else {
 								com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtosErstePosition = getFertigungFac()
-										.lossollarbeitsplanFindByLosIId(
-												losDto.getIId());
-								if (dtosErstePosition != null
-										&& dtosErstePosition.length > 0) {
-									zeitdatenDto
-											.setIBelegartpositionid(dtosErstePosition[0]
-													.getIId());
+										.lossollarbeitsplanFindByLosIId(losDto.getIId());
+								if (dtosErstePosition != null && dtosErstePosition.length > 0) {
+									zeitdatenDto.setIBelegartpositionid(dtosErstePosition[0].getIId());
 								} else {
 									// Bemerkung
-									getTheClient(request, response).setSMsg(
-											"Los " + beleg.substring(1)
-													+ " hat keine Positionen");
+									getTheClient(request, response)
+											.setSMsg("Los " + beleg.substring(1) + " hat keine Positionen");
 									return getSJSPNext();
 
 								}
@@ -1143,29 +1140,21 @@ public class CommandZE extends Command {
 						}
 
 						try {
-							getZeiterfassungsFac().createZeitdaten(
-									zeitdatenDto, true, true, true,
-									false, theclientDto);
-							getTheClient(request, response).setSMsg(
-									getMeldungGebuchtFuerBDE(
-											getTheClient(request, response)
-													.getData(), taetigkeit,
-											theclientDto));
+							getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, true, false, theclientDto);
+							getTheClient(request, response).setSMsg(getMeldungGebuchtFuerBDE(
+									getTheClient(request, response).getData(), taetigkeit, theclientDto));
 
 							return getSJSPNext();
 						} catch (EJBExceptionLP ex2) {
-							getTheClient(request, response).setSMsg(
-									"Fehler beim Buchen!");
+							getTheClient(request, response).setSMsg("Fehler beim Buchen!");
 							return getSJSPNext();
 						}
 					}
 				}
 			}
 		} else if (command.equals(TheApp.CMD_ZE_BDESTATION3GUTSCHLECHT)) {
-			HashMap<Object, Object> hmParameter = (HashMap<Object, Object>) getTheClient(
-					request, response).getData();
-			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter
-					.get("zeitdaten");
+			HashMap<Object, Object> hmParameter = (HashMap<Object, Object>) getTheClient(request, response).getData();
+			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter.get("zeitdaten");
 
 			String gutstueck = request.getParameter("gutstueck");
 			if (gutstueck.equals("")) {
@@ -1182,38 +1171,29 @@ public class CommandZE extends Command {
 				bdGutstueck = new BigDecimal(gutstueck);
 				bdSchlechtstueck = new BigDecimal(schlechtstueck);
 			} catch (NumberFormatException ex9) {
-				getTheClient(request, response)
-						.setSMsg(
-								"Gut/Schlechtst\u00FCck d\u00FCrfen nur aus Zahlen bestehen.");
+				getTheClient(request, response).setSMsg("Gut/Schlechtst\u00FCck d\u00FCrfen nur aus Zahlen bestehen.");
 				setSJSPNext("bdestation.jsp");
 				return getSJSPNext();
 			}
 
-			if (bdGutstueck.doubleValue() < 0
-					|| bdSchlechtstueck.doubleValue() < 0) {
-				getTheClient(request, response).setSMsg(
-						"Gut/Schlechtst\u00FCck m\u00FCssen Positiv sein.");
+			if (bdGutstueck.doubleValue() < 0 || bdSchlechtstueck.doubleValue() < 0) {
+				getTheClient(request, response).setSMsg("Gut/Schlechtst\u00FCck m\u00FCssen Positiv sein.");
 				setSJSPNext("bdestation.jsp");
 				return getSJSPNext();
 			}
 			Integer taetigkeitIId_Ende = getZeiterfassungsFac()
-					.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_ENDE,
-							theclientDto).getIId();
+					.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_ENDE, theclientDto).getIId();
 			ZeitdatenDto zeitdatenDtoEnde = new ZeitdatenDto();
-			zeitdatenDtoEnde.setTZeit(new Timestamp(zeitdatenDto.getTZeit()
-					.getTime() + 1000));
+			zeitdatenDtoEnde.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime() + 1000));
 			zeitdatenDtoEnde.setTaetigkeitIId(taetigkeitIId_Ende);
 			zeitdatenDtoEnde.setPersonalIId(zeitdatenDto.getPersonalIId());
 
 			// Hole letzten begonnenen Auftrag und hinterlege gut/schlechtstueck
 			Session session = FLRSessionFactory.getFactory().openSession();
-			org.hibernate.Criteria liste = session
-					.createCriteria(FLRZeitdaten.class);
-			liste.add(Expression.eq(
-					ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID,
-					zeitdatenDto.getPersonalIId()));
-			liste.add(Expression.gt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
-					Helper.cutTimestamp(zeitdatenDto.getTZeit())));
+			org.hibernate.Criteria liste = session.createCriteria(FLRZeitdaten.class);
+			liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID, zeitdatenDto.getPersonalIId()));
+			liste.add(
+					Expression.gt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT, Helper.cutTimestamp(zeitdatenDto.getTZeit())));
 
 			liste.addOrder(Order.desc(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT));
 			List<?> letzerAuftrag = liste.list();
@@ -1224,21 +1204,15 @@ public class CommandZE extends Command {
 			while (it.hasNext()) {
 				FLRZeitdaten flrLetzerAuftrag = (FLRZeitdaten) it.next();
 
-				if (flrLetzerAuftrag.getC_belegartnr() != null
-						&& flrLetzerAuftrag.getI_belegartid() != null) {
-					if (flrLetzerAuftrag.getC_belegartnr().equals(
-							zeitdatenDto.getCBelegartnr())
-							&& flrLetzerAuftrag.getI_belegartid().equals(
-									zeitdatenDto.getIBelegartid())) {
-						letzterAuftrag = getZeiterfassungsFac()
-								.zeitdatenFindByPrimaryKey(
-										flrLetzerAuftrag.getI_id(),
-										theclientDto);
+				if (flrLetzerAuftrag.getC_belegartnr() != null && flrLetzerAuftrag.getI_belegartid() != null) {
+					if (flrLetzerAuftrag.getC_belegartnr().equals(zeitdatenDto.getCBelegartnr())
+							&& flrLetzerAuftrag.getI_belegartid().equals(zeitdatenDto.getIBelegartid())) {
+						letzterAuftrag = getZeiterfassungsFac().zeitdatenFindByPrimaryKey(flrLetzerAuftrag.getI_id(),
+								theclientDto);
 						break;
 					}
 				} else if (flrLetzerAuftrag.getTaetigkeit_i_id() != null
-						&& flrLetzerAuftrag.getTaetigkeit_i_id().equals(
-								taetigkeitIId_Ende)) {
+						&& flrLetzerAuftrag.getTaetigkeit_i_id().equals(taetigkeitIId_Ende)) {
 					break;
 				}
 
@@ -1248,36 +1222,29 @@ public class CommandZE extends Command {
 				// Hier eintragen
 				// letzterAuftrag.setNGut(bdGutstueck);
 				// letzterAuftrag.setNSchlecht(bdSchlechtstueck);
-				getZeiterfassungsFac().updateZeitdaten(letzterAuftrag,
-						theclientDto);
+				getZeiterfassungsFac().updateZeitdaten(letzterAuftrag, theclientDto);
 				// und buche ENDE
-				getZeiterfassungsFac().createZeitdaten(zeitdatenDtoEnde, false,
-						false, false, false, theclientDto);
+				getZeiterfassungsFac().createZeitdaten(zeitdatenDtoEnde, false, false, false, false, theclientDto);
 
 			} else {
 				// was nun?
 				// Beginn und ende Buchen
-				getZeiterfassungsFac().createZeitdaten(zeitdatenDto, false,
-						false, false, false, theclientDto);
-				getZeiterfassungsFac().createZeitdaten(zeitdatenDtoEnde, false,
-						false, false, false, theclientDto);
+				getZeiterfassungsFac().createZeitdaten(zeitdatenDto, false, false, false, false, theclientDto);
+				getZeiterfassungsFac().createZeitdaten(zeitdatenDtoEnde, false, false, false, false, theclientDto);
 
 			}
 
 			session.close();
-			getTheClient(request, response).setSMsg(
-					getMeldungGebuchtFuerBDE(getTheClient(request, response)
-							.getData(), null, theclientDto));
+			getTheClient(request, response)
+					.setSMsg(getMeldungGebuchtFuerBDE(getTheClient(request, response).getData(), null, theclientDto));
 
 			setSJSPNext("bdestation.jsp");
 			return getSJSPNext();
 		}
 
 		else if (command.equals(TheApp.CMD_ZE_BDESTATION4)) {
-			HashMap<?, ?> hmParameter = (HashMap<?, ?>) getTheClient(request,
-					response).getData();
-			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter
-					.get("zeitdaten");
+			HashMap<?, ?> hmParameter = (HashMap<?, ?>) getTheClient(request, response).getData();
+			ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter.get("zeitdaten");
 			zeitdatenDto.setTZeit(new Timestamp(System.currentTimeMillis()));
 
 			String taetigkeit = request.getParameter("taetigkeit");
@@ -1287,14 +1254,12 @@ public class CommandZE extends Command {
 				setSJSPNext("bdestation.jsp");
 				com.lp.server.artikel.service.ArtikelDto artikelDto = null;
 				try {
-					artikelDto = getArtikelFac().artikelFindByCNr(
-							taetigkeit.substring(2), theclientDto);
+					artikelDto = getArtikelFac().artikelFindByCNr(taetigkeit.substring(2), theclientDto);
 
 					zeitdatenDto.setArtikelIId(artikelDto.getIId());
 				} catch (EJBExceptionLP ex2) {
-					getTheClient(request, response).setSMsg(
-							"T\u00E4tigkeit '" + taetigkeit.substring(2)
-									+ "' nicht gefunden! ");
+					getTheClient(request, response)
+							.setSMsg("T\u00E4tigkeit '" + taetigkeit.substring(2) + "' nicht gefunden! ");
 					return getSJSPNext();
 				}
 
@@ -1305,8 +1270,7 @@ public class CommandZE extends Command {
 							.losFindByCNrMandantCNr(beleg.substring(1), mandant);
 
 					com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtos = getFertigungFac()
-							.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(
-									losDto.getIId(), artikelDto.getIId());
+							.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(losDto.getIId(), artikelDto.getIId());
 
 					if (hmParameter.containsKey("fertig")) {
 
@@ -1315,63 +1279,43 @@ public class CommandZE extends Command {
 							LossollarbeitsplanDto dto = dtos[0];
 							dto.setBFertig(Helper.boolean2Short(true));
 
-							ParametermandantDto parameterDtoTriggerTops = getParameterFac()
-									.getMandantparameter(
-											mandant,
-											ParameterFac.KATEGORIE_FERTIGUNG,
-											ParameterFac.PARAMETER_TRIGGERT_TRUMPF_TOPS_ABLIEFERUNG);
+							ParametermandantDto parameterDtoTriggerTops = getParameterFac().getMandantparameter(mandant,
+									ParameterFac.KATEGORIE_FERTIGUNG,
+									ParameterFac.PARAMETER_TRIGGERT_TRUMPF_TOPS_ABLIEFERUNG);
 
 							try {
-								getFertigungFac().updateLossollarbeitsplan(dto,
-										theclientDto);
+								getFertigungFac().updateLossollarbeitsplan(dto, theclientDto);
 
 								// PJ 17916
 								if (parameterDtoTriggerTops.getCWert() != null
-										&& parameterDtoTriggerTops.getCWert()
-												.trim().length() > 0) {
-									ArtikelDto aDto = getArtikelFac()
-											.artikelFindByCNrMandantCNrOhneExc(
-													parameterDtoTriggerTops
-															.getCWert().trim(),
-													theclientDto.getMandant());
+										&& parameterDtoTriggerTops.getCWert().trim().length() > 0) {
+									ArtikelDto aDto = getArtikelFac().artikelFindByCNrMandantCNrOhneExc(
+											parameterDtoTriggerTops.getCWert().trim(), theclientDto.getMandant());
 
 									if (aDto == null) {
-										getTheClient(request, response)
-												.setSMsg(
-														"Der Artikel, der im Parameter TRIGGERT_TRUMPF_TOPS_ABLIEFERUNG hinterlegt ist, exisitiert nicht! "
-																+ parameterDtoTriggerTops
-																		.getCWert());
+										getTheClient(request, response).setSMsg(
+												"Der Artikel, der im Parameter TRIGGERT_TRUMPF_TOPS_ABLIEFERUNG hinterlegt ist, exisitiert nicht! "
+														+ parameterDtoTriggerTops.getCWert());
 										return getSJSPNext();
 									}
-									if (aDto != null
-											&& aDto.getIId().equals(
-													artikelDto.getIId())) {
-										getFertigungFac()
-												.bucheTOPSArtikelAufHauptLager(
-														losDto.getIId(),
-														theclientDto, null);
+									if (aDto != null && aDto.getIId().equals(artikelDto.getIId())) {
+										getFertigungFac().bucheTOPSArtikelAufHauptLager(losDto.getIId(), theclientDto,
+												null);
 									}
 								}
 
-								getTheClient(request, response).setSMsg(
-										getMeldungGebuchtFuerBDE(
-												getTheClient(request, response)
-														.getData(), taetigkeit
-														.substring(2),
-												theclientDto));
+								getTheClient(request, response)
+										.setSMsg(getMeldungGebuchtFuerBDE(getTheClient(request, response).getData(),
+												taetigkeit.substring(2), theclientDto));
 								return getSJSPNext();
 							} catch (EJBExceptionLP ex2) {
-								getTheClient(request, response).setSMsg(
-										"Fehler beim Buchen!");
+								getTheClient(request, response).setSMsg("Fehler beim Buchen!");
 								return getSJSPNext();
 							}
 						} else {
-							getTheClient(request, response)
-									.setSMsg(
-											"Das Los "
-													+ beleg.substring(1)
-													+ " hat keinen entsprechen Arbeitsgang mit der Artikelnummer "
-													+ taetigkeit.substring(2));
+							getTheClient(request, response).setSMsg("Das Los " + beleg.substring(1)
+									+ " hat keinen entsprechen Arbeitsgang mit der Artikelnummer "
+									+ taetigkeit.substring(2));
 							return getSJSPNext();
 						}
 
@@ -1382,16 +1326,12 @@ public class CommandZE extends Command {
 					} else {
 						com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtosErstePosition = getFertigungFac()
 								.lossollarbeitsplanFindByLosIId(losDto.getIId());
-						if (dtosErstePosition != null
-								&& dtosErstePosition.length > 0) {
-							zeitdatenDto
-									.setIBelegartpositionid(dtosErstePosition[0]
-											.getIId());
+						if (dtosErstePosition != null && dtosErstePosition.length > 0) {
+							zeitdatenDto.setIBelegartpositionid(dtosErstePosition[0].getIId());
 						} else {
 							// Bemerkung
-							getTheClient(request, response).setSMsg(
-									"Los " + beleg.substring(1)
-											+ " hat keine Positionen");
+							getTheClient(request, response)
+									.setSMsg("Los " + beleg.substring(1) + " hat keine Positionen");
 							return getSJSPNext();
 
 						}
@@ -1400,46 +1340,33 @@ public class CommandZE extends Command {
 
 				// Maschinenzeitdaten buchen (geht nur auf Los)
 
-				if (hmParameter.containsKey("maschine")
-						&& zeitdatenDto.getCBelegartnr() != null
-						&& zeitdatenDto.getCBelegartnr().equals(
-								LocaleFac.BELEGART_LOS)
+				if (hmParameter.containsKey("maschine") && zeitdatenDto.getCBelegartnr() != null
+						&& zeitdatenDto.getCBelegartnr().equals(LocaleFac.BELEGART_LOS)
 						&& zeitdatenDto.getIBelegartid() != null) {
-					MaschineDto maschineDto = (MaschineDto) hmParameter
-							.get("maschine");
+					MaschineDto maschineDto = (MaschineDto) hmParameter.get("maschine");
 
 					com.lp.server.fertigung.service.LossollarbeitsplanDto[] dtos = getFertigungFac()
-							.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(
-									zeitdatenDto.getIBelegartid(),
+							.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(zeitdatenDto.getIBelegartid(),
 									zeitdatenDto.getArtikelIId());
 
 					if (dtos != null && dtos.length > 0) {
 						MaschinenzeitdatenDto maschinenzeitdatenDto = new MaschinenzeitdatenDto();
-						maschinenzeitdatenDto
-								.setPersonalIIdGestartet(zeitdatenDto
-										.getPersonalIId());
+						maschinenzeitdatenDto.setPersonalIIdGestartet(zeitdatenDto.getPersonalIId());
 						maschinenzeitdatenDto.setTVon(zeitdatenDto.getTZeit());
-						maschinenzeitdatenDto.setLossollarbeitsplanIId(dtos[0]
-								.getIId());
-						maschinenzeitdatenDto.setMaschineIId(maschineDto
-								.getIId());
-						getZeiterfassungsFac().createMaschinenzeitdaten(
-								maschinenzeitdatenDto, theclientDto);
+						maschinenzeitdatenDto.setLossollarbeitsplanIId(dtos[0].getIId());
+						maschinenzeitdatenDto.setMaschineIId(maschineDto.getIId());
+						getZeiterfassungsFac().createMaschinenzeitdaten(maschinenzeitdatenDto, theclientDto);
 
 					}
 				}
 
 				try {
-					getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true,
-							true, false, false, theclientDto);
-					getTheClient(request, response).setSMsg(
-							getMeldungGebuchtFuerBDE(
-									getTheClient(request, response).getData(),
-									taetigkeit.substring(2), theclientDto));
+					getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false, theclientDto);
+					getTheClient(request, response).setSMsg(getMeldungGebuchtFuerBDE(
+							getTheClient(request, response).getData(), taetigkeit.substring(2), theclientDto));
 					return getSJSPNext();
 				} catch (EJBExceptionLP ex2) {
-					getTheClient(request, response).setSMsg(
-							"Fehler beim Buchen!");
+					getTheClient(request, response).setSMsg("Fehler beim Buchen!");
 					return getSJSPNext();
 				}
 
@@ -1448,8 +1375,7 @@ public class CommandZE extends Command {
 			String beleg = request.getParameter("beleg");
 
 			if (beleg == null) {
-				response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-						"Parameter 'beleg' muss angegeben werden");
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameter 'beleg' muss angegeben werden");
 				return null;
 			}
 
@@ -1469,26 +1395,20 @@ public class CommandZE extends Command {
 
 				if (beleg.substring(0, 2).equals("$A")) {
 
-					AuftragDto auftragDto = getAuftragFac()
-							.auftragFindByMandantCNrCNr(mandant,
-									beleg.substring(2), theclientDto);
+					AuftragDto auftragDto = getAuftragFac().auftragFindByMandantCNrCNr(mandant, beleg.substring(2),
+							theclientDto);
 					status = auftragDto.getStatusCNr();
 
 				} else if (beleg.substring(0, 2).equals("$L")) {
-					LosDto losDto = getFertigungFac().losFindByCNrMandantCNr(
-							beleg.substring(2), mandant);
+					LosDto losDto = getFertigungFac().losFindByCNrMandantCNr(beleg.substring(2), mandant);
 					status = losDto.getStatusCNr();
 
-					BigDecimal erledigteMenge = getFertigungFac()
-							.getErledigteMenge(losDto.getIId(), theclientDto);
-					offeneMenge = losDto.getNLosgroesse().subtract(
-							erledigteMenge);
+					BigDecimal erledigteMenge = getFertigungFac().getErledigteMenge(losDto.getIId(), theclientDto);
+					offeneMenge = losDto.getNLosgroesse().subtract(erledigteMenge);
 
 					if (losDto.getStuecklisteIId() != null) {
 						StuecklisteDto stkDto = getStuecklisteFac()
-								.stuecklisteFindByPrimaryKey(
-										losDto.getStuecklisteIId(),
-										theclientDto);
+								.stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theclientDto);
 
 						if (Helper.short2boolean(stkDto.getBUeberlieferbar()) == false) {
 							ueberliefernErlaubt = "0";
@@ -1517,8 +1437,7 @@ public class CommandZE extends Command {
 			} else {
 				sb.append(" ");
 			}
-			sb.append(Helper.fitString2LengthAlignRight(
-					dFormat.format(offeneMenge.abs()), 16, ' '));
+			sb.append(Helper.fitString2LengthAlignRight(dFormat.format(offeneMenge.abs()), 16, ' '));
 			sb.append(ueberliefernErlaubt);
 			sb.append("\r\n");
 
@@ -1529,13 +1448,11 @@ public class CommandZE extends Command {
 			String menge = request.getParameter("menge");
 
 			if (beleg == null) {
-				response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-						"Parameter 'beleg' muss angegeben werden");
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameter 'beleg' muss angegeben werden");
 				return null;
 			}
 			if (menge == null) {
-				response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-						"Parameter 'menge' muss angegeben werden");
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameter 'menge' muss angegeben werden");
 				return null;
 			}
 
@@ -1556,27 +1473,20 @@ public class CommandZE extends Command {
 
 				if (beleg.substring(0, 2).equals("$A")) {
 
-					AuftragDto auftragDto = getAuftragFac()
-							.auftragFindByMandantCNrCNr(mandant,
-									beleg.substring(2), theclientDto);
+					AuftragDto auftragDto = getAuftragFac().auftragFindByMandantCNrCNr(mandant, beleg.substring(2),
+							theclientDto);
 					status = auftragDto.getStatusCNr();
 
 				} else if (beleg.substring(0, 2).equals("$L")) {
-					LosDto losDto = getFertigungFac().losFindByCNrMandantCNr(
-							beleg.substring(2), mandant);
+					LosDto losDto = getFertigungFac().losFindByCNrMandantCNr(beleg.substring(2), mandant);
 					status = losDto.getStatusCNr();
 
-					BigDecimal erledigteMenge = getFertigungFac()
-							.getErledigteMenge(losDto.getIId(), theclientDto);
-					offeneMenge = losDto.getNLosgroesse().subtract(
-							erledigteMenge);
+					BigDecimal erledigteMenge = getFertigungFac().getErledigteMenge(losDto.getIId(), theclientDto);
+					offeneMenge = losDto.getNLosgroesse().subtract(erledigteMenge);
 					if (losDto.getStuecklisteIId() != null) {
 						StuecklisteDto stkDto = getStuecklisteFac()
-								.stuecklisteFindByPrimaryKey(
-										losDto.getStuecklisteIId(),
-										theclientDto);
-						ueberliefernErlaubt = Helper.short2boolean(stkDto
-								.getBUeberlieferbar());
+								.stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theclientDto);
+						ueberliefernErlaubt = Helper.short2boolean(stkDto.getBUeberlieferbar());
 					}
 
 				}
@@ -1602,10 +1512,8 @@ public class CommandZE extends Command {
 			String fehlercode = "";
 			String text1 = "";
 			String text2 = "";
-			if (status.equals(LocaleFac.STATUS_ERLEDIGT)
-					|| status.equals(LocaleFac.STATUS_STORNIERT)
-					|| status.equals(LocaleFac.STATUS_ANGELEGT)
-					|| status.equals(LocaleFac.STATUS_GESTOPPT)) {
+			if (status.equals(LocaleFac.STATUS_ERLEDIGT) || status.equals(LocaleFac.STATUS_STORNIERT)
+					|| status.equals(LocaleFac.STATUS_ANGELEGT) || status.equals(LocaleFac.STATUS_GESTOPPT)) {
 				fehlercode = "001";
 				text1 = "Nicht erlaubt!";
 				text2 = "Status: " + status;
@@ -1621,13 +1529,10 @@ public class CommandZE extends Command {
 						fehlercode = "002";
 						text1 = "Nicht erlaubt!";
 
-						DecimalFormatSymbols dfs = DecimalFormatSymbols
-								.getInstance();
+						DecimalFormatSymbols dfs = DecimalFormatSymbols.getInstance();
 						dfs.setDecimalSeparator('.');
 						DecimalFormat dFormat = new DecimalFormat("#####0", dfs);
-						text2 = "Nur "
-								+ Helper.fitString2LengthAlignRight(
-										dFormat.format(offeneMenge), 6, ' ')
+						text2 = "Nur " + Helper.fitString2LengthAlignRight(dFormat.format(offeneMenge), 6, ' ')
 								+ " Stk offen";
 					} else {
 						fehlercode = "000";
@@ -1655,8 +1560,7 @@ public class CommandZE extends Command {
 
 			if (fingerprint != null) {
 				StringBuffer sb = new StringBuffer();
-				PersonalfingerDto[] personalfingerDtos = getZutrittscontrollerFac()
-						.personalfingerFindAll();
+				PersonalfingerDto[] personalfingerDtos = getZutrittscontrollerFac().personalfingerFindAll();
 				for (int i = 0; i < personalfingerDtos.length; i++) {
 					PersonalfingerDto personalfingerDto = personalfingerDtos[i];
 					String id = personalfingerDto.getIId() + "";
@@ -1667,24 +1571,18 @@ public class CommandZE extends Command {
 					tmp.append(Helper.fitString2Length(id, 20, ' '));
 
 					PersonalDto personalDto = getPersonalFac()
-							.personalFindByPrimaryKey(
-									personalfingerDto.getPersonalIId(),
-									theclientDto);
+							.personalFindByPrimaryKey(personalfingerDto.getPersonalIId(), theclientDto);
 
-					tmp.append(Helper.fitString2LengthAlignRight(
-							personalDto.getCPersonalnr() + "", 5, '0')); // persnr
+					tmp.append(Helper.fitString2LengthAlignRight(personalDto.getCPersonalnr() + "", 5, '0')); // persnr
 					tmp.append(Helper.fitString2Length("", 3, ' ')); // zutrkl
 
-					String sVorname = personalDto.getPartnerDto()
-							.getCName2vornamefirmazeile2();
-					String sNachname = personalDto.getPartnerDto()
-							.getCName1nachnamefirmazeile1();
+					String sVorname = personalDto.getPartnerDto().getCName2vornamefirmazeile2();
+					String sNachname = personalDto.getPartnerDto().getCName1nachnamefirmazeile1();
 
 					if (sVorname == null) {
 						sVorname = "";
 					}
-					tmp.append(Helper.fitString2Length(sVorname + " "
-							+ sNachname, 25, ' ')); // name
+					tmp.append(Helper.fitString2Length(sVorname + " " + sNachname, 25, ' ')); // name
 					sb.append(tmp).append("\r\n");
 
 				}
@@ -1693,14 +1591,10 @@ public class CommandZE extends Command {
 
 				// Ausweisnummern holen
 				StringBuffer sb = new StringBuffer();
-				PersonalDto[] personalDtos = getPersonalFac()
-						.personalFindByCAusweisSortiertNachCAusweis();
+				PersonalDto[] personalDtos = getPersonalFac().personalFindByCAusweisSortiertNachCAusweis();
 
-				ParametermandantDto parameterDto = getParameterFac()
-						.getMandantparameter(
-								mandant,
-								ParameterFac.KATEGORIE_PERSONAL,
-								ParameterFac.PARAMETER_LEAD_IN_AUSWEISNUMMER_MECS);
+				ParametermandantDto parameterDto = getParameterFac().getMandantparameter(mandant,
+						ParameterFac.KATEGORIE_PERSONAL, ParameterFac.PARAMETER_LEAD_IN_AUSWEISNUMMER_MECS);
 
 				String leadIn = "";
 				if (parameterDto.getCWert() != null) {
@@ -1709,29 +1603,23 @@ public class CommandZE extends Command {
 
 				for (int i = 0; i < personalDtos.length; i++) {
 					PersonalDto personalDto = personalDtos[i];
-					personalDto.setPartnerDto(getPartnerFac()
-							.partnerFindByPrimaryKey(
-									personalDto.getPartnerIId(), theclientDto));
+					personalDto.setPartnerDto(
+							getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIId(), theclientDto));
 					StringBuffer tmp = new StringBuffer();
 					// unbedingt nach ausweis sortieren
 					tmp.setLength(0);
-					tmp.append(Helper.fitString2Length(
-							leadIn + personalDto.getCAusweis(), 20, ' ')); // ausweis
-					tmp.append(Helper.fitString2LengthAlignRight(
-							personalDto.getCPersonalnr() + "", 5, '0')); // persnr
+					tmp.append(Helper.fitString2Length(leadIn + personalDto.getCAusweis(), 20, ' ')); // ausweis
+					tmp.append(Helper.fitString2LengthAlignRight(personalDto.getCPersonalnr() + "", 5, '0')); // persnr
 					tmp.append(Helper.fitString2Length("", 3, ' ')); // zutrkl
 
-					String sVorname = personalDto.getPartnerDto()
-							.getCName2vornamefirmazeile2();
-					String sNachname = personalDto.getPartnerDto()
-							.getCName1nachnamefirmazeile1();
+					String sVorname = personalDto.getPartnerDto().getCName2vornamefirmazeile2();
+					String sNachname = personalDto.getPartnerDto().getCName1nachnamefirmazeile1();
 
 					if (sVorname == null) {
 						sVorname = "";
 					}
 
-					tmp.append(Helper.fitString2Length(sVorname + " "
-							+ sNachname, 25, ' ')); // name
+					tmp.append(Helper.fitString2Length(sVorname + " " + sNachname, 25, ' ')); // name
 					sb.append(tmp).append("\r\n");
 
 				}
@@ -1741,11 +1629,8 @@ public class CommandZE extends Command {
 		} else if (command.equals(TheApp.CMD_ZE_MECS_ERLAUBTETAETIGKEITEN)) {
 
 			Session session = FLRSessionFactory.getFactory().openSession();
-			org.hibernate.Criteria liste = session
-					.createCriteria(FLRTaetigkeit.class);
-			liste.add(Expression.eq(
-					ZeiterfassungFac.FLR_TAETIGKEIT_B_BDEBUCHBAR,
-					Helper.boolean2Short(true)));
+			org.hibernate.Criteria liste = session.createCriteria(FLRTaetigkeit.class);
+			liste.add(Expression.eq(ZeiterfassungFac.FLR_TAETIGKEIT_B_BDEBUCHBAR, Helper.boolean2Short(true)));
 			liste.addOrder(Order.asc("c_nr"));
 			List<?> lReisezeiten = liste.list();
 			Iterator<?> it = lReisezeiten.iterator();
@@ -1758,8 +1643,7 @@ public class CommandZE extends Command {
 
 				tmp.setLength(0);
 				tmp.append('$');
-				tmp.append(Helper.fitString2LengthAlignRight(
-						flrTaetigkeit.getC_nr(), 14, ' ')); // persnr
+				tmp.append(Helper.fitString2LengthAlignRight(flrTaetigkeit.getC_nr(), 14, ' ')); // persnr
 				sb.append(tmp).append("\r\n");
 
 			}
@@ -1773,31 +1657,25 @@ public class CommandZE extends Command {
 			StringBuffer sb = new StringBuffer();
 
 			// unbedingt nach personalnummer sortieren
-			PersonalDto[] personalDtos = getPersonalFac()
-					.personalFindByCAusweisSortiertNachPersonalnr();
+			PersonalDto[] personalDtos = getPersonalFac().personalFindByCAusweisSortiertNachPersonalnr();
 			for (int i = 0; i < personalDtos.length; i++) {
 				PersonalDto personalDto = personalDtos[i];
-				personalDto.setPartnerDto(getPartnerFac()
-						.partnerFindByPrimaryKey(personalDto.getPartnerIId(),
-								theclientDto));
+				personalDto.setPartnerDto(
+						getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIId(), theclientDto));
 				StringBuffer tmp = new StringBuffer();
 
 				tmp.setLength(0);
-				tmp.append(Helper.fitString2LengthAlignRight(
-						personalDto.getCPersonalnr() + "", 5, '0')); // persnr
+				tmp.append(Helper.fitString2LengthAlignRight(personalDto.getCPersonalnr() + "", 5, '0')); // persnr
 				tmp.append(Helper.fitString2Length("", 3, ' ')); // zutrkl
 
-				String sVorname = personalDto.getPartnerDto()
-						.getCName2vornamefirmazeile2();
-				String sNachname = personalDto.getPartnerDto()
-						.getCName1nachnamefirmazeile1();
+				String sVorname = personalDto.getPartnerDto().getCName2vornamefirmazeile2();
+				String sNachname = personalDto.getPartnerDto().getCName1nachnamefirmazeile1();
 
 				if (sVorname == null) {
 					sVorname = "";
 				}
 
-				tmp.append(Helper.fitString2Length(sVorname + " " + sNachname,
-						25, ' ')); // name
+				tmp.append(Helper.fitString2Length(sVorname + " " + sNachname, 25, ' ')); // name
 				sb.append(tmp).append("\r\n");
 
 			}
@@ -1808,8 +1686,7 @@ public class CommandZE extends Command {
 				ausweis = request.getParameter("ausweis");
 			} catch (Exception e) {
 				getTheClient(request, response).setBResponseIsReady(true);
-				response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-						"Parameter 'ausweis' nicht angegeben");
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameter 'ausweis' nicht angegeben");
 				myLogger.error("doPost; Exception aufgetreten", e);
 				return null;
 			}
@@ -1819,10 +1696,8 @@ public class CommandZE extends Command {
 
 			ausweis = ausweis.trim();
 
-			ParametermandantDto parameterDto = getParameterFac()
-					.getMandantparameter(mandant,
-							ParameterFac.KATEGORIE_PERSONAL,
-							ParameterFac.PARAMETER_LEAD_IN_AUSWEISNUMMER_MECS);
+			ParametermandantDto parameterDto = getParameterFac().getMandantparameter(mandant,
+					ParameterFac.KATEGORIE_PERSONAL, ParameterFac.PARAMETER_LEAD_IN_AUSWEISNUMMER_MECS);
 
 			String leadIn = "";
 			if (parameterDto.getCWert() != null) {
@@ -1833,14 +1708,12 @@ public class CommandZE extends Command {
 				}
 			}
 
-			PersonalDto personalDto = getPersonalFac().personalFindByCAusweis(
-					ausweis);
+			PersonalDto personalDto = getPersonalFac().personalFindByCAusweis(ausweis);
 
-			personalDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
-					personalDto.getPartnerIId(), theclientDto));
+			personalDto
+					.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIId(), theclientDto));
 
-			java.sql.Timestamp ts = new java.sql.Timestamp(
-					System.currentTimeMillis() - 3600000 * 24);
+			java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis() - 3600000 * 24);
 			ts = com.lp.util.Helper.cutTimestamp(ts);
 
 			Calendar c = Calendar.getInstance();
@@ -1848,29 +1721,22 @@ public class CommandZE extends Command {
 
 			String urlaub = null;
 			try {
-				urlaub = getZeiterfassungsFac()
-						.erstelleMonatsAbrechnungFuerBDE(personalDto.getIId(),
-								new Integer(c.get(Calendar.YEAR)),
-								new Integer(c.get(Calendar.MONTH)), false,
-								new java.sql.Date(ts.getTime()), theclientDto,
-								true, false);
+				urlaub = getZeiterfassungsFac().erstelleMonatsAbrechnungFuerBDE(personalDto.getIId(),
+						new Integer(c.get(Calendar.YEAR)), new Integer(c.get(Calendar.MONTH)), false,
+						new java.sql.Date(ts.getTime()), theclientDto, true, false);
 
 			} catch (EJBExceptionLP ex7) {
 
 				if (ex7.getCause() instanceof EJBExceptionLP) {
 					EJBExceptionLP e = (EJBExceptionLP) ex7.getCause();
-					if (e != null
-							&& e.getCode() == EJBExceptionLP.FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM) {
+					if (e != null && e.getCode() == EJBExceptionLP.FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM) {
 						getTheClient(request, response)
-								.setSMsg(
-										new String(
-												"FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM"));
+								.setSMsg(new String("FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM"));
 						return getSJSPNext();
 
 					}
 				}
-				getTheClient(request, response).setSMsg(
-						new String(ex7.getMessage()));
+				getTheClient(request, response).setSMsg(new String(ex7.getMessage()));
 				setSJSPNext("bdestation.jsp");
 
 			}
@@ -1908,8 +1774,8 @@ public class CommandZE extends Command {
 				bAbliefern = true;
 			} else {
 
-				artikelDtoTaetigkeit = getArtikelFac().artikelFindByCNrOhneExc(
-						record.substring(132, 155).trim(), theclientDto);
+				artikelDtoTaetigkeit = getArtikelFac().artikelFindByCNrOhneExc(record.substring(132, 155).trim(),
+						theclientDto);
 			}
 
 			ZeitdatenDto zeitdatenDto = new ZeitdatenDto();
@@ -1919,21 +1785,14 @@ public class CommandZE extends Command {
 
 			Calendar c = Calendar.getInstance();
 			c.set(Calendar.YEAR, new Integer(zeit.substring(0, 4)).intValue());
-			c.set(Calendar.MONTH,
-					new Integer(zeit.substring(4, 6)).intValue() - 1);
-			c.set(Calendar.DAY_OF_MONTH,
-					new Integer(zeit.substring(6, 8)).intValue());
-			c.set(Calendar.HOUR_OF_DAY,
-					new Integer(zeit.substring(8, 10)).intValue());
-			c.set(Calendar.MINUTE,
-					new Integer(zeit.substring(10, 12)).intValue());
-			c.set(Calendar.SECOND,
-					new Integer(zeit.substring(12, 14)).intValue());
+			c.set(Calendar.MONTH, new Integer(zeit.substring(4, 6)).intValue() - 1);
+			c.set(Calendar.DAY_OF_MONTH, new Integer(zeit.substring(6, 8)).intValue());
+			c.set(Calendar.HOUR_OF_DAY, new Integer(zeit.substring(8, 10)).intValue());
+			c.set(Calendar.MINUTE, new Integer(zeit.substring(10, 12)).intValue());
+			c.set(Calendar.SECOND, new Integer(zeit.substring(12, 14)).intValue());
 
-			zeitdatenDto
-					.setTZeit(new java.sql.Timestamp(c.getTime().getTime()));
-			zeitdatenDtoEnde.setTZeit(new java.sql.Timestamp(c.getTime()
-					.getTime() + 1000));
+			zeitdatenDto.setTZeit(new java.sql.Timestamp(c.getTime().getTime()));
+			zeitdatenDtoEnde.setTZeit(new java.sql.Timestamp(c.getTime().getTime() + 1000));
 			zeitdatenDto.setTAendern(zeitdatenDto.getTZeit());
 			zeitdatenDtoEnde.setTAendern(zeitdatenDtoEnde.getTZeit());
 
@@ -1943,11 +1802,9 @@ public class CommandZE extends Command {
 
 			if (schluesselNr.startsWith("$P")) {
 				try {
-					personalIId = getPersonalFac().personalFindByCAusweis(
-							schluesselNr.substring(2)).getIId();
+					personalIId = getPersonalFac().personalFindByCAusweis(schluesselNr.substring(2)).getIId();
 				} catch (NullPointerException ex11) {
-					String msg = "Person mit Ausweis " + schluesselNr
-							+ " nicht vorhanden. ORIGINAL-Request:" + record;
+					String msg = "Person mit Ausweis " + schluesselNr + " nicht vorhanden. ORIGINAL-Request:" + record;
 					myLogger.error(msg, ex11);
 					response.setStatus(HttpServletResponse.SC_OK);
 					return getSJSPNext();
@@ -1957,11 +1814,9 @@ public class CommandZE extends Command {
 			} else {
 				if (command.equals(TheApp.CMD_ZE_MECS_ZEITBUCHEN)) {
 					try {
-						personalIId = getPersonalFac().personalFindByCAusweis(
-								schluesselNr).getIId();
+						personalIId = getPersonalFac().personalFindByCAusweis(schluesselNr).getIId();
 					} catch (NullPointerException ex11) {
-						String msg = "Person mit Ausweis " + schluesselNr
-								+ " nicht vorhanden. ORIGINAL-Request:"
+						String msg = "Person mit Ausweis " + schluesselNr + " nicht vorhanden. ORIGINAL-Request:"
 								+ record;
 						myLogger.error(msg, ex11);
 
@@ -1970,21 +1825,17 @@ public class CommandZE extends Command {
 
 					}
 
-				} else if (command
-						.equals(TheApp.CMD_ZE_MECS_ZEITBUCHENFINGERPRINT)) {
+				} else if (command.equals(TheApp.CMD_ZE_MECS_ZEITBUCHENFINGERPRINT)) {
 					Integer i = new Integer(schluesselNr);
-					getZutrittscontrollerFac()
-							.personalfingerFindByPrimaryKey(i).getPersonalIId();
-					personalIId = getZutrittscontrollerFac()
-							.personalfingerFindByPrimaryKey(i).getPersonalIId();
+					getZutrittscontrollerFac().personalfingerFindByPrimaryKey(i).getPersonalIId();
+					personalIId = getZutrittscontrollerFac().personalfingerFindByPrimaryKey(i).getPersonalIId();
 				}
 			}
 
 			zeitdatenDto.setPersonalIId(personalIId);
 			zeitdatenDtoEnde.setPersonalIId(personalIId);
 			zeitdatenDtoEnde.setTaetigkeitIId(getZeiterfassungsFac()
-					.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_ENDE,
-							theclientDto).getIId());
+					.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_ENDE, theclientDto).getIId());
 
 			// Taetigkeiten, die MECS liefert muessen in der Tabelle LP_KEYVALUE
 			// uebersetzt werden (als String)
@@ -1995,43 +1846,34 @@ public class CommandZE extends Command {
 				if (schluesselNr.startsWith("$P")) {
 					sTaetigkeit = record.substring(110, 126);
 					Integer taetigkeitIId_Ende = getZeiterfassungsFac()
-							.taetigkeitFindByCNr(
-									ZeiterfassungFac.TAETIGKEIT_ENDE,
-									theclientDto).getIId();
+							.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_ENDE, theclientDto).getIId();
 					String gutStueck = record.substring(160, 172);
 					String schlechtStueck = record.substring(173, 189);
 
 					BigDecimal nGutStueck = new BigDecimal(gutStueck.trim());
-					BigDecimal nSchlechtStueck = new BigDecimal(
-							schlechtStueck.trim());
+					BigDecimal nSchlechtStueck = new BigDecimal(schlechtStueck.trim());
 					Integer artikelIId = null;
 
 					if (artikelDtoTaetigkeit == null) {
-						ParametermandantDto parameterDto = getParameterFac()
-								.getMandantparameter(
-										mandant,
-										ParameterFac.KATEGORIE_ALLGEMEIN,
-										ParameterFac.PARAMETER_DEFAULT_ARBEITSZEITARTIKEL);
+						ParametermandantDto parameterDto = getParameterFac().getMandantparameter(mandant,
+								ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_DEFAULT_ARBEITSZEITARTIKEL);
 
-						if (parameterDto != null
-								&& parameterDto.getCWert() != null
+						if (parameterDto != null && parameterDto.getCWert() != null
 								&& !parameterDto.getCWert().trim().equals("")) {
 							try {
-								artikelIId = getArtikelFac().artikelFindByCNr(
-										parameterDto.getCWert(), theclientDto)
+								artikelIId = getArtikelFac().artikelFindByCNr(parameterDto.getCWert(), theclientDto)
 										.getIId();
 
 							} catch (RemoteException ex2) {
-								myLogger.error("Default-Arbeitszeitartikel "
-										+ parameterDto.getCWert()
-										+ " nicht vorhanden.", ex2);
+								myLogger.error(
+										"Default-Arbeitszeitartikel " + parameterDto.getCWert() + " nicht vorhanden.",
+										ex2);
 								return getSJSPNext();
 							}
 
 						} else {
-							myLogger.error("Default-Arbeitszeitartikel "
-									+ parameterDto.getCWert()
-									+ " nicht definiert.");
+							myLogger.error(
+									"Default-Arbeitszeitartikel " + parameterDto.getCWert() + " nicht definiert.");
 							return getSJSPNext();
 						}
 					} else {
@@ -2043,84 +1885,61 @@ public class CommandZE extends Command {
 						AuftragDto auftragDto = null;
 						try {
 							if (sTaetigkeit.startsWith("$A")) {
-								auftragDto = getAuftragFac()
-										.auftragFindByMandantCNrCNr(
-												mandant,
-												sTaetigkeit.substring(2).trim(),
-												theclientDto);
+								auftragDto = getAuftragFac().auftragFindByMandantCNrCNr(mandant,
+										sTaetigkeit.substring(2).trim(), theclientDto);
 							} else {
-								auftragDto = getAuftragFac()
-										.auftragFindByMandantCNrCNr(
-												mandant,
-												sTaetigkeit.substring(3).trim(),
-												theclientDto);
+								auftragDto = getAuftragFac().auftragFindByMandantCNrCNr(mandant,
+										sTaetigkeit.substring(3).trim(), theclientDto);
 
 							}
 						} catch (RemoteException ex8) {
-							zeitdatenDto.setCBemerkungZuBelegart("Auftrag "
-									+ sTaetigkeit.substring(2).trim()
-									+ " konnte nicht gefunden werden");
+							zeitdatenDto.setCBemerkungZuBelegart(
+									"Auftrag " + sTaetigkeit.substring(2).trim() + " konnte nicht gefunden werden");
 							zeitdatenDto.setTaetigkeitIId(taetigkeitIId_Ende);
-							getZeiterfassungsFac().createZeitdaten(
-									zeitdatenDto, true, true, false,
-									false, theclientDto);
+							getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false,
+									theclientDto);
 
 							return getSJSPNext();
 						}
 						// Wenn Auftragsbeginn ->
 						if (sTaetigkeit.startsWith("$A")) {
 							AuftragpositionDto[] auftragpositionDtos = getAuftragpositionFac()
-									.auftragpositionFindByAuftrag(
-											auftragDto.getIId());
+									.auftragpositionFindByAuftrag(auftragDto.getIId());
 
 							if (auftragpositionDtos.length > 0) {
-								zeitdatenDto
-										.setCBelegartnr(LocaleFac.BELEGART_AUFTRAG);
+								zeitdatenDto.setCBelegartnr(LocaleFac.BELEGART_AUFTRAG);
 								zeitdatenDto.setArtikelIId(artikelIId);
-								zeitdatenDto
-										.setIBelegartid(auftragDto.getIId());
-								zeitdatenDto
-										.setIBelegartpositionid(auftragpositionDtos[0]
-												.getIId());
+								zeitdatenDto.setIBelegartid(auftragDto.getIId());
+								zeitdatenDto.setIBelegartpositionid(auftragpositionDtos[0].getIId());
 							} else {
-								myLogger.error("Buchung von MECS-TERMINAL, Ausweis: "
-										+ schluesselNr
-										+ ", Auftrag"
-										+ sTaetigkeit
-										+ " hat keine Positionen.");
+								myLogger.error("Buchung von MECS-TERMINAL, Ausweis: " + schluesselNr + ", Auftrag"
+										+ sTaetigkeit + " hat keine Positionen.");
 								return getSJSPNext();
 							}
 						}
-					} else if (sTaetigkeit.startsWith("$EL")
-							|| sTaetigkeit.startsWith("$L")) {
+					} else if (sTaetigkeit.startsWith("$EL") || sTaetigkeit.startsWith("$L")) {
 
 						com.lp.server.fertigung.service.LosDto losDto = null;
 						try {
 							if (sTaetigkeit.startsWith("$L")) {
 
-								losDto = getFertigungFac()
-										.losFindByCNrMandantCNr(
+								losDto = getFertigungFac().losFindByCNrMandantCNr(
 
-										sTaetigkeit.substring(2).trim(),
-												mandant);
+										sTaetigkeit.substring(2).trim(), mandant);
 
 							} else {
-								losDto = getFertigungFac()
-										.losFindByCNrMandantCNr(
+								losDto = getFertigungFac().losFindByCNrMandantCNr(
 
-										sTaetigkeit.substring(3).trim(),
-												mandant);
+										sTaetigkeit.substring(3).trim(), mandant);
 
 							}
 
 						} catch (EJBExceptionLP ex10) {
-							zeitdatenDto.setCBemerkungZuBelegart("Los "
-									+ sTaetigkeit.substring(2).trim()
-									+ " konnte nicht gefunden werden");
+							zeitdatenDto.setCBemerkungZuBelegart(
+									"Los " + sTaetigkeit.substring(2).trim() + " konnte nicht gefunden werden");
 							zeitdatenDto.setTaetigkeitIId(taetigkeitIId_Ende);
-							getZeiterfassungsFac().createZeitdaten(
-									zeitdatenDto, true, true, false,
-									false, theclientDto);
+							getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false,
+									theclientDto);
 							return getSJSPNext();
 						}
 
@@ -2130,115 +1949,105 @@ public class CommandZE extends Command {
 							String menge = record.substring(155, 170);
 							BigDecimal nMenge = new BigDecimal(menge.trim());
 							losablieferungDto.setNMenge(nMenge);
-							losablieferungDto.setTAendern(zeitdatenDto
-									.getTZeit());
+							losablieferungDto.setTAendern(zeitdatenDto.getTZeit());
 
 							if (nMenge.doubleValue() > 0) {
 								// lt. FM
-								BigDecimal bdBisherErledigt = getFertigungFac()
-										.getErledigteMenge(losDto.getIId(),
-												theclientDto);
+								BigDecimal bdBisherErledigt = getFertigungFac().getErledigteMenge(losDto.getIId(),
+										theclientDto);
 
-								if (bdBisherErledigt.add(nMenge).doubleValue() > losDto
-										.getNLosgroesse().doubleValue()) {
-									getFertigungFac().aendereLosgroesse(
-											losDto.getIId(),
-											bdBisherErledigt.add(nMenge)
-													.intValue(), false,
-											theclientDto);
+								if (bdBisherErledigt.add(nMenge).doubleValue() > losDto.getNLosgroesse()
+										.doubleValue()) {
+									getFertigungFac().aendereLosgroesse(losDto.getIId(),
+											bdBisherErledigt.add(nMenge).intValue(), false, theclientDto);
 
 									// SP933
-									losDto.setNLosgroesse(bdBisherErledigt
-											.add(nMenge));
+									losDto.setNLosgroesse(bdBisherErledigt.add(nMenge));
 
 								}
 
 								try {
-									getFertigungFac().bucheMaterialAufLos(
-											losDto, nMenge, false, false, true,
+									getFertigungFac().bucheMaterialAufLos(losDto, nMenge, false, false, true,
 											theclientDto, null, false);
 								} catch (Exception e1) {
 									// Terminal darf keinen Fehler bekommen
 								}
 
-								getFertigungFac()
-										.createLosablieferungFuerTerminalOhnePreisberechnung(
-												losablieferungDto,
-												theclientDto, false);
-
-								try {
-									getFertigungFac()
-											.aktualisiereNachtraeglichPreiseAllerLosablieferungen(
-													losDto.getIId(),
-													theclientDto, true);
-								} catch (Exception e) {
-									// PREISBERECHNUNG FEHLGESCHLAGEN
-									myLogger.error(
-											"Preisberechnung der Ablieferungen f\u00FCr Los "
-													+ losDto.getCNr()
-													+ " fehlgeschlagen. Bitte manuell ausfuehren",
-											e);
+								losablieferungDto=getFertigungFac().createLosablieferungFuerTerminal(losablieferungDto, theclientDto,
+										false);
+								
+								
+								
+								//PJ21516
+								String benutzernameOri=theclientDto.getBenutzername();
+								
+								String userNeu=theclientDto.getBenutzername();
+								int index = userNeu.indexOf('|');
+								if (index > 0) {
+									userNeu = theclientDto.getBenutzername().substring(0,index).trim();
 								}
+								
+								theclientDto.setBenutzername(userNeu.trim() + "|" + terminal);
+								getFertigungReportFac().printAblieferEtikettOnServer(
+										losablieferungDto.getIId(), null, theclientDto);
+								theclientDto.setBenutzername(benutzernameOri);
+								
+								
+								
+								// ana: Preisberechnung wird nun in createLosablieferungFuerTerminal
+								// durchgefuehrt
+//								//siehe SP7162
+//								try {
+//									getFertigungFac().aktualisiereNachtraeglichPreiseAllerLosablieferungen(
+//											losDto.getIId(), theclientDto, true);
+//								} catch (Exception e) {
+//									// PREISBERECHNUNG FEHLGESCHLAGEN
+//									myLogger.error("Preisberechnung der Ablieferungen f\u00FCr Los " + losDto.getCNr()
+//											+ " fehlgeschlagen. Bitte manuell ausfuehren", e);
+//								}
 							}
 
 							// PJ17748
 
 							ParametermandantDto parameterAblieferungBuchtEndeDto = getParameterFac()
-									.getMandantparameter(
-											mandant,
-											ParameterFac.KATEGORIE_FERTIGUNG,
+									.getMandantparameter(mandant, ParameterFac.KATEGORIE_FERTIGUNG,
 											ParameterFac.PARAMETER_ABLIEFERUNG_BUCHT_ENDE);
 
 							Boolean bAblieferungBuchtEndeDto = (Boolean) parameterAblieferungBuchtEndeDto
 									.getCWertAsObject();
 
 							if (bAblieferungBuchtEndeDto == true) {
-								zeitdatenDto
-										.setTaetigkeitIId(taetigkeitIId_Ende);
+								zeitdatenDto.setTaetigkeitIId(taetigkeitIId_Ende);
 								zeitdatenDto.setCBelegartnr(null);
 								zeitdatenDto.setArtikelIId(null);
 								zeitdatenDto.setIBelegartid(null);
 								zeitdatenDto.setIBelegartpositionid(null);
-								Integer zeitdatenIId = getZeiterfassungsFac()
-										.createZeitdaten(zeitdatenDto, false,
-												false, false, false, theclientDto);
+								Integer zeitdatenIId = getZeiterfassungsFac().createZeitdaten(zeitdatenDto, false,
+										false, false, false, theclientDto);
 
 								// PJ17797
 								if (nMenge.doubleValue() > 0) {
-									if (getMandantFac()
-											.darfAnwenderAufZusatzfunktionZugreifen(
-													MandantFac.ZUSATZFUNKTION_STUECKRUECKMELDUNG,
-													theclientDto)) {
+									if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+											MandantFac.ZUSATZFUNKTION_STUECKRUECKMELDUNG, theclientDto)) {
 
 										Integer lossollarbeitsplanIId = null;
 										LossollarbeitsplanDto[] sollDtos = getFertigungFac()
-												.lossollarbeitsplanFindByLosIId(
-														losDto.getIId());
+												.lossollarbeitsplanFindByLosIId(losDto.getIId());
 										if (sollDtos.length > 0) {
-											lossollarbeitsplanIId = sollDtos[sollDtos.length - 1]
-													.getIId();
+											lossollarbeitsplanIId = sollDtos[sollDtos.length - 1].getIId();
 										} else {
 											lossollarbeitsplanIId = getFertigungFac()
-													.defaultArbeitszeitartikelErstellen(
-															losDto,
-															theclientDto);
+													.defaultArbeitszeitartikelErstellen(losDto, theclientDto);
 										}
 
 										LosgutschlechtDto losgutschlechtDto = new LosgutschlechtDto();
-										losgutschlechtDto
-												.setZeitdatenIId(zeitdatenIId);
-										losgutschlechtDto
-												.setLossollarbeitsplanIId(lossollarbeitsplanIId);
+										losgutschlechtDto.setZeitdatenIId(zeitdatenIId);
+										losgutschlechtDto.setLossollarbeitsplanIId(lossollarbeitsplanIId);
 										losgutschlechtDto.setNGut(nMenge);
-										losgutschlechtDto
-												.setNSchlecht(new BigDecimal(0));
-										losgutschlechtDto
-												.setNInarbeit(new BigDecimal(0));
+										losgutschlechtDto.setNSchlecht(new BigDecimal(0));
+										losgutschlechtDto.setNInarbeit(new BigDecimal(0));
 
-										getFertigungFac()
-												.createLosgutschlecht(
-														losgutschlechtDto,
-														theclientDto);
+										getFertigungFac().createLosgutschlecht(losgutschlechtDto, theclientDto);
 									}
 								}
 
@@ -2254,36 +2063,25 @@ public class CommandZE extends Command {
 							zeitdatenDto.setIBelegartid(losDto.getIId());
 
 							LossollarbeitsplanDto[] sollDtos = getFertigungFac()
-									.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(
-											losDto.getIId(), artikelIId);
+									.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(losDto.getIId(), artikelIId);
 							if (sollDtos.length > 0) {
-								zeitdatenDto.setIBelegartpositionid(sollDtos[0]
-										.getIId());
+								zeitdatenDto.setIBelegartpositionid(sollDtos[0].getIId());
 							}
 						} else {
 							// Hole letzten begonnenen Auftrag und hinterlege
 							// gut/schlechtstueck
-							Session session = FLRSessionFactory.getFactory()
-									.openSession();
-							org.hibernate.Criteria liste = session
-									.createCriteria(FLRZeitdaten.class);
-							liste.add(Expression
-									.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID,
-											personalIId));
+							Session session = FLRSessionFactory.getFactory().openSession();
+							org.hibernate.Criteria liste = session.createCriteria(FLRZeitdaten.class);
+							liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID, personalIId));
 							/*
-							 * liste.add(Expression.eq(ZeiterfassungFac.
-							 * FLR_ZEITDATEN_C_BELEGARTNR ,
+							 * liste.add(Expression.eq(ZeiterfassungFac. FLR_ZEITDATEN_C_BELEGARTNR ,
 							 * LocaleFac.BELEGART_LOS)); liste.add(Expression.eq
-							 * (ZeiterfassungFac.FLR_ZEITDATEN_I_BELEGARTID,
-							 * losDto.getIId()));
+							 * (ZeiterfassungFac.FLR_ZEITDATEN_I_BELEGARTID, losDto.getIId()));
 							 */
-							liste.add(Expression
-									.gt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
-											Helper.cutTimestamp(zeitdatenDto
-													.getTZeit())));
+							liste.add(Expression.gt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
+									Helper.cutTimestamp(zeitdatenDto.getTZeit())));
 
-							liste.addOrder(Order
-									.desc(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT));
+							liste.addOrder(Order.desc(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT));
 							// liste.setMaxResults(1);
 							List<?> lReisezeiten = liste.list();
 
@@ -2294,30 +2092,19 @@ public class CommandZE extends Command {
 
 							ZeitdatenDto letzterAuftrag = null;
 							while (it.hasNext()) {
-								FLRZeitdaten flrLetzerAuftrag = (FLRZeitdaten) it
-										.next();
+								FLRZeitdaten flrLetzerAuftrag = (FLRZeitdaten) it.next();
 
 								if (flrLetzerAuftrag.getC_belegartnr() != null
 										&& flrLetzerAuftrag.getI_belegartid() != null) {
-									if (flrLetzerAuftrag.getC_belegartnr()
-											.equals(zeitdatenDto
-													.getCBelegartnr())
-											&& flrLetzerAuftrag
-													.getI_belegartid()
-													.equals(zeitdatenDto
-															.getIBelegartid())) {
+									if (flrLetzerAuftrag.getC_belegartnr().equals(zeitdatenDto.getCBelegartnr())
+											&& flrLetzerAuftrag.getI_belegartid()
+													.equals(zeitdatenDto.getIBelegartid())) {
 										letzterAuftrag = getZeiterfassungsFac()
-												.zeitdatenFindByPrimaryKey(
-														flrLetzerAuftrag
-																.getI_id(),
-														theclientDto);
+												.zeitdatenFindByPrimaryKey(flrLetzerAuftrag.getI_id(), theclientDto);
 										break;
 									}
-								} else if (flrLetzerAuftrag
-										.getTaetigkeit_i_id() != null
-										&& flrLetzerAuftrag
-												.getTaetigkeit_i_id().equals(
-														taetigkeitIId_Ende)) {
+								} else if (flrLetzerAuftrag.getTaetigkeit_i_id() != null
+										&& flrLetzerAuftrag.getTaetigkeit_i_id().equals(taetigkeitIId_Ende)) {
 									break;
 								}
 
@@ -2326,55 +2113,42 @@ public class CommandZE extends Command {
 							if (letzterAuftrag != null) {
 								// Hier eintragen
 								ZeitdatenDto auftragsbeginn = getZeiterfassungsFac()
-										.zeitdatenFindByPrimaryKey(
-												letzterAuftrag.getIId(),
-												theclientDto);
+										.zeitdatenFindByPrimaryKey(letzterAuftrag.getIId(), theclientDto);
 
 								// auftragsbeginn.setNGut(nGutStueck);
 								// auftragsbeginn.setNSchlecht(nSchlechtStueck);
-								getZeiterfassungsFac().updateZeitdaten(
-										auftragsbeginn, theclientDto);
+								getZeiterfassungsFac().updateZeitdaten(auftragsbeginn, theclientDto);
 								// und buche ENDE
 								zeitdatenDto = zeitdatenDtoEnde;
 
 							} else {
-								zeitdatenDto
-										.setCBelegartnr(LocaleFac.BELEGART_LOS);
+								zeitdatenDto.setCBelegartnr(LocaleFac.BELEGART_LOS);
 								zeitdatenDto.setArtikelIId(artikelIId);
 								zeitdatenDto.setIBelegartid(losDto.getIId());
 								// zeitdatenDto.setNGut(nGutStueck);
 								// zeitdatenDto.setNSchlecht(nSchlechtStueck);
 
-								getZeiterfassungsFac().createZeitdaten(
-										zeitdatenDto, true, true, false,
-										false, theclientDto);
+								getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false,
+										theclientDto);
 								zeitdatenDto = zeitdatenDtoEnde;
 							}
 							session.close();
 
 							/*
-							 * if (lReisezeiten.size() > 0) { FLRZeitdaten
-							 * flrZeitdaten = (FLRZeitdaten)
+							 * if (lReisezeiten.size() > 0) { FLRZeitdaten flrZeitdaten = (FLRZeitdaten)
 							 * lReisezeiten.iterator().next();
 							 * 
 							 * ZeitdatenDto losbeginn = getZeiterfassungsFac().
-							 * zeitdatenFindByPrimaryKey(flrZeitdaten.getI_id(),
-							 * cNrUser);
+							 * zeitdatenFindByPrimaryKey(flrZeitdaten.getI_id(), cNrUser);
 							 * 
-							 * losbeginn.setNGut(nGutStueck);
-							 * losbeginn.setNSchlecht(nSchlechtStueck);
-							 * getZeiterfassungsFac().updateZeitdaten(losbeginn,
-							 * cNrUser); //und buche ENDE zeitdatenDto =
-							 * zeitdatenDtoEnde; } else {
-							 * zeitdatenDto.setCBelegartnr
-							 * (LocaleFac.BELEGART_LOS);
-							 * zeitdatenDto.setArtikelIId(artikelIId);
+							 * losbeginn.setNGut(nGutStueck); losbeginn.setNSchlecht(nSchlechtStueck);
+							 * getZeiterfassungsFac().updateZeitdaten(losbeginn, cNrUser); //und buche ENDE
+							 * zeitdatenDto = zeitdatenDtoEnde; } else { zeitdatenDto.setCBelegartnr
+							 * (LocaleFac.BELEGART_LOS); zeitdatenDto.setArtikelIId(artikelIId);
 							 * zeitdatenDto.setIBelegartid(losDto.getIId());
-							 * zeitdatenDto.setNGut(nGutStueck);
-							 * zeitdatenDto.setNSchlecht(nSchlechtStueck);
-							 * getZeiterfassungsFac
-							 * ().createZeitdaten(zeitdatenDto, true, true,
-							 * cNrUser); zeitdatenDto = zeitdatenDtoEnde; }
+							 * zeitdatenDto.setNGut(nGutStueck); zeitdatenDto.setNSchlecht(nSchlechtStueck);
+							 * getZeiterfassungsFac ().createZeitdaten(zeitdatenDto, true, true, cNrUser);
+							 * zeitdatenDto = zeitdatenDtoEnde; }
 							 * 
 							 * session.close();
 							 */
@@ -2382,36 +2156,24 @@ public class CommandZE extends Command {
 						}
 
 					} else {
-						zeitdatenDto.setTaetigkeitIId(getZeiterfassungsFac()
-								.taetigkeitFindByCNr(
-										Helper.fitString2Length(
-												sTaetigkeit.substring(1), 15,
-												' '), theclientDto).getIId());
+						zeitdatenDto.setTaetigkeitIId(getZeiterfassungsFac().taetigkeitFindByCNr(
+								Helper.fitString2Length(sTaetigkeit.substring(1), 15, ' '), theclientDto).getIId());
 					}
 
 				}
 
 				else {
 					sTaetigkeit = getSystemServicesFac()
-							.keyvalueFindByPrimaryKey(
-									SystemServicesFac.KEYVALUE_MECSTERMINAL,
-									taetigkeit).getCValue();
-					if (sTaetigkeit != null
-							&& !sTaetigkeit
-									.equals(ZeiterfassungFac.TAETIGKEIT_REISE
-											.trim())) {
+							.keyvalueFindByPrimaryKey(SystemServicesFac.KEYVALUE_MECSTERMINAL, taetigkeit).getCValue();
+					if (sTaetigkeit != null && !sTaetigkeit.equals(ZeiterfassungFac.TAETIGKEIT_REISE.trim())) {
 						zeitdatenDto.setTaetigkeitIId(getZeiterfassungsFac()
-								.taetigkeitFindByCNr(
-										Helper.fitString2Length(sTaetigkeit,
-												15, ' '), theclientDto)
+								.taetigkeitFindByCNr(Helper.fitString2Length(sTaetigkeit, 15, ' '), theclientDto)
 								.getIId());
 					}
 				}
 
 				// Resezeiten wenn Taetigkeit REISE
-				if (sTaetigkeit != null
-						&& sTaetigkeit.equals(ZeiterfassungFac.TAETIGKEIT_REISE
-								.trim())) {
+				if (sTaetigkeit != null && sTaetigkeit.equals(ZeiterfassungFac.TAETIGKEIT_REISE.trim())) {
 					ReiseDto reiseDto = new ReiseDto();
 					reiseDto.setPersonalIId(personalIId);
 
@@ -2424,21 +2186,13 @@ public class CommandZE extends Command {
 					cTemp.set(Calendar.SECOND, 0);
 					cTemp.set(Calendar.MILLISECOND, 0);
 
-					Session sessReise = FLRSessionFactory.getFactory()
-							.openSession();
-					org.hibernate.Criteria reisezeiten = sessReise
-							.createCriteria(FLRReise.class);
-					reisezeiten.add(Expression.eq(
-							ZeiterfassungFac.FLR_REISE_PERSONAL_I_ID,
-							personalIId));
-					reisezeiten.add(Expression.ge(
-							ZeiterfassungFac.FLR_REISE_T_ZEIT, new Timestamp(
-									cTemp.getTimeInMillis())));
-					reisezeiten.add(Expression.lt(
-							ZeiterfassungFac.FLR_REISE_T_ZEIT,
-							zeitdatenDto.getTZeit()));
-					reisezeiten.addOrder(Order
-							.desc(ZeiterfassungFac.FLR_REISE_T_ZEIT));
+					Session sessReise = FLRSessionFactory.getFactory().openSession();
+					org.hibernate.Criteria reisezeiten = sessReise.createCriteria(FLRReise.class);
+					reisezeiten.add(Expression.eq(ZeiterfassungFac.FLR_REISE_PERSONAL_I_ID, personalIId));
+					reisezeiten.add(
+							Expression.ge(ZeiterfassungFac.FLR_REISE_T_ZEIT, new Timestamp(cTemp.getTimeInMillis())));
+					reisezeiten.add(Expression.lt(ZeiterfassungFac.FLR_REISE_T_ZEIT, zeitdatenDto.getTZeit()));
+					reisezeiten.addOrder(Order.desc(ZeiterfassungFac.FLR_REISE_T_ZEIT));
 					reisezeiten.setMaxResults(1);
 					List<?> lReisezeiten = reisezeiten.list();
 
@@ -2456,30 +2210,23 @@ public class CommandZE extends Command {
 
 					reiseDto.setTZeit(zeitdatenDto.getTZeit());
 
-					Integer partnerMandant = getMandantFac()
-							.mandantFindByPrimaryKey(mandant, theclientDto)
+					Integer partnerMandant = getMandantFac().mandantFindByPrimaryKey(mandant, theclientDto)
 							.getPartnerIId();
-					PartnerDto partnerDto = getPartnerFac()
-							.partnerFindByPrimaryKey(partnerMandant,
-									theclientDto);
+					PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(partnerMandant, theclientDto);
 
 					if (partnerDto.getLandplzortIId() == null) {
 						throw new Exception("Mandant hat kein Land hinterlegt");
 					}
 
 					DiaetenDto[] dtos = getZeiterfassungsFac()
-							.diaetenFindByLandIId(
-									partnerDto.getLandplzortDto().getIlandID());
+							.diaetenFindByLandIId(partnerDto.getLandplzortDto().getIlandID());
 
 					if (dtos.length == 0) {
 						// Einen anlegen
 						DiaetenDto dto = new DiaetenDto();
-						dto.setCBez(partnerDto.getLandplzortDto().getLandDto()
-								.getCName());
-						dto.setLandIId(partnerDto.getLandplzortDto()
-								.getIlandID());
-						reiseDto.setDiaetenIId(getZeiterfassungsFac()
-								.createDiaeten(dto));
+						dto.setCBez(partnerDto.getLandplzortDto().getLandDto().getCName());
+						dto.setLandIId(partnerDto.getLandplzortDto().getIlandID());
+						reiseDto.setDiaetenIId(getZeiterfassungsFac().createDiaeten(dto));
 					} else {
 						reiseDto.setDiaetenIId(dtos[0].getIId());
 					}
@@ -2492,6 +2239,7 @@ public class CommandZE extends Command {
 					return getSJSPNext();
 				}
 			} catch (Exception ex3) {
+				Logger.logException(ex3);
 				ex3.printStackTrace();
 				// lt. FM darf an das MECS-Terminal nur Status=200
 				// zurueckgegeben werden
@@ -2499,8 +2247,7 @@ public class CommandZE extends Command {
 				return getSJSPNext();
 			}
 
-			getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true,
-					false, false, theclientDto);
+			getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false, theclientDto);
 
 			response.setStatus(HttpServletResponse.SC_OK);
 			response.flushBuffer();
@@ -2518,98 +2265,79 @@ public class CommandZE extends Command {
 			String password = getCookieValue("pass", request);
 
 			if (localeCookie != null && localeCookie.length() > 3) {
-				localeLogon = new Locale(localeCookie.substring(0, 2),
-						localeCookie.substring(2, 4));
+				localeLogon = new Locale(localeCookie.substring(0, 2), localeCookie.substring(2, 4));
 			}
 
 			if (username == null || password == null) {
-				response.sendError(
-						HttpServletResponse.SC_BAD_REQUEST,
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST,
 						"Es wurde kein Benutzername oder Kennwort angegeben. Bitte verwenden Sie http://?????cmd=quickze");
-
+				getTheClient(request, response).setBResponseIsReady(true);
+				return null;
 			}
 			try {
-				theclientDto = getLogonFac().logon(
-						Helper.getFullUsername(username),
-						Helper.getMD5Hash((username + password).toCharArray()),
-						localeLogon, null,
+				theclientDto = getLogonFac().logon(Helper.getFullUsername(username),
+						Helper.getMD5Hash((username + password).toCharArray()), localeLogon, null,
 						new Timestamp(System.currentTimeMillis()));
+				//SP8497
+				mandant=theclientDto.getMandant();
 			} catch (EJBExceptionLP ex12) {
 
 				int code = ex12.getCode();
 				if (code == EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY) {
-					response.sendError(
-							HttpServletResponse.SC_BAD_REQUEST,
-							"Benutzername '"
-									+ username
-									+ "' konnte im System nicht gefunden werden");
+					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+							"Benutzername '" + username + "' konnte im System nicht gefunden werden");
 				} else if (code == EJBExceptionLP.FEHLER_FALSCHES_KENNWORT) {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-							"Kennwort f\u00FCr Benutzername '" + username
-									+ "' ist falsch.");
+							"Kennwort f\u00FCr Benutzername '" + username + "' ist falsch.");
 				} else if (code == EJBExceptionLP.FEHLER_BENUTZER_IST_GESPERRT) {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
 							"Benutzername '" + username + "' ist gesperrt.");
 				} else if (code == EJBExceptionLP.FEHLER_BENUTZER_IST_NICHT_MEHR_GUELTIG) {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-							"Benutzername '" + username
-									+ "' ist nicht mehr g\u00FCltig.");
+							"Benutzername '" + username + "' ist nicht mehr g\u00FCltig.");
 				} else if (code == EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_BEI_DIESEM_MANDANTEN_NICHT_ANMELDEN) {
-					response.sendError(
-							HttpServletResponse.SC_BAD_REQUEST,
-							"Benutzername '"
-									+ username
-									+ "' darf sich bei dem Mandanten nicht anmelden.");
+					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+							"Benutzername '" + username + "' darf sich bei dem Mandanten nicht anmelden.");
 				} else if (code == EJBExceptionLP.FEHLER_BENUTZER_KEIN_EINTRAG_IN_BENUTZERMANDANT) {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-							"Kein Eintrag in Benutzermandant f\u00FCr Benutzername '"
-									+ username + "'.");
+							"Kein Eintrag in Benutzermandant f\u00FCr Benutzername '" + username + "'.");
 				} else if (ex12.getCode() == EJBExceptionLP.FEHLER_MAXIMALE_BENUTZERANZAHL_UEBERSCHRITTEN) {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-							"Maximale Benutzeranzahl \u00FCberschritten '"
-									+ username + "'.");
+							"Maximale Benutzeranzahl \u00FCberschritten '" + username + "'.");
 					return null;
 				} else if (code == EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_IN_DIESER_SPRACHE_NICHT_ANMELDEN) {
-					ArrayList<?> al = ((EJBExceptionLP) ex12.getCause())
-							.getAlInfoForTheClient();
+					List<?> al = ((EJBExceptionLP) ex12.getCause()).getAlInfoForTheClient();
 					String zusatz = "";
 					if (al.size() > 0 && al.get(0) instanceof Locale) {
 						Locale loc = (Locale) al.get(0);
-						zusatz = "(" + loc.getDisplayLanguage() + "|"
-								+ loc.getDisplayCountry() + ")";
+						zusatz = "(" + loc.getDisplayLanguage() + "|" + loc.getDisplayCountry() + ")";
 					}
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-							"Benutzer '" + username + "' darf sich in '"
-									+ zusatz + "' nicht anmelden.");
+							"Benutzer '" + username + "' darf sich in '" + zusatz + "' nicht anmelden.");
 				}
-
+				getTheClient(request, response).setBResponseIsReady(true);
 				return null;
 			}
 
-			PersonalDto personalDto = getPersonalFac()
-					.personalFindByPrimaryKey(theclientDto.getIDPersonal(),
-							theclientDto);
+			PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(theclientDto.getIDPersonal(),
+					theclientDto);
 
-			personalDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
-					personalDto.getPartnerIId(), theclientDto));
+			personalDto
+					.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIId(), theclientDto));
 
 			HashMap<String, Object> hmData = new HashMap<String, Object>();
 
-			TextDto textDto = getSystemMultilanguageFac()
-					.textFindByPrimaryKeyOhneExc("quickze.sondertaetigkeit",
-							theclientDto.getMandant(),
-							theclientDto.getLocUiAsString());
+			TextDto textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.sondertaetigkeit",
+					theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			if (textDto != null) {
 				hmData.put("bezeichnung_sondertaetigkeit", textDto.getCText());
 			} else {
-				hmData.put("bezeichnung_sondertaetigkeit",
-						"Sondert\u00E4tigkeit");
+				hmData.put("bezeichnung_sondertaetigkeit", "Sondert\u00E4tigkeit");
 			}
 
 			// Belegarten holen
 
-			Map<String, String> b = getZeiterfassungsFac()
-					.getBebuchbareBelegarten(theclientDto);
+			Map<String, String> b = getZeiterfassungsFac().getBebuchbareBelegarten(theclientDto);
 
 			hmData.put("belegarten", b);
 
@@ -2622,25 +2350,17 @@ public class CommandZE extends Command {
 			}
 
 			if (belegart.equals(LocaleFac.BELEGART_AUFTRAG)) {
-				textDto = getSystemMultilanguageFac()
-						.textFindByPrimaryKeyOhneExc("quickze.offenerauftrag",
-								theclientDto.getMandant(),
-								theclientDto.getLocUiAsString());
+				textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.offenerauftrag",
+						theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			} else if (belegart.equals(LocaleFac.BELEGART_LOS)) {
-				textDto = getSystemMultilanguageFac()
-						.textFindByPrimaryKeyOhneExc("quickze.offeneslos",
-								theclientDto.getMandant(),
-								theclientDto.getLocUiAsString());
+				textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.offeneslos",
+						theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			} else if (belegart.equals(LocaleFac.BELEGART_ANGEBOT)) {
-				textDto = getSystemMultilanguageFac()
-						.textFindByPrimaryKeyOhneExc("quickze.offenesangebot",
-								theclientDto.getMandant(),
-								theclientDto.getLocUiAsString());
+				textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.offenesangebot",
+						theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			} else if (belegart.equals(LocaleFac.BELEGART_PROJEKT)) {
-				textDto = getSystemMultilanguageFac()
-						.textFindByPrimaryKeyOhneExc("quickze.offenesprojekt",
-								theclientDto.getMandant(),
-								theclientDto.getLocUiAsString());
+				textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.offenesprojekt",
+						theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			}
 			if (textDto != null) {
 				hmData.put("bezeichnung_offenerauftrag", textDto.getCText());
@@ -2648,36 +2368,32 @@ public class CommandZE extends Command {
 				hmData.put("bezeichnung_offenerauftrag", "Offener Beleg");
 			}
 
-			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc(
-					"quickze.taetigkeit", theclientDto.getMandant(),
-					theclientDto.getLocUiAsString());
+			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.taetigkeit",
+					theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			if (textDto != null) {
 				hmData.put("bezeichnung_taetigkeit", textDto.getCText());
 			} else {
 				hmData.put("bezeichnung_taetigkeit", "T\u00E4tigkeit");
 			}
 
-			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc(
-					"quickze.kunde", theclientDto.getMandant(),
-					theclientDto.getLocUiAsString());
+			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.kunde",
+					theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			if (textDto != null) {
 				hmData.put("bezeichnung_kunde", textDto.getCText());
 			} else {
 				hmData.put("bezeichnung_kunde", "Kunde");
 			}
 
-			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc(
-					"quickze.belegart", theclientDto.getMandant(),
-					theclientDto.getLocUiAsString());
+			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.belegart",
+					theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			if (textDto != null) {
 				hmData.put("bezeichnung_belegart", textDto.getCText());
 			} else {
 				hmData.put("bezeichnung_belegart", "Belegart");
 			}
 
-			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc(
-					"quickze.bemerkung", theclientDto.getMandant(),
-					theclientDto.getLocUiAsString());
+			textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.bemerkung",
+					theclientDto.getMandant(), theclientDto.getLocUiAsString());
 			if (textDto != null) {
 				hmData.put("bezeichnung_bemerkung", textDto.getCText());
 			} else {
@@ -2693,29 +2409,33 @@ public class CommandZE extends Command {
 			String sQuery = "";
 			if (belegart.equals(LocaleFac.BELEGART_AUFTRAG)) {
 				sQuery = "SELECT flrkunde.flrpartner.c_name1nachnamefirmazeile1, flrkunde.flrpartner.c_name2vornamefirmazeile2, flrkunde.flrpartner.i_id "
-						+ " FROM FLRAuftrag AS auftrag WHERE (auftrag.auftragstatus_c_nr='"
-						+ LocaleFac.STATUS_OFFEN
-						+ "' OR auftrag.auftragstatus_c_nr='"
-						+ LocaleFac.STATUS_TEILERLEDIGT
-						+ "') AND auftrag.mandant_c_nr='"
-						+ theclientDto.getMandant()
-						+ "'"
+						+ " FROM FLRAuftrag AS auftrag WHERE (auftrag.auftragstatus_c_nr='" + LocaleFac.STATUS_OFFEN
+						+ "' OR auftrag.auftragstatus_c_nr='" + LocaleFac.STATUS_TEILERLEDIGT
+						+ "') AND auftrag.mandant_c_nr='" + theclientDto.getMandant() + "'"
 						+ "  GROUP BY flrkunde.flrpartner.c_name1nachnamefirmazeile1, flrkunde.flrpartner.c_name2vornamefirmazeile2, flrkunde.flrpartner.i_id  ORDER BY flrkunde.flrpartner.c_name1nachnamefirmazeile1 ASC";
 			} else if (belegart.equals(LocaleFac.BELEGART_ANGEBOT)) {
 				sQuery = "SELECT flrkunde.flrpartner.c_name1nachnamefirmazeile1, flrkunde.flrpartner.c_name2vornamefirmazeile2, flrkunde.flrpartner.i_id "
-						+ " FROM FLRAngebot AS angebot WHERE (angebot.angebotstatus_c_nr='"
-						+ LocaleFac.STATUS_OFFEN
-						+ "') AND angebot.mandant_c_nr='"
-						+ theclientDto.getMandant()
-						+ "'"
+						+ " FROM FLRAngebot AS angebot WHERE (angebot.angebotstatus_c_nr='" + LocaleFac.STATUS_OFFEN
+						+ "') AND angebot.mandant_c_nr='" + theclientDto.getMandant() + "'"
 						+ "  GROUP BY flrkunde.flrpartner.c_name1nachnamefirmazeile1, flrkunde.flrpartner.c_name2vornamefirmazeile2, flrkunde.flrpartner.i_id  ORDER BY flrkunde.flrpartner.c_name1nachnamefirmazeile1 ASC";
 			} else if (belegart.equals(LocaleFac.BELEGART_PROJEKT)) {
+
+				ParametermandantDto parameterint = (ParametermandantDto) getParameterFac().getMandantparameter(
+						theclientDto.getMandant(), ParameterFac.KATEGORIE_PROJEKT,
+						ParameterFac.PARAMETER_INTERN_ERLEDIGT_BEBUCHBAR);
+
+				boolean bInterErledigteBebuchbar = ((Boolean) parameterint.getCWertAsObject());
+
+				String internerledigt = "";
+				if (bInterErledigteBebuchbar == false) {
+					internerledigt = " AND projekt.t_internerledigt IS NULL ";
+				}
+
 				sQuery = "SELECT flrpartner.c_name1nachnamefirmazeile1, flrpartner.c_name2vornamefirmazeile2, flrpartner.i_id "
 						+ " FROM FLRProjekt AS projekt WHERE projekt.status_c_nr<>'"
 						+ ProjektServiceFac.PROJEKT_STATUS_STORNIERT
 						+ "' AND projekt.t_erledigungsdatum IS NULL AND projekt.mandant_c_nr='"
-						+ theclientDto.getMandant()
-						+ "'"
+						+ theclientDto.getMandant() + "' " + internerledigt
 						+ "  GROUP BY flrpartner.c_name1nachnamefirmazeile1, flrpartner.c_name2vornamefirmazeile2, flrpartner.i_id  ORDER BY flrpartner.c_name1nachnamefirmazeile1 ASC";
 
 			}
@@ -2747,14 +2467,9 @@ public class CommandZE extends Command {
 				session.close();
 			} else {
 
-				sQuery = "SELECT los "
-						+ " FROM FLRLosReport AS los WHERE (los.status_c_nr='"
-						+ LocaleFac.STATUS_AUSGEGEBEN
-						+ "' OR los.status_c_nr='"
-						+ LocaleFac.STATUS_IN_PRODUKTION
-						+ "' OR los.status_c_nr='"
-						+ LocaleFac.STATUS_TEILERLEDIGT
-						+ "')  AND los.mandant_c_nr='"
+				sQuery = "SELECT los " + " FROM FLRLosReport AS los WHERE (los.status_c_nr='"
+						+ LocaleFac.STATUS_AUSGEGEBEN + "' OR los.status_c_nr='" + LocaleFac.STATUS_IN_PRODUKTION
+						+ "' OR los.status_c_nr='" + LocaleFac.STATUS_TEILERLEDIGT + "')  AND los.mandant_c_nr='"
 						+ theclientDto.getMandant()
 						+ "' AND ( los.flrauftrag IS NOT NULL OR los.flrkunde IS NOT NULL) ";
 
@@ -2772,32 +2487,21 @@ public class CommandZE extends Command {
 					Integer partnerIId = null;
 					String kundenname = "";
 					if (los.getFlrauftrag() != null) {
-						partnerIId = los.getFlrauftrag().getFlrkunde()
-								.getFlrpartner().getI_id();
+						partnerIId = los.getFlrauftrag().getFlrkunde().getFlrpartner().getI_id();
 
-						kundenname += los.getFlrauftrag().getFlrkunde()
-								.getFlrpartner()
-								.getC_name1nachnamefirmazeile1();
+						kundenname += los.getFlrauftrag().getFlrkunde().getFlrpartner().getC_name1nachnamefirmazeile1();
 
-						if (los.getFlrauftrag().getFlrkunde().getFlrpartner()
-								.getC_name2vornamefirmazeile2() != null) {
+						if (los.getFlrauftrag().getFlrkunde().getFlrpartner().getC_name2vornamefirmazeile2() != null) {
 							kundenname += " "
-									+ los.getFlrauftrag().getFlrkunde()
-											.getFlrpartner()
-											.getC_name2vornamefirmazeile2();
+									+ los.getFlrauftrag().getFlrkunde().getFlrpartner().getC_name2vornamefirmazeile2();
 						}
 
 					} else {
-						partnerIId = los.getFlrkunde().getFlrpartner()
-								.getI_id();
-						kundenname += los.getFlrkunde().getFlrpartner()
-								.getC_name1nachnamefirmazeile1();
+						partnerIId = los.getFlrkunde().getFlrpartner().getI_id();
+						kundenname += los.getFlrkunde().getFlrpartner().getC_name1nachnamefirmazeile1();
 
-						if (los.getFlrkunde().getFlrpartner()
-								.getC_name2vornamefirmazeile2() != null) {
-							kundenname += " "
-									+ los.getFlrkunde().getFlrpartner()
-											.getC_name2vornamefirmazeile2();
+						if (los.getFlrkunde().getFlrpartner().getC_name2vornamefirmazeile2() != null) {
+							kundenname += " " + los.getFlrkunde().getFlrpartner().getC_name2vornamefirmazeile2();
 						}
 					}
 
@@ -2824,8 +2528,7 @@ public class CommandZE extends Command {
 			// Sondertaetigkeiten holen
 
 			Map<Integer, String> m = getZeiterfassungsFac()
-					.getAllSprSondertaetigkeitenNurBDEBuchbar(
-							theclientDto.getLocUiAsString());
+					.getAllSprSondertaetigkeitenNurBDEBuchbar(theclientDto.getLocUiAsString());
 
 			hmData.put("taetigkeiten", m);
 
@@ -2837,10 +2540,8 @@ public class CommandZE extends Command {
 			} else {
 				if (!request.getParameter("kunde").equals("")) {
 					if (!request.getParameter("kunde").equals(" ")) {
-						if (!request.getParameter("kunde").trim()
-								.equals("null")) {
-							kunde = new Integer(request.getParameter("kunde")
-									.trim());
+						if (!request.getParameter("kunde").trim().equals("null")) {
+							kunde = new Integer(request.getParameter("kunde").trim());
 						}
 					}
 
@@ -2854,24 +2555,17 @@ public class CommandZE extends Command {
 			if (belegart.equals(LocaleFac.BELEGART_AUFTRAG)) {
 
 				sQuery = "SELECT auftrag.i_id, auftrag.c_nr, auftrag.c_bez, auftrag.t_liefertermin, auftrag.flrkunde.flrpartner.i_id "
-						+ " FROM FLRAuftrag AS auftrag WHERE (auftrag.auftragstatus_c_nr='"
-						+ LocaleFac.STATUS_OFFEN
-						+ "' OR auftrag.auftragstatus_c_nr='"
-						+ LocaleFac.STATUS_TEILERLEDIGT
-						+ "') AND auftrag.flrkunde.flrpartner.i_id="
-						+ kunde
+						+ " FROM FLRAuftrag AS auftrag WHERE (auftrag.auftragstatus_c_nr='" + LocaleFac.STATUS_OFFEN
+						+ "' OR auftrag.auftragstatus_c_nr='" + LocaleFac.STATUS_TEILERLEDIGT
+						+ "') AND auftrag.flrkunde.flrpartner.i_id=" + kunde
 						+ " AND auftrag.b_versteckt=0 ORDER BY auftrag.c_nr ASC";
 			} else if (belegart.equals(LocaleFac.BELEGART_LOS)) {
 				sQuery = "SELECT los.i_id, los.c_nr, los.c_projekt, los.t_produktionsende, coalesce(auftragpartner.i_id,kundepartner.i_id) "
 						+ " FROM FLRLosReport AS los LEFT OUTER JOIN los.flrauftrag.flrkunde.flrpartner as auftragpartner LEFT OUTER JOIN los.flrkunde.flrpartner as kundepartner  WHERE (los.status_c_nr='"
-						+ LocaleFac.STATUS_AUSGEGEBEN
-						+ "' OR los.status_c_nr='"
-						+ LocaleFac.STATUS_IN_PRODUKTION
-						+ "' OR los.status_c_nr='"
-						+ LocaleFac.STATUS_TEILERLEDIGT + "') ";
+						+ LocaleFac.STATUS_AUSGEGEBEN + "' OR los.status_c_nr='" + LocaleFac.STATUS_IN_PRODUKTION
+						+ "' OR los.status_c_nr='" + LocaleFac.STATUS_TEILERLEDIGT + "') ";
 				if (kunde != null) {
-					sQuery += " AND ( auftragpartner.i_id=" + kunde
-							+ " OR kundepartner.i_id=" + kunde + ")";
+					sQuery += " AND ( auftragpartner.i_id=" + kunde + " OR kundepartner.i_id=" + kunde + ")";
 
 				} else {
 					sQuery += " AND ( auftragpartner.i_id IS NULL AND kundepartner.i_id IS NULL)";
@@ -2879,17 +2573,15 @@ public class CommandZE extends Command {
 				sQuery += " ORDER BY los.c_nr ASC";
 			} else if (belegart.equals(LocaleFac.BELEGART_ANGEBOT)) {
 				sQuery = "SELECT angebot.i_id, angebot.c_nr, angebot.c_bez, angebot.t_realisierungstermin, angebot.flrkunde.flrpartner.i_id "
-						+ " FROM FLRAngebot AS angebot WHERE angebot.angebotstatus_c_nr='"
-						+ LocaleFac.STATUS_OFFEN
-						+ "' AND angebot.flrkunde.flrpartner.i_id="
-						+ kunde
-						+ "  ORDER BY angebot.c_nr ASC";
+						+ " FROM FLRAngebot AS angebot WHERE angebot.angebotstatus_c_nr='" + LocaleFac.STATUS_OFFEN
+						+ "' AND angebot.flrkunde.flrpartner.i_id=" + kunde + "  ORDER BY angebot.c_nr ASC";
 			} else if (belegart.equals(LocaleFac.BELEGART_PROJEKT)) {
-				sQuery = "SELECT projekt.i_id, projekt.c_nr, projekt.c_titel, projekt.t_zielwunschdatum, projekt.partner_i_id "
+				sQuery = "SELECT projekt.i_id, projekt.flrbereich.c_bez ||' '|| projekt.c_nr, projekt.c_titel, projekt.t_zielwunschdatum, projekt.partner_i_id "
 						+ " FROM FLRProjekt AS projekt WHERE projekt.status_c_nr<>'"
 						+ ProjektServiceFac.PROJEKT_STATUS_STORNIERT
-						+ "' AND projekt.t_erledigungsdatum IS NULL AND projekt.partner_i_id="
-						+ kunde + " ORDER BY projekt.c_nr ASC";
+						+ "' AND projekt.t_erledigungsdatum IS NULL AND projekt.mandant_c_nr='"
+						+ theclientDto.getMandant() + "' AND projekt.partner_i_id=" + kunde
+						+ " ORDER BY projekt.flrbereich.i_sort ASC, projekt.c_nr ASC";
 			}
 			Query auftraege = session.createQuery(sQuery);
 
@@ -2920,8 +2612,7 @@ public class CommandZE extends Command {
 
 			hmData.put("selectedkunde", partnerIId);
 
-			if (request.getParameter("auftrag") != null
-					&& request.getParameter("auftrag").length() > 0) {
+			if (request.getParameter("auftrag") != null && request.getParameter("auftrag").length() > 0) {
 				selectedAuftragId = request.getParameter("auftrag");
 
 			}
@@ -2932,21 +2623,18 @@ public class CommandZE extends Command {
 			if (belegart.equals(LocaleFac.BELEGART_AUFTRAG)) {
 
 				sQuery = "SELECT a.i_id, a.flrartikel.i_id FROM FLRAuftragposition AS a WHERE a.flrauftrag.i_id="
-						+ selectedAuftragId
-						+ " AND a.flrartikel.artikelart_c_nr='"
-						+ ArtikelFac.ARTIKELART_ARBEITSZEIT + "'";
+						+ selectedAuftragId + " AND a.flrartikel.artikelart_c_nr='" + ArtikelFac.ARTIKELART_ARBEITSZEIT
+						+ "'";
 			} else if (belegart.equals(LocaleFac.BELEGART_LOS)) {
 
 				sQuery = "SELECT a.i_id, a.flrartikel.i_id FROM FLRLossollarbeitsplan AS a WHERE a.los_i_id="
-						+ selectedAuftragId
-						+ " AND a.flrartikel.artikelart_c_nr='"
-						+ ArtikelFac.ARTIKELART_ARBEITSZEIT + "'";
+						+ selectedAuftragId + " AND a.flrartikel.artikelart_c_nr='" + ArtikelFac.ARTIKELART_ARBEITSZEIT
+						+ "'";
 			} else if (belegart.equals(LocaleFac.BELEGART_ANGEBOT)) {
 
 				sQuery = "SELECT a.i_id, a.flrartikel.i_id FROM FLRAngebotposition AS a WHERE a.flrangebot.i_id="
-						+ selectedAuftragId
-						+ " AND a.flrartikel.artikelart_c_nr='"
-						+ ArtikelFac.ARTIKELART_ARBEITSZEIT + "'";
+						+ selectedAuftragId + " AND a.flrartikel.artikelart_c_nr='" + ArtikelFac.ARTIKELART_ARBEITSZEIT
+						+ "'";
 			}
 			LinkedHashMap<Object, Object> tmArtikel = new LinkedHashMap<Object, Object>();
 			if (!belegart.equals(LocaleFac.BELEGART_PROJEKT)) {
@@ -2969,30 +2657,22 @@ public class CommandZE extends Command {
 
 					if (belegart.equals(LocaleFac.BELEGART_AUFTRAG)) {
 
-						BigDecimal bdSoll = getAuftragpositionFac()
-								.auftragpositionFindByPrimaryKey(
-										(Integer) zeile[0]).getNMenge();
-						sollIst = "; Soll: "
-								+ Helper.formatZahl(bdSoll, 2,
-										theclientDto.getLocUi());
+						BigDecimal bdSoll = getAuftragpositionFac().auftragpositionFindByPrimaryKey((Integer) zeile[0])
+								.getNMenge();
+						sollIst = "; Soll: " + Helper.formatZahl(bdSoll, 2, theclientDto.getLocUi());
 
 						Double dIst;
 						try {
 
 							boolean bZuvieleZeitbuchungen = getZeiterfassungsFac()
-									.sindZuvieleZeitdatenEinesBelegesVorhanden(
-											belegart, new Integer(selectedAuftragId),
+									.sindZuvieleZeitdatenEinesBelegesVorhanden(belegart, new Integer(selectedAuftragId),
 											theclientDto);
 							if (bZuvieleZeitbuchungen == false) {
 
-								dIst = getZeiterfassungsFac()
-										.getSummeZeitenEinesBeleges(belegart,
-												new Integer(selectedAuftragId),
-												(Integer) zeile[0], null, null,
-												null, theclientDto);
-								sollIst += " Ist: "
-										+ Helper.formatZahl(dIst, 2,
-												theclientDto.getLocUi());
+								dIst = getZeiterfassungsFac().getSummeZeitenEinesBeleges(belegart,
+										new Integer(selectedAuftragId), (Integer) zeile[0], null, null, null,
+										theclientDto);
+								sollIst += " Ist: " + Helper.formatZahl(dIst, 2, theclientDto.getLocUi());
 							}
 						} catch (Exception e) {
 							sollIst += " Ist: ERR";
@@ -3000,10 +2680,8 @@ public class CommandZE extends Command {
 
 					}
 
-					String artikel = getArtikelFac().artikelFindByPrimaryKey(
-							artikelIId, theclientDto)
-							.formatArtikelbezeichnung()
-							+ sollIst;
+					String artikel = getArtikelFac().artikelFindByPrimaryKey(artikelIId, theclientDto)
+							.formatArtikelbezeichnung() + sollIst;
 					if (!tmArtikel.containsKey(artikelIId)) {
 						tmArtikel.put(artikelIId, artikel);
 
@@ -3016,15 +2694,13 @@ public class CommandZE extends Command {
 			if (selectedAuftragId != null) {
 
 				PersonalverfuegbarkeitDto[] personalverfuegbarkeitDtos = getPersonalFac()
-						.personalverfuegbarkeitFindByPersonalIId(
-								personalDto.getIId());
+						.personalverfuegbarkeitFindByPersonalIId(personalDto.getIId());
 				if (personalverfuegbarkeitDtos.length > 0) {
 					tmArtikel.put(-2, " - - - Verf\u00FCgbarkeit - - - ");
 				}
 				for (int i = 0; i < personalverfuegbarkeitDtos.length; i++) {
 					PersonalverfuegbarkeitDto v = personalverfuegbarkeitDtos[i];
-					String artikel = getArtikelFac().artikelFindByPrimaryKey(
-							v.getArtikelIId(), theclientDto)
+					String artikel = getArtikelFac().artikelFindByPrimaryKey(v.getArtikelIId(), theclientDto)
 							.formatArtikelbezeichnung();
 					tmArtikel.put(v.getArtikelIId(), artikel);
 				}
@@ -3033,39 +2709,38 @@ public class CommandZE extends Command {
 
 			}
 
-			ParametermandantDto parameterDtoDefaultarbeitszeit = getParameterFac()
-					.getMandantparameter(mandant,
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.PARAMETER_DEFAULT_ARBEITSZEITARTIKEL);
+			ParametermandantDto parameterDtoDefaultarbeitszeit = getParameterFac().getMandantparameter(mandant,
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_DEFAULT_ARBEITSZEITARTIKEL);
 
-			if (parameterDtoDefaultarbeitszeit != null
-					&& parameterDtoDefaultarbeitszeit.getCWert() != null
-					&& !parameterDtoDefaultarbeitszeit.getCWert().trim()
-							.equals("")) {
+			if (parameterDtoDefaultarbeitszeit != null && parameterDtoDefaultarbeitszeit.getCWert() != null
+					&& !parameterDtoDefaultarbeitszeit.getCWert().trim().equals("")) {
+				try {
+					ArtikelDto artikelDtoDefaultArbeiztszeit = getArtikelFac()
+							.artikelFindByCNr(parameterDtoDefaultarbeitszeit.getCWert(), theclientDto);
+					tmArtikel.put(-3, " - - - Default-Arbeitszeitartikel - - -");
+					tmArtikel.put(artikelDtoDefaultArbeiztszeit.getIId(),
+							artikelDtoDefaultArbeiztszeit.formatArtikelbezeichnung());
+				} catch (Exception ex2) {
 
-				ArtikelDto artikelDtoDefaultArbeiztszeit = getArtikelFac()
-						.artikelFindByCNr(
-								parameterDtoDefaultarbeitszeit.getCWert(),
-								theclientDto);
-				tmArtikel.put(-3, " - - - Default-Arbeitszeitartikel - - -");
-				tmArtikel.put(artikelDtoDefaultArbeiztszeit.getIId(),
-						artikelDtoDefaultArbeiztszeit
-								.formatArtikelbezeichnung());
+					response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Default-Arbeitszeitartikel '"
+							+ parameterDtoDefaultarbeitszeit.getCWert() + "' nicht vorhanden");
+					return getSJSPNext();
+
+				}
+
 			}
 
 			hmData.put("artikel", tmArtikel);
 
 			// Zeitbuchen
 			String bucheauftrag = request.getParameter("bucheauftrag");
-			String buchesondertaetigkeit = request
-					.getParameter("buchesondertaetigkeit");
+			String buchesondertaetigkeit = request.getParameter("buchesondertaetigkeit");
 
 			// Zeit buchen
 			ZeitdatenDto zeitdatenDto = new ZeitdatenDto();
 			zeitdatenDto.setPersonalIId(personalDto.getIId());
 			Timestamp tZeit = new Timestamp(System.currentTimeMillis());
-			zeitdatenDto.setCWowurdegebucht("Quick-ZE "
-					+ request.getRemoteHost());
+			zeitdatenDto.setCWowurdegebucht("Quick-ZE " + request.getRemoteHost());
 			String meldung = "";
 
 			zeitdatenDto.setTZeit(tZeit);
@@ -3076,28 +2751,21 @@ public class CommandZE extends Command {
 
 				if (request.getParameter("artikel") != null) {
 
-					Integer artikelId = new Integer(
-							request.getParameter("artikel"));
+					Integer artikelId = new Integer(request.getParameter("artikel"));
 					if (artikelId > 0) {
 
-						Integer auftragIId = new Integer(
-								selectedAuftragId.trim());
+						Integer auftragIId = new Integer(selectedAuftragId.trim());
 
 						String s = "Auf ";
 
 						if (kunde != null) {
-							PartnerDto partnerDto = getPartnerFac()
-									.partnerFindByPrimaryKey(kunde,
-											theclientDto);
+							PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(kunde, theclientDto);
 							s += partnerDto.formatFixName1Name2() + ", ";
 						}
 
 						if (belegart.equals(LocaleFac.BELEGART_AUFTRAG)) {
-							textDto = getSystemMultilanguageFac()
-									.textFindByPrimaryKeyOhneExc(
-											"quickze.auftrag",
-											theclientDto.getMandant(),
-											theclientDto.getLocUiAsString());
+							textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("quickze.auftrag",
+									theclientDto.getMandant(), theclientDto.getLocUiAsString());
 
 							if (textDto != null) {
 								s += textDto.getCText() + " ";
@@ -3109,24 +2777,17 @@ public class CommandZE extends Command {
 									.auftragFindByPrimaryKey(auftragIId);
 							s += auftragDto.getCNr();
 							if (auftragDto.getCBezProjektbezeichnung() != null) {
-								s += " "
-										+ auftragDto
-												.getCBezProjektbezeichnung();
+								s += " " + auftragDto.getCBezProjektbezeichnung();
 							}
 
 							com.lp.server.auftrag.service.AuftragpositionDto[] auftragpositionDtos = getAuftragpositionFac()
 									.auftragpositionFindByAuftrag(auftragIId);
 							if (auftragpositionDtos.length > 0) {
-								zeitdatenDto
-										.setIBelegartpositionid(auftragpositionDtos[0]
-												.getIId());
+								zeitdatenDto.setIBelegartpositionid(auftragpositionDtos[0].getIId());
 							}
 						} else if (belegart.equals(LocaleFac.BELEGART_ANGEBOT)) {
-							textDto = getSystemMultilanguageFac()
-									.textFindByPrimaryKeyOhneExc(
-											"angb.angebot",
-											theclientDto.getMandant(),
-											theclientDto.getLocUiAsString());
+							textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("angb.angebot",
+									theclientDto.getMandant(), theclientDto.getLocUiAsString());
 
 							if (textDto != null) {
 								s += textDto.getCText() + " ";
@@ -3135,19 +2796,15 @@ public class CommandZE extends Command {
 							}
 
 							com.lp.server.angebot.service.AngebotDto auftragDto = getAngebotFac()
-									.angebotFindByPrimaryKey(auftragIId,
-											theclientDto);
+									.angebotFindByPrimaryKey(auftragIId, theclientDto);
 							s += auftragDto.getCNr();
 							if (auftragDto.getCBez() != null) {
 								s += " " + auftragDto.getCBez();
 							}
 
 						} else if (belegart.equals(LocaleFac.BELEGART_PROJEKT)) {
-							textDto = getSystemMultilanguageFac()
-									.textFindByPrimaryKeyOhneExc(
-											"lp.projekt.modulname",
-											theclientDto.getMandant(),
-											theclientDto.getLocUiAsString());
+							textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc("lp.projekt.modulname",
+									theclientDto.getMandant(), theclientDto.getLocUiAsString());
 
 							if (textDto != null) {
 								s += textDto.getCText() + " ";
@@ -3163,11 +2820,9 @@ public class CommandZE extends Command {
 							}
 
 						} else if (belegart.equals(LocaleFac.BELEGART_LOS)) {
-							textDto = getSystemMultilanguageFac()
-									.textFindByPrimaryKeyOhneExc(
-											"fert.tab.unten.los.title",
-											theclientDto.getMandant(),
-											theclientDto.getLocUiAsString());
+							textDto = getSystemMultilanguageFac().textFindByPrimaryKeyOhneExc(
+									"fert.tab.unten.los.title", theclientDto.getMandant(),
+									theclientDto.getLocUiAsString());
 
 							if (textDto != null) {
 								s += textDto.getCText() + " ";
@@ -3175,19 +2830,16 @@ public class CommandZE extends Command {
 								s += "Los ";
 							}
 
-							LosDto auftragDto = getFertigungFac()
-									.losFindByPrimaryKey(auftragIId);
+							LosDto auftragDto = getFertigungFac().losFindByPrimaryKey(auftragIId);
 							s += auftragDto.getCNr();
 							if (auftragDto.getCProjekt() != null) {
 								s += " " + auftragDto.getCProjekt();
 							}
 
 							LossollarbeitsplanDto[] dtos = getFertigungFac()
-									.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(
-											auftragIId, artikelId);
+									.lossollarbeitsplanFindByLosIIdArtikelIIdTaetigkeit(auftragIId, artikelId);
 							if (dtos.length > 0) {
-								zeitdatenDto.setIBelegartpositionid(dtos[0]
-										.getIId());
+								zeitdatenDto.setIBelegartpositionid(dtos[0].getIId());
 							}
 
 						}
@@ -3196,27 +2848,19 @@ public class CommandZE extends Command {
 						zeitdatenDto.setIBelegartid(auftragIId);
 						zeitdatenDto.setArtikelIId(artikelId);
 
-						ArtikelDto artikelDto = getArtikelFac()
-								.artikelFindByPrimaryKey(artikelId,
-										theclientDto);
+						ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(artikelId, theclientDto);
 
-						meldung += s + ", "
-								+ artikelDto.formatArtikelbezeichnung();
+						meldung += s + ", " + artikelDto.formatArtikelbezeichnung();
 
-						getZeiterfassungsFac().createZeitdaten(zeitdatenDto,
-								true, true, false, false, theclientDto);
-						meldung += " um "
-								+ Helper.formatTime(tZeit, localeLogon)
-								+ " gebucht.";
+						getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false, theclientDto);
+						meldung += " um " + Helper.formatTime(tZeit, localeLogon) + " gebucht.";
 						getTheClient(request, response).setSMsg(meldung);
 					}
 				} else {
 
-					getTheClient(request, response).setSMsg(
-							"Keine Auftragsposition ausgew\u00E4hlt");
+					getTheClient(request, response).setSMsg("Keine Auftragsposition ausgew\u00E4hlt");
 				}
-			} else if (buchesondertaetigkeit != null
-					&& buchesondertaetigkeit.length() > 0) {
+			} else if (buchesondertaetigkeit != null && buchesondertaetigkeit.length() > 0) {
 				String zusatz = request.getParameter("zusatz");
 
 				if (zusatz != null && zusatz.length() > 0) {
@@ -3225,144 +2869,109 @@ public class CommandZE extends Command {
 					c.setTimeInMillis(zeitdatenDto.getTZeit().getTime());
 					ZeitdatenDto[] letzeBuchungen = getZeiterfassungsFac()
 							.zeitdatenFindZeitdatenEinesTagesUndEinerPersonOnheBelegzeiten(
-									zeitdatenDto.getPersonalIId(),
-									Helper.cutTimestamp(zeitdatenDto.getTZeit()),
+									zeitdatenDto.getPersonalIId(), Helper.cutTimestamp(zeitdatenDto.getTZeit()),
 									zeitdatenDto.getTZeit());
 					Integer taetigkeitIId_Kommt = getZeiterfassungsFac()
-							.taetigkeitFindByCNr(
-									ZeiterfassungFac.TAETIGKEIT_KOMMT,
-									theclientDto).getIId();
+							.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_KOMMT, theclientDto).getIId();
 					Integer taetigkeitIId_Unter = getZeiterfassungsFac()
-							.taetigkeitFindByCNr(
-									ZeiterfassungFac.TAETIGKEIT_UNTER,
-									theclientDto).getIId();
+							.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_UNTER, theclientDto).getIId();
 					Integer taetigkeitIId_Geht = getZeiterfassungsFac()
-							.taetigkeitFindByCNr(
-									ZeiterfassungFac.TAETIGKEIT_GEHT,
-									theclientDto).getIId();
+							.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_GEHT, theclientDto).getIId();
 					if (zusatz.equals("spezialkommt")) {
 
 						if (letzeBuchungen.length == 0) {
 							// Zuerst Kommt und dann UNTER
 							ZeitdatenDto dtoKommt = new ZeitdatenDto();
 							dtoKommt.setTaetigkeitIId(taetigkeitIId_Kommt);
-							dtoKommt.setPersonalIId(zeitdatenDto
-									.getPersonalIId());
+							dtoKommt.setPersonalIId(zeitdatenDto.getPersonalIId());
 							dtoKommt.setCWowurdegebucht("Spezial-Kommt");
 							// Zeit 100 MS vorher
-							dtoKommt.setTZeit(new Timestamp(zeitdatenDto
-									.getTZeit().getTime()));
-							getZeiterfassungsFac().createZeitdaten(dtoKommt,
-									false, false, false, false, theclientDto);
+							dtoKommt.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime()));
+							getZeiterfassungsFac().createZeitdaten(dtoKommt, false, false, false, false, theclientDto);
 							// Taetigkeit GEHT Buchen
 							ZeitdatenDto dtoUnter = new ZeitdatenDto();
 							dtoUnter.setTaetigkeitIId(taetigkeitIId_Unter);
-							dtoUnter.setPersonalIId(zeitdatenDto
-									.getPersonalIId());
+							dtoUnter.setPersonalIId(zeitdatenDto.getPersonalIId());
 							dtoUnter.setCWowurdegebucht("Spezial-Kommt");
 							// Zeit 100 MS nachher
-							dtoUnter.setTZeit(new Timestamp(zeitdatenDto
-									.getTZeit().getTime() + 96));
-							getZeiterfassungsFac().createZeitdaten(dtoUnter,
-									false, false, false, false, theclientDto);
+							dtoUnter.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime() + 96));
+							getZeiterfassungsFac().createZeitdaten(dtoUnter, false, false, false, false, theclientDto);
 						} else if (letzeBuchungen.length == 1) {
-							Integer letztetaetigkeit = letzeBuchungen[0]
-									.getTaetigkeitIId();
+							Integer letztetaetigkeit = letzeBuchungen[0].getTaetigkeitIId();
 							// Wenn nur Kommt, dann Unter buchen
 							if (taetigkeitIId_Kommt.equals(letztetaetigkeit)) {
 								// Taetigkeit UNTER Buchen
 								ZeitdatenDto dtoUnter = new ZeitdatenDto();
 								dtoUnter.setTaetigkeitIId(taetigkeitIId_Unter);
-								dtoUnter.setPersonalIId(zeitdatenDto
-										.getPersonalIId());
+								dtoUnter.setPersonalIId(zeitdatenDto.getPersonalIId());
 								dtoUnter.setCWowurdegebucht("Spezial-Kommt");
-								dtoUnter.setTZeit(new Timestamp(zeitdatenDto
-										.getTZeit().getTime()));
-								getZeiterfassungsFac().createZeitdaten(
-										dtoUnter, false, false, false,
-										false, theclientDto);
+								dtoUnter.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime()));
+								getZeiterfassungsFac().createZeitdaten(dtoUnter, false, false, false, false,
+										theclientDto);
 
 							}
 						} else if (letzeBuchungen.length > 1) {
-							Integer letztetaetigkeit = letzeBuchungen[letzeBuchungen.length - 1]
-									.getTaetigkeitIId();
+							Integer letztetaetigkeit = letzeBuchungen[letzeBuchungen.length - 1].getTaetigkeitIId();
 							if (taetigkeitIId_Kommt.equals(letztetaetigkeit)) {
 								// Taetigkeit UNTER Buchen
 								ZeitdatenDto dtoUnter = new ZeitdatenDto();
 								dtoUnter.setTaetigkeitIId(taetigkeitIId_Unter);
-								dtoUnter.setPersonalIId(zeitdatenDto
-										.getPersonalIId());
+								dtoUnter.setPersonalIId(zeitdatenDto.getPersonalIId());
 								dtoUnter.setCWowurdegebucht("Spezial-Kommt");
-								dtoUnter.setTZeit(new Timestamp(zeitdatenDto
-										.getTZeit().getTime()));
-								getZeiterfassungsFac().createZeitdaten(
-										dtoUnter, false, false, false,
-										false, theclientDto);
+								dtoUnter.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime()));
+								getZeiterfassungsFac().createZeitdaten(dtoUnter, false, false, false, false,
+										theclientDto);
 
 							} else {
 
 								// Wenn letzte Taetigkeit ein Geht ist wird
 								// Kommt
 								// und Unter gebucht
-								if (!taetigkeitIId_Geht
-										.equals(letztetaetigkeit)) {
+								if (!taetigkeitIId_Geht.equals(letztetaetigkeit)) {
 
 									int iSondertaetigkeitenHintereinander = 1;
 									for (int i = letzeBuchungen.length - 2; i >= 0; i--) {
 										ZeitdatenDto dto = letzeBuchungen[i];
-										if (letztetaetigkeit.equals(dto
-												.getTaetigkeitIId())) {
+										if (letztetaetigkeit.equals(dto.getTaetigkeitIId())) {
 											iSondertaetigkeitenHintereinander++;
 										} else {
 											break;
 										}
-										letztetaetigkeit = dto
-												.getTaetigkeitIId();
+										letztetaetigkeit = dto.getTaetigkeitIId();
 									}
 
 									if (iSondertaetigkeitenHintereinander % 2 == 0) {
 										// Taetigkeit UNTER Buchen
 										ZeitdatenDto dtoUnter = new ZeitdatenDto();
 										dtoUnter.setTaetigkeitIId(taetigkeitIId_Unter);
-										dtoUnter.setPersonalIId(zeitdatenDto
-												.getPersonalIId());
+										dtoUnter.setPersonalIId(zeitdatenDto.getPersonalIId());
 										dtoUnter.setCWowurdegebucht("Spezial-Geht");
-										dtoUnter.setTZeit(new Timestamp(
-												zeitdatenDto.getTZeit()
-														.getTime()));
-										getZeiterfassungsFac().createZeitdaten(
-												dtoUnter, false, false, false,
-												false, theclientDto);
+										dtoUnter.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime()));
+										getZeiterfassungsFac().createZeitdaten(dtoUnter, false, false, false, false,
+												theclientDto);
 
 										/**
-										 * @todo 100ms vorher Projekt-ENDE
-										 *       buchen
+										 * @todo 100ms vorher Projekt-ENDE buchen
 										 */
 									}
 								} else {
 									// Taetigkeit KOMMT Buchen
 									ZeitdatenDto dtoKommt = new ZeitdatenDto();
 									dtoKommt.setTaetigkeitIId(taetigkeitIId_Kommt);
-									dtoKommt.setPersonalIId(zeitdatenDto
-											.getPersonalIId());
+									dtoKommt.setPersonalIId(zeitdatenDto.getPersonalIId());
 									dtoKommt.setCWowurdegebucht("Spezial-Kommt");
-									dtoKommt.setTZeit(new Timestamp(
-											zeitdatenDto.getTZeit().getTime()));
-									getZeiterfassungsFac().createZeitdaten(
-											dtoKommt, false, false, false,
-											false, theclientDto);
+									dtoKommt.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime()));
+									getZeiterfassungsFac().createZeitdaten(dtoKommt, false, false, false, false,
+											theclientDto);
 									// Taetigkeit UNTER Buchen
 									ZeitdatenDto dtoUnter = new ZeitdatenDto();
 									dtoUnter.setTaetigkeitIId(taetigkeitIId_Unter);
-									dtoUnter.setPersonalIId(zeitdatenDto
-											.getPersonalIId());
+									dtoUnter.setPersonalIId(zeitdatenDto.getPersonalIId());
 									dtoUnter.setCWowurdegebucht("Spezial-Kommt");
 									// Zeit 100 MS nachher
-									dtoUnter.setTZeit(new Timestamp(
-											zeitdatenDto.getTZeit().getTime() + 96));
-									getZeiterfassungsFac().createZeitdaten(
-											dtoUnter, false, false, false,
-											false, theclientDto);
+									dtoUnter.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime() + 96));
+									getZeiterfassungsFac().createZeitdaten(dtoUnter, false, false, false, false,
+											theclientDto);
 
 								}
 							}
@@ -3371,8 +2980,7 @@ public class CommandZE extends Command {
 					} else if (zusatz.equals("spezialgeht")) {
 						if (letzeBuchungen.length > 1) {
 
-							Integer letztetaetigkeit = letzeBuchungen[letzeBuchungen.length - 1]
-									.getTaetigkeitIId();
+							Integer letztetaetigkeit = letzeBuchungen[letzeBuchungen.length - 1].getTaetigkeitIId();
 							// Wenn letzte Taetigkeit kein geht ist, sonst wird
 							// geht verschmissen
 							if (!taetigkeitIId_Geht.equals(letztetaetigkeit)) {
@@ -3380,8 +2988,7 @@ public class CommandZE extends Command {
 								int iSondertaetigkeitenHintereinander = 1;
 								for (int i = letzeBuchungen.length - 2; i >= 0; i--) {
 									ZeitdatenDto dto = letzeBuchungen[i];
-									if (letztetaetigkeit.equals(dto
-											.getTaetigkeitIId())) {
+									if (letztetaetigkeit.equals(dto.getTaetigkeitIId())) {
 										iSondertaetigkeitenHintereinander++;
 									} else {
 										break;
@@ -3392,46 +2999,33 @@ public class CommandZE extends Command {
 								if (iSondertaetigkeitenHintereinander % 2 == 1) {
 									// Sondertaetigkeit Ende Buchen
 									ZeitdatenDto dtoSonderEnde = new ZeitdatenDto();
-									dtoSonderEnde
-											.setTaetigkeitIId(letztetaetigkeit);
-									dtoSonderEnde.setPersonalIId(zeitdatenDto
-											.getPersonalIId());
-									dtoSonderEnde
-											.setCWowurdegebucht("Spezial-Geht");
+									dtoSonderEnde.setTaetigkeitIId(letztetaetigkeit);
+									dtoSonderEnde.setPersonalIId(zeitdatenDto.getPersonalIId());
+									dtoSonderEnde.setCWowurdegebucht("Spezial-Geht");
 									// Zeit 100 MS vorher
-									dtoSonderEnde
-											.setTZeit(new Timestamp(
-													zeitdatenDto.getTZeit()
-															.getTime() - 96));
-									getZeiterfassungsFac().createZeitdaten(
-											dtoSonderEnde, false, false, false,
-											false, theclientDto);
+									dtoSonderEnde.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime() - 96));
+									getZeiterfassungsFac().createZeitdaten(dtoSonderEnde, false, false, false, false,
+											theclientDto);
 									// Taetigkeit GEHT Buchen
 									ZeitdatenDto dtoUnter = new ZeitdatenDto();
 									dtoUnter.setTaetigkeitIId(taetigkeitIId_Geht);
-									dtoUnter.setPersonalIId(zeitdatenDto
-											.getPersonalIId());
+									dtoUnter.setPersonalIId(zeitdatenDto.getPersonalIId());
 									dtoUnter.setCWowurdegebucht("Spezial-Geht");
 									// Zeit 100 MS vorher
-									dtoUnter.setTZeit(new Timestamp(
-											zeitdatenDto.getTZeit().getTime()));
-									getZeiterfassungsFac().createZeitdaten(
-											dtoUnter, false, false, false,
-											false, theclientDto);
+									dtoUnter.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime()));
+									getZeiterfassungsFac().createZeitdaten(dtoUnter, false, false, false, false,
+											theclientDto);
 
 								} else {
 									// Taetigkeit GEHT Buchen
 									ZeitdatenDto dtoUnter = new ZeitdatenDto();
 									dtoUnter.setTaetigkeitIId(taetigkeitIId_Geht);
-									dtoUnter.setPersonalIId(zeitdatenDto
-											.getPersonalIId());
+									dtoUnter.setPersonalIId(zeitdatenDto.getPersonalIId());
 									dtoUnter.setCWowurdegebucht("Spezial-Geht");
 									// Zeit 100 MS vorher
-									dtoUnter.setTZeit(new Timestamp(
-											zeitdatenDto.getTZeit().getTime()));
-									getZeiterfassungsFac().createZeitdaten(
-											dtoUnter, false, false, false,
-											false, theclientDto);
+									dtoUnter.setTZeit(new Timestamp(zeitdatenDto.getTZeit().getTime()));
+									getZeiterfassungsFac().createZeitdaten(dtoUnter, false, false, false, false,
+											theclientDto);
 
 								}
 							}
@@ -3439,8 +3033,7 @@ public class CommandZE extends Command {
 						}
 
 					} else {
-						response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-								"zusatz '" + zusatz + "' unbekannt");
+						response.sendError(HttpServletResponse.SC_BAD_REQUEST, "zusatz '" + zusatz + "' unbekannt");
 					}
 					setSJSPNext("mecs.jsp");
 					return getSJSPNext();
@@ -3448,24 +3041,18 @@ public class CommandZE extends Command {
 
 					if (request.getParameter("taetigkeit") != null) {
 
-						Integer taetigkeitId = new Integer(
-								request.getParameter("taetigkeit"));
+						Integer taetigkeitId = new Integer(request.getParameter("taetigkeit"));
 						zeitdatenDto.setTaetigkeitIId(taetigkeitId);
 
-						TaetigkeitDto dto = getZeiterfassungsFac()
-								.taetigkeitFindByPrimaryKey(taetigkeitId,
-										theclientDto);
+						TaetigkeitDto dto = getZeiterfassungsFac().taetigkeitFindByPrimaryKey(taetigkeitId,
+								theclientDto);
 						meldung += dto.getBezeichnung();
 
-						getZeiterfassungsFac().createZeitdaten(zeitdatenDto,
-								true, true, false, false, theclientDto);
-						meldung += " um "
-								+ Helper.formatTime(tZeit, localeLogon)
-								+ " gebucht.";
+						getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true, false, false, theclientDto);
+						meldung += " um " + Helper.formatTime(tZeit, localeLogon) + " gebucht.";
 						getTheClient(request, response).setSMsg(meldung);
 					} else {
-						getTheClient(request, response).setSMsg(
-								"Keine T\u00E4tigkeit ausgew\u00E4hlt");
+						getTheClient(request, response).setSMsg("Keine T\u00E4tigkeit ausgew\u00E4hlt");
 					}
 				}
 			}
@@ -3483,17 +3070,14 @@ public class CommandZE extends Command {
 				ZutrittscontrollerDto zutrittscontrollerDto = getZutrittscontrollerFac()
 						.zutrittscontrollerFindByCNr(master);
 				ZutrittsobjektDto[] zutrittsobjektDtos = getZutrittscontrollerFac()
-						.zutrittsobjektFindByZutrittscontrollerIId(
-								zutrittscontrollerDto.getIId());
+						.zutrittsobjektFindByZutrittscontrollerIId(zutrittscontrollerDto.getIId());
 
 				StringBuffer objekte = new StringBuffer();
 
 				for (int i = 0; i < zutrittsobjektDtos.length; i++) {
-					objekte.append(Helper.fitString2Length(
-							zutrittsobjektDtos[i].getCNr(), 6, ' ')); // terminal-
+					objekte.append(Helper.fitString2Length(zutrittsobjektDtos[i].getCNr(), 6, ' ')); // terminal-
 					// id
-					objekte.append(Helper.fitString2Length(
-							zutrittsobjektDtos[i].getCAdresse(), 100, ' ')); // adresse
+					objekte.append(Helper.fitString2Length(zutrittsobjektDtos[i].getCAdresse(), 100, ' ')); // adresse
 					objekte.append("\r\n");
 				}
 				myLogger.info(command + ":" + new String(objekte));
@@ -3505,8 +3089,7 @@ public class CommandZE extends Command {
 				if (ex5.getCause() instanceof EJBExceptionLP) {
 					EJBExceptionLP lpex = (EJBExceptionLP) ex5.getCause();
 					if (lpex.getCode() == EJBExceptionLP.FEHLER_BEI_FIND) {
-						myLogger.error("Zutrittscontroller '" + master
-								+ "' nicht angelegt", ex5);
+						myLogger.error("Zutrittscontroller '" + master + "' nicht angelegt", ex5);
 					} else {
 						myLogger.error(ex5.getMessage(), ex5);
 					}
@@ -3523,19 +3106,16 @@ public class CommandZE extends Command {
 				return null;
 			}
 			try {
-				ZutrittsobjektDto zutrittsobjektDto = getZutrittscontrollerFac()
-						.zutrittsobjektFindByCNr(termid);
+				ZutrittsobjektDto zutrittsobjektDto = getZutrittscontrollerFac().zutrittsobjektFindByCNr(termid);
 
 				StringBuffer objekte = new StringBuffer();
 
 				objekte.append("10"); // readerid
 				objekte.append("0"); // port
 				objekte.append(zutrittsobjektDto.getCRelais()); // relais
-				String oeffnungszeit = zutrittsobjektDto.getFOeffnungszeit()
-						.toString();
+				String oeffnungszeit = zutrittsobjektDto.getFOeffnungszeit().toString();
 				oeffnungszeit = oeffnungszeit.replaceAll(",", ".");
-				objekte.append(Helper.fitString2LengthAlignRight(oeffnungszeit,
-						4, ' ')); // oeffnungszeit
+				objekte.append(Helper.fitString2LengthAlignRight(oeffnungszeit, 4, ' ')); // oeffnungszeit
 				objekte.append(zutrittsobjektDto.getZutrittsleserCNr().trim()); // readerid
 				objekte.append("\r\n");
 				myLogger.info(command + ":" + new String(objekte));
@@ -3556,35 +3136,28 @@ public class CommandZE extends Command {
 		} else if (command.equals(TheApp.CMD_ZU_MECS_ZUTRITT)) {
 			String termid = request.getParameter("termid");
 			try {
-				ZutrittsobjektDto dto = getZutrittscontrollerFac()
-						.zutrittsobjektFindByCNr(termid);
+				ZutrittsobjektDto dto = getZutrittscontrollerFac().zutrittsobjektFindByCNr(termid);
 
-				String s = getZutrittscontrollerFac()
-						.getZutrittsdatenFuerEinObjektFuerMecs(dto.getIId(),
-								theclientDto);
+				String s = getZutrittscontrollerFac().getZutrittsdatenFuerEinObjektFuerMecs(dto.getIId(), theclientDto);
 				myLogger.info(command + ":" + new String(s));
 
 				getTheClient(request, response).setSMsg(new String(s));
 			} catch (EJBExceptionLP ex4) {
 				if (ex4.getCode() == EJBExceptionLP.FEHLER_BEI_FIND) {
-					myLogger.error("Zutrittsobjekt '" + termid
-							+ "' nicht angelegt", ex4);
+					myLogger.error("Zutrittsobjekt '" + termid + "' nicht angelegt", ex4);
 					response.sendError(HttpServletResponse.SC_NOT_FOUND,
 							"Zutrittsobjekt '" + termid + "' nicht angelegt");
 
 				} else {
 					myLogger.error(ex4.getMessage(), ex4);
-					response.sendError(HttpServletResponse.SC_NOT_FOUND,
-							ex4.getMessage());
+					response.sendError(HttpServletResponse.SC_NOT_FOUND, ex4.getMessage());
 				}
 
 			}
 
 		} else if (command.equals(TheApp.CMD_ZU_MECS_AUSWEISE_ZUTRITT)) {
 			PersonalzutrittsklasseDto[] dtos = getZutrittscontrollerFac()
-					.personalzutrittsklassenFindByTGueltigab(
-							new Timestamp(System.currentTimeMillis()),
-							theclientDto);
+					.personalzutrittsklassenFindByTGueltigab(new Timestamp(System.currentTimeMillis()), theclientDto);
 
 			ArrayList<StringBuffer> alDaten = new ArrayList<StringBuffer>();
 
@@ -3593,28 +3166,22 @@ public class CommandZE extends Command {
 				sb.append("10");
 
 				// Hole personalDto
-				PersonalDto personalDto = getPersonalFac()
-						.personalFindByPrimaryKeySmall(dtos[i].getPersonalIId());
+				PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKeySmall(dtos[i].getPersonalIId());
 
-				sb.append(Helper.fitString2Length(personalDto.getCAusweis(),
-						20, ' '));
-				sb.append(Helper.fitString2Length(personalDto.getCPersonalnr()
-						.toString(), 10, ' '));
+				sb.append(Helper.fitString2Length(personalDto.getCAusweis(), 20, ' '));
+				sb.append(Helper.fitString2Length(personalDto.getCPersonalnr().toString(), 10, ' '));
 				sb.append(Helper.fitString2Length("", 24, ' '));
 
 				// Hole Zutrittsklasse
 				ZutrittsklasseDto zutrittsklasseDto = getZutrittscontrollerFac()
-						.zutrittsklasseFindByPrimaryKey(
-								dtos[i].getZutrittsklasseIId());
-				sb.append(Helper.fitString2Length(zutrittsklasseDto.getCNr(),
-						3, ' '));
+						.zutrittsklasseFindByPrimaryKey(dtos[i].getZutrittsklasseIId());
+				sb.append(Helper.fitString2Length(zutrittsklasseDto.getCNr(), 3, ' '));
 				alDaten.add(sb);
 			}
 
 			// Besucherausweise
 			String[] ausweise = getZutrittscontrollerFac()
-					.zutrittonlinecheckAusweiseFindByTGueltigab(
-							new Timestamp(System.currentTimeMillis()));
+					.zutrittonlinecheckAusweiseFindByTGueltigab(new Timestamp(System.currentTimeMillis()));
 
 			for (int i = 0; i < ausweise.length; i++) {
 				StringBuffer sb = new StringBuffer();
@@ -3622,9 +3189,7 @@ public class CommandZE extends Command {
 				sb.append(Helper.fitString2Length(ausweise[i], 20, ' '));
 				sb.append(Helper.fitString2Length("", 10, ' '));
 				sb.append(Helper.fitString2Length("", 24, ' '));
-				sb.append(Helper.fitString2Length(
-						ZutrittscontrollerFac.ZUTRITTSKLASSE_ONLINECHECK, 3,
-						' '));
+				sb.append(Helper.fitString2Length(ZutrittscontrollerFac.ZUTRITTSKLASSE_ONLINECHECK, 3, ' '));
 				alDaten.add(sb);
 			}
 
@@ -3632,8 +3197,7 @@ public class CommandZE extends Command {
 			String datenGesamt = "";
 			for (int i = alDaten.size() - 1; i > 0; --i) {
 				for (int j = 0; j < i; ++j) {
-					if ((new String(alDaten.get(j))).compareTo(new String(
-							alDaten.get(j + 1))) > 0) {
+					if ((new String(alDaten.get(j))).compareTo(new String(alDaten.get(j + 1))) > 0) {
 						StringBuffer lagerbewegungDtoTemp = alDaten.get(j);
 						alDaten.set(j, alDaten.get(j + 1));
 						alDaten.set(j + 1, lagerbewegungDtoTemp);
@@ -3657,12 +3221,9 @@ public class CommandZE extends Command {
 			String pin = request.getParameter("pin");
 
 			try {
-				ZutrittsobjektDto dto = getZutrittscontrollerFac()
-						.zutrittsobjektFindByCNr(termid);
-				boolean b = getZutrittscontrollerFac()
-						.onlineCheck(card, pin,
-								new Timestamp(System.currentTimeMillis()),
-								dto.getIId());
+				ZutrittsobjektDto dto = getZutrittscontrollerFac().zutrittsobjektFindByCNr(termid);
+				boolean b = getZutrittscontrollerFac().onlineCheck(card, pin, new Timestamp(System.currentTimeMillis()),
+						dto.getIId());
 				if (b == true) {
 					myLogger.info(command + ": ZUTRITT ERLAUBT");
 					getTheClient(request, response).setSMsg("A");
@@ -3677,14 +3238,11 @@ public class CommandZE extends Command {
 					if (lpex.getCode() == EJBExceptionLP.FEHLER_BEI_FIND) {
 
 						response.sendError(HttpServletResponse.SC_NOT_FOUND,
-								"Zutrittsobjekt '" + termid
-										+ "' nicht angelegt");
-						myLogger.error("Zutrittsobjekt '" + termid
-								+ "' nicht angelegt", ex4);
+								"Zutrittsobjekt '" + termid + "' nicht angelegt");
+						myLogger.error("Zutrittsobjekt '" + termid + "' nicht angelegt", ex4);
 					} else {
 						myLogger.error(ex4.getMessage(), ex4);
-						response.sendError(HttpServletResponse.SC_NOT_FOUND,
-								ex4.getMessage());
+						response.sendError(HttpServletResponse.SC_NOT_FOUND, ex4.getMessage());
 					}
 				}
 			}
@@ -3700,8 +3258,7 @@ public class CommandZE extends Command {
 
 			ZutrittsobjektDto dto = null;
 			try {
-				dto = getZutrittscontrollerFac()
-						.zutrittsobjektFindByCNr(termid);
+				dto = getZutrittscontrollerFac().zutrittsobjektFindByCNr(termid);
 			} catch (EJBExceptionLP e) {
 				if (e.getCode() == EJBExceptionLP.FEHLER_BEI_FIND) {
 					response.sendError(HttpServletResponse.SC_NOT_FOUND,
@@ -3709,15 +3266,13 @@ public class CommandZE extends Command {
 					return null;
 				} else {
 					e.printStackTrace();
-					response.sendError(
-							HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+					response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
 							"Unerwarteter Fehler aufgetreten.");
 					return null;
 				}
 			}
 
-			String s = getZutrittscontrollerFac().getZutrittsEventsFuerMecs(
-					dto.getIId(), theclientDto);
+			String s = getZutrittscontrollerFac().getZutrittsEventsFuerMecs(dto.getIId(), theclientDto);
 			myLogger.info(command + ":" + s);
 			getTheClient(request, response).setSMsg(s);
 
@@ -3745,14 +3300,12 @@ public class CommandZE extends Command {
 			String ausweis = record.substring(106, 135).trim();
 			String event = record.substring(126, 137).trim();
 
-			PersonalDto personalDto = getPersonalFac().personalFindByCAusweis(
-					ausweis);
+			PersonalDto personalDto = getPersonalFac().personalFindByCAusweis(ausweis);
 
-			if (personalDto != null || event.equals("PINONLINE")
-					|| personalnr.equals("?????") || personalnr.equals("     ")) {
+			if (personalDto != null || event.equals("PINONLINE") || personalnr.equals("?????")
+					|| personalnr.equals("     ")) {
 				if (personalDto != null) {
-					dto.setCPerson(getPartnerFac().partnerFindByPrimaryKey(
-							personalDto.getPartnerIId(), theclientDto)
+					dto.setCPerson(getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIId(), theclientDto)
 							.formatFixAnredeTitelName2Name1());
 					dto.setMandantCNr(personalDto.getMandantCNr());
 				} else if (personalnr.equals("     ")) {
@@ -3776,16 +3329,11 @@ public class CommandZE extends Command {
 				dto.setCZutrittscontroller(null);
 
 				try {
-					ZutrittsobjektDto zutrittsobjektDto = getZutrittscontrollerFac()
-							.zutrittsobjektFindByCNr(objekt);
+					ZutrittsobjektDto zutrittsobjektDto = getZutrittscontrollerFac().zutrittsobjektFindByCNr(objekt);
 
-					dto.setCZutrittsobjekt(zutrittsobjektDto.getBezeichnung()
-							+ "-" + zutrittsobjektDto.getCAdresse());
+					dto.setCZutrittsobjekt(zutrittsobjektDto.getBezeichnung() + "-" + zutrittsobjektDto.getCAdresse());
 					dto.setCZutrittscontroller(getZutrittscontrollerFac()
-							.zutrittscontrollerFindByPrimaryKey(
-									zutrittsobjektDto
-											.getZutrittscontrollerIId())
-							.getCNr());
+							.zutrittscontrollerFindByPrimaryKey(zutrittsobjektDto.getZutrittscontrollerIId()).getCNr());
 					dto.setMandantCNrObjekt(zutrittsobjektDto.getMandantCNr());
 				} catch (RemoteException ex6) {
 					dto.setCZutrittsobjekt("Zutrittsobjekt unbekannt");
@@ -3802,8 +3350,7 @@ public class CommandZE extends Command {
 
 			PersonalfingerDto[] personalfingerDtos = null;
 			if (sAendern == null) {
-				personalfingerDtos = getZutrittscontrollerFac()
-						.personalfingerFindAll();
+				personalfingerDtos = getZutrittscontrollerFac().personalfingerFindAll();
 
 			} else {
 
@@ -3818,9 +3365,7 @@ public class CommandZE extends Command {
 				c.set(Calendar.MILLISECOND, 0);
 
 				personalfingerDtos = getZutrittscontrollerFac()
-						.personalfingerFindByTAendern(
-								new java.sql.Timestamp(c.getTimeInMillis()),
-								theclientDto);
+						.personalfingerFindByTAendern(new java.sql.Timestamp(c.getTimeInMillis()), theclientDto);
 			}
 			StringBuffer sb = new StringBuffer();
 			// Zuerts alle loeschen
@@ -3829,56 +3374,40 @@ public class CommandZE extends Command {
 			sb.append(Helper.fitString2Length("X", 512, 'X'));
 			StringBuffer zeit = new StringBuffer();
 			Calendar cAendern = Calendar.getInstance();
-			zeit.append(Helper.fitString2Length(cAendern.get(Calendar.YEAR)
-					+ "", 4, '0'));
-			zeit.append(Helper.fitString2Length(
-					(cAendern.get(Calendar.MONTH) + 1) + "", 2, '0'));
-			zeit.append(Helper.fitString2Length(
-					cAendern.get(Calendar.DAY_OF_MONTH) + "", 2, '0'));
-			zeit.append(Helper.fitString2Length(
-					cAendern.get(Calendar.HOUR_OF_DAY) + "", 2, '0'));
-			zeit.append(Helper.fitString2Length(cAendern.get(Calendar.MINUTE)
-					+ "", 2, '0'));
+			zeit.append(Helper.fitString2Length(cAendern.get(Calendar.YEAR) + "", 4, '0'));
+			zeit.append(Helper.fitString2Length((cAendern.get(Calendar.MONTH) + 1) + "", 2, '0'));
+			zeit.append(Helper.fitString2Length(cAendern.get(Calendar.DAY_OF_MONTH) + "", 2, '0'));
+			zeit.append(Helper.fitString2Length(cAendern.get(Calendar.HOUR_OF_DAY) + "", 2, '0'));
+			zeit.append(Helper.fitString2Length(cAendern.get(Calendar.MINUTE) + "", 2, '0'));
 
 			sb.append(zeit);
 			sb.append("\r\n");
 
 			for (int i = 0; i < personalfingerDtos.length; i++) {
 				PersonalfingerDto personalfingerDto = personalfingerDtos[i];
-				sb.append(Helper.fitString2LengthAlignRight(
-						personalfingerDto.getIId() + "", 5, ' '));
+				sb.append(Helper.fitString2LengthAlignRight(personalfingerDto.getIId() + "", 5, ' '));
 				sb.append(Helper.fitString2LengthAlignRight("1", 2, ' '));
 				String templateBase64 = new String(
-						org.apache.commons.codec.binary.Base64
-								.encodeBase64(personalfingerDto.getOTemplate1()));
+						org.apache.commons.codec.binary.Base64.encodeBase64(personalfingerDto.getOTemplate1()));
 				sb.append(Helper.fitString2Length(templateBase64, 512, ' '));
 
 				cAendern = Calendar.getInstance();
-				cAendern.setTimeInMillis(personalfingerDto.getTAendern()
-						.getTime());
+				cAendern.setTimeInMillis(personalfingerDto.getTAendern().getTime());
 				zeit = new StringBuffer();
-				zeit.append(Helper.fitString2Length(cAendern.get(Calendar.YEAR)
-						+ "", 4, '0'));
-				zeit.append(Helper.fitString2Length(
-						(cAendern.get(Calendar.MONTH) + 1) + "", 2, '0'));
-				zeit.append(Helper.fitString2Length(
-						cAendern.get(Calendar.DAY_OF_MONTH) + "", 2, '0'));
-				zeit.append(Helper.fitString2Length(
-						cAendern.get(Calendar.HOUR_OF_DAY) + "", 2, '0'));
-				zeit.append(Helper.fitString2Length(
-						cAendern.get(Calendar.MINUTE) + "", 2, '0'));
+				zeit.append(Helper.fitString2Length(cAendern.get(Calendar.YEAR) + "", 4, '0'));
+				zeit.append(Helper.fitString2Length((cAendern.get(Calendar.MONTH) + 1) + "", 2, '0'));
+				zeit.append(Helper.fitString2Length(cAendern.get(Calendar.DAY_OF_MONTH) + "", 2, '0'));
+				zeit.append(Helper.fitString2Length(cAendern.get(Calendar.HOUR_OF_DAY) + "", 2, '0'));
+				zeit.append(Helper.fitString2Length(cAendern.get(Calendar.MINUTE) + "", 2, '0'));
 
 				sb.append(zeit);
 				sb.append("\r\n");
 
 				if (personalfingerDto.getOTemplate2() != null) {
-					sb.append(Helper.fitString2LengthAlignRight(
-							personalfingerDto.getIId() + "", 5, ' '));
+					sb.append(Helper.fitString2LengthAlignRight(personalfingerDto.getIId() + "", 5, ' '));
 					sb.append(Helper.fitString2LengthAlignRight("2", 2, ' '));
 					templateBase64 = new String(
-							org.apache.commons.codec.binary.Base64
-									.encodeBase64(personalfingerDto
-											.getOTemplate2()));
+							org.apache.commons.codec.binary.Base64.encodeBase64(personalfingerDto.getOTemplate2()));
 					sb.append(Helper.fitString2Length(templateBase64, 512, ' '));
 					sb.append(zeit);
 					if (i == personalfingerDtos.length - 1) {
@@ -3892,12 +3421,38 @@ public class CommandZE extends Command {
 			getTheClient(request, response).setSMsg(new String(sb));
 
 		}
-//		getLogonFac().logout(theclientDto);
+		// getLogonFac().logout(theclientDto);
 		return getSJSPNext();
 	}
 
-	private String getMeldungGebuchtFuerBDE(Object data, String taetigkeit,
-			TheClientDto theClientDto) throws Exception {
+	private void convertJasperPrintToHTML(HttpServletRequest request, HttpServletResponse response, Locale localeLogon,
+			JasperPrintLP jasperprint) throws Exception {
+		response.setContentType("text/html");
+		response.setLocale(localeLogon);
+		// PrintWriter out = response.getWriter();
+		StringBuffer out = new StringBuffer();
+		JRExporter exporter = new HtmlExporter();
+		Map<Object, Object> imagesMap = new HashMap<Object, Object>();
+		request.getSession().setAttribute("IMAGES_MAP", imagesMap);
+		exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperprint.getPrint());
+		exporter.setParameter(JRExporterParameter.OUTPUT_STRING_BUFFER, out);
+
+		
+		exporter.exportReport();
+		out = HelperServer.removeScriptHtml(out);
+
+		String str2 = out.toString().replaceAll("</title>", "</title><meta http-equiv=\"refresh\" content=\"30\">");
+		// to get a StringBuffer result:
+		out = new StringBuffer(str2);
+
+		response.getWriter().print(out);
+
+		getTheClient(request, response).setBResponseIsReady(true);
+
+	}
+
+	private String getMeldungGebuchtFuerBDE(Object data, String taetigkeit, TheClientDto theClientDto)
+			throws Exception {
 
 		HashMap<?, ?> hmParameter = (HashMap<?, ?>) data;
 		ZeitdatenDto zeitdatenDto = (ZeitdatenDto) hmParameter.get("zeitdaten");
@@ -3906,11 +3461,9 @@ public class CommandZE extends Command {
 		MaschineDto maschine = (MaschineDto) hmParameter.get("maschine");
 
 		Integer taetigkeitIId_Kommt = getZeiterfassungsFac()
-				.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_KOMMT,
-						theClientDto).getIId();
+				.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_KOMMT, theClientDto).getIId();
 		Integer taetigkeitIId_Geht = getZeiterfassungsFac()
-				.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_GEHT,
-						theClientDto).getIId();
+				.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto).getIId();
 
 		String tmp = "Letzte Buchung: " + person + ", ";
 		if (beleg != null) {
@@ -3920,8 +3473,7 @@ public class CommandZE extends Command {
 		if (hmParameter.containsKey("fertig")) {
 			tmp += " Fertig-Buchung, ";
 		} else {
-			if (maschine != null
-					&& maschine.getBezeichnung().trim().length() > 0) {
+			if (maschine != null && maschine.getBezeichnung().trim().length() > 0) {
 				tmp += " Maschine: " + maschine.getBezeichnung() + ", ";
 			}
 		}
@@ -3934,22 +3486,18 @@ public class CommandZE extends Command {
 			}
 		}
 
-		tmp += " um "
-				+ Helper.formatTimestamp(zeitdatenDto.getTZeit(), new Locale(
-						"de", "AT"));
+		tmp += " um " + Helper.formatTimestamp(zeitdatenDto.getTZeit(), new Locale("de", "AT"));
 
 		// Meldung ob KOMMT/GEHT fehlt
 		Timestamp tBis = new Timestamp(zeitdatenDto.getTZeit().getTime() + 100);
 		ZeitdatenDto[] zeitdatenDtos = getZeiterfassungsFac()
-				.zeitdatenFindZeitdatenEinesTagesUndEinerPersonOnheBelegzeiten(
-						zeitdatenDto.getPersonalIId(),
+				.zeitdatenFindZeitdatenEinesTagesUndEinerPersonOnheBelegzeiten(zeitdatenDto.getPersonalIId(),
 						Helper.cutTimestamp(zeitdatenDto.getTZeit()), tBis);
 		boolean bKommtfuerHeuteFehlt = true;
 		for (int i = 0; i < zeitdatenDtos.length; i++) {
 			ZeitdatenDto zeitdatenDtoZeile = zeitdatenDtos[i];
 			if (zeitdatenDtoZeile.getTaetigkeitIId() != null
-					&& zeitdatenDtoZeile.getTaetigkeitIId().equals(
-							taetigkeitIId_Kommt)) {
+					&& zeitdatenDtoZeile.getTaetigkeitIId().equals(taetigkeitIId_Kommt)) {
 				bKommtfuerHeuteFehlt = false;
 
 				break;
@@ -3966,14 +3514,10 @@ public class CommandZE extends Command {
 		// Meldung ob GEHT ind den etzten Tagen fehlt
 		// Hole letztes GEHT
 		Session session = FLRSessionFactory.getFactory().openSession();
-		org.hibernate.Criteria liste = session
-				.createCriteria(FLRZeitdaten.class);
-		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID,
-				zeitdatenDto.getPersonalIId()));
-		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_TAETIGKEIT_I_ID,
-				taetigkeitIId_Geht));
-		liste.add(Expression.lt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
-				Helper.cutTimestamp(zeitdatenDto.getTZeit())));
+		org.hibernate.Criteria liste = session.createCriteria(FLRZeitdaten.class);
+		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID, zeitdatenDto.getPersonalIId()));
+		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_TAETIGKEIT_I_ID, taetigkeitIId_Geht));
+		liste.add(Expression.lt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT, Helper.cutTimestamp(zeitdatenDto.getTZeit())));
 
 		liste.addOrder(Order.desc(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT));
 		liste.setMaxResults(1);
@@ -3989,12 +3533,9 @@ public class CommandZE extends Command {
 
 		session = FLRSessionFactory.getFactory().openSession();
 		liste = session.createCriteria(FLRZeitdaten.class);
-		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID,
-				zeitdatenDto.getPersonalIId()));
-		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_TAETIGKEIT_I_ID,
-				taetigkeitIId_Kommt));
-		liste.add(Expression.lt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
-				Helper.cutTimestamp(zeitdatenDto.getTZeit())));
+		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID, zeitdatenDto.getPersonalIId()));
+		liste.add(Expression.eq(ZeiterfassungFac.FLR_ZEITDATEN_TAETIGKEIT_I_ID, taetigkeitIId_Kommt));
+		liste.add(Expression.lt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT, Helper.cutTimestamp(zeitdatenDto.getTZeit())));
 
 		liste.addOrder(Order.desc(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT));
 		liste.setMaxResults(1);
@@ -4004,8 +3545,7 @@ public class CommandZE extends Command {
 
 		if (it.hasNext()) {
 			FLRZeitdaten flrLetzerAuftrag = (FLRZeitdaten) it.next();
-			tLetztesKommt = new Timestamp(flrLetzerAuftrag.getT_zeit()
-					.getTime());
+			tLetztesKommt = new Timestamp(flrLetzerAuftrag.getT_zeit().getTime());
 		}
 
 		if (tLetztesGeht != null && tLetztesKommt != null) {

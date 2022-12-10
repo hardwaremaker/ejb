@@ -45,6 +45,7 @@ import javax.persistence.Table;
 		@NamedQuery(name = "ArtikelkommentarfindByArtikelIIdArtikelkommentarartIIdDatenformatCNr", query = "SELECT OBJECT (o) FROM Artikelkommentar o WHERE o.artikelIId=?1 AND o.artikelkommentarartIId=?2 AND o.datenformatCNr=?3"),
 		@NamedQuery(name = "ArtikelkommentarfindByArtikelIIdArtikelkommentarartIId", query = "SELECT OBJECT (o) FROM Artikelkommentar o WHERE o.artikelIId=?1 AND o.artikelkommentarartIId=?2"),
 		@NamedQuery(name = "ArtikelkommentarfindByArtikelIId", query = "SELECT OBJECT (o) FROM Artikelkommentar o WHERE o.artikelIId=?1"),
+		@NamedQuery(name = "ArtikelkommentarfindByArtikelIIdSorted", query = "SELECT OBJECT (o) FROM Artikelkommentar o WHERE o.artikelIId=?1 ORDER BY o.iSort"),
 		@NamedQuery(name = "ArtikelkommentarfindByArtikelIIdBDefaultbild", query = "SELECT OBJECT (o) FROM Artikelkommentar o WHERE o.artikelIId=?1 AND o.bDefaultbild=?2"),
 		@NamedQuery(name = "ArtikelkommentarejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Artikelkommentar o WHERE o.artikelIId = ?1"),
 		@NamedQuery(name = "ArtikelkommentarfindByArtikelIIdIArt", query = "SELECT OBJECT (o) FROM Artikelkommentar o WHERE o.artikelIId=?1 AND o.iArt=?2") })
@@ -73,6 +74,17 @@ public class Artikelkommentar implements Serializable {
 	@Column(name = "ARTIKELKOMMENTARART_I_ID")
 	private Integer artikelkommentarartIId;
 
+	@Column(name = "B_DATEIVERWEIS")
+	private Short bDateiverweis;
+	
+	public Short getBDateiverweis() {
+		return bDateiverweis;
+	}
+
+	public void setBDateiverweis(Short bDateiverweis) {
+		this.bDateiverweis = bDateiverweis;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Artikelkommentar() {
@@ -84,7 +96,7 @@ public class Artikelkommentar implements Serializable {
 			Integer artikelkommentarartIId2,
 			String datenformatCNr2,
 			Short defaultbild,
-			Integer iArt, Integer iSort) {
+			Integer iArt, Integer iSort,Short dateiverweis) {
 		setIId(id);
 		setArtikelIId(artikelIId2);
 		setArtikelkommentarartIId(artikelkommentarartIId2);
@@ -92,6 +104,7 @@ public class Artikelkommentar implements Serializable {
 		setDatenformatCNr(datenformatCNr2);
 		setIArt(iArt);
 		setISort(iSort);
+		setBDateiverweis(dateiverweis);
 	}
 
 	public Integer getIId() {

@@ -47,6 +47,7 @@ public class ReportUvaKriterienDto implements Serializable {
 	private Integer finanzamtIId;
 	
 	private String sAbrechnungszeitraum;
+	private boolean details;
 	
 	public void setIPeriode(int iPeriode) {
 		this.iPeriode = iPeriode;
@@ -87,5 +88,12 @@ public class ReportUvaKriterienDto implements Serializable {
 	public String getSAbrechnungszeitraum() {
 		return sAbrechnungszeitraum;
 	}
-	
+
+	public boolean isDetails() {
+		return details;
+	}
+
+	public void setDetails(boolean details) {
+		this.details = details;
+	}
 }

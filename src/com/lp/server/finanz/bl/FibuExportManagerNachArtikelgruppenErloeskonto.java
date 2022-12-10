@@ -46,11 +46,11 @@ import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.finanz.service.ReportErloeskontoDto;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
-import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
@@ -71,8 +71,9 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 //	private Integer debitorenKontoUebersteuertId ;
 	private Integer rechnungId ;
 	private RechnungPositionDto[] positionDtos ;
-	private KundeDto kundeDto ;
-
+	private KundeDto kundeDto;
+	private Integer lieferLandId;
+	
 	
 	public FibuExportManagerNachArtikelgruppenErloeskonto(
 			TheClientDto theClientDto) throws EJBExceptionLP {
@@ -107,7 +108,7 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 		debitorenKontoId = null ;
 		laenderartCnr = null ;
 		kundeDto = null ;
-		
+		lieferLandId = null;
 //		uebersteuerteMandantenWaehrungLoaded = false ;
 //		uebersteuerteMandantenWaehrung = null ;
 //		debitorenKontoUebersteuertId = null ;
@@ -238,16 +239,20 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 			debitorenKontoId = kundeDto.getIidDebitorenkonto() ;
 			String sLaenderartRechnung = null;
 			
-			boolean hatFibu = getMandantFac().darfAnwenderAufModulZugreifen(
-					LocaleFac.BELEGART_FINANZBUCHHALTUNG, theClientDto);
+			boolean hatFibu = getMandantFac().hatModulFinanzbuchhaltung(theClientDto) ;
 			if (hatFibu) {
 				sLaenderartRechnung = getLaenderartZuKonto(
-					kundeDto.getPartnerDto(), debitorenKontoId, rechnungDto.isReverseCharge());
+						kundeDto.getPartnerDto(), debitorenKontoId, rechnungDto.getTBelegdatum()) ;
+//				sLaenderartRechnung = getLaenderartZuKonto(
+//					kundeDto.getPartnerDto(), debitorenKontoId, rechnungDto.isReverseCharge());
 			} else {
-				sLaenderartRechnung = getLaenderartZuPartner(kundeDto.getPartnerDto());
+				sLaenderartRechnung = getLaenderartZuPartner(
+						kundeDto.getPartnerDto(), rechnungDto.getTBelegdatum());
 			}
 			
 			laenderartCnr = sLaenderartRechnung;
+			lieferLandId = kundeDto
+					.getPartnerDto().getLandplzortDto().getIlandID();
 			
 			RechnungPositionDto[] positionDtos = getRechnungPositionen(rechnungDto.getIId());
 			for (RechnungPositionDto rechnungPositionDto : positionDtos) {
@@ -262,6 +267,11 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 				
 				LieferscheinDto lieferscheinDto = getLieferscheinFac().lieferscheinFindByPrimaryKey(
 						rechnungPositionDto.getLieferscheinIId()) ;
+				String lsLaenderartCnr = lieferscheinDto.getLaenderartCnr();
+				if(lsLaenderartCnr != null) {
+					laenderartCnr = lsLaenderartCnr;
+				}
+				
 				if(!lieferscheinDto.getKundeIIdLieferadresse()
 						.equals(lieferscheinDto.getKundeIIdRechnungsadresse())){
 					if(hatFibu) {
@@ -276,10 +286,15 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 						if(getValidator().hasFailedValidations()) {
 							return laenderartCnr ;
 						}
+	
+						if(lsLaenderartCnr == null) {
+							laenderartCnr = getLaenderartZuKonto(
+								lieferscheinKundeDto.getPartnerDto(), 
+								lieferscheinKundeDto.getIidDebitorenkonto(),
+								lieferscheinDto.getTBelegdatum());
+						}
+						lieferLandId = lieferscheinKundeDto.getPartnerDto().getLandplzortDto().getIlandID();
 						
-						laenderartCnr = getLaenderartZuKonto(
-								lieferscheinKundeDto.getPartnerDto(), lieferscheinKundeDto.getIidDebitorenkonto());
-
 						//PJ 17120
 						KontoDto lieferscheinDebitorenkonto = getFinanzFac()
 								.kontoFindByPrimaryKey(lieferscheinKundeDto.getIidDebitorenkonto());
@@ -291,10 +306,13 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 								lieferscheinDto.getKundeIIdLieferadresse(), theClientDto);
 						if (getFinanzServiceFac().isFibuLandunterschiedlich(kundeDto.getPartnerDto().getIId(), 
 								lieferscheinKundeDto.getPartnerDto().getIId())) {
-//								KundeDto lieferscheinKundeDto = getKundeFac().kundeFindByPrimaryKey(
-//									lieferscheinDto.getKundeIIdLieferadresse(), theClientDto);
-								laenderartCnr = getLaenderartZuPartner(getPartnerFac()
-									.partnerFindByPrimaryKeyOhneExc(lieferscheinKundeDto.getPartnerIId(), theClientDto));
+							if(lsLaenderartCnr == null) {
+								PartnerDto lsPartnerDto = getPartnerFac()
+										.partnerFindByPrimaryKeyOhneExc(lieferscheinKundeDto.getPartnerIId(), theClientDto);
+								laenderartCnr = getLaenderartZuPartner(lsPartnerDto, 
+										lieferscheinDto.getTBelegdatum());
+							}
+							lieferLandId = lieferscheinKundeDto.getPartnerDto().getLandplzortDto().getIlandID();		
 						}
 					}
 				}
@@ -365,7 +383,8 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 		
 		KontoDto kontoDto = uebersetzeKontoNachLandBzwLaenderart(
 				kontoId, laenderart, finanzId, theClientDto.getMandant(), reDto, 
-				getKundeDto().getPartnerDto().getLandplzortDto().getIlandID());	
+				lieferLandId, reDto.getReversechargeartId(),
+				reDto.getTBelegdatum());	
 		return kontoDto ;
 	}
 
@@ -382,9 +401,11 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 
 			KontoDto debitorenKontoDto = getFinanzFac().kontoFindByPrimaryKey(getDebitorenKontoId()) ;
 			FinanzamtDto finanzamtDto = getFinanzamt(debitorenKontoDto.getFinanzamtIId()) ;
-			Integer kontoId = getRechnungDto().isReverseCharge() 
-					? finanzamtDto.getKontoIIdRCAnzahlungErhaltVerr()
-					: finanzamtDto.getKontoIIdAnzahlungErhaltVerr() ;
+			Integer kontoId = finanzamtDto.getKontoIIdAnzahlungErhaltVerr() ;			
+//			Integer kontoId = getRechnungDto().isReverseCharge() 
+//					? finanzamtDto.getKontoIIdRCAnzahlungErhaltVerr()
+//					: finanzamtDto.getKontoIIdAnzahlungErhaltVerr() ;
+			
 			if(kontoId == null) {
 				getValidator().addFailedValidation(new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_FINANZ_EXPORT_ANZAHLUNG_KONTO_NICHT_DEFINIERT, 
@@ -445,4 +466,12 @@ public class FibuExportManagerNachArtikelgruppenErloeskonto extends FibuExportMa
 		
 		return StuecklisteFac.STUECKLISTEART_SETARTIKEL.equals(stuecklisteDto.getStuecklisteartCNr()) ;
 	}
+	
+	@Override
+	public KontoDto getUebersetzeKontoNachLandBzwLaenderart(Integer kontoIId,
+			 Integer belegId) throws EJBExceptionLP {
+		Validator.notNull(kontoIId, "kontoIId");
+		Validator.notNull(belegId, "belegId") ;
+		throw new IllegalArgumentException("should not be called!");
+	}	
 }

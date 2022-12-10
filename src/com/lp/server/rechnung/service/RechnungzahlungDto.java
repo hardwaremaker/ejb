@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.rechnung.service;
@@ -37,9 +37,12 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-public class RechnungzahlungDto implements Serializable {
+import com.lp.server.finanz.service.IBuchungDetailKommentar;
+import com.lp.server.util.logger.LogEventPayload;
+
+public class RechnungzahlungDto implements Serializable, IBuchungDetailKommentar, LogEventPayload {
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
@@ -64,15 +67,16 @@ public class RechnungzahlungDto implements Serializable {
 	private Integer rechnungzahlungIIdGutschrift;
 	private Integer eingangsrechnungIId;
 	private Integer buchungdetailIId;
-	
+	private String cKommentar;
+
 	public Integer getBuchungdetailIId() {
 		return buchungdetailIId;
 	}
-	
+
 	public void setBuchungdetailIId(Integer buchungdetailIId) {
 		this.buchungdetailIId = buchungdetailIId;
 	}
-	
+
 	public Integer getEingangsrechnungIId() {
 		return eingangsrechnungIId;
 	}
@@ -241,6 +245,16 @@ public class RechnungzahlungDto implements Serializable {
 		this.rechnungzahlungIIdGutschrift = rechnungzahlungIIdGutschrift;
 	}
 
+	@Override
+	public void setCKommentar(String cKommentar) {
+		this.cKommentar = cKommentar;
+	}
+
+	@Override
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -361,12 +375,31 @@ public class RechnungzahlungDto implements Serializable {
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}
-	
+
 	public boolean isGutschrift() {
 		return RechnungFac.RECHNUNGART_GUTSCHRIFT.equals(getZahlungsartCNr()) ;
 	}
-	
+
 	public boolean isRechnung() {
-		return RechnungFac.RECHNUNGART_RECHNUNG.equals(getZahlungsartCNr()) ;		
+		return RechnungFac.RECHNUNGART_RECHNUNG.equals(getZahlungsartCNr()) ;
+	}
+
+	public boolean isBank() {
+		return RechnungFac.ZAHLUNGSART_BANK.equals(getZahlungsartCNr()) ;
+	}
+
+	public boolean isBar() {
+		return RechnungFac.ZAHLUNGSART_BAR.equals(getZahlungsartCNr()) ;
+	}
+
+	public boolean isVorauszahlung() {
+		return RechnungFac.ZAHLUNGSART_VORAUSZAHLUNG.equals(getZahlungsartCNr()) ;
+	}
+	
+	@Override
+	public String asString() {
+		return "ARZahlung [" + getDZahldatum() + ", " + getNBetrag().toPlainString() 
+				+ ", USt " + getNBetragUst().toPlainString() + ", rechnungId " + getRechnungIId() 
+				+ ", gutschriftId " + getRechnungIIdGutschrift() + ", (id:" + iId + ")]" ;
 	}
 }

@@ -37,7 +37,14 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+
+import com.lp.server.system.service.HvDtoLogIdCnr;
+
+@NamedQueries( {
+	@NamedQuery(name = BankQuery.ByBIC, query = "SELECT OBJECT(b) FROM Bank b WHERE b.cBic=:bic")})
 
 @Entity
 @Table(name = "PART_BANK")
@@ -56,12 +63,13 @@ public class Bank implements Serializable {
 	@Column(name = "C_BIC")
 	private String cBic;
 
+	
 	private static final long serialVersionUID = 1L;
 
 	public Bank(Integer partnerIId) {
 		setPartnerIId(partnerIId);
 	}
-
+	@HvDtoLogIdCnr(entityClass = Partner.class)
 	public Integer getPartnerIId() {
 		return this.partnerIId;
 	}

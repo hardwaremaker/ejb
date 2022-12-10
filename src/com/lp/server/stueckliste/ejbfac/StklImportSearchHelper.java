@@ -33,12 +33,11 @@
 package com.lp.server.stueckliste.ejbfac;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.lp.server.stueckliste.service.FertigungsStklImportSpezifikation;
+import org.apache.commons.lang.StringUtils;
+
 import com.lp.server.system.service.TheClientDto;
 import com.lp.service.StklImportSpezifikation;
 
@@ -47,78 +46,52 @@ import com.lp.service.StklImportSpezifikation;
  * St&uuml;cklistenimports. Sie speichert die ben&ouml;tigten Variablen und stellt
  * Methoden f&uuml;r die Erstellung der verschiedenen Datenbank-Queries zur Verf&uuml;gung.
  * Dabei bedient sie sich bei den verschiedenen ImportColumnQueryBuilder.
- * In Unterklassen k&ouml;nnen je nach Art der St&uuml;ckliste die Bedingungen f&uuml;r die
- * Suche angepasst werden werden.
+ * In Unterklassen werden je nach Art der St&uuml;ckliste die Bedingungen f&uuml;r die
+ * Suche angepasst.
  * 
  * @author andi
  *
  */
-public class StklImportSearchHelper {
+public abstract class StklImportSearchHelper {
 	
 	private Map<String, String> values;
 	private StklImportSpezifikation spez;
 	private String basicFrom;
 	private String basicWhere;
 	private TheClientDto theClientDto;
-	private Map<String, IImportColumnQueryBuilder> importColumns;
-	private Integer kundeIId;
+	protected Map<String, IImportColumnQueryBuilder> importColumns;
 	
-	private List<String> columnPriorityOrder = Arrays.asList(
-			StklImportSpezifikation.KUNDENARTIKELNUMMER,
-			StklImportSpezifikation.HERSTELLERARTIKELNUMMER,
-			StklImportSpezifikation.ARTIKELNUMMER,
-			StklImportSpezifikation.HERSTELLERBEZ,
-			StklImportSpezifikation.SI_WERT,
-			StklImportSpezifikation.BEZEICHNUNG,
-			StklImportSpezifikation.BEZEICHNUNG1,
-			StklImportSpezifikation.BEZEICHNUNG2,
-			StklImportSpezifikation.BEZEICHNUNG3,
-			StklImportSpezifikation.BAUFORM,
-			StklImportSpezifikation.KOMMENTAR);
+	protected List<String> columnPriorityOrder;
 
-	public StklImportSearchHelper(Map<String, String> values,
+	protected StklImportSearchHelper(Map<String, String> values,
 			StklImportSpezifikation spez, String queryFrom,
-			String queryWhere, TheClientDto theClientDto, Integer kundeIId) {
+			String queryWhere, TheClientDto theClientDto) {
 
 		this.values = values;
 		this.spez = spez;
 		this.basicFrom = queryFrom;
 		this.basicWhere = queryWhere;
 		this.theClientDto = theClientDto;
-		this.kundeIId = kundeIId;
 		initImportColumnsMap();
+		initColumnPriorityOrder();
 	}
 	
-	public StklImportSearchHelper(StklImportSpezifikation spez, 
-			TheClientDto theClientDto, Integer kundeIId) {
-		this(null, spez, null, null, theClientDto, kundeIId);
+	protected StklImportSearchHelper(StklImportSpezifikation spez, 
+			TheClientDto theClientDto) {
+		this(null, spez, null, null, theClientDto);
 	}
 	
 	/**
-	 * Mappt die verschiedenen QueryBuilder zur entsprechenden ImportColumn
+	 * Initialsiert die columnPriorityOrder, die die Abfolge der Artikelsuche
+	 * des intelligenten Stklimports beschreibt.
 	 */
-	private void initImportColumnsMap() {
-		importColumns = new HashMap<String, IImportColumnQueryBuilder>();
-		
-		importColumns.put(FertigungsStklImportSpezifikation.KUNDENARTIKELNUMMER,
-				new ImportColumnQueryBuilderKndArtikelNr());
-		importColumns.put(StklImportSpezifikation.HERSTELLERARTIKELNUMMER,
-				new ImportColumnQueryBuilderHerstellernummer());
-		importColumns.put(StklImportSpezifikation.ARTIKELNUMMER,
-				new ImportColumnQueryBuilderArtikelnr());
-		importColumns.put(StklImportSpezifikation.HERSTELLERBEZ,
-				new ImportColumnQueryBuilderHerstellerBez());
-		importColumns.put(StklImportSpezifikation.SI_WERT,
-				new ImportColumnQueryBuilderSIWert());
-		importColumns.put(StklImportSpezifikation.BEZEICHNUNG,
-				new ImportColumnQueryBuilderBezeichnung());
-		importColumns.put(StklImportSpezifikation.BEZEICHNUNG1,
-				new ImportColumnQueryBuilderBezeichnung());
-		importColumns.put(StklImportSpezifikation.BEZEICHNUNG2,
-				new ImportColumnQueryBuilderBezeichnung());
-		importColumns.put(StklImportSpezifikation.BEZEICHNUNG3,
-				new ImportColumnQueryBuilderBezeichnung());	
-	}
+	protected abstract void initColumnPriorityOrder();
+	
+	/**
+	 * Initialisiert die importColumns Map, mappt dabei die verschiedenen 
+	 * QueryBuilder zur entsprechenden ImportColumn Bezeichnung.
+	 */
+	protected abstract void initImportColumnsMap();
 
 	public void setValues(Map<String, String> values) {
 		this.values = values;
@@ -190,12 +163,6 @@ public class StklImportSearchHelper {
 		wheres.add(getBasicQueryWhere());
 		wheres.add(where);
 		
-		if(type.equals(StklImportSpezifikation.KUNDENARTIKELNUMMER) && kundeIId != null) {
-			String whereKundeNr = ((ImportColumnQueryBuilderKndArtikelNr)getImportColumns()
-					.get(type)).buildWhereKundeIidQuery(kundeIId);
-			wheres.add(whereKundeNr);
-		}
-
 		return wheres;
 	}
 
@@ -219,5 +186,45 @@ public class StklImportSearchHelper {
 		}
 		
 		return froms;
+	}
+	
+	public boolean canBuildQuery(String type) {
+		String value = getValue(type);
+		if (value == null || value.isEmpty())
+			return false;
+		
+		if (getWhereQuery(type) == null)
+			return false;
+		
+		return true;
+	}
+	
+	public String getValue(String type) {
+		return getValues().get(type);
+	}
+	
+	public String buildQuery(String type) {
+		List<String> froms = getFromQuery(type);
+		List<String> wheres = getWhereQuery(type);
+		return ImportQueryBuilder.buildQuery(froms, wheres);
+	}
+	
+	public boolean hasDeeperColumnQuery(String type) {
+		List<String> deeperColumnTypes = getImportColumns().get(type).getDeeperColumnQueryBuilders();
+		if (deeperColumnTypes == null || deeperColumnTypes.isEmpty()) {
+			return false;
+		}
+		return getValue(deeperColumnTypes.get(0)) != null;
+	}
+	
+	public String buildDeeperColumnQuery(String type, List<Integer> artikelIds) {
+		List<String> deeperColumnTypes = getImportColumns().get(type).getDeeperColumnQueryBuilders();
+		String deeperColType = deeperColumnTypes.get(0);
+		
+		List<String> froms = getFromQuery(deeperColType);
+		List<String> wheres = getWhereQuery(deeperColType);
+		wheres.add(IImportColumnQueryBuilder.Artikel + ".i_id IN (" + StringUtils.join(artikelIds.iterator(), ",") + ")");
+		
+		return ImportQueryBuilder.buildQuery(froms, wheres);
 	}
 }

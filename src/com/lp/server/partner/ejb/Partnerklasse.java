@@ -41,10 +41,13 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICNr;
+import com.lp.server.util.IIId;
+
 @NamedQueries( { @NamedQuery(name = "PartnerklassefindByCNr", query = "SELECT OBJECT(c) FROM Partnerklasse c WHERE c.cNr = ?1") })
 @Entity
 @Table(name = "PART_PARTNERKLASSE")
-public class Partnerklasse implements Serializable {
+public class Partnerklasse implements Serializable,IIId, ICNr  {
 	public Partnerklasse() {
 		// TODO Auto-generated constructor stub
 	}

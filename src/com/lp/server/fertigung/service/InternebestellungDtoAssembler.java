@@ -65,6 +65,11 @@ public class InternebestellungDtoAssembler {
 					.getIBelegpositionIId());
 			internebestellungDto.setTProduktionsbeginn(internebestellung
 					.getTProduktionsbeginn());
+			internebestellungDto.setPartnerIIdStandort(internebestellung
+					.getPartnerIIdStandort());
+			internebestellungDto.setAuftragIIdKopfauftrag(internebestellung.getAuftragIIdKopfauftrag());
+			internebestellungDto.setXAusloeser(internebestellung.getXAusloeser());
+			internebestellungDto.setFLagermindest(internebestellung.getFLagermindest());
 		}
 		return internebestellungDto;
 	}

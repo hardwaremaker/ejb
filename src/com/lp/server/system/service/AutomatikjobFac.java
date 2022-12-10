@@ -35,6 +35,7 @@ package com.lp.server.system.service;
 
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.util.List;
 
 import javax.ejb.Remote;
 
@@ -78,9 +79,23 @@ public interface AutomatikjobFac {
 	public AutomatikjobDto[] automatikjobFindBydNextperform(
 			Timestamp dNextPerform) throws RemoteException;
 
-	public AutomatikjobDto automatikjobFindByCName(String cName)
-			throws RemoteException;
-
 	public AutomatikjobDto automatikjobFindByCMandantCNr(String cMandantCNr)
 			throws RemoteException;
+
+	public AutomatikjobDto[] automatikjobFindAllByCMandantCNr(String cMandantCNr)
+			throws RemoteException;
+
+	void vertauscheAutomatikjobs(Integer id1, Integer id2);
+
+	AutomatikjobDto automatikjobFindByCJobtypeMandantCnr(String cJobtype, String mandantCnr);
+	
+	/**
+	 * PJ22120 Alle im Mandanten exisitierenden Automatikjobs werden bei anderen
+	 * Mandanten nachgetragen, wenn sie noch nicht exisiteren
+	 * 
+	 * @return Eine Liste von Exceptions, die beim synchronisieren augetreten ist.
+	 *         Pro Mandant, der aktualisiert wird kann maximal eine Exception
+	 *         auftreten
+	 */
+	 AutomatikjobSyncResultDto synchronisiereAutomatikjobsZwischenMandanten(String cMandantCNr, TheClientDto theClientDto);
 }

@@ -44,7 +44,8 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 	@NamedQuery(name = "PaternosterAll", query = "SELECT OBJECT (o) FROM Paternoster o ORDER BY o.cNr"),
-	@NamedQuery(name = "PaternosterfindByCPaternostertyp", query = "SELECT OBJECT (o) FROM Paternoster o WHERE o.cPaternostertyp=?1")})
+	@NamedQuery(name = "PaternosterfindByCPaternostertyp", query = "SELECT OBJECT (o) FROM Paternoster o WHERE o.cPaternostertyp=?1"),
+	@NamedQuery(name = PaternosterQuery.ByLagerIIds, query = "SELECT OBJECT(o) FROM Paternoster o WHERE o.lagerIId IN (?1)")})
 
 @Entity
 @Table(name = "WW_PATERNOSTER")

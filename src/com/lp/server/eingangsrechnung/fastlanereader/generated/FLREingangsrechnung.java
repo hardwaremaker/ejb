@@ -1,42 +1,12 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.eingangsrechnung.fastlanereader.generated;
 
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellung;
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -101,6 +71,12 @@ public class FLREingangsrechnung implements Serializable {
     private Date t_gedruckt;
 
     /** nullable persistent field */
+    private Integer personal_i_id_geprueft;
+
+    /** nullable persistent field */
+    private Date t_geprueft;
+
+    /** nullable persistent field */
     private Date t_wiederholenderledigt;
 
     /** nullable persistent field */
@@ -110,10 +86,22 @@ public class FLREingangsrechnung implements Serializable {
     private Integer personal_i_id_wiederholenderledigt;
 
     /** nullable persistent field */
+    private Integer konto_i_id;
+
+    /** nullable persistent field */
+    private Integer kostenstelle_i_id;
+
+    /** nullable persistent field */
     private Short b_igerwerb;
 
     /** nullable persistent field */
-    private Short b_reversecharge;
+    private Short b_mitpositionen;
+
+    /** nullable persistent field */
+    private Integer reversechargeartId;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonal_geprueft;
 
     /** nullable persistent field */
     private FLRBestellung flrbestellung;
@@ -127,8 +115,11 @@ public class FLREingangsrechnung implements Serializable {
     /** nullable persistent field */
     private com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungtextsuche flreingangsrechnungtextsuche;
 
+    /** persistent field */
+    private Set auftragszuordnungset;
+
     /** full constructor */
-    public FLREingangsrechnung(String eingangsrechnungart_c_nr, String c_nr, String mandant_c_nr, Integer i_geschaeftsjahr, Integer eingangsrechnung_i_id_nachfolger, Date t_belegdatum, Date t_freigabedatum, BigDecimal n_betragfw, BigDecimal n_betrag, BigDecimal n_ustbetragfw, BigDecimal n_ustbetrag, String status_c_nr, String waehrung_c_nr, String auftragwiederholungsintervall_c_nr, String c_text, String c_lieferantenrechnungsnummer, Date t_fibuuebernahme, Date t_gedruckt, Date t_wiederholenderledigt, Date t_zollimportpapier, Integer personal_i_id_wiederholenderledigt, Short b_igerwerb, Short b_reversecharge, FLRBestellung flrbestellung, FLRLieferant flrlieferant, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung flreingangsrechnung_nachfolger, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungtextsuche flreingangsrechnungtextsuche) {
+    public FLREingangsrechnung(String eingangsrechnungart_c_nr, String c_nr, String mandant_c_nr, Integer i_geschaeftsjahr, Integer eingangsrechnung_i_id_nachfolger, Date t_belegdatum, Date t_freigabedatum, BigDecimal n_betragfw, BigDecimal n_betrag, BigDecimal n_ustbetragfw, BigDecimal n_ustbetrag, String status_c_nr, String waehrung_c_nr, String auftragwiederholungsintervall_c_nr, String c_text, String c_lieferantenrechnungsnummer, Date t_fibuuebernahme, Date t_gedruckt, Integer personal_i_id_geprueft, Date t_geprueft, Date t_wiederholenderledigt, Date t_zollimportpapier, Integer personal_i_id_wiederholenderledigt, Integer konto_i_id, Integer kostenstelle_i_id, Short b_igerwerb, Short b_mitpositionen, Integer reversechargeartId, FLRPersonal flrpersonal_geprueft, FLRBestellung flrbestellung, FLRLieferant flrlieferant, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung flreingangsrechnung_nachfolger, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungtextsuche flreingangsrechnungtextsuche, Set auftragszuordnungset) {
         this.eingangsrechnungart_c_nr = eingangsrechnungart_c_nr;
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
@@ -147,19 +138,31 @@ public class FLREingangsrechnung implements Serializable {
         this.c_lieferantenrechnungsnummer = c_lieferantenrechnungsnummer;
         this.t_fibuuebernahme = t_fibuuebernahme;
         this.t_gedruckt = t_gedruckt;
+        this.personal_i_id_geprueft = personal_i_id_geprueft;
+        this.t_geprueft = t_geprueft;
         this.t_wiederholenderledigt = t_wiederholenderledigt;
         this.t_zollimportpapier = t_zollimportpapier;
         this.personal_i_id_wiederholenderledigt = personal_i_id_wiederholenderledigt;
+        this.konto_i_id = konto_i_id;
+        this.kostenstelle_i_id = kostenstelle_i_id;
         this.b_igerwerb = b_igerwerb;
-        this.b_reversecharge = b_reversecharge;
+        this.b_mitpositionen = b_mitpositionen;
+        this.reversechargeartId = reversechargeartId;
+        this.flrpersonal_geprueft = flrpersonal_geprueft;
         this.flrbestellung = flrbestellung;
         this.flrlieferant = flrlieferant;
         this.flreingangsrechnung_nachfolger = flreingangsrechnung_nachfolger;
         this.flreingangsrechnungtextsuche = flreingangsrechnungtextsuche;
+        this.auftragszuordnungset = auftragszuordnungset;
     }
 
     /** default constructor */
     public FLREingangsrechnung() {
+    }
+
+    /** minimal constructor */
+    public FLREingangsrechnung(Set auftragszuordnungset) {
+        this.auftragszuordnungset = auftragszuordnungset;
     }
 
     public Integer getI_id() {
@@ -314,6 +317,22 @@ public class FLREingangsrechnung implements Serializable {
         this.t_gedruckt = t_gedruckt;
     }
 
+    public Integer getPersonal_i_id_geprueft() {
+        return this.personal_i_id_geprueft;
+    }
+
+    public void setPersonal_i_id_geprueft(Integer personal_i_id_geprueft) {
+        this.personal_i_id_geprueft = personal_i_id_geprueft;
+    }
+
+    public Date getT_geprueft() {
+        return this.t_geprueft;
+    }
+
+    public void setT_geprueft(Date t_geprueft) {
+        this.t_geprueft = t_geprueft;
+    }
+
     public Date getT_wiederholenderledigt() {
         return this.t_wiederholenderledigt;
     }
@@ -338,6 +357,22 @@ public class FLREingangsrechnung implements Serializable {
         this.personal_i_id_wiederholenderledigt = personal_i_id_wiederholenderledigt;
     }
 
+    public Integer getKonto_i_id() {
+        return this.konto_i_id;
+    }
+
+    public void setKonto_i_id(Integer konto_i_id) {
+        this.konto_i_id = konto_i_id;
+    }
+
+    public Integer getKostenstelle_i_id() {
+        return this.kostenstelle_i_id;
+    }
+
+    public void setKostenstelle_i_id(Integer kostenstelle_i_id) {
+        this.kostenstelle_i_id = kostenstelle_i_id;
+    }
+
     public Short getB_igerwerb() {
         return this.b_igerwerb;
     }
@@ -346,12 +381,28 @@ public class FLREingangsrechnung implements Serializable {
         this.b_igerwerb = b_igerwerb;
     }
 
-    public Short getB_reversecharge() {
-        return this.b_reversecharge;
+    public Short getB_mitpositionen() {
+        return this.b_mitpositionen;
     }
 
-    public void setB_reversecharge(Short b_reversecharge) {
-        this.b_reversecharge = b_reversecharge;
+    public void setB_mitpositionen(Short b_mitpositionen) {
+        this.b_mitpositionen = b_mitpositionen;
+    }
+
+    public Integer getReversechargeartId() {
+        return this.reversechargeartId;
+    }
+
+    public void setReversechargeartId(Integer reversechargeartId) {
+        this.reversechargeartId = reversechargeartId;
+    }
+
+    public FLRPersonal getFlrpersonal_geprueft() {
+        return this.flrpersonal_geprueft;
+    }
+
+    public void setFlrpersonal_geprueft(FLRPersonal flrpersonal_geprueft) {
+        this.flrpersonal_geprueft = flrpersonal_geprueft;
     }
 
     public FLRBestellung getFlrbestellung() {
@@ -384,6 +435,14 @@ public class FLREingangsrechnung implements Serializable {
 
     public void setFlreingangsrechnungtextsuche(com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungtextsuche flreingangsrechnungtextsuche) {
         this.flreingangsrechnungtextsuche = flreingangsrechnungtextsuche;
+    }
+
+    public Set getAuftragszuordnungset() {
+        return this.auftragszuordnungset;
+    }
+
+    public void setAuftragszuordnungset(Set auftragszuordnungset) {
+        this.auftragszuordnungset = auftragszuordnungset;
     }
 
     public String toString() {

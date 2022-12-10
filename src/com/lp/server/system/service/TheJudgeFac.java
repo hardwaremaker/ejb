@@ -85,4 +85,13 @@ public interface TheJudgeFac {
 	public boolean hatRecht(String rechtCNr, TheClientDto theClientDto);
 	public Integer getSystemrolleIId(TheClientDto theClientDto);
 	
+	/**
+	 * Hat Anwender entweder Recht1 oder Recht2?
+	 * 
+	 * @param recht1Cnr
+	 * @param recht2Cnr
+	 * @param theClientDto
+	 * @return true wenn der Anwender mindestens eines der beiden Rechte hat
+	 */
+	public boolean hatRechtOder(String recht1Cnr, String recht2Cnr, TheClientDto theClientDto);	
 }

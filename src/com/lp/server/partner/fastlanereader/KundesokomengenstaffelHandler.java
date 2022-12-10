@@ -154,7 +154,12 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 					nBerechneterPreis = new BigDecimal(0);
 
 					if (mengenstaffel.getN_fixpreis() != null) {
-						nBerechneterPreis = mengenstaffel.getN_fixpreis();
+						nBerechneterPreis = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+								mengenstaffel.getN_fixpreis(),
+								mengenstaffel.getFlrkundesoko().getFlrkunde().getWaehrung_c_nr(),
+								theClientDto.getSMandantenwaehrung(), new java.sql.Date(System.currentTimeMillis()),
+								theClientDto);
+						
 					} else {
 						// WH 21.06.06 Es gilt die VK-Basis, die zu Beginn der
 						// Mengenstaffel gueltig ist
@@ -189,7 +194,8 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 
 						VerkaufspreisDto vkpfDto = getVkPreisfindungFac()
 								.berechneVerkaufspreis(nPreisbasis,
-										mengenstaffel.getF_rabattsatz());
+										mengenstaffel.getF_rabattsatz(),
+										theClientDto);
 
 						if (vkpfDto != null) {
 							nBerechneterPreis = vkpfDto.nettopreis;
@@ -375,15 +381,13 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 				throwEJBExceptionLPRespectOld(e);
 			}
 			setTableInfo(new TableInfo(
-					new Class[] {
-							Integer.class,
-							 String.class,
-							String.class, BigDecimal.class, BigDecimal.class,
-							Double.class, BigDecimal.class,
-							java.sql.Date.class, java.sql.Date.class },
+					new Class[] { Integer.class, String.class, String.class,
+							BigDecimal.class, BigDecimal.class, Double.class,
+							BigDecimal.class, java.sql.Date.class,
+							java.sql.Date.class },
 					new String[] {
 							"i_id",
-							 "",
+							"",
 							getTextRespectUISpr("lp.artikel", mandantCNr, locUI),
 							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
 							getTextRespectUISpr("lp.fixpreis", mandantCNr,
@@ -391,14 +395,13 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.rabatt", mandantCNr, locUI),
 							getTextRespectUISpr(
 									"bes.nettogesamtpreisminusrabatte",
-									mandantCNr, locUI),
+									mandantCNr, locUI)+ " ["
+									+ theClientDto.getSMandantenwaehrung() + "]",
 							getTextRespectUISpr("lp.gueltig_ab", mandantCNr,
 									locUI),
 							getTextRespectUISpr("lp.gueltig_bis", mandantCNr,
 									locUI) },
-					new int[] {
-							-1,
-							QueryParameters.FLR_BREITE_XXS,
+					new int[] { -1, QueryParameters.FLR_BREITE_XXS,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -408,7 +411,7 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 					new String[] {
 							"i_id",
-							 Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR,
 							"flrkundesoko.flrartikel.c_nr",
 							KundesokoFac.FLR_KUNDESOKOMENGESTAFFEL_N_MENGE,
 							KundesokoFac.FLR_KUNDESOKOMENGESTAFFEL_N_FIXPREIS,
@@ -437,7 +440,7 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-//				boolean idFound = false;
+				// boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

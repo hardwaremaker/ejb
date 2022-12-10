@@ -44,8 +44,6 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 @NamedQueries( {
-		@NamedQuery(name = "ArtikelreservierungfindAll", query = "SELECT OBJECT(o) FROM Artikelreservierung o"),
-		@NamedQuery(name = "ArtikelreservierungfindByArtikelIId", query = "SELECT OBJECT(C) FROM Artikelreservierung c WHERE c.artikelIId = ?1"),
 		@NamedQuery(name = "ArtikelreservierungfindByBelegartCNrIBelegartpositionid", query = "SELECT OBJECT(C) FROM Artikelreservierung c WHERE c.cBelegartnr = ?1 AND c.iBelegartpositionid = ?2") })
 @Entity
 @Table(name = "WW_ARTIKELRESERVIERUNG")
@@ -89,19 +87,6 @@ public class Artikelreservierung implements Serializable {
 	    setNMenge(new BigDecimal(0));
 	}
 	
-	public Artikelreservierung(Integer id,
-			String belegartnr,
-			Integer belegartpositionid, 
-			Integer artikelIId,
-			Timestamp liefertermin, 
-			 BigDecimal menge) {
-		setIBelegartpositionid(belegartpositionid);
-		setArtikelIId(artikelIId);
-		setTLiefertermin(liefertermin);
-		setCBelegartnr(belegartnr);
-		setIId(id);
-	    setNMenge(menge);
-	}
 
 	public Integer getIId() {
 		return this.iId;

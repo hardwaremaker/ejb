@@ -102,8 +102,19 @@ public class ExportDatevField {
 		return index;
 	}
 	
+//	public String formatValue() {
+//		if(value == null) return isText ? "\"\"" : "";
+//		return isText ? "\"" + value + "\"" : value;
+//	}
+	
+	/**
+	 * Als Text mit umschlie&szlig;enden Anf&uuml;hrungszeichen oder Zahl ausgeben.
+	 * Enth&auml;lt der Text das Zeichen ", wird es verdoppelt 
+	 * (Datev Format-Leitfaden, 2012-11-16)
+	 * @return den formatierten Inhalt
+	 */
 	public String formatValue() {
 		if(value == null) return isText ? "\"\"" : "";
-		return isText ? "\"" + value + "\"" : value;
+		return isText ? "\"" + value.replaceAll("\"", "\"\"") + "\"" : value;
 	}
 }

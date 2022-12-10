@@ -42,6 +42,9 @@ public class InvenurlisteImportDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private String cArtikelnummer;
 	private String cInventurmenge;
+	private String cSerienChargennummer;
+	private Integer zeile;
+	
 	public String getCArtikelnummer() {
 		return cArtikelnummer;
 	}
@@ -55,4 +58,16 @@ public class InvenurlisteImportDto implements Serializable {
 		this.cInventurmenge = cInventurmenge;
 	}
 
+	public String getCSerienChargennummer() {
+		return cSerienChargennummer;
+	}
+	public void setCSerienChargennummer(String cSerienChargennummer) {
+		this.cSerienChargennummer = cSerienChargennummer;
+	}
+	public Integer getZeile() {
+		return zeile;
+	}
+	public void setZeile(Integer zeile) {
+		this.zeile = zeile;
+	}
 }

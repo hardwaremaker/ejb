@@ -35,6 +35,8 @@ package com.lp.server.fertigung.fastlanereader;
 import java.awt.Color;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -46,11 +48,19 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelsperren;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelfehlmengeDto;
+import com.lp.server.artikel.service.LagerFac;
+import com.lp.server.artikel.service.SperrenIcon;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial;
 import com.lp.server.fertigung.service.FertigungFac;
+import com.lp.server.fertigung.service.LossollmaterialDto;
+import com.lp.server.lieferschein.service.LieferscheinFac;
+import com.lp.server.stueckliste.service.StuecklistepositionDto;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
@@ -89,9 +99,43 @@ public class LossollmaterialHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	private static final String FLR_LOSMAT = "flrlossollmaterial.";
-	private static final String FLR_LOSMAT_FROM_CLAUSE = " from FLRLossollmaterial flrlossollmaterial ";
+	private static final String FLR_LOSMAT_FROM_CLAUSE = " from FLRLossollmaterial flrlossollmaterial LEFT OUTER JOIN flrlossollmaterial.flrartikelliste.artikelsprset AS aspr ";
 
 	private boolean bFehlmengeStattPreis = false;
+
+	private boolean bIstpreisAnzeigen = false;
+
+	private boolean bPositionstextAusStklAnzeigen = false;
+
+	private boolean bLagerinfo = false;
+	private int iLagerinfoLagerstandKnapp = 10;
+
+	private String getEinrueckung(FLRLossollmaterial sm, int iEbene) {
+
+		iEbene = iEbene + 1;
+
+		if (iEbene < 10) {
+			if (sm.getLossollmaterial_i_id_original() != null) {
+
+				return getEinrueckung(sm.getFlrlossollmaterial_original(), iEbene) + "  ";
+			} else {
+				return "";
+			}
+		} else {
+			return "";
+		}
+
+	}
+
+	private String getEinrueckung(FLRLossollmaterial sm) {
+		String s = "";
+
+		if (sm.getLossollmaterial_i_id_original() != null) {
+			return getEinrueckung(sm.getFlrlossollmaterial_original(), 0) + " ";
+		}
+
+		return s;
+	}
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -103,7 +147,12 @@ public class LossollmaterialHandler extends UseCaseHandler {
 			int endIndex = startIndex + PAGE_SIZE - 1;
 
 			session = factory.openSession();
-			String queryString = "SELECT flrlossollmaterial,(SELECT distinct s.artikel_i_id FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrlossollmaterial.flrartikel.i_id) as sperren from FLRLossollmaterial flrlossollmaterial "
+			session = setFilter(session);
+			String queryString = "SELECT flrlossollmaterial,(SELECT s FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrlossollmaterial.flrartikel.i_id AND s.i_sort=1) as sperren, (SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=flrlossollmaterial.flrartikel.i_id AND artikellager.flrlager.mandant_c_nr='"
+					+ theClientDto.getMandant()
+					+ "'  AND artikellager.flrlager.b_konsignationslager=0 AND artikellager.flrlager.lagerart_c_nr NOT IN('"
+					+ LagerFac.LAGERART_WERTGUTSCHRIFT
+					+ "')), (SELECT sum(fm.n_menge) FROM FLRFehlmenge AS fm WHERE fm.artikel_i_id=flrlossollmaterial.flrartikel.i_id), (SELECT sum(ar.n_menge) FROM FLRArtikelreservierung AS ar WHERE ar.flrartikel.i_id=flrlossollmaterial.flrartikel.i_id), (SELECT sum(bs.n_menge) FROM FLRArtikelbestellt AS bs WHERE bs.flrartikel.i_id=flrlossollmaterial.flrartikel.i_id)   from FLRLossollmaterial flrlossollmaterial  LEFT OUTER JOIN flrlossollmaterial.flrartikelliste.artikelsprset AS aspr  "
 
 					+ this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
@@ -114,9 +163,83 @@ public class LossollmaterialHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
+
+			HashMap<Integer, String> positionstexteAusStueckliste = null;
+
 			while (resultListIterator.hasNext()) {
 				Object[] o = (Object[]) resultListIterator.next();
 				FLRLossollmaterial losmat = (FLRLossollmaterial) o[0];
+
+				if (positionstexteAusStueckliste == null) {
+					positionstexteAusStueckliste = new HashMap<Integer, String>();
+
+					if (bPositionstextAusStklAnzeigen) {
+						if (losmat.getFlrlos().getStueckliste_i_id() != null) {
+							StuecklistepositionDto[] stklPosDtos = getStuecklisteFac()
+									.stuecklistepositionFindByStuecklisteIId(losmat.getFlrlos().getStueckliste_i_id(),
+											theClientDto);
+
+							ArrayList<StuecklistepositionDto> alPositionen = new ArrayList<StuecklistepositionDto>();
+
+							for (int j = 0; j < stklPosDtos.length; j++) {
+								alPositionen.add(stklPosDtos[j]);
+
+							}
+
+							LossollmaterialDto[] sollmatDtos = getFertigungFac()
+									.lossollmaterialFindByLosIIdOrderByISort(losmat.getFlrlos().getI_id());
+
+							for (int i = 0; i < sollmatDtos.length; i++) {
+
+								// SP5058 Wenn Artikel und Montageart genau einmal vorhanden
+								// sind, dann verwenden wird den Eintrag
+
+								LossollmaterialDto sollmatDto = sollmatDtos[i];
+
+								StuecklistepositionDto stuecklistepositionDto_Zueghoerig = null;
+								for (int u = 0; u < alPositionen.size(); u++) {
+
+									if (sollmatDto.getArtikelIId().equals(alPositionen.get(u).getArtikelIId())
+											&& sollmatDto.getMontageartIId()
+													.equals(alPositionen.get(u).getMontageartIId())) {
+
+										if (stuecklistepositionDto_Zueghoerig == null) {
+
+											stuecklistepositionDto_Zueghoerig = alPositionen.get(u);
+										} else {
+											stuecklistepositionDto_Zueghoerig = null;
+											break;
+										}
+
+									}
+
+								}
+
+								if (stuecklistepositionDto_Zueghoerig == null) {
+									// SP5709
+									BigDecimal sollsatzmenge = sollmatDto.getNMenge().divide(
+											losmat.getFlrlos().getN_losgroesse(), 3, BigDecimal.ROUND_HALF_EVEN);
+
+									com.lp.server.fertigung.service.StklPosDtoSearchResult resultS = getFertigungReportFac()
+											.findStklPositionByLossollmaterial(alPositionen,
+													new com.lp.server.fertigung.service.StklPosDtoSearchParams(
+															sollmatDto.getArtikelIId(), sollmatDto.getMontageartIId(),
+															sollsatzmenge, sollmatDto.getNMengeStklPos()),
+													theClientDto);
+									stuecklistepositionDto_Zueghoerig = resultS.getStklPosDto();
+								}
+								if (stuecklistepositionDto_Zueghoerig != null) {
+									String positionAusStueckliste = stuecklistepositionDto_Zueghoerig.getCPosition();
+
+									positionstexteAusStueckliste.put(sollmatDto.getIId(), positionAusStueckliste);
+
+									alPositionen.remove(stuecklistepositionDto_Zueghoerig);
+								}
+							}
+
+						}
+					}
+				}
 
 				rows[row][col++] = losmat.getI_id();
 				if (Helper.short2boolean(losmat.getB_nachtraeglich())) {
@@ -124,11 +247,14 @@ public class LossollmaterialHandler extends UseCaseHandler {
 				} else {
 					rows[row][col++] = "S";
 				}
-				rows[row][col++] = losmat.getFlrartikel().getC_nr();
 
-				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-						losmat.getFlrartikel().getI_id(), theClientDto);
+				rows[row][col++] = getEinrueckung(losmat) + losmat.getFlrartikel().getC_nr();
 
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(losmat.getFlrartikel().getI_id(),
+						theClientDto);
+				if (bReferenznummerInPositionen) {
+					rows[row][col++] = aDto.getCReferenznr();
+				}
 				if (aDto.getArtikelsprDto() != null) {
 					rows[row][col++] = aDto.getArtikelsprDto().getCBez();
 					rows[row][col++] = aDto.getArtikelsprDto().getCZbez();
@@ -137,11 +263,22 @@ public class LossollmaterialHandler extends UseCaseHandler {
 					rows[row][col++] = null;
 				}
 
+				if (bPositionstextAusStklAnzeigen) {
+					rows[row][col++] = positionstexteAusStueckliste.get(losmat.getI_id());
+				}
+
 				rows[row][col++] = losmat.getN_menge();
+				
+				
+				if (losmat.getFlrartikel() != null && losmat.getFlrartikel().getEinheit_c_nr()!=null) {
+					rows[row][col++] = losmat.getFlrartikel().getEinheit_c_nr().trim();
+				}else {
+					rows[row][col++] = null;
+				}
+				
 				// erledigte Menge
 				BigDecimal bdAusgegeben = new BigDecimal(0);
-				for (Iterator<?> iter = losmat.getIstmaterialset().iterator(); iter
-						.hasNext();) {
+				for (Iterator<?> iter = losmat.getIstmaterialset().iterator(); iter.hasNext();) {
 					FLRLosistmaterial item = (FLRLosistmaterial) iter.next();
 					if (Helper.short2boolean(item.getB_abgang()) == true) {
 						bdAusgegeben = bdAusgegeben.add(item.getN_menge());
@@ -152,17 +289,51 @@ public class LossollmaterialHandler extends UseCaseHandler {
 				rows[row][col++] = bdAusgegeben;
 
 				ArtikelfehlmengeDto artikelfehlmengeDto = getFehlmengeFac()
-						.artikelfehlmengeFindByBelegartCNrBelegartPositionIIdOhneExc(
-								LocaleFac.BELEGART_LOS, losmat.getI_id());
+						.artikelfehlmengeFindByBelegartCNrBelegartPositionIIdOhneExc(LocaleFac.BELEGART_LOS,
+								losmat.getI_id());
+
+				boolean bLagerstandKnapp = false;
+				if (bLagerinfo) {
+
+					BigDecimal lagerstand = (BigDecimal) o[2];
+					if (lagerstand == null) {
+						lagerstand = BigDecimal.ZERO;
+					}
+
+					BigDecimal fehlmenge = (BigDecimal) o[3];
+					if (fehlmenge == null) {
+						fehlmenge = BigDecimal.ZERO;
+					}
+
+					BigDecimal reservierungen = (BigDecimal) o[4];
+					if (reservierungen == null) {
+						reservierungen = BigDecimal.ZERO;
+					}
+
+					BigDecimal bestellt = (BigDecimal) o[5];
+					if (bestellt == null) {
+						bestellt = BigDecimal.ZERO;
+					}
+
+					rows[row][col++] = lagerstand;
+					rows[row][col++] = lagerstand.subtract(fehlmenge.add(reservierungen));
+					rows[row][col++] = bestellt;
+
+					if (Helper.short2boolean(aDto.getBLagerbewirtschaftet()) && artikelfehlmengeDto != null
+							&& lagerstand.doubleValue() < (artikelfehlmengeDto.getNMenge().doubleValue()
+									+ iLagerinfoLagerstandKnapp)) {
+
+						bLagerstandKnapp = true;
+					}
+
+				}
 
 				if (bFehlmengeStattPreis) {
 
-					if (Helper.short2boolean(losmat.getB_nachtraeglich())
-							&& artikelfehlmengeDto == null) {
+					if (Helper.short2boolean(losmat.getB_nachtraeglich()) && artikelfehlmengeDto == null) {
 						rows[row][col++] = null;
 					} else {
-						rows[row][col++] = losmat.getN_menge().subtract(
-								bdAusgegeben);
+						rows[row][col++] = losmat.getN_menge().subtract(bdAusgegeben);
 					}
 
 				} else {
@@ -170,28 +341,46 @@ public class LossollmaterialHandler extends UseCaseHandler {
 					rows[row][col++] = losmat.getN_sollpreis();
 				}
 
+				if (bIstpreisAnzeigen) {
+					rows[row][col++] = getFertigungFac().getAusgegebeneMengePreis(losmat.getI_id(), null, theClientDto);
+				}
+
 				if (artikelfehlmengeDto != null) {
 					rows[row][col++] = "F";
 				} else {
 					rows[row][col++] = "";
 				}
-				if (o[1] != null) {
-					rows[row][col++] = LocaleFac.STATUS_GESPERRT;
+
+				FLRArtikelsperren as = (FLRArtikelsperren) o[1];
+
+				if (as != null) {
+					rows[row][col++] = as.getFlrsperren().getC_bez();
 				} else {
 					rows[row][col++] = null;
 				}
 
-				if (losmat.getLossollmaterial_i_id_original() != null) {
-					rows[row][col++] = new Color(89, 188, 41);
+				if (Helper.short2boolean(losmat.getB_dringend())) {
+
+					rows[row][col++] = Color.BLUE;
+
 				} else {
-					rows[row][col++] = null;
+					if (losmat.getLossollmaterial_i_id_original() != null) {
+						rows[row][col++] = new Color(89, 188, 41);
+					} else {
+
+						if (bLagerstandKnapp) {
+							rows[row][col++] = Color.ORANGE;
+						} else {
+							rows[row][col++] = null;
+						}
+
+					}
 				}
 
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -206,8 +395,8 @@ public class LossollmaterialHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			session = setFilter(session);
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -222,8 +411,8 @@ public class LossollmaterialHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -234,8 +423,7 @@ public class LossollmaterialHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -270,14 +458,17 @@ public class LossollmaterialHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_LOSMAT + kriterien[i].kritName);
+							if (!kriterien[i].kritName.startsWith("aspr")) {
+								orderBy.append(FLR_LOSMAT + kriterien[i].kritName);
+							} else {
+								orderBy.append(kriterien[i].kritName);
+							}
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -290,20 +481,17 @@ public class LossollmaterialHandler extends UseCaseHandler {
 				}
 
 				if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-						MandantFac.ZUSATZFUNKTION_ERSATZTYPENVERWALTUNG,
-						theClientDto)) {
-					orderBy.append("flrlossollmaterial.i_sort ASC, flrlossollmaterial.lossollmaterial_i_id_original ASC");
+						MandantFac.ZUSATZFUNKTION_ERSATZTYPENVERWALTUNG, theClientDto)) {
+					orderBy.append(
+							"flrlossollmaterial.i_sort ASC, flrlossollmaterial.lossollmaterial_i_id_original DESC");
 				} else {
-					orderBy.append(FLR_LOSMAT)
-							.append(FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL
-									+ ".c_nr")
+					orderBy.append(FLR_LOSMAT).append(FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".c_nr")
 							.append(" ASC , flrlossollmaterial.t_aendern ASC ");
 				}
 
 				sortAdded = true;
 			}
-			if (orderBy.indexOf(FLR_LOSMAT
-					+ FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".c_nr") < 0) {
+			if (orderBy.indexOf(FLR_LOSMAT + FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".c_nr") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -312,10 +500,8 @@ public class LossollmaterialHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ")
-						.append(FLR_LOSMAT)
-						.append(FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL
-								+ ".c_nr").append(" ");
+				orderBy.append(" ").append(FLR_LOSMAT).append(FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".c_nr")
+						.append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -334,8 +520,7 @@ public class LossollmaterialHandler extends UseCaseHandler {
 		return FLR_LOSMAT_FROM_CLAUSE;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -347,10 +532,9 @@ public class LossollmaterialHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select " + FLR_LOSMAT
-						+ FertigungFac.FLR_LOSSOLLMATERIAL_I_ID
-						+ FLR_LOSMAT_FROM_CLAUSE + this.buildWhereClause()
-						+ this.buildOrderByClause();
+				session = setFilter(session);
+				String queryString = "select " + FLR_LOSMAT + FertigungFac.FLR_LOSSOLLMATERIAL_I_ID
+						+ FLR_LOSMAT_FROM_CLAUSE + this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -380,67 +564,134 @@ public class LossollmaterialHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 
-			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_FERTIGUNG,
-								ParameterFac.PARAMETER_FEHLMENGE_STATT_PREIS_IN_LOSMATERIAL);
-				bFehlmengeStattPreis = (java.lang.Boolean) parameter
-						.getCWertAsObject();
+		int iNachkommastellenMenge = 2;
+		int iNachkommastellenPreis = 2;
+		try {
+			iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(theClientDto.getMandant());
+			iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisAllgemein(theClientDto.getMandant());
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG, ParameterFac.PARAMETER_FEHLMENGE_STATT_PREIS_IN_LOSMATERIAL);
+			bFehlmengeStattPreis = (java.lang.Boolean) parameter.getCWertAsObject();
 
-			} catch (RemoteException ex) {
-				throwEJBExceptionLPRespectOld(ex);
-			}
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_POSITIONSTEXT_AUS_STKL_IN_LOSSOLLMATERIAL_ANZEIGEN);
+			bPositionstextAusStklAnzeigen = (java.lang.Boolean) parameter.getCWertAsObject();
 
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, BigDecimal.class,
-							BigDecimal.class, BigDecimal.class, String.class,
-							Icon.class, Color.class },
-					new String[] {
-							"i_id",
-							getTextRespectUISpr("lp.art", mandantCNr, locUI),
-							getTextRespectUISpr("lp.artikelnummer", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("artikel.zusatzbez",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
-							getTextRespectUISpr("fert.ausgegeben", mandantCNr,
-									locUI),
-							bFehlmengeStattPreis ? getTextRespectUISpr(
-									"lp.fehlmenge", mandantCNr, locUI)
-									: getTextRespectUISpr("lp.preis",
-											mandantCNr, locUI), " ", "S", "" },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, 3,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_PREIS, 1,
-							QueryParameters.FLR_BREITE_S, 1 },
-					new String[] {
-							FertigungFac.FLR_LOSSOLLMATERIAL_I_ID,
-							Facade.NICHT_SORTIERBAR,
-							FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL
-									+ ".c_nr",
-							Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR,
-							FertigungFac.FLR_LOSSOLLMATERIAL_N_MENGE,
-							Facade.NICHT_SORTIERBAR,
-							bFehlmengeStattPreis ? Facade.NICHT_SORTIERBAR
-									: FertigungFac.FLR_LOSSOLLMATERIAL_N_SOLLPREIS,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							"" }));
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
 		}
-		return super.getTableInfo();
+
+		columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+		columns.add("lp.art", String.class, getTextRespectUISpr("lp.art", mandant, locUi), 3, Facade.NICHT_SORTIERBAR);
+		columns.add("lp.artikelnummer", String.class, getTextRespectUISpr("lp.artikelnummer", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".c_nr");
+
+		if (bReferenznummerInPositionen) {
+			columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".c_referenznr");
+		}
+
+		columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "aspr.c_bez");
+		columns.add("artikel.zusatzbez", String.class, getTextRespectUISpr("artikel.zusatzbez", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "aspr.c_zbez");
+
+		if (bPositionstextAusStklAnzeigen) {
+			columns.add("lp.position", String.class, getTextRespectUISpr("lp.position", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+		}
+
+		columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+				getTextRespectUISpr("lp.menge", mandant, locUi), QueryParameters.FLR_BREITE_PREIS,
+				FertigungFac.FLR_LOSSOLLMATERIAL_N_MENGE);
+		columns.add("lp.einheit", String.class, getTextRespectUISpr("lp.einheit", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".einheit_c_nr");
+		columns.add("fert.ausgegeben", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+				getTextRespectUISpr("fert.ausgegeben", mandant, locUi),
+				getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.MENGE, iNachkommastellenMenge),
+				AnfragepositionFac.FLR_ANFRAGEPOSITION_N_MENGE);
+
+		// PJ21663
+		if (bLagerinfo) {
+			columns.add("lp.lagerstand", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.lagerstand", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.verfuegbar", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.verfuegbar", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.bestellt", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.bestellt", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+		}
+
+		if (bFehlmengeStattPreis) {
+			columns.add("lp.fehlmenge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.fehlmenge", mandant, locUi), QueryParameters.FLR_BREITE_PREIS,
+					Facade.NICHT_SORTIERBAR);
+		} else {
+			columns.add("fert.losmaterial.sollpreis",
+					super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("fert.losmaterial.sollpreis", mandant, locUi), QueryParameters.FLR_BREITE_PREIS,
+					FertigungFac.FLR_LOSSOLLMATERIAL_N_SOLLPREIS);
+		}
+
+		if (bIstpreisAnzeigen) {
+			columns.add("fert.losmaterial.istpreis", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("fert.losmaterial.istpreis", mandant, locUi), QueryParameters.FLR_BREITE_PREIS,
+					Facade.NICHT_SORTIERBAR);
+		}
+
+		columns.add("fehlmengen", String.class, " ", 1, Facade.NICHT_SORTIERBAR,
+				getTextRespectUISpr("lp.fehlmenge", theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		columns.add("fert.sperre", SperrenIcon.class, getTextRespectUISpr("fert.sperre", mandant, locUi),
+				QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR,
+				getTextRespectUISpr("fert.sperre.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()));
+		columns.add("Color", Color.class, "", 1, Facade.NICHT_SORTIERBAR);
+
+		return columns;
+
 	}
+
+	public TableInfo getTableInfo() {
+
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG, ParameterFac.PARAMETER_FEHLMENGE_STATT_PREIS_IN_LOSMATERIAL);
+			bFehlmengeStattPreis = (java.lang.Boolean) parameter.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG, ParameterFac.PARAMETER_ISTPREIS_ANZEIGEN);
+			bIstpreisAnzeigen = (java.lang.Boolean) parameter.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG, ParameterFac.PARAMETER_LAGERINFO_IN_POSITIONEN);
+			bLagerinfo = (Boolean) parameter.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_LAGERINFO_IN_LOSPOSITIONEN_LAGERSTAND_KNAPP);
+			iLagerinfoLagerstandKnapp = (Integer) parameter.getCWertAsObject();
+
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
+	}
+
 }

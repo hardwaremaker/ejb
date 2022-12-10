@@ -45,6 +45,15 @@ public class ZahlungsvorschlagkriterienDto implements Serializable {
 	private boolean bMitSkonto = false;
 	private Integer iSkontoUeberziehungsfristInTagen = null;
 	private Integer bankvertbindungIId = null;
+	private String waehrungCNr = null;
+
+	public String getWaehrungCNr() {
+		return waehrungCNr;
+	}
+
+	public void setWaehrungCNr(String waehrungCNr) {
+		this.waehrungCNr = waehrungCNr;
+	}
 
 	public Integer getBankvertbindungIId() {
 		return bankvertbindungIId;

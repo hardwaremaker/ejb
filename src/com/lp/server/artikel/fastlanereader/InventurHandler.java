@@ -345,15 +345,16 @@ public class InventurHandler extends UseCaseHandler {
 
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
 					java.sql.Date.class, String.class,String.class, Boolean.class,
-					String.class }, new String[] {
+					String.class }, 
+					new String[] {
 					"ID",
 					getTextRespectUISpr("lp.datum", theClientDto.getMandant(),
 							theClientDto.getLocUi()),
-						getTextRespectUISpr("bes.artikelbezeichnung", theClientDto
+					getTextRespectUISpr("bes.artikelbezeichnung", theClientDto
 							.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.lager", theClientDto.getMandant(),
+					getTextRespectUISpr("lp.lager", theClientDto.getMandant(),
 									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.inventurdurchgefuehrt", theClientDto
+					getTextRespectUISpr("artikel.inventurdurchgefuehrt.short", theClientDto
 							.getMandant(), theClientDto.getLocUi()),
 					getTextRespectUISpr("lp.person.inventurdurchgefuehrt",
 							theClientDto.getMandant(), theClientDto.getLocUi()) },
@@ -363,11 +364,15 @@ public class InventurHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_XL }, new String[] {
+							QueryParameters.FLR_BREITE_XL }, 
+					new String[] {
 							"i_id", InventurFac.FLR_INVENTUR_T_INVENTURDATUM,
 							InventurFac.FLR_INVENTUR_C_BEZ,Facade.NICHT_SORTIERBAR ,
 							InventurFac.FLR_INVENTUR_B_INVENTURDURCHGEFUEHRT,
-							Facade.NICHT_SORTIERBAR }));
+							Facade.NICHT_SORTIERBAR },
+					new String[]{null, null, null, null, 
+							getTextRespectUISpr("artikel.inventurdurchgefuehrt.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()), null
+					}));
 		}
 		return super.getTableInfo();
 	}

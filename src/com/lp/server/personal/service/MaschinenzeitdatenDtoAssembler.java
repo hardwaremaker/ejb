@@ -54,6 +54,10 @@ public class MaschinenzeitdatenDtoAssembler {
 			maschinenzeitdatenDto.setTBis(maschinenzeitdaten.getTBis());
 			maschinenzeitdatenDto.setTVon(maschinenzeitdaten.getTVon());
 			maschinenzeitdatenDto.setPersonalIIdGestartet(maschinenzeitdaten.getPersonalIIdGestartet());
+			maschinenzeitdatenDto.setFVerrechenbar(maschinenzeitdaten.getFVerrechenbar());
+			maschinenzeitdatenDto.setPersonalIIdErledigt(maschinenzeitdaten.getPersonalIIdErledigt());
+			maschinenzeitdatenDto.setTErledigt(maschinenzeitdaten.getTErledigt());
+			maschinenzeitdatenDto.setBParallel(maschinenzeitdaten.getBParallel());
 		}
 		return maschinenzeitdatenDto;
 	}

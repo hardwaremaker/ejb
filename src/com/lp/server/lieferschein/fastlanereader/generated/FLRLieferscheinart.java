@@ -52,11 +52,11 @@ public class FLRLieferscheinart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> lieferscheinart_lieferscheinart_set;
+	private Set<FLRLieferscheinartspr> lieferscheinart_lieferscheinart_set;
 
 	/** full constructor */
 	public FLRLieferscheinart(Integer i_sort,
-			Set<?> lieferscheinart_lieferscheinart_set) {
+			Set<FLRLieferscheinartspr> lieferscheinart_lieferscheinart_set) {
 		this.i_sort = i_sort;
 		this.lieferscheinart_lieferscheinart_set = lieferscheinart_lieferscheinart_set;
 	}
@@ -66,7 +66,7 @@ public class FLRLieferscheinart implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRLieferscheinart(Set<?> lieferscheinart_lieferscheinart_set) {
+	public FLRLieferscheinart(Set<FLRLieferscheinartspr> lieferscheinart_lieferscheinart_set) {
 		this.lieferscheinart_lieferscheinart_set = lieferscheinart_lieferscheinart_set;
 	}
 
@@ -86,12 +86,12 @@ public class FLRLieferscheinart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getLieferscheinart_lieferscheinart_set() {
+	public Set<FLRLieferscheinartspr> getLieferscheinart_lieferscheinart_set() {
 		return this.lieferscheinart_lieferscheinart_set;
 	}
 
 	public void setLieferscheinart_lieferscheinart_set(
-			Set<?> lieferscheinart_lieferscheinart_set) {
+			Set<FLRLieferscheinartspr> lieferscheinart_lieferscheinart_set) {
 		this.lieferscheinart_lieferscheinart_set = lieferscheinart_lieferscheinart_set;
 	}
 

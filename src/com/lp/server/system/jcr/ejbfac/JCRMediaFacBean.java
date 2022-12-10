@@ -48,6 +48,7 @@ import javax.jcr.Session;
 import javax.jcr.SimpleCredentials;
 import javax.mail.MessagingException;
 import javax.naming.InitialContext;
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -76,16 +77,24 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 	private Credentials cred;
 
 	private Session session;
-	
+
 	public JCRMediaFacBean() throws NamingException, LoginException, RepositoryException {
-		super() ;
+		super();
 
 		ctx = new InitialContext();
-		repo = (Repository) ctx.lookup("java:jcrmedia/local");
-		cred = new SimpleCredentials("Anonymous", "".toCharArray());
-		session = null ;
+
+		try {
+			repo = (Repository) ctx.lookup("java:jcrmedia/local");
+		} catch (NameNotFoundException ex) {
+			repo = (Repository) ctx.lookup("java:/jcrmedia/local");
+			cred = new SimpleCredentials("jcr", "jcr".toCharArray());
+		}
+		if (cred == null) {
+			cred = new SimpleCredentials("Anonymous", "".toCharArray());
+		}
+		session = null;
 	}
-	
+
 	public boolean isOnline() {
 		return repo != null;
 	}
@@ -94,11 +103,11 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 		if (null == session) {
 			myLogger.info("login to repository necessary");
 
-			if(!isOnline()) {
+			if (!isOnline()) {
 				myLogger.info("repository not available");
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DOKUMENTENABLAGE_OFFLINE, "repo == null");
 			}
-			
+
 			session = repo.login(cred);
 		}
 		myLogger.info("returning session (" + session + ")");
@@ -113,7 +122,7 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 					session.logout();
 					session = null;
 				}
-			} catch(IllegalStateException e) {
+			} catch (IllegalStateException e) {
 				myLogger.warn("logout from repository, Illegal State", e);
 			}
 		}
@@ -122,14 +131,13 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 
 	private void forcedCloseSession() {
 		if (null != session) {
-			 myLogger.warn("forced logout from repository (" + session + ")") ;
-			
-			 session.logout() ;
-			 session = null ;
+			myLogger.warn("forced logout from repository (" + session + ")");
+
+			session.logout();
+			session = null;
 		}
 		session = null;
 	}
-	
 
 	private Node getRootNode() throws RepositoryException {
 		Node rootNode = null;
@@ -142,23 +150,23 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 			forcedCloseSession();
 			rootNode = getSession().getRootNode();
 		}
-		
-		return rootNode ;
+
+		return rootNode;
 	}
-	
+
 	public Node getNode(DocPath docPath) throws RepositoryException {
-		return getNode(docPath.getPathAsString()) ;
+		return getNode(docPath.getPathAsString());
 	}
-	
+
 	public Node getNode(String docPathString) throws RepositoryException {
-		Node rootNode = getRootNode() ;
+		Node rootNode = getRootNode();
 		Node returnNode = rootNode.getNode(docPathString);
-		return returnNode ;
+		return returnNode;
 	}
-	
-	
-	private Node updateMediaNode(DocPath docPath, JCRMediaDto mediaDto) throws IOException, MessagingException, RepositoryException {
-		Node updateNode = getNode(docPath) ;
+
+	private Node updateMediaNode(DocPath docPath, JCRMediaDto mediaDto)
+			throws IOException, MessagingException, RepositoryException {
+		Node updateNode = getNode(docPath);
 		// Neue Version des Knotens
 		if (updateNode.getMixinNodeTypes().length == 0)
 			updateNode.addMixin("mix:versionable");
@@ -167,70 +175,66 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 		setNodeProperties(updateNode, mediaDto);
 		updateNode.getParent().save();
 		updateNode.checkin();
-		
-		return updateNode ;
+
+		return updateNode;
 	}
-	
+
 	private Node createPathTo(DocPath docPath) throws RepositoryException {
-		Node nUpdateNode = null ;
-		
+		Node nUpdateNode = null;
+
 		// Der Knoten existiert nicht und muss angelegt werden
 		// String[] sFolders = jcrDocDto.getsFullNodePath().split("/");
 		List<DocNodeBase> folders = docPath.asDocNodeList();
 		String sPath = "";
 		for (int i = 0; i < folders.size(); i++) {
-			sPath += (i == 0 ? "" : DocPath.SEPERATOR)
-					+ folders.get(i).asEncodedPath();
+			sPath += (i == 0 ? "" : DocPath.SEPERATOR) + folders.get(i).asEncodedPath();
 
 			try {
 				nUpdateNode = getNode(sPath);
 				try {
-					nUpdateNode
-							.getProperty(DocNodeBase.NODEPROPERTY_NODETYPE);
+					nUpdateNode.getProperty(DocNodeBase.NODEPROPERTY_NODETYPE);
 				} catch (PathNotFoundException pnfEx) {
-					folders.get(i).persist(nUpdateNode);
+					folders.get(i).persistTo(nUpdateNode);
 					nUpdateNode.getParent().save();
 				}
 			} catch (Exception pnfEx) {
 				// Anlegen
 				nUpdateNode = getRootNode().addNode(sPath);
 				getSession().save();
-				folders.get(i).persist(nUpdateNode);
+				folders.get(i).persistTo(nUpdateNode);
 				nUpdateNode.getParent().save();
 			}
 		}
-		
-		return nUpdateNode ;
+
+		return nUpdateNode;
 	}
-	
+
 	@Override
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JCRMediaUuidHelper addEMail(JCRMediaDto mediaDto, TheClientDto theClientDto) 
-			throws Exception {
-		return addEMailCloseSession(mediaDto, theClientDto) ;
+	public JCRMediaUuidHelper addEMail(JCRMediaDto mediaDto, TheClientDto theClientDto) throws Exception {
+		return addEMailCloseSession(mediaDto, theClientDto);
 	}
-	
+
 	@Override
-	public JCRMediaUuidHelper addEMailWithinTransaction(JCRMediaDto mediaDto, TheClientDto theClientDto) 
+	public JCRMediaUuidHelper addEMailWithinTransaction(JCRMediaDto mediaDto, TheClientDto theClientDto)
 			throws Exception {
 		return addEmailImpl(mediaDto, theClientDto);
 	}
 
 	@Override
-	public JCRMediaUuidHelper addEMailCloseSession(JCRMediaDto mediaDto, TheClientDto theClientDto) 
-			throws Exception {
+	public JCRMediaUuidHelper addEMailCloseSession(JCRMediaDto mediaDto, TheClientDto theClientDto) throws Exception {
 		JCRMediaUuidHelper uuidHelper = addEmailImpl(mediaDto, theClientDto);
-		closeSession() ;
-		return uuidHelper ;
+		closeSession();
+		return uuidHelper;
 	}
-	
+
 	private JCRMediaDto mediaDtoFrom(JCRMediaDto jcrMediaDto, TheClientDto theClientDto) throws MessagingException {
 		jcrMediaDto.setMandantCnr(theClientDto.getMandant());
-		return jcrMediaDto ;
+		return jcrMediaDto;
 	}
-	
-	
-	private void setNodeProperties(Node node, JCRMediaDto mediaDto) throws IOException, MessagingException, RepositoryException {
+
+	private void setNodeProperties(Node node, JCRMediaDto mediaDto)
+			throws IOException, MessagingException, RepositoryException {
 //		node.setProperty(NNEmail.FROM, mediaDto.getFromAddr()) ;		
 //		node.setProperty(NNEmail.TO, mediaDto.getToAddr()) ;
 //		node.setProperty(NNEmail.CC, mediaDto.getCcAddr()) ;
@@ -239,81 +243,80 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 //		node.setProperty(NNEmail.MESSAGEID, mediaDto.getMessageId()) ;
 //		node.setProperty(NNEmail.EMAILDATE, mediaDto.getTEmailDate().getTime()) ;
 //		node.setProperty(NNEmail.DATA, mediaDto.getContentStream()) ;
-		logSetProperty(node, NNEmail.FROM, mediaDto.getFromAddr()) ;		
-		logSetProperty(node, NNEmail.TO, mediaDto.getToAddr()) ;
-		logSetProperty(node, NNEmail.CC, mediaDto.getCcAddr()) ;
-		logSetProperty(node, NNEmail.BCC, mediaDto.getBccAddr()) ;
-		logSetProperty(node, NNEmail.SUBJECT, mediaDto.getSubject()) ;
-		logSetProperty(node, NNEmail.MESSAGEID, mediaDto.getMessageId()) ;
-		logSetProperty(node, NNEmail.INREPLYTOID, mediaDto.getInReplyToId()) ;
-		logSetProperty(node, NNEmail.EMAILDATE, mediaDto.getTEmailDate().getTime()) ;
+		logSetProperty(node, NNEmail.FROM, mediaDto.getFromAddr());
+		logSetProperty(node, NNEmail.TO, mediaDto.getToAddr());
+		logSetProperty(node, NNEmail.CC, mediaDto.getCcAddr());
+		logSetProperty(node, NNEmail.BCC, mediaDto.getBccAddr());
+		logSetProperty(node, NNEmail.SUBJECT, mediaDto.getSubject());
+		logSetProperty(node, NNEmail.MESSAGEID, mediaDto.getMessageId());
+		logSetProperty(node, NNEmail.INREPLYTOID, mediaDto.getInReplyToId());
+		logSetProperty(node, NNEmail.EMAILDATE, mediaDto.getTEmailDate().getTime());
 		logSetProperty(node, NNEmail.ISHTML, mediaDto.isHtmlText());
-		node.setProperty(NNEmail.DATA, mediaDto.getContentStream()) ;
+		node.setProperty(NNEmail.DATA, mediaDto.getContentStream());
 	}
-	
+
 	private void logSetProperty(Node node, String nodename, boolean value) throws RepositoryException {
 		myLogger.warn("Setting " + nodename + " to '" + value + "'.");
-		node.setProperty(nodename, value) ;
+		node.setProperty(nodename, value);
 	}
 
 	private void logSetProperty(Node node, String nodename, String value) throws RepositoryException {
 		myLogger.warn("Setting " + nodename + " to '" + value + "'.");
-		node.setProperty(nodename, value) ;
+		node.setProperty(nodename, value);
 	}
 
 	private void logSetProperty(Node node, String nodename, long value) throws RepositoryException {
 		myLogger.warn("Setting " + nodename + " to '" + value + "'.");
-		node.setProperty(nodename, value) ;
+		node.setProperty(nodename, value);
 	}
-	
-	private void setAttachmentProperties(Node jcrAttachNode,
-		JCRMediaDto mediaDto, JCRMediaAttachment attachment) throws IOException, RepositoryException {
+
+	private void setAttachmentProperties(Node jcrAttachNode, JCRMediaDto mediaDto, JCRMediaAttachment attachment)
+			throws IOException, RepositoryException {
 //		jcrAttachNode.setProperty(NNAttachment.PARENTUUID, mediaDto.getJcrUuid()) ;
 //		jcrAttachNode.setProperty(NNAttachment.NAME, attachment.getName()) ;
 //		jcrAttachNode.setProperty(NNAttachment.DESCRIPTION,  attachment.getDescription()) ;
 //		jcrAttachNode.setProperty(NNAttachment.TYPE, attachment.getMimeType()) ;
 //		jcrAttachNode.setProperty(NNAttachment.DATA, attachment.getContentStream()) ;
-		logSetProperty(jcrAttachNode, NNAttachment.PARENTUUID, mediaDto.getJcrUuid()) ;
-		logSetProperty(jcrAttachNode, NNAttachment.NAME, attachment.getName()) ;
-		logSetProperty(jcrAttachNode, NNAttachment.DESCRIPTION,  attachment.getDescription()) ;
-		logSetProperty(jcrAttachNode, NNAttachment.TYPE, attachment.getMimeType()) ;
-		jcrAttachNode.setProperty(NNAttachment.DATA, attachment.getContentStream()) ;
+		logSetProperty(jcrAttachNode, NNAttachment.PARENTUUID, mediaDto.getJcrUuid());
+		logSetProperty(jcrAttachNode, NNAttachment.NAME, attachment.getName());
+		logSetProperty(jcrAttachNode, NNAttachment.DESCRIPTION, attachment.getDescription());
+		logSetProperty(jcrAttachNode, NNAttachment.TYPE, attachment.getMimeType());
+		jcrAttachNode.setProperty(NNAttachment.DATA, attachment.getContentStream());
 	}
-	
+
 	private JCRMediaUuidHelper addEmailImpl(JCRMediaDto mediaDto, TheClientDto theClientDto) throws Exception {
 		Validator.notNull(mediaDto, "mediaDto");
 		Validator.notNull(theClientDto, "theClientDto");
-		
-		mediaDtoFrom(mediaDto, theClientDto) ;
-		MediaNodeEmail mediaNodeEmail = new MediaNodeEmail(mediaDto) ;
-		DocPath docPath = new DocPath(mediaNodeEmail) ;
-		
+
+		mediaDtoFrom(mediaDto, theClientDto);
+		MediaNodeEmail mediaNodeEmail = new MediaNodeEmail(mediaDto);
+		DocPath docPath = new DocPath(mediaNodeEmail);
+
 //		Node updateNode = null;
 //		try {
 //			updateNode = updateMediaNode(docPath, jcrMediaDto);
 //		} catch (PathNotFoundException ex) {
 		try {
-			Node updateNode = createPathTo(docPath) ;
+			Node updateNode = createPathTo(docPath);
 			updateNode.addMixin("mix:versionable");
 			setNodeProperties(updateNode, mediaDto);
 			updateNode.save();
 
-			JCRMediaUuidHelper uuidHelper = new JCRMediaUuidHelper(updateNode.getUUID()) ;
-			
+			JCRMediaUuidHelper uuidHelper = new JCRMediaUuidHelper(updateNode.getUUID());
+
 			for (JCRMediaAttachment attachment : mediaDto.getAttachments()) {
-				MediaNodeEmailAttachment attachNode = 
-						new MediaNodeEmailAttachment(attachment, mediaDto) ;
-				DocPath attachPath = new DocPath(attachNode) ;
-				
-				Node jcrAttachNode = createPathTo(attachPath) ;
+				MediaNodeEmailAttachment attachNode = new MediaNodeEmailAttachment(attachment, mediaDto);
+				DocPath attachPath = new DocPath(attachNode);
+
+				Node jcrAttachNode = createPathTo(attachPath);
 				jcrAttachNode.addMixin("mix:versionable");
 //				jcrAttachNode.addMixin("mix:referenceable");
-				setAttachmentProperties(jcrAttachNode, mediaDto, attachment) ;
-				jcrAttachNode.save() ;
-				jcrAttachNode.checkin() ;
-				String uuid = jcrAttachNode.getUUID() ;
+				setAttachmentProperties(jcrAttachNode, mediaDto, attachment);
+				jcrAttachNode.save();
+				jcrAttachNode.checkin();
+				String uuid = jcrAttachNode.getUUID();
 				myLogger.info("Attachment-Node-UUID: " + uuid);
-				uuidHelper.addAttachmentUuid(uuid) ;
+				uuidHelper.addAttachmentUuid(uuid);
 			}
 
 			// Auch gleich die erste Version anlegen
@@ -321,88 +324,84 @@ public class JCRMediaFacBean extends Facade implements JCRMediaFac {
 //			setNodeProperties(updateNode, jcrMediaDto);
 //			updateNode.save();
 			updateNode.checkin();
-			
-			String uuid = updateNode.getUUID() ;
+
+			String uuid = updateNode.getUUID();
 			myLogger.info("EMail-Node-UUID: " + uuid);
-			
-			if(getSession().hasPendingChanges()) {
+
+			if (getSession().hasPendingChanges()) {
 				myLogger.info("Pending changes for node " + uuid + ".");
-				getSession().save() ;
+				getSession().save();
 			}
-			return uuidHelper ;
-		} catch(Exception e) {
-			myLogger.error("addEmail-Exception", e) ;
-			throw e ;
-		}		
-	}
-
-	public JCRMediaDto findEmail(String messageId,
-			TheClientDto theClientDto) throws IOException, MessagingException {
-		return findEmail(messageId, false, theClientDto) ;
-	}
-	
-	public JCRMediaDto findEmail(String messageId, boolean withContent,
-			TheClientDto theClientDto) throws IOException, MessagingException {
-		try {
-			return findEmailImpl(messageId, withContent, theClientDto) ;
-		} catch(RepositoryException e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler. Login an JCR fehlgeschlagen oder kein root-Node vorhanden");			
-		} finally {
-			closeSession();
+			return uuidHelper;
+		} catch (Exception e) {
+			myLogger.error("addEmail-Exception", e);
+			throw e;
 		}
 	}
 
-	public JCRMediaDto findEmailEx(String messageId, boolean withContent, 
-			TheClientDto theClientDto) throws IOException, RepositoryException, MessagingException {
-		try {
-			return findEmailImpl(messageId, withContent, theClientDto) ;
-		} finally {
-			closeSession();
-		}
+	public JCRMediaDto findEmail(String messageId, TheClientDto theClientDto) throws IOException, MessagingException {
+		return findEmail(messageId, false, theClientDto);
 	}
-	
-	
-	protected JCRMediaDto findEmailImpl(String messageId, boolean withContent, 
-			TheClientDto theClientDto) throws IOException, RepositoryException, MessagingException{
-		Validator.notEmpty(messageId, "messageId");
-		JCRMediaDto mediaDto = mediaDtoFrom(new JCRMediaDto(), theClientDto) ;
-		mediaDto.setMessageId(messageId) ;
-		MediaNodeEmail mediaNodeEmail = new MediaNodeEmail(mediaDto) ;
-		DocPath docPath = new DocPath(mediaNodeEmail) ;
 
-		Node findNode = getNode(docPath) ;
-		return JCRMediaDtoAssembler.createDto(findNode, withContent) ;
-	}
-	
-	public JCRMediaDto findEmailByUUID(String uuid,
-			TheClientDto theClientDto) throws IOException, RepositoryException {
-		return findEmailByUUID(uuid, false, theClientDto) ;
-	}
-	
-	public JCRMediaDto findEmailByUUID(String uuid, boolean withContent,
-			TheClientDto theClientDto) throws IOException, RepositoryException {
-		Validator.notEmpty(uuid, "uuid");
-		
+	public JCRMediaDto findEmail(String messageId, boolean withContent, TheClientDto theClientDto)
+			throws IOException, MessagingException {
 		try {
-			Node n = getSession().getNodeByUUID(uuid) ;	
-//			return new JCRMediaDto(n, withContent) ;
-			return JCRMediaDtoAssembler.createDto(n, withContent) ;
-		} catch(IllegalStateException e) {
-			forcedCloseSession() ; 
-			Node n = getSession().getNodeByUUID(uuid) ;	
-//			return new JCRMediaDto(n, withContent) ;
-			return JCRMediaDtoAssembler.createDto(n, withContent) ;
-		} catch(RepositoryException e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			return findEmailImpl(messageId, withContent, theClientDto);
+		} catch (RepositoryException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"Fehler. Login an JCR fehlgeschlagen oder kein root-Node vorhanden");
 		} finally {
-			closeSession() ;
+			closeSession();
 		}
 	}
-	
+
+	public JCRMediaDto findEmailEx(String messageId, boolean withContent, TheClientDto theClientDto)
+			throws IOException, RepositoryException, MessagingException {
+		try {
+			return findEmailImpl(messageId, withContent, theClientDto);
+		} finally {
+			closeSession();
+		}
+	}
+
+	protected JCRMediaDto findEmailImpl(String messageId, boolean withContent, TheClientDto theClientDto)
+			throws IOException, RepositoryException, MessagingException {
+		Validator.notEmpty(messageId, "messageId");
+		JCRMediaDto mediaDto = mediaDtoFrom(new JCRMediaDto(), theClientDto);
+		mediaDto.setMessageId(messageId);
+		MediaNodeEmail mediaNodeEmail = new MediaNodeEmail(mediaDto);
+		DocPath docPath = new DocPath(mediaNodeEmail);
+
+		Node findNode = getNode(docPath);
+		return JCRMediaDtoAssembler.createDto(findNode, withContent);
+	}
+
+	public JCRMediaDto findEmailByUUID(String uuid, TheClientDto theClientDto) throws IOException, RepositoryException {
+		return findEmailByUUID(uuid, false, theClientDto);
+	}
+
+	public JCRMediaDto findEmailByUUID(String uuid, boolean withContent, TheClientDto theClientDto)
+			throws IOException, RepositoryException {
+		Validator.notEmpty(uuid, "uuid");
+
+		try {
+			Node n = getSession().getNodeByUUID(uuid);
+//			return new JCRMediaDto(n, withContent) ;
+			return JCRMediaDtoAssembler.createDto(n, withContent);
+		} catch (IllegalStateException e) {
+			forcedCloseSession();
+			Node n = getSession().getNodeByUUID(uuid);
+//			return new JCRMediaDto(n, withContent) ;
+			return JCRMediaDtoAssembler.createDto(n, withContent);
+		} catch (RepositoryException e) {
+			myLogger.error("RepositoryEx:", e);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler. Login an JCR fehlgeschlagen oder kein root-Node vorhanden");
+		} finally {
+			closeSession();
+		}
+	}
+
 //	@Override
 //	public void retrieveEmails(TheClientDto theClientDto) throws IOException,
 //			MessagingException, RepositoryException {

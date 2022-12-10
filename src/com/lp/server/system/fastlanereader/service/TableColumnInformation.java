@@ -45,6 +45,7 @@ public class TableColumnInformation implements Serializable {
 		headerNames = new ArrayList<Object>();
 		widths = new ArrayList<Integer>();
 		dbColumnNames = new ArrayList<String>();
+		headerToolTips = new ArrayList<String>();
 		columnViewNamesMap = new HashMap<String, Integer>();
 	}
 
@@ -55,6 +56,17 @@ public class TableColumnInformation implements Serializable {
 		widths.add(width);
 		dbColumnNames.add(dbColumnName);
 		columnViewNamesMap.put(columnViewName, columnViewNamesMap.size());
+		headerToolTips.add(null);
+	}
+	
+	public void add(String columnViewName, Class columnClass,
+			Object headerName, int width, String dbColumnName, String headerToolTip) {
+		columnClasses.add(columnClass);
+		headerNames.add(headerName);
+		widths.add(width);
+		dbColumnNames.add(dbColumnName);
+		columnViewNamesMap.put(columnViewName, columnViewNamesMap.size());
+		headerToolTips.add(headerToolTip);
 	}
 
 	public Class[] getClasses() {
@@ -93,9 +105,14 @@ public class TableColumnInformation implements Serializable {
 		return columnViewNamesMap.get(columnViewName) ;
  	}
 	
+	public String[] getHeaderToolTips(){
+		return headerToolTips.toArray(new String[0]);
+	}
+	
 	private List<Class> columnClasses;
 	private List<Object> headerNames;
 	private List<Integer> widths;
 	private List<String> dbColumnNames;
+	private List<String> headerToolTips;
 	private HashMap<String, Integer> columnViewNamesMap;
 }

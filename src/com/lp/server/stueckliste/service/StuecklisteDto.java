@@ -73,7 +73,66 @@ public class StuecklisteDto implements Serializable, IIId {
 	private BigDecimal nDefaultdurchlaufzeit;
 	private Integer partnerIId;
 	private Integer personalIIdAnlegen;
-	private Integer iErfassungsfaktor;
+
+	private Short bHierarchischeChargennummern;
+
+	public Short getBHierarchischeChargennummern() {
+		return bHierarchischeChargennummern;
+	}
+
+	public void setBHierarchischeChargennummern(Short bHierarchischeChargennummern) {
+		this.bHierarchischeChargennummern = bHierarchischeChargennummern;
+	}
+
+	private Short bJahreslos;
+
+	public Short getBJahreslos() {
+		return bJahreslos;
+	}
+
+	public void setBJahreslos(Short bJahreslos) {
+		this.bJahreslos = bJahreslos;
+	}
+
+	private Integer iReihenfolge;
+
+	public Integer getIReihenfolge() {
+		return iReihenfolge;
+	}
+
+	public void setIReihenfolge(Integer iReihenfolge) {
+		this.iReihenfolge = iReihenfolge;
+	}
+
+	private Short bMitFormeln;
+
+	public Short getBMitFormeln() {
+		return bMitFormeln;
+	}
+
+	public void setBMitFormeln(Short bMitFormeln) {
+		this.bMitFormeln = bMitFormeln;
+	}
+
+	private Integer stuecklisteIIdFormelstueckliste;
+
+	public Integer getStuecklisteIIdFormelstueckliste() {
+		return stuecklisteIIdFormelstueckliste;
+	}
+
+	public void setStuecklisteIIdFormelstueckliste(Integer stuecklisteIIdFormelstueckliste) {
+		this.stuecklisteIIdFormelstueckliste = stuecklisteIIdFormelstueckliste;
+	}
+
+	public String getCFremdsystemnr() {
+		return cFremdsystemnr;
+	}
+
+	public void setCFremdsystemnr(String fremdsystemnr) {
+		cFremdsystemnr = fremdsystemnr;
+	}
+
+	private String cFremdsystemnr;
 
 	private Short bUeberlieferbar;
 
@@ -122,17 +181,18 @@ public class StuecklisteDto implements Serializable, IIId {
 		return bKeineAutomatischeMaterialbuchung;
 	}
 
-	public void setBKeineAutomatischeMaterialbuchung(
-			Short bKeineAutomatischeMaterialbuchung) {
+	public void setBKeineAutomatischeMaterialbuchung(Short bKeineAutomatischeMaterialbuchung) {
 		this.bKeineAutomatischeMaterialbuchung = bKeineAutomatischeMaterialbuchung;
 	}
 
-	public Integer getIErfassungsfaktor() {
-		return iErfassungsfaktor;
+	private BigDecimal nErfassungsfaktor;
+
+	public BigDecimal getNErfassungsfaktor() {
+		return nErfassungsfaktor;
 	}
 
-	public void setIErfassungsfaktor(Integer erfassungsfaktor) {
-		iErfassungsfaktor = erfassungsfaktor;
+	public void setNErfassungsfaktor(BigDecimal erfassungsfaktor) {
+		nErfassungsfaktor = erfassungsfaktor;
 	}
 
 	private Integer personalIIdFreigabe;
@@ -164,6 +224,9 @@ public class StuecklisteDto implements Serializable, IIId {
 	private String stuecklisteartCNr;
 	private Short bMaterialbuchungbeiablieferung;
 	private Short bAusgabeunterstueckliste;
+
+	private Integer scriptartIId;
+	private StuecklisteScriptartDto scriptartDto;
 
 	public void setIId(Integer iId) {
 		this.iId = iId;
@@ -224,8 +287,7 @@ public class StuecklisteDto implements Serializable, IIId {
 		return personalIIdAendernarbeitsplan;
 	}
 
-	public void setPersonalIIdAendernarbeitsplan(
-			Integer personalIIdAendernarbeitsplan) {
+	public void setPersonalIIdAendernarbeitsplan(Integer personalIIdAendernarbeitsplan) {
 		this.personalIIdAendernarbeitsplan = personalIIdAendernarbeitsplan;
 	}
 
@@ -346,8 +408,7 @@ public class StuecklisteDto implements Serializable, IIId {
 		this.stuecklisteartCNr = stuecklisteartCNr;
 	}
 
-	public void setBMaterialbuchungbeiablieferung(
-			Short bMaterialbuchungbeiablieferung) {
+	public void setBMaterialbuchungbeiablieferung(Short bMaterialbuchungbeiablieferung) {
 		this.bMaterialbuchungbeiablieferung = bMaterialbuchungbeiablieferung;
 	}
 
@@ -356,8 +417,23 @@ public class StuecklisteDto implements Serializable, IIId {
 	}
 
 	public boolean isMaterialbuchungbeiablieferung() {
-		return bMaterialbuchungbeiablieferung == null ? false
-				: ((short) 1 == bMaterialbuchungbeiablieferung);
+		return bMaterialbuchungbeiablieferung == null ? false : ((short) 1 == bMaterialbuchungbeiablieferung);
+	}
+
+	public Integer getStuecklisteScriptartIId() {
+		return scriptartIId;
+	}
+
+	public void setStuecklisteScriptartIId(Integer scriptartId) {
+		this.scriptartIId = scriptartId;
+	}
+
+	public StuecklisteScriptartDto getStuecklisteScriptartDto() {
+		return scriptartDto;
+	}
+
+	public void setScriptartDto(StuecklisteScriptartDto scriptartDto) {
+		this.scriptartDto = scriptartDto;
 	}
 
 	public boolean equals(Object obj) {
@@ -368,8 +444,7 @@ public class StuecklisteDto implements Serializable, IIId {
 		StuecklisteDto that = (StuecklisteDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.artikelIId == null ? this.artikelIId == null
-				: that.artikelIId.equals(this.artikelIId)))
+		if (!(that.artikelIId == null ? this.artikelIId == null : that.artikelIId.equals(this.artikelIId)))
 			return false;
 		if (!(that.bFremdfertigung == null ? this.bFremdfertigung == null
 				: that.bFremdfertigung.equals(this.bFremdfertigung)))
@@ -380,18 +455,15 @@ public class StuecklisteDto implements Serializable, IIId {
 		if (!(that.fertigungsgruppeIId == null ? this.fertigungsgruppeIId == null
 				: that.fertigungsgruppeIId.equals(this.fertigungsgruppeIId)))
 			return false;
-		if (!(that.nLosgroesse == null ? this.nLosgroesse == null
-				: that.nLosgroesse.equals(this.nLosgroesse)))
+		if (!(that.nLosgroesse == null ? this.nLosgroesse == null : that.nLosgroesse.equals(this.nLosgroesse)))
 			return false;
 		if (!(that.tAendernarbeitsplan == null ? this.tAendernarbeitsplan == null
 				: that.tAendernarbeitsplan.equals(this.tAendernarbeitsplan)))
 			return false;
 		if (!(that.personalIIdAendernarbeitsplan == null ? this.personalIIdAendernarbeitsplan == null
-				: that.personalIIdAendernarbeitsplan
-						.equals(this.personalIIdAendernarbeitsplan)))
+				: that.personalIIdAendernarbeitsplan.equals(this.personalIIdAendernarbeitsplan)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
@@ -427,5 +499,10 @@ public class StuecklisteDto implements Serializable, IIId {
 		returnString += ", " + tAendern;
 		returnString += ", " + personalIIdAendern;
 		return returnString;
+	}
+
+	@HvDtoLogIgnore
+	public boolean isSetartikel() {
+		return StuecklisteFac.STUECKLISTEART_SETARTIKEL.equals(getStuecklisteartCNr());
 	}
 }

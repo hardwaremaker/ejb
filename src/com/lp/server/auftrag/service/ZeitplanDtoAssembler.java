@@ -46,12 +46,17 @@ public class ZeitplanDtoAssembler {
 			dto.setIId(bean.getIId());
 			dto.setAuftragIId(bean.getAuftragIId());
 			dto.setCKommentar(bean.getCKommentar());
-			dto.setITerminVorLiefertermin(bean.getITerminVorLiefertermin());
+			dto.setTTermin(bean.getTTermin());
 			dto.setNDauer(bean.getNDauer());
 			dto.setNDauerUrsprung(bean.getNDauerUrsprung());
 			dto.setNMaterial(bean.getNMaterial());
 			dto.setNMaterialUrsprung(bean.getNMaterialUrsprung());
 			dto.setXText(bean.getXText());
+			dto.setPersonalIIdDauerErledigt(bean.getPersonalIIdDauerErledigt());
+			dto.setPersonalIIdMaterialErledigt(bean
+					.getPersonalIIdMaterialErledigt());
+			dto.setTDauerErledigt(bean.getTDauerErledigt());
+			dto.setTMaterialErledigt(bean.getTMaterialErledigt());
 		}
 		return dto;
 	}

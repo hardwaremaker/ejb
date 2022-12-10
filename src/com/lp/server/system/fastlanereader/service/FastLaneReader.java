@@ -39,6 +39,7 @@ import javax.ejb.Remote;
 
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
+import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
@@ -49,29 +50,35 @@ import com.lp.util.Pair;
 @Remote
 public interface FastLaneReader {
 
-	public QueryResult setQuery(String uuid, Integer useCaseId, QueryParameters query,TheClientDto theClientDto)
+	public QueryResult setQuery(String uuid, Integer useCaseId,
+			QueryParameters query, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public QueryResult sort(String uuid, Integer useCaseId,
-			SortierKriterium[] sortierKriterien, Object selectedId,TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			SortierKriterium[] sortierKriterien, Object selectedId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public QueryResult getPageAt(String uuid, Integer useCaseId, Integer row,TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public QueryResult getPageAt(String uuid, Integer useCaseId, Integer row,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public QueryResult getResults(String uuid, Integer useCaseId, long iPageSize,TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public QueryResult getResults(String uuid, Integer useCaseId,
+			long iPageSize, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException;
 
-	public TableInfo getTableInfo(String uuid, Integer useCaseId,TheClientDto theClientDto) throws RemoteException,
-			EJBExceptionLP;
-	
-    public UseCaseHandler getUseCaseHandler(String uuid,Integer useCaseId,TheClientDto theClientDto) 
-	        throws RemoteException;
+	public TableInfo getTableInfo(String uuid, Integer useCaseId,
+			FilterKriterium[] defaultFilter, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP;
 
-	public void cleanup(String uuid, Integer useCaseId,TheClientDto theClientDto)
+	public UseCaseHandler getUseCaseHandler(String uuid, Integer useCaseId,
+			TheClientDto theClientDto) throws RemoteException;
+
+	public void cleanup(String uuid, Integer useCaseId,
+			TheClientDto theClientDto) throws RemoteException;
+
+	List<Pair<?, ?>> getInfoForSelectedIIds(String uuid, Integer useCaseId,
+			TheClientDto theClientDto, List<Object> selectedIIds)
 			throws RemoteException;
-	
-	List<Pair<?,?>> getInfoForSelectedIIds(String uuid, Integer useCaseId,TheClientDto theClientDto, List<Object> selectedIIds) throws RemoteException;
-	
-	TableColumnInformation getTableColumnInfo(String uuid, Integer useCaseId, TheClientDto theClientDto) throws EJBExceptionLP ;	
+
+	TableColumnInformation getTableColumnInfo(String uuid, Integer useCaseId,
+			TheClientDto theClientDto) throws EJBExceptionLP;
 }

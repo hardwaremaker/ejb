@@ -33,6 +33,8 @@
 package com.lp.server.artikel.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+
 
 public class MaterialDto implements Serializable {
 	/**
@@ -49,6 +51,18 @@ public class MaterialDto implements Serializable {
 
 	public void setCNr(String cNr) {
 		this.cNr = cNr;
+	}
+
+
+	
+	private BigDecimal nGewichtInKG;
+
+	public BigDecimal getNGewichtInKG() {
+		return nGewichtInKG;
+	}
+
+	public void setNGewichtInKG(BigDecimal nGewichtInKG) {
+		this.nGewichtInKG = nGewichtInKG;
 	}
 
 	public Integer getIId() {

@@ -41,7 +41,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "SignaturfindByPersonalIIdLocaleCNr", query = "SELECT OBJECT(C) FROM Signatur c WHERE c.personalIId = ?1 AND c.localeCNr = ?2") })
+@NamedQueries({ @NamedQuery(name = "SignaturfindByPersonalIIdLocaleCNr", query = "SELECT OBJECT(C) FROM Signatur c WHERE c.personalIId = ?1 AND c.localeCNr = ?2"),
+	@NamedQuery(name = "SignaturfindByPersonalIId", query = "SELECT OBJECT(C) FROM Signatur c WHERE c.personalIId = ?1")})
 @Entity
 @Table(name = "PERS_SIGNATUR")
 public class Signatur implements Serializable {

@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.auftrag.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
@@ -54,6 +22,9 @@ public class FLRPositionenSichtAuftrag implements Serializable {
 
     /** nullable persistent field */
     private String c_zbez;
+
+    /** nullable persistent field */
+    private BigDecimal n_einkaufpreis;
 
     /** nullable persistent field */
     private String x_textinhalt;
@@ -83,6 +54,18 @@ public class FLRPositionenSichtAuftrag implements Serializable {
     private Integer position_i_id_artikelset;
 
     /** nullable persistent field */
+    private BigDecimal n_nettogesamtpreis;
+
+    /** nullable persistent field */
+    private BigDecimal n_bruttogesamtpreis;
+
+    /** nullable persistent field */
+    private BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte;
+
+    /** nullable persistent field */
+    private BigDecimal n_menge;
+
+    /** nullable persistent field */
     private FLRArtikel flrartikel;
 
     /** nullable persistent field */
@@ -92,10 +75,11 @@ public class FLRPositionenSichtAuftrag implements Serializable {
     private com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag;
 
     /** full constructor */
-    public FLRPositionenSichtAuftrag(Integer i_sort, String c_bez, String c_zbez, String x_textinhalt, Integer auftrag_i_id, BigDecimal n_offene_menge, String positionart_c_nr, String auftragpositionstatus_c_nr, Date t_uebersteuerterliefertermin, Integer position_i_id, String typ_c_nr, Integer position_i_id_artikelset, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag) {
+    public FLRPositionenSichtAuftrag(Integer i_sort, String c_bez, String c_zbez, BigDecimal n_einkaufpreis, String x_textinhalt, Integer auftrag_i_id, BigDecimal n_offene_menge, String positionart_c_nr, String auftragpositionstatus_c_nr, Date t_uebersteuerterliefertermin, Integer position_i_id, String typ_c_nr, Integer position_i_id_artikelset, BigDecimal n_nettogesamtpreis, BigDecimal n_bruttogesamtpreis, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, BigDecimal n_menge, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag) {
         this.i_sort = i_sort;
         this.c_bez = c_bez;
         this.c_zbez = c_zbez;
+        this.n_einkaufpreis = n_einkaufpreis;
         this.x_textinhalt = x_textinhalt;
         this.auftrag_i_id = auftrag_i_id;
         this.n_offene_menge = n_offene_menge;
@@ -105,6 +89,10 @@ public class FLRPositionenSichtAuftrag implements Serializable {
         this.position_i_id = position_i_id;
         this.typ_c_nr = typ_c_nr;
         this.position_i_id_artikelset = position_i_id_artikelset;
+        this.n_nettogesamtpreis = n_nettogesamtpreis;
+        this.n_bruttogesamtpreis = n_bruttogesamtpreis;
+        this.n_nettogesamtpreisplusversteckteraufschlagminusrabatte = n_nettogesamtpreisplusversteckteraufschlagminusrabatte;
+        this.n_menge = n_menge;
         this.flrartikel = flrartikel;
         this.flrmediastandard = flrmediastandard;
         this.flrauftrag = flrauftrag;
@@ -144,6 +132,14 @@ public class FLRPositionenSichtAuftrag implements Serializable {
 
     public void setC_zbez(String c_zbez) {
         this.c_zbez = c_zbez;
+    }
+
+    public BigDecimal getN_einkaufpreis() {
+        return this.n_einkaufpreis;
+    }
+
+    public void setN_einkaufpreis(BigDecimal n_einkaufpreis) {
+        this.n_einkaufpreis = n_einkaufpreis;
     }
 
     public String getX_textinhalt() {
@@ -216,6 +212,38 @@ public class FLRPositionenSichtAuftrag implements Serializable {
 
     public void setPosition_i_id_artikelset(Integer position_i_id_artikelset) {
         this.position_i_id_artikelset = position_i_id_artikelset;
+    }
+
+    public BigDecimal getN_nettogesamtpreis() {
+        return this.n_nettogesamtpreis;
+    }
+
+    public void setN_nettogesamtpreis(BigDecimal n_nettogesamtpreis) {
+        this.n_nettogesamtpreis = n_nettogesamtpreis;
+    }
+
+    public BigDecimal getN_bruttogesamtpreis() {
+        return this.n_bruttogesamtpreis;
+    }
+
+    public void setN_bruttogesamtpreis(BigDecimal n_bruttogesamtpreis) {
+        this.n_bruttogesamtpreis = n_bruttogesamtpreis;
+    }
+
+    public BigDecimal getN_nettogesamtpreisplusversteckteraufschlagminusrabatte() {
+        return this.n_nettogesamtpreisplusversteckteraufschlagminusrabatte;
+    }
+
+    public void setN_nettogesamtpreisplusversteckteraufschlagminusrabatte(BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte) {
+        this.n_nettogesamtpreisplusversteckteraufschlagminusrabatte = n_nettogesamtpreisplusversteckteraufschlagminusrabatte;
+    }
+
+    public BigDecimal getN_menge() {
+        return this.n_menge;
+    }
+
+    public void setN_menge(BigDecimal n_menge) {
+        this.n_menge = n_menge;
     }
 
     public FLRArtikel getFlrartikel() {

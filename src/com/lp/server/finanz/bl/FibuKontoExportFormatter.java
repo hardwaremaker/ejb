@@ -61,6 +61,8 @@ abstract class FibuKontoExportFormatter extends Facade {
 	protected final static String XSL_FILE_RZL = "fb_kontoexport_rzl";
 	protected final static String XSL_FILE_BMD = "fb_kontoexport_bmd";
 	protected final static String XSL_FILE_SCHLEUPEN = "fb_kontoexport_schleupen";
+	protected final static String XSL_FILE_RZL_SACHKONTO = "fb_sachkontoexport_rzl";
+	protected final static String XSL_FILE_DATEV = "fb_kontoexport_datev";
 
 	protected abstract String exportiereDaten(
 			FibuKontoExportDto[] fibuExportDtos, TheClientDto theClientDto)

@@ -44,8 +44,7 @@ public class LieferscheinpositionDto extends BelegpositionVerkaufDto implements
 	private static final long serialVersionUID = 1L;
 	private Integer auftragpositionIId;
 	private Double fKupferzuschlag;
-	
-	
+
 	private Integer positioniId = null;
 	private String typCNr = null;
 
@@ -80,9 +79,17 @@ public class LieferscheinpositionDto extends BelegpositionVerkaufDto implements
 	public void setFKupferzuschlag(Double fKupferzuschlag) {
 		this.fKupferzuschlag = fKupferzuschlag;
 	}
-	
 
-	
+	private Integer forecastpositionIId;
+
+	public Integer getForecastpositionIId() {
+		return forecastpositionIId;
+	}
+
+	public void setForecastpositionIId(Integer forecastpositionIId) {
+		this.forecastpositionIId = forecastpositionIId;
+	}
+
 	public String getTypCNr() {
 		return typCNr;
 	}
@@ -118,7 +125,18 @@ public class LieferscheinpositionDto extends BelegpositionVerkaufDto implements
 	public void setLagerIId(Integer lagerIId) {
 		this.lagerIId = lagerIId;
 	}
-	
+
+	private Integer wareneingangspositionIIdAndererMandant;
+
+	public Integer getWareneingangspositionIIdAndererMandant() {
+		return wareneingangspositionIIdAndererMandant;
+	}
+
+	public void setWareneingangspositionIIdAndererMandant(
+			Integer wareneingangspositionIIdAndererMandant) {
+		this.wareneingangspositionIIdAndererMandant = wareneingangspositionIIdAndererMandant;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

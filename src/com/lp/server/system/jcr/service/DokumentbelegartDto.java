@@ -34,7 +34,6 @@ package com.lp.server.system.jcr.service;
 
 import java.io.Serializable;
 
-import com.lp.server.system.jcr.ejb.Dokumentbelegart;
 import com.lp.server.system.jcr.ejb.DokumentbelegartPK;
 
 public class DokumentbelegartDto implements Serializable {
@@ -52,11 +51,6 @@ public class DokumentbelegartDto implements Serializable {
 	public DokumentbelegartDto(String mandantCNr,String cNr){
 		this.mandantCNr=mandantCNr;
 		this.cNr = cNr;
-	}
-	
-	public DokumentbelegartDto(Dokumentbelegart dokumentbelegart){
-		this.mandantCNr=dokumentbelegart.getMandantCNr();
-		this.cNr = dokumentbelegart.getCNr();
 	}
 	
 	public String getCNr(){

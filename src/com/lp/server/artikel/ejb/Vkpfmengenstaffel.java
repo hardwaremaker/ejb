@@ -51,6 +51,7 @@ import com.lp.server.partner.ejbfac.VkpfmengenstaffelQuery;
 		@NamedQuery(name = "VkpfMengenstaffelfindByUniqueKey2", query = "SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 AND o.nMenge=?2 AND o.tPreisgueltigab=?3 AND o.vkpfartikelpreislisteIId IS NULL"),
 		@NamedQuery(name = "VkpfMengenstaffelfindByArtikelIId", query = "SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 ORDER BY o.tPreisgueltigab ASC"),
 		@NamedQuery(name = "VkpfMengenstaffelfindByArtikelIIdNMenge", query = "SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 AND o.nMenge=?2 ORDER BY o.nMenge, o.tPreisgueltigab DESC"),
+		@NamedQuery(name = "VkpfMengenstaffelfindByArtikelIIdNMengeVkpfartikelpreislisteIId", query = "SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 AND o.nMenge=?2 AND o.vkpfartikelpreislisteIId=?3 ORDER BY o.nMenge, o.tPreisgueltigab DESC"),
 		@NamedQuery(name = "VkpfMengenstaffelfindByArtikelIIdNMengeGueltigkeitsdatum", query = "SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 AND o.nMenge<=?2 AND ((o.tPreisgueltigab<=?3 AND o.tPreisgueltigbis>=?3) OR (o.tPreisgueltigab<=?3 AND o.tPreisgueltigbis IS NULL)) ORDER BY o.nMenge"),
 		@NamedQuery(name = "VkpfMengenstaffelfindByArtikelIIdGueltigkeitsdatum", query = "SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 AND ((o.tPreisgueltigab<=?2 AND o.tPreisgueltigbis>=?2) OR (o.tPreisgueltigab<=?2 AND o.tPreisgueltigbis IS NULL)) ORDER BY o.nMenge ASC, o.tPreisgueltigab DESC"),
 		@NamedQuery(name = "VkpfMengenstaffelfindByArtikelIIdAbGueltigab", query = "SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 AND o.tPreisgueltigab > ?2"),
@@ -83,6 +84,17 @@ public class Vkpfmengenstaffel implements Serializable {
 
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
+
+	@Column(name = "C_BEMERKUNG")
+	private String cBemerkung;
+	
+	public String getCBemerkung() {
+		return cBemerkung;
+	}
+
+	public void setCBemerkung(String cBemerkung) {
+		this.cBemerkung = cBemerkung;
+	}
 
 	@Column(name = "B_ALLEPREISLISTEN")
 	private Short bAllepreislisten;

@@ -43,8 +43,9 @@ public class PASelektionDtoAssembler {
 	public static PASelektionDto createDto(Paselektion pASelektion) {
 		PASelektionDto pASelektionDto = new PASelektionDto();
 		if (pASelektion != null) {
-			pASelektionDto.setPartnerIId(pASelektion.getPk().getPartnerIId());
-			pASelektionDto.setSelektionIId(pASelektion.getPk().getSelektionIId());
+			pASelektionDto.setIId(pASelektion.getIId());
+			pASelektionDto.setPartnerIId(pASelektion.getPartnerIId());
+			pASelektionDto.setSelektionIId(pASelektion.getSelektionIId());
 			pASelektionDto.setCBemerkung(pASelektion.getCBemerkung());
 		}
 		return pASelektionDto;

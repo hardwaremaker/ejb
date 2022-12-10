@@ -35,6 +35,7 @@ package com.lp.server.system.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 public class ParameteranwenderDto implements Serializable {
@@ -59,7 +60,7 @@ public class ParameteranwenderDto implements Serializable {
 		this.cNr = cNr;
 	}
 
-	public Object getCWertAsObject() throws Exception {
+	public Object getCWertAsObject() {
 		Object oRet = null;
 		if (cDatentyp.equals("java.util.Locale")) {
 			// String muss genau 10 Zeichen haben, damit ihn der Helper zu einem
@@ -68,6 +69,8 @@ public class ParameteranwenderDto implements Serializable {
 					0, 10));
 		} else if (cDatentyp.equals("java.lang.Integer")) {
 			oRet = new Integer(cWert);
+		} else if (this.getCDatentyp().equals("java.lang.Boolean")) {
+			oRet = new Boolean(Integer.parseInt(getCWert()) != 0);
 		}
 		return oRet;
 	}
@@ -188,5 +191,36 @@ public class ParameteranwenderDto implements Serializable {
 		returnString += ", " + cBemerkungsmall;
 		returnString += ", " + cBemerkunglarge;
 		return returnString;
+	}
+
+	/**
+	 * Den Wert als Boolean zurueckliefern sofern der Parameter vom Typ Boolean
+	 * ist.
+	 * 
+	 * @return boolean des Parameterwerts
+	 */
+	public Boolean asBoolean() {
+		if ("java.lang.Boolean".equals(getCDatentyp())
+				|| "java.lang.Integer".equals(getCDatentyp())) {
+			return new Boolean(Integer.parseInt(getCWert()) != 0);
+		}
+
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
+				new Exception());
+	}
+
+	/**
+	 * Den CWert als Integer zur&uuml;ckliefern, sofern der Parameter vom Typ
+	 * Integer ist.
+	 * 
+	 * @return den Integer-Wert sofern parseable und Datentyp java.lang.Integer
+	 */
+	public Integer asInteger() {
+		if ("java.lang.Integer".equals(getCDatentyp())) {
+			return new Integer(getCWert());
+		}
+
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
+				new Exception());
 	}
 }

@@ -42,8 +42,16 @@ public class PASelektionDto implements Serializable {
 	private Integer partnerIId;
 	private Integer selektionIId;
 	private String cBemerkung;
-	private boolean bIsNew = false;
+	private Integer iId;
 
+	public Integer getIId() {
+		return this.iId;
+	}
+
+	public void setIId(Integer iId) {
+		this.iId = iId;
+	}
+	
 	public Integer getPartnerIId() {
 		return partnerIId;
 	}
@@ -64,17 +72,11 @@ public class PASelektionDto implements Serializable {
 		return cBemerkung;
 	}
 
-	public boolean isBIsNew() {
-		return bIsNew;
-	}
 
 	public void setCBemerkung(String cBemerkung) {
 		this.cBemerkung = cBemerkung;
 	}
 
-	public void setBIsNew(boolean bIsNew) {
-		this.bIsNew = bIsNew;
-	}
 
 	public boolean equals(Object obj) {
 		if (this == obj)

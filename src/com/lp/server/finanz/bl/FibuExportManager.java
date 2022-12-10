@@ -35,18 +35,17 @@ package com.lp.server.finanz.bl;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungKontierungDto;
-import com.lp.server.finanz.service.BuchenFac;
-import com.lp.server.finanz.service.BuchungDto;
-import com.lp.server.finanz.service.BuchungdetailDto;
 import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuKontoExportDto;
 import com.lp.server.finanz.service.FibuexportDto;
@@ -56,6 +55,7 @@ import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.finanz.service.KontolaenderartDto;
 import com.lp.server.finanz.service.KontolandDto;
 import com.lp.server.finanz.service.ReportErloeskontoDto;
+import com.lp.server.finanz.service.ReversechargeartDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
@@ -65,14 +65,15 @@ import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungartDto;
 import com.lp.server.rechnung.service.RechnungkontierungDto;
 import com.lp.server.system.service.KostenstelleDto;
-import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.ZahlungszielDto;
+import com.lp.server.util.BelegDatumAdapter;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HvOptional;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
@@ -243,6 +244,9 @@ public abstract class FibuExportManager extends Facade {
 	public abstract ReportErloeskontoDto getErloeskonto(Integer rechnungId, 
 			BelegpositionVerkaufDto positionDto) throws EJBExceptionLP ; 
 
+	public abstract KontoDto getUebersetzeKontoNachLandBzwLaenderart(
+			Integer kontoIId, Integer belegId) throws EJBExceptionLP ;
+
 	public final String exportiereEingangsrechnung(Integer eingangsrechnungIId, Date dStichtag)
 			throws EJBExceptionLP {
 		FibuexportDto[] exportDaten = getExportdatenEingangsrechnung(eingangsrechnungIId ,dStichtag);
@@ -327,72 +331,46 @@ public abstract class FibuExportManager extends Facade {
 		try {
 			// Ist die RE/GS noch nicht ausgedruckt?? das darf nicht sein
 			if(!getValidator().isValidRechnungStatus(rechnungDto)) {
-				return null ;
+				return null;
+			}
+	
+			// SP8614: Bei Anzahlungsrechnung wird prinzipiell der
+			// Lieferkunde als Rechnungskunde betrachtet.
+			// Hintergrund: Bei der spaeteren Schlussrechnung wird ein
+			// die Lieferadresse (Lieferschein) als Debitor verwendet,
+			// da dort die Leistung erbracht wurde.
+
+			Integer kundeId = rechnungDto.getKundeIId();
+			if (rechnungDto.isAnzahlungsRechnung()) {
+				AuftragDto abDto = getAuftragFac()
+						.auftragFindByPrimaryKey(rechnungDto.getAuftragIId());
+				kundeId = abDto.getKundeIIdLieferadresse();
 			}
 			
-//			if (rechnungDto.getStatusCNr().equals(RechnungFac.STATUS_ANGELEGT)) {
-//				EJBExceptionLP ex = new EJBExceptionLP(
-//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_BELEG_IST_NOCH_NICHT_AKTIVIERT,
-//						new Exception("RE oder GS mit I_ID="
-//								+ rechnungDto.getIId() + " ist nicht aktiviert"));
-//				// Kunden holen
-//				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-//						rechnungDto.getKundeIId(), theClientDto);
-//				ArrayList<Object> a = new ArrayList<Object>();
-//				a.addAll(getAllInfoForTheClient(rechnungDto));
-//				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
-//				ex.setAlInfoForTheClient(a);
-//				throw ex;
-//			}
-			// den Kunden holen
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-					rechnungDto.getKundeIId(), theClientDto);
+//			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+//					rechnungDto.getKundeIId(), theClientDto);
+			KundeDto kundeDto = getKundeFac()
+					.kundeFindByPrimaryKey(kundeId, theClientDto);
+			
 			// die Laenderart eines Partners muss feststellbar sein
 			pruefePartnerLaenderart(kundeDto.getPartnerIId(), rechnungDto);
+			
 			// Pruefen, ob die RE/GS noch im gueltigen Exportzeitraum liegt
 			if(!getValidator().isValidExportZeitraumFuerBeleg(
 					exportKriterienDto, rechnungDto, kundeDto.getPartnerDto())) {
-				return null ;
-			}
-//			pruefeBelegAufGueltigenExportZeitraum(rechnungDto,
-//					kundeDto.getPartnerDto());
-			// der Kunde muss ein debitorenkonto haben
-			if(!getValidator().isValidKundeDebitorenKonto(kundeDto, rechnungDto)) {
-				return null ;
-			}
-//			if (kundeDto.getIidDebitorenkonto() == null) {
-//				EJBExceptionLP ex = new EJBExceptionLP(
-//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_DEBITORENKONTO_NICHT_DEFINIERT,
-//						new Exception(kundeDto.getIId()	+ "," + kundeDto.getPartnerDto().getCName1nachnamefirmazeile1()));
-//				ArrayList<Object> a = new ArrayList<Object>();
-//				a.addAll(getAllInfoForTheClient(rechnungDto));
-//				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
-//				ex.setAlInfoForTheClient(a);
-//				throw ex;
-//			}
-			// pruefen, ob die Rechnung vollstaendig kontiert ist
-			if(!getValidator().isRechnungVollstaendigKontiert(rechnungDto, kundeDto)) {
-				return null ;
+				return null;
 			}
 			
-//			BigDecimal bdKontiert = getRechnungFac().getProzentsatzKontiert(
-//					rechnungDto.getIId(), theClientDto);
-//			if (bdKontiert.compareTo(new BigDecimal(0)) != 0
-//					&& bdKontiert.compareTo(new BigDecimal(100)) != 0) {
-//				EJBExceptionLP ex = new EJBExceptionLP(
-//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_AUSGANGSRECHNUNG_NICHT_VOLLSTAENDIG_KONTIERT,
-//						new Exception("Debitorenkonto fuer Kunde "
-//								+ kundeDto.getIId()
-//								+ ","
-//								+ kundeDto.getPartnerDto()
-//										.getCName1nachnamefirmazeile1()
-//								+ " ist nicht definiert"));
-//				ArrayList<Object> a = new ArrayList<Object>();
-//				a.addAll(getAllInfoForTheClient(rechnungDto));
-//				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
-//				ex.setAlInfoForTheClient(a);
-//				throw ex;
-//			}
+			// der Kunde muss ein debitorenkonto haben
+			if(!getValidator().isValidKundeDebitorenKonto(kundeDto, rechnungDto)) {
+				return null;
+			}
+
+			// pruefen, ob die Rechnung vollstaendig kontiert ist
+			if(!getValidator().isRechnungVollstaendigKontiert(rechnungDto, kundeDto)) {
+				return null;
+			}
+			
 			return kundeDto;
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -517,100 +495,101 @@ public abstract class FibuExportManager extends Facade {
 
 	}
 
-	/**
-	 * Ein Konto in die Laenderart des uebergebenen Partners uebersetzen.
-	 * 
-	 * @param kontoIId
-	 *            Integer
-	 * @param laenderartCNr
-	 *            String
-	 * @param oBelegDto
-	 *            Object
-	 * @return KontoDto
-	 * @throws EJBExceptionLP
-	 */
-	protected KontoDto uebersetzeKontoNachLandBzwLaenderart(Integer kontoIId,
-			String laenderartCNr, Integer finanzamtIId, String mandantCNr,
-			Object oBelegDto, Integer LandIId) throws EJBExceptionLP {
+	protected KontoDto uebersetzeKontoNachLandBzwLaenderart(
+			Integer kontoIId, String laenderartCNr, Integer finanzamtIId, 
+			String mandantCNr, Object oBelegDto, Integer landIId, 
+			Integer reversechargeartId, Timestamp gueltigZum) throws EJBExceptionLP {
 		KontoDto kontoDto = null;
-		MandantDto mandantDto;
 		Integer meinFinanzamtIId = null;
 		try {
-			mandantDto = getMandantFac().mandantFindByPrimaryKeyOhneExc(
+			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKeyOhneExc(
 					mandantCNr, theClientDto);
 			meinFinanzamtIId = mandantDto.getPartnerIIdFinanzamt();
 		} catch (RemoteException e) {
-			//
+			throwEJBExceptionLPRespectOld(e);
 		}
 
-		boolean hatFibu = getMandantFac().darfAnwenderAufModulZugreifen(
-				LocaleFac.BELEGART_FINANZBUCHHALTUNG, theClientDto);
+		boolean hatFibu = getMandantFac().hatModulFinanzbuchhaltung(theClientDto) ;
 		// keine Uebersetzung Inland:
 		// keine Fibu dann bei Inland oder fuer eigenes Finanzamt
 		// ansonst wenn Inland
 		try {
 			boolean keineUbersetzung = false;
-			if (laenderartCNr.equals(FinanzFac.LAENDERART_INLAND)) {
+			ReversechargeartDto rcDto = getFinanzServiceFac().reversechargeartFindOhne(theClientDto);
+			boolean brauchtUebersetztesKonto = true;
+			
+			/*
+			 * Bisher: Im Inland bei gleichem Finanzamt wird keine 
+			 * Uebersetzung benoetigt.
+			 * SP8308: Auch im Inland ist eine Uebersetzung moeglich(!), weil
+			 * Steueraenderung. D.h. nur noch dort einen Fehler bringen,
+			 * wenn die Kontouebersetzung zwingend erforderlich ist.
+			 */
+			if (FinanzFac.LAENDERART_INLAND.equals(laenderartCNr) &&
+					rcDto.getIId().equals(reversechargeartId)) {
 				if (!hatFibu) {
 					keineUbersetzung = true;
+					brauchtUebersetztesKonto = false;
 				} else {
-					if (meinFinanzamtIId == null)
+					if (meinFinanzamtIId == null) {
 						keineUbersetzung = true;
-					else if (meinFinanzamtIId.equals(finanzamtIId))
-						keineUbersetzung = true;
+						brauchtUebersetztesKonto = false;
+					} else { 
+/*	
+ * SP8308 Es wird auch Inland/gleiches Finanzamt uebersetzt
+ * 					
+						if (meinFinanzamtIId.equals(finanzamtIId)) {
+							keineUbersetzung = true;							
+						}
+*/						
+						brauchtUebersetztesKonto = false;
+					}
 				}
 			}
+
 			if (keineUbersetzung) {
 				kontoDto = getFinanzFac().kontoFindByPrimaryKey(kontoIId);
 			} else {
 				// Uebersetzung finden
 				// zuerst nach Landzuordnung
-				KontolandDto kontolandDto = getFinanzFac()
-						.kontolandFindByPrimaryKeyOhneExc(kontoIId, LandIId);
-				if (kontolandDto != null) {
+				HvOptional<KontolandDto> kontolandDto = getFinanzFac()
+						.kontolandZuDatum(kontoIId, landIId, gueltigZum);
+				if (kontolandDto.isPresent()) {
 					kontoDto = getFinanzFac().kontoFindByPrimaryKey(
-							kontolandDto.getKontoIIdUebersetzt());
+							kontolandDto.get().getKontoIIdUebersetzt());
 				} else {
 					// dann nach laenderart
+					Integer newKontoId = kontoIId;
+					HvOptional<KontolaenderartDto> dto = getFinanzFac()
+							.kontolaenderartZuDatum(kontoIId, reversechargeartId,
+									laenderartCNr, finanzamtIId, mandantCNr, gueltigZum);
+					if(brauchtUebersetztesKonto) {
+						if(!getValidator().isValidKontolaenderart(dto,
+								kontoIId, laenderartCNr, finanzamtIId, reversechargeartId,
+								oBelegDto, meinFinanzamtIId, gueltigZum)) {
+							return null ;						
+						}
+						newKontoId = dto.get().getKontoIIdUebersetzt();
+					} else {
+						if(dto.isPresent()) {
+							newKontoId = dto.get().getKontoIIdUebersetzt();							
+						}
+					}
+					
+					kontoDto = getFinanzFac().kontoFindByPrimaryKey(newKontoId);						
+					
+//					kontoDto = getFinanzFac().kontoFindByPrimaryKey(dto.get().getKontoIIdUebersetzt());
+/*					
 					KontolaenderartDto kontolaenderartDto = getFinanzFac()
 							.kontolaenderartFindByPrimaryKeyOhneExc(kontoIId,
-									laenderartCNr, finanzamtIId, mandantCNr);
+									reversechargeartId, laenderartCNr, finanzamtIId, mandantCNr);
 					if(!getValidator().isValidKontolaenderart(kontolaenderartDto,
-							kontoIId, laenderartCNr, finanzamtIId, oBelegDto, meinFinanzamtIId)) {
+							kontoIId, laenderartCNr, finanzamtIId, reversechargeartId, oBelegDto, meinFinanzamtIId)) {
 						return null ;						
 					}
 					kontoDto = getFinanzFac().kontoFindByPrimaryKey(
 							kontolaenderartDto.getKontoIIdUebersetzt());
-					
-					// wenn eine hinterlegt ist
-//					if (kontolaenderartDto != null) {
-//						kontoDto = getFinanzFac().kontoFindByPrimaryKey(
-//								kontolaenderartDto.getKontoIIdUebersetzt());
-//					} else {
-//						// ansonsten entsprechende Fehlermeldung
-//						KontoDto kontoDtoHelp = getFinanzFac()
-//								.kontoFindByPrimaryKey(kontoIId);
-//						EJBExceptionLP ex = new EJBExceptionLP(
-//								EJBExceptionLP.FEHLER_FINANZ_EXPORT_KONTOLAENDERART_NICHT_DEFINIERT,
-//								new Exception("Kontolaenderart fuer konto i_id"
-//										+ kontoDtoHelp.getIId() + ","
-//										+ kontoDtoHelp.getCNr() + " "
-//										+ kontoDtoHelp.getCBez() + ", "
-//										+ laenderartCNr
-//										+ " ist nicht definiert"));
-//						ArrayList<Object> a = new ArrayList<Object>();
-//						a.add(kontoDtoHelp.getCNr() + " "
-//								+ kontoDtoHelp.getCBez() + ", " + laenderartCNr);
-//						a.add("Finanzamt Mandant I_ID='" + (meinFinanzamtIId == null ? "" : meinFinanzamtIId.toString()) + "'") ;
-//						a.add("Finanzamt I_ID='" + (finanzamtIId == null ? "" : finanzamtIId.toString()) + "'");
-//						if (oBelegDto instanceof RechnungDto) {
-//							a.addAll(getAllInfoForTheClient((RechnungDto) oBelegDto));
-//						} else if (oBelegDto instanceof EingangsrechnungDto) {
-//							a.addAll(getAllInfoForTheClient((EingangsrechnungDto) oBelegDto));
-//						}
-//						ex.setAlInfoForTheClient(a);
-//						throw ex;
-//					}
+*/
 				}
 			}
 		} catch (RemoteException ex) {
@@ -619,120 +598,29 @@ public abstract class FibuExportManager extends Facade {
 		return kontoDto;
 	}
 
-	/**
-	 * Pruefen, ob fuer das uebergebene Konto das weiterfuehrende UST-Konto
-	 * definiert ist. Dieses wird, falls alle Daten vorhanden sind, in die
-	 * Laenderart des Partners uebersetzt.
-	 * 
-	 * @param kontoDto
-	 *            KontoDto
-	 * @param partnerIId
-	 *            Integer
-	 * @param oBelegDto
-	 *            String
-	 * @return KontoDto
-	 * @throws EJBExceptionLP
-	 */
-	/*
-	 * protected KontoDto pruefeKontoNachUSTKonto(KontoDto kontoDto, Integer
-	 * partnerIId, Object oBelegDto) throws EJBExceptionLP, RemoteException {
-	 * KontoDto kontoDtoUebersetzt = null; if
-	 * (kontoDto.getKontoIIdWeiterfuehrendUst() != null) { String laenderartCNr
-	 * = pruefePartnerLaenderart(partnerIId, oBelegDto); PartnerDto partnerDto =
-	 * getPartnerFac().partnerFindByPrimaryKey( partnerIId, null); Integer iLand
-	 * = partnerDto.getLandplzortDto().getIlandID(); kontoDtoUebersetzt =
-	 * uebersetzeKontoNachLandBzwLaenderart(kontoDto .getIId(), laenderartCNr,
-	 * finanzamtIId, mandantCNr, oBelegDto, iLand); } else { EJBExceptionLP ex =
-	 * new EJBExceptionLP(
-	 * EJBExceptionLP.FEHLER_FINANZ_EXPORT_UST_KONTO_NICHT_DEFINIERT, new
-	 * Exception("UST-Konto fuer konto i_id" + kontoDto.getIId() + "," +
-	 * kontoDto.getCNr() + " " + kontoDto.getCBez() + " ist nicht definiert"));
-	 * ArrayList<Object> a = new ArrayList<Object>(); if (oBelegDto instanceof
-	 * RechnungDto) { a.addAll(getAllInfoForTheClient((RechnungDto) oBelegDto));
-	 * } else if (oBelegDto instanceof EingangsrechnungDto) { a
-	 * .addAll(getAllInfoForTheClient((EingangsrechnungDto) oBelegDto)); }
-	 * a.addAll(getAllInfoForTheClient(kontoDto)); ex.setAlInfoForTheClient(a);
-	 * throw ex; } return kontoDtoUebersetzt; }
-	 */
-
-	/**
-	 * Pruefen, ob ein Partner einer Laenderarar ist, und die Laenderart
-	 * zurueckgeben.
-	 * 
-	 * @param partnerIId
-	 *            Integer
-	 * @param oBelegDto
-	 *            String
-	 * @return String
-	 * @throws EJBExceptionLP
-	 */
-	private String pruefePartnerLaenderart(Integer partnerIId, Object oBelegDto)
-			throws EJBExceptionLP {
-		String laenderartCNr = null;
+	private void pruefePartnerLaenderart(
+			Integer partnerId, EingangsrechnungDto erDto) {
+		pruefePartnerLaenderartImpl(partnerId, new BelegDatumAdapter(erDto));
+	}
+	
+	private void pruefePartnerLaenderart(
+			Integer partnerId, RechnungDto arDto) {
+		pruefePartnerLaenderartImpl(partnerId, new BelegDatumAdapter(arDto));		
+	}
+	
+	private void pruefePartnerLaenderartImpl(
+			Integer partnerId, BelegDatumAdapter beleg) {
 		try {
-			laenderartCNr = getFinanzServiceFac().getLaenderartZuPartner(
-					partnerIId, theClientDto);
-			if(getValidator().isValidLaenderartCnr(laenderartCNr, partnerIId, oBelegDto)) {
-				return null ;
+			String laenderartCnr = getFinanzServiceFac().getLaenderartZuPartner(
+					partnerId, beleg.date(), theClientDto);	
+			if (getValidator().isValidLaenderartCnr(laenderartCnr, partnerId, beleg)) {
+				return;
 			}
-			
-//			if (laenderartCNr == null) {
-//				PartnerDto partnerDto = getPartnerFac()
-//						.partnerFindByPrimaryKey(partnerIId, theClientDto);
-//				EJBExceptionLP ex = new EJBExceptionLP(
-//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_LAENDERART_NICHT_FESTSTELLBAR_FUER_PARTNER,
-//						new Exception(
-//								"Laenderart nicht feststellbar partner i_id"
-//										+ partnerDto.getIId()
-//										+ ","
-//										+ partnerDto
-//												.getCName1nachnamefirmazeile1()));
-//				ArrayList<Object> a = new ArrayList<Object>();
-//				if (oBelegDto instanceof RechnungDto) {
-//					a.addAll(getAllInfoForTheClient((RechnungDto) oBelegDto));
-//				} else if (oBelegDto instanceof EingangsrechnungDto) {
-//					a.addAll(getAllInfoForTheClient((EingangsrechnungDto) oBelegDto));
-//				}
-//				a.addAll(getAllInfoForTheClient(partnerDto));
-//				ex.setAlInfoForTheClient(a);
-//				throw ex;
-//			}
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
-		return laenderartCNr;
-	}
-
-	private BuchungdetailDto[] getBuchungszeilenFromExportdaten(
-			FibuexportDto[] exportDtos) throws EJBExceptionLP {
-		BuchungdetailDto[] buchungen = new BuchungdetailDto[exportDtos.length];
-		for (int i = 0; i < exportDtos.length; i++) {
-			buchungen[i].setKontoIId(exportDtos[i].getKontoDto().getIId());
-			buchungen[i].setKontoIIdGegenkonto(exportDtos[i].getGegenkontoDto()
-					.getIId());
-			if (exportDtos[i].getHabenbetragBD().doubleValue() != 0.0) {
-				buchungen[i].setBuchungdetailartCNr(BuchenFac.HabenBuchung);
-				buchungen[i].setNBetrag(exportDtos[i].getHabenbetragBD());
-			} else {
-				buchungen[i].setBuchungdetailartCNr(BuchenFac.SollBuchung);
-				buchungen[i].setNBetrag(exportDtos[i].getSollbetragBD());
-			}
-			buchungen[i].setNUst(exportDtos[i].getSteuerBD());
-		}
-		return buchungen;
-	}
-
-	protected void verbucheExportdaten(BuchungDto buchungDto,
-			FibuexportDto[] exportDtos, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		try {
-			BuchungdetailDto[] buchungen = getBuchungszeilenFromExportdaten(exportDtos);
-			getBuchenFac().buchen(buchungDto, buchungen, false, theClientDto);
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
+		} catch(RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);			
 		}
 	}
-
+	
 	void setExportFormatter(FibuExportFormatter exportFormatter) {
 		this.exportFormatter = exportFormatter;
 	}
@@ -858,6 +746,9 @@ public abstract class FibuExportManager extends Facade {
 			tBelegdatum = ((EingangsrechnungDto) oBelegDto).getDBelegdatum();
 		} else if (oBelegDto instanceof FLREingangsrechnung) {
 			tBelegdatum = ((FLREingangsrechnung) oBelegDto).getT_belegdatum();
+		} else {
+			throw new IllegalArgumentException(
+					"Unknown Belegtype: " + (oBelegDto == null ? "null" : oBelegDto.toString()));
 		}
 		GregorianCalendar cStichtag = new GregorianCalendar();
 		cStichtag.setTime(exportKriterienDto.getDStichtag());
@@ -925,11 +816,11 @@ public abstract class FibuExportManager extends Facade {
 		return list;
 	}
 
-	protected String getLaenderartZuPartner(PartnerDto partnerDto)
+	protected String getLaenderartZuPartner(PartnerDto partnerDto, Timestamp gueltigZum)
 			throws EJBExceptionLP {
 		try {
 			return getFinanzServiceFac().getLaenderartZuPartner(mandantDto,
-					partnerDto, theClientDto);
+					partnerDto, gueltigZum, theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 			return null;
@@ -937,46 +828,20 @@ public abstract class FibuExportManager extends Facade {
 	}
 
 	protected String getLaenderartZuKonto(PartnerDto partnerDto,
-			Integer kontoIId) throws EJBExceptionLP {
+			Integer kontoIId, Timestamp gueltigZum) throws EJBExceptionLP {
 		try {
 			KontoDto kontoDto = getFinanzFac().kontoFindByPrimaryKey(kontoIId);
 			PartnerDto partnerDtoBasis = getPartnerFac()
 					.partnerFindByPrimaryKey(kontoDto.getFinanzamtIId(),
 							theClientDto);
 			return getFinanzServiceFac().getLaenderartZuPartner(
-					partnerDtoBasis, partnerDto, theClientDto);
+					partnerDtoBasis, partnerDto, gueltigZum, theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 			return null;
 		}
 	}
-
-	protected String getLaenderartZuKonto(PartnerDto partnerDto,
-			Integer kontoIId, boolean bReverseCharge) throws EJBExceptionLP {
-		try {
-			KontoDto kontoDto = getFinanzFac().kontoFindByPrimaryKey(kontoIId);
-			PartnerDto partnerDtoBasis = getPartnerFac()
-					.partnerFindByPrimaryKey(kontoDto.getFinanzamtIId(),
-							theClientDto);
-			String laenderart = getFinanzServiceFac().getLaenderartZuPartner(
-					partnerDtoBasis, partnerDto, theClientDto);
-			if (bReverseCharge) {
-				if (laenderart.equals(FinanzFac.LAENDERART_INLAND))
-					return FinanzFac.LAENDERART_REVCHARGE_INLAND;
-				else if (laenderart.equals(FinanzFac.LAENDERART_EU_AUSLAND_MIT_UID))
-					return FinanzFac.LAENDERART_REVCHARGE_AUSLAND;
-				else
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_EXPORT_KONTOLAENDERART_NICHT_DEFINIERT,
-							"Keine L\u00E4nderart\u00FCbersetzung bei Reversecharge m\u00F6glich: L\u00E4nderart=" + laenderart);
-			} else {
-				return laenderart;
-			}
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-			return null;
-		}
-	}
-
+	
 	protected final ZahlungszielDto getZahlungsziel(Integer zahlungszielIId) {
 		return (ZahlungszielDto) mZahlungsziele.get(zahlungszielIId);
 	}
@@ -988,4 +853,26 @@ public abstract class FibuExportManager extends Facade {
 	protected final FinanzamtDto getFinanzamt(Integer partnerIIdFinanzamt) {
 		return (FinanzamtDto) mFinanzaemter.get(partnerIIdFinanzamt);
 	}
+	
+	protected boolean isEingangsrechnungDtoReversecharge(EingangsrechnungDto erDto) {
+		try {
+			ReversechargeartDto rcOhneDto = getFinanzServiceFac()
+					.reversechargeartFindOhne(erDto.getMandantCNr()) ;
+			return !rcOhneDto.getIId().equals(erDto.getReversechargeartId()) ;
+		} catch(RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		return false ;		
+	}
+	
+	protected boolean isRechnungDtoReversecharge(RechnungDto rechnungDto) {
+		try {
+			ReversechargeartDto rcOhneDto = getFinanzServiceFac()
+					.reversechargeartFindOhne(rechnungDto.getMandantCNr()) ;
+			return !rcOhneDto.getIId().equals(rechnungDto.getReversechargeartId()) ;
+		} catch(RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		return false ;
+	}	
 }

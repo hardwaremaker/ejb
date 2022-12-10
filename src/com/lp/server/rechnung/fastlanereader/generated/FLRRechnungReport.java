@@ -1,38 +1,8 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.rechnung.fastlanereader.generated;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
+import com.lp.server.finanz.fastlanereader.generated.FLRReversechargeart;
+import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
@@ -59,6 +29,9 @@ public class FLRRechnungReport implements Serializable {
 
     /** nullable persistent field */
     private String c_zollpapier;
+
+    /** nullable persistent field */
+    private String c_mahnungsanmerkung;
 
     /** nullable persistent field */
     private Date d_belegdatum;
@@ -109,13 +82,13 @@ public class FLRRechnungReport implements Serializable {
     private BigDecimal n_kurs;
 
     /** nullable persistent field */
-    private Short b_reversecharge;
-
-    /** nullable persistent field */
     private Date t_mahnsperrebis;
 
     /** nullable persistent field */
     private Date t_faelligkeit;
+
+    /** nullable persistent field */
+    private Integer reversechargeartId;
 
     /** nullable persistent field */
     private FLRKunde flrkunde;
@@ -138,12 +111,19 @@ public class FLRRechnungReport implements Serializable {
     /** nullable persistent field */
     private com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport flrrechnung;
 
+    /** nullable persistent field */
+    private FLRReversechargeart flrreversechargeart;
+
+    /** nullable persistent field */
+    private FLRLieferschein flrlieferschein;
+
     /** full constructor */
-    public FLRRechnungReport(String mandant_c_nr, Integer i_geschaeftsjahr, String c_nr, String c_zollpapier, Date d_belegdatum, String waehrung_c_nr, String status_c_nr, BigDecimal n_wert, BigDecimal n_wertust, BigDecimal n_wertfw, BigDecimal n_wertustfw, Date t_bezahltdatum, Date t_storniert, Date t_fibuuebernahme, Integer kunde_i_id, Integer vertreter_i_id, Integer kostenstelle_i_id, Integer zahlungsziel_i_id, Integer kunde_i_id_statistikadresse, BigDecimal n_kurs, Short b_reversecharge, Date t_mahnsperrebis, Date t_faelligkeit, FLRKunde flrkunde, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungart flrrechnungart, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRKunde flrstatistikadresse, FLRAuftragReport flrauftrag, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport flrrechnung) {
+    public FLRRechnungReport(String mandant_c_nr, Integer i_geschaeftsjahr, String c_nr, String c_zollpapier, String c_mahnungsanmerkung, Date d_belegdatum, String waehrung_c_nr, String status_c_nr, BigDecimal n_wert, BigDecimal n_wertust, BigDecimal n_wertfw, BigDecimal n_wertustfw, Date t_bezahltdatum, Date t_storniert, Date t_fibuuebernahme, Integer kunde_i_id, Integer vertreter_i_id, Integer kostenstelle_i_id, Integer zahlungsziel_i_id, Integer kunde_i_id_statistikadresse, BigDecimal n_kurs, Date t_mahnsperrebis, Date t_faelligkeit, Integer reversechargeartId, FLRKunde flrkunde, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungart flrrechnungart, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRKunde flrstatistikadresse, FLRAuftragReport flrauftrag, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport flrrechnung, FLRReversechargeart flrreversechargeart, FLRLieferschein flrlieferschein) {
         this.mandant_c_nr = mandant_c_nr;
         this.i_geschaeftsjahr = i_geschaeftsjahr;
         this.c_nr = c_nr;
         this.c_zollpapier = c_zollpapier;
+        this.c_mahnungsanmerkung = c_mahnungsanmerkung;
         this.d_belegdatum = d_belegdatum;
         this.waehrung_c_nr = waehrung_c_nr;
         this.status_c_nr = status_c_nr;
@@ -160,9 +140,9 @@ public class FLRRechnungReport implements Serializable {
         this.zahlungsziel_i_id = zahlungsziel_i_id;
         this.kunde_i_id_statistikadresse = kunde_i_id_statistikadresse;
         this.n_kurs = n_kurs;
-        this.b_reversecharge = b_reversecharge;
         this.t_mahnsperrebis = t_mahnsperrebis;
         this.t_faelligkeit = t_faelligkeit;
+        this.reversechargeartId = reversechargeartId;
         this.flrkunde = flrkunde;
         this.flrrechnungart = flrrechnungart;
         this.flrkostenstelle = flrkostenstelle;
@@ -170,6 +150,8 @@ public class FLRRechnungReport implements Serializable {
         this.flrstatistikadresse = flrstatistikadresse;
         this.flrauftrag = flrauftrag;
         this.flrrechnung = flrrechnung;
+        this.flrreversechargeart = flrreversechargeart;
+        this.flrlieferschein = flrlieferschein;
     }
 
     /** default constructor */
@@ -214,6 +196,14 @@ public class FLRRechnungReport implements Serializable {
 
     public void setC_zollpapier(String c_zollpapier) {
         this.c_zollpapier = c_zollpapier;
+    }
+
+    public String getC_mahnungsanmerkung() {
+        return this.c_mahnungsanmerkung;
+    }
+
+    public void setC_mahnungsanmerkung(String c_mahnungsanmerkung) {
+        this.c_mahnungsanmerkung = c_mahnungsanmerkung;
     }
 
     public Date getD_belegdatum() {
@@ -344,14 +334,6 @@ public class FLRRechnungReport implements Serializable {
         this.n_kurs = n_kurs;
     }
 
-    public Short getB_reversecharge() {
-        return this.b_reversecharge;
-    }
-
-    public void setB_reversecharge(Short b_reversecharge) {
-        this.b_reversecharge = b_reversecharge;
-    }
-
     public Date getT_mahnsperrebis() {
         return this.t_mahnsperrebis;
     }
@@ -366,6 +348,14 @@ public class FLRRechnungReport implements Serializable {
 
     public void setT_faelligkeit(Date t_faelligkeit) {
         this.t_faelligkeit = t_faelligkeit;
+    }
+
+    public Integer getReversechargeartId() {
+        return this.reversechargeartId;
+    }
+
+    public void setReversechargeartId(Integer reversechargeartId) {
+        this.reversechargeartId = reversechargeartId;
     }
 
     public FLRKunde getFlrkunde() {
@@ -422,6 +412,22 @@ public class FLRRechnungReport implements Serializable {
 
     public void setFlrrechnung(com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport flrrechnung) {
         this.flrrechnung = flrrechnung;
+    }
+
+    public FLRReversechargeart getFlrreversechargeart() {
+        return this.flrreversechargeart;
+    }
+
+    public void setFlrreversechargeart(FLRReversechargeart flrreversechargeart) {
+        this.flrreversechargeart = flrreversechargeart;
+    }
+
+    public FLRLieferschein getFlrlieferschein() {
+        return this.flrlieferschein;
+    }
+
+    public void setFlrlieferschein(FLRLieferschein flrlieferschein) {
+        this.flrlieferschein = flrlieferschein;
     }
 
     public String toString() {

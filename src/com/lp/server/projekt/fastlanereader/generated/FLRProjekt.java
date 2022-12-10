@@ -1,43 +1,13 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.projekt.fastlanereader.generated;
 
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
 import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
 import com.lp.server.partner.fastlanereader.generated.FLRPartner;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -75,6 +45,9 @@ public class FLRProjekt implements Serializable {
     private Integer partner_i_id;
 
     /** nullable persistent field */
+    private Integer partner_i_id_betreiber;
+
+    /** nullable persistent field */
     private Integer bereich_i_id;
 
     /** nullable persistent field */
@@ -99,13 +72,16 @@ public class FLRProjekt implements Serializable {
     private Integer ansprechpartner_i_id;
 
     /** nullable persistent field */
-    private Short b_verrechenbar;
+    private Integer i_verrechenbar;
 
     /** nullable persistent field */
     private Short b_freigegeben;
 
     /** nullable persistent field */
     private Date t_internerledigt;
+
+    /** nullable persistent field */
+    private Date t_realisierung;
 
     /** nullable persistent field */
     private Date t_anlegen;
@@ -138,6 +114,18 @@ public class FLRProjekt implements Serializable {
     private Integer i_wahrscheinlichkeit;
 
     /** nullable persistent field */
+    private Integer artikel_i_id;
+
+    /** nullable persistent field */
+    private com.lp.server.projekt.fastlanereader.generated.FLRTitelaushistory flrtitelaushistory;
+
+    /** nullable persistent field */
+    private FLRArtikel flrartikel;
+
+    /** nullable persistent field */
+    private com.lp.server.projekt.fastlanereader.generated.FLRBereich flrbereich;
+
+    /** nullable persistent field */
     private com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus flrprojektstatus;
 
     /** nullable persistent field */
@@ -156,10 +144,28 @@ public class FLRProjekt implements Serializable {
     private FLRPartner flrpartner;
 
     /** nullable persistent field */
+    private FLRPartner flrpartnerbetreiber;
+
+    /** nullable persistent field */
     private com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche;
 
+    /** nullable persistent field */
+    private com.lp.server.projekt.fastlanereader.generated.FLRProjekterledigungsgrund flrprojekterledigungsgrund;
+
+    /** nullable persistent field */
+    private com.lp.server.projekt.fastlanereader.generated.FLRVkfortschritt flrvkfortschritt;
+
+    /** nullable persistent field */
+    private com.lp.server.projekt.fastlanereader.generated.FLRTyp flrtyp;
+
+    /** persistent field */
+    private Set technikerset;
+
+    /** persistent field */
+    private Set historyset;
+
     /** full constructor */
-    public FLRProjekt(String c_nr, String kategorie_c_nr, String c_titel, String c_dateiname, Integer personal_i_id_erzeuger, Integer personal_i_id_zugewiesener, Integer personal_i_id_internerledigt, Integer personal_i_id_erlediger, Integer partner_i_id, Integer bereich_i_id, String typ_c_nr, Integer i_prio, String status_c_nr, String mandant_c_nr, Date t_zielwunschdatum, String x_freetext, Integer ansprechpartner_i_id, Short b_verrechenbar, Short b_freigegeben, Date t_internerledigt, Date t_anlegen, Date t_aendern, Double d_dauer, Date t_zeit, Date t_erledigungsdatum, Integer i_sort, String c_buildnumber, String c_deploynumber, BigDecimal n_umsatzgeplant, Integer i_wahrscheinlichkeit, com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus flrprojektstatus, FLRPersonal flrpersonalZugewiesener, FLRPersonal flrpersonalErzeuger, FLRPersonal flrpersonalErlediger, FLRAnsprechpartner flransprechpartner, FLRPartner flrpartner, com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche) {
+    public FLRProjekt(String c_nr, String kategorie_c_nr, String c_titel, String c_dateiname, Integer personal_i_id_erzeuger, Integer personal_i_id_zugewiesener, Integer personal_i_id_internerledigt, Integer personal_i_id_erlediger, Integer partner_i_id, Integer partner_i_id_betreiber, Integer bereich_i_id, String typ_c_nr, Integer i_prio, String status_c_nr, String mandant_c_nr, Date t_zielwunschdatum, String x_freetext, Integer ansprechpartner_i_id, Integer i_verrechenbar, Short b_freigegeben, Date t_internerledigt, Date t_realisierung, Date t_anlegen, Date t_aendern, Double d_dauer, Date t_zeit, Date t_erledigungsdatum, Integer i_sort, String c_buildnumber, String c_deploynumber, BigDecimal n_umsatzgeplant, Integer i_wahrscheinlichkeit, Integer artikel_i_id, com.lp.server.projekt.fastlanereader.generated.FLRTitelaushistory flrtitelaushistory, FLRArtikel flrartikel, com.lp.server.projekt.fastlanereader.generated.FLRBereich flrbereich, com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus flrprojektstatus, FLRPersonal flrpersonalZugewiesener, FLRPersonal flrpersonalErzeuger, FLRPersonal flrpersonalErlediger, FLRAnsprechpartner flransprechpartner, FLRPartner flrpartner, FLRPartner flrpartnerbetreiber, com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche, com.lp.server.projekt.fastlanereader.generated.FLRProjekterledigungsgrund flrprojekterledigungsgrund, com.lp.server.projekt.fastlanereader.generated.FLRVkfortschritt flrvkfortschritt, com.lp.server.projekt.fastlanereader.generated.FLRTyp flrtyp, Set technikerset, Set historyset) {
         this.c_nr = c_nr;
         this.kategorie_c_nr = kategorie_c_nr;
         this.c_titel = c_titel;
@@ -169,6 +175,7 @@ public class FLRProjekt implements Serializable {
         this.personal_i_id_internerledigt = personal_i_id_internerledigt;
         this.personal_i_id_erlediger = personal_i_id_erlediger;
         this.partner_i_id = partner_i_id;
+        this.partner_i_id_betreiber = partner_i_id_betreiber;
         this.bereich_i_id = bereich_i_id;
         this.typ_c_nr = typ_c_nr;
         this.i_prio = i_prio;
@@ -177,9 +184,10 @@ public class FLRProjekt implements Serializable {
         this.t_zielwunschdatum = t_zielwunschdatum;
         this.x_freetext = x_freetext;
         this.ansprechpartner_i_id = ansprechpartner_i_id;
-        this.b_verrechenbar = b_verrechenbar;
+        this.i_verrechenbar = i_verrechenbar;
         this.b_freigegeben = b_freigegeben;
         this.t_internerledigt = t_internerledigt;
+        this.t_realisierung = t_realisierung;
         this.t_anlegen = t_anlegen;
         this.t_aendern = t_aendern;
         this.d_dauer = d_dauer;
@@ -190,17 +198,33 @@ public class FLRProjekt implements Serializable {
         this.c_deploynumber = c_deploynumber;
         this.n_umsatzgeplant = n_umsatzgeplant;
         this.i_wahrscheinlichkeit = i_wahrscheinlichkeit;
+        this.artikel_i_id = artikel_i_id;
+        this.flrtitelaushistory = flrtitelaushistory;
+        this.flrartikel = flrartikel;
+        this.flrbereich = flrbereich;
         this.flrprojektstatus = flrprojektstatus;
         this.flrpersonalZugewiesener = flrpersonalZugewiesener;
         this.flrpersonalErzeuger = flrpersonalErzeuger;
         this.flrpersonalErlediger = flrpersonalErlediger;
         this.flransprechpartner = flransprechpartner;
         this.flrpartner = flrpartner;
+        this.flrpartnerbetreiber = flrpartnerbetreiber;
         this.flrprojekttextsuche = flrprojekttextsuche;
+        this.flrprojekterledigungsgrund = flrprojekterledigungsgrund;
+        this.flrvkfortschritt = flrvkfortschritt;
+        this.flrtyp = flrtyp;
+        this.technikerset = technikerset;
+        this.historyset = historyset;
     }
 
     /** default constructor */
     public FLRProjekt() {
+    }
+
+    /** minimal constructor */
+    public FLRProjekt(Set technikerset, Set historyset) {
+        this.technikerset = technikerset;
+        this.historyset = historyset;
     }
 
     public Integer getI_id() {
@@ -283,6 +307,14 @@ public class FLRProjekt implements Serializable {
         this.partner_i_id = partner_i_id;
     }
 
+    public Integer getPartner_i_id_betreiber() {
+        return this.partner_i_id_betreiber;
+    }
+
+    public void setPartner_i_id_betreiber(Integer partner_i_id_betreiber) {
+        this.partner_i_id_betreiber = partner_i_id_betreiber;
+    }
+
     public Integer getBereich_i_id() {
         return this.bereich_i_id;
     }
@@ -347,12 +379,12 @@ public class FLRProjekt implements Serializable {
         this.ansprechpartner_i_id = ansprechpartner_i_id;
     }
 
-    public Short getB_verrechenbar() {
-        return this.b_verrechenbar;
+    public Integer getI_verrechenbar() {
+        return this.i_verrechenbar;
     }
 
-    public void setB_verrechenbar(Short b_verrechenbar) {
-        this.b_verrechenbar = b_verrechenbar;
+    public void setI_verrechenbar(Integer i_verrechenbar) {
+        this.i_verrechenbar = i_verrechenbar;
     }
 
     public Short getB_freigegeben() {
@@ -369,6 +401,14 @@ public class FLRProjekt implements Serializable {
 
     public void setT_internerledigt(Date t_internerledigt) {
         this.t_internerledigt = t_internerledigt;
+    }
+
+    public Date getT_realisierung() {
+        return this.t_realisierung;
+    }
+
+    public void setT_realisierung(Date t_realisierung) {
+        this.t_realisierung = t_realisierung;
     }
 
     public Date getT_anlegen() {
@@ -451,6 +491,38 @@ public class FLRProjekt implements Serializable {
         this.i_wahrscheinlichkeit = i_wahrscheinlichkeit;
     }
 
+    public Integer getArtikel_i_id() {
+        return this.artikel_i_id;
+    }
+
+    public void setArtikel_i_id(Integer artikel_i_id) {
+        this.artikel_i_id = artikel_i_id;
+    }
+
+    public com.lp.server.projekt.fastlanereader.generated.FLRTitelaushistory getFlrtitelaushistory() {
+        return this.flrtitelaushistory;
+    }
+
+    public void setFlrtitelaushistory(com.lp.server.projekt.fastlanereader.generated.FLRTitelaushistory flrtitelaushistory) {
+        this.flrtitelaushistory = flrtitelaushistory;
+    }
+
+    public FLRArtikel getFlrartikel() {
+        return this.flrartikel;
+    }
+
+    public void setFlrartikel(FLRArtikel flrartikel) {
+        this.flrartikel = flrartikel;
+    }
+
+    public com.lp.server.projekt.fastlanereader.generated.FLRBereich getFlrbereich() {
+        return this.flrbereich;
+    }
+
+    public void setFlrbereich(com.lp.server.projekt.fastlanereader.generated.FLRBereich flrbereich) {
+        this.flrbereich = flrbereich;
+    }
+
     public com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus getFlrprojektstatus() {
         return this.flrprojektstatus;
     }
@@ -499,12 +571,60 @@ public class FLRProjekt implements Serializable {
         this.flrpartner = flrpartner;
     }
 
+    public FLRPartner getFlrpartnerbetreiber() {
+        return this.flrpartnerbetreiber;
+    }
+
+    public void setFlrpartnerbetreiber(FLRPartner flrpartnerbetreiber) {
+        this.flrpartnerbetreiber = flrpartnerbetreiber;
+    }
+
     public com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche getFlrprojekttextsuche() {
         return this.flrprojekttextsuche;
     }
 
     public void setFlrprojekttextsuche(com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche) {
         this.flrprojekttextsuche = flrprojekttextsuche;
+    }
+
+    public com.lp.server.projekt.fastlanereader.generated.FLRProjekterledigungsgrund getFlrprojekterledigungsgrund() {
+        return this.flrprojekterledigungsgrund;
+    }
+
+    public void setFlrprojekterledigungsgrund(com.lp.server.projekt.fastlanereader.generated.FLRProjekterledigungsgrund flrprojekterledigungsgrund) {
+        this.flrprojekterledigungsgrund = flrprojekterledigungsgrund;
+    }
+
+    public com.lp.server.projekt.fastlanereader.generated.FLRVkfortschritt getFlrvkfortschritt() {
+        return this.flrvkfortschritt;
+    }
+
+    public void setFlrvkfortschritt(com.lp.server.projekt.fastlanereader.generated.FLRVkfortschritt flrvkfortschritt) {
+        this.flrvkfortschritt = flrvkfortschritt;
+    }
+
+    public com.lp.server.projekt.fastlanereader.generated.FLRTyp getFlrtyp() {
+        return this.flrtyp;
+    }
+
+    public void setFlrtyp(com.lp.server.projekt.fastlanereader.generated.FLRTyp flrtyp) {
+        this.flrtyp = flrtyp;
+    }
+
+    public Set getTechnikerset() {
+        return this.technikerset;
+    }
+
+    public void setTechnikerset(Set technikerset) {
+        this.technikerset = technikerset;
+    }
+
+    public Set getHistoryset() {
+        return this.historyset;
+    }
+
+    public void setHistoryset(Set historyset) {
+        this.historyset = historyset;
     }
 
     public String toString() {

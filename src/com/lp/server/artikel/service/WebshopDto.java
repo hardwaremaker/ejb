@@ -40,6 +40,10 @@ public class WebshopDto  implements Serializable {
 	private Integer iId;
 	private String cBez;
 	private String mandantCNr;
+	private String webshopartCnr;
+	private String cUrl;
+	private String cUser;
+	private String cPassword;
 	
 	public String getMandantCNr() {
 		return mandantCNr;
@@ -65,5 +69,35 @@ public class WebshopDto  implements Serializable {
 		this.cBez = cBez;
 	}
 
+	public String getWebshopartCnr() {
+		return webshopartCnr;
+	}
 
+	public void setWebshopartCnr(String webshopartCnr) {
+		this.webshopartCnr = webshopartCnr;
+	}
+
+	public String getCUrl() {
+		return cUrl;
+	}
+
+	public void setCUrl(String cUrl) {
+		this.cUrl = cUrl;
+	}
+
+	public String getCUser() {
+		return cUser;
+	}
+
+	public void setCUser(String cUser) {
+		this.cUser = cUser;
+	}
+
+	public String getCPassword() {
+		return cPassword;
+	}
+
+	public void setCPassword(String cPassword) {
+		this.cPassword = cPassword;
+	}
 }

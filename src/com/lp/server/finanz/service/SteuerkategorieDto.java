@@ -51,6 +51,9 @@ public class SteuerkategorieDto implements Serializable{
 	private Integer finanzamtIId;
 	private Integer kontoIIdKursverlust;
 	private Integer kontoIIdKursgewinn;
+	private Integer reversechargeartId ;
+	private Integer iSort;
+	
 	
 	public Integer getIId() {
 		return iId;
@@ -70,12 +73,12 @@ public class SteuerkategorieDto implements Serializable{
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
 	}
-	public Short getBReversecharge() {
-		return bReversecharge;
-	}
-	public void setBReversecharge(Short bReversecharge) {
-		this.bReversecharge = bReversecharge;
-	}
+//	public Short getBReversecharge() {
+//		return bReversecharge;
+//	}
+//	public void setBReversecharge(Short bReversecharge) {
+//		this.bReversecharge = bReversecharge;
+//	}
 	public String getCBez() {
 		return cBez;
 	}
@@ -118,7 +121,11 @@ public class SteuerkategorieDto implements Serializable{
 	public Integer getKontoIIdKursgewinn() {
 		return kontoIIdKursgewinn;
 	}
-	private Integer iSort;
 	
-	
+	public Integer getReversechargeartId() {
+		return reversechargeartId;
+	}
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId;
+	}	
 }

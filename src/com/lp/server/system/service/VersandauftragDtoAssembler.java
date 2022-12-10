@@ -69,6 +69,7 @@ public class VersandauftragDtoAssembler {
 			versandauftragDto.setOInhalt(versandauftrag.getOInhalt());
 			versandauftragDto.setBEmpfangsbestaetigung(versandauftrag
 					.getBEmpfangsbestaetigung());
+			versandauftragDto.setCBccempfaenger(versandauftrag.getCBccempfaenger());
 		}
 		return versandauftragDto;
 	}

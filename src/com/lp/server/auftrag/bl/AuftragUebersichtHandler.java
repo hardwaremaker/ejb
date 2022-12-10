@@ -34,6 +34,7 @@ package com.lp.server.auftrag.bl;
 
 import java.math.BigDecimal;
 import java.text.DateFormatSymbols;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
@@ -42,6 +43,9 @@ import java.util.TreeMap;
 import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragUebersichtTabelleDto;
+import com.lp.server.rechnung.service.GutschriftUmsatzTabelleDto;
+import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.rechnung.service.RechnungUmsatzTabelleDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.UmsatzUseCaseHandlerTabelle;
@@ -72,7 +76,7 @@ public class AuftragUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private final int iAnzahlZeilen = 17;
+	private ArrayList<AuftragUebersichtTabelleDto> hmDaten = null;
 	private final int iAnzahlSpalten = 9;
 
 	/**
@@ -89,256 +93,183 @@ public class AuftragUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 		}
 	}
 
+	private void setInhalt() throws Throwable {
+		mandantCNr = theClientDto.getMandant();
+		locUI = theClientDto.getLocUi();
+		hmDaten = new ArrayList<AuftragUebersichtTabelleDto>();
+		DateFormatSymbols symbols = new DateFormatSymbols(locUI);
+		aMonatsnamen = symbols.getMonths();
+
+		getFilterKriterien();
+		FilterKriterium fkAuswertung = aFilterKriterium[AuftragFac.UMSATZUEBERSICHT_IDX_KRIT_AUSWERTUNG];
+		FilterKriterium fkJahr = aFilterKriterium[AuftragFac.UMSATZUEBERSICHT_IDX_KRIT_JAHR];
+		FilterKriterium fkPlusjahre = aFilterKriterium[AuftragFac.UMSATZUEBERSICHT_IDX_KRIT_PLUS_JAHRE];
+
+		Integer iJahr = new Integer(fkJahr.value).intValue();
+
+		// PJ21214
+		Integer plusJahre = new Integer(fkPlusjahre.value).intValue();
+
+		boolean bGerschaeftsjahr = false;
+		if (fkJahr.kritName.equals(AuftragFac.KRIT_UEBERSICHT_GESCHAEFTSJAHR)) {
+			bGerschaeftsjahr = true;
+		}
+
+		// Zeile 1 Vorjahr
+		RechnungUmsatzTabelleDto zeileDto = new RechnungUmsatzTabelleDto();
+		zeileDto.setSZeilenheader(getTextRespectUISpr("lp.vorjahr", mandantCNr, locUI) + " " + (iJahr - 1 + plusJahre));
+
+		GregorianCalendar[] gcVonBis = getVorjahr(iJahr, plusJahre, bGerschaeftsjahr);
+
+		hmDaten.add(befuelleDtoAnhandDatumsgrenzen(
+				getTextRespectUISpr("lp.vorjahr", mandantCNr, locUI) + " " + (iJahr - 1 + plusJahre),
+				fkAuswertung.kritName, gcVonBis[0], gcVonBis[1]));
+
+		// Leerzeile
+		hmDaten.add(new AuftragUebersichtTabelleDto());
+
+		// Nun Monate des aktuellen GF durchgehen
+
+		ArrayList<GregorianCalendar[]> alMonate = getMonateAktuellesJahr(iJahr, plusJahre, bGerschaeftsjahr);
+
+		for (int i = 0; i < alMonate.size(); i++) {
+
+			GregorianCalendar[] gcVonBisMonate = alMonate.get(i);
+
+			hmDaten.add(befuelleDtoAnhandDatumsgrenzen(aMonatsnamen[gcVonBisMonate[0].get(GregorianCalendar.MONTH)],
+					fkAuswertung.kritName, gcVonBisMonate[0], gcVonBisMonate[1]));
+		}
+
+		// Leerzeile
+		hmDaten.add(new AuftragUebersichtTabelleDto());
+
+		// Summe aktuelles Jahr
+		GregorianCalendar[] gcVonBisAktuell = getAktuellesJahr(iJahr, plusJahre, bGerschaeftsjahr);
+
+		hmDaten.add(befuelleDtoAnhandDatumsgrenzen(
+				getTextRespectUISpr("lp.summe", mandantCNr, locUI) + " " + (iJahr + plusJahre), fkAuswertung.kritName,
+				gcVonBisAktuell[0], gcVonBisAktuell[1]));
+
+		// Summe Gesamt
+		GregorianCalendar[] gcVonBisGesamt = getGesamtJahr(iJahr, plusJahre, bGerschaeftsjahr);
+
+		hmDaten.add(befuelleDtoAnhandDatumsgrenzen(getTextRespectUISpr("lp.gesamtsumme", mandantCNr, locUI),
+				fkAuswertung.kritName, null, null));
+
+		setAnzahlZeilen(hmDaten.size());
+
+	}
+
 	public TableInfo getTableInfo() {
 		if (tableInfo == null) {
-			tableInfo = new TableInfo(new Class[] { String.class,String.class,
-					BigDecimal.class, BigDecimal.class, BigDecimal.class,
-					String.class, BigDecimal.class, BigDecimal.class,
-					BigDecimal.class }, new String[] {" ",
-					" ",
-					getTextRespectUISpr("auft.freieauftraege", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("auft.abrufautraege", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("auft.rahmenauftraege", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					" ",
-					getTextRespectUISpr("auft.freieauftraege", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("auft.abrufautraege", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("auft.rahmenauftraege", theClientDto
-							.getMandant(), theClientDto.getLocUi()) },
-					new String[] {"", "", "", "", "", "", "", "", "" });
+			tableInfo = new TableInfo(
+					new Class[] { String.class, String.class, BigDecimal.class, BigDecimal.class, BigDecimal.class,
+							String.class, BigDecimal.class, BigDecimal.class, BigDecimal.class },
+					new String[] { " ", " ",
+							getTextRespectUISpr("auft.freieauftraege", theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("auft.abrufautraege", theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("auft.rahmenauftraege", theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							" ",
+							getTextRespectUISpr("auft.freieauftraege", theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("auft.abrufautraege", theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("auft.rahmenauftraege", theClientDto.getMandant(),
+									theClientDto.getLocUi()) },
+					new String[] { "", "", "", "", "", "", "", "", "" });
 		}
 
 		return tableInfo;
 	}
 
-	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
-	 * 
-	 * @param rowIndex
-	 *            die markierte Zeile
-	 * @return QueryResult Ergebnis
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
-	 */
+	protected long getRowCountFromDataBase() {
+		try {
+
+			hmDaten = new ArrayList<AuftragUebersichtTabelleDto>();
+			getFilterKriterien();
+
+			setInhalt();
+		} catch (Throwable t) {
+			if (t.getCause() instanceof EJBExceptionLP) {
+				throw (EJBExceptionLP) t.getCause();
+			} else {
+
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(t));
+			}
+		}
+		return getAnzahlZeilen();
+	}
+
+	private AuftragUebersichtTabelleDto befuelleDtoAnhandDatumsgrenzen(String header, String kriterium,
+			GregorianCalendar gcBerechnungsdatumVonI, GregorianCalendar gcBerechnungsdatumBisI) throws Throwable {
+
+		BigDecimal bdOffeneFreie = getAuftragFac().berechneSummeAuftragsnettowert(AuftragServiceFac.AUFTRAGART_FREI,
+				kriterium, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, AuftragFac.AUFT_UMSATZUEBERSICHT_OFFEN,
+				theClientDto);
+
+		// den offenen Nettoauftragswert fuer Auftragart ABRUF
+		// bestimmen
+		BigDecimal bdOffeneAbruf = getAuftragFac().berechneSummeAuftragsnettowert(AuftragServiceFac.AUFTRAGART_ABRUF,
+				kriterium, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, AuftragFac.AUFT_UMSATZUEBERSICHT_OFFEN,
+				theClientDto);
+
+		// den offenen Nettoauftragswert fuer Auftragart RAHMEN
+		// bestimmen
+		BigDecimal bdOffeneRahmen = getAuftragFac().berechneSummeAuftragsnettowert(AuftragServiceFac.AUFTRAGART_RAHMEN,
+				kriterium, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, AuftragFac.AUFT_UMSATZUEBERSICHT_OFFEN,
+				theClientDto);
+
+		// den gesamten Nettoauftragswert fuer Auftragart FREI
+		// bestimmen
+		BigDecimal bdEingangFreie = getAuftragFac().berechneSummeAuftragsnettowert(AuftragServiceFac.AUFTRAGART_FREI,
+				kriterium, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, AuftragFac.AUFT_UMSATZUEBERSICHT_EINGANG,
+				theClientDto);
+
+		// die Summe fuer Auftragart ABRUF und Auftragstatus OFFEN
+		// bestimmen
+		BigDecimal bdEingangAbruf = getAuftragFac().berechneSummeAuftragsnettowert(AuftragServiceFac.AUFTRAGART_ABRUF,
+				kriterium, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, AuftragFac.AUFT_UMSATZUEBERSICHT_EINGANG,
+				theClientDto);
+
+		// die Summe fuer Auftragart RAHMEN und Auftragstatus OFFEN
+		// bestimmen
+		BigDecimal bdEingangRahmen = getAuftragFac().berechneSummeAuftragsnettowert(AuftragServiceFac.AUFTRAGART_RAHMEN,
+				kriterium, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, AuftragFac.AUFT_UMSATZUEBERSICHT_EINGANG,
+				theClientDto);
+
+		// die Zeilen fuer die Anzeige zusammenbauen
+		AuftragUebersichtTabelleDto zeileDto = new AuftragUebersichtTabelleDto();
+
+		zeileDto.setSZeilenheader(header);
+		zeileDto.setBdAbrufauftraege1(bdOffeneAbruf);
+		zeileDto.setBdFreieauftraege1(bdOffeneFreie);
+		zeileDto.setBdRahmenauftrage1(bdOffeneRahmen);
+
+		zeileDto.setBdAbrufauftraege2(bdEingangAbruf);
+		zeileDto.setBdFreieauftraege2(bdEingangFreie);
+		zeileDto.setBdRahmenauftrage2(bdEingangRahmen);
+
+		return zeileDto;
+	}
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 
 		try {
-			// ptkrit: 3 die aktuellen Filter Kriterien bestimmen
-			getFilterKriterien();
-
-			// enthaelt KRIT_BELEGDATUM | KRIT_LIEFERTERMIN | KRIT_FINALTERMIN =
-			// vierstelliges Geschaeftsjahr
-			FilterKriterium fkAuswertung = aFilterKriterium[AuftragFac.UMSATZUEBERSICHT_IDX_KRIT_AUSWERTUNG];
-			init(aFilterKriterium[AuftragFac.UMSATZUEBERSICHT_IDX_KRIT_JAHR]);
-			AuftragUebersichtTabelleDto oSummenVorjahr = null;
-			// zuerste eine HashMap mit den darzustellenden Daten zusammenbauen
-			TreeMap<Integer, AuftragUebersichtTabelleDto> hmSammelstelle = new TreeMap<Integer, AuftragUebersichtTabelleDto>();
-			for (int i = 0; i < iAnzahlZeilen; i++) {
-				String sZeilenHeader = null;
-				GregorianCalendar gcBerechnungsdatumVonI = null;
-				GregorianCalendar gcBerechnungsdatumBisI = null;
-				BigDecimal bdOffeneFreie = new BigDecimal(0);
-				BigDecimal bdOffeneAbruf = new BigDecimal(0);
-				BigDecimal bdOffeneRahmen = new BigDecimal(0);
-				BigDecimal bdEingangFreie = new BigDecimal(0);
-				BigDecimal bdEingangAbruf = new BigDecimal(0);
-				BigDecimal bdEingangRahmen = new BigDecimal(0);
-				switch (i) {
-				// in Zeile 0 stehen die Summen fuer das gesamte Vorjahr
-				case 0:
-					sZeilenHeader = getTextRespectUISpr("lp.vorjahr", theClientDto.getMandant(), theClientDto.getLocUi());
-					sZeilenHeader += " ";
-					sZeilenHeader += iVorjahr;
-					// das Zeitintervall auf das gesamte Vorjahr festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(iVorjahr,iIndexBeginnMonat, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr,iIndexBeginnMonat, 1);
-					break;
-				// Zeile 1 ist eine Leerzeile zur otpischen Trennung
-				case 1:
-					sZeilenHeader = null;
-					break;
-				// Zeile 14 ist eine Leerzeile zur optischen Trennung
-				case 14:
-					sZeilenHeader = null;
-					break;
-				// Zeile 15 enthaelt die Summe ueber das gesamte laufende
-				// Geschaeftsjahr
-				case 15:
-					sZeilenHeader = getTextRespectUISpr("lp.summe", theClientDto.getMandant(), theClientDto.getLocUi());
-					sZeilenHeader += " ";
-					sZeilenHeader += fkAuswertung.value;
-					// das Zeitintervall auf das gesamte laufende Jahr festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(iJahr,iIndexBeginnMonat, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr + 1,iIndexBeginnMonat, 1);
-					break;
-				// Zeile 16 enthaelt die Summe aus gesamtem laufenden Jahr plus
-				// Summe des Vorjahres
-				case 16:
-					sZeilenHeader = getTextRespectUISpr("lp.gesamtsumme",theClientDto.getMandant(), theClientDto.getLocUi());
-					// das Zeitintervall auf alle erfassten Auftraege festlegen
-					// IMS 749 Summe ueber saemtliche Auftraege
-					gcBerechnungsdatumVonI = new GregorianCalendar(1900,iIndexBeginnMonat, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr + 1,iIndexBeginnMonat, 1);
-					break;
-				// Zeile 2 bis 13 enthaelt die Summe fuer das jeweilige Monat
-				default:
-
-					sZeilenHeader = aMonatsnamen[iCurrentMonat];
-
-					// das Zeitintervall auf das laufende Monat festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iCurrentJahr, iCurrentMonat, 1);
-
-					// dieser Zeitpunkt liegt 1 Monat nach dem Von Datum
-					gcBerechnungsdatumBisI = berechneNaechstesZeitintervall(
-							iCurrentMonat, iCurrentJahr);
-
-					iCurrentJahr = gcBerechnungsdatumBisI
-							.get(GregorianCalendar.YEAR);
-					iCurrentMonat = gcBerechnungsdatumBisI
-							.get(GregorianCalendar.MONTH);
-
-					break;
-				}
-
-				if (gcBerechnungsdatumVonI != null
-						&& gcBerechnungsdatumBisI != null) {
-
-					// den offenen Nettoauftragswert fuer Auftragart FREI
-					// bestimmen
-					bdOffeneFreie = getAuftragFac()
-							.berechneSummeAuftragsnettowert(
-									AuftragServiceFac.AUFTRAGART_FREI,
-									fkAuswertung.kritName,
-									gcBerechnungsdatumVonI,
-									gcBerechnungsdatumBisI,
-									AuftragFac.AUFT_UMSATZUEBERSICHT_OFFEN,
-									theClientDto);
-
-					// den offenen Nettoauftragswert fuer Auftragart ABRUF
-					// bestimmen
-					bdOffeneAbruf = getAuftragFac()
-							.berechneSummeAuftragsnettowert(
-									AuftragServiceFac.AUFTRAGART_ABRUF,
-									fkAuswertung.kritName,
-									gcBerechnungsdatumVonI,
-									gcBerechnungsdatumBisI,
-									AuftragFac.AUFT_UMSATZUEBERSICHT_OFFEN,
-									theClientDto);
-
-					// den offenen Nettoauftragswert fuer Auftragart RAHMEN
-					// bestimmen
-					bdOffeneRahmen = getAuftragFac()
-							.berechneSummeAuftragsnettowert(
-									AuftragServiceFac.AUFTRAGART_RAHMEN,
-									fkAuswertung.kritName,
-									gcBerechnungsdatumVonI,
-									gcBerechnungsdatumBisI,
-									AuftragFac.AUFT_UMSATZUEBERSICHT_OFFEN,
-									theClientDto);
-
-					// den gesamten Nettoauftragswert fuer Auftragart FREI
-					// bestimmen
-					bdEingangFreie = getAuftragFac()
-							.berechneSummeAuftragsnettowert(
-									AuftragServiceFac.AUFTRAGART_FREI,
-									fkAuswertung.kritName,
-									gcBerechnungsdatumVonI,
-									gcBerechnungsdatumBisI,
-									AuftragFac.AUFT_UMSATZUEBERSICHT_EINGANG,
-									theClientDto);
-
-					// die Summe fuer Auftragart ABRUF und Auftragstatus OFFEN
-					// bestimmen
-					bdEingangAbruf = getAuftragFac()
-							.berechneSummeAuftragsnettowert(
-									AuftragServiceFac.AUFTRAGART_ABRUF,
-									fkAuswertung.kritName,
-									gcBerechnungsdatumVonI,
-									gcBerechnungsdatumBisI,
-									AuftragFac.AUFT_UMSATZUEBERSICHT_EINGANG,
-									theClientDto);
-
-					// die Summe fuer Auftragart RAHMEN und Auftragstatus OFFEN
-					// bestimmen
-					bdEingangRahmen = getAuftragFac()
-							.berechneSummeAuftragsnettowert(
-									AuftragServiceFac.AUFTRAGART_RAHMEN,
-									fkAuswertung.kritName,
-									gcBerechnungsdatumVonI,
-									gcBerechnungsdatumBisI,
-									AuftragFac.AUFT_UMSATZUEBERSICHT_EINGANG,
-									theClientDto);
-				}
-
-				// die Zeilen fuer die Anzeige zusammenbauen
-				AuftragUebersichtTabelleDto oAuftragUebersichtDto = new AuftragUebersichtTabelleDto();
-
-				if (sZeilenHeader != null) {
-					oAuftragUebersichtDto.setSZeilenheader(sZeilenHeader);
-					oAuftragUebersichtDto.setBdAbrufauftraege1(bdOffeneAbruf);
-					oAuftragUebersichtDto.setBdFreieauftraege1(bdOffeneFreie);
-					oAuftragUebersichtDto.setBdRahmenauftrage1(bdOffeneRahmen);
-					// oAuftragUebersichtDto.setSEmpty(null) // ist bereits
-					// ueber Dto gesetzt
-					oAuftragUebersichtDto.setBdAbrufauftraege2(bdEingangAbruf);
-					oAuftragUebersichtDto.setBdFreieauftraege2(bdEingangFreie);
-					oAuftragUebersichtDto.setBdRahmenauftrage2(bdEingangRahmen);
-				}
-
-				// die Summen des Vorjahrs muss man sich fuer spaeter merken
-				if (i == IDX_SUMMEN_VORJAHR) {
-					oSummenVorjahr = oAuftragUebersichtDto;
-				}
-
-				// die Gesamtsummen bestehen aus den Summen des laufenden Jahres
-				// und des Vorjahres
-				if (i == IDX_SUMMEN_GESAMT) {
-					// IMS 749 linke Spalte Offenen enthaelt die Summe ueber
-					// alle Auftraege im System
-					oAuftragUebersichtDto
-							.setBdAbrufauftraege1(oAuftragUebersichtDto
-									.getBdAbrufauftraege1());
-					oAuftragUebersichtDto
-							.setBdFreieauftraege1(oAuftragUebersichtDto
-									.getBdFreieauftraege1());
-					oAuftragUebersichtDto
-							.setBdRahmenauftrage1(oAuftragUebersichtDto
-									.getBdRahmenauftrage1());
-
-					// IMS 749 rechte Spalte Eingang enthaelt 0.00, weil die
-					// Anzeige der Gesamtsumme keinen Sinn macht
-					oAuftragUebersichtDto.setBdAbrufauftraege2(Helper
-							.getBigDecimalNull());
-					oAuftragUebersichtDto.setBdFreieauftraege2(Helper
-							.getBigDecimalNull());
-					oAuftragUebersichtDto.setBdRahmenauftrage2(Helper
-							.getBigDecimalNull());
-				}
-
-				hmSammelstelle.put(new Integer(i), oAuftragUebersichtDto);
-			}
-
+			setInhalt();
 			// jetzt die Darstellung in der Tabelle zusammenbauen
 			int startIndex = 0;
 			long endIndex = startIndex + getAnzahlZeilen() - 1;
 
 			Object[][] rows = new Object[(int) getAnzahlZeilen()][getAnzahlSpalten()];
-			int row = 0;
+
 			int col = 0;
 
-			Collection<AuftragUebersichtTabelleDto> clSichtLieferstatus = hmSammelstelle.values();
-			Iterator<AuftragUebersichtTabelleDto> it = clSichtLieferstatus.iterator();
-
-			while (it.hasNext()) {
-				AuftragUebersichtTabelleDto oAuftragUebersichtDto = (AuftragUebersichtTabelleDto) it
-						.next();
+			for (int row = 0; row < hmDaten.size(); row++) {
+				AuftragUebersichtTabelleDto oAuftragUebersichtDto = (AuftragUebersichtTabelleDto) hmDaten.get(row);
 				rows[row][col++] = "";
 				rows[row][col++] = oAuftragUebersichtDto.getSZeilenHeader();
 				rows[row][col++] = oAuftragUebersichtDto.getBdFreieauftraege1();
@@ -347,16 +278,14 @@ public class AuftragUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 				rows[row][col++] = oAuftragUebersichtDto.getSEmpty();
 				rows[row][col++] = oAuftragUebersichtDto.getBdFreieauftraege2();
 				rows[row][col++] = oAuftragUebersichtDto.getBdAbrufauftraege2();
-				rows[row++][col++] = oAuftragUebersichtDto
-						.getBdRahmenauftrage2();
+				rows[row][col++] = oAuftragUebersichtDto.getBdRahmenauftrage2();
 
 				col = 0;
 			}
 
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0);
-		} catch (Exception e) {
-			throw new EJBExceptionLP(1, e);
+			result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0);
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
 		}
 
 		return result;

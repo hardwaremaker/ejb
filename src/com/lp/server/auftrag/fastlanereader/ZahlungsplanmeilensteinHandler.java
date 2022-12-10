@@ -44,12 +44,14 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragteilnehmer;
+import com.lp.server.auftrag.fastlanereader.generated.FLRMeilensteinspr;
 import com.lp.server.auftrag.fastlanereader.generated.FLRZahlungsplanmeilenstein;
 import com.lp.server.auftrag.fastlanereader.generated.FLRZeitplan;
 import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragteilnehmerFac;
 import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.personal.fastlanereader.generated.FLRReligionspr;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.system.fastlanereader.FunktionHandler;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -90,6 +92,20 @@ public class ZahlungsplanmeilensteinHandler extends UseCaseHandler {
 	public static final String FLR_ZAHLUNGSPLANMEILENSTEIN = "flrzahlungsplanmeilenstein.";
 	public static final String FLR_ZAHLUNGSPLANMEILENSTEIN_FROM_CLAUSE = " from FLRZahlungsplanmeilenstein flrzahlungsplanmeilenstein ";
 
+	private String findSpr(String sLocaleI, Iterator<?> iterUebersetzungenI) {
+
+		String sUebersetzung = null;
+		while (iterUebersetzungenI.hasNext()) {
+			FLRMeilensteinspr religionspr = (FLRMeilensteinspr) iterUebersetzungenI
+					.next();
+			if (religionspr.getLocale().getC_nr().compareTo(sLocaleI) == 0) {
+				sUebersetzung = religionspr.getC_bez();
+				break;
+			}
+		}
+		return sUebersetzung;
+	}
+	
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
@@ -117,7 +133,8 @@ public class ZahlungsplanmeilensteinHandler extends UseCaseHandler {
 						.next();
 				rows[row][col++] = zeitplan.getI_id();
 
-				rows[row][col++] = zeitplan.getFlrmeilenstein().getC_nr();
+				rows[row][col++] = findSpr(Helper.locale2String(theClientDto.getLocUi()), zeitplan.getFlrmeilenstein().getMeilensteinspr_set().iterator());
+				
 				rows[row][col++] = zeitplan.getC_kommentar();
 				if (zeitplan.getT_erledigt() == null) {
 					rows[row][col++] = new Boolean(false);
@@ -238,7 +255,7 @@ public class ZahlungsplanmeilensteinHandler extends UseCaseHandler {
 					orderBy.append(", ");
 				}
 				orderBy.append(FLR_ZAHLUNGSPLANMEILENSTEIN)
-						.append("flrmeilenstein.c_nr")
+						.append("i_sort")
 						.append(" ASC ");
 				sortAdded = true;
 			}

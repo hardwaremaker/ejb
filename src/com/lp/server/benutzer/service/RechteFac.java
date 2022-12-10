@@ -44,7 +44,7 @@ public interface RechteFac {
 	public Integer createRollerecht(RollerechtDto rollerechtDto,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
 
-	public void removeRollerecht(RollerechtDto rollerechtDto)
+	public void removeRollerecht(RollerechtDto rollerechtDto, TheClientDto theClientDto)
 			throws RemoteException, EJBExceptionLP;
 
 	public void updateRollerecht(RollerechtDto rollerechtDto,
@@ -107,6 +107,7 @@ public interface RechteFac {
 	public static final String RECHT_LS_LIEFERSCHEIN_VERSAND = "LS_LIEFERSCHEIN_VERSAND";
 	public static final String RECHT_RECH_RECHNUNG_R = "RECH_RECHNUNG_R";
 	public static final String RECHT_RECH_RECHNUNG_CUD = "RECH_RECHNUNG_CUD";
+	public static final String RECHT_RECH_RECHNUNG_VERSAND = "RECH_RECHNUNG_VERSAND";
 	public static final String RECHT_FB_FINANZ_R = "FB_FINANZ_R";
 	public static final String RECHT_FB_FINANZ_CUD = "FB_FINANZ_CUD";
 	public static final String RECHT_ANF_ANFRAGE_R = "ANF_ANFRAGE_R";
@@ -169,9 +170,13 @@ public interface RechteFac {
 	public static final String RECHT_LP_DARF_PREISE_AENDERN_EINKAUF = "LP_DARF_PREISE_AENDERN_EINKAUF";
 	public static final String RECHT_LP_DARF_PREISE_AENDERN_VERKAUF = "LP_DARF_PREISE_AENDERN_VERKAUF";
 
+	public static final String RECHT_WW_HANDLAGERBEWEGUNG_R = "WW_HANDLAGERBEWEGUNG_R";
+	public static final String RECHT_WW_HANDLAGERBEWEGUNG_UMB = "WW_HANDLAGERBEWEGUNG_UMB";
 	public static final String RECHT_WW_HANDLAGERBEWEGUNG_CUD = "WW_HANDLAGERBEWEGUNG_CUD";
 	public static final String RECHT_FERT_DARF_FEHLMENGEN_PER_DIALOG_AUFLOESEN = "FERT_DARF_FEHLMENGEN_PER_DIALOG_AUFLOESEN";
 
+	public static final String RECHT_WW_FREIGABE_CUD = "WW_FREIGABE_CUD";
+	
 	public static final String RECHT_FERT_DARF_SOLLMATERIAL_CUD = "FERT_DARF_SOLLMATERIAL_CUD";
 
 	public static final String RECHT_DOKUMENTE_SICHERHEITSSTUFE_0_CU = "DOKUMENTE_SICHERHEITSSTUFE_0_CU";
@@ -216,5 +221,49 @@ public interface RechteFac {
 
 	public static final String RECHT_STK_FREIGABE_CUD = "STK_FREIGABE_CUD";
 	public static final String RECHT_WW_ARTIKEL_LAGERPLATZ_CUD = "WW_ARTIKEL_LAGERPLATZ_CUD";
-
+	public static final String RECHT_PERS_ZEITERFASSUNG_REPORTS_SEHEN = "PERS_ZEITERFASSUNG_REPORTS_SEHEN";
+	
+	public static final String RECHT_PROJ_DETAILS_CUD = "PROJ_DETAILS_CUD";
+	public static final String RECHT_PROJ_DARF_ALLE_SEHEN = "PROJ_DARF_ALLE_SEHEN";
+	
+	public static final String RECHT_FC_FORECAST_CUD = "FC_FORECAST_CUD";
+	public static final String RECHT_FC_FORECAST_R = "FC_FORECAST_R";
+	
+	public static final String RECHT_AUFT_DARF_AUFTRAEGE_FREIGEBEN = "AUFT_DARF_AUFTRAEGE_FREIGEBEN";
+	public static final String RECHT_AUFT_DARF_AUFTRAEGE_KOPIEREN = "AUFT_DARF_AUFTRAEGE_KOPIEREN";
+	
+	public static final String RECHT_LS_AKTIVIEREN = "LS_AKTIVIEREN";
+	public static final String RECHT_FERT_LOS_DARF_ISTMATERIAL_BELEGDATUM_EINGEBEN = "FERT_LOS_DARF_ISTMATERIAL_BELEGDATUM_EINGEBEN";
+	public static final String RECHT_PART_KUNDE_UMSAETZE_R = "PART_KUNDE_UMSAETZE_R";
+	
+	public static final String RECHT_PART_GEODATENANZEIGE_R = "PART_GEODATENANZEIGE_R";
+	
+	
+	public static final String RECHT_LP_DARF_EMAIL_SENDEN = "LP_DARF_EMAIL_SENDEN";
+	
+	public static final String RECHT_ER_DARF_KONTIEREN = "ER_DARF_KONTIEREN";
+	public static final String RECHT_ER_DARF_ZAHLUNGEN_ERFASSEN = "ER_DARF_ZAHLUNGEN_ERFASSEN";
+	
+	public static final String RECHT_DB_DASHBOARD_R = "DB_DASHBOARD_R";
+	
+	public static final String RECHT_CP_COCKPIT_R = "CP_COCKPIT_R";
+	
+	public static final String RECHT_WW_ARTIKEL_ZUSAMMENFUEHREN = "WW_ARTIKEL_ZUSAMMENFUEHREN";
+	
+	public static final String RECHT_FERT_DARF_AUSGEGEBEN_ZURUECKNEHMEN = "FERT_DARF_AUSGEGEBEN_ZURUECKNEHMEN";
+	public static final String RECHT_AUFT_DARF_ALLE_SEHEN = "AUFT_DARF_ALLE_SEHEN";
+	
+	
+	public static final String RECHT_PART_ANSPRECHPARTNER_CUD = "PART_ANSPRECHPARTNER_CUD";
+	public static final String RECHT_WW_ARTIKELKOMMENTAR_FREIGEGEBENER_ARTIKEL_CUD = "WW_ARTIKELKOMMENTAR_FREIGEGEBENER_ARTIKEL_CUD";
+	
+	public static final String RECHT_BES_WE_KOSTEN_IM_ERLEDIGT_STATUS_AENDERN = "BES_WE_KOSTEN_IM_ERLEDIGT_STATUS_AENDERN";
+	
+	public static final String RECHT_STK_SOLLZEITEN_FREIGEGEBENE_STK_CUD = "STK_SOLLZEITEN_FREIGEGEBENE_STK_CUD";
+	
+	public static final String RECHT_ER_DARF_EINGANGSRECHNUNGEN_PRUEFEN = "ER_DARF_EINGANGSRECHNUNGEN_PRUEFEN";
+	
+	public static final String RECHT_PERS_GEHALT_R = "PERS_GEHALT_R";
+	public static final String RECHT_PERS_GEHALT_CUD = "PERS_GEHALT_CUD";
+	
 }

@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.util;
 
+import java.io.Serializable;
+
 /**
  * <p>
  * Diese Klasse kuemmert sich um ...
@@ -52,7 +54,7 @@ package com.lp.util;
  * 
  * @version not attributable Date $Date: 2008/08/05 07:16:25 $
  */
-public class KeyValue {
+public class KeyValue implements Serializable{
 	private Object oKey;
 	private Object oValue;
 

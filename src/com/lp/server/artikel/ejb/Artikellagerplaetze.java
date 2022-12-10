@@ -44,12 +44,12 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 @NamedQueries({
-		@NamedQuery(name = "ArtikellagerplaetzefindByArtikelIIdLagerplatzIId", query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.artikelIId = ?1 AND c.lagerplatzIId = ?2"),
-		@NamedQuery(name = "ArtikellagerplaetzefindByArtikelIId", query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.artikelIId = ?1"),
-		@NamedQuery(name = "ArtikellagerplaetzefindByArtikelIIdOrderByISort", query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.artikelIId = ?1 ORDER BY c.iSort"),
+		@NamedQuery(name = ArtikellagerplaetzeQuery.ByArtikelIIdLagerplatzIId, query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.artikelIId = ?1 AND c.lagerplatzIId = ?2"),
+		@NamedQuery(name = ArtikellagerplaetzeQuery.ByArtikelIId, query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.artikelIId = ?1"),
+		@NamedQuery(name = ArtikellagerplaetzeQuery.ByArtikelIIdOrderByISort, query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.artikelIId = ?1 ORDER BY c.iSort"),
 		@NamedQuery(name = "ArtikellagerplaetzeAnzahlDerLagerorteEinesArtikels", query = "SELECT COUNT(o) FROM Artikellagerplaetze o WHERE o.artikelIId = ?1"),
 		@NamedQuery(name = "ArtikellagerplaetzeAnzahlVerwendungEinesLagerplatz", query = "SELECT COUNT(o) FROM Artikellagerplaetze o WHERE o.lagerplatzIId = ?1"),
-		@NamedQuery(name = "ArtikellagerplaetzefindByLagerplatzIId", query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.lagerplatzIId = ?1"),
+		@NamedQuery(name = ArtikellagerplaetzeQuery.ByLagerplatzIId, query = "SELECT OBJECT(C) FROM Artikellagerplaetze c WHERE c.lagerplatzIId = ?1"),
 		@NamedQuery(name = "ArtikellagerplaetzeejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Artikellagerplaetze o WHERE o.artikelIId = ?1") })
 @Entity
 @Table(name = "WW_ARTIKELLAGERPLAETZE")

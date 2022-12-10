@@ -173,8 +173,10 @@ public class MaschinenzeitdatenHandler extends UseCaseHandler {
 									.getC_name2vornamefirmazeile2();
 				}
 
-				rows[row++][col++] = starter;
+				rows[row][col++] = starter;
 
+				rows[row++][col++] = Helper.short2boolean(zeitdaten.getB_parallel());
+				
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -447,7 +449,7 @@ public class MaschinenzeitdatenHandler extends UseCaseHandler {
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
 							String.class, Double.class, String.class,
-							String.class, },
+							String.class, Boolean.class },
 					new String[] {
 							"Id",
 
@@ -457,14 +459,17 @@ public class MaschinenzeitdatenHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.dauer", mandantCNr, locUI),
 							getTextRespectUISpr("lp.bem", mandantCNr, locUI),
 							getTextRespectUISpr("lp.gestartetvon", mandantCNr,
-									locUI) },
+									locUI),
+							getTextRespectUISpr("pers.maschinenzeitdaten.parallelbedienung", mandantCNr,
+									locUI)},
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
 
 							18, 18, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_L },
+							QueryParameters.FLR_BREITE_L,
+							QueryParameters.FLR_BREITE_S},
 					new String[] {
 							"i_id",
 
@@ -477,7 +482,7 @@ public class MaschinenzeitdatenHandler extends UseCaseHandler {
 							"flrpersonal_gestartet."
 									+ PersonalFac.FLR_PERSONAL_FLRPARTNER
 									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1, }));
+									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1, "b_parallel" }));
 
 		}
 

@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
@@ -50,6 +18,9 @@ public class FLRArtikellieferant implements Serializable {
     private Integer artikel_i_id;
 
     /** nullable persistent field */
+    private Integer gebinde_i_id;
+
+    /** nullable persistent field */
     private Integer lieferant_i_id;
 
     /** nullable persistent field */
@@ -57,6 +28,9 @@ public class FLRArtikellieferant implements Serializable {
 
     /** nullable persistent field */
     private Date t_preisgueltigab;
+
+    /** nullable persistent field */
+    private Date t_preisgueltigbis;
 
     /** nullable persistent field */
     private String c_bezbeilieferant;
@@ -77,7 +51,13 @@ public class FLRArtikellieferant implements Serializable {
     private Short b_webshop;
 
     /** nullable persistent field */
+    private Short b_nicht_lieferbar;
+
+    /** nullable persistent field */
     private FLRLieferant flrlieferant;
+
+    /** nullable persistent field */
+    private com.lp.server.artikel.fastlanereader.generated.FLRGebinde flrgebinde;
 
     /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel;
@@ -86,18 +66,22 @@ public class FLRArtikellieferant implements Serializable {
     private Set staffelset;
 
     /** full constructor */
-    public FLRArtikellieferant(Integer artikel_i_id, Integer lieferant_i_id, String c_artikelnrlieferant, Date t_preisgueltigab, String c_bezbeilieferant, BigDecimal n_einzelpreis, BigDecimal n_nettopreis, Integer i_sort, Integer i_wiederbeschaffungszeit, Short b_webshop, FLRLieferant flrlieferant, com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel, Set staffelset) {
+    public FLRArtikellieferant(Integer artikel_i_id, Integer gebinde_i_id, Integer lieferant_i_id, String c_artikelnrlieferant, Date t_preisgueltigab, Date t_preisgueltigbis, String c_bezbeilieferant, BigDecimal n_einzelpreis, BigDecimal n_nettopreis, Integer i_sort, Integer i_wiederbeschaffungszeit, Short b_webshop, Short b_nicht_lieferbar, FLRLieferant flrlieferant, com.lp.server.artikel.fastlanereader.generated.FLRGebinde flrgebinde, com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel, Set staffelset) {
         this.artikel_i_id = artikel_i_id;
+        this.gebinde_i_id = gebinde_i_id;
         this.lieferant_i_id = lieferant_i_id;
         this.c_artikelnrlieferant = c_artikelnrlieferant;
         this.t_preisgueltigab = t_preisgueltigab;
+        this.t_preisgueltigbis = t_preisgueltigbis;
         this.c_bezbeilieferant = c_bezbeilieferant;
         this.n_einzelpreis = n_einzelpreis;
         this.n_nettopreis = n_nettopreis;
         this.i_sort = i_sort;
         this.i_wiederbeschaffungszeit = i_wiederbeschaffungszeit;
         this.b_webshop = b_webshop;
+        this.b_nicht_lieferbar = b_nicht_lieferbar;
         this.flrlieferant = flrlieferant;
+        this.flrgebinde = flrgebinde;
         this.flrartikel = flrartikel;
         this.staffelset = staffelset;
     }
@@ -127,6 +111,14 @@ public class FLRArtikellieferant implements Serializable {
         this.artikel_i_id = artikel_i_id;
     }
 
+    public Integer getGebinde_i_id() {
+        return this.gebinde_i_id;
+    }
+
+    public void setGebinde_i_id(Integer gebinde_i_id) {
+        this.gebinde_i_id = gebinde_i_id;
+    }
+
     public Integer getLieferant_i_id() {
         return this.lieferant_i_id;
     }
@@ -149,6 +141,14 @@ public class FLRArtikellieferant implements Serializable {
 
     public void setT_preisgueltigab(Date t_preisgueltigab) {
         this.t_preisgueltigab = t_preisgueltigab;
+    }
+
+    public Date getT_preisgueltigbis() {
+        return this.t_preisgueltigbis;
+    }
+
+    public void setT_preisgueltigbis(Date t_preisgueltigbis) {
+        this.t_preisgueltigbis = t_preisgueltigbis;
     }
 
     public String getC_bezbeilieferant() {
@@ -199,12 +199,28 @@ public class FLRArtikellieferant implements Serializable {
         this.b_webshop = b_webshop;
     }
 
+    public Short getB_nicht_lieferbar() {
+        return this.b_nicht_lieferbar;
+    }
+
+    public void setB_nicht_lieferbar(Short b_nicht_lieferbar) {
+        this.b_nicht_lieferbar = b_nicht_lieferbar;
+    }
+
     public FLRLieferant getFlrlieferant() {
         return this.flrlieferant;
     }
 
     public void setFlrlieferant(FLRLieferant flrlieferant) {
         this.flrlieferant = flrlieferant;
+    }
+
+    public com.lp.server.artikel.fastlanereader.generated.FLRGebinde getFlrgebinde() {
+        return this.flrgebinde;
+    }
+
+    public void setFlrgebinde(com.lp.server.artikel.fastlanereader.generated.FLRGebinde flrgebinde) {
+        this.flrgebinde = flrgebinde;
     }
 
     public com.lp.server.artikel.fastlanereader.generated.FLRArtikel getFlrartikel() {

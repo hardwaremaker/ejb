@@ -36,17 +36,39 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.Validator;
+
+
+@NamedQueries({
+	@NamedQuery(
+			name = KontolandQuery.ByCompound,
+			query = "SELECT OBJECT(o) FROM Kontoland o " +
+				"WHERE o.kontoIId=?1 AND o.landIId=?2 AND o.tGueltigAb=?3"),
+	@NamedQuery(
+			name = KontolandQuery.ByDate,
+			query = "SELECT OBJECT(o) FROM Kontoland o " +
+				"WHERE o.kontoIId=?1 AND o.landIId=?2 AND " +
+				"o.tGueltigAb<=?3 ORDER BY o.tGueltigAb DESC")
+})
 
 @Entity
 @Table(name = "FB_KONTOLAND")
 public class Kontoland implements Serializable {
-	@EmbeddedId
-	private KontolandPK pk;
+	private static final long serialVersionUID = 1L;
 
+//	@EmbeddedId
+//	private KontolandPK pk;
+
+	@Id
+	@Column(name = "I_ID")
+	private Integer iId;
+	
 	@Column(name = "KONTO_I_ID_UEBERSETZT")
 	private Integer kontoIIdUebersetzt;
 
@@ -62,8 +84,16 @@ public class Kontoland implements Serializable {
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
-	private static final long serialVersionUID = 1L;
+	@Column(name = "KONTO_I_ID")
+	private Integer kontoIId;
 
+	@Column(name = "LAND_I_ID")
+	private Integer landIId;
+
+	@Column(name = "T_GUELTIGAB")
+	private Timestamp tGueltigAb;
+		
+	
 	public Kontoland() {
 		super();
 	}
@@ -71,8 +101,9 @@ public class Kontoland implements Serializable {
 	public Kontoland(Integer kontoIId, Integer landIId,
 			Integer kontoIIdUebersetzt, 
 			Integer personalIIdAnlegen, 
-			Integer personalIIdAendern) {
-		pk = new KontolandPK();
+			Integer personalIIdAendern,
+			Timestamp gueltigAb) {
+//		pk = new KontolandPK();
 		setKontoIId(kontoIId);
 		setLandIId(landIId);
 		setKontoIIdUebersetzt(kontoIIdUebersetzt);
@@ -81,15 +112,16 @@ public class Kontoland implements Serializable {
 		setTAendern(t);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
+		setTGueltigAb(gueltigAb);
 	}
 
-	public KontolandPK getPk() {
-		return this.pk;
-	}
+//	public KontolandPK getPk() {
+//		return this.pk;
+//	}
 
-	public void setPk(KontolandPK pk) {
-		this.pk = pk;
-	}
+//	public void setPk(KontolandPK pk) {
+//		this.pk = pk;
+//	}
 
 	public Integer getKontoIIdUebersetzt() {
 		return this.kontoIIdUebersetzt;
@@ -116,19 +148,19 @@ public class Kontoland implements Serializable {
 	}
 
 	public Integer getKontoIId() {
-		return pk.getKonto_i_id();
+		return kontoIId;
 	}
 
 	public void setKontoIId(Integer kontoIId) {
-		this.pk.setKonto_i_id(kontoIId);
+		this.kontoIId = kontoIId;
 	}
 
 	public Integer getLandIId() {
-		return pk.getLand_i_id();
+		return landIId;
 	}
 
 	public void setLandIId(Integer landIId) {
-		this.pk.setLand_i_id(landIId);
+		this.landIId = landIId;
 	}
 
 	public Integer getPersonalIIdAnlegen() {
@@ -147,4 +179,20 @@ public class Kontoland implements Serializable {
 		this.personalIIdAendern = personalIIdAendern;
 	}
 
+	public Integer getIId() {
+		return this.iId;
+	}
+
+	public void setIId(Integer iId) {
+		this.iId = iId;
+	}
+
+	public Timestamp getTGueltigAb() {
+		return tGueltigAb;
+	}
+	
+	public void setTGueltigAb(Timestamp gueltigAb) {
+		Validator.notNull(gueltigAb, "gueltigAb");
+		tGueltigAb = gueltigAb;
+	}	
 }

@@ -35,19 +35,52 @@ package com.lp.server.lieferschein.ejb;
 import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.Query;
+
+import com.lp.server.partner.ejb.HvTypedQuery;
 
 public class LieferscheinpositionQuery {
-	public final static String  ByPositionIIdArtikelset = "LieferscheinpositionfindByPositionIIdArtikelset" ;
-
-	public static Query byPositionIIdArtikelset(EntityManager em, Integer positionIIdArtikelset) {
-		Query q = em.createNamedQuery(ByPositionIIdArtikelset) ;
-		q.setParameter(1, positionIIdArtikelset) ;
-		return q ;
+	public static final String ByPositionIIdArtikelset = "LieferscheinpositionfindByPositionIIdArtikelset" ;
+	public static final String ByForecastpositionId = "LieferscheinpositionfindByForecastpositionIId";
+	public static final String ByPositionIIdArtikelsetAll = "LieferscheinpositionfindByPositionIIdArtikelsetAll";
+	public static final String ByLieferscheinIdArtikelIId = "LieferscheinpositionfindByLieferscheinIIdArtikelIId";
+	
+	public static HvTypedQuery<Lieferscheinposition> byPositionIIdArtikelset(EntityManager em, Integer positionIIdArtikelset) {
+		HvTypedQuery<Lieferscheinposition> q = new HvTypedQuery<Lieferscheinposition>(em.createNamedQuery(ByPositionIIdArtikelset)) ;
+		return q.setParameter(1, positionIIdArtikelset);
 	}	
+
+	public static HvTypedQuery<Lieferscheinposition> byForecastpositionId(EntityManager em, Integer forecastpositionIId) { 
+		HvTypedQuery<Lieferscheinposition> q = new HvTypedQuery<Lieferscheinposition>(em.createNamedQuery(ByForecastpositionId));
+		return q.setParameter(1, forecastpositionIId);
+	}
+	
+	public static HvTypedQuery<Lieferscheinposition> byPositionIIdArtikelsetAll(EntityManager em, Integer positionIIdArtikelset) {
+		HvTypedQuery<Lieferscheinposition> q = new HvTypedQuery<Lieferscheinposition>(em.createNamedQuery(ByPositionIIdArtikelsetAll)) ;
+		return q.setParameter(1, positionIIdArtikelset);
+	}
+
+	public static HvTypedQuery<Lieferscheinposition> byLieferscheinIIdArtikelIId(EntityManager em, Integer lieferscheinId, Integer artikelId) {
+		HvTypedQuery<Lieferscheinposition> q = new HvTypedQuery<Lieferscheinposition>(em.createNamedQuery(ByLieferscheinIdArtikelIId)) ;
+		return q.setParameter(1, lieferscheinId)
+				.setParameter(2, artikelId);
+	}
 
 	public static List<Lieferscheinposition> listByPositionIIdArtikelset(EntityManager em, Integer positionIIdArtikelset) {
 		return byPositionIIdArtikelset(em, positionIIdArtikelset).getResultList();
 	}
+	 
+	public static List<Lieferscheinposition> listByForecastpositionIId(
+			EntityManager em, Integer forecastpositionIId) { 
+		return byForecastpositionId(em, forecastpositionIId).getResultList();
+	}
+	
+	public static List<Lieferscheinposition> listByPositionIIdArtikelsetAll(
+			EntityManager em, Integer positionIIdArtikelset) {
+		return byPositionIIdArtikelsetAll(em, positionIIdArtikelset).getResultList();
+	}
 
-}
+	public static List<Lieferscheinposition> listByLieferscheinIIdArtikelIId(
+			EntityManager em, Integer lieferscheinId, Integer artikelId) {
+		return byLieferscheinIIdArtikelIId(em, lieferscheinId, artikelId).getResultList();
+	}
+} 

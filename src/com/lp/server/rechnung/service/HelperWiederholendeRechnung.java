@@ -38,7 +38,7 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 
-import com.lp.server.rechnung.ejbfac.RechnungFacBean;
+import com.lp.server.rechnung.ejbfac.RechnungPruefbarFacBean;
 import com.lp.util.Helper;
 
 public class HelperWiederholendeRechnung {
@@ -50,9 +50,9 @@ public class HelperWiederholendeRechnung {
 	String sMandant;
 	
 	ArrayList<RechnungInfo> al = new ArrayList<RechnungInfo>();
-	RechnungFacBean callback;
+	RechnungPruefbarFacBean callback;
 
-	public HelperWiederholendeRechnung(RechnungFacBean callback, RechnungDto[] rechnungDtos, 
+	public HelperWiederholendeRechnung(RechnungPruefbarFacBean callback, RechnungDto[] rechnungDtos, 
 			Date startDatum, String intervallArt, Locale localeKunde, String sMandant) {
 		super();
 		this.callback = callback;

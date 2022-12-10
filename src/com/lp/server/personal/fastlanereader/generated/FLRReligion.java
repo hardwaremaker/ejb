@@ -53,10 +53,10 @@ public class FLRReligion implements Serializable {
 	private String c_nr;
 
 	/** persistent field */
-	private Set<?> religionsprset;
+	private Set<FLRReligionspr> religionsprset;
 
 	/** full constructor */
-	public FLRReligion(String c_nr, Set<?> religionsprset) {
+	public FLRReligion(String c_nr, Set<FLRReligionspr> religionsprset) {
 		this.c_nr = c_nr;
 		this.religionsprset = religionsprset;
 	}
@@ -66,7 +66,7 @@ public class FLRReligion implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRReligion(Set<?> religionsprset) {
+	public FLRReligion(Set<FLRReligionspr> religionsprset) {
 		this.religionsprset = religionsprset;
 	}
 
@@ -86,11 +86,11 @@ public class FLRReligion implements Serializable {
 		this.c_nr = c_nr;
 	}
 
-	public Set<?> getReligionsprset() {
+	public Set<FLRReligionspr> getReligionsprset() {
 		return this.religionsprset;
 	}
 
-	public void setReligionsprset(Set<?> religionsprset) {
+	public void setReligionsprset(Set<FLRReligionspr> religionsprset) {
 		this.religionsprset = religionsprset;
 	}
 

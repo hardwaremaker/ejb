@@ -52,6 +52,7 @@ public class ZahlungsvorschlagDto implements Serializable {
 	private BigDecimal nBereitsBezahlt;
 	private BigDecimal nZahlbetrag;
 	private Short bWaereVollstaendigBezahlt;
+	private String cAuftraggeberreferenz;
 
 	public Integer getIId() {
 		return iId;
@@ -131,6 +132,14 @@ public class ZahlungsvorschlagDto implements Serializable {
 
 	public void setBWaereVollstaendigBezahlt(Short bWaereVollstaendigBezahlt) {
 		this.bWaereVollstaendigBezahlt = bWaereVollstaendigBezahlt;
+	}
+
+	public String getCAuftraggeberreferenz() {
+		return cAuftraggeberreferenz;
+	}
+
+	public void setCAuftraggeberreferenz(String cAuftraggeberreferenz) {
+		this.cAuftraggeberreferenz = cAuftraggeberreferenz;
 	}
 
 	public boolean equals(Object obj) {

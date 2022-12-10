@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -78,6 +80,7 @@ public class MahnlaufHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private Boolean hasZusatzfunktionSepaLastschrift;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -109,6 +112,11 @@ public class MahnlaufHandler extends UseCaseHandler {
 						.getC_kurzzeichen();
 				rows[row][col++] = getMahnungsCount(mahnlauf.getI_id());
 				rows[row][col++] = getErledigtCount(mahnlauf.getI_id());
+				
+				if (hasSepaLastschriftZusatzfunktion()) {
+					rows[row][col++] = getLastschriftCount(mahnlauf.getI_id());
+					rows[row][col++] = getErledigtCountLastschrift(mahnlauf.getI_id());
+				}
 				row++;
 				col = 0;
 			}
@@ -316,35 +324,73 @@ public class MahnlaufHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, java.sql.Timestamp.class,
-							String.class, Integer.class, Integer.class },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
-							getTextRespectUISpr("lp.erzeuger",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.mahnungen", mandantCNr,
-									locUI),
-							getTextRespectUISpr("auft.offen", mandantCNr, locUI) },
-
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
-
-					new String[] { FinanzFac.FLR_MAHNLAUF_I_ID,
-							FinanzFac.FLR_MAHNLAUF_T_ANLEGEN,
-							FinanzFac.FLR_MAHNUNG_FLRPERSONALANLEGER,
-							FinanzFac.FLR_MAHNLAUF_I_ID,
-							FinanzFac.FLR_MAHNLAUF_I_ID }));
+			TableInfo tableInfo = new TableInfo(getTableInfoClasses(), 
+					getTableInfoHeaderValues(), getColumnHeaderWidths(), getDBColumnNames());
+			setTableInfo(tableInfo);
 		}
 		return super.getTableInfo();
+	}
+	
+	private String[] getDBColumnNames() {
+		List<String> dbColumnNames = new ArrayList<String>();
+		dbColumnNames.add(FinanzFac.FLR_MAHNLAUF_I_ID);
+		dbColumnNames.add(FinanzFac.FLR_MAHNLAUF_T_ANLEGEN);
+		dbColumnNames.add(FinanzFac.FLR_MAHNUNG_FLRPERSONALANLEGER);
+		dbColumnNames.add(FinanzFac.FLR_MAHNLAUF_I_ID);
+		dbColumnNames.add(FinanzFac.FLR_MAHNLAUF_I_ID);
+		
+		if (hasSepaLastschriftZusatzfunktion()) {
+			dbColumnNames.add(FinanzFac.FLR_MAHNLAUF_I_ID);
+			dbColumnNames.add(FinanzFac.FLR_MAHNLAUF_I_ID);
+		}
+		
+		return dbColumnNames.toArray(new String[dbColumnNames.size()]);
+	}
+	
+	private Class[] getTableInfoClasses() {
+		List<Class> classes = new ArrayList<Class>();
+		classes.add(Integer.class);
+		classes.add(Timestamp.class);
+		classes.add(String.class);
+		classes.add(Integer.class);
+		classes.add(Integer.class);
+		if (hasSepaLastschriftZusatzfunktion()) {
+			classes.add(Integer.class);
+			classes.add(Integer.class);
+		}
+		return classes.toArray(new Class[classes.size()]);
+	}
+
+	private String[] getTableInfoHeaderValues() {
+		String mandantCNr = theClientDto.getMandant();
+		Locale locUI = theClientDto.getLocUi();
+		List<String> headerValues = new ArrayList<String>();
+		headerValues.add("Id");
+		headerValues.add(getTextRespectUISpr("lp.datum", mandantCNr, locUI));
+		headerValues.add(getTextRespectUISpr("lp.erzeuger",
+				theClientDto.getMandant(), theClientDto.getLocUi()));
+		headerValues.add(getTextRespectUISpr("lp.mahnungen", mandantCNr, locUI));
+		headerValues.add(getTextRespectUISpr("auft.offen", mandantCNr, locUI));
+		if (hasSepaLastschriftZusatzfunktion()) {
+			headerValues.add(getTextRespectUISpr("rechnung.lastschriftvorschlag", mandantCNr, locUI));
+			headerValues.add(getTextRespectUISpr("auft.offen", mandantCNr, locUI));
+		}
+		return headerValues.toArray(new String[headerValues.size()]);
+	}
+
+	private int[] getColumnHeaderWidths() {
+		int arraySize = 5 + (hasSepaLastschriftZusatzfunktion() ? 2 : 0);
+		int[] headerValues = new int[arraySize];
+		headerValues[0] = -1;
+		headerValues[1] = QueryParameters.FLR_BREITE_SHARE_WITH_REST;
+		headerValues[2] = QueryParameters.FLR_BREITE_SHARE_WITH_REST;
+		headerValues[3] = QueryParameters.FLR_BREITE_SHARE_WITH_REST;
+		headerValues[4] = QueryParameters.FLR_BREITE_SHARE_WITH_REST;
+		if (hasSepaLastschriftZusatzfunktion()) {
+			headerValues[5] = QueryParameters.FLR_BREITE_SHARE_WITH_REST;
+			headerValues[6] = QueryParameters.FLR_BREITE_SHARE_WITH_REST;
+		}
+		return headerValues;
 	}
 
 	private int getMahnungsCount(Integer MahnlaufIId) {
@@ -390,4 +436,53 @@ public class MahnlaufHandler extends UseCaseHandler {
 
 	}
 
+	private int getLastschriftCount(Integer mahnlaufIId) {
+		int count = 0;
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		Session session = null;
+		try {
+			session = factory.openSession();
+			String queryString = "select count(*) from FLRLastschriftvorschlag lastschriftvorschlag "
+					+ " WHERE lastschriftvorschlag.mahnlauf_i_id = " + mahnlaufIId;
+			Query query = session.createQuery(queryString);
+			List<?> rowCountResult = query.list();
+			if (rowCountResult != null && rowCountResult.size() > 0) {
+				count = ((Long) rowCountResult.get(0)).intValue();
+			}
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
+		} finally {
+			closeSession(session);
+		}
+		return count;
+	}
+	
+	private int getErledigtCountLastschrift(Integer mahnlaufIId) {
+		int count = 0;
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		Session session = null;
+		try {
+			session = factory.openSession();
+			String queryString = "select count(*) from FLRLastschriftvorschlag lastschriftvorschlag WHERE lastschriftvorschlag.mahnlauf_i_id = "
+					+ mahnlaufIId + "and lastschriftvorschlag.t_gespeichert is null";
+			Query query = session.createQuery(queryString);
+			List<?> rowCountResult = query.list();
+			if (rowCountResult != null && rowCountResult.size() > 0) {
+				count = ((Long) rowCountResult.get(0)).intValue();
+			}
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
+		} finally {
+			closeSession(session);
+		}
+		return count;
+	}
+
+	private boolean hasSepaLastschriftZusatzfunktion() {
+		if (hasZusatzfunktionSepaLastschrift == null) {
+			hasZusatzfunktionSepaLastschrift = 
+					getMandantFac().hatZusatzfunktionSepaLastschrift(theClientDto);
+		}
+		return hasZusatzfunktionSepaLastschrift;
+	}
 }

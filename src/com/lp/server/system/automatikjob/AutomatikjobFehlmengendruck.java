@@ -32,20 +32,13 @@
  ******************************************************************************/
 package com.lp.server.system.automatikjob;
 
-import javax.print.PrintService;
-import javax.print.PrintServiceLookup;
-
-import com.lp.server.system.ejbfac.ServerDruckerFacBean;
+import com.lp.server.system.ejbfac.HvPrinter;
 import com.lp.server.system.service.AutoFehlmengendruckDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.Helper;
 
 public class AutomatikjobFehlmengendruck extends AutomatikjobBasis {
-
-	private boolean errorInJob;
-
-	private static final String NICHT_DRUCKEN = "Nicht Drucken";
 
 	public AutomatikjobFehlmengendruck() {
 		super();
@@ -60,36 +53,23 @@ public class AutomatikjobFehlmengendruck extends AutomatikjobBasis {
 	public boolean performJob(TheClientDto theClientDto) {
 		try {
 			myLogger.info("start Fehlmengendruck");
-			errorInJob = false;
 			AutoFehlmengendruckDto autoFehlmengendruckDto = getAutoFehlmengendruckFac()
 					.autoFehlmengendruckFindByMandantCNr(theClientDto.getMandant());
 			JasperPrintLP print = getFertigungReportFac()
 					.printAufloesbareFehlmengen(Helper.SORTIERUNG_NACH_IDENT,
 							false, false, theClientDto);
-			PrintService[] printService = PrintServiceLookup
-					.lookupPrintServices(null, null);
-			int i = 0;
+			
 			String usedPrinter = autoFehlmengendruckDto.getCDrucker();
-			if (usedPrinter.equals("")) {
-				// do nothing there is no Printer
-			} else {
-				while (i < printService.length) {
-					if (!printService[i].getName().equals(usedPrinter)) {
-						i++;
-					} else {
-						if (!usedPrinter.equals(NICHT_DRUCKEN)) {
-							ServerDruckerFacBean.print(print, printService[i]);
-							break;
-						}
-					}
-				}
-			}
+			HvPrinter hvPrinter = getServerDruckerFacLocal().createHvPrinter(usedPrinter);
+			if (getServerDruckerFacLocal().exists(hvPrinter))
+				getServerDruckerFacLocal().print(print, hvPrinter);
+			
 		} catch (Throwable ex) {
-			myLogger.error("Fehler beim drucken der Fehlmengen");
-			errorInJob = true;
+			myLogger.error("Fehler beim drucken der Fehlmengen", ex);
+			return true;
 		}
 		myLogger.info("ende Fehlmengendruck");
-		return errorInJob;
+		return false;
 	}
 
 }

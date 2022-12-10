@@ -34,7 +34,10 @@ package com.lp.server.benutzer.service;
 
 import java.io.Serializable;
 
-public class SystemrolleDto implements Serializable {
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
+@HvDtoLogClass(name = HvDtoLogClass.SYSTEMROLLE)
+public class SystemrolleDto implements Serializable ,IIId{
 	/**
 	 * 
 	 */

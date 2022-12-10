@@ -135,8 +135,8 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 	private static int REPORT_DECKUNGSBEITRAG_ANZAHL_FELDER = 11;
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printKuechenauswertung2(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, TheClientDto theClientDto) {
+	public JasperPrintLP printKuechenauswertung2(java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			TheClientDto theClientDto) {
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		parameter.put("P_VON", tVon);
 		parameter.put("P_BIS", tBis);
@@ -145,11 +145,8 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 		Integer fertigungsgruppeIIdSofortverbrauch = null;
 		try {
-			fertigungsgruppeIIdSofortverbrauch = getStuecklisteFac()
-					.fertigungsgruppeFindByMandantCNrCBez(
-							theClientDto.getMandant(),
-							StuecklisteFac.FERTIGUNGSGRUPPE_SOFORTVERBRAUCH)
-					.getIId();
+			fertigungsgruppeIIdSofortverbrauch = getStuecklisteFac().fertigungsgruppeFindByMandantCNrCBez(
+					theClientDto.getMandant(), StuecklisteFac.FERTIGUNGSGRUPPE_SOFORTVERBRAUCH).getIId();
 		} catch (EJBExceptionLP e1) {
 			if (e1.getCode() == EJBExceptionLP.FEHLER_BEI_FIND) {
 				throw new EJBExceptionLP(
@@ -172,16 +169,12 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		session.enableFilter("filterMandant").setParameter("paramMandant",
-				theClientDto.getMandant());
-		session.enableFilter("filterLocale").setParameter("paramLocale",
-				theClientDto.getLocUiAsString());
+		session.enableFilter("filterMandant").setParameter("paramMandant", theClientDto.getMandant());
+		session.enableFilter("filterLocale").setParameter("paramLocale", theClientDto.getLocUiAsString());
 
 		String sQuery = "SELECT k, aspr.c_bez FROM FLRKassaimport AS k LEFT OUTER JOIN k.flrartikel.artikelsprset AS aspr  WHERE k.n_menge>0 AND k.t_kassa>='"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime()))
-				+ "' AND k.t_kassa<'"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime()))
-				+ "' AND k.flrartikel.mandant_c_nr='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime())) + "' AND k.t_kassa<'"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "' AND k.flrartikel.mandant_c_nr='"
 				+ theClientDto.getMandant() + "'";
 
 		// SELECT KUNDE_I_ID,ARTIKEL_I_ID,T_KASSA, SUM(N_MENGE),
@@ -207,131 +200,92 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 				Iterator iTspeiseplanpos = s.iterator();
 
 				while (iTspeiseplanpos.hasNext()) {
-					FLRSpeiseplanposition sppos = (FLRSpeiseplanposition) iTspeiseplanpos
-							.next();
+					FLRSpeiseplanposition sppos = (FLRSpeiseplanposition) iTspeiseplanpos.next();
 
 					BigDecimal menge = new BigDecimal(0);
 
 					if (sppos.getN_menge().doubleValue() != 0) {
-						menge = sppos.getN_menge()
-								.divide(ki.getFlrspeiseplan().getN_menge())
-								.multiply(ki.getN_menge());
+						menge = sppos.getN_menge().divide(ki.getFlrspeiseplan().getN_menge()).multiply(ki.getN_menge());
 					}
 
-					if (hmVerbrauchteArtikel.containsKey(sppos.getFlrartikel()
-							.getC_nr())) {
-						Object[] oZeile = (Object[]) hmVerbrauchteArtikel
-								.get(sppos.getFlrartikel().getC_nr());
+					if (hmVerbrauchteArtikel.containsKey(sppos.getFlrartikel().getC_nr())) {
+						Object[] oZeile = (Object[]) hmVerbrauchteArtikel.get(sppos.getFlrartikel().getC_nr());
 
 						oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] =
 
-						((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ])
-								.add(((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS])
-										.multiply(menge));
+								((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ])
+										.add(((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS]).multiply(menge));
 
 						oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT] = ((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT])
 								.add(menge);
 
-						hmVerbrauchteArtikel.put(sppos.getFlrartikel()
-								.getC_nr(), oZeile);
+						hmVerbrauchteArtikel.put(sppos.getFlrartikel().getC_nr(), oZeile);
 
 					} else {
 						Object[] oZeile = new Object[7];
 
 						ArtikelDto artikelDto = getArtikelFac()
-								.artikelFindByPrimaryKeySmall(
-										sppos.getFlrartikel().getI_id(),
-										theClientDto);
-						oZeile[REPORT_KUECHENAUSWERTUNG2_ARTIKELNUMMER] = sppos
-								.getFlrartikel().getC_nr();
-						oZeile[REPORT_KUECHENAUSWERTUNG2_BEZEICHNUNG] = artikelDto
-								.formatBezeichnung();
+								.artikelFindByPrimaryKeySmall(sppos.getFlrartikel().getI_id(), theClientDto);
+						oZeile[REPORT_KUECHENAUSWERTUNG2_ARTIKELNUMMER] = sppos.getFlrartikel().getC_nr();
+						oZeile[REPORT_KUECHENAUSWERTUNG2_BEZEICHNUNG] = artikelDto.formatBezeichnung();
 
-						ArtikellieferantDto ekPreis = getArtikelFac()
-								.getArtikelEinkaufspreis(
-										sppos.getArtikel_i_id(),
-										null,
-										menge,
-										theClientDto.getSMandantenwaehrung(),
-										new java.sql.Date(ki.getT_kassa()
-												.getTime()), theClientDto);
+						ArtikellieferantDto ekPreis = getArtikelFac().getArtikelEinkaufspreis(sppos.getArtikel_i_id(),
+								null, menge, theClientDto.getSMandantenwaehrung(),
+								new java.sql.Date(ki.getT_kassa().getTime()), theClientDto);
 						if (ekPreis != null && ekPreis.getLief1Preis() != null) {
-							oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = ekPreis
-									.getLief1Preis();
-							oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = ekPreis
-									.getLief1Preis().multiply(menge);
+							oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = ekPreis.getLief1Preis();
+							oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = ekPreis.getLief1Preis()
+									.multiply(menge);
 						} else {
-							oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = new BigDecimal(
-									0);
-							oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = new BigDecimal(
-									0);
+							oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = new BigDecimal(0);
+							oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = new BigDecimal(0);
 						}
 
 						oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT] = menge;
 
-						oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_MATERIAL] = new BigDecimal(
-								0);
-						oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = new BigDecimal(
-								0);
-						hmVerbrauchteArtikel.put(sppos.getFlrartikel()
-								.getC_nr(), oZeile);
+						oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_MATERIAL] = new BigDecimal(0);
+						oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = new BigDecimal(0);
+						hmVerbrauchteArtikel.put(sppos.getFlrartikel().getC_nr(), oZeile);
 					}
 
 				}
 
 			} else {
-				if (hmVerbrauchteArtikel.containsKey(ki.getFlrartikel()
-						.getC_nr())) {
-					Object[] oZeile = (Object[]) hmVerbrauchteArtikel.get(ki
-							.getFlrartikel().getC_nr());
+				if (hmVerbrauchteArtikel.containsKey(ki.getFlrartikel().getC_nr())) {
+					Object[] oZeile = (Object[]) hmVerbrauchteArtikel.get(ki.getFlrartikel().getC_nr());
 
 					oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] =
 
-					((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ])
-							.add(((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS])
-									.multiply(ki.getN_menge()));
+							((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ]).add(
+									((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS]).multiply(ki.getN_menge()));
 
 					oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT] = ((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT])
 							.add(ki.getN_menge());
 
-					hmVerbrauchteArtikel.put(ki.getFlrartikel().getC_nr(),
-							oZeile);
+					hmVerbrauchteArtikel.put(ki.getFlrartikel().getC_nr(), oZeile);
 
 				} else {
 					Object[] oZeile = new Object[7];
-					oZeile[REPORT_KUECHENAUSWERTUNG2_ARTIKELNUMMER] = ki
-							.getFlrartikel().getC_nr();
+					oZeile[REPORT_KUECHENAUSWERTUNG2_ARTIKELNUMMER] = ki.getFlrartikel().getC_nr();
 					oZeile[REPORT_KUECHENAUSWERTUNG2_BEZEICHNUNG] = o[1];
 
-					ArtikellieferantDto ekPreis = getArtikelFac()
-							.getArtikelEinkaufspreis(
-									ki.getArtikel_i_id(),
-									null,
-									ki.getN_menge(),
-									theClientDto.getSMandantenwaehrung(),
-									new java.sql.Date(ki.getT_kassa().getTime()),
-									theClientDto);
+					ArtikellieferantDto ekPreis = getArtikelFac().getArtikelEinkaufspreis(ki.getArtikel_i_id(), null,
+							ki.getN_menge(), theClientDto.getSMandantenwaehrung(),
+							new java.sql.Date(ki.getT_kassa().getTime()), theClientDto);
 					if (ekPreis != null && ekPreis.getLief1Preis() != null) {
-						oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = ekPreis
-								.getLief1Preis();
-						oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = ekPreis
-								.getLief1Preis().multiply(ki.getN_menge());
+						oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = ekPreis.getLief1Preis();
+						oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = ekPreis.getLief1Preis()
+								.multiply(ki.getN_menge());
 					} else {
-						oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = new BigDecimal(
-								0);
-						oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = new BigDecimal(
-								0);
+						oZeile[REPORT_KUECHENAUSWERTUNG2_EKPREIS] = new BigDecimal(0);
+						oZeile[REPORT_KUECHENAUSWERTUNG2_THEORETISCHER_WARENEINSATZ] = new BigDecimal(0);
 					}
 
-					oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT] = ki
-							.getN_menge();
+					oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT] = ki.getN_menge();
 
-					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_MATERIAL] = new BigDecimal(
-							0);
-					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = new BigDecimal(
-							0);
-					hmVerbrauchteArtikel.put(ki.getFlrartikel().getC_nr(),
-							oZeile);
+					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_MATERIAL] = new BigDecimal(0);
+					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = new BigDecimal(0);
+					hmVerbrauchteArtikel.put(ki.getFlrartikel().getC_nr(), oZeile);
 				}
 			}
 
@@ -339,27 +293,19 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 		Session sessionSub = FLRSessionFactory.getFactory().openSession();
 		String sQuerySub = "FROM FLRLossollmaterial AS s WHERE s.flrlos.status_c_nr NOT IN('"
-				+ FertigungFac.STATUS_GESTOPPT
-				+ "','"
-				+ FertigungFac.STATUS_ANGELEGT
-				+ "') AND s.flrlos.t_ausgabe>='"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime()))
-				+ "' AND s.flrlos.t_ausgabe<'"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime()))
-				+ "' AND s.flrlos.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "'";
+				+ FertigungFac.STATUS_GESTOPPT + "','" + FertigungFac.STATUS_ANGELEGT + "') AND s.flrlos.t_ausgabe>='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime())) + "' AND s.flrlos.t_ausgabe<'"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "' AND s.flrlos.mandant_c_nr='"
+				+ theClientDto.getMandant() + "'";
 
 		org.hibernate.Query hquerySub = sessionSub.createQuery(sQuerySub);
 		List<?> resultListSub = hquerySub.list();
 		Iterator<?> resultListIteratorSub = resultListSub.iterator();
 		while (resultListIteratorSub.hasNext()) {
-			FLRLossollmaterial sollmaterial = (FLRLossollmaterial) resultListIteratorSub
-					.next();
+			FLRLossollmaterial sollmaterial = (FLRLossollmaterial) resultListIteratorSub.next();
 
 			BigDecimal bdAusgegeben = new BigDecimal(0);
-			for (Iterator<?> iter = sollmaterial.getIstmaterialset().iterator(); iter
-					.hasNext();) {
+			for (Iterator<?> iter = sollmaterial.getIstmaterialset().iterator(); iter.hasNext();) {
 				FLRLosistmaterial item = (FLRLosistmaterial) iter.next();
 				if (Helper.short2boolean(item.getB_abgang()) == true) {
 					bdAusgegeben = bdAusgegeben.add(item.getN_menge());
@@ -372,8 +318,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 			if (bdAusgegeben.doubleValue() != 0) {
 				try {
-					preis = getFertigungFac().getAusgegebeneMengePreis(
-							sollmaterial.getI_id(), null, theClientDto);
+					preis = getFertigungFac().getAusgegebeneMengePreis(sollmaterial.getI_id(), null, theClientDto);
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -381,13 +326,10 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 			BigDecimal wert = preis.multiply(bdAusgegeben);
 
-			if (hmVerbrauchteArtikel.containsKey(sollmaterial.getFlrartikel()
-					.getC_nr())) {
-				Object[] oZeile = (Object[]) hmVerbrauchteArtikel
-						.get(sollmaterial.getFlrartikel().getC_nr());
+			if (hmVerbrauchteArtikel.containsKey(sollmaterial.getFlrartikel().getC_nr())) {
+				Object[] oZeile = (Object[]) hmVerbrauchteArtikel.get(sollmaterial.getFlrartikel().getC_nr());
 
-				if (sollmaterial.getFlrlos().getFertigungsgruppe_i_id()
-						.equals(fertigungsgruppeIIdSofortverbrauch)) {
+				if (sollmaterial.getFlrlos().getFertigungsgruppe_i_id().equals(fertigungsgruppeIIdSofortverbrauch)) {
 					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = ((BigDecimal) oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH])
 							.add(wert);
 				} else {
@@ -395,36 +337,26 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 							.add(wert);
 				}
 
-				hmVerbrauchteArtikel.put(
-						sollmaterial.getFlrartikel().getC_nr(), oZeile);
+				hmVerbrauchteArtikel.put(sollmaterial.getFlrartikel().getC_nr(), oZeile);
 
 			} else {
 				Object[] oZeile = new Object[7];
-				oZeile[REPORT_KUECHENAUSWERTUNG2_ARTIKELNUMMER] = sollmaterial
-						.getFlrartikel().getC_nr();
+				oZeile[REPORT_KUECHENAUSWERTUNG2_ARTIKELNUMMER] = sollmaterial.getFlrartikel().getC_nr();
 
 				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(
-								sollmaterial.getFlrartikel().getI_id(),
-								theClientDto);
-				oZeile[REPORT_KUECHENAUSWERTUNG2_BEZEICHNUNG] = artikelDto
-						.formatBezeichnung();
+						.artikelFindByPrimaryKeySmall(sollmaterial.getFlrartikel().getI_id(), theClientDto);
+				oZeile[REPORT_KUECHENAUSWERTUNG2_BEZEICHNUNG] = artikelDto.formatBezeichnung();
 
-				oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT] = new BigDecimal(
-						0);
-				if (sollmaterial.getFlrlos().getFertigungsgruppe_i_id()
-						.equals(fertigungsgruppeIIdSofortverbrauch)) {
+				oZeile[REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT] = new BigDecimal(0);
+				if (sollmaterial.getFlrlos().getFertigungsgruppe_i_id().equals(fertigungsgruppeIIdSofortverbrauch)) {
 					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = wert;
-					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_MATERIAL] = new BigDecimal(
-							0);
+					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_MATERIAL] = new BigDecimal(0);
 				} else {
-					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = new BigDecimal(
-							0);
+					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_SOFORTVERBRAUCH] = new BigDecimal(0);
 					oZeile[REPORT_KUECHENAUSWERTUNG2_WARENEINSATZ_MATERIAL] = wert;
 				}
 
-				hmVerbrauchteArtikel.put(
-						sollmaterial.getFlrartikel().getC_nr(), oZeile);
+				hmVerbrauchteArtikel.put(sollmaterial.getFlrartikel().getC_nr(), oZeile);
 			}
 		}
 		sessionSub.close();
@@ -432,24 +364,20 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		data = new Object[hmVerbrauchteArtikel.size()][10];
 		data = (Object[][]) hmVerbrauchteArtikel.values().toArray(data);
 
-		initJRDS(parameter, KuecheReportFac.REPORT_MODUL,
-				KuecheReportFac.REPORT_KUECHENAUSWERTUNG2,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+		initJRDS(parameter, KuecheReportFac.REPORT_MODUL, KuecheReportFac.REPORT_KUECHENAUSWERTUNG2,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 
 		return getReportPrint();
 	}
 
-	private void holeWertAllerWareneingaenge(KostenstelleDto kstDto,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+	private void holeWertAllerWareneingaenge(KostenstelleDto kstDto, java.sql.Timestamp tVon, java.sql.Timestamp tBis,
 			ArrayList alDaten, TheClientDto theClientDto) {
 		// Alle Wareneingaenge holen
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String sQuery = "SELECT wep FROM FLRWareneingangspositionen wep WHERE wep.flrwareneingang.flrbestellung.kostenstelle_i_id="
-				+ kstDto.getIId()
-				+ " AND wep.flrwareneingang.t_wareneingansdatum>='"
+				+ kstDto.getIId() + " AND wep.flrwareneingang.t_wareneingansdatum>='"
 				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime()))
 				+ "' AND wep.flrwareneingang.t_wareneingansdatum<'"
 				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime()))
@@ -460,23 +388,17 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		List results = query.list();
 		Iterator resultListIterator = results.iterator();
 		while (resultListIterator.hasNext()) {
-			FLRWareneingangspositionen pos = (FLRWareneingangspositionen) resultListIterator
-					.next();
+			FLRWareneingangspositionen pos = (FLRWareneingangspositionen) resultListIterator.next();
 
 			Object[] oZeile = new Object[REPORT_DECKUNGSBEITRAG_ANZAHL_FELDER];
-			oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto
-					.formatKostenstellenbezeichnung();
-			oZeile[REPORT_DECKUNGSBEITRAG_BESTELLUNG] = pos
-					.getFlrbestellposition().getFlrbestellung().getC_nr();
+			oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto.formatKostenstellenbezeichnung();
+			oZeile[REPORT_DECKUNGSBEITRAG_BESTELLUNG] = pos.getFlrbestellposition().getFlrbestellung().getC_nr();
 
 			try {
 				BigDecimal einstandspreis = getLagerFac()
-						.getGemittelterEinstandspreisEinerZugangsposition(
-								LocaleFac.BELEGART_BESTELLUNG, pos.getI_id());
-				if (einstandspreis != null
-						&& pos.getN_geliefertemenge() != null) {
-					oZeile[REPORT_DECKUNGSBEITRAG_WARENEINGAENGE] = einstandspreis
-							.multiply(pos.getN_geliefertemenge());
+						.getGemittelterEinstandspreisEinerZugangsposition(LocaleFac.BELEGART_BESTELLUNG, pos.getI_id());
+				if (einstandspreis != null && pos.getN_geliefertemenge() != null) {
+					oZeile[REPORT_DECKUNGSBEITRAG_WARENEINGAENGE] = einstandspreis.multiply(pos.getN_geliefertemenge());
 				}
 
 			} catch (RemoteException e) {
@@ -488,10 +410,8 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 	}
 
-	private void holeWarenausgangsGestehungswertZuKostenstelle(
-			KostenstelleDto kstDto, java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, ArrayList alDaten,
-			TheClientDto theClientDto) {
+	private void holeWarenausgangsGestehungswertZuKostenstelle(KostenstelleDto kstDto, java.sql.Timestamp tVon,
+			java.sql.Timestamp tBis, ArrayList alDaten, TheClientDto theClientDto) {
 
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
@@ -501,24 +421,19 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		String queryRechnung = " from FLRRechnungPosition rechpos  WHERE rechpos.positionsart_c_nr = '"
 				+ LocaleFac.POSITIONSART_IDENT + "' ";
 
-		queryRechnung += " AND rechpos.flrrechnung.status_c_nr NOT IN ('"
-				+ RechnungFac.STATUS_STORNIERT + "') ";
+		queryRechnung += " AND rechpos.flrrechnung.status_c_nr NOT IN ('" + RechnungFac.STATUS_STORNIERT + "') ";
 
-		queryRechnung += " AND rechpos.flrrechnung.mandant_c_nr= '"
-				+ theClientDto.getMandant() + "'";
+		queryRechnung += " AND rechpos.flrrechnung.mandant_c_nr= '" + theClientDto.getMandant() + "'";
 
-		queryRechnung += " AND rechpos.flrrechnung.flrkostenstelle.i_id= '"
-				+ kstDto.getIId() + "'";
+		queryRechnung += " AND rechpos.flrrechnung.flrkostenstelle.i_id= '" + kstDto.getIId() + "'";
 
 		if (tVon != null) {
 			queryRechnung += " AND rechpos.flrrechnung.d_belegdatum>='"
-					+ Helper.formatDateWithSlashes(Helper
-							.cutDate(new java.sql.Date(tVon.getTime()))) + "'";
+					+ Helper.formatDateWithSlashes(Helper.cutDate(new java.sql.Date(tVon.getTime()))) + "'";
 		}
 		if (tBis != null) {
 			queryRechnung += " AND rechpos.flrrechnung.d_belegdatum<'"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(tBis
-							.getTime())) + "'";
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "'";
 		}
 
 		queryRechnung += " ORDER BY rechpos.flrrechnung.d_belegdatum DESC";
@@ -529,26 +444,22 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 		String queryLieferschein = " from FLRLieferscheinposition lspos  WHERE  1=1 ";
 
-		queryLieferschein += " AND lspos.positionsart_c_nr = '"
-				+ LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT + "'";
+		queryLieferschein += " AND lspos.positionsart_c_nr = '" + LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT
+				+ "'";
 
 		queryRechnung += " AND lspos.flrlieferschein.lieferscheinstatus_status_c_nr NOT IN ('"
 				+ LieferscheinFac.LSSTATUS_STORNIERT + "') ";
 
-		queryLieferschein += " AND lspos.flrlieferschein.mandant_c_nr= '"
-				+ theClientDto.getMandant() + "'";
-		queryLieferschein += " AND lspos.flrlieferschein.flrkostenstelle.i_id= '"
-				+ kstDto.getIId() + "'";
+		queryLieferschein += " AND lspos.flrlieferschein.mandant_c_nr= '" + theClientDto.getMandant() + "'";
+		queryLieferschein += " AND lspos.flrlieferschein.flrkostenstelle.i_id= '" + kstDto.getIId() + "'";
 
 		if (tVon != null) {
 			queryLieferschein += " AND lspos.flrlieferschein.d_belegdatum>='"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(tVon
-							.getTime())) + "'";
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime())) + "'";
 		}
 		if (tBis != null) {
 			queryLieferschein += " AND lspos.flrlieferschein.d_belegdatum<'"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(tBis
-							.getTime())) + "'";
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "'";
 		}
 
 		queryLieferschein += " ORDER BY lspos.flrlieferschein.d_belegdatum DESC";
@@ -562,12 +473,10 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		ArrayList<KundeLieferstatistikDto> cResult = new ArrayList<KundeLieferstatistikDto>();
 
 		while (resultListIteratorRechnung.hasNext()) {
-			FLRRechnungPosition rePos = (FLRRechnungPosition) resultListIteratorRechnung
-					.next();
+			FLRRechnungPosition rePos = (FLRRechnungPosition) resultListIteratorRechnung.next();
 
 			try {
-				RechnungDto d = fac.getRechnungFac().rechnungFindByPrimaryKey(
-						rePos.getRechnung_i_id());
+				RechnungDto d = fac.getRechnungFac().rechnungFindByPrimaryKey(rePos.getRechnung_i_id());
 
 				String sRechnungsart = d.getRechnungartCNr();
 
@@ -576,38 +485,26 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 					BigDecimal bMenge = rePos.getN_menge();
 					BigDecimal bPreis = new BigDecimal(0);
 					Object[] oZeile = new Object[REPORT_DECKUNGSBEITRAG_ANZAHL_FELDER];
-					if (sRechnungsart
-							.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT)) {
-						bPreis = getLagerFac()
-								.getGemittelterEinstandspreisEinerZugangsposition(
-										LocaleFac.BELEGART_GUTSCHRIFT,
-										rePos.getI_id());
+					if (sRechnungsart.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT)) {
+						bPreis = getLagerFac().getGemittelterEinstandspreisEinerZugangsposition(
+								LocaleFac.BELEGART_GUTSCHRIFT, rePos.getI_id());
 						bMenge = bMenge.negate();
-						oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNG_WA] = "G"
-								+ rePos.getFlrrechnung().getC_nr();
+						oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNG_WA] = "G" + rePos.getFlrrechnung().getC_nr();
 					} else {
-						bPreis = getLagerFac()
-								.getGemittelterGestehungspreisEinerAbgangsposition(
-										LocaleFac.BELEGART_RECHNUNG,
-										rePos.getI_id());
-						oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNG_WA] = "R"
-								+ rePos.getFlrrechnung().getC_nr();
+						bPreis = getLagerFac().getGemittelterGestehungspreisEinerAbgangsposition(
+								LocaleFac.BELEGART_RECHNUNG, rePos.getI_id());
+						oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNG_WA] = "R" + rePos.getFlrrechnung().getC_nr();
 					}
 
-					if (rePos.getFlrrechnung().getN_kurs().doubleValue() != 0
-							&& bPreis != null) {
-						bPreis = bPreis.divide(rePos.getFlrrechnung()
-								.getN_kurs(), 4, BigDecimal.ROUND_HALF_EVEN);
+					if (rePos.getFlrrechnung().getN_kurs().doubleValue() != 0 && bPreis != null) {
+						bPreis = bPreis.divide(rePos.getFlrrechnung().getN_kurs(), 4, BigDecimal.ROUND_HALF_EVEN);
 					} else {
 						bPreis = new BigDecimal(0);
 					}
 
-					oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto
-							.formatKostenstellenbezeichnung();
-					oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNG_WA] = rePos
-							.getFlrrechnung().getC_nr();
-					oZeile[REPORT_DECKUNGSBEITRAG_WARENAUSGANG] = bMenge
-							.multiply(bPreis);
+					oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto.formatKostenstellenbezeichnung();
+					oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNG_WA] = rePos.getFlrrechnung().getC_nr();
+					oZeile[REPORT_DECKUNGSBEITRAG_WARENAUSGANG] = bMenge.multiply(bPreis);
 					alDaten.add(oZeile);
 
 				}
@@ -616,12 +513,10 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 			}
 
 		}
-		Iterator<?> resultListIteratorLieferschein = resultListLieferschein
-				.iterator();
+		Iterator<?> resultListIteratorLieferschein = resultListLieferschein.iterator();
 		// lieferscheinpositionen verarbeiten
 		while (resultListIteratorLieferschein.hasNext()) {
-			FLRLieferscheinposition lsPos = (FLRLieferscheinposition) resultListIteratorLieferschein
-					.next();
+			FLRLieferscheinposition lsPos = (FLRLieferscheinposition) resultListIteratorLieferschein.next();
 
 			KundeLieferstatistikDto dto = new KundeLieferstatistikDto();
 
@@ -640,68 +535,54 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 					if (lsPos.getFlrlieferschein().getFlrziellager() != null) {
 						// SP960
-						bPreis = getLagerFac()
-								.getGemittelterEinstandspreisEinerZugangsposition(
-										LocaleFac.BELEGART_LSZIELLAGER,
-										lsPos.getI_id());
+						bPreis = getLagerFac().getGemittelterEinstandspreisEinerZugangsposition(
+								LocaleFac.BELEGART_LSZIELLAGER, lsPos.getI_id());
 
 					} else {
-						bPreis = getLagerFac()
-								.getGemittelterEinstandspreisEinerZugangsposition(
-										LocaleFac.BELEGART_LIEFERSCHEIN,
-										lsPos.getI_id());
+						bPreis = getLagerFac().getGemittelterEinstandspreisEinerZugangsposition(
+								LocaleFac.BELEGART_LIEFERSCHEIN, lsPos.getI_id());
 
 					}
 
 				} else {
-					bPreis = getLagerFac()
-							.getGemittelterGestehungspreisEinerAbgangsposition(
-									LocaleFac.BELEGART_LIEFERSCHEIN,
-									lsPos.getI_id());
+					bPreis = getLagerFac().getGemittelterGestehungspreisEinerAbgangsposition(
+							LocaleFac.BELEGART_LIEFERSCHEIN, lsPos.getI_id());
 				}
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
 
-			BigDecimal bdKurs = new BigDecimal(lsPos.getFlrlieferschein()
-					.getF_wechselkursmandantwaehrungzulieferscheinwaehrung()
-					.doubleValue());
+			BigDecimal bdKurs = new BigDecimal(
+					lsPos.getFlrlieferschein().getF_wechselkursmandantwaehrungzulieferscheinwaehrung().doubleValue());
 
-			if (bdKurs.doubleValue() != 0
-					&& lsPos.getN_nettogesamtpreis() != null) {
+			if (bdKurs.doubleValue() != 0 && lsPos.getN_nettogesamtpreis() != null) {
 				bPreis = bPreis.divide(bdKurs, 4, BigDecimal.ROUND_HALF_EVEN);
 			} else {
 				bPreis = new BigDecimal(0);
 			}
 
 			Object[] oZeile = new Object[REPORT_DECKUNGSBEITRAG_ANZAHL_FELDER];
-			oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto
-					.formatKostenstellenbezeichnung();
-			oZeile[REPORT_DECKUNGSBEITRAG_LIEFERSCHEIN_WA] = lsPos
-					.getFlrlieferschein().getC_nr();
-			oZeile[REPORT_DECKUNGSBEITRAG_WARENAUSGANG] = bMenge
-					.multiply(bPreis);
+			oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto.formatKostenstellenbezeichnung();
+			oZeile[REPORT_DECKUNGSBEITRAG_LIEFERSCHEIN_WA] = lsPos.getFlrlieferschein().getC_nr();
+			oZeile[REPORT_DECKUNGSBEITRAG_WARENAUSGANG] = bMenge.multiply(bPreis);
 			alDaten.add(oZeile);
 
 		}
 
 	}
 
-	private void holeZuganswerteAllerLose(KostenstelleDto kstDto,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+	private void holeZuganswerteAllerLose(KostenstelleDto kstDto, java.sql.Timestamp tVon, java.sql.Timestamp tBis,
 			ArrayList alDaten, TheClientDto theClientDto) {
 		// Alle Wareneingaenge holen
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String sQuery = "SELECT li FROM FLRLosistmaterial li WHERE li.flrlossollmaterial.flrlos.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' AND li.flrlossollmaterial.flrlos.t_ausgabe>='"
+				+ theClientDto.getMandant() + "' AND li.flrlossollmaterial.flrlos.t_ausgabe>='"
 				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime()))
 				+ "' AND li.flrlossollmaterial.flrlos.t_ausgabe<'"
 				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime()))
-				+ "' AND li.flrlossollmaterial.flrlos.kostenstelle_i_id="
-				+ kstDto.getIId()
+				+ "' AND li.flrlossollmaterial.flrlos.kostenstelle_i_id=" + kstDto.getIId()
 				+ " ORDER BY li.flrlossollmaterial.flrlos.c_nr";
 
 		Query query = session.createQuery(sQuery);
@@ -709,22 +590,16 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		List results = query.list();
 		Iterator resultListIterator = results.iterator();
 		while (resultListIterator.hasNext()) {
-			FLRLosistmaterial ist = (FLRLosistmaterial) resultListIterator
-					.next();
+			FLRLosistmaterial ist = (FLRLosistmaterial) resultListIterator.next();
 
 			try {
 				BigDecimal bdMaterialIstpreis = ist.getN_menge().multiply(
-						getFertigungFac().getAusgegebeneMengePreis(
-								ist.getLossollmaterial_i_id(), null,
-								theClientDto));
+						getFertigungFac().getAusgegebeneMengePreis(ist.getLossollmaterial_i_id(), null, theClientDto));
 
 				Object[] oZeile = new Object[REPORT_DECKUNGSBEITRAG_ANZAHL_FELDER];
-				oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto
-						.formatKostenstellenbezeichnung();
-				oZeile[REPORT_DECKUNGSBEITRAG_LOSNUMMER] = ist
-						.getFlrlossollmaterial().getFlrlos().getC_nr();
-				if (ist.getFlrlossollmaterial().getFlrartikel()
-						.getI_sofortverbrauch() != null) {
+				oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDto.formatKostenstellenbezeichnung();
+				oZeile[REPORT_DECKUNGSBEITRAG_LOSNUMMER] = ist.getFlrlossollmaterial().getFlrlos().getC_nr();
+				if (ist.getFlrlossollmaterial().getFlrartikel().getI_sofortverbrauch() != null) {
 					oZeile[REPORT_DECKUNGSBEITRAG_LOSESOFORTVERBRAUCH] = bdMaterialIstpreis;
 				} else {
 					oZeile[REPORT_DECKUNGSBEITRAG_LOSEREST] = bdMaterialIstpreis;
@@ -742,8 +617,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printDeckungsbeitrag(Integer kostenstelleIId,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+	public JasperPrintLP printDeckungsbeitrag(Integer kostenstelleIId, java.sql.Timestamp tVon, java.sql.Timestamp tBis,
 			TheClientDto theClientDto) {
 
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
@@ -765,15 +639,12 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		try {
 			if (kostenstelleIId == null) {
 
-				kstDtos = getSystemFac().kostenstelleFindByMandant(
-						theClientDto.getMandant());
+				kstDtos = getSystemFac().kostenstelleFindByMandant(theClientDto.getMandant());
 
 			} else {
 				kstDtos = new KostenstelleDto[1];
-				kstDtos[0] = getSystemFac().kostenstelleFindByPrimaryKey(
-						kostenstelleIId);
-				parameter.put("P_KOSTENSTELLE",
-						kstDtos[0].formatKostenstellenbezeichnung());
+				kstDtos[0] = getSystemFac().kostenstelleFindByPrimaryKey(kostenstelleIId);
+				parameter.put("P_KOSTENSTELLE", kstDtos[0].formatKostenstellenbezeichnung());
 
 			}
 
@@ -782,25 +653,18 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 			for (int i = 0; i < kstDtos.length; i++) {
 				// Kostenstelle
 
-				holeZuganswerteAllerLose(kstDtos[i], tVon, tBis, alDaten,
-						theClientDto);
+				holeZuganswerteAllerLose(kstDtos[i], tVon, tBis, alDaten, theClientDto);
 
-				holeWertAllerWareneingaenge(kstDtos[i], tVon, tBis, alDaten,
-						theClientDto);
-				holeWarenausgangsGestehungswertZuKostenstelle(kstDtos[i], tVon,
-						tBis, alDaten, theClientDto);
+				holeWertAllerWareneingaenge(kstDtos[i], tVon, tBis, alDaten, theClientDto);
+				holeWarenausgangsGestehungswertZuKostenstelle(kstDtos[i], tVon, tBis, alDaten, theClientDto);
 
 				// Rechnungswert
 				Session session = FLRSessionFactory.getFactory().openSession();
 
 				String sQuery = "SELECT r.c_nr,r.n_wert FROM FLRRechnung r   WHERE r.flrkostenstelle.i_id="
-						+ kstDtos[i].getIId()
-						+ " AND r.d_belegdatum>='"
-						+ Helper.formatDateWithSlashes(new java.sql.Date(tVon
-								.getTime()))
-						+ "' AND r.d_belegdatum<'"
-						+ Helper.formatDateWithSlashes(new java.sql.Date(tBis
-								.getTime())) + "' ORDER BY r.c_nr";
+						+ kstDtos[i].getIId() + " AND r.d_belegdatum>='"
+						+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime())) + "' AND r.d_belegdatum<'"
+						+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "' ORDER BY r.c_nr";
 
 				Query query = session.createQuery(sQuery);
 
@@ -811,8 +675,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 					Object[] oDaten = (Object[]) resultListIterator.next();
 
 					Object[] oZeile = new Object[REPORT_DECKUNGSBEITRAG_ANZAHL_FELDER];
-					oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDtos[i]
-							.formatKostenstellenbezeichnung();
+					oZeile[REPORT_DECKUNGSBEITRAG_KOSTENSTELLE] = kstDtos[i].formatKostenstellenbezeichnung();
 					oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNG] = oDaten[0];
 					oZeile[REPORT_DECKUNGSBEITRAG_RECHNUNGEN] = oDaten[1];
 					alDaten.add(oZeile);
@@ -826,18 +689,14 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}
-		initJRDS(parameter, KuecheReportFac.REPORT_MODUL,
-				KuecheReportFac.REPORT_DECKUNGSBEITRAG,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+		initJRDS(parameter, KuecheReportFac.REPORT_MODUL, KuecheReportFac.REPORT_DECKUNGSBEITRAG,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 		return getReportPrint();
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printKuechenauswertung1(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, String artikelNrVon, String artikelNrBis,
-			Integer brancheIId, Integer artikelklasseIId,
-			TheClientDto theClientDto) {
+	public JasperPrintLP printKuechenauswertung1(java.sql.Timestamp tVon, java.sql.Timestamp tBis, String artikelNrVon,
+			String artikelNrBis, Integer brancheIId, Integer artikelklasseIId, TheClientDto theClientDto) {
 
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		parameter.put("P_VON", tVon);
@@ -849,19 +708,13 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		HashMap<Integer, KundeDto> cachedKunde = new HashMap<Integer, KundeDto>();
 		HashMap<Integer, ArtikelDto> cachedArtikel = new HashMap<Integer, ArtikelDto>();
 
-		try {
-			if (artikelklasseIId != null) {
-				parameter.put("P_ARTIKELKLASSE", getArtikelFac()
-						.artklaFindByPrimaryKey(artikelklasseIId, theClientDto)
-						.getCNr());
-			}
-			if (brancheIId != null) {
-				parameter.put("P_BRANCHE", getPartnerServicesFac()
-						.brancheFindByPrimaryKey(brancheIId, theClientDto)
-						.getCNr());
-			}
-		} catch (RemoteException ex1) {
-			throwEJBExceptionLPRespectOld(ex1);
+		if (artikelklasseIId != null) {
+			parameter.put("P_ARTIKELKLASSE",
+					getArtikelFac().artklaFindByPrimaryKey(artikelklasseIId, theClientDto).getCNr());
+		}
+		if (brancheIId != null) {
+			parameter.put("P_BRANCHE",
+					getPartnerServicesFac().brancheFindByPrimaryKey(brancheIId, theClientDto).getCNr());
 		}
 
 		sAktuellerReport = KuecheReportFac.REPORT_KUECHENAUSWERTUNG1;
@@ -876,36 +729,28 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		session.enableFilter("filterMandant").setParameter("paramMandant",
-				theClientDto.getMandant());
-		session.enableFilter("filterLocale").setParameter("paramLocale",
-				theClientDto.getLocUiAsString());
+		session.enableFilter("filterMandant").setParameter("paramMandant", theClientDto.getMandant());
+		session.enableFilter("filterLocale").setParameter("paramLocale", theClientDto.getLocUiAsString());
 
 		String sQuery = "SELECT k.flrartikel.i_id,k.flrartikel.c_nr,k.flrkunde.i_id , k.t_kassa, sum(k.n_menge), sum(k.n_preis*k.n_menge), aspr.c_bez, k.speiseplan_i_id FROM FLRKassaimport k LEFT OUTER JOIN k.flrartikel.artikelsprset AS aspr  WHERE k.n_menge>0 AND k.t_kassa>='"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime()))
-				+ "' AND k.t_kassa<'"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime()))
-				+ "'";
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime())) + "' AND k.t_kassa<'"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "'";
 
 		if (artikelNrVon != null) {
 			sQuery += " AND k.flrartikel.c_nr >='" + artikelNrVon + "'";
 		}
 		if (artikelNrBis != null) {
 
-			String artikelNrBis_Gefuellt = Helper.fitString2Length(
-					artikelNrBis, 25, '_');
-			sQuery += " AND k.flrartikel.c_nr <='" + artikelNrBis_Gefuellt
-					+ "'";
+			String artikelNrBis_Gefuellt = Helper.fitString2Length(artikelNrBis, 25, '_');
+			sQuery += " AND k.flrartikel.c_nr <='" + artikelNrBis_Gefuellt + "'";
 		}
 
 		if (artikelklasseIId != null) {
-			sQuery += " AND k.flrartikel.flrartikelklasse.i_id="
-					+ artikelklasseIId.intValue();
+			sQuery += " AND k.flrartikel.flrartikelklasse.i_id=" + artikelklasseIId.intValue();
 		}
 
 		if (brancheIId != null) {
-			sQuery += " AND k.flrkunde.flrpartner.branche_i_id="
-					+ brancheIId.intValue();
+			sQuery += " AND k.flrkunde.flrpartner.branche_i_id=" + brancheIId.intValue();
 		}
 
 		sQuery += " GROUP BY k.flrartikel.i_id, k.flrartikel.c_nr,k.flrkunde,  k.t_kassa, aspr.c_bez,k.speiseplan_i_id";
@@ -942,28 +787,23 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 				+ "') AND lspos.flrartikel.i_id IS NOT NULL AND lspos.flrlieferschein.d_belegdatum>='"
 				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime()))
 				+ "' AND lspos.flrlieferschein.d_belegdatum<'"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime()))
-				+ "'";
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "'";
 
 		if (artikelNrVon != null) {
 			sQueryLS += " AND lspos.flrartikel.c_nr >='" + artikelNrVon + "'";
 		}
 		if (artikelNrBis != null) {
 
-			String artikelNrBis_Gefuellt = Helper.fitString2Length(
-					artikelNrBis, 25, '_');
-			sQueryLS += " AND lspos.flrartikel.c_nr <='"
-					+ artikelNrBis_Gefuellt + "'";
+			String artikelNrBis_Gefuellt = Helper.fitString2Length(artikelNrBis, 25, '_');
+			sQueryLS += " AND lspos.flrartikel.c_nr <='" + artikelNrBis_Gefuellt + "'";
 		}
 
 		if (artikelklasseIId != null) {
-			sQueryLS += " AND lspos.flrartikel.flrartikelklasse.i_id="
-					+ artikelklasseIId.intValue();
+			sQueryLS += " AND lspos.flrartikel.flrartikelklasse.i_id=" + artikelklasseIId.intValue();
 		}
 
 		if (brancheIId != null) {
-			sQueryLS += " AND lspos.flrlieferschein.flrkunde.flrpartner.branche_i_id="
-					+ brancheIId.intValue();
+			sQueryLS += " AND lspos.flrlieferschein.flrkunde.flrpartner.branche_i_id=" + brancheIId.intValue();
 		}
 
 		Query queryLP = sessionLS.createQuery(sQueryLS);
@@ -975,8 +815,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 		ArrayList alLSPositionen = new ArrayList();
 		while (resultListIteratorLS.hasNext()) {
-			FLRLieferscheinposition lspos = (FLRLieferscheinposition) resultListIteratorLS
-					.next();
+			FLRLieferscheinposition lspos = (FLRLieferscheinposition) resultListIteratorLS.next();
 
 			alLSPositionen.add(lspos);
 
@@ -1004,30 +843,25 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 			zeile[REPORT_KUECHENAUSWERTUNG_MENGEVERKAUFT] = menge;
 
-			zeile[REPORT_KUECHENAUSWERTUNG_PREISVERKAUFT] = bdGesamtWert
-					.divide(menge, BigDecimal.ROUND_HALF_EVEN);
+			zeile[REPORT_KUECHENAUSWERTUNG_PREISVERKAUFT] = bdGesamtWert.divide(menge, BigDecimal.ROUND_HALF_EVEN);
 			zeile[REPORT_KUECHENAUSWERTUNG_DATUMVERKAUFT] = oImport[3];
 
-			zeile[REPORT_KUECHENAUSWERTUNG_DATUMVERKAUFT_CUT] = Helper
-					.cutTimestamp((Timestamp) oImport[3]);
+			zeile[REPORT_KUECHENAUSWERTUNG_DATUMVERKAUFT_CUT] = Helper.cutTimestamp((Timestamp) oImport[3]);
 
 			try {
 				KundeDto kundeDto = null;
 				if (cachedKunde.containsKey((Integer) oImport[2])) {
 					kundeDto = cachedKunde.get((Integer) oImport[2]);
 				} else {
-					kundeDto = kundeDto = getKundeFac().kundeFindByPrimaryKey(
-							(Integer) oImport[2], theClientDto);
+					kundeDto = kundeDto = getKundeFac().kundeFindByPrimaryKey((Integer) oImport[2], theClientDto);
 					cachedKunde.put((Integer) oImport[2], kundeDto);
 				}
 
-				zeile[REPORT_KUECHENAUSWERTUNG_KUNDE] = kundeDto
-						.getPartnerDto().formatFixName1Name2();
+				zeile[REPORT_KUECHENAUSWERTUNG_KUNDE] = kundeDto.getPartnerDto().formatFixName1Name2();
 
 				// PJ 14558 Theoretischer Wareneinsatz
 				zeile[REPORT_KUECHENAUSWERTUNG_THEORETISCHER_WARENEINSATZ] = getKuecheFac()
-						.getTheoretischerWareneinsatz((Integer) oImport[7],
-								(Integer) oImport[0], menge, theClientDto);
+						.getTheoretischerWareneinsatz((Integer) oImport[7], (Integer) oImport[0], menge, theClientDto);
 
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
@@ -1037,15 +871,12 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 			for (int j = 0; j < alLSPositionen.size(); j++) {
 
-				FLRLieferscheinposition lspos = (FLRLieferscheinposition) alLSPositionen
-						.get(j);
+				FLRLieferscheinposition lspos = (FLRLieferscheinposition) alLSPositionen.get(j);
 				// Kunde - oder Lieferadresse
-				if (lspos.getFlrlieferschein().getFlrkunde().getI_id()
-						.equals(oImport[2])) {
+				if (lspos.getFlrlieferschein().getFlrkunde().getI_id().equals(oImport[2])) {
 					// Nun muss auch noch der Artikel gleich sein
 					if (lspos.getFlrartikel().getI_id().equals(oImport[0])) {
-						if (lspos.getFlrlieferschein().getD_belegdatum()
-								.getTime() == tKassa.getTime()) {
+						if (lspos.getFlrlieferschein().getD_belegdatum().getTime() == tKassa.getTime()) {
 
 							if (bZeileImportHinzugefuegt == false) {
 								bZeileImportHinzugefuegt = true;
@@ -1057,16 +888,13 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 							neueZeile[REPORT_KUECHENAUSWERTUNG_MENGEVERKAUFT] = null;
 							neueZeile[REPORT_KUECHENAUSWERTUNG_PREISVERKAUFT] = null;
 
-							neueZeile[REPORT_KUECHENAUSWERTUNG_MENGELIEFERSCEHIN] = lspos
-									.getN_menge();
-							neueZeile[REPORT_KUECHENAUSWERTUNG_LIEFERSCHEIN] = lspos
-									.getFlrlieferschein().getC_nr();
+							neueZeile[REPORT_KUECHENAUSWERTUNG_MENGELIEFERSCEHIN] = lspos.getN_menge();
+							neueZeile[REPORT_KUECHENAUSWERTUNG_LIEFERSCHEIN] = lspos.getFlrlieferschein().getC_nr();
 
 							if (lspos.getPosition_i_id_artikelset() != null) {
 								neueZeile[REPORT_KUECHENAUSWERTUNG_SETARTIKEL_TYP] = ArtikelFac.SETARTIKEL_TYP_POSITION;
 							} else {
-								if (lspos.getSetartikel_set() != null
-										&& lspos.getSetartikel_set().size() > 0) {
+								if (lspos.getSetartikel_set() != null && lspos.getSetartikel_set().size() > 0) {
 									neueZeile[REPORT_KUECHENAUSWERTUNG_SETARTIKEL_TYP] = ArtikelFac.SETARTIKEL_TYP_KOPF;
 								}
 							}
@@ -1096,13 +924,11 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		// Alle uebrigen LSPos eintragen
 		for (int j = 0; j < alLSPositionen.size(); j++) {
 
-			FLRLieferscheinposition lspos = (FLRLieferscheinposition) alLSPositionen
-					.get(j);
+			FLRLieferscheinposition lspos = (FLRLieferscheinposition) alLSPositionen.get(j);
 
 			Object[] zeile = new Object[12];
 
-			zeile[REPORT_KUECHENAUSWERTUNG_ARTIKELNUMMER] = lspos
-					.getFlrartikel().getC_nr();
+			zeile[REPORT_KUECHENAUSWERTUNG_ARTIKELNUMMER] = lspos.getFlrartikel().getC_nr();
 
 			zeile[REPORT_KUECHENAUSWERTUNG_MENGEVERKAUFT] = new BigDecimal(0);
 
@@ -1111,42 +937,33 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 			zeile[REPORT_KUECHENAUSWERTUNG_DATUMVERKAUFT] = new java.sql.Timestamp(
 					lspos.getFlrlieferschein().getD_belegdatum().getTime());
 			zeile[REPORT_KUECHENAUSWERTUNG_DATUMVERKAUFT_CUT] = Helper
-					.cutTimestamp(new java.sql.Timestamp(lspos
-							.getFlrlieferschein().getD_belegdatum().getTime()));
+					.cutTimestamp(new java.sql.Timestamp(lspos.getFlrlieferschein().getD_belegdatum().getTime()));
 
 			ArtikelDto artikelDto = null;
 
 			if (cachedArtikel.containsKey(lspos.getFlrartikel().getI_id())) {
 				artikelDto = cachedArtikel.get(lspos.getFlrartikel().getI_id());
 			} else {
-				artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-						lspos.getFlrartikel().getI_id(), theClientDto);
+				artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(lspos.getFlrartikel().getI_id(),
+						theClientDto);
 				cachedArtikel.put(lspos.getFlrartikel().getI_id(), artikelDto);
 			}
 
-			zeile[REPORT_KUECHENAUSWERTUNG_BEZEICHNUNG] = artikelDto
-					.formatBezeichnung();
+			zeile[REPORT_KUECHENAUSWERTUNG_BEZEICHNUNG] = artikelDto.formatBezeichnung();
 
 			KundeDto kundeDto = null;
 
-			if (cachedKunde.containsKey(lspos.getFlrlieferschein()
-					.getKunde_i_id_lieferadresse())) {
-				kundeDto = cachedKunde.get(lspos.getFlrlieferschein()
-						.getKunde_i_id_lieferadresse());
+			if (cachedKunde.containsKey(lspos.getFlrlieferschein().getKunde_i_id_lieferadresse())) {
+				kundeDto = cachedKunde.get(lspos.getFlrlieferschein().getKunde_i_id_lieferadresse());
 			} else {
-				kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						lspos.getFlrlieferschein()
-								.getKunde_i_id_lieferadresse(), theClientDto);
-				cachedKunde.put(lspos.getFlrlieferschein()
-						.getKunde_i_id_lieferadresse(), kundeDto);
+				kundeDto = getKundeFac().kundeFindByPrimaryKey(lspos.getFlrlieferschein().getKunde_i_id_lieferadresse(),
+						theClientDto);
+				cachedKunde.put(lspos.getFlrlieferschein().getKunde_i_id_lieferadresse(), kundeDto);
 			}
-			zeile[REPORT_KUECHENAUSWERTUNG_KUNDE] = kundeDto.getPartnerDto()
-					.formatFixName1Name2();
+			zeile[REPORT_KUECHENAUSWERTUNG_KUNDE] = kundeDto.getPartnerDto().formatFixName1Name2();
 
-			zeile[REPORT_KUECHENAUSWERTUNG_MENGELIEFERSCEHIN] = lspos
-					.getN_menge();
-			zeile[REPORT_KUECHENAUSWERTUNG_LIEFERSCHEIN] = lspos
-					.getFlrlieferschein().getC_nr();
+			zeile[REPORT_KUECHENAUSWERTUNG_MENGELIEFERSCEHIN] = lspos.getN_menge();
+			zeile[REPORT_KUECHENAUSWERTUNG_LIEFERSCHEIN] = lspos.getFlrlieferschein().getC_nr();
 
 			if (lspos.getPosition_i_id_artikelset() != null) {
 
@@ -1155,8 +972,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 			} else {
 
 				/*
-				 * if(lspos.getSetartikel_set()!=null &&
-				 * lspos.getSetartikel_set().size()>0){
+				 * if(lspos.getSetartikel_set()!=null && lspos.getSetartikel_set().size()>0){
 				 * zeile[REPORT_KUECHENAUSWERTUNG_SETARTIKEL_TYP] =
 				 * ArtikelFac.SETARTIKEL_TYP_KOPF; }
 				 */
@@ -1173,15 +989,10 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 
 		// 2 Subreports
 		Session sessionSub = FLRSessionFactory.getFactory().openSession();
-		String sQuerySub = "FROM FLRLosReport AS l WHERE l.status_c_nr NOT IN('"
-				+ FertigungFac.STATUS_GESTOPPT
-				+ "','"
-				+ FertigungFac.STATUS_ANGELEGT
-				+ "') AND l.t_ausgabe>='"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime()))
-				+ "' AND l.t_ausgabe<'"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime()))
-				+ "' ";
+		String sQuerySub = "FROM FLRLosReport AS l WHERE l.status_c_nr NOT IN('" + FertigungFac.STATUS_GESTOPPT + "','"
+				+ FertigungFac.STATUS_ANGELEGT + "') AND l.t_ausgabe>='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tVon.getTime())) + "' AND l.t_ausgabe<'"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tBis.getTime())) + "' ";
 
 		org.hibernate.Query hquerySub = sessionSub.createQuery(sQuerySub);
 		List<?> resultListSub = hquerySub.list();
@@ -1209,27 +1020,22 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 			try {
 				losDto = getFertigungFac().losFindByPrimaryKey(rep.getI_id());
 
-				LossollmaterialDto[] sollmat = getFertigungFac()
-						.lossollmaterialFindByLosIId(losDto.getIId());
+				LossollmaterialDto[] sollmat = getFertigungFac().lossollmaterialFindByLosIId(losDto.getIId());
 				BigDecimal bdWert = new BigDecimal(0);
 				for (int i = 0; i < sollmat.length; i++) {
-					BigDecimal bdAusgegeben = getFertigungFac()
-							.getAusgegebeneMenge(sollmat[i].getIId(), null,
-									theClientDto);
-					BigDecimal bdEinzelpreis = getFertigungFac()
-							.getAusgegebeneMengePreis(sollmat[i].getIId(),
-									null, theClientDto);
+					BigDecimal bdAusgegeben = getFertigungFac().getAusgegebeneMenge(sollmat[i].getIId(), null,
+							theClientDto);
+					BigDecimal bdEinzelpreis = getFertigungFac().getAusgegebeneMengePreis(sollmat[i].getIId(), null,
+							theClientDto);
 					bdWert = bdWert.add(bdAusgegeben.multiply(bdEinzelpreis));
 				}
 
 				zeile[SUBREPORT_WERT] = bdWert;
 
 				String laeger = "";
-				LoslagerentnahmeDto[] dtos = getFertigungFac()
-						.loslagerentnahmeFindByLosIId(rep.getI_id());
+				LoslagerentnahmeDto[] dtos = getFertigungFac().loslagerentnahmeFindByLosIId(rep.getI_id());
 				for (int i = 0; i < dtos.length; i++) {
-					LagerDto lagerDto = getLagerFac().lagerFindByPrimaryKey(
-							dtos[i].getLagerIId());
+					LagerDto lagerDto = getLagerFac().lagerFindByPrimaryKey(dtos[i].getLagerIId());
 					laeger += lagerDto.getCNr() + ", ";
 				}
 				zeile[SUBREPORT_LAGER] = laeger;
@@ -1238,8 +1044,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 				throwEJBExceptionLPRespectOld(e);
 			}
 
-			if (rep.getFlrfertigungsgruppe().getC_bez()
-					.equals(StuecklisteFac.FERTIGUNGSGRUPPE_SOFORTVERBRAUCH)) {
+			if (rep.getFlrfertigungsgruppe().getC_bez().equals(StuecklisteFac.FERTIGUNGSGRUPPE_SOFORTVERBRAUCH)) {
 
 				alSofortverbrauch.add(zeile);
 
@@ -1250,23 +1055,21 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		}
 
 		if (alSofortverbrauch.size() > 0) {
-			String[] fieldnames = new String[] { "F_LOSNUMMER", "F_WERT",
-					"F_PROJEKT", "F_LAGER", "F_KOSTENSTELLE", "F_AUSGABEDATUM" };
+			String[] fieldnames = new String[] { "F_LOSNUMMER", "F_WERT", "F_PROJEKT", "F_LAGER", "F_KOSTENSTELLE",
+					"F_AUSGABEDATUM" };
 			Object[][] dataSub = new Object[alSofortverbrauch.size()][fieldnames.length];
 			dataSub = (Object[][]) alSofortverbrauch.toArray(dataSub);
 
-			parameter.put("DATENSUBREPORT_SOFORTVERBRAUCH",
-					new LPDatenSubreport(dataSub, fieldnames));
+			parameter.put("DATENSUBREPORT_SOFORTVERBRAUCH", new LPDatenSubreport(dataSub, fieldnames));
 		}
 
 		if (alLagerbuchung.size() > 0) {
-			String[] fieldnames = new String[] { "F_LOSNUMMER", "F_WERT",
-					"F_PROJEKT", "F_LAGER", "F_KOSTENSTELLE", "F_AUSGABEDATUM" };
+			String[] fieldnames = new String[] { "F_LOSNUMMER", "F_WERT", "F_PROJEKT", "F_LAGER", "F_KOSTENSTELLE",
+					"F_AUSGABEDATUM" };
 			Object[][] dataSub = new Object[alLagerbuchung.size()][fieldnames.length];
 			dataSub = (Object[][]) alLagerbuchung.toArray(dataSub);
 
-			parameter.put("DATENSUBREPORT_TAGESLOS", new LPDatenSubreport(
-					dataSub, fieldnames));
+			parameter.put("DATENSUBREPORT_TAGESLOS", new LPDatenSubreport(dataSub, fieldnames));
 		}
 
 		// Sortieren nach PJ16694
@@ -1294,10 +1097,8 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 		data = new Object[alDaten.size()][10];
 		data = (Object[][]) alDaten.toArray(data);
 
-		initJRDS(parameter, KuecheReportFac.REPORT_MODUL,
-				KuecheReportFac.REPORT_KUECHENAUSWERTUNG1,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+		initJRDS(parameter, KuecheReportFac.REPORT_MODUL, KuecheReportFac.REPORT_KUECHENAUSWERTUNG1,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 
 		return getReportPrint();
 
@@ -1331,8 +1132,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 				value = data[index][REPORT_KUECHENAUSWERTUNG_SETARTIKEL_TYP];
 			}
 
-		} else if (sAktuellerReport
-				.equals(KuecheReportFac.REPORT_KUECHENAUSWERTUNG2)) {
+		} else if (sAktuellerReport.equals(KuecheReportFac.REPORT_KUECHENAUSWERTUNG2)) {
 			if ("Artikel".equals(fieldName)) {
 				value = data[index][REPORT_KUECHENAUSWERTUNG2_ARTIKELNUMMER];
 			} else if ("Bezeichnung".equals(fieldName)) {
@@ -1346,8 +1146,7 @@ public class KuecheReportFacBean extends LPReport implements KuecheReportFac {
 			} else if ("MengeVerbraucht".equals(fieldName)) {
 				value = data[index][REPORT_KUECHENAUSWERTUNG2_MENGEVERBRAUCHT];
 			}
-		} else if (sAktuellerReport
-				.equals(KuecheReportFac.REPORT_DECKUNGSBEITRAG)) {
+		} else if (sAktuellerReport.equals(KuecheReportFac.REPORT_DECKUNGSBEITRAG)) {
 			if ("Kostenstelle".equals(fieldName)) {
 				value = data[index][REPORT_DECKUNGSBEITRAG_KOSTENSTELLE];
 			} else if ("Rechnungen".equals(fieldName)) {

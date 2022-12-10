@@ -37,4 +37,9 @@ public class AuftragHandlerFeature {
 	public static final String ADRESSE_ANSCHRIFT = "ADRESSE_ANSCHRIFT" ;
 	public static final String ADRESSE_KURZANSCHRIFT = "ADRESSE_KURZANSCHRIFT" ;
 	public static final String ADRESSE_IST_LIEFERADRESSE = "ADRESSE_IST_LIEFERADRESSE" ;
+	
+	/**
+	 * Mit diesem Feature werden die IIds aller Kunden (Auftrags-, Rechnungs- und Lieferadresse)
+	 */
+	public static final String KUNDEN_IIDS = "KUNDEN_IIDS";
 }

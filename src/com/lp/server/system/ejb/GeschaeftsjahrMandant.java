@@ -48,7 +48,9 @@ import com.lp.util.Helper;
 		@NamedQuery(name = GeschaeftsjahrMandantQuery.ByMandant,     query = "SELECT OBJECT(o) FROM GeschaeftsjahrMandant o WHERE o.mandantCNr = :mandant ORDER BY o.tBeginndatum DESC"),
 		@NamedQuery(name = GeschaeftsjahrMandantQuery.ByYear,        query = "SELECT OBJECT(o) FROM GeschaeftsjahrMandant o WHERE o.iGeschaeftsjahr = :year ORDER BY o.mandantCNr"),
 		@NamedQuery(name = GeschaeftsjahrMandantQuery.ByDateMandant, query = "SELECT OBJECT(o) FROM GeschaeftsjahrMandant o WHERE o.mandantCNr = :mandant AND o.tBeginndatum<= :date ORDER BY o.tBeginndatum DESC"),
-		@NamedQuery(name = GeschaeftsjahrMandantQuery.ByYearMandant, query = "SELECT OBJECT(o) FROM GeschaeftsjahrMandant o WHERE o.iGeschaeftsjahr = :year AND o.mandantCNr = :mandant")		})
+		@NamedQuery(name = GeschaeftsjahrMandantQuery.ByYearMandant, query = "SELECT OBJECT(o) FROM GeschaeftsjahrMandant o WHERE o.iGeschaeftsjahr = :year AND o.mandantCNr = :mandant"),
+		@NamedQuery(name = GeschaeftsjahrMandantQuery.ByOpenMandant, query = "SELECT OBJECT(o) FROM GeschaeftsjahrMandant o WHERE o.mandantCNr = :mandant AND o.tSperre IS NULL ORDER BY o.tBeginndatum ASC"),
+		})
 
 @Entity
 @Table(name = "LP_GESCHAEFTSJAHRMANDANT")

@@ -115,6 +115,19 @@ public class BelegartDto implements Serializable {
 		return true;
 	}
 
+	public String getBezeichnung() {
+		if (getBelegartsprDto() != null) {
+			if (getBelegartsprDto().getCBez() != null) {
+				return getBelegartsprDto().getCBez();
+			} else {
+				return getCNr().trim();
+			}
+		} else {
+			return getCNr().trim();
+		}
+	}
+
+	
 	public int hashCode() {
 		int result = 17;
 		result = 37 * result + this.cNr.hashCode();

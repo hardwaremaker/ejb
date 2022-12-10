@@ -141,7 +141,7 @@ public class InseraterHandler extends UseCaseHandler {
 				rows[row][col++] = inserat.getN_betrag();
 				rows[row][col++] = getInseratFac()
 						.berechneWerbeabgabeLFEinesInserates(
-								inserat.getFlrinserat().getI_id(), theClientDto);
+								inserat.getFlrinserat().getI_id(),inserat.getN_betrag(), theClientDto);
 
 				if (inserat.getFlrinserat().getArtikelset().size() > 0) {
 
@@ -290,7 +290,7 @@ public class InseraterHandler extends UseCaseHandler {
 					orderBy.append(", ");
 				}
 				orderBy.append(FLR_INSERATER)
-						.append("flreingangsrechnung.c_nr ASC").append(" ASC ");
+						.append("flreingangsrechnung.c_nr ASC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_INSERATER + "i_id") < 0) {

@@ -50,10 +50,10 @@ public class FLRPositionsart implements Serializable {
 	private String c_nr;
 
 	/** persistent field */
-	private Set<?> positionsart_positionsartspr_set;
+	private Set<FLRPositionsartspr> positionsart_positionsartspr_set;
 
 	/** full constructor */
-	public FLRPositionsart(Set<?> positionsart_positionsartspr_set) {
+	public FLRPositionsart(Set<FLRPositionsartspr> positionsart_positionsartspr_set) {
 		this.positionsart_positionsartspr_set = positionsart_positionsartspr_set;
 	}
 
@@ -69,12 +69,12 @@ public class FLRPositionsart implements Serializable {
 		this.c_nr = c_nr;
 	}
 
-	public Set<?> getPositionsart_positionsartspr_set() {
+	public Set<FLRPositionsartspr> getPositionsart_positionsartspr_set() {
 		return this.positionsart_positionsartspr_set;
 	}
 
 	public void setPositionsart_positionsartspr_set(
-			Set<?> positionsart_positionsartspr_set) {
+			Set<FLRPositionsartspr> positionsart_positionsartspr_set) {
 		this.positionsart_positionsartspr_set = positionsart_positionsartspr_set;
 	}
 

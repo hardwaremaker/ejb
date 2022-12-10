@@ -41,13 +41,15 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICNr;
+
 @NamedQueries( {
 		@NamedQuery(name = "LieferartfindAll", query = "SELECT OBJECT(o) FROM Lieferart o"),
 		@NamedQuery(name = "LieferartfindByCNr", query = "SELECT OBJECT(o) FROM Lieferart o WHERE o.cNr = ?1"),
 		@NamedQuery(name = Lieferart.QueryByCNrMandantCNr, query = "SELECT OBJECT(o) FROM Lieferart o WHERE o.cNr = ?1 AND o.mandantCNr = ?2") })
 @Entity
 @Table(name = "LP_LIEFERART")
-public class Lieferart implements Serializable {
+public class Lieferart implements Serializable, ICNr {
 	public final static String QueryByCNrMandantCNr = "LieferartfindbyCNrMandantCNr" ;
 	
 	@Id
@@ -69,6 +71,31 @@ public class Lieferart implements Serializable {
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
 
+	@Column(name = "I_LIEFERORT")
+	private Integer iLieferort;
+
+	@Column(name = "C_EXTERN")
+	private String cExtern;
+	
+	@Column(name = "ARTIKEL_I_ID_VERSAND")
+	private Integer artikelIIdVersand;
+	
+	
+	public Integer getArtikelIIdVersand() {
+		return artikelIIdVersand;
+	}
+
+	public void setArtikelIIdVersand(Integer artikelIIdVersand) {
+		this.artikelIIdVersand = artikelIIdVersand;
+	}
+
+	public Integer getILieferort() {
+		return iLieferort;
+	}
+
+	public void setILieferort(Integer iLieferort) {
+		this.iLieferort = iLieferort;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -78,12 +105,13 @@ public class Lieferart implements Serializable {
 
 	public Lieferart(Integer id, String nr,
 			Short frachtkostenalserledigtverbuchen, String mandantCNr,
-			Short versteckt) {
+			Short versteckt, Integer iLieferort) {
 		setIId(id);
 		setCNr(nr);
 		setBFrachtkostenalserledigtverbuchen(frachtkostenalserledigtverbuchen);
 		setMandantCNr(mandantCNr);
 		setBVersteckt(versteckt);
+		setILieferort(iLieferort);
 	}
 
 	public Integer getIId() {
@@ -135,6 +163,11 @@ public class Lieferart implements Serializable {
 		this.mandantCNr = mandant;
 	}
 
-
-
+	public String getCExtern() {
+		return this.cExtern;
+	}
+	
+	public void setCExtern(String externerCode) {
+		this.cExtern = externerCode;
+	}
 }

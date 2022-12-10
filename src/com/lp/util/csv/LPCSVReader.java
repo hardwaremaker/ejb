@@ -310,6 +310,7 @@ public class LPCSVReader {
 	 *             if the close fails
 	 */
 	public void close() throws IOException {
+		if (br == null) return;
 		br.close();
 	}
 

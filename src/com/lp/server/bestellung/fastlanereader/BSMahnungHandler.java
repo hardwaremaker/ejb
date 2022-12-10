@@ -33,20 +33,25 @@
 package com.lp.server.bestellung.fastlanereader;
 
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBSMahnung;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellposition;
 import com.lp.server.bestellung.service.BSMahnwesenFac;
 import com.lp.server.bestellung.service.BestellpositionFac;
 import com.lp.server.bestellung.service.BestellungFac;
 import com.lp.server.partner.service.KundeFac;
+import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -92,12 +97,11 @@ public class BSMahnungHandler extends UseCaseHandler {
 	private static final String FLR_MAHNUNG = "bsmahnung.";
 
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
 	 * 
 	 * @see UseCaseHandler#getPageAt(java.lang.Integer)
-	 * @param rowIndex
-	 *            Integer
+	 * @param rowIndex Integer
 	 * @throws EJBExceptionLP
 	 * @return QueryResult
 	 */
@@ -112,8 +116,7 @@ public class BSMahnungHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -124,57 +127,73 @@ public class BSMahnungHandler extends UseCaseHandler {
 			int col = 0;
 			while (resultListIterator.hasNext()) {
 
-				FLRBSMahnung bsmahnung = (FLRBSMahnung) resultListIterator
-						.next();
-				FLRBestellposition bsposition = bsmahnung
-						.getFlrbestellposition();
+				FLRBSMahnung bsmahnung = (FLRBSMahnung) resultListIterator.next();
+				FLRBestellposition bsposition = bsmahnung.getFlrbestellposition();
 
-				rows[row][col++] = bsmahnung.getI_id();
-				rows[row][col++] = bsmahnung.getMahnstufe_i_id().equals(
-						new Integer(BSMahnwesenFac.MAHNSTUFE_0)) ? new Boolean(
-						true) : new Boolean(false);
+				Object[] rowToAddCandidate = new Object[colCount];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")] = bsmahnung.getI_id();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.abmahnung")] = bsmahnung
+						.getMahnstufe_i_id().equals(new Integer(BSMahnwesenFac.MAHNSTUFE_0)) ? new Boolean(true)
+								: new Boolean(false);
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.bestnr")] = bsmahnung.getFlrbestellung()
+						.getC_nr();
 
-				rows[row][col++] = bsmahnung.getFlrbestellung().getC_nr();
+				if (bsposition.getFlrartikel() != null) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.ident")] = bsposition.getFlrartikel()
+							.getC_nr();
+					if (bReferenznummerInPositionen) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.referenznummer")] = bsposition
+								.getFlrartikel().getC_referenznr();
+
+					}
+
+				}
 
 				String bezeichnung = bsposition.getC_bezeichnung();
 
 				if (bezeichnung == null && bsposition.getFlrartikel() != null) {
-					bezeichnung = getArtikelFac()
-							.formatArtikelbezeichnungEinzeiligOhneExc(
-									bsposition.getFlrartikel().getI_id(),
-									theClientDto.getLocUi());
+					bezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+							bsposition.getFlrartikel().getI_id(), theClientDto.getLocUi());
 				}
 
-				rows[row][col++] = bezeichnung;
-
-				rows[row][col++] = bsmahnung.getN_offenemenge();
-				rows[row][col++] = bsmahnung.getFlrbestellung()
-						.getFlrlieferant().getFlrpartner()
-						.getC_name1nachnamefirmazeile1();
-				rows[row][col++] = bsposition.getN_nettogesamtpreis().multiply(
-						bsmahnung.getN_offenemenge());
-				rows[row][col++] = bsmahnung.getFlrbestellung()
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.bezeichnung")] = bezeichnung;
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.menge")] = bsmahnung.getN_offenemenge();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.lieferant")] = bsmahnung
+						.getFlrbestellung().getFlrlieferant().getFlrpartner().getC_name1nachnamefirmazeile1();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.wert")] = bsposition
+						.getN_nettogesamtpreis().multiply(bsmahnung.getN_offenemenge());
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.whg")] = bsmahnung.getFlrbestellung()
 						.getWaehrung_c_nr_bestellwaehrung();
-				rows[row][col++] = bsmahnung.getMahnstufe_i_id();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.liefertermin")] = bsmahnung
+						.getFlrbestellposition().getT_uebersteuerterliefertermin();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.termin")] = bsmahnung
+						.getFlrbestellposition().getT_auftragsbestaetigungstermin();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("bes.mahnstufe")] = bsmahnung
+						.getMahnstufe_i_id();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("")] = new Boolean(
+						bsmahnung.getT_gedruckt() != null);
 
 				// in java.util.Date casten, darf kein java.sql.Date sein sonst
 				// geht FLR Druck nicht.
 				java.util.Date dUtilDate = null;
 				if (bsmahnung.getD_mahndatum() instanceof java.sql.Date) {
-					dUtilDate = new java.util.Date(bsmahnung.getD_mahndatum()
-							.getTime());
+					dUtilDate = new java.util.Date(bsmahnung.getD_mahndatum().getTime());
 				} else {
 					dUtilDate = bsmahnung.getD_mahndatum();
 				}
 				rows[row][col++] = dUtilDate;
 
-				rows[row][col++] = new Boolean(
-						bsmahnung.getT_gedruckt() != null);
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.mahndatum")] = dUtilDate;
+
+				rows[row] = rowToAddCandidate;
+
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -195,8 +214,7 @@ public class BSMahnungHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -211,8 +229,8 @@ public class BSMahnungHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -223,8 +241,7 @@ public class BSMahnungHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 
 			boolean filterAdded = false;
@@ -261,8 +278,7 @@ public class BSMahnungHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -316,14 +332,11 @@ public class BSMahnungHandler extends UseCaseHandler {
 	 * 
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
-	 * @param sortierKriterien
-	 *            SortierKriterium[]
-	 * @param selectedId
-	 *            Object
+	 * @param sortierKriterien SortierKriterium[]
+	 * @param selectedId       Object
 	 * @return QueryResult
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -335,8 +348,8 @@ public class BSMahnungHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select bsmahnung.i_id from FLRBSMahnung bsmahnung "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "select bsmahnung.i_id from FLRBSMahnung bsmahnung " + this.buildWhereClause()
+						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -367,82 +380,95 @@ public class BSMahnungHandler extends UseCaseHandler {
 	}
 
 	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, Boolean.class, String.class,
-							String.class, BigDecimal.class, String.class,
-							BigDecimal.class, String.class, Integer.class,
-							java.util.Date.class, Boolean.class },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.abmahnung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bestnr",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bezeichnung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.menge",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.lieferant",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.wert",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.whg",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.m",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.mahndatum",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()), "" },
-					new int[] { -1, QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, -1,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_WAEHRUNG, 2,
-							QueryParameters.FLR_BREITE_M, 2 },
-					new String[] {
-							FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_I_ID,
-							Facade.NICHT_SORTIERBAR,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG
-									+ "." + BestellungFac.FLR_BESTELLUNG_C_NR,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLPOSITION
-									+ "."
-									+ BestellpositionFac.FLR_BESTELLPOSITION_C_BEZEICHNUNG,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_OFFENEMENGE,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG
-									+ "."
-									+ BestellungFac.FLR_BESTELLUNG_FLRLIEFERANT
-									+ "."
-									+ KundeFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG
-									+ "."
-									+ BestellungFac.FLR_BESTELLUNG_N_BESTELLWERT,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG
-									+ "."
-									+ BestellungFac.FLR_BESTELLUNG_WAEHRUNG_C_NR,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_MAHNSTUFE_I_ID,
-							FLR_MAHNUNG
-									+ BSMahnwesenFac.FLR_MAHNUNG_D_MAHNDATUM,
-							FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_T_GEDRUCKT }));
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
 
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
+	}
+
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+		try {
+
+			String mandantCNr = theClientDto.getMandant();
+
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(mandantCNr);
+
+			columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+
+			columns.add("bes.abmahnung", Boolean.class, getTextRespectUISpr("bes.abmahnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR,
+					getTextRespectUISpr("bes.abmahnung.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()));
+
+			/*
+			 * if (bReferenznummerInPositionen) { columns.add("lp.referenznummer",
+			 * String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+			 * QueryParameters.FLR_BREITE_XM,
+			 * AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL + ".c_referenznr"); }
+			 */
+
+			columns.add("lp.bestnr", String.class, getTextRespectUISpr("lp.bestnr", mandant, locUi),
+					QueryParameters.FLR_BREITE_M,
+					FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG + "." + BestellungFac.FLR_BESTELLUNG_C_NR);
+
+			columns.add("lp.ident", String.class, getTextRespectUISpr("lp.ident", mandant, locUi), getUIBreiteIdent(),
+					FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLPOSITION + "."
+							+ BestellpositionFac.FLR_BESTELLPOSITION_FLRARTIKEL + ".c_nr");
+
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM, FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLPOSITION + "."
+								+ BestellpositionFac.FLR_BESTELLPOSITION_FLRARTIKEL + ".c_referenznr");
+			}
+
+			columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLPOSITION + "."
+							+ BestellpositionFac.FLR_BESTELLPOSITION_C_BEZEICHNUNG);
+			columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.menge", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_OFFENEMENGE);
+			columns.add("lp.lieferant", String.class, getTextRespectUISpr("lp.lieferant", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG + "."
+							+ BestellungFac.FLR_BESTELLUNG_FLRLIEFERANT + "."
+							+ KundeFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
+			columns.add("lp.wert", BigDecimal.class, getTextRespectUISpr("lp.wert", mandant, locUi),
+					QueryParameters.FLR_BREITE_PREIS, FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG + "."
+							+ BestellungFac.FLR_BESTELLUNG_N_BESTELLWERT);
+			columns.add("lp.whg", String.class, getTextRespectUISpr("lp.whg", mandant, locUi),
+					QueryParameters.FLR_BREITE_WAEHRUNG, FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLUNG + "."
+							+ BestellungFac.FLR_BESTELLUNG_WAEHRUNG_C_NR);
+
+			columns.add("bes.liefertermin", java.util.Date.class,
+					getTextRespectUISpr("bes.liefertermin", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLPOSITION + "."
+							+ BestellpositionFac.FLR_BESTELLPOSITION_T_UEBERSTEUERTERLIEFERTERMIN);
+			columns.add("bes.termin", java.util.Date.class, getTextRespectUISpr("bes.termin", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_FLRBESTELLPOSITION + "."
+							+ BestellpositionFac.FLR_BESTELLPOSITION_T_AUFTRAGSBESTAETIGUNGSTERMIN);
+
+			columns.add("bes.mahnstufe", Integer.class, getTextRespectUISpr("bes.mahnstufe", mandant, locUi), 2,
+					FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_MAHNSTUFE_I_ID,
+					getTextRespectUISpr("bes.mahnstufe.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()));
+			columns.add("lp.mahndatum", java.util.Date.class, getTextRespectUISpr("lp.mahndatum", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_D_MAHNDATUM);
+			columns.add("", Boolean.class, "", 2, FLR_MAHNUNG + BSMahnwesenFac.FLR_MAHNUNG_T_GEDRUCKT);
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
-		return super.getTableInfo();
+		return columns;
+
 	}
+
 }

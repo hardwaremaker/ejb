@@ -57,6 +57,16 @@ public class UrlaubsabrechnungDto implements Serializable {
 	private BigDecimal nGeplanterUrlaubTage;
 	private Date dAbrechnungszeitpunkt;
 
+	java.sql.Timestamp dAktuellerUrlaubsbeginn;
+	
+	public java.sql.Timestamp getDAktuellerUrlaubsbeginn() {
+		return dAktuellerUrlaubsbeginn;
+	}
+
+	public void setDAktuellerUrlaubsbeginn(java.sql.Timestamp dAktuellerUrlaubsbeginn) {
+		this.dAktuellerUrlaubsbeginn = dAktuellerUrlaubsbeginn;
+	}
+
 	public java.math.BigDecimal getNAktuellerUrlaubsanspruchStunden() {
 		return nAktuellerUrlaubsanspruch;
 	}

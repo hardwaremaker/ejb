@@ -36,12 +36,13 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.ejb.Remote;
 
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
-import com.lp.server.system.ejbfac.IAktivierbar;
 import com.lp.server.system.service.IAktivierbarControlled;
+import com.lp.server.system.service.IImportHead;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
@@ -55,6 +56,7 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public static final String FLR_BESTELLUNG_C_NR = "c_nr";
 	public static final String FLR_BESTELLUNG_MANDANT_C_NR = "mandant_c_nr";
 	public static final String FLR_BESTELLUNG_T_BELEGDATUM = "t_belegdatum";
+	public static final String FLR_BESTELLUNG_T_VOLLSTAENDIG_GELIEFERT = "t_vollstaendig_geliefert";
 	public static final String FLR_BESTELLUNG_T_LIEFERTERMIN = "t_liefertermin";
 	public static final String FLR_BESTELLUNG_T_MANUELLGELIEFERT = "t_manuellgeliefert";
 	public static final String FLR_BESTELLUNG_N_BESTELLWERT = "n_bestellwert";
@@ -71,6 +73,7 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public static final String FLR_BESTELLUNG_T_MAHNSPERREBIS = "t_mahnsperrebis";
 	public static final String FLR_BESTELLUNG_FLRPROJEKT = "flrprojekt";
 	public static final String FLR_BESTELLUNG_PROJEKT_I_ID = "projekt_i_id";
+	public static final String FLR_BESTELLUNG_FLRPOSITONEN_FLRARTIKEL = "flrartikel";
 
 	// Bestellstatus
 	public static final String BESTELLSTATUS_ANGELEGT = LocaleFac.STATUS_ANGELEGT;
@@ -176,9 +179,7 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public void erledigenAufheben(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public Double getWechselkursBestellungswaehrungZuMandantwaehrung(
-			Integer iIdBestellungI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+
 
 	public BestellungDto[] abrufBestellungenfindByRahmenbestellung(
 			Integer iIdRahmenBestellungI, TheClientDto theClientDto)
@@ -226,8 +227,7 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public Boolean isBSGeliefert(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public void refreshBSStatusAndBestelltListe(Integer iIdBSI,
-			TheClientDto theClientDto) throws RemoteException;
+	
 
 	public Integer erzeugeBestellungAusBestellung(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -263,4 +263,33 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public void updateBestellungRechnungsadresse(Integer bestellungIId,
 			Integer lieferantIIdRechnungsadresseNeu, TheClientDto theClientDto);
 
+	/**
+	 * Liefert die Bean als HeadImporter zur&uuml;ck, um auf die Methoden des
+	 * Interfaces {@link IImportHead} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportHead asHeadImporter();
+
+	public Integer getWiederbeschaffungsmoralEinesArtikels(Integer artikelIId,
+			TheClientDto theClientDto);
+
+	public Integer getWiederbeschaffungsmoralEinesArtikels(Integer artikelIId,Integer lieferantIId,  TheClientDto theClientDto);
+	
+	public void bestellungAufPauschalbetragSetzten(Integer bestellungIId,
+			BigDecimal bdPauschalbetrag, TheClientDto theClientDto);
+	public void bestellungAusAnderemMandantRueckbestaetigen(Integer auftragIId, TheClientDto theClientDto);
+
+	List<BestellungDto> bestellungFindByLieferantIIdBestelladresseMandantCNrFilter(
+			Integer lieferantId, String mandantCnr, String[] allowedStati) throws RemoteException;
+
+	BestellungDto erzeugeAenderungsbestellung(Integer bestellungIId, TheClientDto theClientDto);
+
+	void archiviereOpenTransResult(OpenTransXmlReportResult otResult, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+	
+	public BigDecimal berechneEinstandswertEinerBestellung(Integer iIdBestellungI, boolean bNurHandeingaben,
+			TheClientDto theClientDto);
+	public BigDecimal berechneOffenenWertEinerBestellung(String bestellungCNr, TheClientDto theClientDto);
+	
 }

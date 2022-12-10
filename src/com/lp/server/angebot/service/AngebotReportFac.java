@@ -33,6 +33,7 @@
 package com.lp.server.angebot.service;
 
 import java.rmi.RemoteException;
+import java.sql.Date;
 
 import javax.ejb.Remote;
 
@@ -94,6 +95,17 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOT_JOURNAL_ANSPRECHPARTNER_FAX = 34;
 	public final static int REPORT_ANGEBOT_JOURNAL_ANSPRECHPARTNER_FAXDW = 35;
 	public final static int REPORT_ANGEBOT_JOURNAL_ANSPRECHPARTNER_EMAIL = 36;
+	public final static int REPORT_ANGEBOT_JOURNAL_BELEGDATUM = 37;
+	public final static int REPORT_ANGEBOT_JOURNAL_NACHFASSTERMIN = 38;
+	public final static int REPORT_ANGEBOT_JOURNAL_LIEFERZEIT = 39;
+	public final static int REPORT_ANGEBOT_JOURNAL_EINHEIT_LIEFERZEIT = 40;
+	public final static int REPORT_ANGEBOT_JOURNAL_WAEHRUNG = 41;
+	public final static int REPORT_ANGEBOT_JOURNAL_I_VERSION = 42;
+	public final static int REPORT_ANGEBOT_JOURNAL_T_VERSION = 43;
+	public final static int REPORT_ANGEBOT_JOURNAL_PROVISIONSEMPFAENGER_KURZZEICHEN = 44;
+	public final static int REPORT_ANGEBOT_JOURNAL_PROVISIONSEMPFAENGER_NAME = 45;
+
+	public final static int REPORT_ANGEBOT_JOURNAL_ANZAHL_SPALTEN = 46;
 
 	// reportflr: 3 Die Indizes der Spalten in der Ergebnisliste
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ANGEBOTIID = 0;
@@ -108,6 +120,8 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ANGEBOTERLEDIGUNGSGRUND = 9;
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_EXTERNERKOMMENTAR = 10;
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ERLEDIGUNGSGRUND_AB_NR = 11;
+	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_BELEGDATUM = 12;
+	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ANZAHL_SPALTEN = 13;
 
 	public final static int REPORT_ANGEBOT_OFFENE_ANGEBOTNUMMER = 0;
 	public final static int REPORT_ANGEBOT_OFFENE_KUNDE = 1;
@@ -178,7 +192,24 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOT_ARTIKEL_DATUM_MATERIALZUSCHLAG = 58;
 	public final static int REPORT_ANGEBOT_ZWSPOSPREISDRUCKEN = 59;
 	public final static int REPORT_ANGEBOT_AGSTKL_SUBREPORT_MENGENSTAFFEL = 60;
-	public final static int REPORT_ANGEBOT_ANZAHL_SPALTEN = 61;
+	public final static int REPORT_ANGEBOT_GEWICHT = 61;
+	public final static int REPORT_ANGEBOT_ARTIKEL_URSPRUNGSLAND = 62;
+	public final static int REPORT_ANGEBOT_WARENVERKEHRSNUMMER = 63;
+	public final static int REPORT_ANGEBOT_ARTIKEL_MATERIAL_AUS_KUNDEMATERIAL = 64;
+	public final static int REPORT_ANGEBOT_ARTIKEL_MATERIALBASIS_AUS_KUNDEMATERIAL = 65;
+	public final static int REPORT_ANGEBOT_ARTIKEL_AUFSCHLAG_BETRAG = 66;
+	public final static int REPORT_ANGEBOT_ARTIKEL_AUFSCHLAG_PROZENT = 67;
+	public final static int REPORT_ANGEBOT_SUBREPORT_PRODUKTSTUECKLISTE = 68;
+	public final static int REPORT_ANGEBOT_SUBREPORT_PRODUKTSTUECKLISTE_KONFIGURATIONSWERTE = 69;
+	public final static int REPORT_ANGEBOT_LIEFERZEIT = 70;
+	public final static int REPORT_ANGEBOT_ZWSTEXTE = 71;
+	public final static int REPORT_ANGEBOT_ZWSNETTOSUMMEN = 72;
+	public final static int REPORT_ANGEBOT_ARTIKEL_PRAEFERENZBEGUENSTIGT = 73;
+	public final static int REPORT_ANGEBOT_KUNDEARTIKELBEZEICHNUNG = 74;
+	public final static int REPORT_ANGEBOT_AGSTKL_SUBREPORT_MENGENSTAFFEL_SCHNELLERFASSUNG = 75;
+	public final static int REPORT_ANGEBOT_AGSTKL_ZEICHNUNGSNUMMER = 76;
+	public final static int REPORT_ANGEBOT_AGSTKL_INITIALKOSTEN = 77;
+	public final static int REPORT_ANGEBOT_ANZAHL_SPALTEN = 78;
 
 	public final static int REPORT_VORKALKULATION_IDENT = 0;
 	/** Die Bezeichnung kann auch die im AG uebersteuerte Bezeichnung sein */
@@ -187,13 +218,13 @@ public interface AngebotReportFac {
 	public final static int REPORT_VORKALKULATION_MENGE = 3;
 	public final static int REPORT_VORKALKULATION_EINHEIT = 4;
 	/**
-	 * Fuer die Zwischensumme muss die Menge der uebergeordneten Position
-	 * bekannt sein.
+	 * Fuer die Zwischensumme muss die Menge der uebergeordneten Position bekannt
+	 * sein.
 	 */
 	public final static int REPORT_VORKALKULATION_MENGE_UEBERGEORDNET = 5;
 	/**
-	 * Fuer die Zwischensumme muss die Einheit der uebergeordneten Position
-	 * bekannt sein.
+	 * Fuer die Zwischensumme muss die Einheit der uebergeordneten Position bekannt
+	 * sein.
 	 */
 	public final static int REPORT_VORKALKULATION_EINHEIT_UEBERGEORDNET = 6;
 	/**
@@ -207,8 +238,8 @@ public interface AngebotReportFac {
 	 */
 	public final static int REPORT_VORKALKULATION_GESTEHUNGSPREIS = 8;
 	/**
-	 * Jede Ident Position hat einen manuell bestimmten Gestehungswert, der
-	 * kursiv angedruckt wird
+	 * Jede Ident Position hat einen manuell bestimmten Gestehungswert, der kursiv
+	 * angedruckt wird
 	 */
 	public final static int REPORT_VORKALKULATION_GESTEHUNGSWERT_MANUELL = 9;
 	/**
@@ -236,7 +267,22 @@ public interface AngebotReportFac {
 	public final static int REPORT_VORKALKULATION_LIEFERANT_AUS_POSITION = 26;
 	public final static int REPORT_VORKALKULATION_TEXTEINGABE = 27;
 	public final static int REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT = 28;
-	public final static int REPORT_VORKALKULATION_ANZAHL_SPALTEN = 29;
+	public final static int REPORT_VORKALKULATION_WIEDERBESCHAFFUNGSZEIT = 29;
+	public final static int REPORT_VORKALKULATION_VERKAUFSPREIS_KALKULATORISCHER_ARTIKEL = 30;
+	public final static int REPORT_VORKALKULATION_LIEFERZEIT = 31;
+	public final static int REPORT_VORKALKULATION_ARTIKELART = 32;
+	public final static int REPORT_VORKALKULATION_STUECKLISTEART = 33;
+	public final static int REPORT_VORKALKULATION_FREMDFERTIGUNG = 34;
+	public final static int REPORT_VORKALKULATION_MELDEPFLICHTIG = 35;
+	public final static int REPORT_VORKALKULATION_BEWILLIGUNGSPFLICHTIG = 36;
+	public final static int REPORT_VORKALKULATION_LIEF1PREISGUELTIGAB = 37;
+	public final static int REPORT_VORKALKULATION_RUESTMENGE = 38;
+	public final static int REPORT_VORKALKULATION_AGSTKL_MATERIAL = 39;
+	public final static int REPORT_VORKALKULATION_AGSTKLPOSITION_PREIS = 40;
+	public final static int REPORT_VORKALKULATION_AGSTKL_ZEICHNUNGSNUMMER = 41;
+	public final static int REPORT_VORKALKULATION_INITIALKOSTEN = 42;
+	public final static int REPORT_VORKALKULATION_ANZAHL_SPALTEN = 43;
+
 	/** WH 22.02.06 vorerst Punkt, damit man die Ebene erkennen kann */
 	public final static String REPORT_VORKALKULATION_ZEICHEN_FUER_HANDEINGABE = ".";
 
@@ -269,40 +315,46 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOTSPOTENTIAL_GUELTIGBIS = 9;
 	public final static int REPORT_ANGEBOTSPOTENTIAL_EKPREIS = 10;
 
-	public JasperPrintLP[] printAngebot(Integer iIdAngebotI,
-			Integer iAnzahlKopienI, Boolean bMitLogo, String sReportname,
-			String sDrucktype, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public JasperPrintLP[] printAngebot(Integer iIdAngebotI, Integer iAnzahlKopienI, Boolean bMitLogo,
+			String sReportname, String sDrucktype, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP[] printAngebot(Integer iIdAngebotI,
-			Integer iAnzahlKopienI, Boolean bMitLogo, String sReportname,
+	public JasperPrintLP[] printAngebot(Integer iIdAngebotI, Integer iAnzahlKopienI, Boolean bMitLogo,
+			String sReportname, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printAngebotAlle(ReportAngebotJournalKriterienDto kritDtoI, String erledigungsgrundCNr,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printAngebotAlle(
-			ReportAngebotJournalKriterienDto kritDtoI,
-			String erledigungsgrundCNr, TheClientDto theClientDto)
+	public JasperPrintLP printAngebotOffene(ReportAngebotJournalKriterienDto kritDtoI, Boolean bKommentare,
+			Boolean bDetails, Boolean bKundenstammdaten, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printAngebotOffene(
-			ReportAngebotJournalKriterienDto kritDtoI, Boolean bKommentare,
-			Boolean bDetails, Boolean bKundenstammdaten,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public JasperPrintLP printAngebotAbgelehnte(
-			ReportAngebotJournalKriterienDto kritDtoI, TheClientDto theClientDto)
+	public JasperPrintLP printAngebotAbgelehnte(ReportAngebotJournalKriterienDto kritDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printAngebotVorkalkulation(Integer iIdAngebotI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	/**
+	 * Die Vorkalkulation eines Angebots drucken. <br>
+	 * Beruecksichtigt werden nur preisbehaftete Positionen.
+	 * 
+	 * @param iIdAngebotI  PK des Angebots
+	 * @param preisGueltig Wenn != null, werden Preise verwendet die zu diesem
+	 *                     Zeitpunkt g&uuml;ltig sind, darf auch in der Zukunft
+	 *                     liegen
+	 * @param theClientDto der aktuelle Benutzer
+	 * @return JasperPrint der Druck
+	 * @throws EJBExceptionLP Ausnahme
+	 */
+	public JasperPrintLP printAngebotVorkalkulation(Integer iIdAngebotI, Date preisGueltig, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printAdressetikett(Integer partnerIId,
-			Integer ansprechpartnerIId, TheClientDto theClientDto)
+	public JasperPrintLP printAdressetikett(Integer partnerIId, Integer ansprechpartnerIId, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public JasperPrintLP printAngebotsstatistik(
-			ReportAngebotsstatistikKriterienDto reportAngebotsstatistikKriterienDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			ReportAngebotsstatistikKriterienDto reportAngebotsstatistikKriterienDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printAngebotspotential(TheClientDto theClientDto);
+
+	public String getArtikelsetType(AngebotpositionDto agposDto);
 
 }

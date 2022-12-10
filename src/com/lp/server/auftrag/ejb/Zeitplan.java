@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
@@ -47,12 +46,12 @@ public class Zeitplan implements Serializable {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
-	
+
 	@Column(name = "AUFTRAG_I_ID")
 	private Integer auftragIId;
-	
-	@Column(name = "I_TERMIN_VOR_LIEFERTERMIN")
-	private Integer iTerminVorLiefertermin;
+
+	@Column(name = "T_TERMIN")
+	private java.sql.Timestamp tTermin;
 
 	@Column(name = "N_MATERIAL")
 	private BigDecimal nMaterial;
@@ -65,15 +64,57 @@ public class Zeitplan implements Serializable {
 
 	@Column(name = "N_DAUER_URSPRUNG")
 	private BigDecimal nDauerUrsprung;
-	
+
 	@Column(name = "C_KOMMENTAR")
 	private String cKommentar;
-	
+
 	@Column(name = "X_TEXT")
 	private String xText;
-	
 
-	
+	@Column(name = "T_MATERIAL_ERLEDIGT")
+	private java.sql.Timestamp tMaterialErledigt;
+
+	@Column(name = "PERSONAL_I_ID_MATERIAL_ERLEDIGT")
+	private Integer personalIIdMaterialErledigt;
+
+	@Column(name = "T_DAUER_ERLEDIGT")
+	private java.sql.Timestamp tDauerErledigt;
+
+	@Column(name = "PERSONAL_I_ID_DAUER_ERLEDIGT")
+	private Integer personalIIdDauerErledigt;
+
+	public java.sql.Timestamp getTMaterialErledigt() {
+		return tMaterialErledigt;
+	}
+
+	public void setTMaterialErledigt(java.sql.Timestamp tMaterialErledigt) {
+		this.tMaterialErledigt = tMaterialErledigt;
+	}
+
+	public Integer getPersonalIIdMaterialErledigt() {
+		return personalIIdMaterialErledigt;
+	}
+
+	public void setPersonalIIdMaterialErledigt(
+			Integer personalIIdMaterialErledigt) {
+		this.personalIIdMaterialErledigt = personalIIdMaterialErledigt;
+	}
+
+	public java.sql.Timestamp getTDauerErledigt() {
+		return tDauerErledigt;
+	}
+
+	public void setTDauerErledigt(java.sql.Timestamp tDauerErledigt) {
+		this.tDauerErledigt = tDauerErledigt;
+	}
+
+	public Integer getPersonalIIdDauerErledigt() {
+		return personalIIdDauerErledigt;
+	}
+
+	public void setPersonalIIdDauerErledigt(Integer personalIIdDauerErledigt) {
+		this.personalIIdDauerErledigt = personalIIdDauerErledigt;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -81,10 +122,10 @@ public class Zeitplan implements Serializable {
 		super();
 	}
 
-	public Zeitplan(Integer id, Integer auftragIId, Integer  iTerminVorLiefertermin) {
+	public Zeitplan(Integer id, Integer auftragIId, java.sql.Timestamp tTermin) {
 		setIId(id);
 		setAuftragIId(auftragIId);
-		setITerminVorLiefertermin(iTerminVorLiefertermin);
+		setTTermin(tTermin);
 	}
 
 	public Integer getAuftragIId() {
@@ -95,12 +136,12 @@ public class Zeitplan implements Serializable {
 		this.auftragIId = auftragIId;
 	}
 
-	public Integer getITerminVorLiefertermin() {
-		return iTerminVorLiefertermin;
+	public java.sql.Timestamp getTTermin() {
+		return tTermin;
 	}
 
-	public void setITerminVorLiefertermin(Integer iTerminVorLiefertermin) {
-		this.iTerminVorLiefertermin = iTerminVorLiefertermin;
+	public void setTTermin(java.sql.Timestamp tTermin) {
+		this.tTermin = tTermin;
 	}
 
 	public BigDecimal getNMaterial() {
@@ -158,8 +199,5 @@ public class Zeitplan implements Serializable {
 	public void setIId(Integer iId) {
 		this.iId = iId;
 	}
-
-
-
 
 }

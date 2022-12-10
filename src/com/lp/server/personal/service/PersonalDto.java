@@ -35,13 +35,25 @@ package com.lp.server.personal.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import com.lp.server.artikel.ejb.Artgru;
+import com.lp.server.partner.ejb.Partner;
 import com.lp.server.partner.service.PartnerDto;
-import com.lp.server.partner.service.PartnerkommunikationDto;
+import com.lp.server.personal.ejb.Beruf;
+import com.lp.server.personal.ejb.Kollektiv;
+import com.lp.server.personal.ejb.Religion;
+import com.lp.server.system.ejb.Kostenstelle;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCBez;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.system.service.HvDtoLogIgnore;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LandplzortDto;
+import com.lp.server.util.IIId;
+import com.lp.util.Helper;
 
-public class PersonalDto implements Serializable {
+@HvDtoLogClass(name = HvDtoLogClass.PERSONAL)
+public class PersonalDto implements Serializable, IIId {
 
 	/**
 	 * 
@@ -98,14 +110,57 @@ public class PersonalDto implements Serializable {
 	private String cImapkennwort;
 	private Short bAnwesenheitTerminal;
 	private Short bAnwesenheitalleterminal;
-	private String cImapInboxFolder ;
+	private String cImapInboxFolder;
+	private String cBccempfaenger;
+	private Short bSynchronisiereAlleKontakte = Helper.boolean2Short(false);
+
+	private String cVersandkennwort;
 	
+
+	public String getCVersandkennwort() {
+		return cVersandkennwort;
+	}
+
+	public void setCVersandkennwort(String cVersandkennwort) {
+		this.cVersandkennwort = cVersandkennwort;
+	}
+	
+	private Integer maschinengruppeIId;
+
+	public Integer getMaschinengruppeIId() {
+		return this.maschinengruppeIId;
+	}
+
+	public void setMaschinengruppeIId(Integer maschinengruppeIId) {
+		this.maschinengruppeIId = maschinengruppeIId;
+	}
+
+	private Short bWepInfo;
+
+	public Short getBWepInfo() {
+		return bWepInfo;
+	}
+
+	public void setBWepInfo(Short bWepInfo) {
+		this.bWepInfo = bWepInfo;
+	}
+
 	public Short getBAnwesenheitalleterminal() {
 		return bAnwesenheitalleterminal;
 	}
 
 	public void setBAnwesenheitalleterminal(Short bAnwesenheitalleterminal) {
 		this.bAnwesenheitalleterminal = bAnwesenheitalleterminal;
+	}
+
+	private Short bKeineAnzeigeAmTerminal;
+
+	public Short getBKeineAnzeigeAmTerminal() {
+		return bKeineAnzeigeAmTerminal;
+	}
+
+	public void setBKeineAnzeigeAmTerminal(Short bKeineAnzeigeAmTerminal) {
+		this.bKeineAnzeigeAmTerminal = bKeineAnzeigeAmTerminal;
 	}
 
 	public Integer getPersonalgruppeIId() {
@@ -124,6 +179,16 @@ public class PersonalDto implements Serializable {
 
 	public void setBTelefonzeitstarten(Short bTelefonzeitstarten) {
 		this.bTelefonzeitstarten = bTelefonzeitstarten;
+	}
+
+	private Short bStartMitMeinenOffenenProjekten;
+
+	public Short getBStartMitMeinenOffenenProjekten() {
+		return bStartMitMeinenOffenenProjekten;
+	}
+
+	public void setBStartMitMeinenOffenenProjekten(Short bStartMitMeinenOffenenProjekten) {
+		this.bStartMitMeinenOffenenProjekten = bStartMitMeinenOffenenProjekten;
 	}
 
 	private PartnerDto partnerDto;
@@ -180,8 +245,7 @@ public class PersonalDto implements Serializable {
 	/**
 	 * Formatiere Anrede, Vorname, Nachname
 	 * 
-	 * @return getAnredeCNr getCName2vornamefirmazeile2
-	 *         getCName1nachnamefirmazeile1
+	 * @return getAnredeCNr getCName2vornamefirmazeile2 getCName1nachnamefirmazeile1
 	 */
 	public String formatAnrede() {
 		String ret = "";
@@ -190,21 +254,19 @@ public class PersonalDto implements Serializable {
 				ret += getPartnerDto().getAnredeCNr().trim();
 			}
 			if (getPartnerDto().getCName2vornamefirmazeile2() != null) {
-				ret += " "
-						+ getPartnerDto().getCName2vornamefirmazeile2().trim();
+				ret += " " + getPartnerDto().getCName2vornamefirmazeile2().trim();
 			}
 			if (getPartnerDto().getCName1nachnamefirmazeile1() != null) {
-				ret += " "
-						+ getPartnerDto().getCName1nachnamefirmazeile1().trim();
+				ret += " " + getPartnerDto().getCName1nachnamefirmazeile1().trim();
 			}
 		}
 		return ret.trim();
 	}
 
 	/**
-	 * Fuer die Unterschriften in Belegdrucken. Beispiel:
-	 * "i.A. Ing. Werner Hehenwarter" - ohne Anrede mit Unterschriftsfunktion
-	 * "Einkaufsleiter" - Unterschriftstext
+	 * Fuer die Unterschriften in Belegdrucken. Beispiel: "i.A. Ing. Werner
+	 * Hehenwarter" - ohne Anrede mit Unterschriftsfunktion "Einkaufsleiter" -
+	 * Unterschriftstext
 	 * 
 	 * @return String
 	 */
@@ -221,12 +283,10 @@ public class PersonalDto implements Serializable {
 				ret += " " + getPartnerDto().getCTitel().trim();
 			}
 			if (getPartnerDto().getCName2vornamefirmazeile2() != null) {
-				ret += " "
-						+ getPartnerDto().getCName2vornamefirmazeile2().trim();
+				ret += " " + getPartnerDto().getCName2vornamefirmazeile2().trim();
 			}
 			if (getPartnerDto().getCName1nachnamefirmazeile1() != null) {
-				ret += " "
-						+ getPartnerDto().getCName1nachnamefirmazeile1().trim();
+				ret += " " + getPartnerDto().getCName1nachnamefirmazeile1().trim();
 			}
 		}
 		return ret.trim();
@@ -236,12 +296,10 @@ public class PersonalDto implements Serializable {
 		String ret = "";
 		if (getPartnerDto() != null) {
 			if (getPartnerDto().getCName1nachnamefirmazeile1() != null) {
-				ret += " "
-						+ getPartnerDto().getCName1nachnamefirmazeile1().trim();
+				ret += " " + getPartnerDto().getCName1nachnamefirmazeile1().trim();
 			}
 			if (getPartnerDto().getCName2vornamefirmazeile2() != null) {
-				ret += " "
-						+ getPartnerDto().getCName2vornamefirmazeile2().trim();
+				ret += " " + getPartnerDto().getCName2vornamefirmazeile2().trim();
 			}
 
 		}
@@ -332,6 +390,7 @@ public class PersonalDto implements Serializable {
 		this.familienstandCNr = familienstandCNr;
 	}
 
+	@HvDtoLogIdCBez(entityClass = Kollektiv.class)
 	public Integer getKollektivIId() {
 		return kollektivIId;
 	}
@@ -340,6 +399,7 @@ public class PersonalDto implements Serializable {
 		this.kollektivIId = kollektivIId;
 	}
 
+	@HvDtoLogIdCBez(entityClass = Beruf.class)
 	public Integer getBerufIId() {
 		return berufIId;
 	}
@@ -360,8 +420,7 @@ public class PersonalDto implements Serializable {
 		return landIIdStaatsangehoerigkeit;
 	}
 
-	public void setLandIIdStaatsangehoerigkeit(
-			Integer landIIdStaatsangehoerigkeit) {
+	public void setLandIIdStaatsangehoerigkeit(Integer landIIdStaatsangehoerigkeit) {
 		this.landIIdStaatsangehoerigkeit = landIIdStaatsangehoerigkeit;
 	}
 
@@ -373,6 +432,7 @@ public class PersonalDto implements Serializable {
 		this.bUeberstundenausbezahlt = bUeberstundenausbezahlt;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Religion.class)
 	public Integer getReligionIId() {
 		return religionIId;
 	}
@@ -409,8 +469,7 @@ public class PersonalDto implements Serializable {
 		return partnerIIdSozialversicherer;
 	}
 
-	public void setPartnerIIdSozialversicherer(
-			Integer partnerIIdSozialversicherer) {
+	public void setPartnerIIdSozialversicherer(Integer partnerIIdSozialversicherer) {
 		this.partnerIIdSozialversicherer = partnerIIdSozialversicherer;
 	}
 
@@ -422,6 +481,7 @@ public class PersonalDto implements Serializable {
 		this.partnerIIdFirma = partnerIIdFirma;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Kostenstelle.class)
 	public Integer getKostenstelleIIdAbteilung() {
 		return kostenstelleIIdAbteilung;
 	}
@@ -430,6 +490,7 @@ public class PersonalDto implements Serializable {
 		this.kostenstelleIIdAbteilung = kostenstelleIIdAbteilung;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Kostenstelle.class)
 	public Integer getKostenstelleIIdStamm() {
 		return kostenstelleIIdStamm;
 	}
@@ -506,52 +567,74 @@ public class PersonalDto implements Serializable {
 		return personalIIdAendern;
 	}
 
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerDto() {
 		return partnerDto;
 	}
 
+	@HvDtoLogIgnore
 	public BerufDto getBerufDto() {
 		return berufDto;
 	}
 
+	@HvDtoLogIgnore
 	public ReligionDto getReligionDto() {
 		return religionDto;
 	}
 
+	@HvDtoLogIgnore
 	public LohngruppeDto getLohngruppeDto() {
 		return lohngruppeDto;
 	}
 
+	@HvDtoLogIgnore
 	public PendlerpauschaleDto getPendlerpauschaleDto() {
 		return pendlerpauschaleDto;
 	}
 
+	@HvDtoLogIgnore
 	public LandDto getLandDto() {
 		return landDto;
 	}
 
+	@HvDtoLogIgnore
 	public KollektivDto getKollektivDto() {
 		return kollektivDto;
 	}
 
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerDto_Sozialversicherer() {
 		return partnerDto_Sozialversicherer;
 	}
 
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerDto_Firma() {
 		return partnerDto_Firma;
 	}
 
+	@HvDtoLogIgnore
 	public LandplzortDto getLandplzortDto_Geburtsort() {
 		return landplzortDto_Geburtsort;
 	}
 
+	@HvDtoLogIgnore
 	public KostenstelleDto getKostenstelleDto_Stamm() {
 		return koststelleDto_Stamm;
 	}
 
+	@HvDtoLogIgnore
 	public KostenstelleDto getKostenstelleDto_Abteilung() {
 		return kostenstelleDto_Abteilung;
+	}
+
+	private Short bKommtAmTerminal;
+
+	public Short getBKommtAmTerminal() {
+		return bKommtAmTerminal;
+	}
+
+	public void setBKommtAmTerminal(Short bKommtAmTerminal) {
+		this.bKommtAmTerminal = bKommtAmTerminal;
 	}
 
 	public void setPersonalIIdAendern(Integer personalIIdAendern) {
@@ -586,8 +669,7 @@ public class PersonalDto implements Serializable {
 		this.kollektivDto = kollektivDto;
 	}
 
-	public void setPartnerDto_Sozialversicherer(
-			PartnerDto partnerDto_Sozialversicherer) {
+	public void setPartnerDto_Sozialversicherer(PartnerDto partnerDto_Sozialversicherer) {
 		this.partnerDto_Sozialversicherer = partnerDto_Sozialversicherer;
 	}
 
@@ -595,8 +677,7 @@ public class PersonalDto implements Serializable {
 		this.partnerDto_Firma = partnerDto_Firma;
 	}
 
-	public void setLandplzortDto_Geburtsort(
-			LandplzortDto landplzortDto_Geburtsort) {
+	public void setLandplzortDto_Geburtsort(LandplzortDto landplzortDto_Geburtsort) {
 		this.landplzortDto_Geburtsort = landplzortDto_Geburtsort;
 	}
 
@@ -604,8 +685,7 @@ public class PersonalDto implements Serializable {
 		this.koststelleDto_Stamm = kostenstelleDto_Stamm;
 	}
 
-	public void setKostenstelleDto_Abteilung(
-			KostenstelleDto kostenstelleDto_Abteilung) {
+	public void setKostenstelleDto_Abteilung(KostenstelleDto kostenstelleDto_Abteilung) {
 		this.kostenstelleDto_Abteilung = kostenstelleDto_Abteilung;
 	}
 
@@ -620,16 +700,13 @@ public class PersonalDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId))) {
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId))) {
 			return false;
 		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr))) {
 			return false;
 		}
-		if (!(that.cPersonalnr == null ? this.cPersonalnr == null
-				: that.cPersonalnr.equals(this.cPersonalnr))) {
+		if (!(that.cPersonalnr == null ? this.cPersonalnr == null : that.cPersonalnr.equals(this.cPersonalnr))) {
 			return false;
 		}
 		if (!(that.personalartCNr == null ? this.personalartCNr == null
@@ -640,24 +717,20 @@ public class PersonalDto implements Serializable {
 				: that.personalfunktionCNr.equals(this.personalfunktionCNr))) {
 			return false;
 		}
-		if (!(that.cAusweis == null ? this.cAusweis == null : that.cAusweis
-				.equals(this.cAusweis))) {
+		if (!(that.cAusweis == null ? this.cAusweis == null : that.cAusweis.equals(this.cAusweis))) {
 			return false;
 		}
-		if (!(that.bMaennlich == null ? this.bMaennlich == null
-				: that.bMaennlich.equals(this.bMaennlich))) {
+		if (!(that.bMaennlich == null ? this.bMaennlich == null : that.bMaennlich.equals(this.bMaennlich))) {
 			return false;
 		}
 		if (!(that.familienstandCNr == null ? this.familienstandCNr == null
 				: that.familienstandCNr.equals(this.familienstandCNr))) {
 			return false;
 		}
-		if (!(that.kollektivIId == null ? this.kollektivIId == null
-				: that.kollektivIId.equals(this.kollektivIId))) {
+		if (!(that.kollektivIId == null ? this.kollektivIId == null : that.kollektivIId.equals(this.kollektivIId))) {
 			return false;
 		}
-		if (!(that.berufIId == null ? this.berufIId == null : that.berufIId
-				.equals(this.berufIId))) {
+		if (!(that.berufIId == null ? this.berufIId == null : that.berufIId.equals(this.berufIId))) {
 			return false;
 		}
 		if (!(that.lohngruppeIId == null ? this.lohngruppeIId == null
@@ -665,17 +738,14 @@ public class PersonalDto implements Serializable {
 			return false;
 		}
 		if (!(that.landIIdStaatsangehoerigkeit == null ? this.landIIdStaatsangehoerigkeit == null
-				: that.landIIdStaatsangehoerigkeit
-						.equals(this.landIIdStaatsangehoerigkeit))) {
+				: that.landIIdStaatsangehoerigkeit.equals(this.landIIdStaatsangehoerigkeit))) {
 			return false;
 		}
 		if (!(that.bUeberstundenausbezahlt == null ? this.bUeberstundenausbezahlt == null
-				: that.bUeberstundenausbezahlt
-						.equals(this.bUeberstundenausbezahlt))) {
+				: that.bUeberstundenausbezahlt.equals(this.bUeberstundenausbezahlt))) {
 			return false;
 		}
-		if (!(that.religionIId == null ? this.religionIId == null
-				: that.religionIId.equals(this.religionIId))) {
+		if (!(that.religionIId == null ? this.religionIId == null : that.religionIId.equals(this.religionIId))) {
 			return false;
 		}
 		if (!(that.landplzortIIdGeburt == null ? this.landplzortIIdGeburt == null
@@ -691,8 +761,7 @@ public class PersonalDto implements Serializable {
 			return false;
 		}
 		if (!(that.partnerIIdSozialversicherer == null ? this.partnerIIdSozialversicherer == null
-				: that.partnerIIdSozialversicherer
-						.equals(this.partnerIIdSozialversicherer))) {
+				: that.partnerIIdSozialversicherer.equals(this.partnerIIdSozialversicherer))) {
 			return false;
 		}
 		if (!(that.partnerIIdFirma == null ? this.partnerIIdFirma == null
@@ -700,44 +769,38 @@ public class PersonalDto implements Serializable {
 			return false;
 		}
 		if (!(that.kostenstelleIIdAbteilung == null ? this.kostenstelleIIdAbteilung == null
-				: that.kostenstelleIIdAbteilung
-						.equals(this.kostenstelleIIdAbteilung))) {
+				: that.kostenstelleIIdAbteilung.equals(this.kostenstelleIIdAbteilung))) {
 			return false;
 		}
 		if (!(that.kostenstelleIIdStamm == null ? this.kostenstelleIIdStamm == null
 				: that.kostenstelleIIdStamm.equals(this.kostenstelleIIdStamm))) {
 			return false;
 		}
-		if (!(that.fVerfuegbar == null ? this.fVerfuegbar == null
-				: that.fVerfuegbar.equals(this.fVerfuegbar))) {
+		if (!(that.fVerfuegbar == null ? this.fVerfuegbar == null : that.fVerfuegbar.equals(this.fVerfuegbar))) {
 			return false;
 		}
 		if (!(that.bAnwesenheitsliste == null ? this.bAnwesenheitsliste == null
 				: that.bAnwesenheitsliste.equals(this.bAnwesenheitsliste))) {
 			return false;
 		}
-		if (!(that.cKurzzeichen == null ? this.cKurzzeichen == null
-				: that.cKurzzeichen.equals(this.cKurzzeichen))) {
+		if (!(that.cKurzzeichen == null ? this.cKurzzeichen == null : that.cKurzzeichen.equals(this.cKurzzeichen))) {
 			return false;
 		}
 		if (!(that.pendlerpauschaleIId == null ? this.pendlerpauschaleIId == null
 				: that.pendlerpauschaleIId.equals(this.pendlerpauschaleIId))) {
 			return false;
 		}
-		if (!(that.xKommentar == null ? this.xKommentar == null
-				: that.xKommentar.equals(this.xKommentar))) {
+		if (!(that.xKommentar == null ? this.xKommentar == null : that.xKommentar.equals(this.xKommentar))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
@@ -785,8 +848,10 @@ public class PersonalDto implements Serializable {
 
 	/**
 	 * Der Name des IMap Ordners der als "inbox" fungiert</br>
-	 * <p>Kann auch leer sein, dann wird in weiterer Folge der
-	 * Default "INBOX" verwendet.</p>
+	 * <p>
+	 * Kann auch leer sein, dann wird in weiterer Folge der Default "INBOX"
+	 * verwendet.
+	 * </p>
 	 * 
 	 * @return null oder der Name des Ordners der als Inbox verwendet werden soll
 	 */
@@ -796,6 +861,22 @@ public class PersonalDto implements Serializable {
 
 	public void setCImapInboxFolder(String cImapInboxFolder) {
 		this.cImapInboxFolder = cImapInboxFolder;
+	}
+
+	public String getCBccempfaenger() {
+		return cBccempfaenger;
+	}
+
+	public void setCBccempfaenger(String cBccempfaenger) {
+		this.cBccempfaenger = cBccempfaenger;
+	}
+
+	public Short getbSynchronisiereAlleKontakte() {
+		return bSynchronisiereAlleKontakte;
+	}
+
+	public void setbSynchronisiereAlleKontakte(Short bSynchronisiereAlleKontakte) {
+		this.bSynchronisiereAlleKontakte = bSynchronisiereAlleKontakte;
 	}
 
 	public int hashCode() {
@@ -869,6 +950,7 @@ public class PersonalDto implements Serializable {
 		returnString += ", " + tAendern;
 		returnString += ", " + personalIIdAendern;
 		returnString += ", " + bAnwesenheitTerminal;
+		returnString += ", " + cBccempfaenger;
 		return returnString;
 	}
 

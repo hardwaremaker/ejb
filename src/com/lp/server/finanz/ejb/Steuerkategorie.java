@@ -41,11 +41,17 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "SteuerkategorieByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.cNr = ?1 AND o.mandantCNr = ?2"),
+import com.lp.util.Helper;
+
+@NamedQueries({
+	@NamedQuery(name = "SteuerkategorieByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.cNr = ?1 AND o.mandantCNr = ?2"),
 	@NamedQuery(name = "SteuerkategorieByCNrFinanzamtIIDMandant", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.cNr = ?1 AND o.finanzamtIId = ?2 AND o.mandantCNr = ?3"),
 	@NamedQuery(name = "SteuerkategorieByMandantCNr", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.mandantCNr = ?1"),
 	@NamedQuery(name = "SteuerkategorieejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Steuerkategorie o WHERE o.mandantCNr = ?1"),
-	@NamedQuery(name = "SteuerkategorieByFinanzamtIIDMandant", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.finanzamtIId = ?1 AND o.mandantCNr = ?2")
+	@NamedQuery(name = "SteuerkategorieByFinanzamtIIDMandant", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.finanzamtIId = ?1 AND o.mandantCNr = ?2"),
+	@NamedQuery(name = "SteuerkategorieByCNrReversechargeartIdFinanzamtIIDMandant", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.cNr = ?1 AND o.reversechargeartId = ?2 AND o.finanzamtIId = ?3 AND o.mandantCNr = ?4"),
+	@NamedQuery(name = "SteuerkategorieByFinanzamtIIDReversechargeartMandant", query = "SELECT OBJECT(o) FROM Steuerkategorie o WHERE o.finanzamtIId = ?1 And o.reversechargeartId = ?2 AND o.mandantCNr = ?3")
+	
 })
 @Entity
 @Table(name = "FB_STEUERKATEGORIE")
@@ -84,6 +90,9 @@ public class Steuerkategorie implements Serializable {
 	
 	@Column(name = "KONTO_I_ID_KURSVERLUST")
 	private Integer kontoIIdKursverlust;
+
+	@Column(name = "REVERSECHARGEART_I_ID")
+	private Integer reversechargeartId ;
 	
 	public String getMandantCNr() {
 		return mandantCNr;
@@ -99,14 +108,15 @@ public class Steuerkategorie implements Serializable {
 		super();
 	}
 
-	public Steuerkategorie(Integer id, String nr, Short bReversecharge,
-			String mandantCNr, String cBez, Integer finanzamtIID) {
+	public Steuerkategorie(Integer id, String nr, 
+			String mandantCNr, String cBez, Integer finanzamtIID, Integer reversechargeartId) {
 		setCNr(nr);
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setCBez(cBez);
-		setbReversecharge(bReversecharge);
 		setFinanzamtIId(finanzamtIID);
+		setReversechargeartIId(reversechargeartId);
+		setbReversecharge(Helper.getShortFalse());
 	}
 
 	public Short getbReversecharge() {
@@ -189,4 +199,11 @@ public class Steuerkategorie implements Serializable {
 		return kontoIIdKursverlust;
 	}
 
+	public void setReversechargeartIId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId ;
+	}
+	
+	public Integer getReversechargeartIId() {
+		return reversechargeartId ;
+	}
 }

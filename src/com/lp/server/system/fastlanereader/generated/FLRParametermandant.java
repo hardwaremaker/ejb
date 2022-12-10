@@ -92,10 +92,21 @@ public class FLRParametermandant implements Serializable {
 	}
 
 	public String getC_wert() {
+//		if (Helper.istKennwortParameter(getId_comp().getC_nr())) {
+//			return Helper.decode(c_wert);
+//		} else {
+//			return c_wert;
+//		}
 		return this.c_wert;
 	}
 
 	public void setC_wert(String c_wert) {
+//		if (Helper.istKennwortParameter(getId_comp().getC_nr())) {
+//			this.c_wert = Helper.encode(c_wert);
+//		} else {
+//			this.c_wert = c_wert ;
+//		}
+		
 		this.c_wert = c_wert;
 	}
 

@@ -40,7 +40,10 @@ import com.lp.server.system.service.TheClientDto;
 
 public interface IOrderResponseProducer {
 	boolean isDummy() ;
-	IOrderResponse createResponse(AuftragDto auftragDto, TheClientDto theClientDto) throws RemoteException, NamingException ;
-	void postResponse(IOrderResponse orderResponse, AuftragDto auftragDto, TheClientDto theClientDto) throws RemoteException ;
-	String toString(IOrderResponse orderResponse) ;
+	IOrderResponse createResponse(AuftragDto auftragDto, TheClientDto theClientDto) throws RemoteException, NamingException;
+	void postResponse(IOrderResponse orderResponse, AuftragDto auftragDto, TheClientDto theClientDto) throws RemoteException;
+	String toString(IOrderResponse orderResponse);
+	
+	String archiveResponse(IOrderResponse orderResponse, AuftragDto auftragDto, 
+			TheClientDto theClientDto) throws RemoteException, NamingException;
 }

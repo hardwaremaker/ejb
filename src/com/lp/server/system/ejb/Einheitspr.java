@@ -41,7 +41,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "EinheitsprfindByEinheitCNr", query = "SELECT OBJECT (o) FROM Einheitspr o WHERE o.pk.einheitCNr = ?1") })
+@NamedQueries( { @NamedQuery(name = "EinheitsprfindByEinheitCNr", query = "SELECT OBJECT (o) FROM Einheitspr o WHERE o.pk.einheitCNr = ?1"),
+	@NamedQuery(name = "EinheitsprfindByCBez", query = "SELECT OBJECT (o) FROM Einheitspr o WHERE o.cBez=?1 AND o.pk.localeCNr=?2")})
 @Entity
 @Table(name = "LP_EINHEITSPR")
 public class Einheitspr implements Serializable {

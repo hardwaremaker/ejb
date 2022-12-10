@@ -76,8 +76,8 @@ public class StuecklisteDtoAssembler {
 					.getPersonalIIdAnlegen());
 			stuecklisteDto.setNDefaultdurchlaufzeit(stueckliste
 					.getNDefaultdurchlaufzeit());
-			stuecklisteDto.setIErfassungsfaktor(stueckliste
-					.getIErfassungsfaktor());
+			stuecklisteDto.setNErfassungsfaktor(stueckliste
+					.getNErfassungsfaktor());
 			stuecklisteDto.setLagerIIdZiellager(stueckliste
 					.getLagerIIdZiellager());
 			stuecklisteDto.setStuecklisteIIdEk(stueckliste
@@ -90,7 +90,14 @@ public class StuecklisteDtoAssembler {
 			stuecklisteDto.setPersonalIIdFreigabe(stueckliste
 					.getPersonalIIdFreigabe());
 			stuecklisteDto.setTFreigabe(stueckliste.getTFreigabe());
-
+			stuecklisteDto.setStuecklisteScriptartIId(stueckliste
+					.getStuecklisteScriptartIId());
+			stuecklisteDto.setCFremdsystemnr(stueckliste.getCFremdsystemnr());
+			stuecklisteDto.setBMitFormeln(stueckliste.getBMitFormeln());
+			stuecklisteDto.setStuecklisteIIdFormelstueckliste(stueckliste.getStuecklisteIIdFormelstueckliste());
+			stuecklisteDto.setIReihenfolge(stueckliste.getIReihenfolge());
+			stuecklisteDto.setBJahreslos(stueckliste.getBJahreslos());
+			stuecklisteDto.setBHierarchischeChargennummern(stueckliste.getBHierarchischeChargennummern());
 		}
 		return stuecklisteDto;
 	}

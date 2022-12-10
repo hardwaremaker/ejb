@@ -50,10 +50,10 @@ public class FLRStatus implements Serializable {
 	private String c_nr;
 
 	/** persistent field */
-	private Set<?> status_statusspr_set;
+	private Set<FLRStatusspr> status_statusspr_set;
 
 	/** full constructor */
-	public FLRStatus(Set<?> status_statusspr_set) {
+	public FLRStatus(Set<FLRStatusspr> status_statusspr_set) {
 		this.status_statusspr_set = status_statusspr_set;
 	}
 
@@ -69,11 +69,11 @@ public class FLRStatus implements Serializable {
 		this.c_nr = c_nr;
 	}
 
-	public Set<?> getStatus_statusspr_set() {
+	public Set<FLRStatusspr> getStatus_statusspr_set() {
 		return this.status_statusspr_set;
 	}
 
-	public void setStatus_statusspr_set(Set<?> status_statusspr_set) {
+	public void setStatus_statusspr_set(Set<FLRStatusspr> status_statusspr_set) {
 		this.status_statusspr_set = status_statusspr_set;
 	}
 

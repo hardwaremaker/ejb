@@ -33,6 +33,7 @@
 package com.lp.server.lieferschein.fastlanereader;
 
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -45,9 +46,11 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.auftrag.fastlanereader.generated.FLRLieferstatus;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.lieferschein.service.LieferscheinFac;
 import com.lp.server.lieferschein.service.LieferscheinpositionFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -84,18 +87,16 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	public static final String FLR_LIEFERSCHEINPOSITION = "flrlieferscheinposition.";
-	public static final String FLR_LIEFERSCHEINPOSITION_FROM_CLAUSE = " from FLRLieferscheinposition flrlieferscheinposition ";
+	public static final String FLR_LIEFERSTATUS = "lieferstatus.";
+	public static final String FLR_LIEFERSTATUS_FROM_CLAUSE = " from FLRLieferstatus lieferstatus ";
 
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
 	 * 
-	 * @param rowIndex
-	 *            diese Zeile soll selektiert sein
+	 * @param rowIndex diese Zeile soll selektiert sein
 	 * @return QueryResult das Ergebnis der Abfrage
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 * @see UseCaseHandler#getPageAt(java.lang.Integer)
 	 */
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
@@ -109,8 +110,7 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			// myLogger.info("HQL: " + queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -121,38 +121,67 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRLieferscheinposition pos = (FLRLieferscheinposition) resultListIterator
-						.next();
+				FLRLieferstatus pos = (FLRLieferstatus) resultListIterator.next();
 				rows[row][col++] = pos.getI_id();
 
-				String cBelegkuerzel = getLocaleFac().belegartFindByCNr(
-						LocaleFac.BELEGART_LIEFERSCHEIN).getCKurzbezeichnung();
+				if (pos.getFlrlieferscheinposition() != null) {
 
-				rows[row][col++] = cBelegkuerzel;
-				rows[row][col++] = pos.getFlrlieferschein().getC_nr();
-				rows[row][col++] = pos.getFlrartikel().getC_nr();
+					String cBelegkuerzel = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_LIEFERSCHEIN)
+							.getCKurzbezeichnung();
 
-				// die Bezeichnung im uebersteuert in jedem Fall
-				String sBezeichnung = pos.getC_bez();
+					rows[row][col++] = cBelegkuerzel;
+					rows[row][col++] = pos.getFlrlieferscheinposition().getFlrlieferschein().getC_nr();
+					rows[row][col++] = pos.getFlrlieferscheinposition().getFlrartikel().getC_nr();
 
-				if (pos.getPositionsart_c_nr().equals(
-						LocaleFac.POSITIONSART_IDENT)
-						&& (sBezeichnung == null || sBezeichnung.length() == 0)) {
-					// die sprachabhaengig Artikelbezeichnung anzeigen
-					sBezeichnung = getArtikelFac()
-							.formatArtikelbezeichnungEinzeiligOhneExc(
-									pos.getFlrartikel().getI_id(),
-									theClientDto.getLocUi());
+					if (bReferenznummerInPositionen) {
+						rows[row][col++] = pos.getFlrlieferscheinposition().getFlrartikel().getC_referenznr();
+					}
+
+					// die Bezeichnung im uebersteuert in jedem Fall
+					String sBezeichnung = pos.getFlrlieferscheinposition().getC_bez();
+
+					if (pos.getFlrlieferscheinposition().getPositionsart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)
+							&& (sBezeichnung == null || sBezeichnung.length() == 0)) {
+						// die sprachabhaengig Artikelbezeichnung anzeigen
+						sBezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+								pos.getFlrlieferscheinposition().getFlrartikel().getI_id(), theClientDto.getLocUi());
+					}
+
+					rows[row][col++] = sBezeichnung;
+					rows[row][col++] = pos.getFlrlieferscheinposition().getN_menge();
+					rows[row][col] = pos.getFlrlieferscheinposition().getFlrlieferschein().getD_belegdatum();
+				} else if (pos.getFlrrechnungposition() != null) {
+
+					String cBelegkuerzel = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_RECHNUNG)
+							.getCKurzbezeichnung();
+
+					rows[row][col++] = cBelegkuerzel;
+					rows[row][col++] = pos.getFlrrechnungposition().getFlrrechnung().getC_nr();
+					rows[row][col++] = pos.getFlrrechnungposition().getFlrartikel().getC_nr();
+
+					if (bReferenznummerInPositionen) {
+						rows[row][col++] = pos.getFlrrechnungposition().getFlrartikel().getC_referenznr();
+					}
+
+					// die Bezeichnung im uebersteuert in jedem Fall
+					String sBezeichnung = pos.getFlrrechnungposition().getC_bez();
+
+					if (pos.getFlrrechnungposition().getPositionsart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)
+							&& (sBezeichnung == null || sBezeichnung.length() == 0)) {
+						// die sprachabhaengig Artikelbezeichnung anzeigen
+						sBezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+								pos.getFlrrechnungposition().getFlrartikel().getI_id(), theClientDto.getLocUi());
+					}
+
+					rows[row][col++] = sBezeichnung;
+					rows[row][col++] = pos.getFlrrechnungposition().getN_menge();
+					rows[row][col] = pos.getFlrrechnungposition().getFlrrechnung().getD_belegdatum();
 				}
 
-				rows[row][col++] = sBezeichnung;
-				rows[row][col++] = pos.getN_menge();
-				rows[row++][col++] = pos.getFlrlieferschein().getD_belegdatum();
-
+				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -177,8 +206,7 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -191,8 +219,7 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 				try {
 					session.close();
 				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE,
-							he);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE, he);
 				}
 			}
 		}
@@ -200,8 +227,8 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -212,8 +239,7 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -223,8 +249,7 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_LIEFERSCHEINPOSITION
-							+ filterKriterien[i].kritName);
+					where.append(" " + FLR_LIEFERSTATUS + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -250,15 +275,13 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_LIEFERSCHEINPOSITION
-									+ kriterien[i].kritName);
+							orderBy.append(FLR_LIEFERSTATUS + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -269,16 +292,11 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy
-						.append(FLR_LIEFERSCHEINPOSITION)
-						.append(
-								LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRARTIKEL)
-						.append(".").append(ArtikelFac.FLR_ARTIKEL_C_NR)
-						.append(" ASC ");
+				orderBy.append(FLR_LIEFERSTATUS).append(LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRARTIKEL)
+						.append(".").append(ArtikelFac.FLR_ARTIKEL_C_NR).append(" ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf(FLR_LIEFERSCHEINPOSITION
-					+ LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_I_ID) < 0) {
+			if (orderBy.indexOf(FLR_LIEFERSTATUS + LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_I_ID) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -287,9 +305,8 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_LIEFERSCHEINPOSITION).append(
-						LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_I_ID)
-						.append(" ");
+				orderBy.append(" ").append(FLR_LIEFERSTATUS)
+						.append(LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_I_ID).append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -305,24 +322,20 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return FLR_LIEFERSCHEINPOSITION_FROM_CLAUSE;
+		return FLR_LIEFERSTATUS_FROM_CLAUSE;
 	}
 
 	/**
 	 * sorts the data described by the current query using the specified sort
 	 * criterias. The current query is also updated with the new sort criterias.
 	 * 
-	 * @param sortierKriterien
-	 *            nach diesen Kriterien wird das Ergebnis sortiert
-	 * @param selectedId
-	 *            auf diesem Datensatz soll der Cursor stehen
+	 * @param sortierKriterien nach diesen Kriterien wird das Ergebnis sortiert
+	 * @param selectedId       auf diesem Datensatz soll der Cursor stehen
 	 * @return QueryResult das Ergebnis der Abfrage
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -334,8 +347,7 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select " + FLR_LIEFERSCHEINPOSITION
-						+ "i_id" + FLR_LIEFERSCHEINPOSITION_FROM_CLAUSE
+				String queryString = "select " + FLR_LIEFERSTATUS + "i_id" + FLR_LIEFERSTATUS_FROM_CLAUSE
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -351,8 +363,7 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 				}
 			} catch (Exception e) {
 				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_LIEFERSCHEIN_DIEZUGEHOERIGELIEFERSCHEINPOSITIONWURDEGELOESCHT,
-						e);
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_DIEZUGEHOERIGELIEFERSCHEINPOSITIONWURDEGELOESCHT, e);
 			} finally {
 				try {
 					session.close();
@@ -372,49 +383,55 @@ public class AuftragpositionInLieferscheinHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+		try {
 			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, BigDecimal.class,
-							Date.class },
-					new String[] {
-							"i_id",
-							"", // nach dem Belegkuerzel kann man nicht
-							// sortieren
-							getTextRespectUISpr("lp.belegnummer", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.ident", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
-							getTextRespectUISpr("lp.datum", mandantCNr, locUI) },
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_M,
-							getUIBreiteIdent(), //ident
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // variabel
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M, },
-					new String[] {
-							LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_I_ID,
-							Facade.NICHT_SORTIERBAR, // nach dem Belegkuerzel
-							// kann man nicht
-							// sortieren
-							LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRLIEFERSCHEIN
-									+ "."
-									+ LieferscheinFac.FLR_LIEFERSCHEIN_C_NR,
-							Facade.NICHT_SORTIERBAR,
-							LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_C_BEZEICHNUNG,
-							LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_N_MENGE,
-							LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRLIEFERSCHEIN
-									+ "."
-									+ LieferscheinFac.FLR_LIEFERSCHEIN_D_BELEGDATUM }));
+
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+
+			columns.add("id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+			columns.add("belegart", String.class, "", QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR);
+			columns.add("lp.belegnummer", String.class, getTextRespectUISpr("lp.belegnummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRLIEFERSCHEIN + "."
+							+ LieferscheinFac.FLR_LIEFERSCHEIN_C_NR);
+			columns.add("lp.ident", String.class, getTextRespectUISpr("lp.ident", mandant, locUi), getUIBreiteIdent(),
+					Facade.NICHT_SORTIERBAR);
+
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+			}
+
+			columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_C_BEZEICHNUNG);
+			columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.menge", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_N_MENGE);
+			columns.add("lp.datum", Date.class, getTextRespectUISpr("lp.datum", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRLIEFERSCHEIN + "."
+							+ LieferscheinFac.FLR_LIEFERSCHEIN_D_BELEGDATUM);
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
-		return super.getTableInfo();
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 }

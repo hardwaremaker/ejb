@@ -34,6 +34,7 @@ package com.lp.server.angebot.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 public class ReportAngebotpositionJournalDto implements Serializable {
 	/**
@@ -43,6 +44,55 @@ public class ReportAngebotpositionJournalDto implements Serializable {
 	// Kopfdaten Angebot
 	private Integer iId = null;
 	private String cNr = null;
+	
+	
+	private String kundeProvisionsempfaengerName = null;
+	public String getKundeProvisionsempfaengerName() {
+		return kundeProvisionsempfaengerName;
+	}
+
+	public void setKundeProvisionsempfaengerName(String kundeProvisionsempfaengerName) {
+		this.kundeProvisionsempfaengerName = kundeProvisionsempfaengerName;
+	}
+
+	public String getKundeProvisionsempfaengerKurzzeichen() {
+		return kundeProvisionsempfaengerKurzzeichen;
+	}
+
+	public void setKundeProvisionsempfaengerKurzzeichen(String kundeProvisionsempfaengerKurzzeichen) {
+		this.kundeProvisionsempfaengerKurzzeichen = kundeProvisionsempfaengerKurzzeichen;
+	}
+
+	private String kundeProvisionsempfaengerKurzzeichen = null;
+	
+	private String waehrungCNr = null;
+	public String getWaehrungCNr() {
+		return waehrungCNr;
+	}
+
+	public void setWaehrungCNr(String waehrungCNr) {
+		this.waehrungCNr = waehrungCNr;
+	}
+
+	private Integer iVersion = null;
+	public Integer getIVersion() {
+		return iVersion;
+	}
+
+	public void setIVersion(Integer iVersion) {
+		this.iVersion = iVersion;
+	}
+
+	public Timestamp getTVersion() {
+		return tVersion;
+	}
+
+	public void setTVersion(Timestamp tVersion) {
+		this.tVersion = tVersion;
+	}
+
+	private Timestamp tVersion = null;
+	
 	private String kundeCName1 = null;
 	private String kundeCName2 = null;
 	private String kundeCName3 = null;
@@ -51,7 +101,25 @@ public class ReportAngebotpositionJournalDto implements Serializable {
 	private String kundePlz = null;
 	private String kundeOrt = null;
 	
-	
+	private String einheitLieferzeit = null;
+	private Integer lieferzeit = null;
+
+	public String getEinheitLieferzeit() {
+		return einheitLieferzeit;
+	}
+
+	public void setEinheitLieferzeit(String einheitLieferzeit) {
+		this.einheitLieferzeit = einheitLieferzeit;
+	}
+
+	public Integer getLieferzeit() {
+		return lieferzeit;
+	}
+
+	public void setLieferzeit(Integer lieferzeit) {
+		this.lieferzeit = lieferzeit;
+	}
+
 	private String ansprechpartnerVorname = null;
 	private String ansprechpartnerNachname = null;
 	private String ansprechpartnerTitel = null;
@@ -62,7 +130,25 @@ public class ReportAngebotpositionJournalDto implements Serializable {
 	private String ansprechpartnerFaxDw = null;
 	private String ansprechpartnerEmail = null;
 
-	
+	private java.util.Date belegdatum = null;
+	private java.util.Date nachfasstermin = null;
+
+	public java.util.Date getNachfasstermin() {
+		return nachfasstermin;
+	}
+
+	public void setNachfasstermin(java.util.Date nachfasstermin) {
+		this.nachfasstermin = nachfasstermin;
+	}
+
+	public java.util.Date getBelegdatum() {
+		return belegdatum;
+	}
+
+	public void setBelegdatum(java.util.Date belegdatum) {
+		this.belegdatum = belegdatum;
+	}
+
 	public String getAnsprechpartnerVorname() {
 		return ansprechpartnerVorname;
 	}
@@ -219,15 +305,14 @@ public class ReportAngebotpositionJournalDto implements Serializable {
 	private String kundeFax = null;
 	private String kundeEmail = null;
 	private String kundeHomepage = null;
-	
-	
+
 	private String kostenstelleCNr = null;
 	private String vertreterCName1 = null;
 	private String projektBez = null;
 	private String realisierungstermin = null;
 	private String angeboterledigungsgrundCNr = null;
 	private String erledigungsgrundABNr = null;
-	
+
 	// Konditionen Angebot
 	private Double dAuftragwahrscheinlichkeit = null;
 	private BigDecimal nWert = null;
@@ -238,9 +323,6 @@ public class ReportAngebotpositionJournalDto implements Serializable {
 	private BigDecimal nMenge = null;
 	private String einheitCNr = null;
 	private BigDecimal nPreis = null;
-	
-	
-	
 
 	public Integer getIId() {
 		return this.iId;
@@ -329,7 +411,7 @@ public class ReportAngebotpositionJournalDto implements Serializable {
 	public void setNWert(BigDecimal nWert) {
 		this.nWert = nWert;
 	}
-	
+
 	public Double getDAuftragwahrscheinlichkeit() {
 		return this.dAuftragwahrscheinlichkeit;
 	}
@@ -361,7 +443,7 @@ public class ReportAngebotpositionJournalDto implements Serializable {
 	public void setAngeboterledigungsgrundCNr(String angeboterledigungsgrundCNr) {
 		this.angeboterledigungsgrundCNr = angeboterledigungsgrundCNr;
 	}
-	
+
 	public String getErledigungsgrundABNr() {
 		return erledigungsgrundABNr;
 	}

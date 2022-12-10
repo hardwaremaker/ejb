@@ -32,19 +32,22 @@
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader.generated;
 
-import com.lp.server.finanz.ejb.SteuerkategoriekontoPK;
-import com.lp.server.system.fastlanereader.generated.FLRMwstsatzbez;
 import java.io.Serializable;
+import java.sql.Timestamp;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
+
+import com.lp.server.finanz.ejb.SteuerkategoriekontoPK;
+import com.lp.server.system.fastlanereader.generated.FLRMwstsatzbez;
 
 
 /** @author Hibernate CodeGenerator */
 public class FLRSteuerkategoriekonto implements Serializable {
 
     /** identifier field */
-    private SteuerkategoriekontoPK id_comp;
+//    private SteuerkategoriekontoPK id_comp;
 
     /** nullable persistent field */
     private com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidvk;
@@ -67,9 +70,15 @@ public class FLRSteuerkategoriekonto implements Serializable {
     /** nullable persistent field */
     private com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiideinfuhrust;
 
+    private Timestamp gueltigAb;
+    
+    private Integer i_id;
+
     /** full constructor */
-    public FLRSteuerkategoriekonto(SteuerkategoriekontoPK id_comp, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidvk, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidek, com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie flrsteuerkategorie, FLRMwstsatzbez flrmwstsatzbez, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidskontovk, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidskontoek, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiideinfuhrust) {
-        this.id_comp = id_comp;
+//    public FLRSteuerkategoriekonto(SteuerkategoriekontoPK id_comp, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidvk, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidek, com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie flrsteuerkategorie, FLRMwstsatzbez flrmwstsatzbez, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidskontovk, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidskontoek, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiideinfuhrust, Timestamp gueltigAb) {
+    public FLRSteuerkategoriekonto(Integer i_id, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidvk, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidek, com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie flrsteuerkategorie, FLRMwstsatzbez flrmwstsatzbez, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidskontovk, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiidskontoek, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto kontoiideinfuhrust, Timestamp gueltigAb) {
+//        this.id_comp = id_comp;
+    	this.i_id = i_id;
         this.kontoiidvk = kontoiidvk;
         this.kontoiidek = kontoiidek;
         this.flrsteuerkategorie = flrsteuerkategorie;
@@ -77,6 +86,7 @@ public class FLRSteuerkategoriekonto implements Serializable {
         this.kontoiidskontovk = kontoiidskontovk;
         this.kontoiidskontoek = kontoiidskontoek;
         this.kontoiideinfuhrust = kontoiideinfuhrust;
+        this.setGueltigAb(gueltigAb);
     }
 
     /** default constructor */
@@ -84,6 +94,7 @@ public class FLRSteuerkategoriekonto implements Serializable {
     }
 
     /** minimal constructor */
+/*    
     public FLRSteuerkategoriekonto(SteuerkategoriekontoPK id_comp) {
         this.id_comp = id_comp;
     }
@@ -91,11 +102,16 @@ public class FLRSteuerkategoriekonto implements Serializable {
     public SteuerkategoriekontoPK getId_comp() {
         return this.id_comp;
     }
-
+*/
+    public FLRSteuerkategoriekonto(Integer id) {
+    	this.i_id = id;
+    }
+  
+/*    
     public void setId_comp(SteuerkategoriekontoPK id_comp) {
         this.id_comp = id_comp;
     }
-
+*/
     public com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto getKontoiidvk() {
         return this.kontoiidvk;
     }
@@ -154,7 +170,8 @@ public class FLRSteuerkategoriekonto implements Serializable {
 
     public String toString() {
         return new ToStringBuilder(this)
-            .append("id_comp", getId_comp())
+        	.append("i_id", getI_id())
+//            .append("id_comp", getId_comp())
             .toString();
     }
 
@@ -163,14 +180,31 @@ public class FLRSteuerkategoriekonto implements Serializable {
         if ( !(other instanceof FLRSteuerkategoriekonto) ) return false;
         FLRSteuerkategoriekonto castOther = (FLRSteuerkategoriekonto) other;
         return new EqualsBuilder()
-            .append(this.getId_comp(), castOther.getId_comp())
+        	.append(this.getI_id(),  castOther.getI_id())
+//            .append(this.getId_comp(), castOther.getId_comp())
             .isEquals();
     }
 
     public int hashCode() {
         return new HashCodeBuilder()
-            .append(getId_comp())
+        	.append(getI_id())
+  //          .append(getId_comp())
             .toHashCode();
     }
 
+	public Timestamp getGueltigAb() {
+		return gueltigAb;
+	}
+
+	public void setGueltigAb(Timestamp gueltigAb) {
+		this.gueltigAb = gueltigAb;
+	}
+
+	public Integer getI_id() {
+		return i_id;
+	}
+
+	public void setI_id(Integer i_id) {
+		this.i_id = i_id;
+	}
 }

@@ -58,11 +58,14 @@ public class FLRBenutzer implements Serializable {
 
 	/** nullable persistent field */
 	private FLRMandant flrmandantdefault;
+	
+	private Short b_gesperrt;
 
 	/** full constructor */
-	public FLRBenutzer(String c_benutzerkennung, Date t_gueltigbis,
+	public FLRBenutzer(String c_benutzerkennung, Short b_gesperrt, Date t_gueltigbis,
 			FLRMandant flrmandantdefault) {
 		this.c_benutzerkennung = c_benutzerkennung;
+		this.b_gesperrt = b_gesperrt;
 		this.t_gueltigbis = t_gueltigbis;
 		this.flrmandantdefault = flrmandantdefault;
 	}
@@ -85,6 +88,14 @@ public class FLRBenutzer implements Serializable {
 
 	public void setC_benutzerkennung(String c_benutzerkennung) {
 		this.c_benutzerkennung = c_benutzerkennung;
+	}
+	
+	public Short getB_gesperrt() {
+		return this.b_gesperrt;
+	}
+
+	public void setB_gesperrt(Short b_gesperrt) {
+		this.b_gesperrt = b_gesperrt;
 	}
 
 	public Date getT_gueltigbis() {

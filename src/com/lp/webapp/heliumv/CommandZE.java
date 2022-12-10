@@ -67,8 +67,8 @@ import com.lp.webapp.frame.TheClient;
  */
 public class CommandZE extends Command {
 
-	private static final String sUser = "lpwebappzemecs";
-	private static final String sPassword = "lpwebappzemecs";
+//	private static final String sUser = "lpwebappzemecs";
+//	private static final String sPassword = "lpwebappzemecs";
 
 	public CommandZE(String sJSPI) {
 		super(sJSPI);
@@ -104,12 +104,12 @@ public class CommandZE extends Command {
 			zeitdatenDto.setTZeit(new Timestamp(dZE.getBuchungsZeitpunkt()
 					.getTime()));
 			
-			TheClientDto theclientDto = getLogonFac()
+			/*TheClientDto theclientDto = getLogonFac()
 					.logon( Helper.getFullUsername(sUser), 			
 							Helper.getMD5Hash((sUser + sPassword).toCharArray()),
 							getMandantFac().getLocaleDesHauptmandanten(), null,
-							new Timestamp(System.currentTimeMillis()));
-
+							new Timestamp(System.currentTimeMillis()));*/
+			TheClientDto theclientDto = getLogonFac().logonIntern(getMandantFac().getLocaleDesHauptmandanten(), null);
 
 			String sBuArt = req.getParameter(TheApp.BUCHUNGSART);
 

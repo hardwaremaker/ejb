@@ -58,5 +58,8 @@ public class LpSimpleBelegnummerFormat extends LpBelegnummerFormat {
 	public String format(LpBelegnummer lpBelegnummer) {
 		return dfBelegNummer.format(lpBelegnummer.getBelegNummer());
 	}
+	public String formatMitStellenZufall(LpBelegnummer lpBelegnummer) {
+		return format(lpBelegnummer);
+	}
 
 }

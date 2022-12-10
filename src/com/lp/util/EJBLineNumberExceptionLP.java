@@ -42,6 +42,7 @@ public class EJBLineNumberExceptionLP extends EJBExceptionLP {
 
 	private Integer linenumber ;
 	private Integer severity ;
+	private String  filename;
 	
 	public static final Integer SEVERITY_NONE    = 0 ;
 	public static final Integer SEVERITY_DEBUG   = 1 ;
@@ -55,8 +56,21 @@ public class EJBLineNumberExceptionLP extends EJBExceptionLP {
 		setSeverity(severity) ;
 	}
 
+	public EJBLineNumberExceptionLP(String filename, Integer linenumber, Integer severity, EJBExceptionLP e) {
+		super(e) ;
+		setFilename(filename);
+		setLinenumber(linenumber) ;
+		setSeverity(severity) ;
+	}
+
 	public EJBLineNumberExceptionLP(Integer linenumber, EJBExceptionLP e) {
 		super(e) ;
+		setLinenumber(linenumber) ;
+	}
+
+	public EJBLineNumberExceptionLP(String filename, Integer linenumber, EJBExceptionLP e) {
+		super(e) ;
+		setFilename(filename);
 		setLinenumber(linenumber) ;
 	}
 	
@@ -74,5 +88,17 @@ public class EJBLineNumberExceptionLP extends EJBExceptionLP {
 	
 	public Integer getSeverity() {
 		return severity ;
+	}
+
+	public String getFilename() {
+		return filename;
+	}
+
+	public void setFilename(String filename) {
+		this.filename = filename;
+	}
+	
+	public boolean hasFilename() {
+		return filename != null;
 	}
 }

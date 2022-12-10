@@ -40,69 +40,60 @@ import java.util.List;
 import com.lp.server.angebotstkl.ejb.Einkaufsangebotposition;
 
 public class EinkaufsangebotpositionDtoAssembler {
-	public static EinkaufsangebotpositionDto createDto(
-			Einkaufsangebotposition einkaufsangebotposition) {
+	public static EinkaufsangebotpositionDto createDto(Einkaufsangebotposition einkaufsangebotposition) {
 		EinkaufsangebotpositionDto einkaufsangebotpositionDto = new EinkaufsangebotpositionDto();
 		if (einkaufsangebotposition != null) {
 			einkaufsangebotpositionDto.setIId(einkaufsangebotposition.getIId());
-			einkaufsangebotpositionDto.setBelegIId(einkaufsangebotposition
-					.getEinkaufsangebotIId());
-			einkaufsangebotpositionDto.setISort(einkaufsangebotposition
-					.getISort());
+			einkaufsangebotpositionDto.setBelegIId(einkaufsangebotposition.getEinkaufsangebotIId());
+			einkaufsangebotpositionDto.setISort(einkaufsangebotposition.getISort());
+			einkaufsangebotpositionDto.setPositionsartCNr(einkaufsangebotposition.getAgstklpositionsartCNr());
+			einkaufsangebotpositionDto.setArtikelIId(einkaufsangebotposition.getArtikelIId());
+			einkaufsangebotpositionDto.setCBez(einkaufsangebotposition.getCBez());
+			einkaufsangebotpositionDto.setCBemerkung(einkaufsangebotposition.getCBemerkung());
+			einkaufsangebotpositionDto.setCZusatzbez(einkaufsangebotposition.getCZbez());
 			einkaufsangebotpositionDto
-					.setPositionsartCNr(einkaufsangebotposition
-							.getAgstklpositionsartCNr());
-			einkaufsangebotpositionDto.setArtikelIId(einkaufsangebotposition
-					.getArtikelIId());
-			einkaufsangebotpositionDto.setCBez(einkaufsangebotposition
-					.getCBez());
-			einkaufsangebotpositionDto.setCBemerkung(einkaufsangebotposition
-					.getCBemerkung());
-			einkaufsangebotpositionDto.setCZusatzbez(einkaufsangebotposition
-					.getCZbez());
-			einkaufsangebotpositionDto
-					.setBArtikelbezeichnunguebersteuert(einkaufsangebotposition
-							.getBArtikelbezeichnunguebersteuert());
-			einkaufsangebotpositionDto.setNMenge(einkaufsangebotposition
-					.getNMenge());
-			einkaufsangebotpositionDto.setNPreis1(einkaufsangebotposition
-					.getNPreis1());
-			einkaufsangebotpositionDto.setNPreis2(einkaufsangebotposition
-					.getNPreis2());
-			einkaufsangebotpositionDto.setNPreis3(einkaufsangebotposition
-					.getNPreis3());
-			einkaufsangebotpositionDto.setNPreis4(einkaufsangebotposition
-					.getNPreis4());
-			einkaufsangebotpositionDto.setNPreis5(einkaufsangebotposition
-					.getNPreis5());
-			einkaufsangebotpositionDto.setEinheitCNr(einkaufsangebotposition
-					.getEinheitCNr());
-			einkaufsangebotpositionDto
-					.setIVerpackungseinheit(einkaufsangebotposition
-							.getIVerpackungseinheit());
-			einkaufsangebotpositionDto
-					.setIWiederbeschaffungszeit(einkaufsangebotposition
-							.getIWiederbeschaffungszeit());
-			einkaufsangebotpositionDto
-					.setFMindestbestellmenge(einkaufsangebotposition
-							.getFMindestbestellmenge());
-			einkaufsangebotpositionDto
-			.setCPosition(einkaufsangebotposition
-					.getCPosition());
-			einkaufsangebotpositionDto
-			.setCInternebemerkung(einkaufsangebotposition
-					.getCInternebemerkung());
-			einkaufsangebotpositionDto
-			.setBMitdrucken(einkaufsangebotposition
-					.getBMitdrucken());
+					.setBArtikelbezeichnunguebersteuert(einkaufsangebotposition.getBArtikelbezeichnunguebersteuert());
+			einkaufsangebotpositionDto.setNMenge(einkaufsangebotposition.getNMenge());
+			einkaufsangebotpositionDto.setNPreis1(einkaufsangebotposition.getNPreis1());
+			einkaufsangebotpositionDto.setNPreis2(einkaufsangebotposition.getNPreis2());
+			einkaufsangebotpositionDto.setNPreis3(einkaufsangebotposition.getNPreis3());
+			einkaufsangebotpositionDto.setNPreis4(einkaufsangebotposition.getNPreis4());
+			einkaufsangebotpositionDto.setNPreis5(einkaufsangebotposition.getNPreis5());
+			einkaufsangebotpositionDto.setEinheitCNr(einkaufsangebotposition.getEinheitCNr());
+			einkaufsangebotpositionDto.setIVerpackungseinheit(einkaufsangebotposition.getIVerpackungseinheit());
+			einkaufsangebotpositionDto.setIWiederbeschaffungszeit(einkaufsangebotposition.getIWiederbeschaffungszeit());
+			einkaufsangebotpositionDto.setFMindestbestellmenge(einkaufsangebotposition.getFMindestbestellmenge());
+			einkaufsangebotpositionDto.setCPosition(einkaufsangebotposition.getCPosition());
+			einkaufsangebotpositionDto.setCInternebemerkung(einkaufsangebotposition.getCInternebemerkung());
+			einkaufsangebotpositionDto.setBMitdrucken(einkaufsangebotposition.getBMitdrucken());
 			einkaufsangebotpositionDto.setCKommentar1(einkaufsangebotposition.getCKommentar1());
 			einkaufsangebotpositionDto.setCKommentar2(einkaufsangebotposition.getCKommentar2());
+
+			einkaufsangebotpositionDto.setHerstellerIId(einkaufsangebotposition.getHerstellerIId());
+			einkaufsangebotpositionDto.setLieferantIId(einkaufsangebotposition.getLieferantIId());
+			einkaufsangebotpositionDto.setTLetztewebabfrage(einkaufsangebotposition.getTLetztewebabfrage());
+			einkaufsangebotpositionDto.setCBuyerurl(einkaufsangebotposition.getCBuyerurl());
+
+			einkaufsangebotpositionDto.setCArtikelnrhersteller(einkaufsangebotposition.getCArtikelnrhersteller());
+			einkaufsangebotpositionDto.setCArtikelbezhersteller(einkaufsangebotposition.getCArtikelbezhersteller());
+			einkaufsangebotpositionDto.setPositionlieferantIIdUebersteuertMenge1(
+					einkaufsangebotposition.getPositionlieferantIIdUebersteuertMenge1());
+			einkaufsangebotpositionDto.setPositionlieferantIIdUebersteuertMenge2(
+					einkaufsangebotposition.getPositionlieferantIIdUebersteuertMenge2());
+			einkaufsangebotpositionDto.setPositionlieferantIIdUebersteuertMenge3(
+					einkaufsangebotposition.getPositionlieferantIIdUebersteuertMenge3());
+			einkaufsangebotpositionDto.setPositionlieferantIIdUebersteuertMenge4(
+					einkaufsangebotposition.getPositionlieferantIIdUebersteuertMenge4());
+			einkaufsangebotpositionDto.setPositionlieferantIIdUebersteuertMenge5(
+					einkaufsangebotposition.getPositionlieferantIIdUebersteuertMenge5());
+			einkaufsangebotpositionDto.setCZbez2(einkaufsangebotposition.getCZbez2());
+			einkaufsangebotpositionDto.setILfdnummer(einkaufsangebotposition.getILfdnummer());
+
 		}
 		return einkaufsangebotpositionDto;
 	}
 
-	public static EinkaufsangebotpositionDto[] createDtos(
-			Collection<?> einkaufsangebotpositions) {
+	public static EinkaufsangebotpositionDto[] createDtos(Collection<?> einkaufsangebotpositions) {
 		List<EinkaufsangebotpositionDto> list = new ArrayList<EinkaufsangebotpositionDto>();
 		if (einkaufsangebotpositions != null) {
 			Iterator<?> iterator = einkaufsangebotpositions.iterator();
@@ -110,8 +101,7 @@ public class EinkaufsangebotpositionDtoAssembler {
 				list.add(createDto((Einkaufsangebotposition) iterator.next()));
 			}
 		}
-		EinkaufsangebotpositionDto[] returnArray = new EinkaufsangebotpositionDto[list
-				.size()];
+		EinkaufsangebotpositionDto[] returnArray = new EinkaufsangebotpositionDto[list.size()];
 		return (EinkaufsangebotpositionDto[]) list.toArray(returnArray);
 	}
 }

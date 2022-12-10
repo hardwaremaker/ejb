@@ -33,23 +33,20 @@
 package com.lp.server.finanz.fastlanereader.generated;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-import com.lp.server.finanz.service.FLRKontolaenderartPK;
+import com.lp.server.system.fastlanereader.generated.FLRMandant;
 
 /** @author Hibernate CodeGenerator */
 public class FLRKontolaenderart implements Serializable {
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	/** identifier field */
-	private FLRKontolaenderartPK id_comp;
+//	private FLRKontolaenderartPK id_comp;
 
 	/** nullable persistent field */
 	private com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto;
@@ -57,21 +54,54 @@ public class FLRKontolaenderart implements Serializable {
 	/** nullable persistent field */
 	private com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto_uebersetzt;
 
+	private FLRReversechargeart flrreversechargeart ;
+	
+	private FLRMandant flrmandant;
+	
+	private FLRFinanzLaenderart flrlaenderart;
+	
+//	private FLRFinanzFinanzamt flrfinanzamt;
+	
+	private Integer finanzamt_i_id;
+	
+    private Timestamp gueltigAb;
+    
+    private Integer i_id;
+
+
 	/** full constructor */
+ /*   
 	public FLRKontolaenderart(
 			FLRKontolaenderartPK id_comp,
-			com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto,
-			com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto_uebersetzt) {
+			FLRFinanzKonto flrkonto,
+			FLRFinanzKonto flrkonto_uebersetzt,
+			FLRReversechargeart flrreversechargeart) {
 		this.id_comp = id_comp;
 		this.flrkonto = flrkonto;
 		this.flrkonto_uebersetzt = flrkonto_uebersetzt;
+		this.setFlrreversechargeart(flrreversechargeart) ;
 	}
-
+*/
+    
+    public FLRKontolaenderart(
+    		Integer i_id, FLRFinanzKonto flrkonto, FLRFinanzKonto flrkonto_uebersetzt,
+    		FLRReversechargeart flrreversechargeart, FLRFinanzLaenderart flrlaenderart,
+    		FLRMandant flrmandant, Integer finanzamt_i_id, Timestamp gueltigAb) {
+    	this.i_id = i_id;
+    	this.flrkonto = flrkonto;
+    	this.flrkonto_uebersetzt = flrkonto_uebersetzt;
+    	this.flrreversechargeart = flrreversechargeart;
+    	this.flrmandant = flrmandant;
+    	this.finanzamt_i_id = finanzamt_i_id;
+    	this.flrlaenderart = flrlaenderart;
+    }
+    
 	/** default constructor */
 	public FLRKontolaenderart() {
 	}
 
 	/** minimal constructor */
+/*	
 	public FLRKontolaenderart(FLRKontolaenderartPK id_comp) {
 		this.id_comp = id_comp;
 	}
@@ -83,7 +113,11 @@ public class FLRKontolaenderart implements Serializable {
 	public void setId_comp(FLRKontolaenderartPK id_comp) {
 		this.id_comp = id_comp;
 	}
-
+*/
+	public FLRKontolaenderart(Integer iid) {
+		this.i_id = iid;
+	}
+	
 	public com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto getFlrkonto() {
 		return this.flrkonto;
 	}
@@ -102,9 +136,36 @@ public class FLRKontolaenderart implements Serializable {
 		this.flrkonto_uebersetzt = flrkonto_uebersetzt;
 	}
 
+	public void setFinanzamt_i_id(Integer finanzamt_i_id) {
+		this.finanzamt_i_id = finanzamt_i_id;
+	}
+	
+	public Integer getFinanzamt_i_id() {
+		return this.finanzamt_i_id;
+	}
+	
+	public void setFlrmandant(FLRMandant flrmandant) {
+		this.flrmandant = flrmandant;
+	}
+	
+	public FLRMandant getFlrmandant() {
+		return this.flrmandant;
+	}
+	
+	public void setFlrlaenderart(FLRFinanzLaenderart flrlaenderart) {
+		this.flrlaenderart = flrlaenderart;
+	}
+	
+	public FLRFinanzLaenderart getFlrlaenderart() {
+		return this.flrlaenderart;
+	}
+	
 	public String toString() {
+/*		
 		return new ToStringBuilder(this).append("id_comp", getId_comp())
 				.toString();
+*/
+		return new ToStringBuilder(this).append("i_id", getI_id()).toString();
 	}
 
 	public boolean equals(Object other) {
@@ -113,12 +174,41 @@ public class FLRKontolaenderart implements Serializable {
 		if (!(other instanceof FLRKontolaenderart))
 			return false;
 		FLRKontolaenderart castOther = (FLRKontolaenderart) other;
+		return new EqualsBuilder().append(this.getI_id(), castOther.getI_id()).isEquals();
+/*		
 		return new EqualsBuilder().append(this.getId_comp(),
 				castOther.getId_comp()).isEquals();
+*/				
 	}
 
 	public int hashCode() {
-		return new HashCodeBuilder().append(getId_comp()).toHashCode();
+/*
+ * 		return new HashCodeBuilder().append(getId_comp()).toHashCode();
+ */
+		return new HashCodeBuilder().append(getI_id()).toHashCode();
 	}
 
+	public FLRReversechargeart getFlrreversechargeart() {
+		return flrreversechargeart;
+	}
+
+	public void setFlrreversechargeart(FLRReversechargeart flrreversechargeart) {
+		this.flrreversechargeart = flrreversechargeart;
+	}
+	
+	public Timestamp getGueltigAb() {
+		return gueltigAb;
+	}
+
+	public void setGueltigAb(Timestamp gueltigAb) {
+		this.gueltigAb = gueltigAb;
+	}
+
+	public Integer getI_id() {
+		return i_id;
+	}
+
+	public void setI_id(Integer i_id) {
+		this.i_id = i_id;
+	}
 }

@@ -49,6 +49,16 @@ public class SperrenDto implements Serializable {
 	private Short bGesperrtstueckliste;
 	private Short bDurchfertigung;
 
+	private Short bDefaultBeiArtikelneuanlage;
+
+	public Short getBDefaultBeiArtikelneuanlage() {
+		return bDefaultBeiArtikelneuanlage;
+	}
+
+	public void setBDefaultBeiArtikelneuanlage(Short bDefaultBeiArtikelneuanlage) {
+		this.bDefaultBeiArtikelneuanlage = bDefaultBeiArtikelneuanlage;
+	}
+
 	public Short getBDurchfertigung() {
 		return bDurchfertigung;
 	}
@@ -139,14 +149,11 @@ public class SperrenDto implements Serializable {
 		SperrenDto that = (SperrenDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez)))
+		if (!(that.cBez == null ? this.cBez == null : that.cBez.equals(this.cBez)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
-		if (!(that.bGesperrt == null ? this.bGesperrt == null : that.bGesperrt
-				.equals(this.bGesperrt)))
+		if (!(that.bGesperrt == null ? this.bGesperrt == null : that.bGesperrt.equals(this.bGesperrt)))
 			return false;
 		if (!(that.bGesperrteinkauf == null ? this.bGesperrteinkauf == null
 				: that.bGesperrteinkauf.equals(this.bGesperrteinkauf)))
@@ -154,8 +161,7 @@ public class SperrenDto implements Serializable {
 		if (!(that.bGesperrtverkauf == null ? this.bGesperrtverkauf == null
 				: that.bGesperrtverkauf.equals(this.bGesperrtverkauf)))
 			return false;
-		if (!(that.bGesperrtlos == null ? this.bGesperrtlos == null
-				: that.bGesperrtlos.equals(this.bGesperrtlos)))
+		if (!(that.bGesperrtlos == null ? this.bGesperrtlos == null : that.bGesperrtlos.equals(this.bGesperrtlos)))
 			return false;
 		if (!(that.bGesperrtstueckliste == null ? this.bGesperrtstueckliste == null
 				: that.bGesperrtstueckliste.equals(this.bGesperrtstueckliste)))
@@ -186,8 +192,7 @@ public class SperrenDto implements Serializable {
 		returnStringBuffer.append("bGesperrteinkauf:").append(bGesperrteinkauf);
 		returnStringBuffer.append("bGesperrtverkauf:").append(bGesperrtverkauf);
 		returnStringBuffer.append("bGesperrtlos:").append(bGesperrtlos);
-		returnStringBuffer.append("bGesperrtstueckliste:").append(
-				bGesperrtstueckliste);
+		returnStringBuffer.append("bGesperrtstueckliste:").append(bGesperrtstueckliste);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}

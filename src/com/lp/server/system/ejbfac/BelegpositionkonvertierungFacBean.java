@@ -49,7 +49,6 @@ import com.lp.server.anfrage.service.AnfrageServiceFac;
 import com.lp.server.anfrage.service.AnfragepositionDto;
 import com.lp.server.angebot.service.AngebotpositionDto;
 import com.lp.server.angebotstkl.ejbfac.AngebotstklpositionLocalFac;
-import com.lp.server.angebotstkl.service.AgstklDto;
 import com.lp.server.angebotstkl.service.AgstklarbeitsplanDto;
 import com.lp.server.angebotstkl.service.AgstklpositionDto;
 import com.lp.server.angebotstkl.service.EinkaufsangebotpositionDto;
@@ -69,7 +68,6 @@ import com.lp.server.fertigung.service.LossollmaterialDto;
 import com.lp.server.instandhaltung.service.WartungslisteDto;
 import com.lp.server.instandhaltung.service.WartungsschritteDto;
 import com.lp.server.lieferschein.service.LieferscheinpositionDto;
-import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.personal.ejb.Personalgruppe;
 import com.lp.server.personal.service.MaschineDto;
 import com.lp.server.rechnung.service.RechnungPositionDto;
@@ -78,12 +76,11 @@ import com.lp.server.stueckliste.service.StuecklistearbeitsplanDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
 import com.lp.server.system.service.BelegpositionkonvertierungFac;
 import com.lp.server.system.service.LocaleFac;
-import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MwstsatzDto;
-import com.lp.server.system.service.ParameterFac;
-import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.KundeId;
+import com.lp.server.util.Validator;
 import com.lp.service.BelegpositionDto;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
@@ -114,8 +111,7 @@ import com.lp.util.Helper;
  * @version not attributable Date $Date: 2012/10/03 09:58:28 $
  */
 @Stateless
-public class BelegpositionkonvertierungFacBean extends Facade implements
-		BelegpositionkonvertierungFac {
+public class BelegpositionkonvertierungFacBean extends Facade implements BelegpositionkonvertierungFac {
 
 	@PersistenceContext
 	private EntityManager em;
@@ -123,12 +119,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 	@EJB
 	private AngebotstklpositionLocalFac angebotstklPositionLocalFac;
 
-	public AgstklpositionDto[] konvertiereNachAgstklpositionDto(
-			BelegpositionDto[] belegpositionDto, Integer agstklIId,
+	public AgstklpositionDto[] konvertiereNachAgstklpositionDto(BelegpositionDto[] belegpositionDto, Integer agstklIId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<AgstklpositionDto> a = new java.util.ArrayList<AgstklpositionDto>();
 
@@ -143,30 +137,24 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 			AgstklpositionDto zielDto = new AgstklpositionDto();
 
-			if (belegpositionDto[i]
-					.getPositionsartCNr()
+			if (belegpositionDto[i].getPositionsartCNr()
 					.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_HANDEINGABE)
-					|| belegpositionDto[i]
-							.getPositionsartCNr()
+					|| belegpositionDto[i].getPositionsartCNr()
 							.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_IDENT)) {
 
-				cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-						belegpositionDto[i], theClientDto);
+				cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 				// Defaultwerte setzen
-				if (belegpositionDto[i]
-						.getPositionsartCNr()
+				if (belegpositionDto[i].getPositionsartCNr()
 						.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_IDENT)) {
 					if (zielDto.getNGestehungspreis() == null) {
-						BigDecimal gestPreis = ermittleGestehungsPreis(
-								zielDto.getArtikelIId(), theClientDto);
+						BigDecimal gestPreis = ermittleGestehungsPreis(zielDto.getArtikelIId(), theClientDto);
 						zielDto.setNGestehungspreis(gestPreis);
 						zielDto.setFRabattsatz(0.0);
 						zielDto.setNNettoeinzelpreis(gestPreis);
 						zielDto.setNNettogesamtpreis(gestPreis);
 					}
-				} else if (belegpositionDto[i]
-						.getPositionsartCNr()
+				} else if (belegpositionDto[i].getPositionsartCNr()
 						.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_HANDEINGABE)) {
 					zielDto.setNGestehungspreis(BigDecimal.ZERO);
 					zielDto.setFRabattsatz(0.0);
@@ -174,8 +162,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					zielDto.setNNettogesamtpreis(BigDecimal.ZERO);
 				}
 
-				if (belegpositionDto[i]
-						.getPositionsartCNr()
+				if (belegpositionDto[i].getPositionsartCNr()
 						.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_HANDEINGABE)) {
 
 				}
@@ -185,17 +172,13 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 				if (belegpositionDto instanceof AgstklpositionDto[]) {
 					AgstklpositionDto quellDto = (AgstklpositionDto) belegpositionDto[i];
-					zielDto.setFRabattsatz(Helper.cloneDouble(quellDto
-							.getFRabattsatz()));
-					zielDto.setFZusatzrabattsatz(Helper.cloneDouble(quellDto
-							.getFZusatzrabattsatz()));
-					zielDto.setNGestehungspreis(Helper.cloneBigDecimal(quellDto
-							.getNGestehungspreis()));
-					zielDto.setNNettoeinzelpreis(Helper
-							.cloneBigDecimal(quellDto.getNNettoeinzelpreis()));
-					zielDto.setNNettogesamtpreis(Helper
-							.cloneBigDecimal(quellDto.getNNettogesamtpreis()));
+					zielDto.setFRabattsatz(Helper.cloneDouble(quellDto.getFRabattsatz()));
+					zielDto.setFZusatzrabattsatz(Helper.cloneDouble(quellDto.getFZusatzrabattsatz()));
+					zielDto.setNGestehungspreis(Helper.cloneBigDecimal(quellDto.getNGestehungspreis()));
+					zielDto.setNNettoeinzelpreis(Helper.cloneBigDecimal(quellDto.getNNettoeinzelpreis()));
+					zielDto.setNNettogesamtpreis(Helper.cloneBigDecimal(quellDto.getNNettogesamtpreis()));
 					zielDto.setBDrucken(quellDto.getBDrucken());
+					zielDto.setCPosition(quellDto.getCPosition());
 				} else if (belegpositionDto instanceof AnfragepositionDto[]) {
 					AnfragepositionDto quellDto = (AnfragepositionDto) belegpositionDto[i];
 					zielDto.setNNettogesamtpreis(quellDto.getNRichtpreis());
@@ -204,13 +187,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					zielDto.setFRabattsatz(0.0);
 
 					try {
-						LagerDto lagerDto = getLagerFac()
-								.getHauptlagerDesMandanten(theClientDto);
+						LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
 
-						BigDecimal preis = getLagerFac()
-								.getGemittelterGestehungspreisEinesLagers(
-										belegpositionDto[i].getArtikelIId(),
-										lagerDto.getIId(), theClientDto);
+						BigDecimal preis = getLagerFac().getGemittelterGestehungspreisEinesLagers(
+								belegpositionDto[i].getArtikelIId(), lagerDto.getIId(), theClientDto);
 						zielDto.setNGestehungspreis(preis);
 
 					} catch (RemoteException ex) {
@@ -218,36 +198,30 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					}
 				} else if (belegpositionDto instanceof StuecklistepositionDto[]) {
 					StuecklistepositionDto quellDto = (StuecklistepositionDto) belegpositionDto[i];
-					zielDto.setBArtikelbezeichnunguebersteuert(Helper
-							.boolean2Short(false));
+					zielDto.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(false));
 					if (quellDto.getArtikelDto() != null) {
 						if (quellDto.getArtikelDto().getArtikelsprDto() != null) {
-							zielDto.setCBez(quellDto.getArtikelDto()
-									.getArtikelsprDto().getCBez());
+							zielDto.setCBez(quellDto.getArtikelDto().getArtikelsprDto().getCBez());
 						}
-						zielDto.setEinheitCNr(quellDto.getArtikelDto()
-								.getEinheitCNr());
+						zielDto.setEinheitCNr(quellDto.getArtikelDto().getEinheitCNr());
 					}
 
 					zielDto.setBDrucken(quellDto.getBMitdrucken());
+					zielDto.setCPosition(quellDto.getCPosition());
 					zielDto.setFRabattsatz(0.0);
 					zielDto.setNNettoeinzelpreis(new BigDecimal(0));
 					zielDto.setNNettogesamtpreis(new BigDecimal(0));
 					try {
-						LagerDto lagerDto = getLagerFac()
-								.getHauptlagerDesMandanten(theClientDto);
+						LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
 
-						BigDecimal preis = getLagerFac()
-								.getGemittelterGestehungspreisEinesLagers(
-										belegpositionDto[i].getArtikelIId(),
-										lagerDto.getIId(), theClientDto);
+						BigDecimal preis = getLagerFac().getGemittelterGestehungspreisEinesLagers(
+								belegpositionDto[i].getArtikelIId(), lagerDto.getIId(), theClientDto);
 						zielDto.setNGestehungspreis(preis);
 
 						// SP2065
 
 						zielDto.setNMenge(Helper.rundeKaufmaennisch(
-								getStuecklisteFac().berechneZielmenge(
-										quellDto.getIId(), theClientDto), 4));
+								getStuecklisteFac().berechneZielmenge(quellDto.getIId(), theClientDto), 4));
 
 					} catch (RemoteException ex) {
 						throwEJBExceptionLPRespectOld(ex);
@@ -256,20 +230,15 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					BestellpositionDto quellDto = (BestellpositionDto) belegpositionDto[i];
 					zielDto.setBDrucken(quellDto.getBDrucken());
 
-					zielDto.setNNettoeinzelpreis(quellDto
-							.getNNettoeinzelpreis());
-					zielDto.setNNettogesamtpreis(quellDto
-							.getNNettogesamtpreis());
+					zielDto.setNNettoeinzelpreis(quellDto.getNNettoeinzelpreis());
+					zielDto.setNNettogesamtpreis(quellDto.getNNettogesamtpreis());
 					zielDto.setFRabattsatz(quellDto.getDRabattsatz());
 
 					try {
-						LagerDto lagerDto = getLagerFac()
-								.getHauptlagerDesMandanten(theClientDto);
+						LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
 
-						BigDecimal preis = getLagerFac()
-								.getGemittelterGestehungspreisEinesLagers(
-										belegpositionDto[i].getArtikelIId(),
-										lagerDto.getIId(), theClientDto);
+						BigDecimal preis = getLagerFac().getGemittelterGestehungspreisEinesLagers(
+								belegpositionDto[i].getArtikelIId(), lagerDto.getIId(), theClientDto);
 						zielDto.setNGestehungspreis(preis);
 
 					} catch (RemoteException ex) {
@@ -284,49 +253,49 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 				}
 
-				// SP2064
 				try {
-					ParametermandantDto parameterMand = getParameterFac()
-							.getMandantparameter(theClientDto.getMandant(),
-									ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
-									ParameterFac.PARAMETER_KALKULATIONSART);
-					int iKalkulationsart = (Integer) parameterMand
-							.getCWertAsObject();
-					// Aufschlag
-					if (iKalkulationsart == 3
-							&& zielDto.getArtikelIId() != null) {
-
-						// Lief1Preis
-						AgstklDto agstklDto = getAngebotstklFac()
-								.agstklFindByPrimaryKey(agstklIId);
-						zielDto = angebotstklPositionLocalFac
-								.befuellePositionMitPreisenKalkulationsart2(
-										theClientDto,
-										agstklDto.getWaehrungCNr(),
-										zielDto.getArtikelIId(),
-										zielDto.getNMenge(), zielDto);
-
-						parameterMand = getParameterFac().getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
-								ParameterFac.PARAMETER_DEFAULT_AUFSCHLAG);
-						Double aufschlag = (Double) parameterMand
-								.getCWertAsObject();
-						zielDto.setFAufschlag(aufschlag);
-
-						zielDto.setBAufschlaggesamtFixiert(Helper
-								.boolean2Short(false));
-
-						BigDecimal bdAufschlag = Helper.getProzentWert(zielDto
-								.getNNettogesamtpreis(), new BigDecimal(
-								aufschlag), 4);
-
-						zielDto.setNAufschlag(bdAufschlag);
-
-						zielDto.setNNettogesamtmitaufschlag(zielDto
-								.getNNettogesamtpreis().add(bdAufschlag));
-
-					}
+					zielDto.setAgstklIId(agstklIId);
+					zielDto = angebotstklPositionLocalFac.befuelleMitPreisenNachKalkulationsart(zielDto, theClientDto);
+					// SP2064
+					// ParametermandantDto parameterMand = getParameterFac()
+					// .getMandantparameter(theClientDto.getMandant(),
+					// ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
+					// ParameterFac.PARAMETER_KALKULATIONSART);
+					// int iKalkulationsart = (Integer) parameterMand
+					// .getCWertAsObject();
+					// // Aufschlag
+					// if (iKalkulationsart == 3
+					// && zielDto.getArtikelIId() != null) {
+					//
+					// // Lief1Preis
+					// zielDto = angebotstklPositionLocalFac
+					// .befuellePositionMitPreisenKalkulationsart2(
+					// theClientDto,
+					// agstklDto.getWaehrungCNr(),
+					// zielDto.getArtikelIId(),
+					// zielDto.getNMenge(), zielDto);
+					//
+					// parameterMand = getParameterFac().getMandantparameter(
+					// theClientDto.getMandant(),
+					// ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
+					// ParameterFac.PARAMETER_DEFAULT_AUFSCHLAG);
+					// Double aufschlag = (Double) parameterMand
+					// .getCWertAsObject();
+					// zielDto.setFAufschlag(aufschlag);
+					//
+					// zielDto.setBAufschlaggesamtFixiert(Helper
+					// .boolean2Short(false));
+					//
+					// BigDecimal bdAufschlag = Helper.getProzentWert(zielDto
+					// .getNNettogesamtpreis(), new BigDecimal(
+					// aufschlag), 4);
+					//
+					// zielDto.setNAufschlag(bdAufschlag);
+					//
+					// zielDto.setNNettogesamtmitaufschlag(zielDto
+					// .getNNettogesamtpreis().add(bdAufschlag));
+					//
+					// }
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -339,36 +308,41 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 		return (AgstklpositionDto[]) a.toArray(returnArray);
 	}
 
-	public StuecklistepositionDto[] konvertiereNachStklpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public StuecklistepositionDto[] konvertiereNachStklpositionDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<StuecklistepositionDto> a = new java.util.ArrayList<StuecklistepositionDto>();
 
 		for (int i = 0; i < belegpositionDto.length; i++) {
 			StuecklistepositionDto zielDto = new StuecklistepositionDto();
+			
+			
+			if (belegpositionDto instanceof StuecklistearbeitsplanDto[]) {
+				StuecklistearbeitsplanDto quellDto = (StuecklistearbeitsplanDto) belegpositionDto[i];
+				belegpositionDto[i].setPositionsartCNr(com.lp.server.system.service.LocaleFac.POSITIONSART_IDENT);
+				belegpositionDto[i].setNMenge(BigDecimal.ONE);
+				
+				ArtikelDto aDto=getArtikelFac().artikelFindByPrimaryKeySmall(belegpositionDto[i].getArtikelIId(), theClientDto);
+				belegpositionDto[i].setEinheitCNr(aDto.getEinheitCNr());
+			}
+			
 			// ALLGMEINE FELDER
-			if (belegpositionDto[i]
-					.getPositionsartCNr()
+			if (belegpositionDto[i].getPositionsartCNr()
 					.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_HANDEINGABE)
-					|| belegpositionDto[i]
-							.getPositionsartCNr()
+					|| belegpositionDto[i].getPositionsartCNr()
 							.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_IDENT)) {
 
 				zielDto = new StuecklistepositionDto();
-				cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-						belegpositionDto[i], theClientDto);
+				cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 				zielDto.setBMitdrucken(Helper.boolean2Short(false));
 				zielDto.setSHandeingabe(belegpositionDto[i].getCBez());
 
 				MontageartDto[] dtos = null;
 				try {
-					dtos = getStuecklisteFac().montageartFindByMandantCNr(
-							theClientDto);
+					dtos = getStuecklisteFac().montageartFindByMandantCNr(theClientDto);
 				} catch (RemoteException ex) {
 					throwEJBExceptionLPRespectOld(ex);
 				}
@@ -396,11 +370,14 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					zielDto.setNZielmenge(quellDto.getNZielmenge());
 					zielDto.setSHandeingabe(quellDto.getSHandeingabe());
 					zielDto.setStuecklisteIId(quellDto.getStuecklisteIId());
+					zielDto.setBRuestmenge(quellDto.getBRuestmenge());
+					zielDto.setXFormel(quellDto.getXFormel());
 				}
 
 				if (belegpositionDto instanceof AgstklpositionDto[]) {
 					AgstklpositionDto quellDto = (AgstklpositionDto) belegpositionDto[i];
 					zielDto.setBMitdrucken(quellDto.getBDrucken());
+					zielDto.setCPosition(quellDto.getCPosition());
 				} else if (belegpositionDto instanceof AnfragepositionDto[]) {
 					AnfragepositionDto quellDto = (AnfragepositionDto) belegpositionDto[i];
 				} else if (belegpositionDto instanceof BestellpositionDto[]) {
@@ -410,6 +387,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					EinkaufsangebotpositionDto quellDto = (EinkaufsangebotpositionDto) belegpositionDto[i];
 					zielDto.setCKommentar(quellDto.getCBemerkung());
 					zielDto.setCPosition(quellDto.getCPosition());
+					zielDto.setILfdnummer(quellDto.getILfdnummer());
 				} else if (belegpositionDto instanceof LossollmaterialDto[]) {
 					LossollmaterialDto quellDto = (LossollmaterialDto) belegpositionDto[i];
 					int iLosIId = quellDto.getLosIId();
@@ -418,13 +396,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					case BelegpositionDto.COPY_PASTE_MODUS_IST_PREIS_AUS_LOS: {
 						// IstPreis u IstMenge setzen
 						try {
-							BigDecimal bdIstmenge = getFertigungFac()
-									.getAusgegebeneMenge(quellDto.getIId(),
-											null, theClientDto);
-							BigDecimal bdIstPreis = getFertigungFac()
-									.getAusgegebeneMengePreis(
-											quellDto.getIId(), null,
-											theClientDto);
+							BigDecimal bdIstmenge = getFertigungFac().getAusgegebeneMenge(quellDto.getIId(), null,
+									theClientDto);
+							BigDecimal bdIstPreis = getFertigungFac().getAusgegebeneMengePreis(quellDto.getIId(), null,
+									theClientDto);
 							zielDto.setNMenge(bdIstmenge);
 							zielDto.setNKalkpreis(bdIstPreis);
 						} catch (RemoteException ex) {
@@ -446,22 +421,34 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 		}
 
-		StuecklistepositionDto[] returnArray = new StuecklistepositionDto[a
-				.size()];
+		StuecklistepositionDto[] returnArray = new StuecklistepositionDto[a.size()];
 		return (StuecklistepositionDto[]) a.toArray(returnArray);
 
 	}
 
-	public StuecklistearbeitsplanDto[] konvertiereNachStklarbeitsplanDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto) {
+	public StuecklistearbeitsplanDto[] konvertiereNachStklarbeitsplanDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<StuecklistearbeitsplanDto> a = new java.util.ArrayList<StuecklistearbeitsplanDto>();
 
 		for (int i = 0; i < belegpositionDto.length; i++) {
 			StuecklistearbeitsplanDto zielDto = new StuecklistearbeitsplanDto();
+
+			if (belegpositionDto instanceof StuecklistepositionDto[]) {
+
+				StuecklistepositionDto quellDto = (StuecklistepositionDto) belegpositionDto[i];
+				zielDto.setStuecklisteIId(null);
+				zielDto.setStuecklistepositionIId(null);
+				zielDto.setArtikelIId(quellDto.getArtikelIId());
+				zielDto.setLStueckzeit(0L);
+				zielDto.setLRuestzeit(0L);
+				zielDto.setIArbeitsgang(0);
+				zielDto.setBNurmaschinenzeit(Helper.boolean2Short(false));
+				
+
+			}
 
 			if (belegpositionDto instanceof StuecklistearbeitsplanDto[]) {
 				zielDto = (StuecklistearbeitsplanDto) belegpositionDto[i];
@@ -478,8 +465,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setArtikelIId(quellDto.getArtikelIIdTaetigkeit());
 				zielDto.setEinheitCNr(quellDto.getEinheitCNr());
 				zielDto.setIAufspannung(quellDto.getIAufspannung());
-				zielDto.setIMaschinenversatztage(quellDto
-						.getIMaschinenversatztage());
+				zielDto.setIMaschinenversatztage(quellDto.getIMaschinenversatztage());
 				zielDto.setMaschineIId(quellDto.getMaschineIId());
 				zielDto.setLRuestzeit(quellDto.getLRuestzeit());
 				zielDto.setLStueckzeit(quellDto.getLStueckzeit());
@@ -493,6 +479,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setIArbeitsgang(quellDto.getIArbeitsgang());
 				zielDto.setIUnterarbeitsgang(quellDto.getIUnterarbeitsgang());
 				zielDto.setBNurmaschinenzeit(quellDto.getBNurmaschinenzeit());
+				zielDto.setBInitial(quellDto.getBInitial());
 				zielDto.setNMenge(quellDto.getNMenge());
 				zielDto.setArtikelIId(quellDto.getArtikelIId());
 				zielDto.setEinheitCNr(quellDto.getEinheitCNr());
@@ -510,8 +497,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 		}
 
-		StuecklistearbeitsplanDto[] returnArray = new StuecklistearbeitsplanDto[a
-				.size()];
+		StuecklistearbeitsplanDto[] returnArray = new StuecklistearbeitsplanDto[a.size()];
 		return (StuecklistearbeitsplanDto[]) a.toArray(returnArray);
 
 	}
@@ -523,11 +509,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 	 * konvertiereNachAgstklarbeitsplanDto(com.lp.service.BelegpositionDto[],
 	 * com.lp.server.system.service.TheClientDto)
 	 */
-	public AgstklarbeitsplanDto[] konvertiereNachAgstklarbeitsplanDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto) {
+	public AgstklarbeitsplanDto[] konvertiereNachAgstklarbeitsplanDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<AgstklarbeitsplanDto> a = new java.util.ArrayList<AgstklarbeitsplanDto>();
 
@@ -561,6 +546,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setIArbeitsgang(quellDto.getIArbeitsgang());
 				zielDto.setIUnterarbeitsgang(quellDto.getIUnterarbeitsgang());
 				zielDto.setBNurmaschinenzeit(quellDto.getBNurmaschinenzeit());
+				zielDto.setBInitial(quellDto.getBInitial());
 				zielDto.setNMenge(quellDto.getNMenge());
 				zielDto.setArtikelIId(quellDto.getArtikelIId());
 				zielDto.setEinheitCNr(quellDto.getEinheitCNr());
@@ -583,48 +569,41 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 	}
 
-	public EinkaufsangebotpositionDto[] konvertiereNachEinkaufsangebotpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto) {
+	public EinkaufsangebotpositionDto[] konvertiereNachEinkaufsangebotpositionDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<EinkaufsangebotpositionDto> a = new java.util.ArrayList<EinkaufsangebotpositionDto>();
 
 		for (int i = 0; i < belegpositionDto.length; i++) {
 			EinkaufsangebotpositionDto zielDto = new EinkaufsangebotpositionDto();
 			// ALLGMEINE FELDER
-			if (belegpositionDto[i]
-					.getPositionsartCNr()
+			if (belegpositionDto[i].getPositionsartCNr()
 					.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_HANDEINGABE)
-					|| belegpositionDto[i]
-							.getPositionsartCNr()
+					|| belegpositionDto[i].getPositionsartCNr()
 							.equals(com.lp.server.system.service.LocaleFac.POSITIONSART_IDENT)) {
 
 				if (belegpositionDto instanceof EinkaufsangebotpositionDto[]) {
 					zielDto = (EinkaufsangebotpositionDto) belegpositionDto[i];
 				} else {
 					zielDto = new EinkaufsangebotpositionDto();
-					cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-							belegpositionDto[i], theClientDto);
+					cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 					if (belegpositionDto instanceof StuecklistepositionDto[]) {
 
 						StuecklistepositionDto dto = (StuecklistepositionDto) belegpositionDto[i];
-						if (dto.getArtikelDto() != null
-								&& dto.getArtikelDto().getArtikelsprDto() != null) {
-							zielDto.setCBez(dto.getArtikelDto()
-									.getArtikelsprDto().getCBez());
-							zielDto.setCZusatzbez(dto.getArtikelDto()
-									.getArtikelsprDto().getCZbez());
+						if (dto.getArtikelDto() != null && dto.getArtikelDto().getArtikelsprDto() != null) {
+							zielDto.setCBez(dto.getArtikelDto().getArtikelsprDto().getCBez());
+							zielDto.setCZusatzbez(dto.getArtikelDto().getArtikelsprDto().getCZbez());
 						}
 						zielDto.setCPosition(dto.getCPosition());
 						zielDto.setCBemerkung(dto.getCKommentar());
+						zielDto.setILfdnummer(dto.getILfdnummer());
 
 					} else {
 						zielDto.setCBez(belegpositionDto[i].getCBez());
-						zielDto.setCZusatzbez(belegpositionDto[i]
-								.getCZusatzbez());
+						zielDto.setCZusatzbez(belegpositionDto[i].getCZusatzbez());
 
 					}
 					zielDto.setBMitdrucken(Helper.boolean2Short(false));
@@ -636,15 +615,13 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 		}
 
-		EinkaufsangebotpositionDto[] returnArray = new EinkaufsangebotpositionDto[a
-				.size()];
+		EinkaufsangebotpositionDto[] returnArray = new EinkaufsangebotpositionDto[a.size()];
 		return (EinkaufsangebotpositionDto[]) a.toArray(returnArray);
 
 	}
 
-	public BestellvorschlagDto[] konvertiereNachBestellvorschlagDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException {
+	public BestellvorschlagDto[] konvertiereNachBestellvorschlagDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		ArrayList<BestellvorschlagDto> al = new ArrayList<BestellvorschlagDto>();
 		for (int i = 0; i < belegpositionDto.length; i++) {
 			BestellvorschlagDto zielDto = new BestellvorschlagDto();
@@ -654,10 +631,8 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			zielDto.setNZubestellendeMenge(belegpositionDto[i].getNMenge());
 			zielDto.setXTextinhalt(belegpositionDto[i].getXTextinhalt());
 			if (belegpositionDto[i] instanceof AuftragpositionDto) {
-				zielDto.setILieferantId(((AuftragpositionDto) belegpositionDto[i])
-						.getLieferantIId());
-				BigDecimal ekPreis = ((AuftragpositionDto) belegpositionDto[i])
-						.getBdEinkaufpreis();
+				zielDto.setILieferantId(((AuftragpositionDto) belegpositionDto[i]).getLieferantIId());
+				BigDecimal ekPreis = ((AuftragpositionDto) belegpositionDto[i]).getBdEinkaufpreis();
 				if (ekPreis != null) {
 					zielDto.setDRabattsatz(0D);
 					zielDto.setNNettoeinzelpreis(ekPreis);
@@ -667,10 +642,8 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 			}
 			if (belegpositionDto[i] instanceof AngebotpositionDto) {
-				zielDto.setILieferantId(((AngebotpositionDto) belegpositionDto[i])
-						.getLieferantIId());
-				BigDecimal ekPreis = ((AngebotpositionDto) belegpositionDto[i])
-						.getNEinkaufpreis();
+				zielDto.setILieferantId(((AngebotpositionDto) belegpositionDto[i]).getLieferantIId());
+				BigDecimal ekPreis = ((AngebotpositionDto) belegpositionDto[i]).getNEinkaufpreis();
 				if (ekPreis != null) {
 					zielDto.setDRabattsatz(0D);
 					zielDto.setNNettoeinzelpreis(ekPreis);
@@ -684,43 +657,35 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setCBelegartCNr(LocaleFac.BELEGART_BESTELLUNG);
 				zielDto.setDRabattsatz(besPosDto.getDRabattsatz());
 				zielDto.setNNettoeinzelpreis(besPosDto.getNNettoeinzelpreis());
-				zielDto.setBNettopreisuebersteuert(besPosDto
-						.getBNettopreisuebersteuert());
+				zielDto.setBNettopreisuebersteuert(besPosDto.getBNettopreisuebersteuert());
+				zielDto.setGebindeIId(besPosDto.getGebindeIId());
+				zielDto.setNAnzahlgebinde(besPosDto.getNAnzahlgebinde());
 
 				// PJ18006
 				BigDecimal nMaterialzuschlag = besPosDto.getNMaterialzuschlag();
 
-				if (nMaterialzuschlag != null
-						&& besPosDto.getNNettogesamtpreis() != null) {
-					zielDto.setNNettogesamtpreis(besPosDto
-							.getNNettogesamtpreis().subtract(nMaterialzuschlag));
+				if (nMaterialzuschlag != null && besPosDto.getNNettogesamtpreis() != null) {
+					zielDto.setNNettogesamtpreis(besPosDto.getNNettogesamtpreis().subtract(nMaterialzuschlag));
 				} else {
-					zielDto.setNNettogesamtpreis(besPosDto
-							.getNNettogesamtpreis());
+					zielDto.setNNettogesamtpreis(besPosDto.getNNettogesamtpreis());
 				}
 
-				if (nMaterialzuschlag != null
-						&& besPosDto.getNNettogesamtPreisminusRabatte() != null) {
-					zielDto.setNNettoGesamtPreisMinusRabatte(besPosDto
-							.getNNettogesamtPreisminusRabatte().subtract(
-									nMaterialzuschlag));
+				if (nMaterialzuschlag != null && besPosDto.getNNettogesamtPreisminusRabatte() != null) {
+					zielDto.setNNettoGesamtPreisMinusRabatte(
+							besPosDto.getNNettogesamtPreisminusRabatte().subtract(nMaterialzuschlag));
 				} else {
-					zielDto.setNNettoGesamtPreisMinusRabatte(besPosDto
-							.getNNettogesamtPreisminusRabatte());
+					zielDto.setNNettoGesamtPreisMinusRabatte(besPosDto.getNNettogesamtPreisminusRabatte());
 				}
 
 				zielDto.setNRabattbetrag(besPosDto.getNRabattbetrag());
 
 				if (besPosDto.getLieferantIIdWennCopyInBestellvorschlag() != null) {
-					zielDto.setILieferantId(besPosDto
-							.getLieferantIIdWennCopyInBestellvorschlag());
+					zielDto.setILieferantId(besPosDto.getLieferantIIdWennCopyInBestellvorschlag());
 				} else {
 					if (besPosDto.getBelegIId() != null) {
 						BestellungDto bestellungDto = getBestellungFac()
-								.bestellungFindByPrimaryKey(
-										besPosDto.getBelegIId());
-						zielDto.setILieferantId(bestellungDto
-								.getLieferantIIdBestelladresse());
+								.bestellungFindByPrimaryKey(besPosDto.getBelegIId());
+						zielDto.setILieferantId(bestellungDto.getLieferantIIdBestelladresse());
 					}
 				}
 
@@ -734,12 +699,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 	// copypaste: 7 Hier wird die Verknuepfung der einzelnen Positionen
 	// festgelegt
-	public BestellpositionDto[] konvertiereNachBestellpositionDto(
-			BestellungDto bestellungDto, BelegpositionDto[] belegpositionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BestellpositionDto[] konvertiereNachBestellpositionDto(BestellungDto bestellungDto,
+			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<BestellpositionDto> a = new java.util.ArrayList<BestellpositionDto>();
 
@@ -749,8 +712,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			BigDecimal ekPreis = null;
 
 			BestellpositionDto zielDto = new BestellpositionDto();
-			cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-					belegpositionDto[i], theClientDto);
+			cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 			zielDto.setBDrucken(Helper.boolean2Short(true));
 
 			zielDto.setBNettopreisuebersteuert(Helper.boolean2Short(false));
@@ -768,8 +730,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			// NOT NULL Felder pruefen und noetigenfalls mit default-werten
 			// belegen
 			if (zielDto.getBArtikelbezeichnunguebersteuert() == null) {
-				zielDto.setBArtikelbezeichnunguebersteuert(Helper
-						.boolean2Short(false));
+				zielDto.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(false));
 			}
 			if (zielDto.getBMwstsatzUebersteuert() == null) {
 				zielDto.setBMwstsatzUebersteuert(Helper.boolean2Short(false));
@@ -781,16 +742,16 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setNMaterialzuschlag(quellDto.getNMaterialzuschlag());
 				zielDto.setNNettogesamtpreis(quellDto.getNNettogesamtpreis());
 				zielDto.setNRabattbetrag(quellDto.getNRabattbetrag());
-				zielDto.setNNettogesamtPreisminusRabatte(quellDto
-						.getNNettogesamtPreisminusRabatte());
-				zielDto.setBNettopreisuebersteuert(quellDto
-						.getBNettopreisuebersteuert());
+				zielDto.setNNettogesamtPreisminusRabatte(quellDto.getNNettogesamtPreisminusRabatte());
+				zielDto.setBNettopreisuebersteuert(quellDto.getBNettopreisuebersteuert());
 				zielDto.setDRabattsatz(quellDto.getDRabattsatz());
 				zielDto.setPositionsartCNr(quellDto.getPositionsartCNr());
 				zielDto.setBestellungIId(quellDto.getBestellungIId());
 				zielDto.setCABKommentar(quellDto.getCABKommentar());
 				zielDto.setCABNummer(quellDto.getCABNummer());
 				zielDto.setNFixkosten(quellDto.getNFixkosten());
+				zielDto.setGebindeIId(quellDto.getGebindeIId());
+				zielDto.setNAnzahlgebinde(quellDto.getNAnzahlgebinde());
 
 				// Status einer eingefuegten Position nicht kopieren
 				// TManuellvollstaendiggeliefert nicht setzen
@@ -806,20 +767,16 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 				zielDto.setNNettoeinzelpreis(quellDto.getNNettoeinzelpreis());
 				zielDto.setNNettogesamtpreis(quellDto.getNNettogesamtpreis());
-				zielDto.setNNettogesamtPreisminusRabatte(quellDto
-						.getNNettoeinzelpreis());
+				zielDto.setNNettogesamtPreisminusRabatte(quellDto.getNNettoeinzelpreis());
 				zielDto.setNNettoeinzelpreis(quellDto.getNNettoeinzelpreis());
-				if (quellDto.getNNettoeinzelpreis() != null
-						&& quellDto.getNNettogesamtpreis() != null) {
+				if (quellDto.getNNettoeinzelpreis() != null && quellDto.getNNettogesamtpreis() != null) {
 
 					BigDecimal nRabattbetrag = quellDto.getNNettoeinzelpreis()
 							.subtract(quellDto.getNNettogesamtpreis());
 					BigDecimal nRabatt = new BigDecimal(0);
 					if (nRabattbetrag.doubleValue() != 0) {
-						nRabatt = nRabattbetrag.divide((quellDto
-								.getNNettoeinzelpreis().divide(new BigDecimal(
-								100), BigDecimal.ROUND_HALF_EVEN)),
-								BigDecimal.ROUND_HALF_EVEN);
+						nRabatt = nRabattbetrag.divide((quellDto.getNNettoeinzelpreis().divide(new BigDecimal(100),
+								BigDecimal.ROUND_HALF_EVEN)), BigDecimal.ROUND_HALF_EVEN);
 						zielDto.setDRabattsatz(nRabatt.doubleValue());
 					}
 					zielDto.setNRabattbetrag(nRabattbetrag);
@@ -827,18 +784,17 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				}
 			} else if (belegpositionDto instanceof AnfragepositionDto[]) {
 				AnfragepositionDto quellDto = (AnfragepositionDto) belegpositionDto[i];
+				zielDto.setLossollmaterialIId(quellDto.getLossollmaterialIId());
 			} else if (belegpositionDto instanceof StuecklistepositionDto[]) {
 				StuecklistepositionDto quellDto = (StuecklistepositionDto) belegpositionDto[i];
 				zielDto.setBDrucken(quellDto.getBMitdrucken());
 			} else if (belegpositionDto[i] instanceof AuftragpositionDto) {
 
-				ekPreis = ((AuftragpositionDto) belegpositionDto[i])
-						.getBdEinkaufpreis();
+				ekPreis = ((AuftragpositionDto) belegpositionDto[i]).getBdEinkaufpreis();
 
 			} else if (belegpositionDto[i] instanceof AngebotpositionDto) {
 
-				ekPreis = ((AngebotpositionDto) belegpositionDto[i])
-						.getNEinkaufpreis();
+				ekPreis = ((AngebotpositionDto) belegpositionDto[i]).getNEinkaufpreis();
 
 			}
 
@@ -847,33 +803,23 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			if (ekPreis == null) {
 				if (belegpositionDto[i].getArtikelIId() != null) {
 
-					ArtikellieferantDto alDto = getArtikelFac()
-							.getArtikelEinkaufspreis(
-									belegpositionDto[i].getArtikelIId(),
-									bestellungDto
-											.getLieferantIIdBestelladresse(),
-									belegpositionDto[i].getNMenge(),
-									bestellungDto.getWaehrungCNr(),
-									bestellungDto.getDBelegdatum(),
-									theClientDto);
+					ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(
+							belegpositionDto[i].getArtikelIId(), bestellungDto.getLieferantIIdBestelladresse(),
+							belegpositionDto[i].getNMenge(), bestellungDto.getWaehrungCNr(),
+							bestellungDto.getDBelegdatum(), theClientDto);
 
 					if (alDto != null && alDto.getNEinzelpreis() != null) {
 						zielDto.setNNettoeinzelpreis(alDto.getNEinzelpreis());
-						zielDto.setNRabattbetrag(alDto.getNEinzelpreis()
-								.subtract(alDto.getNNettopreis()));
-						zielDto.setNMaterialzuschlag(alDto
-								.getNMaterialzuschlag());
+						zielDto.setNRabattbetrag(alDto.getNEinzelpreis().subtract(alDto.getNNettopreis()));
+						zielDto.setNMaterialzuschlag(alDto.getNMaterialzuschlag());
 
 						zielDto.setNNettogesamtpreis(alDto.getNNettopreis());
-						zielDto.setNNettogesamtPreisminusRabatte(alDto
-								.getNNettopreis());
+						zielDto.setNNettogesamtPreisminusRabatte(alDto.getNNettopreis());
 
 						if (alDto.getNMaterialzuschlag() != null) {
-							zielDto.setNNettogesamtpreis(alDto.getNNettopreis()
-									.add(alDto.getNMaterialzuschlag()));
-							zielDto.setNNettogesamtPreisminusRabatte(alDto
-									.getNNettopreis().add(
-											alDto.getNMaterialzuschlag()));
+							zielDto.setNNettogesamtpreis(alDto.getNNettopreis().add(alDto.getNMaterialzuschlag()));
+							zielDto.setNNettogesamtPreisminusRabatte(
+									alDto.getNNettopreis().add(alDto.getNMaterialzuschlag()));
 						}
 
 						zielDto.setDRabattsatz(alDto.getFRabatt());
@@ -899,38 +845,30 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 	}
 
-	public AnfragepositionDto[] konvertiereNachAnfragepositionDto(
-			AnfrageDto anfrageDto, BelegpositionDto[] belegpositionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public AnfragepositionDto[] konvertiereNachAnfragepositionDto(AnfrageDto anfrageDto,
+			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<AnfragepositionDto> a = new java.util.ArrayList<AnfragepositionDto>();
 
 		for (int i = 0; i < belegpositionDto.length; i++) {
 			// ALLGMEINE FELDER
 			AnfragepositionDto zielDto = new AnfragepositionDto();
-			cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-					belegpositionDto[i], theClientDto);
+			cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 			if (belegpositionDto instanceof AnfragepositionDto[]) {
 				AnfragepositionDto quellDto = (AnfragepositionDto) belegpositionDto[i];
 				zielDto.setNRichtpreis(quellDto.getNRichtpreis());
-			} else {
-				if (anfrageDto.getLieferantIIdAnfrageadresse() != null
-						&& belegpositionDto[i].getPositionsartCNr().equals(
-								AnfrageServiceFac.ANFRAGEPOSITIONART_IDENT)) {
 
-					ArtikellieferantDto alDto = getArtikelFac()
-							.getArtikelEinkaufspreis(
-									belegpositionDto[i].getArtikelIId(),
-									anfrageDto.getLieferantIIdAnfrageadresse(),
-									belegpositionDto[i].getNMenge(),
-									anfrageDto.getWaehrungCNr(),
-									new java.sql.Date(anfrageDto
-											.getTBelegdatum().getTime()),
-									theClientDto);
+			} else {
+				if (anfrageDto.getLieferantIIdAnfrageadresse() != null && belegpositionDto[i].getPositionsartCNr()
+						.equals(AnfrageServiceFac.ANFRAGEPOSITIONART_IDENT)) {
+
+					ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(
+							belegpositionDto[i].getArtikelIId(), anfrageDto.getLieferantIIdAnfrageadresse(),
+							belegpositionDto[i].getNMenge(), anfrageDto.getWaehrungCNr(),
+							new java.sql.Date(anfrageDto.getTBelegdatum().getTime()), theClientDto);
 
 					if (alDto != null && alDto.getNEinzelpreis() != null) {
 						zielDto.setNRichtpreis(alDto.getNNettopreis());
@@ -953,22 +891,17 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 				if (quellDto.getArtikelDto() != null) {
 					if (quellDto.getArtikelDto().getArtikelsprDto() != null) {
-						zielDto.setCBez(quellDto.getArtikelDto()
-								.getArtikelsprDto().getCBez());
+						zielDto.setCBez(quellDto.getArtikelDto().getArtikelsprDto().getCBez());
 
 					}
 				}
 
-				zielDto.setBArtikelbezeichnunguebersteuert(Helper
-						.boolean2Short(false));
+				zielDto.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(false));
 				try {
-					LagerDto lagerDto = getLagerFac()
-							.getHauptlagerDesMandanten(theClientDto);
+					LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
 
-					BigDecimal preis = getLagerFac()
-							.getGemittelterGestehungspreisEinesLagers(
-									belegpositionDto[i].getArtikelIId(),
-									lagerDto.getIId(), theClientDto);
+					BigDecimal preis = getLagerFac().getGemittelterGestehungspreisEinesLagers(
+							belegpositionDto[i].getArtikelIId(), lagerDto.getIId(), theClientDto);
 					zielDto.setNRichtpreis(preis);
 
 				} catch (RemoteException ex) {
@@ -977,6 +910,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			} else if (belegpositionDto instanceof BestellpositionDto[]) {
 				BestellpositionDto quellDto = (BestellpositionDto) belegpositionDto[i];
 				zielDto.setNRichtpreis(quellDto.getNNettoeinzelpreis());
+				zielDto.setLossollmaterialIId(quellDto.getLossollmaterialIId());
 			}
 			a.add(zielDto);
 		}
@@ -985,12 +919,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 		return (AnfragepositionDto[]) a.toArray(returnArray);
 	}
 
-	public AngebotpositionDto[] konvertiereNachAngebotpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public AngebotpositionDto[] konvertiereNachAngebotpositionDto(BelegpositionDto[] belegpositionDto, Integer kundeIId,
+			Timestamp tBelegdatum, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<AngebotpositionDto> a = new java.util.ArrayList<AngebotpositionDto>();
 		for (int i = 0; i < belegpositionDto.length; i++) {
@@ -999,38 +931,34 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 			// Schritt 2a: Positionen aus Verkaufsmodulen
 			if (belegpositionDto[i] instanceof BelegpositionVerkaufDto) {
-				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(
-						zielDto, (BelegpositionVerkaufDto) belegpositionDto[i],
-						theClientDto);
+				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(zielDto,
+						(BelegpositionVerkaufDto) belegpositionDto[i], theClientDto);
 			}
 			// Schritt 2b: Positionen aus anderen Modulen
 			else {
-				cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-						belegpositionDto[i], theClientDto);
+				cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 				// Defaultwerte setzen
-				setzeDefaultVerkaufspreise(zielDto);
+				if (zielDto.getNMenge() != null) {
+					setzeDefaultVerkaufspreise(zielDto);
+					zielDto.setNRabattbetrag(new BigDecimal(0));
+					zielDto.setNMwstbetrag(new BigDecimal(0));
+					zielDto.setNGestehungspreis(new BigDecimal(0));
+				}
 				zielDto.setBNettopreisuebersteuert(Helper.boolean2Short(false));
-				zielDto.setNRabattbetrag(new BigDecimal(0));
-				zielDto.setNMwstbetrag(new BigDecimal(0));
-				zielDto.setNGestehungspreis(new BigDecimal(0));
 
 				if (zielDto.getBRabattsatzuebersteuert() == null) {
-					zielDto.setBRabattsatzuebersteuert(Helper
-							.boolean2Short(false));
+					zielDto.setBRabattsatzuebersteuert(Helper.boolean2Short(false));
 				}
 				if (zielDto.getBMwstsatzuebersteuert() == null) {
-					zielDto.setBMwstsatzuebersteuert(Helper
-							.boolean2Short(false));
+					zielDto.setBMwstsatzuebersteuert(Helper.boolean2Short(false));
 				}
 
 				if (zielDto.getMwstsatzIId() == null) {
-					mwstsatzDto = ermittleMwstSatz(belegpositionDto[i],
-							theClientDto);
+					mwstsatzDto = ermittleMwstSatz(belegpositionDto[i], tBelegdatum, theClientDto);
 					if (mwstsatzDto != null) {
 						zielDto.setMwstsatzIId(mwstsatzDto.getIId());
-						zielDto.setBMwstsatzuebersteuert(Helper
-								.boolean2Short(false));
+						zielDto.setBMwstsatzuebersteuert(Helper.boolean2Short(false));
 					}
 				}
 			}
@@ -1042,21 +970,23 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setNGestehungspreis(quellDto.getNGestehungspreis());
 				zielDto.setNEinkaufpreis(quellDto.getNEinkaufpreis());
 				zielDto.setAgstklIId(quellDto.getAgstklIId());
+				zielDto.setBAlternative(quellDto.getBAlternative());
 				// setNGesamtwertagstklinangebotswaehrung nicht setzen
 			}
 
 			// weitere Default-Eigenschaften setzen
 			// NOT NULL Felder pruefen und noetigenfalls mit default-werten
 			// belegen
-			zielDto.setBAlternative((short) 0);
+			if (zielDto.getBAlternative() == null) {
+				zielDto.setBAlternative((short) 0);
+			}
 
 			// sonstiges
 			if (belegpositionDto instanceof AgstklpositionDto[]) {
 				AgstklpositionDto quellDto = (AgstklpositionDto) belegpositionDto[i];
 				zielDto.setNGestehungspreis(quellDto.getNGestehungspreis());
 				zielDto.setFRabattsatz(quellDto.getFRabattsatz());
-				zielDto.setBRabattsatzuebersteuert(quellDto
-						.getBRabattsatzuebersteuert());
+				zielDto.setBRabattsatzuebersteuert(quellDto.getBRabattsatzuebersteuert());
 				zielDto.setFZusatzrabattsatz(quellDto.getFZusatzrabattsatz());
 				zielDto.setNNettoeinzelpreis(quellDto.getNNettoeinzelpreis());
 				zielDto.setNBruttoeinzelpreis(quellDto.getNNettoeinzelpreis());
@@ -1074,17 +1004,14 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				BigDecimal nBruttoeinzelpreis = null;
 				if (mwstsatzDto != null && mwstsatzDto.getFMwstsatz() != 0.0) {
 					zielDto.setNMwstbetrag(zielDto.getNNettoeinzelpreis()
-							.divide(new BigDecimal(mwstsatzDto.getFMwstsatz()),
-									BigDecimal.ROUND_HALF_EVEN));
-					nBruttoeinzelpreis = zielDto.getNNettoeinzelpreis().add(
-							zielDto.getNMwstbetrag());
+							.divide(new BigDecimal(mwstsatzDto.getFMwstsatz()), BigDecimal.ROUND_HALF_EVEN));
+					nBruttoeinzelpreis = zielDto.getNNettoeinzelpreis().add(zielDto.getNMwstbetrag());
 				} else {
 					nBruttoeinzelpreis = quellDto.getNRichtpreis();
 				}
 				zielDto.setNBruttoeinzelpreis(nBruttoeinzelpreis);
 
-				BigDecimal nGestPreis = ermittleGestehungsPreis(
-						quellDto.getArtikelIId(), theClientDto);
+				BigDecimal nGestPreis = ermittleGestehungsPreis(quellDto.getArtikelIId(), theClientDto);
 				zielDto.setNGestehungspreis(nGestPreis);
 
 			}
@@ -1099,22 +1026,17 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 				if (quellDto.getArtikelDto() != null) {
 					if (quellDto.getArtikelDto().getArtikelsprDto() != null) {
-						zielDto.setCBez(quellDto.getArtikelDto()
-								.getArtikelsprDto().getCBez());
+						zielDto.setCBez(quellDto.getArtikelDto().getArtikelsprDto().getCBez());
 
 					}
 				}
 
-				zielDto.setBArtikelbezeichnunguebersteuert(Helper
-						.boolean2Short(false));
+				zielDto.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(false));
 				try {
-					LagerDto lagerDto = getLagerFac()
-							.getHauptlagerDesMandanten(theClientDto);
+					LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
 
-					BigDecimal preis = getLagerFac()
-							.getGemittelterGestehungspreisEinesLagers(
-									belegpositionDto[i].getArtikelIId(),
-									lagerDto.getIId(), theClientDto);
+					BigDecimal preis = getLagerFac().getGemittelterGestehungspreisEinesLagers(
+							belegpositionDto[i].getArtikelIId(), lagerDto.getIId(), theClientDto);
 					zielDto.setNGestehungspreis(preis);
 
 				} catch (RemoteException ex) {
@@ -1132,17 +1054,14 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				} else {
 					zielDto.setFRabattsatz(new Double(0));
 				}
-				zielDto.setBRabattsatzuebersteuert(quellDto
-						.getBRabattsatzUebersteuert());
+				zielDto.setBRabattsatzuebersteuert(quellDto.getBRabattsatzUebersteuert());
 				if (quellDto.getNNettoeinzelpreis() != null) {
-					zielDto.setNNettoeinzelpreis(quellDto
-							.getNNettoeinzelpreis());
+					zielDto.setNNettoeinzelpreis(quellDto.getNNettoeinzelpreis());
 				} else {
 					zielDto.setNNettoeinzelpreis(new BigDecimal(0));
 				}
 				if (quellDto.getNNettogesamtPreisminusRabatte() != null) {
-					zielDto.setNEinzelpreis(quellDto
-							.getNNettogesamtPreisminusRabatte());
+					zielDto.setNEinzelpreis(quellDto.getNNettogesamtPreisminusRabatte());
 				} else {
 					zielDto.setNEinzelpreis(new BigDecimal(0));
 				}
@@ -1156,10 +1075,14 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				// zielDto.setNBruttoeinzelpreis(new BigDecimal(0));
 				// zielDto.setNEinzelpreisplusversteckteraufschlag(new
 				// BigDecimal(0));
-				BigDecimal nGestPreis = ermittleGestehungsPreis(
-						quellDto.getArtikelIId(), theClientDto);
+				BigDecimal nGestPreis = ermittleGestehungsPreis(quellDto.getArtikelIId(), theClientDto);
 				zielDto.setNGestehungspreis(nGestPreis);
 			}
+
+			// SP6339
+			zielDto = (AngebotpositionDto) mwstsatzBestimmenUndNeuBerechnen(zielDto, kundeIId, tBelegdatum,
+					theClientDto);
+
 			a.add(zielDto);
 		}
 
@@ -1167,13 +1090,11 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 		return (AngebotpositionDto[]) a.toArray(returnArray);
 	}
 
-	public AuftragpositionDto[] konvertiereNachAuftragpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public AuftragpositionDto[] konvertiereNachAuftragpositionDto(BelegpositionDto[] belegpositionDto, Integer kundeIId,
+			Timestamp tBelegdatum, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		java.util.ArrayList<AuftragpositionDto> a = new java.util.ArrayList<AuftragpositionDto>();
 		for (int i = 0; i < belegpositionDto.length; i++) {
@@ -1182,27 +1103,25 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			MwstsatzDto mwstsatzDto = null;
 			// Schritt 2a: Positionen aus Verkaufsmodulen
 			if (belegpositionDto[i] instanceof BelegpositionVerkaufDto) {
-				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(
-						zielDto, (BelegpositionVerkaufDto) belegpositionDto[i],
-						theClientDto);
+				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(zielDto,
+						(BelegpositionVerkaufDto) belegpositionDto[i], theClientDto);
 			}
 			// Schritt 2b: Positionen aus anderen Modulen
 			else {
-				cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-						belegpositionDto[i], theClientDto);
+				cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 				// Defaultwerte setzen
-				setzeDefaultVerkaufspreise(zielDto);
-				zielDto.setNRabattbetrag(new BigDecimal(0));
-				zielDto.setNMwstbetrag(new BigDecimal(0));
+				if (zielDto.getNMenge() != null) {
+					setzeDefaultVerkaufspreise(zielDto);
+					zielDto.setNRabattbetrag(new BigDecimal(0));
+					zielDto.setNMwstbetrag(new BigDecimal(0));
+				}
 				zielDto.setBNettopreisuebersteuert(Helper.boolean2Short(false));
 				if (zielDto.getMwstsatzIId() == null) {
-					mwstsatzDto = ermittleMwstSatz(belegpositionDto[i],
-							theClientDto);
+					mwstsatzDto = ermittleMwstSatz(belegpositionDto[i], tBelegdatum, theClientDto);
 					if (mwstsatzDto != null) {
 						zielDto.setMwstsatzIId(mwstsatzDto.getIId());
-						zielDto.setBMwstsatzuebersteuert(Helper
-								.boolean2Short(false));
+						zielDto.setBMwstsatzuebersteuert(Helper.boolean2Short(false));
 					}
 				}
 
@@ -1227,31 +1146,28 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				AuftragpositionDto quellDto = (AuftragpositionDto) belegpositionDto[i];
 				// echtes Klonen
 				zielDto.setBDrucken(Helper.cloneShort(quellDto.getBDrucken()));
-				zielDto.setNOffeneMenge(Helper.cloneBigDecimal(quellDto
-						.getNOffeneMenge()));
+				zielDto.setNOffeneMenge(Helper.cloneBigDecimal(quellDto.getNOffeneMenge()));
 
 				/*
-				 * PJ 16633 zielDto.setTUebersteuerbarerLiefertermin(new
-				 * Timestamp(quellDto
+				 * PJ 16633 zielDto.setTUebersteuerbarerLiefertermin(new Timestamp(quellDto
 				 * .getTUebersteuerbarerLiefertermin().getTime()));
 				 */
 
 				// SP1059
 				zielDto.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
-				zielDto.setAuftragpositionIIdRahmenposition(Helper
-						.cloneInteger(quellDto
-								.getAuftragpositionIIdRahmenposition()));
-				zielDto.setNRabattbetrag(Helper.cloneBigDecimal(quellDto
-						.getNRabattbetrag()));
-				zielDto.setNMwstbetrag(Helper.cloneBigDecimal(quellDto
-						.getNMwstbetrag()));
+				zielDto.setAuftragpositionIIdRahmenposition(
+						Helper.cloneInteger(quellDto.getAuftragpositionIIdRahmenposition()));
+				zielDto.setNRabattbetrag(Helper.cloneBigDecimal(quellDto.getNRabattbetrag()));
+				zielDto.setNMwstbetrag(Helper.cloneBigDecimal(quellDto.getNMwstbetrag()));
+
+				// SP5588
+				zielDto.setBdEinkaufpreis(Helper.cloneBigDecimal(quellDto.getBdEinkaufpreis()));
 
 			}
 			// Schritt 2f: sonstiges
 			else if (belegpositionDto[i] instanceof AngebotpositionDto) {
 				AngebotpositionDto quellDto = (AngebotpositionDto) belegpositionDto[i];
-				zielDto.setBdEinkaufpreis(Helper.cloneBigDecimal(quellDto
-						.getNEinkaufpreis()));
+				zielDto.setBdEinkaufpreis(Helper.cloneBigDecimal(quellDto.getNEinkaufpreis()));
 				// im moment nichts besonderes
 			} else if (belegpositionDto instanceof AgstklpositionDto[]) {
 				AgstklpositionDto quellDto = (AgstklpositionDto) belegpositionDto[i];
@@ -1280,6 +1196,11 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				myLogger.warn("Belegpositionkonvertierung: Details nicht definiert f\u00FCr "
 						+ belegpositionDto.getClass().getName());
 			}
+
+			// SP6339
+			zielDto = (AuftragpositionDto) mwstsatzBestimmenUndNeuBerechnen(zielDto, kundeIId, tBelegdatum,
+					theClientDto);
+
 			a.add(zielDto);
 		}
 
@@ -1287,12 +1208,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 		return (AuftragpositionDto[]) a.toArray(returnArray);
 	}
 
-	public LossollarbeitsplanDto[] konvertiereNachLossollarbeitsplanDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public LossollarbeitsplanDto[] konvertiereNachLossollarbeitsplanDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		ArrayList<LossollarbeitsplanDto> a = new ArrayList<LossollarbeitsplanDto>();
 		for (int i = 0; i < belegpositionDto.length; i++) {
@@ -1304,8 +1223,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			// anderen Modulen moeglich.
 			if (belegpositionDto[i] instanceof LossollarbeitsplanDto) {
 				LossollarbeitsplanDto quellDto = (LossollarbeitsplanDto) belegpositionDto[i];
-				zielDto.setArtikelIIdTaetigkeit(quellDto
-						.getArtikelIIdTaetigkeit());
+				zielDto.setArtikelIIdTaetigkeit(quellDto.getArtikelIIdTaetigkeit());
 				zielDto.setBNachtraeglich(quellDto.getBNachtraeglich());
 				zielDto.setCKomentar(quellDto.getCKomentar());
 				zielDto.setIArbeitsgangnummer(quellDto.getIArbeitsgangnummer());
@@ -1335,8 +1253,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setBAutoendebeigeht(Helper.boolean2Short(false));
 
 				if (zielDto.getMaschineIId() != null) {
-					MaschineDto mDto = getZeiterfassungFac()
-							.maschineFindByPrimaryKey(zielDto.getMaschineIId());
+					MaschineDto mDto = getZeiterfassungFac().maschineFindByPrimaryKey(zielDto.getMaschineIId());
 					zielDto.setBAutoendebeigeht(mDto.getBAutoendebeigeht());
 				}
 
@@ -1345,25 +1262,21 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setNMenge(quellDto.getNMenge());
 				zielDto.setEinheitCNr(quellDto.getEinheitCNr());
 				zielDto.setIAufspannung(quellDto.getIAufspannung());
-				zielDto.setIMaschinenversatztage(quellDto
-						.getIMaschinenversatztage());
+				zielDto.setIMaschinenversatztage(quellDto.getIMaschinenversatztage());
 				zielDto.setAgartCNr(quellDto.getAgartCNr());
 
 			}
 			a.add(zielDto);
 		}
-		LossollarbeitsplanDto[] returnArray = new LossollarbeitsplanDto[a
-				.size()];
+		LossollarbeitsplanDto[] returnArray = new LossollarbeitsplanDto[a.size()];
 		return (LossollarbeitsplanDto[]) a.toArray(returnArray);
 	}
 
-	public RechnungPositionDto[] konvertiereNachRechnungpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
-		}
+	@Override
+	public RechnungPositionDto[] konvertiereNachRechnungpositionDto(BelegpositionDto[] belegpositionDto,
+			Integer kundeId, Timestamp tBelegDatum, TheClientDto theClientDto) {
+		Validator.dtoNotNull(belegpositionDto, "belegpositionDto");
+
 		ArrayList<RechnungPositionDto> a = new ArrayList<RechnungPositionDto>();
 		for (int i = 0; i < belegpositionDto.length; i++) {
 			// neues Dto erstellen
@@ -1372,36 +1285,31 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			MwstsatzDto mwstsatzDto = null;
 			// Schritt 2a: Positionen aus Verkaufsmodulen
 			if (belegpositionDto[i] instanceof BelegpositionVerkaufDto) {
-				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(
-						zielDto, (BelegpositionVerkaufDto) belegpositionDto[i],
-						theClientDto);
-			}
-
-			// SP3406 Wenn Menge <0, dann 0
-			if (zielDto.getNMenge() != null
-					&& zielDto.getNMenge().doubleValue() < 0) {
-				zielDto.setNMenge(BigDecimal.ZERO);
-			}
-
-			// Schritt 2b: Positionen aus anderen Modulen
-			else {
-				cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-						belegpositionDto[i], theClientDto);
+				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(zielDto,
+						(BelegpositionVerkaufDto) belegpositionDto[i], theClientDto);
+			} else {
+				// Schritt 2b: Positionen aus anderen Modulen
+				cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 				// Defaultwerte setzen
-				setzeDefaultVerkaufspreise(zielDto);
-				zielDto.setNEinzelpreisplusversteckteraufschlag(new BigDecimal(
-						0));
+				if (zielDto.getNMenge() != null) {
+					setzeDefaultVerkaufspreise(zielDto);
+					zielDto.setNEinzelpreisplusversteckteraufschlag(new BigDecimal(0));
+					zielDto.setFKupferzuschlag(0.0);
+				}
 				zielDto.setAuftragpositionIId(null);
-				zielDto.setFKupferzuschlag(0.0);
 
 				if (zielDto.getMwstsatzIId() == null) {
-					mwstsatzDto = ermittleMwstSatz(belegpositionDto[i],
-							theClientDto);
+					mwstsatzDto = ermittleMwstSatz(belegpositionDto[i], tBelegDatum, theClientDto);
 					if (mwstsatzDto != null) {
 						zielDto.setMwstsatzIId(mwstsatzDto.getIId());
 					}
 				}
+			}
+
+			// SP3406 Wenn Menge <0, dann 0
+			if (zielDto.getNMenge() != null && zielDto.getNMenge().signum() < 0) {
+				zielDto.setNMenge(BigDecimal.ZERO);
 			}
 
 			// Schritt 2c: weitere Default-Eigenschaften setzen
@@ -1419,23 +1327,16 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			if (belegpositionDto[i] instanceof RechnungPositionDto) {
 				RechnungPositionDto quellDto = (RechnungPositionDto) belegpositionDto[i];
 				// echtes Klonen
-				zielDto.setAuftragpositionIId(Helper.cloneInteger(quellDto
-						.getAuftragpositionIId()));
+				// SP4104 Auftragpos nicht uebernehmen
+				zielDto.setAuftragpositionIId(null);
 				zielDto.setBDrucken(Helper.cloneShort(quellDto.getBDrucken()));
-				zielDto.setSeriennrChargennrMitMenge(Helper.cloneList(quellDto
-						.getSeriennrChargennrMitMenge()));
-				zielDto.setFKupferzuschlag(Helper.cloneDouble(quellDto
-						.getFKupferzuschlag()));
-				zielDto.setLieferscheinIId(Helper.cloneInteger(quellDto
-						.getLieferscheinIId()));
-				zielDto.setRechnungIId(Helper.cloneInteger(quellDto
-						.getRechnungIId()));
-				zielDto.setRechnungIIdGutschrift(Helper.cloneInteger(quellDto
-						.getRechnungIIdGutschrift()));
-				zielDto.setRechnungpositionartCNr(Helper.cloneString(quellDto
-						.getRechnungpositionartCNr()));
-				zielDto.setRechnungpositionIId(Helper.cloneInteger(quellDto
-						.getRechnungpositionIId()));
+				zielDto.setSeriennrChargennrMitMenge(Helper.cloneList(quellDto.getSeriennrChargennrMitMenge()));
+				zielDto.setFKupferzuschlag(Helper.cloneDouble(quellDto.getFKupferzuschlag()));
+				zielDto.setLieferscheinIId(Helper.cloneInteger(quellDto.getLieferscheinIId()));
+				zielDto.setRechnungIId(Helper.cloneInteger(quellDto.getRechnungIId()));
+				zielDto.setRechnungIIdGutschrift(Helper.cloneInteger(quellDto.getRechnungIIdGutschrift()));
+				zielDto.setRechnungpositionartCNr(Helper.cloneString(quellDto.getRechnungpositionartCNr()));
+				zielDto.setRechnungpositionIId(Helper.cloneInteger(quellDto.getRechnungpositionIId()));
 			}
 			// Schritt 2f: sonstiges
 			else if (belegpositionDto[i] instanceof AngebotpositionDto) {
@@ -1449,8 +1350,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				AuftragpositionDto quellDto = (AuftragpositionDto) belegpositionDto[i];
 				zielDto.setBDrucken(Helper.cloneShort(quellDto.getBDrucken()));
 				// echtes Klonen
-				zielDto.setAuftragpositionIId(Helper.cloneInteger(quellDto
-						.getIId()));
+				zielDto.setAuftragpositionIId(Helper.cloneInteger(quellDto.getIId()));
 			} else if (belegpositionDto[i] instanceof LieferscheinpositionDto) {
 				LieferscheinpositionDto quellDto = (LieferscheinpositionDto) belegpositionDto[i];
 				// im moment nichts besonderes
@@ -1469,6 +1369,9 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				myLogger.warn("Belegpositionkonvertierung: Details nicht definiert f\u00FCr "
 						+ belegpositionDto.getClass().getName());
 			}
+			// SP6339
+			zielDto = (RechnungPositionDto) mwstsatzBestimmenUndNeuBerechnen(zielDto, kundeId, tBelegDatum,
+					theClientDto);
 			a.add(zielDto);
 		}
 
@@ -1476,46 +1379,38 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 		return (RechnungPositionDto[]) a.toArray(returnArray);
 	}
 
-	public LieferscheinpositionDto[] konvertiereNachLieferscheinpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
+	public LieferscheinpositionDto[] konvertiereNachLieferscheinpositionDto(BelegpositionDto[] belegpositionDto,
+			Integer kundeIId, Timestamp tBelegdatum, boolean bMwstSatzNeuBestimmen, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		if (belegpositionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegpositionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegpositionDto == null"));
 		}
 		ArrayList<LieferscheinpositionDto> a = new ArrayList<LieferscheinpositionDto>();
 		for (int i = 0; i < belegpositionDto.length; i++) {
 			// neues Dto erstellen
 			LieferscheinpositionDto zielDto = new LieferscheinpositionDto();
 			zielDto.setBNettopreisuebersteuert(Helper.boolean2Short(false));
-			MwstsatzDto mwstsatzDto = null;
+
 			// Schritt 2a: Positionen aus Verkaufsmodulen
 			if (belegpositionDto[i] instanceof BelegpositionVerkaufDto) {
-				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(
-						zielDto, (BelegpositionVerkaufDto) belegpositionDto[i],
-						theClientDto);
+				cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(zielDto,
+						(BelegpositionVerkaufDto) belegpositionDto[i], theClientDto);
+
 			}
 			// Schritt 2b: Positionen aus anderen Modulen
 			else {
-				cloneBelegpositionDtoFromBelegpositionDto(zielDto,
-						belegpositionDto[i], theClientDto);
+				cloneBelegpositionDtoFromBelegpositionDto(zielDto, belegpositionDto[i], theClientDto);
 
 				// Defaultwerte setzen
-				setzeDefaultVerkaufspreise(zielDto);
-				zielDto.setNRabattbetrag(new BigDecimal(0));
-				zielDto.setNMwstbetrag(new BigDecimal(0));
+				if (zielDto.getNMenge() != null) {
+					setzeDefaultVerkaufspreise(zielDto);
+					zielDto.setNRabattbetrag(new BigDecimal(0));
+					zielDto.setNMwstbetrag(new BigDecimal(0));
+					zielDto.setFKupferzuschlag(0.0);
+				}
 
 				zielDto.setAuftragpositionIId(null);
 
-				zielDto.setFKupferzuschlag(0.0);
-
-				if (zielDto.getMwstsatzIId() == null) {
-					mwstsatzDto = ermittleMwstSatz(belegpositionDto[i],
-							theClientDto);
-					if (mwstsatzDto != null) {
-						zielDto.setMwstsatzIId(mwstsatzDto.getIId());
-					}
-				}
 			}
 
 			// Schritt 2c: weitere Default-Eigenschaften setzen
@@ -1536,19 +1431,11 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					continue;
 				}
 
-				zielDto.setFKupferzuschlag(Helper.cloneDouble(quellDto
-						.getFKupferzuschlag()));
-				zielDto.setLieferscheinIId(Helper.cloneInteger(quellDto
-						.getLieferscheinIId()));
-				zielDto.setLieferscheinpositionartCNr(Helper
-						.cloneString(quellDto.getLieferscheinpositionartCNr()));
-				zielDto.setNMwstbetrag(Helper.cloneBigDecimal(quellDto
-						.getNMwstbetrag()));
-				zielDto.setNRabattbetrag(Helper.cloneBigDecimal(quellDto
-						.getNRabattbetrag()));
+				zielDto.setFKupferzuschlag(Helper.cloneDouble(quellDto.getFKupferzuschlag()));
+				zielDto.setLieferscheinIId(Helper.cloneInteger(quellDto.getLieferscheinIId()));
+				zielDto.setLieferscheinpositionartCNr(Helper.cloneString(quellDto.getLieferscheinpositionartCNr()));
 
-				zielDto.setSeriennrChargennrMitMenge(Helper.cloneList(quellDto
-						.getSeriennrChargennrMitMenge()));
+				zielDto.setSeriennrChargennrMitMenge(Helper.cloneList(quellDto.getSeriennrChargennrMitMenge()));
 
 				// Auftragpos nicht uebernehmen
 				zielDto.setAuftragpositionIId(null);
@@ -1579,6 +1466,8 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setNEinzelpreis(quellDto.getNRichtpreis());
 				zielDto.setNBruttoeinzelpreis(quellDto.getNRichtpreis());
 				zielDto.setNNettoeinzelpreis(quellDto.getNRichtpreis());
+				zielDto.setNNettoeinzelpreisplusversteckteraufschlag(quellDto.getNRichtpreis());
+				zielDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(quellDto.getNRichtpreis());
 			} else if (belegpositionDto instanceof BestellpositionDto[]) {
 				BestellpositionDto quellDto = (BestellpositionDto) belegpositionDto[i];
 				// im moment nichts besonderes
@@ -1586,35 +1475,44 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				myLogger.warn("Belegpositionkonvertierung: Details nicht definiert f\u00FCr "
 						+ belegpositionDto.getClass().getName());
 			}
+
+			// SP7266
+			if (bMwstSatzNeuBestimmen == true) {
+				// SP5720
+				zielDto = (LieferscheinpositionDto) mwstsatzBestimmenUndNeuBerechnen(zielDto, kundeIId, tBelegdatum,
+						theClientDto);
+			}
+
 			a.add(zielDto);
 		}
 
-		LieferscheinpositionDto[] returnArray = new LieferscheinpositionDto[a
-				.size()];
+		LieferscheinpositionDto[] returnArray = new LieferscheinpositionDto[a.size()];
 		return (LieferscheinpositionDto[]) a.toArray(returnArray);
 	}
 
-	public void cloneBelegpositionDtoFromBelegpositionDto(
-			BelegpositionDto target, BelegpositionDto source,
+	public BelegpositionDto cloneBelegpositionDtoFromBelegpositionDto(BelegpositionDto target, BelegpositionDto source,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// alle Eigenschaften uebertragen (Echtes Klonen!!!)
-		target.setPositionsartCNr(Helper.cloneString(source
-				.getPositionsartCNr()));
+		target.setPositionsartCNr(Helper.cloneString(source.getPositionsartCNr()));
+
+		target.setUsecaseIIdQuelle(Helper.cloneInteger(source.getUsecaseIIdQuelle()));
+		target.setIKeyQuelle(Helper.cloneInteger(source.getIId()));
+
+		target.setBInitial(Helper.cloneShort(source.getBInitial()));
 
 		// Bei Handartikel die IID nicht kopieren und ArtikelBez auf
 		// uebersteuert setzen
-		if (target.getPositionsartCNr().equals(
-				LocaleFac.POSITIONSART_HANDEINGABE)) {
+		if (target.getPositionsartCNr().equals(LocaleFac.POSITIONSART_HANDEINGABE)) {
 			setzeHandartikelUebersteuert(target, Boolean.TRUE);
+
 		} else {
 			target.setArtikelIId(Helper.cloneInteger(source.getArtikelIId()));
 			// Artikelbezeichnung uebersteuert darf nicht null sein.
 			if (source.getBArtikelbezeichnunguebersteuert() != null) {
-				target.setBArtikelbezeichnunguebersteuert(Helper
-						.cloneShort(source.getBArtikelbezeichnunguebersteuert()));
+				target.setBArtikelbezeichnunguebersteuert(
+						Helper.cloneShort(source.getBArtikelbezeichnunguebersteuert()));
 			} else {
-				target.setBArtikelbezeichnunguebersteuert(Helper
-						.boolean2Short(Boolean.FALSE));
+				target.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(Boolean.FALSE));
 			}
 		}
 
@@ -1625,6 +1523,20 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 		}
 		target.setCBez(Helper.cloneString(source.getCBez()));
 		target.setCZusatzbez(Helper.cloneString(source.getCZusatzbez()));
+
+		// SP4578
+		if (target.getPositionsartCNr().equals(LocaleFac.POSITIONSART_HANDEINGABE)) {
+
+			if (source instanceof StuecklistepositionDto) {
+				ArtikelDto aDto = ((StuecklistepositionDto) source).getArtikelDto();
+				if (aDto.getArtikelsprDto() != null && aDto.getArtikelsprDto().getCBez() != null) {
+					target.setCBez(aDto.getArtikelsprDto().getCBez());
+				}
+
+			}
+
+		}
+
 		target.setEinheitCNr(Helper.cloneString(source.getEinheitCNr()));
 		// i_id kopieren macht nur sinn, wenn beide aus dem gleichen Modul
 		// kommen
@@ -1632,8 +1544,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			target.setIId(Helper.cloneInteger(source.getIId()));
 		}
 		target.setISort(Helper.cloneInteger(source.getISort()));
-		target.setMediastandardIId(Helper.cloneInteger(source
-				.getMediastandardIId()));
+		target.setMediastandardIId(Helper.cloneInteger(source.getMediastandardIId()));
 		target.setNMenge(Helper.cloneBigDecimal(source.getNMenge()));
 
 		target.setXTextinhalt(Helper.cloneString(source.getXTextinhalt()));
@@ -1652,131 +1563,119 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				// Istpreis wird in konvertiereNach Methode gesetzt
 				LossollmaterialDto quellDto = (LossollmaterialDto) source;
 				/**
-				 * @todo MR: WH Fragen ob Menge oder Ausgegebene Menge genommen
-				 *       werden soll.
+				 * @todo MR: WH Fragen ob Menge oder Ausgegebene Menge genommen werden soll.
 				 */
 				// try {
 				/*
 				 * BigDecimal bdAusgegebeneMenge = null; bdAusgegebeneMenge =
-				 * getFertigungFac().getAusgegebeneMenge(quellDto.getIId(),
-				 * theClientDto);
+				 * getFertigungFac().getAusgegebeneMenge(quellDto.getIId(), theClientDto);
 				 */
 				target.setNMenge(quellDto.getNMenge());
 				/*
-				 * } catch (RemoteException ex) {
-				 * throwEJBExceptionLPRespectOld(ex); }
+				 * } catch (RemoteException ex) { throwEJBExceptionLPRespectOld(ex); }
 				 */
 			} else {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_COPY_PASTE,
-						new Exception(
-								"Fehler bei C&P: keine Instanz von LossollmaterialDto"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_COPY_PASTE,
+						new Exception("Fehler bei C&P: keine Instanz von LossollmaterialDto"));
 			}
 		}
 			break;
 		default: {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_COPY_PASTE,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_COPY_PASTE,
 					new Exception("Fehler bei C&P: unbekannter iCopyPasteModus"));
 		}
 		}
+		return target;
 	}
 
 	public BelegpositionVerkaufDto cloneBelegpositionVerkaufDtoFromBelegpositionVerkaufDto(
-			BelegpositionVerkaufDto target, BelegpositionVerkaufDto source,
-			TheClientDto theClientDto) {
+			BelegpositionVerkaufDto target, BelegpositionVerkaufDto source, TheClientDto theClientDto) {
 		// Basiseigenschaften uebertragen
 		cloneBelegpositionDtoFromBelegpositionDto(target, source, theClientDto);
 		// alle weiteren Eigenschaften uebertragen
-		target.setBMwstsatzuebersteuert(Helper.cloneShort(source
-				.getBMwstsatzuebersteuert()));
-		target.setBNettopreisuebersteuert(Helper.cloneShort(source
-				.getBNettopreisuebersteuert()));
-		target.setBRabattsatzuebersteuert(Helper.cloneShort(source
-				.getBRabattsatzuebersteuert()));
+		target.setBMwstsatzuebersteuert(Helper.cloneShort(source.getBMwstsatzuebersteuert()));
+		target.setBNettopreisuebersteuert(Helper.cloneShort(source.getBNettopreisuebersteuert()));
+		target.setBRabattsatzuebersteuert(Helper.cloneShort(source.getBRabattsatzuebersteuert()));
 		target.setFRabattsatz(Helper.cloneDouble(source.getFRabattsatz()));
-		target.setFZusatzrabattsatz(Helper.cloneDouble(source
-				.getFZusatzrabattsatz()));
+		target.setFZusatzrabattsatz(Helper.cloneDouble(source.getFZusatzrabattsatz()));
 		target.setMwstsatzIId(Helper.cloneInteger(source.getMwstsatzIId()));
 		target.setVerleihIId(Helper.cloneInteger(source.getVerleihIId()));
 		// Preise
-		target.setNBruttoeinzelpreis(Helper.cloneBigDecimal(source
-				.getNBruttoeinzelpreis()));
+		target.setNBruttoeinzelpreis(Helper.cloneBigDecimal(source.getNBruttoeinzelpreis()));
 		target.setCLvposition(source.getCLvposition());
 		target.setKostentraegerIId(source.getKostentraegerIId());
 		target.setNEinzelpreis(Helper.cloneBigDecimal(source.getNEinzelpreis()));
-		target.setNMaterialzuschlag(Helper.cloneBigDecimal(source
-				.getNMaterialzuschlag()));
-		target.setNEinzelpreisplusversteckteraufschlag(Helper
-				.cloneBigDecimal(source
-						.getNEinzelpreisplusversteckteraufschlag()));
-		target.setNNettoeinzelpreis(Helper.cloneBigDecimal(source
-				.getNNettoeinzelpreis()));
-		target.setNNettoeinzelpreisplusversteckteraufschlag(Helper
-				.cloneBigDecimal(source
-						.getNNettoeinzelpreisplusversteckteraufschlag()));
-		target.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(Helper.cloneBigDecimal(source
-				.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte()));
+		target.setNMaterialzuschlag(Helper.cloneBigDecimal(source.getNMaterialzuschlag()));
+		target.setTMaterialzuschlagDatum(source.getTMaterialzuschlagDatum());
+		target.setNMaterialzuschlagKurs(source.getNMaterialzuschlagKurs());
+		target.setNMaterialzuschlag(Helper.cloneBigDecimal(source.getNMaterialzuschlag()));
+		target.setNEinzelpreisplusversteckteraufschlag(
+				Helper.cloneBigDecimal(source.getNEinzelpreisplusversteckteraufschlag()));
+		target.setNNettoeinzelpreis(Helper.cloneBigDecimal(source.getNNettoeinzelpreis()));
+		target.setNNettoeinzelpreisplusversteckteraufschlag(
+				Helper.cloneBigDecimal(source.getNNettoeinzelpreisplusversteckteraufschlag()));
+		target.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+				Helper.cloneBigDecimal(source.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte()));
 		target.setTypCNr(source.getTypCNr());
 
 		target.setLieferantIId(source.getLieferantIId());
-		target.setNNettoeinzelpreisplusversteckteraufschlag(Helper
-				.cloneBigDecimal(source
-						.getNNettoeinzelpreisplusversteckteraufschlag()));
+		target.setNNettoeinzelpreisplusversteckteraufschlag(
+				Helper.cloneBigDecimal(source.getNNettoeinzelpreisplusversteckteraufschlag()));
+
+		target.setNDimMenge(source.getNDimMenge());
+		target.setNDimHoehe(source.getNDimHoehe());
+		target.setNDimBreite(source.getNDimBreite());
+		target.setNDimTiefe(source.getNDimTiefe());
 
 		if (source instanceof AuftragpositionDto) {
 			if (target instanceof AngebotpositionDto) {
-				((AngebotpositionDto) target)
-						.setNMwstbetrag(((AuftragpositionDto) source)
-								.getNMwstbetrag());
-				((AngebotpositionDto) target)
-						.setNRabattbetrag(((AuftragpositionDto) source)
-								.getNRabattbetrag());
+				((AngebotpositionDto) target).setNMwstbetrag(((AuftragpositionDto) source).getNMwstbetrag());
+				((AngebotpositionDto) target).setNRabattbetrag(((AuftragpositionDto) source).getNRabattbetrag());
 			}
 			if (target instanceof LieferscheinpositionDto) {
-				((LieferscheinpositionDto) target)
-						.setNMwstbetrag(((AuftragpositionDto) source)
-								.getNMwstbetrag());
-				((LieferscheinpositionDto) target)
-						.setNRabattbetrag(((AuftragpositionDto) source)
-								.getNRabattbetrag());
+				((LieferscheinpositionDto) target).setNMwstbetrag(((AuftragpositionDto) source).getNMwstbetrag());
+				((LieferscheinpositionDto) target).setNRabattbetrag(((AuftragpositionDto) source).getNRabattbetrag());
 			}
 		}
 		if (source instanceof AngebotpositionDto) {
 			if (target instanceof AuftragpositionDto) {
-				((AuftragpositionDto) target)
-						.setNMwstbetrag(((AngebotpositionDto) source)
-								.getNMwstbetrag());
-				((AuftragpositionDto) target)
-						.setNRabattbetrag(((AngebotpositionDto) source)
-								.getNRabattbetrag());
+				((AuftragpositionDto) target).setNMwstbetrag(((AngebotpositionDto) source).getNMwstbetrag());
+				((AuftragpositionDto) target).setNRabattbetrag(((AngebotpositionDto) source).getNRabattbetrag());
 			}
 			if (target instanceof LieferscheinpositionDto) {
-				((LieferscheinpositionDto) target)
-						.setNMwstbetrag(((AngebotpositionDto) source)
-								.getNMwstbetrag());
-				((LieferscheinpositionDto) target)
-						.setNRabattbetrag(((AngebotpositionDto) source)
-								.getNRabattbetrag());
+				((LieferscheinpositionDto) target).setNMwstbetrag(((AngebotpositionDto) source).getNMwstbetrag());
+				((LieferscheinpositionDto) target).setNRabattbetrag(((AngebotpositionDto) source).getNRabattbetrag());
 			}
 
 		}
 		if (source instanceof LieferscheinpositionDto) {
 			if (target instanceof AuftragpositionDto) {
-				((AuftragpositionDto) target)
-						.setNMwstbetrag(((LieferscheinpositionDto) source)
-								.getNMwstbetrag());
-				((AuftragpositionDto) target)
-						.setNRabattbetrag(((LieferscheinpositionDto) source)
-								.getNRabattbetrag());
+				((AuftragpositionDto) target).setNMwstbetrag(((LieferscheinpositionDto) source).getNMwstbetrag());
+				((AuftragpositionDto) target).setNRabattbetrag(((LieferscheinpositionDto) source).getNRabattbetrag());
 			}
 			if (target instanceof AngebotpositionDto) {
-				((AngebotpositionDto) target)
-						.setNMwstbetrag(((LieferscheinpositionDto) source)
-								.getNMwstbetrag());
-				((AngebotpositionDto) target)
-						.setNRabattbetrag(((LieferscheinpositionDto) source)
-								.getNRabattbetrag());
+				((AngebotpositionDto) target).setNMwstbetrag(((LieferscheinpositionDto) source).getNMwstbetrag());
+				((AngebotpositionDto) target).setNRabattbetrag(((LieferscheinpositionDto) source).getNRabattbetrag());
+			}
+
+		}
+
+		if (source instanceof RechnungPositionDto) {
+			// SP4394
+			if (source.getArtikelIId() != null
+					&& source.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte() != null
+					&& source.getNBruttoeinzelpreis() != null) {
+
+				target.setNMwstbetrag(source.getNBruttoeinzelpreis()
+						.subtract(source.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte()));
+			}
+			if (source.getArtikelIId() != null && source.getFRabattsatz() != null
+					&& source.getNNettoeinzelpreis() != null) {
+
+				BigDecimal bdRabattbetrag = source.getNEinzelpreis()
+						.multiply(new BigDecimal(source.getFRabattsatz().doubleValue())).movePointLeft(2);
+				target.setNRabattbetrag(bdRabattbetrag);
+
 			}
 
 		}
@@ -1785,15 +1684,12 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 	}
 
-	private BigDecimal ermittleGestehungsPreis(Integer artikelIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	private BigDecimal ermittleGestehungsPreis(Integer artikelIId, TheClientDto theClientDto) throws EJBExceptionLP {
 		BigDecimal preis = new BigDecimal(0);
 		try {
-			LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(
-					theClientDto);
+			LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
 
-			preis = getLagerFac().getGemittelterGestehungspreisEinesLagers(
-					artikelIId, lagerDto.getIId(), theClientDto);
+			preis = getLagerFac().getGemittelterGestehungspreisEinesLagers(artikelIId, lagerDto.getIId(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -1801,182 +1697,33 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 	}
 
 	/**
-	 * Ermittle MWST Satz aus Mandantparameter
-	 * PARAMETER_KUNDEN_POSITIONSKONTIERUNG oder aus oKundeOderLieferant. Ist
-	 * belegpositionDto vom Typ BelegpositionVerkaufDto so muss mwstsatzIId
-	 * gesetzt sein.
-	 * 
-	 * @param belegpositionDto
-	 *            BelegpositionDto Belegposition aus dem der MWST Satz geholt
-	 *            werden soll.
-	 * @param theClientDto
-	 *            TheClientDto
-	 * @return MwstsatzDto
-	 */
-	private MwstsatzDto ermittleMwstSatz(BelegpositionDto belegpositionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		MwstsatzDto mwstsatzDto = null;
-
-		// MWST Satz nur wenn Artikel oder Handeingabe
-		if (belegpositionDto.getPositionsartCNr().equalsIgnoreCase(
-				AnfrageServiceFac.ANFRAGEPOSITIONART_HANDEINGABE)
-				|| belegpositionDto.getPositionsartCNr().equalsIgnoreCase(
-						AnfrageServiceFac.ANFRAGEPOSITIONART_IDENT)) {
-
-			// VerkaufDto muss bereits MWSTSatz IID haben
-			if (belegpositionDto instanceof BelegpositionVerkaufDto) {
-				BelegpositionVerkaufDto belegpositionVKDto = (BelegpositionVerkaufDto) belegpositionDto;
-				Integer mwstSatzIId = belegpositionVKDto.getMwstsatzIId();
-				if (mwstSatzIId == null) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
-							new Exception(
-									"MwstsatzIId von BelegpositionVerkaufDto == null"));
-				} else {
-					try {
-						mwstsatzDto = getMandantFac().mwstsatzFindByPrimaryKey(
-								mwstSatzIId, theClientDto);
-					} catch (RemoteException ex1) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_BEI_FIND,
-								new Exception(
-										"MwstsatzDto von BelegpositionVerkaufDto == null",
-										ex1));
-					}
-				}
-				return mwstsatzDto;
-			}
-
-			// MWSTSatz fuer Einkaufsmodule setzen
-
-			// Mandantenparameter fuer Positionskontierung bestimmen
-			ParametermandantDto parameterPositionskontierung = null;
-			try {
-				parameterPositionskontierung = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_KUNDEN,
-								ParameterFac.PARAMETER_KUNDEN_POSITIONSKONTIERUNG);
-			} catch (RemoteException ex) {
-				throwEJBExceptionLPRespectOld(ex);
-			}
-
-			boolean bDefaultMwstsatzAusArtikel = (Boolean) parameterPositionskontierung
-					.getCWertAsObject();
-			// Mwstsatz aus Artikel
-			if (bDefaultMwstsatzAusArtikel) {
-				ArtikelDto artikelDto = null;
-				try {
-					artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-							belegpositionDto.getArtikelIId(), theClientDto);
-
-					mwstsatzDto = getMandantFac()
-							.mwstsatzFindByMwstsatzbezIIdAktuellster(
-									artikelDto.getMwstsatzbezIId(),
-									theClientDto);
-				} catch (RemoteException ex) {
-					throwEJBExceptionLPRespectOld(ex);
-				}
-
-			}
-
-			else {
-				// MWST Satz setzen
-				// Default MWST aus Mandant holen
-				try {
-					MandantDto mandantDto = getMandantFac()
-							.mandantFindByPrimaryKey(theClientDto.getMandant(),
-									theClientDto);
-					mwstsatzDto = getMandantFac()
-							.mwstsatzFindByMwstsatzbezIIdAktuellster(
-									mandantDto
-											.getMwstsatzbezIIdStandardinlandmwstsatz(),
-									theClientDto);
-				} catch (RemoteException ex) {
-					throwEJBExceptionLPRespectOld(ex);
-				}
-
-				// Einkauf: MWST Satz aus Lieferant
-				if (belegpositionDto instanceof AnfragepositionDto) {
-					AnfragepositionDto quellDto = (AnfragepositionDto) belegpositionDto;
-					AnfrageDto anfrageDto = null;
-					try {
-						anfrageDto = getAnfrageFac().anfrageFindByPrimaryKey(
-								quellDto.getBelegIId(), theClientDto);
-						LieferantDto lieferantDto = getLieferantFac()
-								.lieferantFindByPrimaryKey(
-										anfrageDto
-												.getLieferantIIdAnfrageadresse(),
-										theClientDto);
-
-						mwstsatzDto = getMandantFac()
-								.mwstsatzFindByMwstsatzbezIIdAktuellster(
-										lieferantDto.getMwstsatzbezIId(),
-										theClientDto);
-					} catch (RemoteException ex) {
-						throwEJBExceptionLPRespectOld(ex);
-					}
-
-				} else if (belegpositionDto instanceof BestellpositionDto) {
-					BestellpositionDto quellDto = (BestellpositionDto) belegpositionDto;
-					BestellungDto bestellungDto = null;
-					try {
-						if (quellDto.getBelegIId() != null) {
-							bestellungDto = getBestellungFac()
-									.bestellungFindByPrimaryKey(
-											quellDto.getBelegIId());
-							LieferantDto lieferantDto = getLieferantFac()
-									.lieferantFindByPrimaryKey(
-											bestellungDto
-													.getLieferantIIdBestelladresse(),
-											theClientDto);
-
-							mwstsatzDto = getMandantFac()
-									.mwstsatzFindByMwstsatzbezIIdAktuellster(
-											lieferantDto.getMwstsatzbezIId(),
-											theClientDto);
-						}
-					} catch (RemoteException ex2) {
-						throwEJBExceptionLPRespectOld(ex2);
-					}
-				}
-			}
-
-		}
-		return mwstsatzDto;
-	}
-
-	/**
 	 * Wenn von Einkauf in Verkauf kopiert wird muessen die Preisfelder
 	 * zurueckgesetzt werden
 	 * 
-	 * @param zielDto
-	 *            RechnungPositionDto
+	 * @param zielDto RechnungPositionDto
 	 */
 	private void setzeDefaultVerkaufspreise(BelegpositionVerkaufDto zielDto) {
 		zielDto.setNNettoeinzelpreis(new BigDecimal(0));
 		zielDto.setNNettoeinzelpreisplusversteckteraufschlag(new BigDecimal(0));
+		zielDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(new BigDecimal(0));
 		zielDto.setNBruttoeinzelpreis(new BigDecimal(0));
 		zielDto.setNEinzelpreis(new BigDecimal(0));
 		zielDto.setFRabattsatz(0.0);
 		zielDto.setFZusatzrabattsatz(0.0);
 	}
 
-	private void setzeHandartikelUebersteuert(BelegpositionDto positionDto,
-			boolean bUebersteuert) {
+	private void setzeHandartikelUebersteuert(BelegpositionDto positionDto, boolean bUebersteuert) {
 		// Wenn Handeingabe, ArtikelID nicht mitkopieren,Artikelbezeichnung auf
 		// uebersteuert setzen
-		if (positionDto.getPositionsartCNr().equals(
-				LocaleFac.POSITIONSART_HANDEINGABE)) {
+		if (positionDto.getPositionsartCNr().equals(LocaleFac.POSITIONSART_HANDEINGABE)) {
 			positionDto.setArtikelIId(null);
-			positionDto.setBArtikelbezeichnunguebersteuert(Helper
-					.boolean2Short(bUebersteuert));
+			positionDto.setBArtikelbezeichnunguebersteuert(Helper.boolean2Short(bUebersteuert));
 
 		}
 	}
 
-	public WartungsschritteDto[] konvertiereNachWartungsschritteDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto) {
+	public WartungsschritteDto[] konvertiereNachWartungsschritteDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) {
 
 		ArrayList<WartungsschritteDto> al = new ArrayList<WartungsschritteDto>();
 
@@ -1986,11 +1733,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 				WartungsschritteDto zielDto = new WartungsschritteDto();
 
-				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-						belegpositionDto[i].getArtikelIId(), theClientDto);
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(belegpositionDto[i].getArtikelIId(),
+						theClientDto);
 
-				if (aDto.getArtikelartCNr().equals(
-						ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
+				if (aDto.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
 					zielDto.setArtikelIId(belegpositionDto[i].getArtikelIId());
 				} else {
 					continue;
@@ -1998,17 +1744,14 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 
 				zielDto.setLDauer(new Long(0));
 
-				zielDto.setTAbdurchfuehren(Helper.cutTimestamp(new Timestamp(
-						System.currentTimeMillis())));
+				zielDto.setTAbdurchfuehren(Helper.cutTimestamp(new Timestamp(System.currentTimeMillis())));
 				zielDto.setAuftragwiederholungsintervallCNr(AuftragServiceFac.AUFTRAGWIEDERHOLUNGSINTERVALL_MONATLICH);
 
 				if (belegpositionDto instanceof WartungsschritteDto[]) {
 					WartungsschritteDto quellDto = (WartungsschritteDto) belegpositionDto[i];
-					zielDto.setPersonalgruppeIId(quellDto
-							.getPersonalgruppeIId());
+					zielDto.setPersonalgruppeIId(quellDto.getPersonalgruppeIId());
 					zielDto.setTAbdurchfuehren(quellDto.getTAbdurchfuehren());
-					zielDto.setAuftragwiederholungsintervallCNr(quellDto
-							.getAuftragwiederholungsintervallCNr());
+					zielDto.setAuftragwiederholungsintervallCNr(quellDto.getAuftragwiederholungsintervallCNr());
 					zielDto.setLDauer(quellDto.getLDauer());
 					zielDto.setTagesartIId(quellDto.getTagesartIId());
 
@@ -2018,8 +1761,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 					Collection<?> cl = query.getResultList();
 
 					if (cl.size() > 0) {
-						Personalgruppe p = (Personalgruppe) cl.iterator()
-								.next();
+						Personalgruppe p = (Personalgruppe) cl.iterator().next();
 						zielDto.setPersonalgruppeIId(p.getIId());
 						al.add(zielDto);
 					}
@@ -2034,8 +1776,8 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 		return (WartungsschritteDto[]) al.toArray(returnArray);
 	}
 
-	public WartungslisteDto[] konvertiereNachWartungslisteDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto) {
+	public WartungslisteDto[] konvertiereNachWartungslisteDto(BelegpositionDto[] belegpositionDto,
+			TheClientDto theClientDto) {
 
 		ArrayList<WartungslisteDto> al = new ArrayList<WartungslisteDto>();
 
@@ -2043,11 +1785,10 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 			WartungslisteDto zielDto = new WartungslisteDto();
 
 			if (belegpositionDto[i].getArtikelIId() != null) {
-				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-						belegpositionDto[i].getArtikelIId(), theClientDto);
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(belegpositionDto[i].getArtikelIId(),
+						theClientDto);
 
-				if (aDto.getArtikelartCNr().equals(
-						ArtikelFac.ARTIKELART_HANDARTIKEL)) {
+				if (aDto.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_HANDARTIKEL)) {
 					zielDto.setCBez(belegpositionDto[i].getCBez());
 				} else {
 					zielDto.setArtikelIId(belegpositionDto[i].getArtikelIId());
@@ -2069,8 +1810,7 @@ public class BelegpositionkonvertierungFacBean extends Facade implements
 				zielDto.setTPersonalVeraltet(quellDto.getTPersonalVeraltet());
 				zielDto.settVeraltet(quellDto.getTVeraltet());
 				zielDto.setXBemerkung(quellDto.getXBemerkung());
-				zielDto.setPersonalIIdVeraltet(quellDto
-						.getPersonalIIdVeraltet());
+				zielDto.setPersonalIIdVeraltet(quellDto.getPersonalIIdVeraltet());
 
 			}
 

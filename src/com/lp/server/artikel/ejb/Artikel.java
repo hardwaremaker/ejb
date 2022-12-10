@@ -43,28 +43,32 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.server.util.ICNr;
 
 @NamedQueries({
 		@NamedQuery(name = "ArtikelfindByCNrMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cNr = ?1 AND c.mandantCNr=?2"),
+		@NamedQuery(name = "ArtikelfindByCReferenznrMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cReferenznr = ?1 AND c.mandantCNr=?2"),
 		@NamedQuery(name = "ArtikelfindByArtikelIIdErsatz", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.artikelIIdErsatz = ?1"),
 		@NamedQuery(name = "ArtikelfindByCVerkaufseannrMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cVerkaufseannr = ?1 AND c.mandantCNr=?2"),
 		@NamedQuery(name = "ArtikelfindByCVerpackungseannrMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cVerpackungseannr = ?1 AND c.mandantCNr=?2"),
 		@NamedQuery(name = "ArtikelfindByCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cNr = ?1"),
 		@NamedQuery(name = "ArtikelfindByArtgruIIdMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = ?1 AND c.artgruIId = ?2"),
-		@NamedQuery(name = "ArtikelfindByArtgruIIdMandantCNrWithDate", 
-			query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = ?1 AND c.artgruIId = ?2 AND c.tAendern >= ?3"),
-		@NamedQuery(name = ArtikelQuery.ByMandantCNrShopgruppeIId,
-			query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.shopgruppeIId = :id"),
-		@NamedQuery(name = ArtikelQuery.ByMandantCNrShopgruppeIIdWithDate,
-			query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.shopgruppeIId = :id AND c.tAendern >= :tChanged"),	
-		@NamedQuery(name = ArtikelQuery.ByMandantCNrWithDate,
-			query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.shopgruppeIId IS NOT NULL AND c.bVersteckt = 0 AND c.tAendern >= :tChanged")	
+		@NamedQuery(name = "ArtikelfindByArtgruIIdMandantCNrWithDate", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = ?1 AND c.artgruIId = ?2 AND c.tAendern >= ?3"),
+		@NamedQuery(name = ArtikelQuery.ByMandantCNrShopgruppeIId, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.shopgruppeIId = :id"),
+		@NamedQuery(name = ArtikelQuery.ByMandantCNrShopgruppeIIdWithDate, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.shopgruppeIId = :id AND c.tAendern >= :tChanged"),
+		@NamedQuery(name = ArtikelQuery.ByMandantCNrWithDate, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.shopgruppeIId IS NOT NULL AND c.bVersteckt = 0 AND c.tAendern >= :tChanged"),
+		@NamedQuery(name = ArtikelQuery.ByMandantCNr4VendingId, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.cUL = :fourVendingId"),
+		@NamedQuery(name = ArtikelQuery.ByMandantCNr4VendingIdNotNull, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND c.cUL IS NOT NULL"),
+		@NamedQuery(name = ArtikelQuery.MaxCUl, query = "SELECT MAX(CAST(c.cUL AS integer)) FROM Artikel c"),
+		@NamedQuery(name = ArtikelQuery.ByArtikelnrherstellerMandantCNr, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cArtikelnrhersteller = :cnr AND c.mandantCNr= :mandant"),
+		@NamedQuery(name = ArtikelQuery.ByArtikelCNrSP8207, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.mandantCNr = :mandant AND REPLACE(c.cNr, '-', '') like :cnr ORDER BY c.cNr ASC"),
+		@NamedQuery(name = ArtikelQuery.ByArtikelCNrHerstellerkopplung, query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cNr like :cNr || '%' || :herstellerKuerzel")
 		})
 @Entity
-@Table(name = "WW_ARTIKEL")
+@Table(name = ITablenames.WW_ARTIKEL)
 public class Artikel implements Serializable, ICNr {
-	
+
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -78,16 +82,133 @@ public class Artikel implements Serializable, ICNr {
 	@Column(name = "C_ARTIKELNRHERSTELLER")
 	private String cArtikelnrhersteller;
 
+	@Column(name = "B_VKPREISPFLICHTIG")
+	private Short bVkpreispflichtig;
+	
+	public Short getBVkpreispflichtig() {
+		return bVkpreispflichtig;
+	}
+
+	public void setBVkpreispflichtig(Short bVkpreispflichtig) {
+		this.bVkpreispflichtig = bVkpreispflichtig;
+	}
+
+
+	@Column(name = "I_EXTERNER_ARBEITSGANG")
+	private Integer iExternerArbeitsgang;
+	
+	public Integer getIExternerArbeitsgang() {
+		return iExternerArbeitsgang;
+	}
+
+	public void setIExternerArbeitsgang(Integer iExternerArbeitsgang) {
+		this.iExternerArbeitsgang = iExternerArbeitsgang;
+	}
+
+	@Column(name = "PERSONAL_I_ID_FREIGABE")
+	private Integer personalIIdFreigabe;
+
+	@Column(name = "T_FREIGABE")
+	private Timestamp tFreigabe;
+	
+	public Integer getPersonalIIdFreigabe() {
+		return personalIIdFreigabe;
+	}
+
+	public void setPersonalIIdFreigabe(Integer personalIIdFreigabe) {
+		this.personalIIdFreigabe = personalIIdFreigabe;
+	}
+
+	public Timestamp getTFreigabe() {
+		return tFreigabe;
+	}
+
+	public void setTFreigabe(Timestamp tFreigabe) {
+		this.tFreigabe = tFreigabe;
+	}
+	
+	@Column(name = "C_FREIGABE_ZURUECKGENOMMEN")
+	private String cFreigabeZuerueckgenommen;
+	
+	public String getCFreigabeZuerueckgenommen() {
+		return cFreigabeZuerueckgenommen;
+	}
+
+	public void setCFreigabeZuerueckgenommen(String cFreigabeZuerueckgenommen) {
+		this.cFreigabeZuerueckgenommen = cFreigabeZuerueckgenommen;
+	}
+
+
+	@Column(name = "I_PASSIVE_REISEZEIT")
+	private Integer iPassiveReisezeit;
+	
+	
+	public Integer getIPassiveReisezeit() {
+		return iPassiveReisezeit;
+	}
+
+	public void setIPassiveReisezeit(Integer iPassiveReisezeit) {
+		this.iPassiveReisezeit = iPassiveReisezeit;
+	}
+
+
 	@Column(name = "B_SERIENNRTRAGEND")
 	private Short bSeriennrtragend;
 
 	@Column(name = "B_CHARGENNRTRAGEND")
 	private Short bChargennrtragend;
+	
+	@Column(name = "B_KEINE_LAGERZUBUCHUNG")
+	private Short bKeineLagerzubuchung;
+	
+	public Short getBKeineLagerzubuchung() {
+		return bKeineLagerzubuchung;
+	}
+
+	public void setBKeineLagerzubuchung(Short bKeineLagerzubuchung) {
+		this.bKeineLagerzubuchung = bKeineLagerzubuchung;
+	}
+
+
+	@Column(name = "B_RAHMENARTIKEL")
+	private Short bRahmenartikel;
+
+	public Short getBRahmenartikel() {
+		return bRahmenartikel;
+	}
+
+	public void setBRahmenartikel(Short bRahmenartikel) {
+		this.bRahmenartikel = bRahmenartikel;
+	}
 
 	
+	@Column(name = "B_KOMMISSIONIEREN")
+	private Short bKommissionieren;
+	
+	public Short getBKommissionieren() {
+		return bKommissionieren;
+	}
+
+	public void setBKommissionieren(Short bKommissionieren) {
+		this.bKommissionieren = bKommissionieren;
+	}
+
+
+	@Column(name = "VERPACKUNGSMITTEL_I_ID")
+	private Integer verpackungsmittelIId;
+
+	
+	public Integer getVerpackungsmittelIId() {
+		return verpackungsmittelIId;
+	}
+
+	public void setVerpackungsmittelIId(Integer verpackungsmittelIId) {
+		this.verpackungsmittelIId = verpackungsmittelIId;
+	}
+
 	@Column(name = "VORZUG_I_ID")
 	private Integer vorzugIId;
-	
+
 	public Integer getVorzugIId() {
 		return vorzugIId;
 	}
@@ -99,7 +220,6 @@ public class Artikel implements Serializable, ICNr {
 	@Column(name = "B_BESTELLMENGENEINHEIT_INVERS")
 	private Short bBestellmengeneinheitInvers;
 
-	
 	public Short getbBestellmengeneinheitInvers() {
 		return bBestellmengeneinheitInvers;
 	}
@@ -116,7 +236,7 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "B_VERLEIH")
 	private Short bVerleih;
-	
+
 	@Column(name = "B_KALKULATORISCH")
 	private Short bKalkulatorisch;
 
@@ -128,6 +248,28 @@ public class Artikel implements Serializable, ICNr {
 		this.bKalkulatorisch = bKalkulatorisch;
 	}
 
+	@Column(name = "I_LAENGEMIN_SNRCHNR")
+	private Integer iLaengeminSnrchnr;
+	public Integer getILaengeminSnrchnr() {
+		return iLaengeminSnrchnr;
+	}
+
+	public void setILaengeminSnrchnr(Integer iLaengeminSnrchnr) {
+		this.iLaengeminSnrchnr = iLaengeminSnrchnr;
+	}
+
+	public Integer getILaengemaxSnrchnr() {
+		return iLaengemaxSnrchnr;
+	}
+
+	public void setILaengemaxSnrchnr(Integer iLaengemaxSnrchnr) {
+		this.iLaengemaxSnrchnr = iLaengemaxSnrchnr;
+	}
+
+
+	@Column(name = "I_LAENGEMAX_SNRCHNR")
+	private Integer iLaengemaxSnrchnr;
+	
 	@Column(name = "LFLIEFERGRUPPE_I_ID")
 	private Integer lfliefergruppeIId;
 
@@ -146,6 +288,30 @@ public class Artikel implements Serializable, ICNr {
 	public void setBVerleih(Short bVerleih) {
 		this.bVerleih = bVerleih;
 	}
+
+	@Column(name = "B_WEP_INFO_AN_ANFORDERER")
+	private Short bWepinfoAnAnforderer;
+	
+	public Short getBWepinfoAnAnforderer() {
+		return bWepinfoAnAnforderer;
+	}
+
+	public void setBWepinfoAnAnforderer(Short bWepinfoAnAnforderer) {
+		this.bWepinfoAnAnforderer = bWepinfoAnAnforderer;
+	}
+
+	@Column(name = "B_SUMME_IN_BESTELLUNG")
+	private Short bSummeInBestellung;
+	
+
+	public Short getBSummeInBestellung() {
+		return bSummeInBestellung;
+	}
+
+	public void setBSummeInBestellung(Short bSummeInBestellung) {
+		this.bSummeInBestellung = bSummeInBestellung;
+	}
+
 
 	@Column(name = "B_REINEMANNZEIT")
 	private Short bReinemannzeit;
@@ -187,6 +353,41 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "F_LAGERSOLL")
 	private Double fLagersoll;
+	
+	@Column(name = "F_MULTIPLIKATOR_ZUGEHOERIGERARTIKEL")
+	private Double fMultiplikatorZugehoerigerartikel;
+	@Column(name = "B_AZINABNACHKALK")
+	private Short bAzinabnachkalk;
+	
+	public Double getFMultiplikatorZugehoerigerartikel() {
+		return fMultiplikatorZugehoerigerartikel;
+	}
+
+	public void setFMultiplikatorZugehoerigerartikel(
+			Double fMultiplikatorZugehoerigerartikel) {
+		this.fMultiplikatorZugehoerigerartikel = fMultiplikatorZugehoerigerartikel;
+	}
+
+	public Short getBAzinabnachkalk() {
+		return bAzinabnachkalk;
+	}
+
+	public void setBAzinabnachkalk(Short bAzinabnachkalk) {
+		this.bAzinabnachkalk = bAzinabnachkalk;
+	}
+
+	@Column(name = "F_MAXFERTIGUNGSSATZGROESSE")
+	private Double fMaxfertigungssatzgroesse;
+
+	
+	public Double getFMaxfertigungssatzgroesse() {
+		return fMaxfertigungssatzgroesse;
+	}
+
+	public void setFMaxfertigungssatzgroesse(Double fMaxfertigungssatzgroesse) {
+		this.fMaxfertigungssatzgroesse = fMaxfertigungssatzgroesse;
+	}
+
 
 	@Column(name = "F_FERTIGUNGSSATZGROESSE")
 	private Double fFertigungssatzgroesse;
@@ -197,11 +398,9 @@ public class Artikel implements Serializable, ICNr {
 	@Column(name = "F_VERSCHNITTFAKTOR")
 	private Double fVerschnittfaktor;
 
-	
 	@Column(name = "F_UEBERPRODUKTION")
 	private Double fUeberproduktion;
 
-	
 	public Double getFUeberproduktion() {
 		return fUeberproduktion;
 	}
@@ -221,6 +420,28 @@ public class Artikel implements Serializable, ICNr {
 		this.fDetailprozentmindeststand = fDetailprozentmindeststand;
 	}
 
+	@Column(name = "N_MINDESTVERKAUFSMENGE")
+	private BigDecimal nMindestverkaufsmenge;
+	
+	public BigDecimal getNMindestverkaufsmenge() {
+		return nMindestverkaufsmenge;
+	}
+
+	public void setNMindestverkaufsmenge(BigDecimal nMindestverkaufsmenge) {
+		this.nMindestverkaufsmenge = nMindestverkaufsmenge;
+	}
+
+	@Column(name = "N_VERPACKUNGSMITTELMENGE")
+	private BigDecimal nVerpackungsmittelmenge;
+	
+	public BigDecimal getNVerpackungsmittelmenge() {
+		return nVerpackungsmittelmenge;
+	}
+
+	public void setNVerpackungsmittelmenge(BigDecimal nVerpackungsmittelmenge) {
+		this.nVerpackungsmittelmenge = nVerpackungsmittelmenge;
+	}
+
 	@Column(name = "F_VERSCHNITTBASIS")
 	private Double fVerschnittbasis;
 
@@ -235,6 +456,40 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "B_ANTISTATIC")
 	private Short bAntistatic;
+
+	@Column(name = "B_BEVORZUGT")
+	private Short bBevorzugt;
+
+	public Short getBBevorzugt() {
+		return bBevorzugt;
+	}
+
+	public void setBBevorzugt(Short bBevorzugt) {
+		this.bBevorzugt = bBevorzugt;
+	}
+
+	@Column(name = "B_MULTIPLIKATOR_INVERS")
+	private Short bMultiplikatorInvers;
+	public Short getBMultiplikatorInvers() {
+		return bMultiplikatorInvers;
+	}
+
+	public void setBMultiplikatorInvers(Short bMultiplikatorInvers) {
+		this.bMultiplikatorInvers = bMultiplikatorInvers;
+	}
+
+	public Short getBMultiplikatorAufrunden() {
+		return bMultiplikatorAufrunden;
+	}
+
+	public void setBMultiplikatorAufrunden(Short bMultiplikatorAufrunden) {
+		this.bMultiplikatorAufrunden = bMultiplikatorAufrunden;
+	}
+
+
+	@Column(name = "B_MULTIPLIKATOR_AUFRUNDEN")
+	private Short bMultiplikatorAufrunden;
+	
 
 	@Column(name = "F_VERTRETERPROVISIONMAX")
 	private Double fVertreterprovisionmax;
@@ -253,6 +508,7 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "C_ECCN")
 	private String cEccn;
+
 	public String getCEccn() {
 		return cEccn;
 	}
@@ -285,7 +541,6 @@ public class Artikel implements Serializable, ICNr {
 	@Column(name = "B_WERBEABGABEPFLICHTIG")
 	private Short bWerbeabgabepflichtig;
 
-	
 	public Short getBWerbeabgabepflichtig() {
 		return bWerbeabgabepflichtig;
 	}
@@ -314,6 +569,19 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
+	
+	@Column(name = "LASEROBERFLAECHE_I_ID")
+	private Integer laseroberflaecheIId;
+	
+
+	public Integer getLaseroberflaecheIId() {
+		return laseroberflaecheIId;
+	}
+
+	public void setLaseroberflaecheIId(Integer laseroberflaecheIId) {
+		this.laseroberflaecheIId = laseroberflaecheIId;
+	}
+
 
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
@@ -329,7 +597,7 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "SHOPGRUPPE_I_ID")
 	private Integer shopgruppeIId;
-	
+
 	public Integer getShopgruppeIId() {
 		return shopgruppeIId;
 	}
@@ -418,13 +686,11 @@ public class Artikel implements Serializable, ICNr {
 		iWartungsintervall = wartungsintervall;
 	}
 
-	
 	@Column(name = "PERSONAL_I_ID_LETZTEWARTUNG")
 	private Integer personalIIdLetztewartung;
 	@Column(name = "T_LETZTEWARTUNG")
 	private Timestamp tLetztewartung;
-	
-	
+
 	public Timestamp getTLetztewartung() {
 		return tLetztewartung;
 	}
@@ -441,11 +707,9 @@ public class Artikel implements Serializable, ICNr {
 		this.personalIIdLetztewartung = personalIIdLetztewartung;
 	}
 
-
 	@Column(name = "F_FERTIGUNGS_VPE")
 	private Double fFertigungsVpe;
 
-	
 	public Double getFFertigungsVpe() {
 		return fFertigungsVpe;
 	}
@@ -454,12 +718,24 @@ public class Artikel implements Serializable, ICNr {
 		this.fFertigungsVpe = fFertigungsVpe;
 	}
 
+	@Column(name = "N_PREIS_ZUEGHOERIGERARTIKEL")
+	private BigDecimal nPreisZugehoerigerartikel;
+	
+	public BigDecimal getNPreisZugehoerigerartikel() {
+		return nPreisZugehoerigerartikel;
+	}
+
+	public void setNPreisZugehoerigerartikel(BigDecimal nPreisZugehoerigerartikel) {
+		this.nPreisZugehoerigerartikel = nPreisZugehoerigerartikel;
+	}
+
+
 	@Column(name = "F_AUFSCHLAG_PROZENT")
 	private Double fAufschlagProzent;
 
 	@Column(name = "N_AUFSCHLAG_BETRAG")
 	private BigDecimal nAufschlagBetrag;
-	
+
 	public Double getFAufschlagProzent() {
 		return fAufschlagProzent;
 	}
@@ -476,7 +752,17 @@ public class Artikel implements Serializable, ICNr {
 		this.nAufschlagBetrag = nAufschlagBetrag;
 	}
 
-	
+	@Column(name = "N_VERSCHNITTMENGE")
+	private BigDecimal nVerschnittmenge;
+
+	public BigDecimal getNVerschnittmenge() {
+		return nVerschnittmenge;
+	}
+
+	public void setNVerschnittmenge(BigDecimal nVerschnittmenge) {
+		this.nVerschnittmenge = nVerschnittmenge;
+	}
+
 	@Column(name = "C_UL")
 	private String cUL;
 	@Column(name = "REACH_I_ID")
@@ -487,7 +773,7 @@ public class Artikel implements Serializable, ICNr {
 	private Integer automotiveIId;
 	@Column(name = "MEDICAL_I_ID")
 	private Integer medicalIId;
-	
+
 	public String getCUL() {
 		return cUL;
 	}
@@ -528,6 +814,69 @@ public class Artikel implements Serializable, ICNr {
 		this.medicalIId = medicalIId;
 	}
 
+	
+	@Column(name = "WAFFENKALIBER_I_ID")
+	private Integer waffenkaliberIId;
+	public Integer getWaffenkaliberIId() {
+		return waffenkaliberIId;
+	}
+
+	public void setWaffenkaliberIId(Integer waffenkaliberIId) {
+		this.waffenkaliberIId = waffenkaliberIId;
+	}
+
+	public Integer getWaffentypIId() {
+		return waffentypIId;
+	}
+
+	public void setWaffentypIId(Integer waffentypIId) {
+		this.waffentypIId = waffentypIId;
+	}
+
+	public Integer getWaffentypFeinIId() {
+		return waffentypFeinIId;
+	}
+
+	public void setWaffentypFeinIId(Integer waffentypFeinIId) {
+		this.waffentypFeinIId = waffentypFeinIId;
+	}
+
+	public Integer getWaffenkategorieIId() {
+		return waffenkategorieIId;
+	}
+
+	public void setWaffenkategorieIId(Integer waffenkategorieIId) {
+		this.waffenkategorieIId = waffenkategorieIId;
+	}
+
+	public Integer getWaffenzusatzIId() {
+		return waffenzusatzIId;
+	}
+
+	public void setWaffenzusatzIId(Integer waffenzusatzIId) {
+		this.waffenzusatzIId = waffenzusatzIId;
+	}
+
+	public Integer getWaffenausfuehrungIId() {
+		return waffenausfuehrungIId;
+	}
+
+	public void setWaffenausfuehrungIId(Integer waffenausfuehrungIId) {
+		this.waffenausfuehrungIId = waffenausfuehrungIId;
+	}
+
+
+	@Column(name = "WAFFENTYP_I_ID")
+	private Integer waffentypIId;
+	@Column(name = "WAFFENTYP_FEIN_I_ID")
+	private Integer waffentypFeinIId;
+	@Column(name = "WAFFENKATEGORIE_I_ID")
+	private Integer waffenkategorieIId;
+	@Column(name = "WAFFENZUSATZ_I_ID")
+	private Integer waffenzusatzIId;
+	@Column(name = "WAFFENAUSFUEHRUNG_I_ID")
+	private Integer waffenausfuehrungIId;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Artikel() {
@@ -556,46 +905,30 @@ public class Artikel implements Serializable, ICNr {
 		setbBestellmengeneinheitInvers(new Short((short) 0));
 		setBWerbeabgabepflichtig(new Short((short) 0));
 		setBKalkulatorisch(new Short((short) 0));
+		setBRahmenartikel(new Short((short) 0));
+		setBKommissionieren(new Short((short) 0));
+		setBKeineLagerzubuchung(new Short((short) 0));
+		setBAzinabnachkalk(new Short((short) 0));
+		setIExternerArbeitsgang(0);
+		setBWepinfoAnAnforderer(new Short((short) 0));
 		setArtikelartCNr(artikelartCNr);
 		setEinheitCNr(einheitCNr);
 		setFMindestdeckungsbeitrag(mindestdeckungsbeitrag);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
 		setBVersteckt(versteckt);
+		setBVkpreispflichtig(new Short((short) 1));
 		setMandantCNr(mandantCNr);
-
+		setIPassiveReisezeit(0);
+		setBSummeInBestellung(new Short((short) 0));
+		setBBevorzugt(new Short((short) 0));
+		setBMultiplikatorAufrunden(new Short((short) 0));
+		setBMultiplikatorInvers(new Short((short) 0));
+		setBBewilligungspflichtig(new Short((short) 0));
+		setBMeldepflichtig(new Short((short) 0));
+		
 	}
 
-	public Artikel(Integer id, String cNr, String artikelartCNr,
-			String einheitCNr, Short seriennrtragend, Short chargennrtragend,
-			Short lagerbewirtschaftet, Short lagerbewertet, Short antistatic,
-			Double mindestdeckungsbeitrag, Short rabattierbar,
-			Integer personalIIdAnlegen, Integer personalIIdAendern,
-			String mandantCNr, Short versteckt, Short verleih, Short bReineMannzeit, Short bNurzurinfo, Short bBestellmengeneinheitInvers,Short bKalkulatorisch) {
-		super();
-		setIId(id);
-		setTAnlegen(new Timestamp(System.currentTimeMillis()));
-		setTAendern(new Timestamp(System.currentTimeMillis()));
-		setCNr(cNr);
-		setBVerleih(verleih);
-		setBAntistatic(antistatic);
-		setBChargennrtragend(chargennrtragend);
-		setBRabattierbar(rabattierbar);
-		setBSeriennrtragend(seriennrtragend);
-		setBLagerbewertet(lagerbewertet);
-		setBLagerbewirtschaftet(lagerbewirtschaftet);
-		setArtikelartCNr(artikelartCNr);
-		setEinheitCNr(einheitCNr);
-		setFMindestdeckungsbeitrag(mindestdeckungsbeitrag);
-		setPersonalIIdAnlegen(personalIIdAnlegen);
-		setPersonalIIdAendern(personalIIdAendern);
-		setBVersteckt(versteckt);
-		setMandantCNr(mandantCNr);
-		setbReinemannzeit(bReineMannzeit);
-		setbNurzurinfo(bNurzurinfo);
-		setBKalkulatorisch(bKalkulatorisch);
-
-	}
 
 	public Integer getIId() {
 		return this.iId;
@@ -972,5 +1305,29 @@ public class Artikel implements Serializable, ICNr {
 	public void setMaterialIId(Integer materialIId) {
 		this.materialIId = materialIId;
 	}
+	
+	@Column(name = "B_MELDEPFLICHTIG")
+	private Short bMeldepflichtig;
+	public Short getBMeldepflichtig() {
+		return bMeldepflichtig;
+	}
+
+	public void setBMeldepflichtig(Short bMeldepflichtig) {
+		this.bMeldepflichtig = bMeldepflichtig;
+	}
+
+	public Short getBBewilligungspflichtig() {
+		return bBewilligungspflichtig;
+	}
+
+	public void setBBewilligungspflichtig(Short bBewilligungspflichtig) {
+		this.bBewilligungspflichtig = bBewilligungspflichtig;
+	}
+
+
+	@Column(name = "B_BEWILLIGUNGSPFLICHTIG")
+	private Short bBewilligungspflichtig;
+
+	
 
 }

@@ -43,31 +43,32 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICNr;
 import com.lp.util.Helper;
-import com.lp.server.finanz.ejb.FinanzamtPK; 
 
-@NamedQueries( 
-		{ @NamedQuery(name = "KontofindByCNrMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
+@NamedQueries({
+		@NamedQuery(name = "KontofindByCNrMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "KontofindByKontotypSteuerkategorie", query = "SELECT OBJECT(o) FROM Konto o WHERE o.kontotypCNr=?1 AND o.steuerkategorieIId=?2"),
 		@NamedQuery(name = "KontofindByCNrKontotypMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.cNr=?1 AND o.kontotypCNr=?2 AND o.mandantCNr=?3"),
 		@NamedQuery(name = Konto.QUERY_ALL_KONTOTYP_MANDANT, query = "SELECT OBJECT(o) FROM Konto o WHERE o.kontotypCNr=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = Konto.QUERY_ALL_KONTOART_MANDANT, query = "SELECT OBJECT(o) FROM Konto o WHERE o.kontoartCNr=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = Konto.QUERY_ALL_KONTOART_MANDANT_FINANZAMT, query = "SELECT OBJECT(o) FROM Konto o WHERE o.kontoartCNr=?1 AND o.mandantCNr=?2 AND o.finanzamtIId=?3"),
 		@NamedQuery(name = "KontofindByErgebnisgruppeMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.ergebnisgruppeIId=?1 AND o.mandantCNr=?2 ORDER BY o.cNr"),
-		@NamedQuery(name = "KontofindByErgebnisgruppeNegativMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.ergebnisgruppeIId_negativ=?1 AND o.mandantCNr=?2 ORDER BY o.cNr")
-		})
+		@NamedQuery(name = "KontofindByErgebnisgruppeNegativMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.ergebnisgruppeIId_negativ=?1 AND o.mandantCNr=?2 ORDER BY o.cNr"),
+		@NamedQuery(name = Konto.QUERY_ALL_UVAART_MANDANT_FINANZAMT, query = "SELECT OBJECT(o) FROM Konto o WHERE o.uvaartIId=?1 AND o.mandantCNr=?2 AND o.finanzamtIId=?3") })
 
 @Entity
 @Table(name = "FB_KONTO")
-public class Konto implements Serializable {
+public class Konto implements Serializable, ICNr {
 	private static final long serialVersionUID = 9035511981535928860L;
 
-	public static final String QUERY_ALL_KONTOTYP_MANDANT = "KontofindAllByKontotypMandant" ;
+	public static final String QUERY_ALL_KONTOTYP_MANDANT = "KontofindAllByKontotypMandant";
 	public static final String QUERY_ALL_KONTOART_MANDANT = "KontofindAllByKontoartMandant";
 	public static final String QUERY_ALL_KONTOART_MANDANT_FINANZAMT = "KontofindAllByKontoartMandantFinanzamt";
 	public static final String QUERY_ALL_ERGEBNISGRUPPE_MANDANT = "KontofindByErgebnisgruppeMandant";
 	public static final String QUERY_ALL_ERGEBNISGRUPPENEGATIV_MANDANT = "KontofindByErgebnisgruppeNegativMandant";
-	
+	public static final String QUERY_ALL_UVAART_MANDANT_FINANZAMT = "KontofindAllByUvaartMandantFinanzamt";
+
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -83,7 +84,7 @@ public class Konto implements Serializable {
 
 	@Column(name = "X_BEMERKUNG")
 	private String xBemerkung;
-	
+
 	@Column(name = "T_GUELTIGBIS")
 	private Date tGueltigbis;
 
@@ -119,10 +120,10 @@ public class Konto implements Serializable {
 
 	@Column(name = "B_OHNEUST")
 	private Short bOhneUst;
-	
+
 	@Column(name = "C_STEUERART")
 	private String cSteuerart;
-	
+
 	public String getcSteuerart() {
 		return cSteuerart;
 	}
@@ -165,11 +166,11 @@ public class Konto implements Serializable {
 
 	@Column(name = "WAEHRUNG_C_NR_DRUCK")
 	private String waehrungCNrDruck;
-	
-	//@JoinColumns( {
-	//	@JoinColumn(name = "finanzamt_i_id", referencedColumnName = "partner_i_id"),
-	//	@JoinColumn(name = "mandant_c_nr", referencedColumnName = "mandant_c_nr") })
-	//private FinanzamtPK PkFinanzamt;
+
+	// @JoinColumns( {
+	// @JoinColumn(name = "finanzamt_i_id", referencedColumnName = "partner_i_id"),
+	// @JoinColumn(name = "mandant_c_nr", referencedColumnName = "mandant_c_nr") })
+	// private FinanzamtPK PkFinanzamt;
 
 	@Column(name = "FINANZAMT_I_ID")
 	private Integer finanzamtIId;
@@ -188,28 +189,40 @@ public class Konto implements Serializable {
 
 	@Column(name = "STEUERKATEGORIE_I_ID")
 	private Integer steuerkategorieIId;
-	
+
 	@Column(name = "STEUERKATEGORIE_I_ID_REVERSE")
 	private Integer steuerkategorieIIdReverse;
-	
+
 	@Column(name = "C_SORTIERT")
 	private String cSortierung;
 
 	@Column(name = "I_GJ_EB")
-	private Integer iGeschaeftsjahrEB ;
+	private Integer iGeschaeftsjahrEB;
 
 	@Column(name = "T_EB_ANLEGEN")
-	private Timestamp tEBAnlegen ;
-	
+	private Timestamp tEBAnlegen;
+
+	@Column(name = "STEUERKATEGORIE_C_NR")
+	private String steuerkategorieCNr;
+
+	@Column(name = "MWSTSATZ_I_ID")
+	private Integer mwstsatzIId;
+
+	public Integer getMwstsatzIId() {
+		return mwstsatzIId;
+	}
+
+	public void setMwstsatzIId(Integer mwstsatzIId) {
+		this.mwstsatzIId = mwstsatzIId;
+	}
+
 	public Konto() {
 		super();
 	}
 
-	public Konto(Integer id, java.lang.String mandantCNr, java.lang.String nr,
-			java.lang.String bez, java.lang.Integer uvaartIId,
-			Short automeroeffnungsbuchung, Short allgemeinsichtbar,
-			Short manuellbebuchbar, java.lang.String kontoartCNr,
-			java.lang.String kontotypCNr, Integer personalIIdAnlegen,
+	public Konto(Integer id, java.lang.String mandantCNr, java.lang.String nr, java.lang.String bez,
+			java.lang.Integer uvaartIId, Short automeroeffnungsbuchung, Short allgemeinsichtbar, Short manuellbebuchbar,
+			java.lang.String kontoartCNr, java.lang.String kontotypCNr, Integer personalIIdAnlegen,
 			Integer personalIIdAendern) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
@@ -222,20 +235,18 @@ public class Konto implements Serializable {
 		setKontoartCNr(kontoartCNr);
 		setKontotypCNr(kontotypCNr);
 		// Setzen der NOT NULL felder
-	    Timestamp now = new Timestamp(System.currentTimeMillis());
-	    this.setTAendern(now);
-	    this.setTAnlegen(now);
+		Timestamp now = new Timestamp(System.currentTimeMillis());
+		this.setTAendern(now);
+		this.setTAnlegen(now);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
-	    setBVersteckt(Helper.boolean2Short(false));
-	    setBOhneUst(Helper.boolean2Short(false));
+		setBVersteckt(Helper.boolean2Short(false));
+		setBOhneUst(Helper.boolean2Short(false));
 	}
-	
-	public Konto(Integer id, java.lang.String mandantCNr, java.lang.String nr,
-			java.lang.String bez, java.lang.String uvaartCNr,
-			Short automeroeffnungsbuchung, Short allgemeinsichtbar,
-			Short manuellbebuchbar, java.lang.String kontoartCNr,
-			java.lang.String kontotypCNr, Integer personalIIdAnlegen,
+
+	public Konto(Integer id, java.lang.String mandantCNr, java.lang.String nr, java.lang.String bez,
+			java.lang.String uvaartCNr, Short automeroeffnungsbuchung, Short allgemeinsichtbar, Short manuellbebuchbar,
+			java.lang.String kontoartCNr, java.lang.String kontotypCNr, Integer personalIIdAnlegen,
 			Integer personalIIdAendern, Short versteckt) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
@@ -248,20 +259,18 @@ public class Konto implements Serializable {
 		setKontoartCNr(kontoartCNr);
 		setKontotypCNr(kontotypCNr);
 		// Setzen der NOT NULL felder
-	    Timestamp now = new Timestamp(System.currentTimeMillis());
-	    this.setTAendern(now);
-	    this.setTAnlegen(now);
+		Timestamp now = new Timestamp(System.currentTimeMillis());
+		this.setTAendern(now);
+		this.setTAnlegen(now);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
-	    setBVersteckt(versteckt);
-	    //setcSortierung(sortiert);
+		setBVersteckt(versteckt);
+		// setcSortierung(sortiert);
 	}
 
-	public Konto(Integer id, java.lang.String mandantCNr, java.lang.String nr,
-			java.lang.String bez, java.lang.String uvaartCNr,
-			Short automeroeffnungsbuchung, Short allgemeinsichtbar,
-			Short manuellbebuchbar, java.lang.String kontoartCNr,
-			java.lang.String kontotypCNr, Integer personalIIdAnlegen,
+	public Konto(Integer id, java.lang.String mandantCNr, java.lang.String nr, java.lang.String bez,
+			java.lang.String uvaartCNr, Short automeroeffnungsbuchung, Short allgemeinsichtbar, Short manuellbebuchbar,
+			java.lang.String kontoartCNr, java.lang.String kontotypCNr, Integer personalIIdAnlegen,
 			Integer personalIIdAendern, Short versteckt, Short bOhneUst) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
@@ -274,14 +283,14 @@ public class Konto implements Serializable {
 		setKontoartCNr(kontoartCNr);
 		setKontotypCNr(kontotypCNr);
 		// Setzen der NOT NULL felder
-	    Timestamp now = new Timestamp(System.currentTimeMillis());
-	    this.setTAendern(now);
-	    this.setTAnlegen(now);
+		Timestamp now = new Timestamp(System.currentTimeMillis());
+		this.setTAendern(now);
+		this.setTAnlegen(now);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
-	    setBVersteckt(versteckt);
-	    setBOhneUst(bOhneUst);
-	    //setcSortierung(sortiert);
+		setBVersteckt(versteckt);
+		setBOhneUst(bOhneUst);
+		// setcSortierung(sortiert);
 	}
 
 	public Integer getIId() {
@@ -300,7 +309,6 @@ public class Konto implements Serializable {
 		this.xBemerkung = xBemerkung;
 	}
 
-	
 	public void setFinanzamtIId(Integer finanzamtIId) {
 		this.finanzamtIId = finanzamtIId;
 	}
@@ -417,8 +425,7 @@ public class Konto implements Serializable {
 		return this.kontoIIdWeiterfuehrendskonto;
 	}
 
-	public void setKontoIIdWeiterfuehrendskonto(
-			Integer kontoIIdWeiterfuehrendskonto) {
+	public void setKontoIIdWeiterfuehrendskonto(Integer kontoIIdWeiterfuehrendskonto) {
 		this.kontoIIdWeiterfuehrendskonto = kontoIIdWeiterfuehrendskonto;
 	}
 
@@ -450,8 +457,7 @@ public class Konto implements Serializable {
 		return this.rechenregelCNrWeiterfuehrendskonto;
 	}
 
-	public void setRechenregelCNrWeiterfuehrendskonto(
-			String rechenregelCNrWeiterfuehrendskonto) {
+	public void setRechenregelCNrWeiterfuehrendskonto(String rechenregelCNrWeiterfuehrendskonto) {
 		this.rechenregelCNrWeiterfuehrendskonto = rechenregelCNrWeiterfuehrendskonto;
 	}
 
@@ -459,8 +465,7 @@ public class Konto implements Serializable {
 		return this.rechenregelCNrWeiterfuehrendust;
 	}
 
-	public void setRechenregelCNrWeiterfuehrendust(
-			String rechenregelCNrWeiterfuehrendust) {
+	public void setRechenregelCNrWeiterfuehrendust(String rechenregelCNrWeiterfuehrendust) {
 		this.rechenregelCNrWeiterfuehrendust = rechenregelCNrWeiterfuehrendust;
 	}
 
@@ -468,20 +473,19 @@ public class Konto implements Serializable {
 		return this.rechenregelCNrWeiterfuehrendbilanz;
 	}
 
-	public void setRechenregelCNrWeiterfuehrendbilanz(
-			String rechenregelCNrWeiterfuehrendbilanz) {
+	public void setRechenregelCNrWeiterfuehrendbilanz(String rechenregelCNrWeiterfuehrendbilanz) {
 		this.rechenregelCNrWeiterfuehrendbilanz = rechenregelCNrWeiterfuehrendbilanz;
 	}
 
 	public FinanzamtPK getPkFinanzamt() {
-		return new FinanzamtPK(getFinanzamtIId(),getMandantCNr());
-		//return this.PkFinanzamt;
+		return new FinanzamtPK(getFinanzamtIId(), getMandantCNr());
+		// return this.PkFinanzamt;
 	}
 
 	public void setPkFinanzamt(FinanzamtPK PkFinanzamt) {
 		this.setMandantCNr(PkFinanzamt.getMandantCNr());
 		this.setFinanzamtIId(PkFinanzamt.getPartnerIId());
-		//this.PkFinanzamt = PkFinanzamt;
+		// this.PkFinanzamt = PkFinanzamt;
 	}
 
 	public Integer getKostenstelleIId() {
@@ -520,6 +524,13 @@ public class Konto implements Serializable {
 		this.steuerkategorieIId = steuerkategorieIId;
 	}
 
+	/**
+	 * 
+	 * @deprecated bitte {@link #getSteuerkategorieCNr()} in Kombination der
+	 *             reversechargeartId verwenden
+	 * @return die IId der zu verwendenden Steuerkategorie
+	 */
+	@Deprecated
 	public Integer getSteuerkategorieIId() {
 		return steuerkategorieIId;
 	}
@@ -528,6 +539,13 @@ public class Konto implements Serializable {
 		this.steuerkategorieIIdReverse = steuerkategorieIIdReverse;
 	}
 
+	/**
+	 * 
+	 * @deprecated bitte nicht mehr verwenden. Entf&auml;llt komplett, wird
+	 *             &uuml;ber reversechargeartId gel&ouml;st
+	 * @return die IId der zu verwendenen Steuerkategorie fuer Reversecharge
+	 */
+	@Deprecated
 	public Integer getSteuerkategorieIIdReverse() {
 		return steuerkategorieIIdReverse;
 	}
@@ -575,9 +593,30 @@ public class Konto implements Serializable {
 	public void setBOhneUst(Short bOhneUst) {
 		this.bOhneUst = bOhneUst;
 	}
-	
+
 	public Short getBOhneUst() {
 		return this.bOhneUst;
 	}
-	
+
+	public String getSteuerkategorieCNr() {
+		return steuerkategorieCNr;
+	}
+
+	public void setSteuerkategorieCNr(String steuerkategorieCNr) {
+		this.steuerkategorieCNr = steuerkategorieCNr;
+	}
+
+	/**
+	 * @deprecated use getMwstsatzIId() instead
+	 */
+	public int getUvavariante() {
+
+		if (getMwstsatzIId() != null) {
+			return getMwstsatzIId();
+		} else {
+			return 0;
+		}
+
+	}
+
 }

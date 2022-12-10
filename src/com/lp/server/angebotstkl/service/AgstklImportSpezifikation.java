@@ -32,11 +32,11 @@
  ******************************************************************************/
 package com.lp.server.angebotstkl.service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 
+import com.lp.service.IReader;
+import com.lp.service.JsonWriter;
 import com.lp.service.StklImportSpezifikation;
 
 public class AgstklImportSpezifikation extends StklImportSpezifikation {
@@ -46,12 +46,17 @@ public class AgstklImportSpezifikation extends StklImportSpezifikation {
 	}
 
 	@Override
-	protected void readIndividualValues(BufferedReader br) throws IOException {
+	protected void readIndividualValues(IReader reader) throws IOException {
 
 	}
 
 	@Override
-	protected void writeIndividualValues(StringWriter sw) {
+	protected void readIndividualValuesJson(IReader reader) throws IOException {
+		
+	}
+
+	@Override
+	protected void writeIndividualValues(JsonWriter writer) {
 		
 	}
 
@@ -75,5 +80,21 @@ public class AgstklImportSpezifikation extends StklImportSpezifikation {
 		availableColumnTypes.add(BEZEICHNUNG3);
 		availableColumnTypes.add(BAUFORM);
 		availableColumnTypes.add(MENGE);
+		availableColumnTypes.add(POSITION);
 	}
+
+	@Override
+	public void removeMappingColumnType() {
+		availableColumnTypes.remove(KUNDENARTIKELNUMMER);
+		int index = columnTypes.indexOf(KUNDENARTIKELNUMMER);
+		if(index >= 0) {
+			columnTypes.set(index, UNDEFINED);
+		}
+	}
+
+	@Override
+	public boolean isStuecklisteMitBezugVerkauf() {
+		return true;
+	}
+	
 }

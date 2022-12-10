@@ -42,8 +42,10 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 @NamedQueries( {
-		@NamedQuery(name = "HerstellerfindByCNr", query = "SELECT OBJECT(o) FROM Hersteller o WHERE o.cNr = ?1"),
-		@NamedQuery(name = "HerstellerfindByPartnerIId", query = "SELECT OBJECT(O) FROM Hersteller o WHERE o.partnerIId = ?1") })
+		@NamedQuery(name = HerstellerQuery.ByCNr, query = "SELECT OBJECT(o) FROM Hersteller o WHERE o.cNr = ?1"),
+		@NamedQuery(name = "HerstellerfindByPartnerIId", query = "SELECT OBJECT(O) FROM Hersteller o WHERE o.partnerIId = ?1")
+})
+
 @Entity
 @Table(name = "WW_HERSTELLER")
 public class Hersteller implements Serializable {
@@ -57,17 +59,19 @@ public class Hersteller implements Serializable {
 	@Column(name = "PARTNER_I_ID")
 	private Integer partnerIId;
 
+	@Column(name = "C_LEADIN")
+	private String cLeadIn;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Hersteller() {
-		super();
 	}
 
-	public Hersteller(Integer id, String nr, Integer partnerIId) {
+	public Hersteller(Integer id, String nr, Integer partnerIId, String leadIn) {
 		setCNr(nr);
 		setPartnerIId(partnerIId);
 		setIId(id);
-
+		setCLeadIn(leadIn);
 	}
 
 	public Integer getIId() {
@@ -92,6 +96,14 @@ public class Hersteller implements Serializable {
 
 	public void setPartnerIId(Integer partnerIId) {
 		this.partnerIId = partnerIId;
+	}
+
+	public String getCLeadIn() {
+		return cLeadIn ;
+	}
+	
+	public void setCLeadIn(String leadIn) {
+		this.cLeadIn = leadIn ;
 	}
 
 }

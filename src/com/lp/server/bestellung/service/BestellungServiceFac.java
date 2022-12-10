@@ -194,4 +194,15 @@ public interface BestellungServiceFac {
 
 	public void createMahngruppe(MahngruppeDto mahngruppeDto);
 
+	public Integer createBSZahlungsplan(BSZahlungsplanDto zahlungsplanDto,
+			TheClientDto theClientDto);
+
+	public void updateBSZahlungsplan(BSZahlungsplanDto dto,
+			TheClientDto theClientDto);
+
+	public BSZahlungsplanDto bszahlungsplanFindByPrimaryKey(Integer iId);
+
+	public void removeBSZahlungsplan(BSZahlungsplanDto zahlungsplanDto);
+	public void toggleBSZahlungsplanErledigt(
+			Integer bszahlungsplanIId, TheClientDto theClientDto);
 }

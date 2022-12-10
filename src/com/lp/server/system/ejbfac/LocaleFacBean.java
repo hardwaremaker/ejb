@@ -46,6 +46,8 @@ import java.util.TreeMap;
 
 import javax.ejb.FinderException;
 import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -55,6 +57,7 @@ import javax.persistence.Query;
 
 import com.lp.server.finanz.ejbfac.FinanzServiceFacBean;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.partner.ejb.HvTypedQuery;
 import com.lp.server.system.ejb.Belegart;
 import com.lp.server.system.ejb.Belegartspr;
 import com.lp.server.system.ejb.BelegartsprPK;
@@ -75,6 +78,8 @@ import com.lp.server.system.ejb.StatussprPK;
 import com.lp.server.system.ejb.Waehrung;
 import com.lp.server.system.ejb.Wechselkurs;
 import com.lp.server.system.ejb.WechselkursPK;
+import com.lp.server.system.ejb.WoerterbuchEintrag;
+import com.lp.server.system.ejb.WoerterbuchEintragQuery;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.BelegartDto;
@@ -86,7 +91,6 @@ import com.lp.server.system.service.FunktionDtoAssembler;
 import com.lp.server.system.service.FunktionsprDto;
 import com.lp.server.system.service.FunktionsprDtoAssembler;
 import com.lp.server.system.service.LieferartDto;
-import com.lp.server.system.service.LieferartDtoAssembler;
 import com.lp.server.system.service.LieferartsprDto;
 import com.lp.server.system.service.LieferartsprDtoAssembler;
 import com.lp.server.system.service.LocaleDto;
@@ -105,8 +109,11 @@ import com.lp.server.system.service.WaehrungDto;
 import com.lp.server.system.service.WaehrungDtoAssembler;
 import com.lp.server.system.service.WechselkursDto;
 import com.lp.server.system.service.WechselkursDtoAssembler;
+import com.lp.server.system.service.WoerterbuchEintragDto;
+import com.lp.server.system.service.WoerterbuchEintragDtoAssembler;
 import com.lp.server.util.Facade;
 import com.lp.server.util.Validator;
+import com.lp.server.util.WoerterbuchEintragIId;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -121,27 +128,24 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	static public final Locale T_LOC_MANDANT = new Locale("de", "AT");
 	static public final Locale T_LOC_UI = new Locale("de", "AT");
 
-	//***Locale*****************************************************************
+	// ***Locale*****************************************************************
 	// **
 	public String createLocale(LocaleDto localeDto) throws EJBExceptionLP {
 		if (localeDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception("localeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception("localeDto == null"));
 		}
 		if (localeDto.getBAktiv() == null) {
 			localeDto.setBAktiv(Helper.boolean2Short(true));
 		}
 		String cNrWieKey = null;
 		try {
-			LocaleLP locale = new LocaleLP(localeDto.getCNr(), localeDto
-					.getBAktiv());
+			LocaleLP locale = new LocaleLP(localeDto.getCNr(), localeDto.getBAktiv());
 			em.persist(locale);
 			em.flush();
 			setLpLocaleFromLocaleDto(locale, localeDto);
 			LocaleLP temp = em.find(LocaleLP.class, localeDto.getCNr());
 			if (temp == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			cNrWieKey = temp.getCNr(); // Wegen Blanks rechts!}
 		} catch (EntityExistsException ex) {
@@ -158,8 +162,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	public void removeLocale(String cNr) throws EJBExceptionLP {
 		Locale toRemove = em.find(Locale.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -183,8 +186,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			// try {
 			LocaleLP localeLP = em.find(LocaleLP.class, cNr);
 			if (localeLP == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setLpLocaleFromLocaleDto(localeLP, localeDto);
 			// }
@@ -199,15 +201,13 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// try {
 		LocaleLP localeLP = em.find(LocaleLP.class, cNr);
 		if (localeLP == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLpLocaleDto(localeLP);
 
 	}
 
-	public LocaleDto localeFindByPrimaryKeyOhneExc(String cNr)
-			throws EJBExceptionLP {
+	public LocaleDto localeFindByPrimaryKeyOhneExc(String cNr) throws EJBExceptionLP {
 		// try {
 		LocaleLP localeLP = em.find(LocaleLP.class, cNr);
 		if (localeLP == null) {
@@ -227,11 +227,10 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	}
 
 	/**
-	 * Hole alle Locales und zeige sie in der Sprache der inLocale an. Wenn
-	 * inLocale null ist wird default locale der Java VM genommen.
+	 * Hole alle Locales und zeige sie in der Sprache der inLocale an. Wenn inLocale
+	 * null ist wird default locale der Java VM genommen.
 	 * 
-	 * @param inLocale
-	 *            Locale in der die Locales angezeigt werden sollen.
+	 * @param inLocale Locale in der die Locales angezeigt werden sollen.
 	 * @return Map
 	 * @throws FinderException
 	 */
@@ -261,8 +260,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 				}
 
 				if (Helper.short2boolean(localeLP.getBAktiv())) {
-					t.put(itemLocaleAsString, sDisplayLanguage + " "
-							+ sDisplayCountry + zusatz);
+					t.put(itemLocaleAsString, sDisplayLanguage + " " + sDisplayCountry + zusatz);
 				}
 			} catch (Exception ex) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
@@ -302,15 +300,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	 * Liefert Map mit allen Lieferarten und deren Code in der jeweiligen
 	 * Landessprache
 	 * 
-	 * @param loSuchErstHierI
-	 *            Stati
-	 * @param loDannHierI
-	 *            Locale
+	 * @param loSuchErstHierI Stati
+	 * @param loDannHierI     Locale
 	 * @return Map
 	 * @throws EJBExceptionLP
 	 */
-	public Map getAllSprLieferarten(Locale loSuchErstHierI, Locale loDannHierI)
-			throws EJBExceptionLP {
+	public Map getAllSprLieferarten(Locale loSuchErstHierI, Locale loDannHierI) throws EJBExceptionLP {
 
 		Map<Integer, String> alleLieferarten = null;
 		Collection<?> lieferartenColl = null;
@@ -328,8 +323,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// t);
 		// }
 
-		alleLieferarten = uebersetzeLieferartOptimal(
-				assembleLieferartDtos(lieferartenColl), loSuchErstHierI,
+		alleLieferarten = uebersetzeLieferartOptimal(assembleLieferartDtos(lieferartenColl), loSuchErstHierI,
 				loDannHierI);
 
 		return alleLieferarten;
@@ -338,21 +332,16 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Hole die Uebersetzungen f&uuml;r ein Array von Lieferarten
 	 * 
-	 * @param pArray
-	 *            Stati
-	 * @param locale1
-	 *            Locale
-	 * @param locale2
-	 *            Locale
+	 * @param pArray  Stati
+	 * @param locale1 Locale
+	 * @param locale2 Locale
 	 * @return Map
 	 */
-	private Map<Integer, String> uebersetzeLieferartOptimal(
-			LieferartDto[] pArray, Locale locale1, Locale locale2) {
+	private Map<Integer, String> uebersetzeLieferartOptimal(LieferartDto[] pArray, Locale locale1, Locale locale2) {
 		Map<Integer, String> uebersetzung = new TreeMap<Integer, String>();
 		for (int i = 0; i < pArray.length; i++) {
 			Integer key = pArray[i].getIId();
-			String value = uebersetzeLieferartOptimal(pArray[i].getIId(),
-					pArray[i].getCNr(), locale1, locale2);
+			String value = uebersetzeLieferartOptimal(pArray[i].getIId(), pArray[i].getCNr(), locale1, locale2);
 			uebersetzung.put(key, value);
 		}
 		return uebersetzung;
@@ -362,18 +351,13 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	 * Uebersetzt eine Lieferart optimal 1.Versuch: mit locale1 2.Versuch: mit
 	 * locale2 3.Versuch: cNr
 	 * 
-	 * @param iID
-	 *            Integer
-	 * @param cNr
-	 *            String
-	 * @param locale1
-	 *            Locale
-	 * @param locale2
-	 *            Locale
+	 * @param iID     Integer
+	 * @param cNr     String
+	 * @param locale1 Locale
+	 * @param locale2 Locale
 	 * @return String
 	 */
-	private String uebersetzeLieferartOptimal(Integer iID, String cNr,
-			Locale locale1, Locale locale2) {
+	private String uebersetzeLieferartOptimal(Integer iID, String cNr, Locale locale1, Locale locale2) {
 		String uebersetzung;
 		uebersetzung = uebersetzeLieferart(iID, locale1);
 		if (uebersetzung == null) {
@@ -388,10 +372,8 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Uebersetzt eine Lieferart in die Sprache des uebergebenen Locales
 	 * 
-	 * @param iID
-	 *            String
-	 * @param locale
-	 *            Locale
+	 * @param iID    String
+	 * @param locale Locale
 	 * @throws FinderException
 	 * @return String
 	 */
@@ -399,8 +381,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		String cLocale = null;
 
 		cLocale = Helper.locale2String(locale);
-		Lieferartspr lieferartspr = em.find(Lieferartspr.class,
-				new LieferartsprPK(iID, cLocale));
+		Lieferartspr lieferartspr = em.find(Lieferartspr.class, new LieferartsprPK(iID, cLocale));
 		if (lieferartspr == null) {
 			return null;
 		}
@@ -408,51 +389,41 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	}
 
 	/**
-	 * Im UI und auf Drucken soll die Lieferart in einem bestimmten Locale bzw.
-	 * der bestmoeglichen Uebersetzung angezeigt werden.
+	 * Im UI und auf Drucken soll die Lieferart in einem bestimmten Locale bzw. der
+	 * bestmoeglichen Uebersetzung angezeigt werden.
 	 * 
-	 * @param iIdLieferartI
-	 *            PK der Lieferart
-	 * @param localeI
-	 *            das gewuenschte Locale
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdLieferartI PK der Lieferart
+	 * @param localeI       das gewuenschte Locale
+	 * @param theClientDto  der aktuelle Benutzer
 	 * @return String die bestmoegliche Uebersetzung, null ist moeglich
 	 */
-	public String lieferartFindByIIdLocaleOhneExc(Integer iIdLieferartI,
-			Locale localeI, TheClientDto theClientDto) {
+	public String lieferartFindByIIdLocaleOhneExc(Integer iIdLieferartI, Locale localeI, TheClientDto theClientDto) {
 		String cLieferart = null;
 
 		if (iIdLieferartI != null) {
 			// Schritt 1: Uebersetzung in gewuenschtes Locale
-			LieferartsprDto lieferartsprDto = lieferartsprFindByPrimaryKeyOhneExc(
-					iIdLieferartI, Helper.locale2String(localeI), theClientDto);
+			LieferartsprDto lieferartsprDto = lieferartsprFindByPrimaryKeyOhneExc(iIdLieferartI,
+					Helper.locale2String(localeI), theClientDto);
 
-			if (lieferartsprDto != null
-					&& lieferartsprDto.getCBezeichnung() != null) {
+			if (lieferartsprDto != null && lieferartsprDto.getCBezeichnung() != null) {
 				cLieferart = lieferartsprDto.getCBezeichnung();
 			} else {
 				// Schritt 2: Uebersetzung in die UI Sprache des Benutzers
-				lieferartsprDto = lieferartsprFindByPrimaryKeyOhneExc(
-						iIdLieferartI, theClientDto.getLocUiAsString(),
+				lieferartsprDto = lieferartsprFindByPrimaryKeyOhneExc(iIdLieferartI, theClientDto.getLocUiAsString(),
 						theClientDto);
 
-				if (lieferartsprDto != null
-						&& lieferartsprDto.getCBezeichnung() != null) {
+				if (lieferartsprDto != null && lieferartsprDto.getCBezeichnung() != null) {
 					cLieferart = lieferartsprDto.getCBezeichnung();
 				} else {
 					// Schritt 3: Uebersetzung in Konzerndatensprache
-					lieferartsprDto = lieferartsprFindByPrimaryKeyOhneExc(
-							iIdLieferartI,
+					lieferartsprDto = lieferartsprFindByPrimaryKeyOhneExc(iIdLieferartI,
 							theClientDto.getLocKonzernAsString(), theClientDto);
 
-					if (lieferartsprDto != null
-							&& lieferartsprDto.getCBezeichnung() != null) {
+					if (lieferartsprDto != null && lieferartsprDto.getCBezeichnung() != null) {
 						cLieferart = lieferartsprDto.getCBezeichnung();
 					} else {
 						// Schritt 4: Die cNr der Lieferart
-						LieferartDto lieferartDto = lieferartFindByPrimaryKey(
-								iIdLieferartI, theClientDto);
+						LieferartDto lieferartDto = lieferartFindByPrimaryKey(iIdLieferartI, theClientDto);
 
 						cLieferart = lieferartDto.getCNr();
 					}
@@ -463,14 +434,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return cLieferart;
 	}
 
-	public void createWaehrung(WaehrungDto waehrungDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createWaehrung(WaehrungDto waehrungDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.logData(waehrungDto);
 
 		// hier wird erwartet, dass die personalId's schon dran sind, sonst
 		// funktioniert der aufbautest nicht
-		if (waehrungDto.getPersonalIIdAendern() == null
-				|| waehrungDto.getPersonalIIdAnlegen() == null) {
+		if (waehrungDto.getPersonalIIdAendern() == null || waehrungDto.getPersonalIIdAnlegen() == null) {
 			waehrungDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			waehrungDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
 		}
@@ -478,9 +447,8 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		waehrungDto.setPersonalIIdAnlegen(waehrungDto.getPersonalIIdAnlegen());
 
 		try {
-			Waehrung waehrung = new Waehrung(waehrungDto.getCNr(), waehrungDto
-					.getPersonalIIdAendern(), waehrungDto
-					.getPersonalIIdAnlegen());
+			Waehrung waehrung = new Waehrung(waehrungDto.getCNr(), waehrungDto.getPersonalIIdAendern(),
+					waehrungDto.getPersonalIIdAnlegen());
 			em.persist(waehrung);
 			em.flush();
 			waehrungDto.setTAendern(waehrung.getTAendern());
@@ -492,33 +460,28 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	}
 
-	public void removeWaehrung(WaehrungDto waehrungDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeWaehrung(WaehrungDto waehrungDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.logData(waehrungDto);
 		if (waehrungDto != null) {
 			Waehrung toRemove = em.find(Waehrung.class, waehrungDto.getCNr());
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 
 		}
 	}
 
-	public void createUpdateWaehrung(WaehrungDto waehrungDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createUpdateWaehrung(WaehrungDto waehrungDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (waehrungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("waehrungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("waehrungDto == null"));
 		}
 
 		myLogger.logData(waehrungDto);
@@ -543,8 +506,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	}
 
-	private void setWaehrungFromWaehrungDto(Waehrung waehrung,
-			WaehrungDto waehrungDto) {
+	private void setWaehrungFromWaehrungDto(Waehrung waehrung, WaehrungDto waehrungDto) {
 		waehrung.setCKommentar(waehrungDto.getCKommentar());
 		waehrung.setPersonalIIdAnlegen(waehrungDto.getPersonalIIdAnlegen());
 		waehrung.setTAnlegen(waehrungDto.getTAnlegen());
@@ -585,10 +547,9 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return tmWaehrungen;
 	}
 
-	//***Wechselkurs************************************************************
+	// ***Wechselkurs************************************************************
 	// **
-	public void createWechselkurs(WechselkursDto wechselkursDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createWechselkurs(WechselkursDto wechselkursDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.logData(wechselkursDto);
 		wechselkursDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		wechselkursDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
@@ -610,11 +571,9 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// + wechselkursDto.toString()));
 		// }
 		try {
-			Wechselkurs wechselkurs = new Wechselkurs(wechselkursDto
-					.getWaehrungCNrVon(), wechselkursDto.getWaehrungCNrZu(),
-					wechselkursDto.getTDatum(), wechselkursDto.getNKurs(),
-					wechselkursDto.getPersonalIIdAnlegen(), wechselkursDto
-							.getPersonalIIdAendern());
+			Wechselkurs wechselkurs = new Wechselkurs(wechselkursDto.getWaehrungCNrVon(),
+					wechselkursDto.getWaehrungCNrZu(), wechselkursDto.getTDatum(), wechselkursDto.getNKurs(),
+					wechselkursDto.getPersonalIIdAnlegen(), wechselkursDto.getPersonalIIdAendern());
 			em.persist(wechselkurs);
 			em.flush();
 
@@ -623,42 +582,35 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			wechselkursDto.setTAnlegen(wechselkurs.getTAnlegen());
 
 			setWechselkursFromWechselkursDto(wechselkurs, wechselkursDto);
-			myLogger.logKritisch("CreateWechselkurs: "
-					+ wechselkursDto.toString());
+			myLogger.logKritisch("CreateWechselkurs: " + wechselkursDto.toString());
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 	}
 
-	public void removeWechselkurs(WechselkursDto wechselkursDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeWechselkurs(WechselkursDto wechselkursDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.logData(wechselkursDto);
 		if (wechselkursDto != null) {
-			myLogger.logKritisch("RemoveWechselkurs: "
-					+ wechselkursDto.toString());
+			myLogger.logKritisch("RemoveWechselkurs: " + wechselkursDto.toString());
 			String waehrungLocaleCNrVon = wechselkursDto.getWaehrungCNrVon();
 			String waehrungLocaleCNrZu = wechselkursDto.getWaehrungCNrZu();
 			java.sql.Date tDatum = wechselkursDto.getTDatum();
 			Wechselkurs toRemove = em.find(Wechselkurs.class,
-					new WechselkursPK(waehrungLocaleCNrVon,
-							waehrungLocaleCNrZu, tDatum));
+					new WechselkursPK(waehrungLocaleCNrVon, waehrungLocaleCNrZu, tDatum));
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 
 		}
 	}
 
-	public void updateWechselkurs(WechselkursDto wechselkursDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateWechselkurs(WechselkursDto wechselkursDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.logData(wechselkursDto);
 		wechselkursDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		wechselkursDto.setTDatum(Helper.cutDate(wechselkursDto.getTDatum()));
@@ -673,31 +625,28 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			if (wechselkurs == null) {
 				createWechselkurs(wechselkursDto, theClientDto);
 
-				myLogger.logKritisch("CreateWechselkurs: "
-						+ wechselkursDto.toString());
+				myLogger.logKritisch("CreateWechselkurs: " + wechselkursDto.toString());
 			} else {
 				// schaut boese aus, muss aber sein
 				// passiert dann wenn am client einer "neu" drueckt, aber
 				// eigentlich
 				// einen bestehenden datensatz updatet
 				if (wechselkursDto.getPersonalIIdAnlegen() == null) {
-					wechselkursDto.setPersonalIIdAnlegen(wechselkurs
-							.getPersonalIIdAnlegen());
+					wechselkursDto.setPersonalIIdAnlegen(wechselkurs.getPersonalIIdAnlegen());
 					wechselkursDto.setTAnlegen(wechselkurs.getTAnlegen());
 				}
 				setWechselkursFromWechselkursDto(wechselkurs, wechselkursDto);
 
-				myLogger.logKritisch("UpdateWechselkurs: von "
-						+ wechselkurs.getNKurs() + " nach "
-						+ wechselkursDto.toString());
+				myLogger.logKritisch(
+						"UpdateWechselkurs: von " + wechselkurs.getNKurs() + " nach " + wechselkursDto.toString());
 
 			}
 
 		}
 	}
 
-	public WechselkursDto wechselkursFindByPrimaryKey(String waehrungCNrVon,
-			String waehrungCNrZu, java.util.Date tDatum) throws EJBExceptionLP {
+	public WechselkursDto wechselkursFindByPrimaryKey(String waehrungCNrVon, String waehrungCNrZu,
+			java.util.Date tDatum) throws EJBExceptionLP {
 		// try {
 		WechselkursPK wechselkursPK = new WechselkursPK();
 		wechselkursPK.setWaehrungCNrVon(waehrungCNrVon);
@@ -705,15 +654,13 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		wechselkursPK.setTDatum(new java.sql.Date(tDatum.getTime()));
 		Wechselkurs wechselkurs = em.find(Wechselkurs.class, wechselkursPK);
 		if (wechselkurs == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleWechselkursDto(wechselkurs);
 	}
 
-	public WechselkursDto wechselkursFindByPrimaryKeyOhneExc(
-			String waehrungCNrVon, String waehrungCNrZu, java.util.Date tDatum)
-			throws EJBExceptionLP {
+	public WechselkursDto wechselkursFindByPrimaryKeyOhneExc(String waehrungCNrVon, String waehrungCNrZu,
+			java.util.Date tDatum) throws EJBExceptionLP {
 		// try {
 		WechselkursPK wechselkursPK = new WechselkursPK();
 		wechselkursPK.setWaehrungCNrVon(waehrungCNrVon);
@@ -732,10 +679,8 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	 * aufgerufen werden, wenn das Nichtvorhandensein eines Wechselkurses keine
 	 * Laufzeit-Exception zur Folge haben darf.
 	 * 
-	 * @param sWaehrungVonI
-	 *            von dieser Waehrung
-	 * @param sWaehrungZuI
-	 *            in diese Waehrung
+	 * @param sWaehrungVonI von dieser Waehrung
+	 * @param sWaehrungZuI  in diese Waehrung
 	 * @return boolean true, wenn der Wechselkurs existiert
 	 */
 	public boolean wechselkursExists(String sWaehrungVonI, String sWaehrungZuI) {
@@ -760,21 +705,17 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// return exists;
 	}
 
-	private void setWechselkursFromWechselkursDto(Wechselkurs wechselkurs,
-			WechselkursDto wechselkursDto) {
+	private void setWechselkursFromWechselkursDto(Wechselkurs wechselkurs, WechselkursDto wechselkursDto) {
 		// Kurs <=0 ist nciht zulaessig
 		if (wechselkursDto.getNKurs().compareTo(new BigDecimal(0)) >= 0) {
 			wechselkurs.setNKurs(wechselkursDto.getNKurs());
 		} else {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"Kurs <=0 ist nicht zulaessig"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("Kurs <=0 ist nicht zulaessig"));
 		}
 		wechselkurs.setTAnlegen(wechselkursDto.getTAnlegen());
-		wechselkurs.setPersonalIIdAnlegen(wechselkursDto
-				.getPersonalIIdAnlegen());
+		wechselkurs.setPersonalIIdAnlegen(wechselkursDto.getPersonalIIdAnlegen());
 		wechselkurs.setTAendern(wechselkursDto.getTAendern());
-		wechselkurs.setPersonalIIdAendern(wechselkursDto
-				.getPersonalIIdAendern());
+		wechselkurs.setPersonalIIdAendern(wechselkursDto.getPersonalIIdAendern());
 		em.merge(wechselkurs);
 		em.flush();
 	}
@@ -810,41 +751,30 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// }
 	}
 
-	public WaehrungDto waehrungFindByPrimaryKey(String cNr)
-			throws EJBExceptionLP {
-		// try {
-		Waehrung waehrung = em.find(Waehrung.class, cNr);
-		if (waehrung == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-		}
-		return WaehrungDtoAssembler.createDto(waehrung);
+	public WaehrungDto waehrungFindByPrimaryKey(String cNr) throws EJBExceptionLP {
+		WaehrungDto waehrungDto = waehrungFindByPrimaryKeyWithNull(cNr);
+		Validator.entityFoundCnr(waehrungDto, cNr);
+		return waehrungDto;
+	}
 
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
-
+	@Override
+	public WaehrungDto waehrungFindByPrimaryKeyWithNull(String cnr) {
+		Waehrung waehrung = em.find(Waehrung.class, cnr);
+		return waehrung == null ? null : WaehrungDtoAssembler.createDto(waehrung);
 	}
 
 	/**
 	 * Einen Wechselkurs zwischen zwei Waehrungen bestimmen. <br>
 	 * Der Wechselkurs ist kalenderfaehig.
 	 * 
-	 * @param waehrungCNrVonI
-	 *            umgerechnet wird aus dieser Waehrung
-	 * @param waehrungCNrNachI
-	 *            umgerechnet wird in diese Waehrung
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param waehrungCNrVonI  umgerechnet wird aus dieser Waehrung
+	 * @param waehrungCNrNachI umgerechnet wird in diese Waehrung
+	 * @param theClientDto     der aktuelle Benutzer
 	 * @return Float der aktuelle Wechselkurs, wenn kein gueltiger vorhanden ist
 	 *         null
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public BigDecimal getWechselkurs2(String waehrungCNrVonI,
-			String waehrungCNrNachI, TheClientDto theClientDto)
+	public BigDecimal getWechselkurs2(String waehrungCNrVonI, String waehrungCNrNachI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		myLogger.info("Von: " + waehrungCNrVonI + " nach: " + waehrungCNrNachI);
@@ -852,12 +782,10 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		BigDecimal ffWechselkursO = null;
 
 		if (waehrungCNrVonI.equals(waehrungCNrNachI)) {
-			ffWechselkursO = BigDecimal.ONE
-					.setScale(ANZAHL_NACHKOMMASTELLEN_WECHSELKURS);
+			ffWechselkursO = BigDecimal.ONE.setScale(ANZAHL_NACHKOMMASTELLEN_WECHSELKURS);
 		} else {
 			// jetzt nach waehrung von -> waehrung zu suchen
-			WechselkursDto wechselkursDto = getLetztenWechselkurs(
-					waehrungCNrVonI, waehrungCNrNachI, theClientDto);
+			WechselkursDto wechselkursDto = getLetztenWechselkurs(waehrungCNrVonI, waehrungCNrNachI, theClientDto);
 			if (wechselkursDto != null) {
 				ffWechselkursO = wechselkursDto.getNKurs();
 			}
@@ -866,8 +794,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return ffWechselkursO;
 	}
 
-	public WechselkursDto getKursZuDatum(String waehrungCNrVonI,
-			String waehrungCNrNachI, java.sql.Date dDatum,
+	public WechselkursDto getKursZuDatum(String waehrungCNrVonI, String waehrungCNrNachI, java.sql.Date dDatum,
 			TheClientDto theClientDto) {
 		WechselkursDto kurs = null;
 
@@ -875,25 +802,24 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			kurs = new WechselkursDto();
 			kurs.setWaehrungCNrVon(waehrungCNrVonI);
 			kurs.setWaehrungCNrZu(waehrungCNrNachI);
-			kurs.setNKurs(BigDecimal.ONE
-					.setScale(LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS));
+			kurs.setNKurs(BigDecimal.ONE.setScale(LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS));
 			return kurs;
 		}
 
 		String mandantenWaehrung = theClientDto.getSMandantenwaehrung();
-		if (!(mandantenWaehrung.equals(waehrungCNrVonI) || mandantenWaehrung
-				.equals(waehrungCNrNachI))) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_IM_WECHSELKURS_KEINE_MANDANTENWAEHRUNG_ENTHALTEN,
-					new Exception("Weder '" + waehrungCNrVonI + "' noch '"
-							+ waehrungCNrNachI + "'"
-							+ "enthalten die Mandantenwaehrung '"
-							+ mandantenWaehrung + "'."));
+		if (!(mandantenWaehrung.equals(waehrungCNrVonI) || mandantenWaehrung.equals(waehrungCNrNachI))) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_IM_WECHSELKURS_KEINE_MANDANTENWAEHRUNG_ENTHALTEN,
+					new Exception("Weder '" + waehrungCNrVonI + "' noch '" + waehrungCNrNachI + "'"
+							+ "enthalten die Mandantenwaehrung '" + mandantenWaehrung + "'."));
 		}
 
-		WechselkursDto[] kurse = getAlleWechselkurse(mandantenWaehrung,
-				waehrungCNrNachI);
+		WechselkursDto[] kurse = getAlleWechselkurse(mandantenWaehrung, waehrungCNrNachI);
 		if (kurse.length > 0) {
+			if (dDatum == null) {
+				myLogger.warn("Das Datum zur Wechselkursberechnung von Mandant '" + mandantenWaehrung + "' zu '"
+						+ waehrungCNrNachI + "' ist nicht gesetzt.");
+				return null;
+			}
 			for (int i = kurse.length - 1; i >= 0; i--) {
 				if (kurse[i].getTDatum().compareTo(dDatum) <= 0) {
 					kurs = kurse[i];
@@ -904,14 +830,19 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 		kurse = getAlleWechselkurse(mandantenWaehrung, waehrungCNrVonI);
 		if (kurse.length > 0) {
+			if (dDatum == null) {
+				myLogger.warn("Das Datum zur Wechselkursberechnung von Mandant '" + mandantenWaehrung + "' zu '"
+						+ waehrungCNrVonI + "' ist nicht gesetzt.");
+				return null;
+			}
+
 			for (int i = kurse.length - 1; i >= 0; i--) {
 				if (kurse[i].getTDatum().compareTo(dDatum) <= 0) {
 					kurs = kurse[i];
 					kurs.setWaehrungCNrVon(waehrungCNrVonI);
 					kurs.setWaehrungCNrZu(mandantenWaehrung);
 					kurs.setNKurs(BigDecimal.ONE.divide(kurs.getNKurs(),
-							LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS,
-							BigDecimal.ROUND_HALF_EVEN));
+							LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS + 4, BigDecimal.ROUND_HALF_EVEN));
 					return kurs;
 				}
 			}
@@ -920,33 +851,26 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return null;
 	}
 
-	private WechselkursDto getLetztenWechselkurs(String waehrungCNrVonI,
-			String waehrungCNrNachI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	private WechselkursDto getLetztenWechselkurs(String waehrungCNrVonI, String waehrungCNrNachI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		WechselkursDto kurs = null;
 
 		if (waehrungCNrVonI.equals(waehrungCNrNachI)) {
 			kurs = new WechselkursDto();
 			kurs.setWaehrungCNrVon(waehrungCNrVonI);
 			kurs.setWaehrungCNrZu(waehrungCNrNachI);
-			kurs.setNKurs(BigDecimal.ONE
-					.setScale(LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS));
+			kurs.setNKurs(BigDecimal.ONE.setScale(LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS));
 			return kurs;
 		}
 
 		String mandantenWaehrung = theClientDto.getSMandantenwaehrung();
-		if (!(mandantenWaehrung.equals(waehrungCNrVonI) || mandantenWaehrung
-				.equals(waehrungCNrNachI))) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_IM_WECHSELKURS_KEINE_MANDANTENWAEHRUNG_ENTHALTEN,
-					new Exception("Weder '" + waehrungCNrVonI + "' noch '"
-							+ waehrungCNrNachI + "'"
-							+ "enthalten die Mandantenwaehrung '"
-							+ mandantenWaehrung + "'."));
+		if (!(mandantenWaehrung.equals(waehrungCNrVonI) || mandantenWaehrung.equals(waehrungCNrNachI))) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_IM_WECHSELKURS_KEINE_MANDANTENWAEHRUNG_ENTHALTEN,
+					new Exception("Weder '" + waehrungCNrVonI + "' noch '" + waehrungCNrNachI + "'"
+							+ "enthalten die Mandantenwaehrung '" + mandantenWaehrung + "'."));
 		}
 
-		WechselkursDto[] kurse = getAlleWechselkurse(mandantenWaehrung,
-				waehrungCNrNachI);
+		WechselkursDto[] kurse = getAlleWechselkurse(mandantenWaehrung, waehrungCNrNachI);
 		if (kurse.length > 0) {
 			return kurse[kurse.length - 1];
 		}
@@ -956,8 +880,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			kurs = kurse[kurse.length - 1];
 			kurs.setWaehrungCNrVon(waehrungCNrVonI);
 			kurs.setWaehrungCNrZu(mandantenWaehrung);
-			kurs.setNKurs(BigDecimal.ONE.divide(kurs.getNKurs(),
-					LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS,
+			kurs.setNKurs(BigDecimal.ONE.divide(kurs.getNKurs(), LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS + 4,
 					BigDecimal.ROUND_HALF_EVEN));
 			return kurs;
 		}
@@ -965,8 +888,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return null;
 	}
 
-	private WechselkursDto[] getAlleWechselkurse(String waehrungCNrVon,
-			String waehrungCNrBis) throws EJBExceptionLP {
+	private WechselkursDto[] getAlleWechselkurse(String waehrungCNrVon, String waehrungCNrBis) throws EJBExceptionLP {
 
 		Query query = em.createNamedQuery("WechselkursfindByVonZu");
 		query.setParameter(1, waehrungCNrVon);
@@ -980,22 +902,18 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	// ****************************************************************
 	/**
 	 * 
-	 * @param belegartDto
-	 *            BelegartDto
-	 * @param theClientDto
-	 *            String
+	 * @param belegartDto  BelegartDto
+	 * @param theClientDto String
 	 * @throws EJBExceptionLP
 	 * @return String
 	 */
-	public String createBelegart(BelegartDto belegartDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createBelegart(BelegartDto belegartDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		myLogger.entry();
 
 		// precondition.
 		if (belegartDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("belegartDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("belegartDto == null"));
 		}
 
 		if (belegartDto.getCNr() == null) {
@@ -1006,9 +924,8 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		String cNrWieKey = null;
 		try {
 			// Erst die Belegart.
-			Belegart belegart = new Belegart(belegartDto.getCNr(), belegartDto
-					.getIStandarderledigungszeitInTagen(), belegartDto
-					.getCKurzbezeichnung(), belegartDto.getISort());
+			Belegart belegart = new Belegart(belegartDto.getCNr(), belegartDto.getIStandarderledigungszeitInTagen(),
+					belegartDto.getCKurzbezeichnung(), belegartDto.getISort());
 			em.persist(belegart);
 			em.flush();
 
@@ -1016,19 +933,16 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 			if (belegartDto.getBelegartsprDto() != null) {
 				// Jetzt die Belegartspr.
-				Belegartspr belegartspr = new Belegartspr(belegartDto
-						.getBelegartsprDto().getLocaleCNr(), belegartDto
-						.getCNr());
+				Belegartspr belegartspr = new Belegartspr(belegartDto.getBelegartsprDto().getLocaleCNr(),
+						belegartDto.getCNr());
 				em.persist(belegartspr);
 				em.flush();
 
-				setBelegartsprFromBelegartsprDto(belegartspr, belegartDto
-						.getBelegartsprDto());
+				setBelegartsprFromBelegartsprDto(belegartspr, belegartDto.getBelegartsprDto());
 			}
 			Belegart temp = em.find(Belegart.class, belegartDto.getCNr());
 			if (temp == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			cNrWieKey = temp.getCNr();
 
@@ -1048,8 +962,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		myLogger.entry();
 
 		if (cNr == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("cNr == null"));
 		}
 
 		try {
@@ -1063,8 +976,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			}
 			Belegart toRemove = em.find(Belegart.class, cNr);
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(toRemove);
 			em.flush();
@@ -1080,33 +992,28 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void updateBelegart(BelegartDto belegartDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateBelegart(BelegartDto belegartDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (belegartDto != null) {
 			String cNr = belegartDto.getCNr();
 			// try {
 			// erst die dto
 			Belegart belegart = em.find(Belegart.class, cNr);
 			if (belegart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setBelegartFromBelegartDto(belegart, belegartDto);
 
 			// dann die sprDto
 			BelegartsprDto belegartsprDto = belegartDto.getBelegartsprDto();
 
-			if (belegartsprDto != null
-					&& belegartsprDto.getBelegartCNr() != null) {
+			if (belegartsprDto != null && belegartsprDto.getBelegartCNr() != null) {
 				BelegartsprPK belegartsprPK = new BelegartsprPK();
 				belegartsprPK.setLocaleCNr(belegartsprDto.getLocaleCNr());
 				belegartsprPK.setBelegartCNr(belegartsprDto.getBelegartCNr());
 				// try {
-				Belegartspr belegartspr = em.find(Belegartspr.class,
-						belegartsprPK);
+				Belegartspr belegartspr = em.find(Belegartspr.class, belegartsprPK);
 				if (belegartspr == null) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 				}
 				setBelegartsprFromBelegartsprDto(belegartspr, belegartsprDto);
 				// }
@@ -1117,15 +1024,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 				// }
 			} else {
 				try {
-					Belegartspr belegartspr = new Belegartspr(belegartsprDto
-							.getLocaleCNr(), belegartDto.getCNr());
+					Belegartspr belegartspr = new Belegartspr(belegartsprDto.getLocaleCNr(), belegartDto.getCNr());
 					em.persist(belegartspr);
 					em.flush();
-					setBelegartsprFromBelegartsprDto(belegartspr,
-							belegartsprDto);
+					setBelegartsprFromBelegartsprDto(belegartspr, belegartsprDto);
 				} catch (EntityExistsException e) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 				}
 
 			}
@@ -1139,13 +1043,11 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public BelegartDto belegartFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BelegartDto belegartFindByPrimaryKey(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("cNr == null"));
 		}
 
 		BelegartDto belegartDto = null;
@@ -1153,16 +1055,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// Erst die Belegart lesen.
 		Belegart belegart = em.find(Belegart.class, cNrI);
 		if (belegart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		belegartDto = assembleBelegartDto(belegart);
 
 		BelegartsprDto belegartsprDto = null;
 		try {
 			// Jetzt die UI-Belegartspr lesen.
-			BelegartsprPK belegartsprPK = new BelegartsprPK(theClientDto
-					.getLocUiAsString(), cNrI);
+			BelegartsprPK belegartsprPK = new BelegartsprPK(theClientDto.getLocUiAsString(), cNrI);
 			Belegartspr belegartspr = em.find(Belegartspr.class, belegartsprPK);
 			if (belegartspr != null) {
 				belegartsprDto = assembleBelegartsprDto(belegartspr);
@@ -1196,12 +1096,10 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	}
 
-	private void setBelegartFromBelegartDto(Belegart belegart,
-			BelegartDto belegartDto) {
+	private void setBelegartFromBelegartDto(Belegart belegart, BelegartDto belegartDto) {
 		belegart.setISort(belegartDto.getISort());
 		belegart.setCKbez(belegartDto.getCKurzbezeichnung());
-		belegart.setIStandarderledigungszeitintagen(belegartDto
-				.getIStandarderledigungszeitInTagen());
+		belegart.setIStandarderledigungszeitintagen(belegartDto.getIStandarderledigungszeitInTagen());
 		em.merge(belegart);
 		em.flush();
 	}
@@ -1223,14 +1121,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return (BelegartDto[]) list.toArray(returnArray);
 	}
 
-	public void createBelegartspr(BelegartsprDto belegartsprDto)
-			throws EJBExceptionLP {
+	public void createBelegartspr(BelegartsprDto belegartsprDto) throws EJBExceptionLP {
 		if (belegartsprDto == null) {
 
 		}
 		try {
-			Belegartspr belegartspr = new Belegartspr(belegartsprDto
-					.getLocaleCNr(), belegartsprDto.getBelegartCNr());
+			Belegartspr belegartspr = new Belegartspr(belegartsprDto.getLocaleCNr(), belegartsprDto.getBelegartCNr());
 			em.persist(belegartspr);
 			em.flush();
 			setBelegartsprFromBelegartsprDto(belegartspr, belegartsprDto);
@@ -1239,15 +1135,13 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void removeBelegartspr(String spracheCNr, String belegartCNr)
-			throws EJBExceptionLP {
+	public void removeBelegartspr(String spracheCNr, String belegartCNr) throws EJBExceptionLP {
 		BelegartsprPK belegartsprPK = new BelegartsprPK();
 		belegartsprPK.setLocaleCNr(spracheCNr);
 		belegartsprPK.setBelegartCNr(belegartCNr);
 		Belegartspr toRemove = em.find(Belegartspr.class, belegartsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1257,8 +1151,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void removeBelegartspr(BelegartsprDto belegartsprDto)
-			throws EJBExceptionLP {
+	public void removeBelegartspr(BelegartsprDto belegartsprDto) throws EJBExceptionLP {
 		if (belegartsprDto != null) {
 			String spracheCNr = belegartsprDto.getLocaleCNr();
 			String belegartCNr = belegartsprDto.getBelegartCNr();
@@ -1266,21 +1159,17 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void updateBelegartspr(BelegartsprDto belegartsprDto)
-			throws EJBExceptionLP {
+	public void updateBelegartspr(BelegartsprDto belegartsprDto) throws EJBExceptionLP {
 		if (belegartsprDto != null) {
-			if (belegartsprDto.getLocaleCNr() != null
-					&& belegartsprDto.getBelegartCNr() != null) {
+			if (belegartsprDto.getLocaleCNr() != null && belegartsprDto.getBelegartCNr() != null) {
 
 				BelegartsprPK belegartsprPK = new BelegartsprPK();
 				belegartsprPK.setLocaleCNr(belegartsprDto.getLocaleCNr());
 				belegartsprPK.setBelegartCNr(belegartsprDto.getBelegartCNr());
 				// try {
-				Belegartspr belegartspr = em.find(Belegartspr.class,
-						belegartsprPK);
+				Belegartspr belegartspr = em.find(Belegartspr.class, belegartsprPK);
 				if (belegartspr == null) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 				}
 				setBelegartsprFromBelegartsprDto(belegartspr, belegartsprDto);
 				// }
@@ -1293,15 +1182,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public BelegartsprDto belegartsprFindByPrimaryKey(String belegartCNr,
-			String spracheCNr) throws EJBExceptionLP {
+	public BelegartsprDto belegartsprFindByPrimaryKey(String belegartCNr, String spracheCNr) throws EJBExceptionLP {
 
 		// try {
-		Belegartspr belegartspr = em.find(Belegartspr.class, new BelegartsprPK(
-				spracheCNr, belegartCNr));
+		Belegartspr belegartspr = em.find(Belegartspr.class, new BelegartsprPK(spracheCNr, belegartCNr));
 		if (belegartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleBelegartsprDto(belegartspr);
 
@@ -1312,8 +1198,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// }
 	}
 
-	private void setBelegartsprFromBelegartsprDto(Belegartspr belegartspr,
-			BelegartsprDto belegartsprDto) {
+	private void setBelegartsprFromBelegartsprDto(Belegartspr belegartspr, BelegartsprDto belegartsprDto) {
 		belegartspr.setCBez(belegartsprDto.getCBez());
 		em.merge(belegartspr);
 		em.flush();
@@ -1339,15 +1224,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Alle Belegarten in bestmoeglicher Uebersetzung holen.
 	 * 
-	 * @param pLocale1
-	 *            Uebersteuerung der UI Sprache des Benutzers
-	 * @param pLocale2
-	 *            UI Sprache des Benutzers
+	 * @param pLocale1 Uebersteuerung der UI Sprache des Benutzers
+	 * @param pLocale2 UI Sprache des Benutzers
 	 * @throws EJBExceptionLP
 	 * @return Map
 	 */
-	public Map getAllBelegartenUebersetzt(Locale pLocale1, Locale pLocale2)
-			throws EJBExceptionLP {
+	public Map getAllBelegartenUebersetzt(Locale pLocale1, Locale pLocale2) throws EJBExceptionLP {
 		Map<String, String> alleBelegarten = null;
 		Collection<?> belegartenColl = null;
 
@@ -1365,8 +1247,8 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// t);
 		// }
 
-		alleBelegarten = this.uebersetzeBelegartenOptimal(this
-				.assembleBelegartDtos(belegartenColl), pLocale1, pLocale2);
+		alleBelegarten = this.uebersetzeBelegartenOptimal(this.assembleBelegartDtos(belegartenColl), pLocale1,
+				pLocale2);
 
 		return alleBelegarten;
 	}
@@ -1374,21 +1256,16 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Hole die bestmoeglichen Uebersetzungen fuer ein Array von Belegarten.
 	 * 
-	 * @param pArray
-	 *            Stati
-	 * @param locale1
-	 *            Locale
-	 * @param locale2
-	 *            Locale
+	 * @param pArray  Stati
+	 * @param locale1 Locale
+	 * @param locale2 Locale
 	 * @return ComboBoxContentDto[]
 	 */
-	private Map<String, String> uebersetzeBelegartenOptimal(
-			BelegartDto[] pArray, Locale locale1, Locale locale2) {
+	private Map<String, String> uebersetzeBelegartenOptimal(BelegartDto[] pArray, Locale locale1, Locale locale2) {
 		Map<String, String> uebersetzung = new TreeMap<String, String>();
 		for (int i = 0; i < pArray.length; i++) {
 			String key = pArray[i].getCNr();
-			String value = uebersetzeBelegartOptimal(pArray[i].getCNr(),
-					locale1, locale2);
+			String value = uebersetzeBelegartOptimal(pArray[i].getCNr(), locale1, locale2);
 			uebersetzung.put(key, value);
 		}
 		return uebersetzung;
@@ -1397,10 +1274,8 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Uebersetzt eine Belegart in die Sprache des uebergebenen Locales.
 	 * 
-	 * @param cNr
-	 *            String
-	 * @param locale
-	 *            Locale
+	 * @param cNr    String
+	 * @param locale Locale
 	 * @throws FinderException
 	 * @return String
 	 */
@@ -1408,8 +1283,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		String cLocale = null;
 
 		cLocale = Helper.locale2String(locale);
-		Belegartspr belegartspr = em.find(Belegartspr.class, new BelegartsprPK(
-				cLocale, cNr));
+		Belegartspr belegartspr = em.find(Belegartspr.class, new BelegartsprPK(cLocale, cNr));
 		if (belegartspr == null) {
 			return null;
 		}
@@ -1420,16 +1294,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	 * Uebersetzt eine Belegart optimal 1.Versuch: mit locale1 2.Versuch: mit
 	 * locale2 3.Versuch: cNr
 	 * 
-	 * @param cNr
-	 *            String
-	 * @param locale1
-	 *            Locale
-	 * @param locale2
-	 *            Locale
+	 * @param cNr     String
+	 * @param locale1 Locale
+	 * @param locale2 Locale
 	 * @return String
 	 */
-	public String uebersetzeBelegartOptimal(String cNr, Locale locale1,
-			Locale locale2) {
+	public String uebersetzeBelegartOptimal(String cNr, Locale locale1, Locale locale2) {
 		String uebersetzung;
 		uebersetzung = uebersetzeBelegart(cNr, locale1);
 		if (uebersetzung == null) {
@@ -1444,8 +1314,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Zu einer Belegart das gesamte Dto holen. Enthaelt die Kurzbezeichnung.
 	 * 
-	 * @param pCNr
-	 *            String
+	 * @param pCNr String
 	 * @throws EJBExceptionLP
 	 * @return BelegartDto
 	 */
@@ -1462,8 +1331,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		} catch (NoResultException t) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, t);
 		} catch (NonUniqueResultException ex1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-					ex1);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
 		}
 
 		return belegartDto;
@@ -1472,32 +1340,23 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Einen Betrag von einer Waehrung in die andere umrechnen.
 	 * 
-	 * @param bdBetragI
-	 *            der Betrag in der Ausgangswaehrung
-	 * @param cCurrency1I
-	 *            Ausgangswaehrung
-	 * @param cCurrency2I
-	 *            Zielwaehrung
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param bdBetragI    der Betrag in der Ausgangswaehrung
+	 * @param cCurrency1I  Ausgangswaehrung
+	 * @param cCurrency2I  Zielwaehrung
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return BigDecimal der Betrag in der Zielwaehrung
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public BigDecimal rechneUmInAndereWaehrungZuDatum(BigDecimal bdBetragI,
-			String cCurrency1I, String cCurrency2I, Date dDatumI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BigDecimal rechneUmInAndereWaehrungZuDatum(BigDecimal bdBetragI, String cCurrency1I, String cCurrency2I,
+			Date dDatumI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (bdBetragI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("bdBetragI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("bdBetragI == null"));
 		}
 		if (cCurrency1I == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cCurrency1I == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cCurrency1I == null"));
 		}
 		if (cCurrency2I == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cCurrency2I == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cCurrency2I == null"));
 		}
 
 		BigDecimal bdBetragO = new BigDecimal(0);
@@ -1507,17 +1366,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 				bdBetragO = bdBetragI;
 			} else {
 				if (!cCurrency1I.equals(theClientDto.getSMandantenwaehrung())
-						&& !cCurrency2I.equals(theClientDto
-								.getSMandantenwaehrung())) {
+						&& !cCurrency2I.equals(theClientDto.getSMandantenwaehrung())) {
 					// Zuerst in Mandantenwaehrung umrechnen
-					bdBetragI = rechneUmInAndereWaehrungZuDatum(bdBetragI,
-							cCurrency1I, theClientDto.getSMandantenwaehrung(),
-							dDatumI, theClientDto);
+					bdBetragI = rechneUmInAndereWaehrungZuDatum(bdBetragI, cCurrency1I,
+							theClientDto.getSMandantenwaehrung(), dDatumI, theClientDto);
 					cCurrency1I = theClientDto.getSMandantenwaehrung();
 				}
 
-				WechselkursDto kursDto = getLocaleFac().getKursZuDatum(
-						cCurrency1I, cCurrency2I, dDatumI, theClientDto);
+				WechselkursDto kursDto = getLocaleFac().getKursZuDatum(cCurrency1I, cCurrency2I, dDatumI, theClientDto);
 
 				if (kursDto != null && kursDto.getNKurs() != null) {
 					bdBetragO = bdBetragI.multiply(kursDto.getNKurs());
@@ -1525,11 +1381,10 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 					ArrayList alDaten = new ArrayList();
 					alDaten.add(cCurrency1I);
 					alDaten.add(cCurrency2I);
+					alDaten.add(dDatumI);
 
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_KEIN_WECHSELKURS_HINTERLEGT,
-							alDaten, new Exception("kein Wechselkurs von "
-									+ cCurrency1I + " auf " + cCurrency2I));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEIN_WECHSELKURS_HINTERLEGT, alDaten,
+							new Exception("kein Wechselkurs von " + cCurrency1I + " auf " + cCurrency2I));
 				}
 			}
 		} catch (RemoteException ex) {
@@ -1542,67 +1397,55 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 	/**
 	 * Einen Betrag von einer Waehrung in die andere umrechnen.
 	 * 
-	 * @param bdBetragI
-	 *            der Betrag in der Ausgangswaehrung
-	 * @param bdKursMandantenwaehrungZuBelegwaehrung
-	 *            Wechselkurs
+	 * @param bdBetragI                              der Betrag in der
+	 *                                               Ausgangswaehrung
+	 * @param bdKursMandantenwaehrungZuBelegwaehrung Wechselkurs
 	 * @return BigDecimal der Betrag in der Zielwaehrung
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	public BigDecimal rechneUmInMandantenWaehrung(BigDecimal bdBetragI,
-			BigDecimal bdKursMandantenwaehrungZuBelegwaehrung)
-			throws EJBExceptionLP {
+			BigDecimal bdKursMandantenwaehrungZuBelegwaehrung) throws EJBExceptionLP {
 		if (bdBetragI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("bgBetragI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("bgBetragI == null"));
 		}
 		if (bdKursMandantenwaehrungZuBelegwaehrung == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception(
-							"bdKursMandantenwaehrungZuBelegwaehrung == null"));
+					new Exception("bdKursMandantenwaehrungZuBelegwaehrung == null"));
 		}
-		return bdBetragI.multiply(Helper
-				.getKehrwert(bdKursMandantenwaehrungZuBelegwaehrung));
+		return bdBetragI.multiply(Helper.getKehrwert(bdKursMandantenwaehrungZuBelegwaehrung));
 	}
 
 	/**
 	 * Einen Betrag von einer Waehrung in die andere umrechnen. <br>
 	 * Diese Methode wirft keine Exceptions.
 	 * 
-	 * @param bdBetragI
-	 *            der Betrag in der Ausgangswaehrung
-	 * @param sCurrencyVonI
-	 *            Ausgangswaehrung
-	 * @param sCurrencyNachI
-	 *            Zielwaehrung
-	 * @param theClientDto
-	 *            String
+	 * @param bdBetragI      der Betrag in der Ausgangswaehrung
+	 * @param sCurrencyVonI  Ausgangswaehrung
+	 * @param sCurrencyNachI Zielwaehrung
+	 * @param theClientDto   String
 	 * @return BigDecimal der Betrag in der Zielwaehrung
 	 */
-	public BigDecimal rechneUmInAndereWaehrungZuDatumOhneExc(
-			BigDecimal bdBetragI, String sCurrencyVonI, String sCurrencyNachI,
-			Date dDatumI, TheClientDto theClientDto) {
+	public BigDecimal rechneUmInAndereWaehrungZuDatumOhneExc(BigDecimal bdBetragI, String sCurrencyVonI,
+			String sCurrencyNachI, Date dDatumI, TheClientDto theClientDto) {
 		BigDecimal bdBetragO = null;
 
 		try {
-			bdBetragO = rechneUmInAndereWaehrungZuDatum(bdBetragI,
-					sCurrencyVonI, sCurrencyNachI, dDatumI, theClientDto);
+			bdBetragO = rechneUmInAndereWaehrungZuDatum(bdBetragI, sCurrencyVonI, sCurrencyNachI, dDatumI,
+					theClientDto);
 		} catch (Throwable t) {
-			myLogger.warn(theClientDto.getIDUser(), "sCurrencyVonI="
-					+ sCurrencyVonI + "sCurrencyNachI" + sCurrencyNachI, t);
+			myLogger.warn(theClientDto.getIDUser(),
+					"sCurrencyVonI=" + sCurrencyVonI + "sCurrencyNachI" + sCurrencyNachI, t);
 		}
 
 		return bdBetragO;
 	}
 
-	public Integer createLieferart(LieferartDto lieferartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	public Integer createLieferart(LieferartDto lieferartDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 
 		// precondition
 		if (lieferartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception("lieferartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception("lieferartDtoI == null"));
 		}
 		if (lieferartDtoI.getIId() != null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
@@ -1623,30 +1466,28 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			query.setParameter(2, lieferartDtoI.getMandantCNr());
 
 			Lieferart lieferart = (Lieferart) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("LP_LIEFERART.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_LIEFERART.UK"));
 		} catch (NoResultException ex) {
 			//
 		}
 		PKGeneratorObj pkGen = getPKGeneratorObj();
 		Integer iId = pkGen.getNextPrimaryKey(PKConst.PK_LIEFERART);
 		lieferartDtoI.setIId(iId);
+		if (lieferartDtoI.getILieferort() == null) {
+			lieferartDtoI.setILieferort(LIEFERART_LIEFERORT_AUS_KONDITIONEN);
+		}
 
 		try {
-			Lieferart lieferart = new Lieferart(lieferartDtoI.getIId(),
-					lieferartDtoI.getCNr(), lieferartDtoI
-							.getBFrachtkostenalserledigtverbuchen(),
-					lieferartDtoI.getMandantCNr(), lieferartDtoI
-							.getBVersteckt());
+			Lieferart lieferart = new Lieferart(lieferartDtoI.getIId(), lieferartDtoI.getCNr(),
+					lieferartDtoI.getBFrachtkostenalserledigtverbuchen(), lieferartDtoI.getMandantCNr(),
+					lieferartDtoI.getBVersteckt(), lieferartDtoI.getILieferort());
 			em.persist(lieferart);
 			em.flush();
 			setLieferartFromLieferartDto(lieferart, lieferartDtoI);
 			// Spr anlegen
 			if (lieferartDtoI.getLieferartsprDto() != null) {
-				lieferartDtoI.getLieferartsprDto().setLieferartIId(
-						lieferartDtoI.getIId());
-				createLieferartspr(lieferartDtoI.getLieferartsprDto(),
-						theClientDto);
+				lieferartDtoI.getLieferartsprDto().setLieferartIId(lieferartDtoI.getIId());
+				createLieferartspr(lieferartDtoI.getLieferartsprDto(), theClientDto);
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -1654,17 +1495,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return iId;
 	}
 
-	public void removeLieferart(Integer iIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removeLieferart(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iIdI == null"));
 		}
 
 		try {
@@ -1678,8 +1516,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			}
 			Lieferart lieferart = em.find(Lieferart.class, iIdI);
 			if (lieferart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(lieferart);
 			em.flush();
@@ -1688,8 +1525,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void removeLieferart(LieferartDto lieferartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeLieferart(LieferartDto lieferartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (lieferartDtoI != null) {
 			Integer iId = lieferartDtoI.getIId();
@@ -1697,17 +1533,15 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void updateLieferart(LieferartDto lieferartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	public void updateLieferart(LieferartDto lieferartDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (lieferartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"lieferartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("lieferartDtoI == null"));
 		}
 
 		// befuellen der mandantCNr
@@ -1719,8 +1553,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// try {
 		Lieferart lieferart = em.find(Lieferart.class, iId);
 		if (lieferart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
@@ -1734,9 +1567,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			}
 
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"LP_LIEFERART.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_LIEFERART.UK"));
 			}
 		} catch (NoResultException ex) {
 			//
@@ -1746,35 +1577,28 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 		if (lieferartDtoI.getLieferartsprDto() != null) {
 			// -- upd oder create
-			lieferartDtoI.getLieferartsprDto().setLieferartIId(
-					lieferartDtoI.getIId());
-			lieferartDtoI.getLieferartsprDto().setLocaleCNr(
-					theClientDto.getLocUiAsString());
+			lieferartDtoI.getLieferartsprDto().setLieferartIId(lieferartDtoI.getIId());
+			lieferartDtoI.getLieferartsprDto().setLocaleCNr(theClientDto.getLocUiAsString());
 
 			Lieferartspr lieferartspr = em.find(Lieferartspr.class,
-					new LieferartsprPK(lieferartDtoI.getIId(), theClientDto
-							.getLocUiAsString()));
+					new LieferartsprPK(lieferartDtoI.getIId(), theClientDto.getLocUiAsString()));
 
 			if (lieferartspr != null) {
-				lieferartspr.setCBezeichnung(lieferartDtoI.getLieferartsprDto()
-						.getCBezeichnung());
+				lieferartspr.setCBezeichnung(lieferartDtoI.getLieferartsprDto().getCBezeichnung());
 			} else {
 
-				createLieferartspr(lieferartDtoI.getLieferartsprDto(),
-						theClientDto);
+				createLieferartspr(lieferartDtoI.getLieferartsprDto(), theClientDto);
 			}
 
 		}
 
 	}
 
-	public LieferartDto lieferartFindByPrimaryKey(Integer iIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public LieferartDto lieferartFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iIdI == null"));
 		}
 //		if (theClientDto.getIDUser() == null) {
 //			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
@@ -1786,17 +1610,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// try {
 		Lieferart lieferart = em.find(Lieferart.class, iIdI);
 		if (lieferart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		lieferartDto = assembleLieferartDto(lieferart);
 
 		try {
 			Lieferartspr lieferartspr = em.find(Lieferartspr.class,
-					new LieferartsprPK(lieferartDto.getIId(), theClientDto
-							.getLocUiAsString()));
-			lieferartDto
-					.setLieferartsprDto(assembleLieferartsprDto(lieferartspr));
+					new LieferartsprPK(lieferartDto.getIId(), theClientDto.getLocUiAsString()));
+			lieferartDto.setLieferartsprDto(assembleLieferartsprDto(lieferartspr));
 		} catch (Throwable t) {
 			// nothing here.
 		}
@@ -1808,34 +1629,24 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return lieferartDto;
 	}
 
-	public LieferartDto lieferartFindByCNr(String cNr, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public LieferartDto lieferartFindByCNr(String cNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		try {
 //			Query query = em.createNamedQuery("LieferartfindbyCNrMandantCNr");
 //			query.setParameter(1, cNr);
 //			query.setParameter(2, theClientDto.getMandant());
-			Query query = LieferartQuery.byCnrMandantCnr(em, cNr, theClientDto.getMandant()) ;
+			Query query = LieferartQuery.byCnrMandantCnr(em, cNr, theClientDto.getMandant());
 			Lieferart lieferart = (Lieferart) query.getSingleResult();
 			return lieferartFindByPrimaryKey(lieferart.getIId(), theClientDto);
 		} catch (NoResultException ex) {
 
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		} catch (NonUniqueResultException ex1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-					ex1);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
 		}
 	}
 
-	
-	private void setLieferartFromLieferartDto(Lieferart lieferart,
-			LieferartDto lieferartDto) {
-		lieferart.setCNr(lieferartDto.getCNr());
-		lieferart.setBFrachtkostenalserledigtverbuchen(lieferartDto
-				.getBFrachtkostenalserledigtverbuchen());
-		lieferart.setBVersteckt(lieferartDto.getBVersteckt());
-		lieferart.setCVersandort(lieferartDto.getCVersandort());
-		em.merge(lieferart);
-		em.flush();
+	private void setLieferartFromLieferartDto(Lieferart lieferart, LieferartDto lieferartDto) {
+		LieferartDtoAssembler.setFlush(em, lieferart, lieferartDto);
 	}
 
 	private LieferartDto assembleLieferartDto(Lieferart lieferartI) {
@@ -1855,11 +1666,11 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return (LieferartDto[]) list.toArray(returnArray);
 	}
 
-	public LieferartsprPK createLieferartspr(LieferartsprDto lieferartsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public LieferartsprPK createLieferartspr(LieferartsprDto lieferartsprDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		try {
-			Lieferartspr lieferartspr = new Lieferartspr(lieferartsprDtoI
-					.getLieferartIId(), lieferartsprDtoI.getLocaleCNr());
+			Lieferartspr lieferartspr = new Lieferartspr(lieferartsprDtoI.getLieferartIId(),
+					lieferartsprDtoI.getLocaleCNr());
 			em.persist(lieferartspr);
 			em.flush();
 			setLieferartsprFromLieferartspr2Dto(lieferartspr, lieferartsprDtoI);
@@ -1869,15 +1680,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return null;
 	}
 
-	public void removeLieferartspr(Integer lieferartIIdI, String localeCNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeLieferartspr(Integer lieferartIIdI, String localeCNrI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		LieferartsprPK lieferartsprPK = new LieferartsprPK();
 		lieferartsprPK.setLieferartIId(lieferartIIdI);
 		lieferartsprPK.setLocaleCNr(localeCNrI);
 		Lieferartspr toRemove = em.find(Lieferartspr.class, lieferartsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1888,8 +1698,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	}
 
-	public void removeLieferartspr(LieferartsprDto lieferartsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeLieferartspr(LieferartsprDto lieferartsprDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (lieferartsprDtoI != null) {
 			Integer lieferartIId = lieferartsprDtoI.getLieferartIId();
 			String localeCNr = lieferartsprDtoI.getLocaleCNr();
@@ -1897,30 +1706,22 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void updateLieferartspr(LieferartsprDto lieferartsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateLieferartspr(LieferartsprDto lieferartsprDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (lieferartsprDtoI != null) {
 			LieferartsprPK lieferartsprPK = new LieferartsprPK();
 			lieferartsprPK.setLieferartIId(lieferartsprDtoI.getLieferartIId());
 			lieferartsprPK.setLocaleCNr(lieferartsprDtoI.getLocaleCNr());
 			// try {
-			Lieferartspr lieferartspr = em.find(Lieferartspr.class,
-					lieferartsprPK);
+			Lieferartspr lieferartspr = em.find(Lieferartspr.class, lieferartsprPK);
 			if (lieferartspr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setLieferartsprFromLieferartspr2Dto(lieferartspr, lieferartsprDtoI);
-			// }
-			// catch (FinderException ex) {
-			// throw new
-			// EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-			// }
 		}
 	}
 
-	public LieferartsprDto lieferartsprFindByPrimaryKey(Integer lieferartIIdI,
-			String localeCNrI, TheClientDto theClientDto) throws EJBExceptionLP {
+	public LieferartsprDto lieferartsprFindByPrimaryKey(Integer lieferartIIdI, String localeCNrI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// try {
 		LieferartsprPK lieferartsprPK = new LieferartsprPK();
@@ -1928,8 +1729,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		lieferartsprPK.setLocaleCNr(localeCNrI);
 		Lieferartspr lieferartspr = em.find(Lieferartspr.class, lieferartsprPK);
 		if (lieferartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLieferartsprDto(lieferartspr);
 		// }
@@ -1939,22 +1739,19 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// }
 	}
 
-	public LieferartsprDto lieferartsprFindByPrimaryKeyOhneExc(
-			Integer iIdLieferartI, String sLocaleCNrI, TheClientDto theClientDto) {
+	public LieferartsprDto lieferartsprFindByPrimaryKeyOhneExc(Integer iIdLieferartI, String sLocaleCNrI,
+			TheClientDto theClientDto) {
 
 		LieferartsprDto oSprDtoO = null;
 		try {
-			oSprDtoO = lieferartsprFindByPrimaryKey(iIdLieferartI, sLocaleCNrI,
-					theClientDto);
+			oSprDtoO = lieferartsprFindByPrimaryKey(iIdLieferartI, sLocaleCNrI, theClientDto);
 		} catch (Throwable t) {
-			myLogger.warn(theClientDto.getIDUser(), "iIdLieferartI="
-					+ iIdLieferartI, t);
+			myLogger.warn(theClientDto.getIDUser(), "iIdLieferartI=" + iIdLieferartI, t);
 		}
 		return oSprDtoO;
 	}
 
-	private void setLieferartsprFromLieferartspr2Dto(Lieferartspr lieferartspr,
-			LieferartsprDto lieferartsprDto) {
+	private void setLieferartsprFromLieferartspr2Dto(Lieferartspr lieferartspr, LieferartsprDto lieferartsprDto) {
 		lieferartspr.setCBezeichnung(lieferartsprDto.getCBezeichnung());
 		em.merge(lieferartspr);
 		em.flush();
@@ -1964,8 +1761,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return LieferartsprDtoAssembler.createDto(lieferartspr);
 	}
 
-	private LieferartsprDto[] assembleLieferartsprDtos(
-			Collection<?> lieferartsprs) {
+	private LieferartsprDto[] assembleLieferartsprDtos(Collection<?> lieferartsprs) {
 		List<LieferartsprDto> list = new ArrayList<LieferartsprDto>();
 		if (lieferartsprs != null) {
 			Iterator<?> iterator = lieferartsprs.iterator();
@@ -1980,30 +1776,25 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	// *** Positionsart
 	// *************************************************************
-	public String createPositionsart(PositionsartDto positionsartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	public String createPositionsart(PositionsartDto positionsartDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 
 		// precondition
 		if (positionsartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception("positionsartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception("positionsartDtoI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		try {
-			Positionsart positionsart = new Positionsart(positionsartDtoI
-					.getCNr());
+			Positionsart positionsart = new Positionsart(positionsartDtoI.getCNr());
 			em.persist(positionsart);
 			em.flush();
 
 			if (positionsartDtoI.getPositionsartsprDto() != null) {
-				positionsartDtoI.getPositionsartsprDto().setPositionsartCNr(
-						positionsartDtoI.getCNr());
-				createPositionsartspr(positionsartDtoI.getPositionsartsprDto(),
-						theClientDto);
+				positionsartDtoI.getPositionsartsprDto().setPositionsartCNr(positionsartDtoI.getCNr());
+				createPositionsartspr(positionsartDtoI.getPositionsartsprDto(), theClientDto);
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -2011,22 +1802,18 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return positionsartDtoI.getCNr();
 	}
 
-	public void removePositionsart(String cNrI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removePositionsart(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrI == null"));
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("PositionsartsprfindByPositionsartCNr");
+			Query query = em.createNamedQuery("PositionsartsprfindByPositionsartCNr");
 			query.setParameter(1, cNrI);
 			Collection<?> c = query.getResultList();
 			// Erst alle SPRs dazu loeschen.
@@ -2036,8 +1823,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			}
 			Positionsart positionsart = em.find(Positionsart.class, cNrI);
 			if (positionsart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(positionsart);
 			em.flush();
@@ -2046,17 +1832,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void removePositionsart(PositionsartDto positionsartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePositionsart(PositionsartDto positionsartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (positionsartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"positionsartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("positionsartDtoI == null"));
 		}
 
 		String cNr = positionsartDtoI.getCNr();
@@ -2064,17 +1847,15 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		removePositionsart(cNr, theClientDto);
 	}
 
-	public void updatePositionsart(PositionsartDto positionsartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	public void updatePositionsart(PositionsartDto positionsartDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (positionsartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"positionsartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("positionsartDtoI == null"));
 		}
 
 		String cNr = positionsartDtoI.getCNr();
@@ -2082,44 +1863,37 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 		Positionsart positionsart = em.find(Positionsart.class, cNr);
 		if (positionsart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
+
 		if (positionsartDtoI.getPositionsartsprDto() != null
 				&& positionsartDtoI.getPositionsartsprDto().getCBez() != null) {
-			// -- upd oder create
-			if (positionsartDtoI.getPositionsartsprDto().getPositionsartCNr() == null) {
-				// create
-				// Key(teil) setzen.
-				positionsartDtoI.getPositionsartsprDto().setPositionsartCNr(
-						positionsartDtoI.getCNr());
-				createPositionsartspr(positionsartDtoI.getPositionsartsprDto(),
-						theClientDto);
+
+			positionsartDtoI.getPositionsartsprDto().setPositionsartCNr(positionsartDtoI.getCNr());
+			positionsartDtoI.getPositionsartsprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+
+			Positionsartspr positionsartspr = em.find(Positionsartspr.class,
+					new PositionsartsprPK(positionsartDtoI.getCNr(), theClientDto.getLocUiAsString()));
+
+			if (positionsartspr != null) {
+				positionsartspr.setCBez(positionsartDtoI.getPositionsartsprDto().getCBez());
 			} else {
-				// upd
-				updatePositionsartspr(positionsartDtoI.getPositionsartsprDto(),
-						theClientDto);
+
+				createPositionsartspr(positionsartDtoI.getPositionsartsprDto(), theClientDto);
 			}
+
 		}
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
 
 	}
 
-	public PositionsartDto positionsartFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PositionsartDto positionsartFindByPrimaryKey(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		PositionsartDto positionsartDto = null;
@@ -2127,17 +1901,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// try {
 		Positionsart positionsart = em.find(Positionsart.class, cNrI);
 		if (positionsart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		positionsartDto = assemblePositionsartDto(positionsart);
 
 		try {
 			Positionsartspr positionsartspr = em.find(Positionsartspr.class,
-					new PositionsartsprPK(positionsartDto.getCNr(),
-							theClientDto.getLocUiAsString()));
-			positionsartDto
-					.setPositionsartsprDto(assemblePositionsartsprDto(positionsartspr));
+					new PositionsartsprPK(positionsartDto.getCNr(), theClientDto.getLocUiAsString()));
+			positionsartDto.setPositionsartsprDto(assemblePositionsartsprDto(positionsartspr));
 		} catch (Throwable t) {
 			// nothing here.
 		}
@@ -2159,12 +1930,10 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (statusDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"statusDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("statusDtoI == null"));
 		}
 
 		try {
@@ -2187,35 +1956,30 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void updateStatus(StatusDto statusDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void updateStatus(StatusDto statusDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (statusDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"statusDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("statusDtoI == null"));
 		}
 
 		String cNr = statusDtoI.getCNr();
 		// try {
 		Status status = em.find(Status.class, cNr);
 		if (status == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		status.setOBild(statusDtoI.getOBild());
 		try {
 			if (statusDtoI.getStatussprDto() != null) {
 				// try {
-				Statusspr statusspr = em.find(Statusspr.class, new StatussprPK(
-						cNr, statusDtoI.getStatussprDto().getLocaleCNr()));
+				Statusspr statusspr = em.find(Statusspr.class,
+						new StatussprPK(cNr, statusDtoI.getStatussprDto().getLocaleCNr()));
 				if (statusspr == null) {
-					statusspr = new Statusspr(cNr, statusDtoI.getStatussprDto()
-							.getLocaleCNr());
+					statusspr = new Statusspr(cNr, statusDtoI.getStatussprDto().getLocaleCNr());
 					statusspr.setCBez(statusDtoI.getStatussprDto().getCBez());
 					em.persist(statusspr);
 					em.flush();
@@ -2257,8 +2021,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		StatusDto[] statusDtos = assembleStatusDtos(cl);
 
 		for (int i = 0; i < statusDtos.length; i++) {
-			hmStatiMitBild
-					.put(statusDtos[i].getCNr(), statusDtos[i].getOBild());
+			hmStatiMitBild.put(statusDtos[i].getCNr(), statusDtos[i].getOBild());
 		}
 		// }
 		// catch (FinderException ex) {
@@ -2269,17 +2032,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return hmStatiMitBild;
 	}
 
-	public String createStatus(StatusDto statusDtoI, TheClientDto theClientDto)
-			throws RemoteException {
+	public String createStatus(StatusDto statusDtoI, TheClientDto theClientDto) throws RemoteException {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (statusDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("statusDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("statusDtoI == null"));
 		}
 
 		try {
@@ -2298,24 +2058,22 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return statusDtoI.getCNr();
 	}
 
-	public StatusDto statusFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) {
+	public StatusDto statusFindByPrimaryKey(String cNrI, TheClientDto theClientDto) {
 		Validator.notNull(cNrI, "cNrI");
-		Validator.notNull(theClientDto.getIDUser(), "getIDUser()") ;
+		Validator.notNull(theClientDto.getIDUser(), "getIDUser()");
 
 		StatusDto statusDto = null;
 
 		Status status = em.find(Status.class, cNrI);
 		if (status == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		statusDto = assembleStatusDto(status);
 
 		try {
-			Statusspr statusspr = em.find(Statusspr.class, new StatussprPK(
-					statusDto.getCNr(), theClientDto.getLocUiAsString()));
-			if(statusspr != null) {
+			Statusspr statusspr = em.find(Statusspr.class,
+					new StatussprPK(statusDto.getCNr(), theClientDto.getLocUiAsString()));
+			if (statusspr != null) {
 				statusDto.setStatussprDto(assembleStatussprDto(statusspr));
 			}
 		} catch (Throwable t) {
@@ -2344,58 +2102,51 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	/**
 	 * Liefert die (&uuml;bersetzte) Bezeichnung f&uuml;r eine Status-CNr
-	 * @param statusCnr die Kennung des Status
+	 * 
+	 * @param statusCnr    die Kennung des Status
 	 * @param theClientDto
-	 * @return die Bezeichnung sofern vorhanden, ansonsten die CNr 
+	 * @return die Bezeichnung sofern vorhanden, ansonsten die CNr
 	 */
 	public String getStatusCBez(String statusCnr, TheClientDto theClientDto) {
-		StatusDto statusDto = statusFindByPrimaryKey(statusCnr, theClientDto) ;
-		StatussprDto sprDto = statusDto.getStatussprDto() ;
-		
-		if(sprDto != null && sprDto.getCBez() != null) {
-			return sprDto.getCBez() ;
+		StatusDto statusDto = statusFindByPrimaryKey(statusCnr, theClientDto);
+		StatussprDto sprDto = statusDto.getStatussprDto();
+
+		if (sprDto != null && sprDto.getCBez() != null) {
+			return sprDto.getCBez();
 		}
 
-		return statusDto.getCNr() ;
+		return statusDto.getCNr();
 	}
-	
+
 	// *** Statusspr
 	// **************************************************************
-	public StatussprDto getStatusspr(String cNrI, String sLocUiI,
-			TheClientDto theClientDto) {
+	public StatussprDto getStatusspr(String cNrI, String sLocUiI, TheClientDto theClientDto) {
 
 		StatussprDto statussprDto = null;
 		try {
-			statussprDto = statussprFindByPrimaryKey(cNrI, sLocUiI,
-					theClientDto);
+			statussprDto = statussprFindByPrimaryKey(cNrI, sLocUiI, theClientDto);
 		} catch (Exception ex) {
 			// nothing here.
 		}
 		return statussprDto;
 	}
 
-	public StatussprDto statussprFindByPrimaryKey(String cNrI, String sLocUiI,
-			TheClientDto theClientDto) {
+	public StatussprDto statussprFindByPrimaryKey(String cNrI, String sLocUiI, TheClientDto theClientDto) {
 		// precondition
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrI == null"));
 		}
 		if (sLocUiI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"sLocUiI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("sLocUiI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		// try {
-		Statusspr statusspr = em.find(Statusspr.class, new StatussprPK(cNrI,
-				sLocUiI));
+		Statusspr statusspr = em.find(Statusspr.class, new StatussprPK(cNrI, sLocUiI));
 		if (statusspr == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleStatussprDto(statusspr);
 
@@ -2407,23 +2158,19 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	}
 
-	public String createStatusspr(StatussprDto statusspr2DtoI,
-			TheClientDto theClientDto) {
+	public String createStatusspr(StatussprDto statusspr2DtoI, TheClientDto theClientDto) {
 
 		// precondition
 		if (statusspr2DtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("statusspr2DtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("statusspr2DtoI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		Statusspr statusspr = null;
 		try {
-			statusspr = new Statusspr(statusspr2DtoI.getStatusCNr(),
-					statusspr2DtoI.getLocaleCNr());
+			statusspr = new Statusspr(statusspr2DtoI.getStatusCNr(), statusspr2DtoI.getLocaleCNr());
 			em.persist(statusspr);
 			em.flush();
 			statusspr.setCBez(statusspr2DtoI.getCBez());
@@ -2434,23 +2181,19 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return statusspr.getPk().getStatusCNr();
 	}
 
-	public void removeStatusspr(StatussprDto statusspr2DtoI,
-			TheClientDto theClientDto) {
+	public void removeStatusspr(StatussprDto statusspr2DtoI, TheClientDto theClientDto) {
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (statusspr2DtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"statusspr2DtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("statusspr2DtoI == null"));
 		}
 
-		Statusspr toRemove = em.find(Statusspr.class, new StatussprPK(
-				statusspr2DtoI.getStatusCNr(), statusspr2DtoI.getLocaleCNr()));
+		Statusspr toRemove = em.find(Statusspr.class,
+				new StatussprPK(statusspr2DtoI.getStatusCNr(), statusspr2DtoI.getLocaleCNr()));
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -2460,25 +2203,21 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void updateStatusspr(StatussprDto statussprDtoI,
-			TheClientDto theClientDto) {
+	public void updateStatusspr(StatussprDto statussprDtoI, TheClientDto theClientDto) {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (statussprDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"statussprDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("statussprDtoI == null"));
 		}
 
 		// try {
-		Statusspr statusspr = em.find(Statusspr.class, new StatussprPK(
-				statussprDtoI.getStatusCNr(), statussprDtoI.getLocaleCNr()));
+		Statusspr statusspr = em.find(Statusspr.class,
+				new StatussprPK(statussprDtoI.getStatusCNr(), statussprDtoI.getLocaleCNr()));
 		if (statusspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		statusspr.setCBez(statussprDtoI.getCBez());
 		// }
@@ -2495,22 +2234,19 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	// *** Funktion
 	// *****************************************************************
-	public Integer createFunktion(FunktionDto funktionDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createFunktion(FunktionDto funktionDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		myLogger.entry();
 
 		if (funktionDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("funktionDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("funktionDtoI == null"));
 		}
 		if (funktionDtoI.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("funktionDto.getCNr() == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		Integer iId = null;
@@ -2519,21 +2255,17 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			iId = pkGen.getNextPrimaryKey(PKConst.PK_FUNKTION);
 			funktionDtoI.setIId(iId);
 
-			Funktion funktion = new Funktion(funktionDtoI.getIId(),
-					funktionDtoI.getCNr());
+			Funktion funktion = new Funktion(funktionDtoI.getIId(), funktionDtoI.getCNr());
 			em.persist(funktion);
 			em.flush();
 			setFunktionFromFunktionDto(funktion, funktionDtoI);
 
 			if (funktionDtoI.getFunktionsprDto() != null) {
-				Funktionspr funktionspr = new Funktionspr(
-						funktionDtoI.getIId(), theClientDto
-								.getLocMandantAsString(), funktionDtoI
-								.getFunktionsprDto().getCBezeichnung());
+				Funktionspr funktionspr = new Funktionspr(funktionDtoI.getIId(), theClientDto.getLocMandantAsString(),
+						funktionDtoI.getFunktionsprDto().getCBezeichnung());
 				em.persist(funktionspr);
 				em.flush();
-				setFunktionsprFromFunktionsprDto(funktionspr, funktionDtoI
-						.getFunktionsprDto());
+				setFunktionsprFromFunktionsprDto(funktionspr, funktionDtoI.getFunktionsprDto());
 			}
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
@@ -2541,16 +2273,13 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return iId;
 	}
 
-	public void removeFunktion(Integer iIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removeFunktion(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iIdI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		try {
@@ -2564,8 +2293,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 			}
 			Funktion funktion = em.find(Funktion.class, iIdI);
 			if (funktion == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(funktion);
 			em.flush();
@@ -2574,53 +2302,44 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void removeFunktion(FunktionDto funktionDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeFunktion(FunktionDto funktionDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		Integer iId = funktionDtoI.getIId();
 		removeFunktion(iId, theClientDto);
 	}
 
-	public void updateFunktion(FunktionDto funktionDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateFunktion(FunktionDto funktionDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (funktionDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"funktionDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("funktionDtoI == null"));
 		}
 
 		Integer iId = funktionDtoI.getIId();
 		// try {
 		Funktion funktion = em.find(Funktion.class, iId);
 		if (funktion == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		setFunktionFromFunktionDto(funktion, funktionDtoI);
-		if (funktionDtoI.getFunktionsprDto() != null
-				&& funktionDtoI.getFunktionsprDto().getCBezeichnung() != null) {
+		if (funktionDtoI.getFunktionsprDto() != null && funktionDtoI.getFunktionsprDto().getCBezeichnung() != null) {
 			// -- upd oder create
-			FunktionsprPK funktionsprPK = new FunktionsprPK(funktionDtoI
-					.getIId(), theClientDto.getLocUiAsString());
+			FunktionsprPK funktionsprPK = new FunktionsprPK(funktionDtoI.getIId(), theClientDto.getLocUiAsString());
 			Funktionspr funktionspr = em.find(Funktionspr.class, funktionsprPK);
 
 			if (funktionspr == null) {
 				// create
 				// Key(teil) setzen.
-				Funktionspr funktionsprNeu = new Funktionspr(funktionDtoI
-						.getIId(), theClientDto.getLocUiAsString(),
+				Funktionspr funktionsprNeu = new Funktionspr(funktionDtoI.getIId(), theClientDto.getLocUiAsString(),
 						funktionDtoI.getFunktionsprDto().getCBezeichnung());
 				em.persist(funktionsprNeu);
 				em.flush();
 
 			} else {
-				funktionspr.setCBezeichnung(funktionDtoI.getFunktionsprDto()
-						.getCBezeichnung());
+				funktionspr.setCBezeichnung(funktionDtoI.getFunktionsprDto().getCBezeichnung());
 			}
 		}
 		// }
@@ -2630,17 +2349,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// }
 	}
 
-	public FunktionDto funktionFindByPrimaryKey(Integer iIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public FunktionDto funktionFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iIdI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		FunktionDto funktionDto = null;
@@ -2648,15 +2364,13 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// try {
 		Funktion funktion = em.find(Funktion.class, iIdI);
 		if (funktion == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		funktionDto = assembleFunktionDto(funktion);
 
 		try {
 			Funktionspr funktionspr = em.find(Funktionspr.class,
-					new FunktionsprPK(funktionDto.getIId(), theClientDto
-							.getLocUiAsString()));
+					new FunktionsprPK(funktionDto.getIId(), theClientDto.getLocUiAsString()));
 			funktionDto.setFunktionsprDto(assembleFunktionsprDto(funktionspr));
 		} catch (Throwable t) {
 			// nothing here.
@@ -2669,8 +2383,19 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return funktionDto;
 	}
 
-	private void setFunktionFromFunktionDto(Funktion funktion,
-			FunktionDto funktionDto) {
+	public FunktionDto funktionFindByCnr(String cnr, TheClientDto theClientDto) throws EJBExceptionLP {
+		Validator.notEmpty(cnr, "cnr");
+		Validator.notNull(theClientDto.getIDUser(), "idUser()");
+
+		HvTypedQuery<Funktion> query = new HvTypedQuery<Funktion>(em.createNamedQuery("FunktionfindByCnr"));
+		List<Funktion> funktionen = query.setParameter("cnr", cnr).getResultList();
+		if (funktionen.size() == 0)
+			return null;
+
+		return funktionFindByPrimaryKey(funktionen.get(0).getIId(), theClientDto);
+	}
+
+	private void setFunktionFromFunktionDto(Funktion funktion, FunktionDto funktionDto) {
 		funktion.setCNr(funktionDto.getCNr());
 		em.merge(funktion);
 		em.flush();
@@ -2680,22 +2405,19 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return FunktionDtoAssembler.createDto(funktion);
 	}
 
-	public FunktionsprPK createFunktionspr(FunktionsprDto funktionsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public FunktionsprPK createFunktionspr(FunktionsprDto funktionsprDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		// precondition
 		if (funktionsprDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("funktionsprDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("funktionsprDtoI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		try {
-			Funktionspr funktionspr = new Funktionspr(funktionsprDtoI
-					.getFunktionIId(), funktionsprDtoI.getLocaleCNr(),
+			Funktionspr funktionspr = new Funktionspr(funktionsprDtoI.getFunktionIId(), funktionsprDtoI.getLocaleCNr(),
 					funktionsprDtoI.getCBezeichnung());
 			em.persist(funktionspr);
 			em.flush();
@@ -2703,25 +2425,21 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-		return new FunktionsprPK(funktionsprDtoI.getFunktionIId(),
-				funktionsprDtoI.getLocaleCNr());
+		return new FunktionsprPK(funktionsprDtoI.getFunktionIId(), funktionsprDtoI.getLocaleCNr());
 	}
 
-	public void removeFunktionspr(Integer funktionIIdI, String localeCNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeFunktionspr(Integer funktionIIdI, String localeCNrI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		// precondition
 		if (funktionIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"funktionIIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("funktionIIdI == null"));
 		}
 		if (localeCNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"localeCNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("localeCNrI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		FunktionsprPK funktionsprPK = new FunktionsprPK();
@@ -2730,8 +2448,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 		Funktionspr toRemove = em.find(Funktionspr.class, funktionsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -2741,8 +2458,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void removeFunktionspr(FunktionsprDto funktionsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeFunktionspr(FunktionsprDto funktionsprDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (funktionsprDtoI != null) {
 			Integer funktionIId = funktionsprDtoI.getFunktionIId();
 			String localeCNr = funktionsprDtoI.getLocaleCNr();
@@ -2750,17 +2466,14 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public void updateFunktionspr(FunktionsprDto funktionsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateFunktionspr(FunktionsprDto funktionsprDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (funktionsprDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"funktionsprDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("funktionsprDtoI == null"));
 		}
 
 		FunktionsprPK funktionsprPK = new FunktionsprPK();
@@ -2769,8 +2482,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// try {
 		Funktionspr funktionspr = em.find(Funktionspr.class, funktionsprPK);
 		if (funktionspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		setFunktionsprFromFunktionsprDto(funktionspr, funktionsprDtoI);
 		// }
@@ -2780,22 +2492,18 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// }
 	}
 
-	public com.lp.server.system.service.FunktionsprDto funktionsprFindByPrimaryKey(
-			Integer funktionIIdI, String localeCNrI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public com.lp.server.system.service.FunktionsprDto funktionsprFindByPrimaryKey(Integer funktionIIdI,
+			String localeCNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (funktionIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"funktionIIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("funktionIIdI == null"));
 		}
 		if (localeCNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"localeCNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("localeCNrI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		// try {
@@ -2804,8 +2512,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		funktionsprPK.setLocaleCNr(localeCNrI);
 		Funktionspr funktionspr = em.find(Funktionspr.class, funktionsprPK);
 		if (funktionspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleFunktionsprDto(funktionspr);
 
@@ -2817,17 +2524,15 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	}
 
-	public FunktionsprDto[] funktionsprFindByFunktionIId(Integer funktionIIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public FunktionsprDto[] funktionsprFindByFunktionIId(Integer funktionIIdI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		// precondition
 		if (funktionIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"funktionIIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("funktionIIdI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		// try {
@@ -2852,8 +2557,7 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		em.flush();
 	}
 
-	private com.lp.server.system.service.FunktionsprDto assembleFunktionsprDto(
-			Funktionspr funktionspr) {
+	private com.lp.server.system.service.FunktionsprDto assembleFunktionsprDto(Funktionspr funktionspr) {
 		return FunktionsprDtoAssembler.createDto(funktionspr);
 	}
 
@@ -2872,60 +2576,49 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	// *** Positionsartspr
 	// **********************************************************
-	public PositionsartsprDto getPositionsartspr(String cNrI, String sLocUiI,
-			TheClientDto theClientDto) {
+	public PositionsartsprDto getPositionsartspr(String cNrI, String sLocUiI, TheClientDto theClientDto) {
 
 		PositionsartsprDto positionsartsprDto = null;
 		try {
-			positionsartsprDto = positionsartsprFindByPrimaryKey(cNrI, sLocUiI,
-					theClientDto);
+			positionsartsprDto = positionsartsprFindByPrimaryKey(cNrI, sLocUiI, theClientDto);
 		} catch (Exception ex) {
 			// nothing here.
 		}
 		return positionsartsprDto;
 	}
 
-	public PositionsartsprPK createPositionsartspr(
-			PositionsartsprDto positionsartsprDtoI, TheClientDto theClientDto)
+	public PositionsartsprPK createPositionsartspr(PositionsartsprDto positionsartsprDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		// precondition
 		if (positionsartsprDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception("positionsartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception("positionsartDtoI == null"));
 		}
 		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 
 		try {
-			Positionsartspr positionsartspr = new Positionsartspr(
-					positionsartsprDtoI.getPositionsartCNr(),
-					positionsartsprDtoI.getLocaleCNr(), positionsartsprDtoI
-							.getCBez());
+			Positionsartspr positionsartspr = new Positionsartspr(positionsartsprDtoI.getPositionsartCNr(),
+					positionsartsprDtoI.getLocaleCNr(), positionsartsprDtoI.getCBez());
 			em.persist(positionsartspr);
 			em.flush();
 
-			setPositionsartsprFromPositionsartsprDto(positionsartspr,
-					positionsartsprDtoI);
+			setPositionsartsprFromPositionsartsprDto(positionsartspr, positionsartsprDtoI);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-		return new PositionsartsprPK(positionsartsprDtoI.getPositionsartCNr(),
-				positionsartsprDtoI.getLocaleCNr());
+		return new PositionsartsprPK(positionsartsprDtoI.getPositionsartCNr(), positionsartsprDtoI.getLocaleCNr());
 	}
 
-	public void removePositionsartspr(String positionsartCNr,
-			String localeCNrI, TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePositionsartspr(String positionsartCNr, String localeCNrI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		PositionsartsprPK positionsartsprPK = new PositionsartsprPK();
 		positionsartsprPK.setPositionsartCNr(positionsartCNr);
 		positionsartsprPK.setLocaleCNr(localeCNrI);
-		Positionsartspr toRemove = em.find(Positionsartspr.class,
-				positionsartsprPK);
+		Positionsartspr toRemove = em.find(Positionsartspr.class, positionsartsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -2936,30 +2629,26 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	}
 
-	public void removePositionsartspr(PositionsartsprDto positionsartsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePositionsartspr(PositionsartsprDto positionsartsprDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		String positionsartCNr = positionsartsprDtoI.getPositionsartCNr();
 		String localeCNr = positionsartsprDtoI.getLocaleCNr();
 		removePositionsartspr(positionsartCNr, localeCNr, theClientDto);
 	}
 
-	public void updatePositionsartspr(PositionsartsprDto positionsartsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePositionsartspr(PositionsartsprDto positionsartsprDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (positionsartsprDtoI != null) {
 			PositionsartsprPK positionsartsprPK = new PositionsartsprPK();
-			positionsartsprPK.setPositionsartCNr(positionsartsprDtoI
-					.getPositionsartCNr());
+			positionsartsprPK.setPositionsartCNr(positionsartsprDtoI.getPositionsartCNr());
 			positionsartsprPK.setLocaleCNr(positionsartsprDtoI.getLocaleCNr());
 			// try {
-			Positionsartspr positionsartspr = em.find(Positionsartspr.class,
-					positionsartsprPK);
+			Positionsartspr positionsartspr = em.find(Positionsartspr.class, positionsartsprPK);
 			if (positionsartspr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setPositionsartsprFromPositionsartsprDto(positionsartspr,
-					positionsartsprDtoI);
+			setPositionsartsprFromPositionsartsprDto(positionsartspr, positionsartsprDtoI);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -2968,19 +2657,16 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		}
 	}
 
-	public PositionsartsprDto positionsartsprFindByPrimaryKey(
-			String positionsartCNrI, String localeCNrI,
+	public PositionsartsprDto positionsartsprFindByPrimaryKey(String positionsartCNrI, String localeCNrI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// try {
 		PositionsartsprPK positionsartsprPK = new PositionsartsprPK();
 		positionsartsprPK.setPositionsartCNr(positionsartCNrI);
 		positionsartsprPK.setLocaleCNr(localeCNrI);
-		Positionsartspr positionsartspr = em.find(Positionsartspr.class,
-				positionsartsprPK);
+		Positionsartspr positionsartspr = em.find(Positionsartspr.class, positionsartsprPK);
 		if (positionsartspr == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePositionsartsprDto(positionsartspr);
 
@@ -2991,40 +2677,103 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		// }
 	}
 
-	private void setPositionsartsprFromPositionsartsprDto(
-			Positionsartspr positionsartspr,
+	private void setPositionsartsprFromPositionsartsprDto(Positionsartspr positionsartspr,
 			PositionsartsprDto positionsartsprDto) {
 		positionsartspr.setCBez(positionsartsprDto.getCBez());
 		em.merge(positionsartspr);
 		em.flush();
 	}
 
-	private PositionsartsprDto assemblePositionsartsprDto(
-			Positionsartspr positionsartspr) {
+	private PositionsartsprDto assemblePositionsartsprDto(Positionsartspr positionsartspr) {
 		return PositionsartsprDtoAssembler.createDto(positionsartspr);
 	}
 
-	public BigDecimal rechneUmInAndereWaehrungGerundetZuDatum(
-			BigDecimal bdBetragI, String currency1I, String currency2I,
-			Date dDatumI, TheClientDto theClient) throws EJBExceptionLP,
-			RemoteException {
-		BigDecimal bdBetragO = rechneUmInAndereWaehrungZuDatum(bdBetragI,
-				currency1I, currency2I, dDatumI, theClient);
+	public BigDecimal rechneUmInAndereWaehrungGerundetZuDatum(BigDecimal bdBetragI, String currency1I,
+			String currency2I, Date dDatumI, TheClientDto theClient) throws EJBExceptionLP, RemoteException {
+		BigDecimal bdBetragO = rechneUmInAndereWaehrungZuDatum(bdBetragI, currency1I, currency2I, dDatumI, theClient);
 		return Helper.rundeKaufmaennisch(bdBetragO, FinanzFac.NACHKOMMASTELLEN);
 	}
 
 	@Override
 	public Map<?, ?> getAllSpr(Locale locale, String mandantCNr) throws RemoteException {
 		Map<Object, Object> sprMap = new TreeMap<Object, Object>();
-		sprMap.putAll((Map<?,?>)getAllBelegartenUebersetzt(locale, locale));
+		sprMap.putAll((Map<?, ?>) getAllBelegartenUebersetzt(locale, locale));
 		sprMap.putAll(getArtikelFac().getAllSprArtikelarten(Helper.locale2String(locale)));
-		//sprMap.putAll(getFinanzServiceFac().getAllBuchungsarten(locale, locale));
-		sprMap.put(FinanzServiceFacBean.KONTOTYP_SACHKONTO, getFinanzServiceFac().uebersetzeKontotypOptimal(FinanzServiceFacBean.KONTOTYP_SACHKONTO, locale, locale));
-		sprMap.put(FinanzServiceFacBean.KONTOTYP_DEBITOR, getFinanzServiceFac().uebersetzeKontotypOptimal(FinanzServiceFacBean.KONTOTYP_DEBITOR, locale, locale));
-		sprMap.put(FinanzServiceFacBean.KONTOTYP_KREDITOR, getFinanzServiceFac().uebersetzeKontotypOptimal(FinanzServiceFacBean.KONTOTYP_KREDITOR, locale, locale));
-		
-		
-		return (Map<?,?>)sprMap;
+		// sprMap.putAll(getFinanzServiceFac().getAllBuchungsarten(locale, locale));
+		sprMap.put(FinanzServiceFacBean.KONTOTYP_SACHKONTO, getFinanzServiceFac()
+				.uebersetzeKontotypOptimal(FinanzServiceFacBean.KONTOTYP_SACHKONTO, locale, locale));
+		sprMap.put(FinanzServiceFacBean.KONTOTYP_DEBITOR,
+				getFinanzServiceFac().uebersetzeKontotypOptimal(FinanzServiceFacBean.KONTOTYP_DEBITOR, locale, locale));
+		sprMap.put(FinanzServiceFacBean.KONTOTYP_KREDITOR, getFinanzServiceFac()
+				.uebersetzeKontotypOptimal(FinanzServiceFacBean.KONTOTYP_KREDITOR, locale, locale));
+
+		return (Map<?, ?>) sprMap;
 	}
+
+	@Override
+	public WoerterbuchEintragIId createWoerterbuchEintrag(WoerterbuchEintragDto eintrag, TheClientDto theClientDto) {
+		//Id nicht setzen, mit auto-generated id erzeugen
+		PKGeneratorObj pkGen = new PKGeneratorObj();
+		WoerterbuchEintragIId pk = new WoerterbuchEintragIId(pkGen.getNextPrimaryKey(PKConst.PK_WOERTERBUCHEINTRAG));
+		WoerterbuchEintrag neu = new WoerterbuchEintrag(pk, eintrag.getLocale(), eintrag.getWort());
+		em.persist(neu);
+		return neu.getId();
+	}
+	
+	@Override
+	public void updateWoerterbuchEintrag(WoerterbuchEintragDto dto, TheClientDto theClientDto) {
+		WoerterbuchEintrag eintrag = em.find(WoerterbuchEintrag.class, dto.getId().id());
+		if(eintrag == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, "WoerterbuchEintrag existiert nicht");
+		}
+		eintrag.setLocale(dto.getLocale());
+		eintrag.setWort(dto.getWort());
+	}
+
+	@Override
+	public void deleteWoerterbuchEintrag(WoerterbuchEintragIId id, TheClientDto theClientDto) {
+		WoerterbuchEintrag eintrag = em.find(WoerterbuchEintrag.class, id.id());
+		em.remove(eintrag);
+	}
+	
+	@Override
+	public WoerterbuchEintragDto woerterbuchEintragFindByPrimaryKey(WoerterbuchEintragIId id, TheClientDto theClientDto) {
+		WoerterbuchEintrag eintrag = em.find(WoerterbuchEintrag.class, id.id());
+		return WoerterbuchEintragDtoAssembler.createDto(eintrag);
+	}
+
+	@Override
+	public List<WoerterbuchEintragDto> getAllWoerterbuchEintraegeZuSprache(String locale, TheClientDto theClientDto) {
+		List<WoerterbuchEintrag> eintraege = WoerterbuchEintragQuery.listByLocale(em, locale);
+		return WoerterbuchEintragDtoAssembler.createDtos(eintraege);
+	}
+	@Override
+	@TransactionAttribute(TransactionAttributeType.REQUIRED)
+	public List<WoerterbuchEintragDto> woerterbuchEintragBatchCRUD(List<WoerterbuchEintragDto> toCreate, List<WoerterbuchEintragDto> toUpdate,
+			List<WoerterbuchEintragDto> toDelete, TheClientDto theClientDto){
+		List<WoerterbuchEintragDto> neueDtos = new ArrayList<>();
+		if (toCreate != null) {
+			for (WoerterbuchEintragDto create : toCreate) {
+				WoerterbuchEintragIId neueId = createWoerterbuchEintrag(create, theClientDto);
+				neueDtos.add(new WoerterbuchEintragDto(neueId, create.getLocale(), create.getWort()));
+			}
+		}
+		
+		if(toUpdate != null) {
+			for(WoerterbuchEintragDto update : toUpdate) {
+				updateWoerterbuchEintrag(update, theClientDto);
+			}
+		}
+		
+		if(toDelete != null) {
+			for(WoerterbuchEintragDto delete : toDelete) {
+				deleteWoerterbuchEintrag(delete.getId(), theClientDto);
+			}
+		}
+ 		
+		return neueDtos;
+		
+	}
+	
 
 }

@@ -63,11 +63,15 @@ import com.lp.server.artikel.service.ArtgruDto;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
 import com.lp.server.artikel.service.BaseRequestResult;
+import com.lp.server.system.ejbfac.SteuercodeInfo;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HvOptional;
+import com.lp.server.util.MwstsatzId;
 import com.lp.server.util.logger.webservice.WebserviceCallInterceptor;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 // @WebService(serviceName="HeliumVItemService", endpointInterface="com.heliumv.intf.ItemService")
 //@WebService(serviceName="HeliumVItemService", endpointInterface="com.lp.server.artikel.ejbfac.IArtikelFacServices")
@@ -488,13 +492,7 @@ public class ArtikelFacBeanWS extends Facade implements IWebshopItemServices {
 		item.setInventoryMinQty(new BigDecimal(null != artikelDto.getFLagermindest() ? artikelDto.getFLagermindest() : 0)) ;
 		item.setItemGroup(artikelDto.getArtgruDto().getCNr()) ;
 		
-		Integer mwstsatzbezIId = artikelDto.getMwstsatzbezIId() ;
-		if(null != mwstsatzbezIId) {
-			MwstsatzDto satzDto = getMandantFac().mwstsatzFindByMwstsatzbezIIdAktuellster(mwstsatzbezIId, webClientDto) ;
-			item.setTaxClass(satzDto.getIFibumwstcode() == null ? 0 : satzDto.getIFibumwstcode()) ;
-		} else {
-			item.setTaxClass(0) ;
-		}
+		item.setTaxClass(getTaxClass(artikelDto, theClientDto)) ;
 		BigDecimal price = getVkPreisfindungFac().ermittlePreisbasis(
 					artikelDto.getIId(),
 					new java.sql.Date(normalizeDate(Calendar.getInstance().getTime()).getTime()),
@@ -506,6 +504,24 @@ public class ArtikelFacBeanWS extends Facade implements IWebshopItemServices {
 		item.setInventoryQty(lagerstand) ;
 		
 		return item ;
+	}
+	
+	private Integer getTaxClass(ArtikelDto artikelDto, TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
+		Integer mwstsatzbezIId = artikelDto.getMwstsatzbezIId() ;
+		if (null == mwstsatzbezIId)
+			return 0;
+		
+		MwstsatzDto satzDto = getMandantFac().mwstsatzZuDatumValidate(
+				mwstsatzbezIId, Helper.cutTimestamp(getTimestamp()), theClientDto);
+		HvOptional<SteuercodeInfo> steuercode = getMandantFac().getSteuercodeArDefault(new MwstsatzId(satzDto.getIId()));
+		if (steuercode.isEmpty())
+			return 0;
+		
+		try {
+			return Integer.parseInt(steuercode.get().getCode());
+		} catch (NumberFormatException ex) {
+			return 0;
+		}
 	}
 	
 	private Date normalizeDate(Date changedDate) {

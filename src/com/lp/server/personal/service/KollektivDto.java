@@ -45,6 +45,59 @@ public class KollektivDto implements Serializable {
 
 	private Integer iId;
 	private String cBez;
+
+	private Integer iFaktorPassiveReisezeit;
+	
+	
+	public Integer getIFaktorPassiveReisezeit() {
+		return iFaktorPassiveReisezeit;
+	}
+
+	public void setIFaktorPassiveReisezeit(Integer iFaktorPassiveReisezeit) {
+		this.iFaktorPassiveReisezeit = iFaktorPassiveReisezeit;
+	}
+	
+	private String cAbrechungsart;
+
+	public String getCAbrechungsart() {
+		return cAbrechungsart;
+	}
+
+	public void setCAbrechungsart(String cAbrechungsart) {
+		this.cAbrechungsart = cAbrechungsart;
+	}
+
+	private Short bFeiertagsueberstundenAbSoll;
+
+
+	public Short getBFeiertagsueberstundenAbSoll() {
+		return bFeiertagsueberstundenAbSoll;
+	}
+
+	public void setBFeiertagsueberstundenAbSoll(Short bFeiertagsueberstundenAbSoll) {
+		this.bFeiertagsueberstundenAbSoll = bFeiertagsueberstundenAbSoll;
+	}
+
+	private Short bWochengesamtsicht;
+
+	public Short getbWochengesamtsicht() {
+		return bWochengesamtsicht;
+	}
+
+	public void setbWochengesamtsicht(Short bWochengesamtsicht) {
+		this.bWochengesamtsicht = bWochengesamtsicht;
+	}
+
+	private Integer iBerechnungsbasis;
+
+	public Integer getIBerechnungsbasis() {
+		return iBerechnungsbasis;
+	}
+
+	public void setIBerechnungsbasis(Integer iBerechnungsbasis) {
+		this.iBerechnungsbasis = iBerechnungsbasis;
+	}
+
 	private Short bVerbraucheuestd;
 
 	public Short getBUestdverteilen() {
@@ -175,8 +228,7 @@ public class KollektivDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez))) {
+		if (!(that.cBez == null ? this.cBez == null : that.cBez.equals(this.cBez))) {
 			return false;
 		}
 		if (!(that.bVerbraucheuestd == null ? this.bVerbraucheuestd == null

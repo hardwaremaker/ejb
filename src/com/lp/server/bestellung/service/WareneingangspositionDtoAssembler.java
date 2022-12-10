@@ -83,6 +83,9 @@ public class WareneingangspositionDtoAssembler {
 			wareneingangspositionDto.setBPreiseErfasst(Helper
 					.short2Boolean(wareneingangsposition.getBPreiseerfasst()));
 			wareneingangspositionDto.setBVerraeumt(wareneingangsposition.getBVerraeumt());
+			wareneingangspositionDto.setNBreiteInMm(wareneingangsposition.getNBreiteInMm());
+			wareneingangspositionDto.setNTiefeInMm(wareneingangsposition.getNTiefeInMm());
+			wareneingangspositionDto.setIRn(wareneingangsposition.getIRn());
 		}
 		return wareneingangspositionDto;
 	}

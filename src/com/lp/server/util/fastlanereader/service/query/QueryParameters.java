@@ -154,6 +154,39 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_MASCHINEMASCHINENZM = 70;
 	public static final int UC_ID_MASCHINEZM = 71;
 	public static final int UC_ID_MASCHINENZMTAGESART = 72;
+	public static final int UC_ID_ZAHLTAG = 73;
+	public static final int UC_ID_SCHICHTZUSCHLAG = 74;
+	public static final int UC_ID_SCHICHT = 75;
+	public static final int UC_ID_SCHICHTZEITEN = 76;
+	public static final int UC_ID_ARTIKELZUSCHLAG = 77;
+	public static final int UC_ID_ZEITGUTSCHRIFT = 78;
+	public static final int UC_ID_ALTERNATIVMASCHINE = 79;
+	public static final int UC_ID_NACHRICHTENART = 80;
+	public static final int UC_ID_NACHRICHTENGRUPPE = 81;
+	public static final int UC_ID_NACHRICHTENABO = 82;
+	public static final int UC_ID_NACHRICHTENGRUPPETEILNEHMER = 83;
+	public static final int UC_ID_NACHRICHTENVERLAUF= 84;
+	public static final int UC_ID_ZEITDATENPRUEFEN = 85;
+	public static final int UC_ID_UEBERTRAGBVA = 86;
+	public static final int UC_ID_KOLLEKTIVUESTDBVA = 87;
+	public static final int UC_ID_AUSZAHLUNGBVA = 88;
+	public static final int UC_ID_HVMALIZENZ = 89;
+	public static final int UC_ID_HVMABENUTZER = 90;
+	public static final int UC_ID_HVMARECHT = 91;
+	public static final int UC_ID_HVMAROLLE = 92;
+	public static final int UC_ID_ANWESENHEITSBESTAETIGUNG = 93;
+	public static final int UC_ID_HVMABENUTZERPARAMETER = 94;
+	public static final int UC_ID_REISESPESEN = 95;
+	public static final int UC_ID_EINGANGSRECHNUNG_REISEZEITEN = 96;
+	public static final int UC_ID_PASSIVEREISE = 97;
+	public static final int UC_ID_COCKPITTELEFONZEITEN = 98;
+	public static final int UC_ID_PERSONALTERMINAL = 99;
+	public static final int UC_ID_PERSONALFAHRZEUG = 100;
+	public static final int UC_ID_TELEFONZEITENTODO = 101;
+	public static final int UC_ID_ZEITBUCHUNGEN = 102;
+	public static final int UC_ID_ZEITINFO = 103;
+	public static final int UC_ID_PARTNER_TELEFONZEITEN = 104;
+	public static final int UC_ID_MASCHINELEISTUNGSFAKTOR = 105;
 
 	// Benutzer 500-999
 	public static final int UC_ID_BENUZTER = 500;
@@ -167,6 +200,7 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_NACHRICHTARCHIV = 508;
 	public static final int UC_ID_LAGERROLLE = 509;
 	public static final int UC_ID_FERTIGUNGSGRUPPEROLLE = 510;
+	public static final int UC_ID_ARTGRUROLLE = 511;
 
 	// Auftrag: 1000-1999
 	public static final int UC_ID_AUFTRAG = 1000;
@@ -190,6 +224,11 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_ZEITPLAN = 1018;
 	public static final int UC_ID_ZAHLUNGSPLAN = 1019;
 	public static final int UC_ID_ZAHLUNGSPLANMEILENSTEIN = 1020;
+	public static final int UC_ID_ZEITPLANTYP = 1021;
+	public static final int UC_ID_ZEITPLANTYPDETAIL = 1022;
+	public static final int UC_ID_BSZAHLUNGSPLAN = 1023;
+	public static final int UC_ID_VERRECHENBAR = 1024;
+	public static final int UC_ID_AUFTRAGKOSTENSTELLE = 1025;
 
 	// Artikel: 2000-2999
 	public static final int UC_ID_ARTIKEL = 2001;
@@ -250,7 +289,30 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_ALERGEN = 2057;
 	public static final int UC_ID_ARTIKELALERGEN = 2058;
 	public static final int UC_ID_LAGER_MIT_MANDANT = 2059;
-	
+	public static final int UC_ID_GEBINDE = 2060;
+	public static final int UC_ID_ERSATZTYPEN = 2061;
+	public static final int UC_ID_VKPREISBASIS = 2062;
+	public static final int UC_ID_VKEINZELPREIS = 2063;
+	public static final int UC_ID_WARENBEWEGUNGEN = 2064;
+	public static final int UC_ID_WERKZEUG = 2065;
+	public static final int UC_ID_VERSCHLEISSTEIL = 2066;
+	public static final int UC_ID_FASESSION = 2067;
+	public static final int UC_ID_VERSCHLEISSTEILWERKZEUG = 2068;
+	public static final int UC_ID_VERPACKUNGSMITTEL = 2069;
+	public static final int UC_ID_ARTIKELGRUPPE_EINGESCHRAENKT = 2070;
+	public static final int UC_ID_VERFUEGBARKEIT = 2071;
+	public static final int UC_ID_ARTIKELSOKO = 2072;
+	public static final int UC_ID_DATEIVERWEIS = 2073;
+	public static final int UC_ID_ARTIKELSOKOMENGENSTAFFEL = 2074;
+	public static final int UC_ID_WAFFENKALIBER = 2075;
+	public static final int UC_ID_WAFFENTYP = 2076;
+	public static final int UC_ID_WAFFENTYPFEIN = 2077;
+	public static final int UC_ID_WAFFENKATEGORIE = 2078;
+	public static final int UC_ID_WAFFENZUSATZ = 2079;
+	public static final int UC_ID_WAFFENAUSFUEHRUNG = 2080;
+	public static final int UC_ID_MATERIALPREIS = 2081;
+	public static final int UC_ID_LASEROBERFLAECHE = 2082;
+
 
 	// Rechnung: 3000-3999
 	public static final int UC_ID_RECHNUNG = 3000;
@@ -275,6 +337,12 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_RECHNUNGPOSITIONSICHTAUFTRAG = 3019;
 	public static final int UC_ID_GUTSCHRIFTTEXT = 3020;
 	public static final int UC_ID_GUTSCHRIFTGRUND = 3021;
+	public static final int UC_ID_LASTSCHRIFTVORSCHLAG = 3022;
+	public static final int UC_ID_ABRECHNUNGSVORSCHLAG = 3023;
+	public static final int UC_ID_VERRECHNUNGSMODELL = 3024;
+	public static final int UC_ID_VERRECHNUNGSMODELLTAG = 3025;
+	public static final int UC_ID_MMZ = 3026;
+	public static final int UC_ID_VORKASSEPOSITIONSICHTAUFTRAG = 3027;
 
 	// Finanz: 4000-4999
 	public static final int UC_ID_FINANZKONTEN = 4000;
@@ -312,6 +380,9 @@ public class QueryParameters implements Serializable {
 
 	public static final int UC_ID_STEUERKATEGORIE = 4502;
 	public static final int UC_ID_STEUERKATEGORIEKONTO = 4503;
+
+	public static final int UC_ID_REVERSECHARGEART = 4504;
+	public static final int UC_ID_SEPAKONTOAUSZUG = 4605;
 
 	// System 5000-5999
 	public static final int UC_ID_THECLIENT = 5000;
@@ -355,6 +426,16 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_KOSTENTRAEGER = 5038;
 	public static final int UC_ID_REPORTVARIANTE = 5039;
 	public static final int UC_ID_PARAMETERMANDANTGUELTIGAB = 5040;
+	public static final int UC_ID_IDENTIFIKATION = 5041;
+	public static final int UC_ID_DSGVOKATEGORIE = 5042;
+	public static final int UC_ID_DSGVOTEXT = 5043;
+	public static final int UC_ID_ABWESENHEITSART = 5044;
+	public static final int UC_ID_MAILPROPERTY = 5045;
+	public static final int UC_ID_HVMAPARAMETER = 5046;
+	public static final int UC_ID_CONCURRENTUSER = 5047;
+	public static final int UC_ID_PANELSPERREN = 5048;
+	public static final int UC_ID_KENNUNG = 5049;
+	public static final int UC_ID_KUNDEKENNUNG = 5050;
 
 	// Partner (Kunde, Sachbearbeiter, Ansprechpartner, Lieferant) 6000-6999
 	public static final int UC_ID_PARTNER = 6000;
@@ -390,11 +471,19 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_SERIENBRIEFSELEKTIONNEGATIV = 6033;
 	public static final int UC_ID_PARTNERKOMMENTARART = 6034;
 	public static final int UC_ID_PARTNERKOMMENTAR = 6035;
+	public static final int UC_ID_NEWSLETTERGRUND = 6036;
+	public static final int UC_ID_KUNDEMATERIAL = 6037;
+	public static final int UC_ID_BEAUSKUNFTUNG = 6038;
+	public static final int UC_ID_PROVISIONSEMPFAENGER = 6039;
+	public static final int UC_ID_KUNDE_STRUKTUR = 6040;
+	public static final int UC_ID_COCKPIT = 6041;
+	public static final int UC_ID_KUNDESPEDITEUR = 6042;
 
 	// Lieferschein 7000-7499 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_LIEFERSCHEIN = 7000;
 	public static final int UC_ID_LIEFERSCHEINPOSITION = 7001;
 	public static final int UC_ID_LIEFERSCHEINPOSITIONSICHTAUFTRAG = 7002;
+	public static final int UC_ID_AUSLIEFERVORSCHLAG = 7003;
 	/**
 	 * @todo MB: wieso wird der nirgends verwendet?
 	 */
@@ -416,6 +505,16 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_AUFSCHLAG = 7504;
 	public static final int UC_ID_AGSTKLARBEITSPLAN = 7505;
 	public static final int UC_ID_AGSTKLMENGENSTAFFEL = 7506;
+	public static final int UC_ID_WEBLIEFERANT = 7507;
+	public static final int UC_ID_EKWEBLIEFERANT = 7508;
+	public static final int UC_ID_WEBFINDCHIPS = 7509;
+	public static final int UC_ID_EKGRUPPE = 7510;
+	public static final int UC_ID_EKGRUPPELIEFERANT = 7511;
+	public static final int UC_ID_EKAGLIEFERANT = 7512;
+	public static final int UC_ID_POSITIONLIEFERANT = 7513;
+	public static final int UC_ID_POSITIONLIEFERANT_OPTIMIEREN = 7514;
+	public static final int UC_ID_AGSTKLMATERIAL = 7515;
+	public static final int UC_ID_AGSTKLMENGENSTAFFEL_SCHNELLERFASSUNG = 7516;
 
 	// Bestellung 8000-8499 MB 01.09.07 keine falschen verwendungen (ausser die
 	// depr.)
@@ -428,7 +527,6 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_BESTELLUNGSTATUS = 8006;
 	public static final int UC_ID_BESTELLVORSCHLAG = 8007;
 	public static final int UC_ID_BESTELLPOSITIONSICHTRAHMEN = 8008;
-	public static final int UC_ID_BESTELLVORSCHLAGALLELIEFERANTEN = 8009;
 	public static final int UC_ID_BESTELLVORSCHLAGALLETERMINE = 8010;
 	public static final int UC_ID_SICHTLIEFERTERMINE = 8012;
 	public static final int UC_ID_BESTELLPOSITIONART = 8013;
@@ -439,6 +537,10 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_OFFENEWEPOS = 8018;
 	public static final int UC_ID_MAHNGRUPPE = 8019;
 	public static final int UC_ID_LIEFERANTENOPTIMIEREN = 8020;
+	public static final int UC_ID_WAREZWISCHENMANDANTEN = 8021;
+	public static final int UC_ID_WE_EINER_RECHNUNGSADRESSE = 8022;
+	public static final int UC_ID_WEP_EINER_RECHNUNGSADRESSE = 8023;
+	public static final int UC_ID_ANFRAGEVORSCHLAG = 8024;
 
 	// Angebot 8500-8999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_ANGEBOT = 8500;
@@ -449,6 +551,8 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_ANGEBOTPOSITIONART = 8505;
 	public static final int UC_ID_ANGEBOTUEBERSICHT = 8506;
 	public static final int UC_ID_ANGEBOTZEITEN = 8507;
+	public static final int UC_ID_AKQUISESTATUS = 8508;
+	public static final int UC_ID_ANGEBOTAUFTRAG = 8509;
 
 	// Eingangsrechnung 9000-9499 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_EINGANGSRECHNUNG = 9000;
@@ -462,6 +566,7 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_ZAHLUNGSVORSCHLAG = 9008;
 	public static final int UC_ID_EINGANGSRECHNUNG_WARENEINGANG = 9009;
 	public static final int UC_ID_ZUSATZKOSTEN = 9010;
+	public static final int UC_ID_EINGANGSRECHNUNGTEXT = 9011;
 
 	// Anfrage 9500-9999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_ANFRAGE = 9500;
@@ -495,6 +600,12 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_LOSTECHNIKER = 10018;
 	public static final int UC_ID_LOSBEREICH = 10019;
 	public static final int UC_ID_OFFENE_AGS = 10020;
+	public static final int UC_ID_LOSPRUEFPLAN = 10021;
+	public static final int UC_ID_PRODUZIEREN = 10022;
+	public static final int UC_ID_LOSE_ERLEDIGEN = 10023;
+	public static final int UC_ID_BEDARFSUEBERNAHME = 10024;
+	public static final int UC_ID_LOSSOLLMATERIAL_TRUMPF = 10025;
+	public static final int UC_ID_TRUMPFMATERIAL = 10026;
 
 	// Kueche 10500-10999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_SPEISEPLAN = 10500;
@@ -516,6 +627,14 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_KOMMENTARIMPORT = 11008;
 	public static final int UC_ID_FERTIGUNGSGRUPPE_EINGESCHRAENKT = 11009;
 	public static final int UC_ID_STKLAGERENTNAHME = 11010;
+	public static final int UC_ID_STUECKLISTESCRIPTART = 11011;
+	public static final int UC_ID_APKOMMENTAR = 11012;
+	public static final int UC_ID_PRUEFKOMBINATION = 11013;
+	public static final int UC_ID_STKLPRUEFPLAN = 11014;
+	public static final int UC_ID_PRUEFART = 11015;
+	public static final int UC_ID_STUECKLISTE_MIT_MANDANT = 11016;
+	public static final int UC_ID_STKLPARAMETER = 11017;
+	public static final int UC_ID_FERTIGUNGSGRUPPE_MANDANT = 11018;
 
 	// Projekt 12000-12999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_PROJEKT = 12000;
@@ -530,6 +649,11 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_PROJEKTERLEDIGUNGSGRUND = 12009;
 	public static final int UC_ID_BEREICH = 12010;
 	public static final int UC_ID_PROJEKTVERLAUF = 12011;
+	public static final int UC_ID_PROJEKTTECHNIKER = 12012;
+	public static final int UC_ID_PROJEKTTAETIGKEIT = 12013;
+	public static final int UC_ID_PROJEKTGRUPPE = 12014;
+	public static final int UC_ID_VKFORTSCHRITT = 12015;
+	public static final int UC_ID_PROJEKT_SCHNELL = 12016;
 
 	// Reklamation 12000-12999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_REKLAMATION = 13000;
@@ -568,9 +692,19 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_EINGANGSRECHNUNGEN_EINES_INSERATES = 16005;
 
 	// Kommunikation Email ... 17000 - 17999
-	public static final int UC_ID_MEDIA_INBOX = 17000 ;
-	public static final int UC_ID_MEDIA_BELEG = 17001 ;
-	
+	public static final int UC_ID_MEDIA_INBOX = 17000;
+	public static final int UC_ID_MEDIA_BELEG = 17001;
+
+	// Forecast ... 18000 - 18999
+	public static final int UC_ID_FORECAST = 18000;
+	public static final int UC_ID_FORECASTAUFTRAG = 18001;
+	public static final int UC_ID_FORECASTPOSITION = 18002;
+	public static final int UC_ID_FORECASTART = 18003;
+	public static final int UC_ID_LINIENABRUF = 18004;
+	public static final int UC_ID_IMPORTDEF = 18005;
+	public static final int UC_ID_FCLIEFERADRESSE = 18006;
+	public static final int UC_ID_KOMMDRUCKER = 18007;
+
 	// Alle FLR-Breitendefinitionen; die zentrale Stelle!
 	// flrspalte: 0 fixe Spaltenbreite fuer die Anzeige einer FLR Liste am
 	// Client
@@ -612,8 +746,8 @@ public class QueryParameters implements Serializable {
 	public static final String PREIS = "Preis";
 
 	public static final String FEATURE_PREFIX = "FEATURE:";
-	public static final String FEATUREVALUE_PREFIX = "FEATUREVALUE:" ;
-	
+	public static final String FEATUREVALUE_PREFIX = "FEATUREVALUE:";
+
 	public static String getModulForUseCase(int iUseCaseId) {
 		if (iUseCaseId < 500) {
 			return LocaleFac.BELEGART_PERSONAL;
@@ -678,8 +812,8 @@ public class QueryParameters implements Serializable {
 	private ArrayList<?> listOfExtraData = null;
 
 	private Integer limit;
-	
-	private boolean isApi ;
+
+	private boolean isApi;
 
 	/**
 	 * creates a new QueryParameters instance.
@@ -822,5 +956,5 @@ public class QueryParameters implements Serializable {
 
 	public void setIsApi(boolean isApi) {
 		this.isApi = isApi;
-	}	
+	}
 }

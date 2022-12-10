@@ -42,7 +42,8 @@ public class LieferscheinAvisoCC implements ILieferscheinAviso, Serializable {
 	private Integer versandwegId ;
 	private Integer partnerId ;	
 	private XMLXMLDISPATCHNOTIFICATION notification ;
-
+	private LieferscheinDto lieferscheinDto;
+	
 	public XMLXMLDISPATCHNOTIFICATION getNotification() {
 		return notification;
 	}
@@ -65,5 +66,15 @@ public class LieferscheinAvisoCC implements ILieferscheinAviso, Serializable {
 
 	public void setPartnerId(Integer partnerId) {
 		this.partnerId = partnerId;
-	}	
+	}
+	
+	@Override
+	public LieferscheinDto getLieferscheinDto() {
+		return lieferscheinDto;
+	}
+	
+	@Override
+	public void setLieferscheinDto(LieferscheinDto lieferscheinDto) {
+		this.lieferscheinDto = lieferscheinDto;
+	}
 }

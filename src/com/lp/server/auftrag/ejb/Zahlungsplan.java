@@ -50,8 +50,8 @@ public class Zahlungsplan implements Serializable {
 	@Column(name = "AUFTRAG_I_ID")
 	private Integer auftragIId;
 
-	@Column(name = "I_TAGE_VOR_LIEFERTERMIN")
-	private Integer iTageVorLiefertermin;
+	@Column(name = "T_TERMIN")
+	private java.sql.Timestamp tTermin;
 
 	@Column(name = "N_BETRAG")
 	private BigDecimal nBetrag;
@@ -66,22 +66,22 @@ public class Zahlungsplan implements Serializable {
 	}
 
 	public Zahlungsplan(Integer id, Integer auftragIId,
-			Integer iTageVorLiefertermin, BigDecimal nBetrag,
+			java.sql.Timestamp tTermin, BigDecimal nBetrag,
 			BigDecimal nBetragUrsprung) {
 		setIId(id);
 		setAuftragIId(auftragIId);
-		setITageVorLiefertermin(iTageVorLiefertermin);
+		setTTermin(tTermin);
 		setNBetrag(nBetrag);
 		setNBetragUrsprung(nBetragUrsprung);
 
 	}
 
-	public Integer getITageVorLiefertermin() {
-		return iTageVorLiefertermin;
+	public java.sql.Timestamp getTTermin() {
+		return tTermin;
 	}
 
-	public void setITageVorLiefertermin(Integer iTageVorLiefertermin) {
-		this.iTageVorLiefertermin = iTageVorLiefertermin;
+	public void setTTermin(java.sql.Timestamp tTermin) {
+		this.tTermin = tTermin;
 	}
 
 	public BigDecimal getNBetrag() {

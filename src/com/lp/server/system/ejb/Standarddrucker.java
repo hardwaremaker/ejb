@@ -44,6 +44,7 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "StandarddruckerfindByPcReportnameMandantCNr", query = "SELECT OBJECT(o) FROM Standarddrucker o WHERE o.cPc=?1 AND o.cReportname=?2 AND o.mandantCNr=?3"),
 		@NamedQuery(name = "StandarddruckerfindByPcReportnameMandantCNrReportvarianteIId", query = "SELECT OBJECT(o) FROM Standarddrucker o WHERE o.cPc=?1 AND o.cReportname=?2 AND o.mandantCNr=?3 AND o.reportvarianteIId=?4"),
+		@NamedQuery(name = "StandarddruckerfindByReportvarianteIId", query = "SELECT OBJECT(o) FROM Standarddrucker o WHERE o.reportvarianteIId=?1"),
 		@NamedQuery(name = "StandarddruckerfindByPcReportnameMandantCNrOhneVariante", query = "SELECT OBJECT(o) FROM Standarddrucker o WHERE o.cPc=?1 AND o.cReportname=?2 AND o.mandantCNr=?3 AND o.reportvarianteIId IS NULL"),
 		@NamedQuery(name = "StandarddruckerfindByPcReportnameMandantCNrBStandard", query = "SELECT OBJECT(o) FROM Standarddrucker o WHERE o.cPc=?1 AND o.cReportname=?2 AND o.mandantCNr=?3 AND o.bStandard=1") })
 @Entity
@@ -61,6 +62,17 @@ public class Standarddrucker implements Serializable {
 
 	@Column(name = "C_DRUCKER")
 	private String cDrucker;
+	
+	@Column(name = "C_DRUCKER_KOPIEN")
+	private String cDruckerKopien;
+
+	public String getCDruckerKopien() {
+		return cDruckerKopien;
+	}
+
+	public void setCDruckerKopien(String cDruckerKopien) {
+		this.cDruckerKopien = cDruckerKopien;
+	}
 
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;

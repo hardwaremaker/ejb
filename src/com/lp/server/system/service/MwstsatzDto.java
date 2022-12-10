@@ -35,6 +35,8 @@ package com.lp.server.system.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import com.lp.util.Helper;
+
 public class MwstsatzDto implements Serializable {
 	/**
 	 * 
@@ -44,7 +46,6 @@ public class MwstsatzDto implements Serializable {
 	private Double fMwstsatz;
 	private Integer iMwstsatzbezId;
 	private Timestamp dGueltigab;
-	private Integer iFibumwstcode;
 	private MwstsatzbezDto mwstsatzbezDto;
 
 	public Integer getIId() {
@@ -86,14 +87,6 @@ public class MwstsatzDto implements Serializable {
 	public void setMwstsatzbezDto(MwstsatzbezDto mwstsatzbezDto) {
 		this.mwstsatzbezDto = mwstsatzbezDto;
 	}
-	
-	public Integer getIFibumwstcode(){
-		return this.iFibumwstcode;
-	}
-	
-	public void setIFibumwstcode(Integer iFibumwstcode){
-		this.iFibumwstcode = iFibumwstcode;
-	}
 
 	public boolean equals(Object obj) {
 		if (this == obj) {
@@ -106,20 +99,14 @@ public class MwstsatzDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.dGueltigab == null ? this.dGueltigab == null
-				: that.dGueltigab.equals(this.dGueltigab))) {
+		if (!(that.dGueltigab == null ? this.dGueltigab == null : that.dGueltigab.equals(this.dGueltigab))) {
 			return false;
 		}
 		if (!(that.iMwstsatzbezId == null ? this.iMwstsatzbezId == null
 				: that.iMwstsatzbezId.equals(this.iMwstsatzbezId))) {
 			return false;
 		}
-		if (!(that.fMwstsatz == null ? this.fMwstsatz == null : that.fMwstsatz
-				.equals(this.fMwstsatz))) {
-			return false;
-		}
-		if(!(that.iFibumwstcode == null ? this.iFibumwstcode == null : that.iFibumwstcode
-				.equals(this.iFibumwstcode))){
+		if (!(that.fMwstsatz == null ? this.fMwstsatz == null : that.fMwstsatz.equals(this.fMwstsatz))) {
 			return false;
 		}
 		return true;
@@ -131,7 +118,6 @@ public class MwstsatzDto implements Serializable {
 		result = 37 * result + this.iMwstsatzbezId.hashCode();
 		result = 37 * result + this.dGueltigab.hashCode();
 		result = 37 * result + this.fMwstsatz.hashCode();
-		result = 37 * result + this.iFibumwstcode.hashCode();
 		return result;
 	}
 
@@ -141,7 +127,20 @@ public class MwstsatzDto implements Serializable {
 		returnString += ", " + iMwstsatzbezId;
 		returnString += ", " + dGueltigab;
 		returnString += ", " + fMwstsatz;
-		returnString += ", " + iFibumwstcode;
 		return returnString;
 	}
+
+	public String formatMwstsatz(TheClientDto theClientDto) {
+
+		StringBuffer s = new StringBuffer();
+
+		if (getMwstsatzbezDto() != null) {
+			s.append(getMwstsatzbezDto().getCBezeichnung());
+		}
+		s.append(" " + Helper.formatDatum(dGueltigab, theClientDto.getLocUi()));
+		s.append(" " + Helper.formatZahl(getFMwstsatz(), 1, theClientDto.getLocUi()));
+		s.append("%");
+		return s.toString();
+	}
+
 }

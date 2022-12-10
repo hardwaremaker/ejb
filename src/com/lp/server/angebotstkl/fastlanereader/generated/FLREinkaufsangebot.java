@@ -80,12 +80,14 @@ public class FLREinkaufsangebot implements Serializable {
 
 	/** nullable persistent field */
 	private FLRKunde flrkunde;
+	
+	private Integer ansprechpartner_i_id;
 
 	/** full constructor */
 	public FLREinkaufsangebot(String c_nr, String mandant_c_nr,
 			String c_projekt, Date t_belegdatum, BigDecimal n_menge1,
 			BigDecimal n_menge2, BigDecimal n_menge3, BigDecimal n_menge4,
-			BigDecimal n_menge5, FLRKunde flrkunde) {
+			BigDecimal n_menge5, FLRKunde flrkunde, Integer ansprechpartner_i_id) {
 		this.c_nr = c_nr;
 		this.mandant_c_nr = mandant_c_nr;
 		this.c_projekt = c_projekt;
@@ -96,6 +98,7 @@ public class FLREinkaufsangebot implements Serializable {
 		this.n_menge4 = n_menge4;
 		this.n_menge5 = n_menge5;
 		this.flrkunde = flrkunde;
+		this.ansprechpartner_i_id = ansprechpartner_i_id;
 	}
 
 	/** default constructor */
@@ -192,6 +195,14 @@ public class FLREinkaufsangebot implements Serializable {
 
 	public String toString() {
 		return new ToStringBuilder(this).append("i_id", getI_id()).toString();
+	}
+
+	public Integer getAnsprechpartner_i_id() {
+		return ansprechpartner_i_id;
+	}
+
+	public void setAnsprechpartner_i_id(Integer ansprechpartner_i_id) {
+		this.ansprechpartner_i_id = ansprechpartner_i_id;
 	}
 
 }

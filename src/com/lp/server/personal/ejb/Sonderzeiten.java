@@ -45,11 +45,13 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 		@NamedQuery(name = "SonderzeitenfindByPersonalIIdTDatum", query = "SELECT OBJECT(C) FROM Sonderzeiten c WHERE c.personalIId = ?1 AND c.tDatum = ?2"),
+		@NamedQuery(name = "SonderzeitenfindByPersonalIIdTDatumBTag", query = "SELECT OBJECT(C) FROM Sonderzeiten c WHERE c.personalIId = ?1 AND c.tDatum = ?2 AND c.bTag=?3"),
 		@NamedQuery(name = "SonderzeitenfindStundenweiseTaetigkeitenGeplant", query = "SELECT OBJECT(C) FROM Sonderzeiten c WHERE c.personalIId = ?1 AND c.taetigkeitIId = ?2 AND c.tDatum >= ?3 AND c.bTag = 0 AND c.bHalbtag = 0"),
 		@NamedQuery(name = "SonderzeitenejbSelectGanztaegigeTaetigkeitenAlt", query = "SELECT SUM (o.bTag) FROM Sonderzeiten o WHERE o.personalIId = ?1 AND o.taetigkeitIId = ?2 AND o.tDatum >= ?3 AND o.tDatum < ?4 AND o.bTag = 1"),
 		@NamedQuery(name = "SonderzeitenejbSelectGanztaegigeTaetigkeitenAktuell", query = "SELECT SUM (o.bTag) FROM Sonderzeiten o WHERE o.personalIId = ?1 AND o.taetigkeitIId = ?2 AND o.tDatum >= ?3 AND o.tDatum <= ?4 AND o.bTag = 1"),
 		@NamedQuery(name = "SonderzeitenejbSelectGanztaegigeTaetigkeitenGeplant", query = "SELECT SUM (o.bTag) FROM Sonderzeiten o WHERE o.personalIId = ?1 AND o.taetigkeitIId = ?2 AND o.tDatum >= ?3 AND o.bTag = 1"),
 		@NamedQuery(name = "SonderzeitenfindStundenweiseTaetigkeitenAktuell", query = "SELECT OBJECT(C) FROM Sonderzeiten c WHERE c.personalIId = ?1 AND c.taetigkeitIId = ?2 AND c.tDatum >= ?3 AND c.tDatum <= ?4 AND c.bTag = 0 AND c.bHalbtag = 0"),
+		@NamedQuery(name = "SonderzeitenfindAlleAutomatikbuchungenEinesZeitraums", query = "SELECT OBJECT(C) FROM Sonderzeiten c WHERE c.personalIId = ?1 AND c.tDatum >= ?2 AND c.tDatum <= ?3 AND c.bAutomatik = 1"),
 		@NamedQuery(name = "SonderzeitenfindStundenweiseTaetigkeitenAlt", query = "SELECT OBJECT(C) FROM Sonderzeiten c WHERE c.personalIId = ?1 AND c.taetigkeitIId = ?2 AND c.tDatum >= ?3 AND c.tDatum < ?4 AND c.bTag = 0 AND c.bHalbtag = 0"),
 		@NamedQuery(name = "SonderzeitenfindByPersonalIIdTDatumTaetigkeitIId", query = "SELECT OBJECT(C) FROM Sonderzeiten c WHERE c.personalIId = ?1 AND c.tDatum = ?2 AND c.taetigkeitIId = ?3"),
 		@NamedQuery(name = "SonderzeitenejbSelectHalbtaegigeTaetigkeitenAlt", query = "SELECT SUM (o.bHalbtag) FROM Sonderzeiten o WHERE o.personalIId = ?1 AND o.taetigkeitIId = ?2 AND o.tDatum >= ?3 AND o.tDatum < ?4 AND o.bHalbtag = 1"),
@@ -71,6 +73,18 @@ public class Sonderzeiten implements Serializable {
 
 	@Column(name = "B_TAG")
 	private Short bTag;
+
+	
+	@Column(name = "B_AUTOMATIK")
+	private Short bAutomatik;
+
+	public Short getBAutomatik() {
+		return bAutomatik;
+	}
+
+	public void setBAutomatik(Short bAutomatik) {
+		this.bAutomatik = bAutomatik;
+	}
 
 	@Column(name = "B_HALBTAG")
 	private Short bHalbtag;
@@ -102,7 +116,7 @@ public class Sonderzeiten implements Serializable {
 			Integer taetigkeitIId2, 
 			Short tag, 
 			Short halbtag,
-			Integer personalIIdAendern2) {
+			Integer personalIIdAendern2, Short bAutomatik) {
 		setIId(id);
 		setPersonalIId(personalIId2);
 		setTDatum(datum);
@@ -111,6 +125,7 @@ public class Sonderzeiten implements Serializable {
 		setPersonalIIdAendern(personalIIdAendern2);
 		setBHalbtag(halbtag);
 		setTAendern(new Timestamp(System.currentTimeMillis()));
+		setBAutomatik(bAutomatik);
 	}
 
 	public Integer getIId() {

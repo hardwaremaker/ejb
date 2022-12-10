@@ -38,12 +38,14 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.lieferschein.ejb.Lieferscheinposition;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 
 public class LieferscheinpositionDtoAssembler {
 	public static LieferscheinpositionDto createDto(
 			Lieferscheinposition lieferscheinposition) {
 		LieferscheinpositionDto lieferscheinpositionDto = new LieferscheinpositionDto();
 		if (lieferscheinposition != null) {
+			lieferscheinpositionDto.setUsecaseIIdQuelle(QueryParameters.UC_ID_LIEFERSCHEINPOSITION);
 			lieferscheinpositionDto.setIId(lieferscheinposition.getIId());
 			lieferscheinpositionDto.setLieferscheinIId(lieferscheinposition
 					.getLieferscheinIId());
@@ -99,7 +101,7 @@ public class LieferscheinpositionDtoAssembler {
 							.getNNettogesamtpreisplusversteckteraufschlag());
 			lieferscheinpositionDto
 					.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(lieferscheinposition
-							.getNNettogesamtpreisplusversteckteraufschlagminusrabatt());
+							.getNNettogesamtpreisplusversteckteraufschlagminusrabatte());
 			lieferscheinpositionDto.setNMwstbetrag(lieferscheinposition
 					.getNMwstbetrag());
 			lieferscheinpositionDto.setNBruttoeinzelpreis(lieferscheinposition
@@ -132,6 +134,15 @@ public class LieferscheinpositionDtoAssembler {
 					.getLagerIId());
 			lieferscheinpositionDto.setNMaterialzuschlagKurs(lieferscheinposition.getNMaterialzuschlagKurs());
 			lieferscheinpositionDto.setTMaterialzuschlagDatum(lieferscheinposition.getTMaterialzuschlagDatum());
+			lieferscheinpositionDto.setForecastpositionIId(lieferscheinposition.getForecastpositionIId());
+			lieferscheinpositionDto.setWareneingangspositionIIdAndererMandant(lieferscheinposition.getWareneingangspositionIIdAndererMandant());
+			lieferscheinpositionDto.setPositionIIdZugehoerig(lieferscheinposition.getPositionIIdZugehoerig());
+			
+			lieferscheinpositionDto.setNDimBreite(lieferscheinposition.getNDimBreite());
+			lieferscheinpositionDto.setNDimHoehe(lieferscheinposition.getNDimHoehe());
+			lieferscheinpositionDto.setNDimTiefe(lieferscheinposition.getNDimTiefe());
+			lieferscheinpositionDto.setNDimMenge(lieferscheinposition.getNDimMenge());
+			
 		}
 		return lieferscheinpositionDto;
 	}

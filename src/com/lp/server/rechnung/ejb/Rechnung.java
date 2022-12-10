@@ -44,10 +44,12 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.util.Helper;
 
 @NamedQueries( {
-		@NamedQuery(name = "RechnungfindByMandantBelegdatumVonBis", query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.mandantCNr=?1 AND o.tBelegdatum>=?2 AND o.tBelegdatum<?3"),
+		@NamedQuery(name = "RechnungfindByMandantBelegdatumVonBis", 
+				query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.mandantCNr=?1 AND o.tBelegdatum>=?2 AND o.tBelegdatum<?3 ORDER BY o.tBelegdatum"),
 		@NamedQuery(name = "RechnungfindByCNrMandant", query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "RechnungfindByCNrRechnungartCNrMandant", query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.cNr=?1 AND o.rechnungartCNr=?2 AND o.mandantCNr=?3"),
 		@NamedQuery(name = "RechnungfindByRechnungartRechnungCNrMandant", 
@@ -64,9 +66,14 @@ import com.lp.util.Helper;
 		@NamedQuery(name = "RechnungfindByKundeIIdMandantCNr", query = "SELECT OBJECT(O) FROM Rechnung o WHERE o.kundeIId=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "RechnungfindByRechnungIIdZuRechnung", query = "SELECT OBJECT(O) FROM Rechnung o WHERE o.rechnungIIdZurechnung=?1 AND (o.rechnungartCNr='Gutschrift' OR o.rechnungartCNr='Wertgutschrift')"),
 		@NamedQuery(name = "RechnungfindByKundeIIdStatistikadresseMandantCNr", query = "SELECT OBJECT(O) FROM Rechnung o WHERE o.kundeIIdStatistikadresse=?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = "RechnungfindByAnsprechpartnerIId", query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.ansprechpartnerIId=?1") })
+		@NamedQuery(name = "RechnungfindByAnsprechpartnerIId", query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.ansprechpartnerIId=?1"),
+		@NamedQuery(name = RechnungQuery.ByMandantKundeIIdStatusCNr, query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.mandantCNr=:mandant AND o.kundeIId=:kunde AND o.statusCNr IN (:stati)"),
+		@NamedQuery(name = RechnungQuery.ByMandantBelegdatumBisStatusCNr, query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.mandantCNr=:mandant AND o.tBelegdatum<:belegdatum AND o.statusCNr IN (:stati)"),
+		@NamedQuery(name = RechnungQuery.ByMandantStatusCNr, query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.mandantCNr=:mandant AND o.statusCNr IN (:stati)"),
+		@NamedQuery(name = RechnungQuery.ByCNrMehrereRechnungartCNrMandant, query = "SELECT OBJECT(o) FROM Rechnung o WHERE o.cNr=:cnr AND o.mandantCNr=:mandant AND o.rechnungartCNr IN (:rechnungarten)")
+})
 @Entity
-@Table(name = "RECH_RECHNUNG")
+@Table(name = ITablenames.RECH_RECHNUNG)
 public class Rechnung implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -134,7 +141,6 @@ public class Rechnung implements Serializable {
 
 	@Column(name = "T_MAHNSPERREBIS")
 	private Date tMahnsperrebis;
-
 
 	@Column(name = "T_ANLEGEN")
 	private Timestamp tAnlegen;
@@ -217,6 +223,17 @@ public class Rechnung implements Serializable {
 	@Column(name = "STATUS_C_NR")
 	private String statusCNr;
 
+	@Column(name = "ZAHLUNGSART_C_NR")
+	private String zahlungsartCNr;
+	
+	public String getZahlungsartCNr() {
+		return zahlungsartCNr;
+	}
+
+	public void setZahlungsartCNr(String zahlungsartCNr) {
+		this.zahlungsartCNr = zahlungsartCNr;
+	}
+
 	@Column(name = "LAGER_I_ID")
 	private Integer lagerIId;
 	
@@ -235,84 +252,42 @@ public class Rechnung implements Serializable {
 	
 	@Column(name = "PROJEKT_I_ID")
 	private Integer projektIId;
-	
-	public Integer getProjektIId() {
-		return projektIId;
-	}
 
-	public void setProjektIId(Integer projektIId) {
-		this.projektIId = projektIId;
-	}
-	
-	
-	@Column(name = "T_ZOLLPAPIER")
-	private Timestamp  tZollpapier;
-	@Column(name = "PERSONAL_I_ID_ZOLLPAPIER")
-	private Integer personalIIdZollpapier;
-	public Timestamp getTZollpapier() {
-		return tZollpapier;
-	}
-
-	public void setTZollpapier(Timestamp tZollpapier) {
-		this.tZollpapier = tZollpapier;
-	}
-
-	public Integer getPersonalIIdZollpapier() {
-		return personalIIdZollpapier;
-	}
-
-	public void setPersonalIIdZollpapier(Integer personalIIdZollpapier) {
-		this.personalIIdZollpapier = personalIIdZollpapier;
-	}
-
-	public String getCZollpapier() {
-		return cZollpapier;
-	}
-
-	public void setCZollpapier(String cZollpapier) {
-		this.cZollpapier = cZollpapier;
-	}
-	@Column(name = "C_ZOLLPAPIER")
-	private String   cZollpapier;
-	
-	
-	public String getCLieferartort() {
-		return cLieferartort;
-	}
-
-	public void setCLieferartort(String cLieferartort) {
-		this.cLieferartort = cLieferartort;
-	}
-
-	public String getCBez() {
-		return this.cBez;
-	}
-
-	public void setCBez(String cBez) {
-		this.cBez = cBez;
-	}
 	@Column(name = "N_MTL_ZAHLBETRAG")
 	private BigDecimal nMtlZahlbetrag;
 	
 	@Column(name = "I_ZAHLTAG_MTL_ZAHLBETRAG")
 	private Integer iZahltagMtlZahlbetrag;
+
+	@Column(name = "T_ZOLLPAPIER")
+	private Timestamp  tZollpapier;
+
+	@Column(name = "PERSONAL_I_ID_ZOLLPAPIER")
+	private Integer personalIIdZollpapier;
+
+	@Column(name = "C_ZOLLPAPIER")
+	private String   cZollpapier;
 	
-	public BigDecimal getNMtlZahlbetrag() {
-		return nMtlZahlbetrag;
+	@Column(name = "C_MAHNUNGSANMERKUNG")
+	private String   cMahnungsanmerkung;
+	
+	public String getCMahnungsanmerkung() {
+		return cMahnungsanmerkung;
 	}
 
-	public void setNMtlZahlbetrag(BigDecimal nMtlZahlbetrag) {
-		this.nMtlZahlbetrag = nMtlZahlbetrag;
+	public void setCMahnungsanmerkung(String cMahnungsanmerkung) {
+		this.cMahnungsanmerkung = cMahnungsanmerkung;
 	}
 
-	public Integer getIZahltagMtlZahlbetrag() {
-		return iZahltagMtlZahlbetrag;
-	}
+	@Column(name = "REVERSECHARGEART_I_ID")
+	private Integer rcArtId;
 
-	public void setIZahltagMtlZahlbetrag(Integer iZahltagMtlZahlbetrag) {
-		this.iZahltagMtlZahlbetrag = iZahltagMtlZahlbetrag;
-	}
-
+	@Column(name = "T_ELEKTRONISCH")
+	private Timestamp tElektronisch;
+	
+	@Column(name = "PERSONAL_I_ID_ELEKTRONISCH")
+	private Integer personalIIdElektronisch;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Rechnung() {
@@ -324,10 +299,11 @@ public class Rechnung implements Serializable {
 			String statusCNr, String rechnungartCNr,Integer kostenstelleIId, String waehrungCNr,
 			 Short mwstsatzallepositionen,
 			Integer personalIIdAnlegen, Integer personalIIdAendern,
-			 Short reversecharge,Integer kundeIIdStatistikadresse, Integer personalIIdVertreter,
+			Integer kundeIIdStatistikadresse, Integer personalIIdVertreter,
 			Integer lieferartIId, 
 			Integer zahlungszielIId,
-			Integer spediteurIId 
+			Integer spediteurIId,
+			Integer reversechargeartId
 	) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
@@ -345,10 +321,11 @@ public class Rechnung implements Serializable {
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
 		setPersonalIIdVertreter(personalIIdVertreter);
-		setBReversecharge(reversecharge);
+		setBReversecharge(Helper.getShortFalse());
 		setLieferartIId(lieferartIId);
 		setZahlungszielIId(zahlungszielIId);
 		setSpediteurIId(spediteurIId);
+		setRcArtId(reversechargeartId);
 		// Setzen der NOT NULL felder
 	    Timestamp now = new Timestamp(System.currentTimeMillis());
 	    this.setFAllgemeinerrabattsatz(new Double(0));
@@ -776,4 +753,92 @@ public class Rechnung implements Serializable {
 		return cVersandtype;
 	}
 
+	public Integer getProjektIId() {
+		return projektIId;
+	}
+
+	public void setProjektIId(Integer projektIId) {
+		this.projektIId = projektIId;
+	}
+	
+	
+	public Timestamp getTZollpapier() {
+		return tZollpapier;
+	}
+
+	public void setTZollpapier(Timestamp tZollpapier) {
+		this.tZollpapier = tZollpapier;
+	}
+
+	public Integer getPersonalIIdZollpapier() {
+		return personalIIdZollpapier;
+	}
+
+	public void setPersonalIIdZollpapier(Integer personalIIdZollpapier) {
+		this.personalIIdZollpapier = personalIIdZollpapier;
+	}
+
+	public String getCZollpapier() {
+		return cZollpapier;
+	}
+
+	public void setCZollpapier(String cZollpapier) {
+		this.cZollpapier = cZollpapier;
+	}
+	
+	public String getCLieferartort() {
+		return cLieferartort;
+	}
+
+	public void setCLieferartort(String cLieferartort) {
+		this.cLieferartort = cLieferartort;
+	}
+
+	public String getCBez() {
+		return this.cBez;
+	}
+
+	public void setCBez(String cBez) {
+		this.cBez = cBez;
+	}
+	
+	public BigDecimal getNMtlZahlbetrag() {
+		return nMtlZahlbetrag;
+	}
+
+	public void setNMtlZahlbetrag(BigDecimal nMtlZahlbetrag) {
+		this.nMtlZahlbetrag = nMtlZahlbetrag;
+	}
+
+	public Integer getIZahltagMtlZahlbetrag() {
+		return iZahltagMtlZahlbetrag;
+	}
+
+	public void setIZahltagMtlZahlbetrag(Integer iZahltagMtlZahlbetrag) {
+		this.iZahltagMtlZahlbetrag = iZahltagMtlZahlbetrag;
+	}
+
+	public Integer getRcArtId() {
+		return rcArtId;
+	}
+
+	public void setRcArtId(Integer rcArtId) {
+		this.rcArtId = rcArtId;
+	}
+
+	public Timestamp getTElektronisch() {
+		return tElektronisch;
+	}
+
+	public void setTElektronisch(Timestamp tElektronisch) {
+		this.tElektronisch = tElektronisch;
+	}
+	
+	public Integer getPersonalIIdElektronisch() {
+		return personalIIdElektronisch;
+	}
+
+	public void setPersonalIIdElektronisch(Integer personalIIdElektronisch) {
+		this.personalIIdElektronisch = personalIIdElektronisch;
+	}	
 }

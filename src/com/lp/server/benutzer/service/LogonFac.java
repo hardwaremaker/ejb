@@ -34,16 +34,18 @@ package com.lp.server.benutzer.service;
 
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Locale;
 
 import javax.ejb.Remote;
 
+import com.lp.server.personal.service.HvmaLizenzEnum;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.system.service.TheClientLoggedInDto;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
-public interface LogonFac {
-
+public interface LogonFac{
 	public static String USERNAMEDELIMITER = "|";
 
 	public static int IDX_BUILDNUMMERSERVER = 0;
@@ -157,4 +159,15 @@ public interface LogonFac {
 	
 	TheClientDto logonExtern(int appType, String userName, char[] cKennwortI,
 			Locale uiLocale, String mandantCnr, String source) throws EJBExceptionLP, RemoteException ; 
+	
+	TheClientDto logonMobil(String sFullUserNameI, char[] cKennwortI,
+			Locale locUII, String sMandantI, Timestamp tLogontimeClientI, String cAusweis) throws EJBExceptionLP, RemoteException ;
+	
+	public TheClientDto logonIntern(Locale locUII, String sMandantI);
+
+	TheClientDto logonHvma(String fullUsername, char[] kennwort, Locale locale,
+			String mandantCnr, Timestamp logontime,
+			HvmaLizenzEnum licence, String resource);
+	
+	List<TheClientLoggedInDto> getUsersLoggedInMandant(TheClientDto theClientDto) throws RemoteException;
 }

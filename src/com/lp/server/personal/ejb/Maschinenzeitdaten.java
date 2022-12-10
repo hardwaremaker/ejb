@@ -44,6 +44,7 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 	@NamedQuery(name = "MaschinenzeitdatenfindLetzeOffeneMaschinenzeitdaten", query = "SELECT OBJECT(c) FROM Maschinenzeitdaten c WHERE c.maschineIId = ?1 AND c.tBis IS NULL ORDER BY c.tVon DESC"),
+	@NamedQuery(name = "MaschinenzeitdatenfindMaschinenzeitdatenNachZeitpunkt", query = "SELECT OBJECT(c) FROM Maschinenzeitdaten c WHERE c.maschineIId = ?1 AND c.tVon >?2"),
 	@NamedQuery(name = "MaschinenzeitdatenfindByLossollarbeitsplanIId", query = "SELECT OBJECT(c) FROM Maschinenzeitdaten c WHERE c.lossollarbeitsplanIId = ?1"),
 	@NamedQuery(name = "MaschinenzeitdatenfindByPersonalIIdGestartet", query = "SELECT OBJECT(c) FROM Maschinenzeitdaten c WHERE c.personalIIdGestartet = ?1 AND c.tVon <?2 AND c.tBis IS NULL")})
 
@@ -82,8 +83,17 @@ public class Maschinenzeitdaten implements Serializable {
 	@Column(name = "PERSONAL_I_ID_GESTARTET")
 	private Integer personalIIdGestartet;
 
-	
-	
+	@Column(name = "B_PARALLEL")
+	private Short bParallel;
+
+	public Short getBParallel() {
+		return bParallel;
+	}
+
+	public void setBParallel(Short bParallel) {
+		this.bParallel = bParallel;
+	}
+
 	public Integer getPersonalIIdGestartet() {
 		return personalIIdGestartet;
 	}
@@ -95,6 +105,41 @@ public class Maschinenzeitdaten implements Serializable {
 	@Column(name = "LOSSOLLARBEITSPLAN_I_ID")
 	private Integer lossollarbeitsplanIId;
 
+	
+	@Column(name = "PERSONAL_I_ID_ERLEDIGT")
+	private Integer personalIIdErledigt;
+	
+	@Column(name = "T_ERLEDIGT")
+	private Timestamp tErledigt;
+	
+	@Column(name = "F_VERRECHENBAR")
+	private Double fVerrechenbar;
+	
+
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public Maschinenzeitdaten() {
@@ -104,7 +149,7 @@ public class Maschinenzeitdaten implements Serializable {
 	public Maschinenzeitdaten(Integer id, Integer maschineIId, Timestamp tVon,
 			Integer personalIIdAnlegen2,
 			Integer personalIIdAendern2, Integer lossollarbeitsplanIId,
-			java.sql.Timestamp tAendern, java.sql.Timestamp tAnlegen, Integer personalIIdGestartet) {
+			java.sql.Timestamp tAendern, java.sql.Timestamp tAnlegen, Integer personalIIdGestartet, Short bParallel) {
 		setIId(id);
 		setLossollarbeitsplanIId(lossollarbeitsplanIId);
 		setTVon(tVon);
@@ -114,6 +159,7 @@ public class Maschinenzeitdaten implements Serializable {
 		setTAendern(tAendern);
 		setTAnlegen(tAnlegen);
 		setPersonalIIdGestartet(personalIIdGestartet);
+		setBParallel(bParallel);
 
 	}
 

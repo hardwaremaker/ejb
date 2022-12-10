@@ -39,43 +39,51 @@ import javax.jms.TextMessage;
 import javax.naming.NamingException;
 
 public class HvQueueSender extends HvQueue {
-	private boolean created = false ;
+	private boolean created = false;
 
 	private Queue queue = null;
 	private QueueSender queueSender = null;
-	
+
 	public HvQueueSender(String queueName) {
-		super(queueName) ;
+		super(queueName);
 	}
-	
+
 	protected boolean createSenderQueue() {
-		if(created) return created ;
+		if (created)
+			return created;
+
+		// ->>UMBAU-BEISPIEL FUER WILDFLY SIEHE KLASSE LPAsynchSubscriber
 
 		try {
 			try {
-				queue = (Queue) getInitialContext().lookup(getQueueName()) ;
-			} catch(NamingException e) {
-				queue = getQueueSession().createQueue(getQueueName()) ;
+				try {
+					queue = (Queue) getInitialContext().lookup(getQueueName());
+				} catch (NamingException e1) {
+					e1.printStackTrace();
+					queue = (Queue) getInitialContext().lookup("jms/" + getQueueName());
+				}
+			} catch (NamingException e) {
+				queue = getQueueSession().createQueue(getQueueName());
 				getInitialContext().bind(getQueueName(), queue);
-			}			
-			queueSender = getQueueSession().createSender(queue) ;
+			}
+			queueSender = getQueueSession().createSender(queue);
 			getQueueConnection().start();
-			created = true ;
-			
+			created = true;
+
 			log.info("created sending end of Queue " + getQueueName());
-		} catch(NamingException e) {
-			log.warn("NamingException: ", e);			
-		} catch(JMSException e) {
-			log.warn("JMSException: ", e);			
+		} catch (NamingException e) {
+			log.warn("NamingException: ", e);
+		} catch (JMSException e) {
+			log.warn("JMSException: ", e);
 		}
-		
-		return created ;		
+
+		return created;
 	}
-	
+
 	protected void sendTextMessage(String message) throws JMSException {
-		TextMessage msg = getQueueSession().createTextMessage(message) ;
+		TextMessage msg = getQueueSession().createTextMessage(message);
 		queueSender.send(msg);
-		
+
 		log.info("sent textmessage '" + message + "'.");
 	}
 }

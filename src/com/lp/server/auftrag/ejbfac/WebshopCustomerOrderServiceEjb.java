@@ -55,16 +55,19 @@ import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.auftrag.service.WebshopOrderServiceFacLocal;
+import com.lp.server.auftrag.service.WebshopOrderServiceInterface;
+import com.lp.server.auftrag.service.WebshopPartner;
 import com.lp.server.partner.ejb.Selektion;
 import com.lp.server.partner.ejb.SelektionQuery;
-import com.lp.server.partner.ejbfac.WebAddress;
-import com.lp.server.partner.ejbfac.WebPerson;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.AnsprechpartnerfunktionDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PASelektionDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.partner.service.WebAddress;
+import com.lp.server.partner.service.WebPerson;
 import com.lp.server.schema.bmecat_2005.BCCONTACTNAME;
 import com.lp.server.schema.bmecat_2005.BCINTERNATIONALPID;
 import com.lp.server.schema.bmecat_2005.BCSUPPLIERPID;
@@ -89,9 +92,10 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
-@Local
+
 @Stateless
-public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
+@Local(WebshopOrderServiceFacLocal.class)
+public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase implements WebshopOrderServiceInterface {
 
 	@PersistenceContext
 	private EntityManager em;
@@ -591,13 +595,11 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 			kundeDto.setBDistributor(Helper.boolean2Short(false));
 			kundeDto.setBIstreempfaenger(Helper.boolean2Short(false));
 			kundeDto.setbIstinteressent(Helper.boolean2Short(false));
-			kundeDto.setBLsgewichtangeben(Helper.boolean2Short(false));
 			kundeDto.setBSammelrechnung(Helper.boolean2Short(false));
 			kundeDto.setBRechnungsdruckmitrabatt(Helper.boolean2Short(false));
 
 			// Default 'Akzeptiert Teillieferung'
 			kundeDto.setBAkzeptiertteillieferung(getParameterKundeAkzeptiertTeillieferung());
-			kundeDto.setBLsgewichtangeben(Helper.boolean2Short(false));
 
 			Integer personalId = getAuthController().getWebClientDto().getIDPersonal() ;
 			kundeDto.setPersonaliIdProvisionsempfaenger(personalId) ;
@@ -683,7 +685,12 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 		public ArtikelFinderWebshop(OT2ORDERITEM convertedOrderItem) {
 			xmlOrderItem = convertedOrderItem ;
 		}
-
+  
+		@Override
+		public String getUsedItemCnr() {
+			return null;
+		}
+		
 		@Override
 		public ArtikelDto findArtikel(KundeDto kundeDto, AuftragDto auftragDto) {
 			ArtikelDto artikelDto = null ;
@@ -813,7 +820,7 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 			try {
 				String bestellnr = getOrderAdapter().getBestellnummer() ;
 				auftragDtos = getAuftragFac().auftragFindByMandantCnrKundeIIdBestellnummerOhneExc(
-						kundeDto.getIId(), getAuthController().getWebClientDto().getMandant(), bestellnr, null) ;
+						kundeDto.getIId(), getAuthController().getWebClientDto().getMandant(), bestellnr) ;
 			} catch(RemoteException e) {				
 			}
 			

@@ -49,6 +49,12 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
 import com.lp.server.artikel.ejb.Artkla;
+import com.lp.server.auftrag.ejb.Zahlungsplan;
+import com.lp.server.auftrag.ejb.Zahlungsplanmeilenstein;
+import com.lp.server.auftrag.service.ZahlungsplanDto;
+import com.lp.server.auftrag.service.ZahlungsplanDtoAssembler;
+import com.lp.server.auftrag.service.ZahlungsplanmeilensteinDtoAssembler;
+import com.lp.server.bestellung.ejb.BSZahlungsplan;
 import com.lp.server.bestellung.ejb.Bestellpositionart;
 import com.lp.server.bestellung.ejb.Bestellpositionstatus;
 import com.lp.server.bestellung.ejb.Bestellungart;
@@ -57,8 +63,9 @@ import com.lp.server.bestellung.ejb.BestellungartsprPK;
 import com.lp.server.bestellung.ejb.Bestellungstatus;
 import com.lp.server.bestellung.ejb.Bestellungtext;
 import com.lp.server.bestellung.ejb.Mahngruppe;
+import com.lp.server.bestellung.service.BSZahlungsplanDto;
+import com.lp.server.bestellung.service.BSZahlungsplanDtoAssembler;
 import com.lp.server.bestellung.service.BestellpositionartDto;
-import com.lp.server.bestellung.service.BestellpositionartDtoAssembler;
 import com.lp.server.bestellung.service.BestellpositionstatusDto;
 import com.lp.server.bestellung.service.BestellpositionstatusDtoAssembler;
 import com.lp.server.bestellung.service.BestellungServiceFac;
@@ -1093,6 +1100,85 @@ public class BestellungServiceFacBean extends Facade implements
 		return (BestellungsartDto[]) list.toArray(returnArray);
 	}
 
+	public Integer createBSZahlungsplan(BSZahlungsplanDto zahlungsplanDto,
+			TheClientDto theClientDto) {
+		// den PK erzeugen und setzen
+		Integer iId = null;
+
+		iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_BSZAHLUNGSPLAN);
+		zahlungsplanDto.setIId(iId);
+
+		zahlungsplanDto.setNBetragUrsprung(zahlungsplanDto.getNBetrag());
+
+		try {
+			BSZahlungsplan zahlungsplan = new BSZahlungsplan(
+					zahlungsplanDto.getIId(),
+					zahlungsplanDto.getBestellungIId(),
+					zahlungsplanDto.getTTermin(), zahlungsplanDto.getNBetrag(),
+					zahlungsplanDto.getNBetragUrsprung());
+			em.persist(zahlungsplan);
+			em.flush();
+			setBSZahlungsplanFromBSZahlungsplanDto(zahlungsplan,
+					zahlungsplanDto);
+
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+
+		return iId;
+	}
+
+	public void updateBSZahlungsplan(BSZahlungsplanDto dto,
+			TheClientDto theClientDto) {
+		BSZahlungsplan zahlungsplan = em.find(BSZahlungsplan.class,
+				dto.getIId());
+		if (zahlungsplan == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		setBSZahlungsplanFromBSZahlungsplanDto(zahlungsplan, dto);
+
+	}
+
+	public BSZahlungsplanDto bszahlungsplanFindByPrimaryKey(Integer iId) {
+		BSZahlungsplanDto zpDto = BSZahlungsplanDtoAssembler.createDto(em.find(
+				BSZahlungsplan.class, iId));
+		return zpDto;
+	}
+
+	public void removeBSZahlungsplan(BSZahlungsplanDto zahlungsplanDto) {
+
+
+		BSZahlungsplan toRemove = em.find(BSZahlungsplan.class,
+				zahlungsplanDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+	
+	private void setBSZahlungsplanFromBSZahlungsplanDto(
+			BSZahlungsplan zahlungsplan, BSZahlungsplanDto zahlungsplanDto) {
+		zahlungsplan.setBestellungIId(zahlungsplanDto.getBestellungIId());
+		zahlungsplan.setNBetrag(zahlungsplanDto.getNBetrag());
+		zahlungsplan.setNBetragUrsprung(zahlungsplanDto.getNBetragUrsprung());
+		zahlungsplan.setTTermin(zahlungsplanDto.getTTermin());
+		zahlungsplan.setCKommentar(zahlungsplanDto.getCKommentar());
+		zahlungsplan.setXText(zahlungsplanDto.getXText());
+		zahlungsplan.setTErledigt(zahlungsplanDto.getTErledigt());
+		zahlungsplan.setPersonalIIdErledigt(zahlungsplanDto
+				.getPersonalIIdErledigt());
+
+		em.merge(zahlungsplan);
+		em.flush();
+	}
+
 	public String createBestellungstatus(BestellungstatusDto bestellungstatusDto)
 			throws EJBExceptionLP {
 		if (bestellungstatusDto == null) {
@@ -1222,5 +1308,20 @@ public class BestellungServiceFacBean extends Facade implements
 		BestellungstatusDto[] returnArray = new BestellungstatusDto[list.size()];
 		return (BestellungstatusDto[]) list.toArray(returnArray);
 	}
+	public void toggleBSZahlungsplanErledigt(
+			Integer bszahlungsplanIId, TheClientDto theClientDto) {
+		BSZahlungsplan zahlungsplan = em.find(
+				BSZahlungsplan.class, bszahlungsplanIId);
 
+		if (zahlungsplan.getTErledigt() == null) {
+			zahlungsplan.setTErledigt(new java.sql.Timestamp(System
+					.currentTimeMillis()));
+			zahlungsplan.setPersonalIIdErledigt(theClientDto
+					.getIDPersonal());
+		} else {
+			zahlungsplan.setTErledigt(null);
+			zahlungsplan.setPersonalIIdErledigt(null);
+		}
+
+	}
 }

@@ -47,6 +47,15 @@ public class ZahlungsplanmeilensteinDto implements Serializable {
 
 	private String cKommentar;
 	private String xText;
+	private Integer iSort;
+
+	public Integer getISort() {
+		return iSort;
+	}
+
+	public void setISort(Integer iSort) {
+		this.iSort = iSort;
+	}
 
 	private java.sql.Timestamp tErledigt;
 

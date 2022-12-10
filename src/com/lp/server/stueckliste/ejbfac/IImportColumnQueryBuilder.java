@@ -48,9 +48,17 @@ public interface IImportColumnQueryBuilder {
 	public static final String Artikel = "artikel";
 	public static final String ArtikelSpr = "artikelspr";
 	public static final String KundeSoko = "kundesoko";
+	public static final String Artikellieferant = "artikellieferant";
+	public static final String Hersteller = "hersteller";
 
-	public static final String JOIN_ARTIKELSPR = "LEFT OUTER JOIN artikel.artikelsprset AS " + ArtikelSpr;
-	public static final String JOIN_KUNDESOKO = "LEFT OUTER JOIN artikel.kundesokoset AS " + KundeSoko;
+	public static final String JOIN_ARTIKELSPR = 
+			"LEFT OUTER JOIN artikel.artikelsprset AS " + ArtikelSpr;
+	public static final String JOIN_KUNDESOKO = 
+			"LEFT OUTER JOIN artikel.kundesokoset AS " + KundeSoko;
+	public static final String JOIN_ARTIKELLIEFERANT = 
+			"LEFT OUTER JOIN artikel.artikellieferantset AS " + Artikellieferant;
+	public static final String JOIN_HERSTELLER =
+			"LEFT OUTER JOIN artikel.flrhersteller AS " + Hersteller;
 	
 	/**
 	 * 

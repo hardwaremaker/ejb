@@ -36,7 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
-import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
@@ -76,8 +75,8 @@ public class EinheitHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = StatusHandler.PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit();
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -85,7 +84,7 @@ public class EinheitHandler extends UseCaseHandler {
 					+ this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
-			session = setFilter(session);
+			setFilter(session);
 
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -119,11 +118,7 @@ public class EinheitHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
@@ -190,7 +185,6 @@ public class EinheitHandler extends UseCaseHandler {
 			}
 		}
 		return orderBy.toString();
-
 	}
 
 	/**
@@ -245,32 +239,9 @@ public class EinheitHandler extends UseCaseHandler {
 	 * @return int
 	 */
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			session = setFilter(session);
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
-		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
-			}
-		}
-		return rowCount;
+		String query = "select count(*) " + getFromClause()
+			+ buildWhereClause();
+		return getRowCountFromDataBaseByQuery(query);
 	}
 
 	/**
@@ -354,11 +325,7 @@ public class EinheitHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-				}
+				closeSession(session);
 			}
 		}
 

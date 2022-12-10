@@ -48,10 +48,13 @@ public interface ArtikelimportFac {
 	public void importiereArtikel(ArtikelImportDto[] daten,
 			boolean bBestehendeArtikelUeberschreiben, TheClientDto theClientDto);
 
-	public String pruefeUndImportiereArtikelXLS(byte[] xlsDatei,
+	public ArtikelimportFehlerDto pruefeUndImportiereArtikelXLS(byte[] xlsDatei,
 			java.sql.Timestamp tDefaultEK,
-			java.sql.Timestamp tDefaultVK, boolean bImportierenWennKeinFehler, TheClientDto theClientDto);
+			java.sql.Timestamp tDefaultVK, boolean bImportierenWennKeinFehler, boolean bPreisUeberschreiben, boolean bAlsLief1Reihen,boolean bBestehendeartikelUeberschreiben, boolean bFreigabestatusIgnorieren, TheClientDto theClientDto);
 	
+	
+	public String importiereVerschleissteileXLS(byte[] xlsDatei,boolean bImportierenWennKeinFehler, 
+			TheClientDto theClientDto);
 	
 	public String importiereAllergeneXLS(byte[] xlsDatei, Integer lieferantIId, TheClientDto theClientDto);
 	public String gestpreisImportieren(TheClientDto theClientDto,
@@ -69,10 +72,10 @@ public interface ArtikelimportFac {
 			String hersteller) throws RemoteException ;
 	public void artikelkommentartAnlegen(TheClientDto theClientDto,
 			String kommentarart, String kommentar, ArrayList alBelege,
-			Integer artikelIId) throws RemoteException;
+			Integer artikelIId, Short bDateiverweis) throws RemoteException;
 	public BigDecimal vkPreisAnlegen(java.sql.Timestamp tDefaultEK,
 			TheClientDto theClientDto, BigDecimal vkPreisbasis,
-			BigDecimal preiseinheit, Integer artikelIId);
+			BigDecimal preiseinheit, Integer artikelIId, VkpfartikelpreislisteDto[] vkpfartikelpreislisteDtos);
 	public void lagerplatzAnlegen(TheClientDto theClientDto,
 			Integer lagerIId_Hauptlager, String lagerplatz, Integer artikelIId)
 			throws RemoteException;
@@ -88,6 +91,12 @@ public interface ArtikelimportFac {
 	public Integer medicalSuchenUndAnlegen(TheClientDto theClientDto,
 			String medical) throws RemoteException;
 	
+	public String importiereKundesokoXLS(byte[] xlsDatei,Integer kundeIId,
+			boolean bImportierenWennKeinFehler, TheClientDto theClientDto);
+	public String importiereLagerminSollXLS(byte[] xlsDatei,
+			boolean bImportierenWennKeinFehler, TheClientDto theClientDto);
 	
-
+	public String importiereVKMengenstgaffelXLS(byte[] xlsDatei,
+			boolean bImportierenWennKeinFehler, String cBegruendung, TheClientDto theClientDto);
+	
 }

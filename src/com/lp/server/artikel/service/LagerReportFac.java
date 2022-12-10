@@ -35,9 +35,12 @@ package com.lp.server.artikel.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
 
 import javax.ejb.Remote;
 
+import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.DatumsfilterVonBis;
 import com.lp.server.util.report.JasperPrintLP;
@@ -52,25 +55,26 @@ public interface LagerReportFac {
 	public static final String REPORT_LIEFERANTUMSATZSTATISTIK = "ww_lieferantumsatzstatistik.jasper";
 	public static final String REPORT_KUNDEDBSTATISTIK = "ww_kundedbstatistik.jasper";
 	public static final String REPORT_LADENHUETER = "ww_ladenhueter.jasper";
+	public static final String REPORT_HANDLAGERBEWEGUNGEN = "ww_handlagerbewegungen.jasper";
 	public static final String REPORT_HITLISTE = "ww_hitliste.jasper";
 	public static final String REPORT_UMBUCHUNGSBELEG = "ww_umbuchungsbeleg.jasper";
 	public static final String REPORT_LAGERBUCHUNGSBELEG = "ww_lagerbuchungsbeleg.jasper";
+	public static final String REPORT_CHARGENEIGENSCHAFTEN = "ww_chargeneigenschaften.jasper";
 	public static final String REPORT_MINDESTHALTBARKEIT = "ww_mindesthaltbarkeit.jasper";
 	public static final String REPORT_GESTPREISUEBERMINVK = "ww_gestpreisueberminvk.jasper";
 	public static final String REPORT_WARENENTNAHMESTATISTIK = "ww_warenentnahmestatistik.jasper";
 	public static final String REPORT_ARTIKLEGRUPPEN = "ww_artikelgruppen.jasper";
+	public static final String REPORT_MATERIALBEDARFSVORSCHAU = "ww_materialbedarfsvorschau.jasper";
 	public static final String REPORT_SHOPGRUPPEN = "ww_shopgruppen.jasper";
 	public static final String REPORT_INDIREKTE_WARENEINSATZ_STATISTIK = "ww_indirektewareneinsatzstatistik.jasper";
-	
 
 	public final static int REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_ARTIKEL = 0;
 	public final static int REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_BELEG = 1;
-	
-	
+
 	public final static int REPORT_WARENENTNAHMESTATISTIK_SORTIERUNG_ARTIKELNR = 0;
 	public final static int REPORT_WARENENTNAHMESTATISTIK_SORTIERUNG_ARTIKELGRUPPE = 1;
 	public final static int REPORT_WARENENTNAHMESTATISTIK_SORTIERUNG_ARTIKELKLASSE = 2;
-	
+
 	public final static int REPORT_LADENHUETER_SORTIERUNG_ARTIKELNR = 0;
 	public final static int REPORT_LADENHUETER_SORTIERUNG_ARTIKELGRUPPE = 1;
 	public final static int REPORT_LADENHUETER_SORTIERUNG_ARTIKELKLASSE = 2;
@@ -84,6 +88,10 @@ public interface LagerReportFac {
 	public final static int REPORT_HITLISTE_SORTIERUNG_VKWERT = 3;
 	public final static int REPORT_HITLISTE_SORTIERUNG_DBWERT = 4;
 	public final static int REPORT_HITLISTE_SORTIERUNG_SHOPGRUPPE = 5;
+
+	public final static int REPORT_ZAEHLLISTE_SORTIERUNG_ARTIKEL = 0;
+	public final static int REPORT_ZAEHLLISTE_SORTIERUNG_REFERENZNUMMER = 1;
+	public final static int REPORT_ZAEHLLISTE_SORTIERUNG_LAGERPLATZ = 2;
 
 	public final static String REPORT_LAGERSTANDLISTE = "ww_lagerstandliste.jasper";
 	public final static int REPORT_LAGERSTANDSLISTE_SORTIERUNG_ARTIKELNUMMER = 1;
@@ -101,9 +109,9 @@ public interface LagerReportFac {
 	public final static int REPORT_LAGERSTANDSLISTE_ARTIKEL_NURSTKL = 1;
 	public final static int REPORT_LAGERSTANDSLISTE_ARTIKEL_OHNESTKL = 2;
 
-	public JasperPrintLP printWarenbewegungsjournal(Integer artikelIId, Integer lagerIId,
-			Timestamp dVon, Timestamp dBis, TheClientDto theClientDto)
-			throws RemoteException;
+	public JasperPrintLP printWarenbewegungsjournal(Integer artikelIId,
+			Integer lagerIId, Timestamp dVon, Timestamp dBis,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public final static int REPORT_KUNDEUMSATZSTATISTIK_OPTION_GRUPPIERUNG_ARTIKELKLASSE = 0;
 	public final static int REPORT_KUNDEUMSATZSTATISTIK_OPTION_GRUPPIERUNG_ARTIKELGRUPPE = 1;
@@ -118,12 +126,10 @@ public interface LagerReportFac {
 	public final static int REPORT_KUNDEUMSATZSTATISTIK_OPTION_SORTIERUNG_UMSATZ = 1;
 	public final static int REPORT_KUNDEUMSATZSTATISTIK_OPTION_SORTIERUNG_LKZ = 2;
 
-	
 	public final static int REPORT_KUNDEUMSATZSTATISTIK_OPTION_GRUPPIERUNG_JAHRE_SORTIERBASIS_UMSATZ_GESAMT = 0;
 	public final static int REPORT_KUNDEUMSATZSTATISTIK_OPTION_GRUPPIERUNG_JAHRE_SORTIERBASIS_UMSATZ_AKTUELLESJAHR = 1;
 	public final static int REPORT_KUNDEUMSATZSTATISTIK_OPTION_GRUPPIERUNG_JAHRE_SORTIERBASIS_UMSATZ_VORJAHR = 2;
 
-	
 	public final static int REPORT_LIEFERANTUMSATZSTATISTIK_OPTION_GRUPPIERUNG_ARTIKELKLASSE = 0;
 	public final static int REPORT_LIEFERANTUMSATZSTATISTIK_OPTION_GRUPPIERUNG_ARTIKELGRUPPE = 1;
 	public final static int REPORT_LIEFERANTUMSATZSTATISTIK_OPTION_GRUPPIERUNG_JAHR = 2;
@@ -135,19 +141,19 @@ public interface LagerReportFac {
 	public final static int REPORT_LIEFERANTUMSATZSTATISTIK_OPTION_SORTIERUNG_FIRMANNAME = 0;
 	public final static int REPORT_LIEFERANTUMSATZSTATISTIK_OPTION_SORTIERUNG_UMSATZ = 1;
 
-	
-	
 	public JasperPrintLP printKundeumsatzstatistik(Timestamp tVon,
 			Timestamp tBis, Integer iOptionKundengruppierung, boolean bUmsatz,
-			Integer iOptionGruppierung, Integer iOptionSortierung,Integer iSortierbasisJahre,boolean bVerwendeStatistikadresse,boolean bMitNichtLagerbewertetenArtikeln,boolean ohneDBBetrachtung, 
-			TheClientDto theClientDto)
+			Integer iOptionGruppierung,boolean bNurHauptgruppeKlasse, Integer iOptionSortierung,
+			Integer iSortierbasisJahre, boolean bVerwendeAuftragsadresse, boolean bVerwendeStatistikadresse,
+			boolean bMitNichtLagerbewertetenArtikeln,
+			boolean ohneDBBetrachtung, boolean bSortiertNachProvisionsempfaenger,  TheClientDto theClientDto)
 
 	throws RemoteException;
 
 	public JasperPrintLP printLieferantumsatzstatistik(Timestamp tVon,
 			Timestamp tBis, boolean bWareneingangspositionen,
 			Integer iOptionKundengruppierung, Integer iOptionGruppierung,
-			Integer iOptionSortierung, TheClientDto theClientDto)
+			Integer iOptionSortierung,boolean bNurHauptgruppeKlasse, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public JasperPrintLP printMindesthaltbarkeit(String artikelnrVon,
@@ -160,57 +166,86 @@ public interface LagerReportFac {
 			String artikelNrBis, Integer artikelgruppeIId,
 			Integer artikelklasseIId, Integer vkPreislisteIId, int sortierung,
 			int iArtikelarten, boolean bMitAbgewertetemGestpreis,
-			boolean bMitArtikelOhneLagerstand, Integer lagerplatzIId,boolean bMitVersteckten, Integer shopgruppeIId, boolean bMitNichtLagerbewirtschaftetenArtikeln,
-			TheClientDto theClientDto) throws RemoteException;
+			boolean bMitArtikelOhneLagerstand, Integer lagerplatzIId,
+			boolean bMitVersteckten, Integer shopgruppeIId,
+			boolean bMitNichtLagerbewirtschaftetenArtikeln,
+			boolean bDetailliert,boolean bLagerstandMitBelegen,  TheClientDto theClientDto)
+			throws RemoteException;
 
 	public JasperPrintLP printHitliste(Timestamp dVon, Timestamp dBis,
 			Integer lagerIId, Integer iSortierung, String artikelNrVon,
 			String artikelNrBis, boolean bMitHandlagerbewegungen,
-			boolean bMitFertigung, boolean bMitVersteckten,TheClientDto theClientDto)
-			throws RemoteException;
+			boolean bMitFertigung, boolean bMitVersteckten,boolean bNurVerrechnetePositionen,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printGestpreisUeberMinVK(Integer lagerIId,
-			Integer vkPreislisteIId, boolean bMitVersteckten, boolean bVergleichMitMinVKPReis,boolean bMitStuecklisten, TheClientDto theClientDto)
-			throws RemoteException;
+			Integer vkPreislisteIId, boolean bMitVersteckten,
+			boolean bVergleichMitMinVKPReis, boolean bMitStuecklisten,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printLadenhueter(Timestamp dVon, Timestamp dBis,
 			Integer iSortierung, String filterVon, String filterBis,
 			Integer lagerIId, boolean bMitHandlagerbewegungen,
-			boolean bMitFertigung,boolean bMitVersteckten, Integer artikelgruppeIId, boolean bZugaengeBeruecksichtigen, TheClientDto theClientDto)
-			throws RemoteException;
+			boolean bMitFertigung, boolean bMitVersteckten,
+			Integer artikelgruppeIId, boolean bZugaengeBeruecksichtigen,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printUmbuchungsbeleg(
 			Integer lagerbewegungIIdBuchungZubuchung,
 			Integer lagerbewegungIIdBuchungAbbuchung, TheClientDto theClientDto)
 			throws RemoteException;
 
-	public JasperPrintLP printLagerbuchungsbeleg(Integer iIdBuchung,
+	public JasperPrintLP printLagerbuchungsbeleg(Integer iExemplare, Integer iIdBuchung,
 			TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printArtikelgruppen(Timestamp dVon, Timestamp dBis,
-			 boolean bMitHandlagerbewegungen,
-			boolean bMitFertigung, boolean bMitVersteckten,
-			TheClientDto theClientDto);
-	
+			boolean bMitHandlagerbewegungen, boolean bMitFertigung,
+			boolean bMitVersteckten,boolean bNurVerrechnetePositionen, TheClientDto theClientDto);
+
 	public JasperPrintLP printShopgruppen(Timestamp dVon, Timestamp dBis,
 			boolean bMitHandlagerbewegungen, boolean bMitFertigung,
-			boolean bMitVersteckten, TheClientDto theClientDto);
-	
+			boolean bMitVersteckten, boolean bNurVerrechnetePositionen, TheClientDto theClientDto);
+
 	public JasperPrintLP printWarenentnahmestatistik(Timestamp dVon,
-			Timestamp dBis, Integer lagerIId,boolean bMitVersteckten, String artikelNrVon,
-			String artikelNrBis,Integer artikelgruppeIId,Integer iSortierung, boolean bMitNichtLagerbewirtschaftetenArtikeln,  TheClientDto theClientDto)
-			throws RemoteException;
+			Timestamp dBis, Integer lagerIId, boolean bMitVersteckten,
+			String artikelNrVon, String artikelNrBis, Integer artikelgruppeIId, Integer artikelklasseIId,
+			Integer iSortierung,
+			boolean bMitNichtLagerbewirtschaftetenArtikeln,boolean bDetailliert,
+			TheClientDto theClientDto) throws RemoteException;
+
 	public JasperPrintLP printZaehlliste(Integer lagerIId,
 			BigDecimal abLageragerwert, BigDecimal abGestpreis,
 			Boolean bNurLagerbewirtschafteteArtikel,
-			Boolean bNurArtikelMitLagerstand, Boolean bSortiereNachLagerort,
+			Boolean bNurArtikelMitLagerstand, int iSortierung,
 			boolean bMitVersteckten, Integer artikelgruppeIId,
-			Integer artikelklasseIId, Integer lagerplatzIId,int iArtikelarten,
-			TheClientDto theClientDto) throws RemoteException;
-	public BigDecimal recalcGestehungspreisKomplett(Integer artikelIId, boolean debugFile);
+			Integer artikelklasseIId, String lagerplatzVon,
+			String lagerplatzBis, int iArtikelarten, String artikelNrVon,
+			String artikelNrBis, boolean bNurLagerbewerteteArtikel, TheClientDto theClientDto)
+			throws RemoteException;
+
+	public BigDecimal recalcGestehungspreisKomplett(Integer artikelIId,
+			boolean debugFile);
+
 	public JasperPrintLP printIndirekterWareneinsatz(
 			DatumsfilterVonBis datumsfilter, Integer kundeIId, int iSortierung,
 			TheClientDto theClientDto);
+
+	public JasperPrintLP printChargeneigenschaften(Integer iIdBuchung,
+			TheClientDto theClientDto);
+
+	public JasperPrintLP printMaterialbedarfsvorschau(
+			Timestamp tVergangenheit_Von, Timestamp tVergangenheit_Bis,
+			Timestamp tAngebotRealisierungstermin,
+			Timestamp tOffeneRahmenAuftraegeBis, Timestamp tAngelegteAuftraege,
+			Integer kundeIId, Integer artikelgruppeIId,
+			boolean bNurVerrechnetePositionen, TheClientDto theClientDto);
 	
+	public HashMap<String, String> getArtikelgruppeVatergruppe(TheClientDto theClientDto);
+	public HashMap<String, String> getArtikelklasseVaterklasse(TheClientDto theClientDto);
 	
+	public JasperPrintLP printHandlagerbewegungen(Timestamp dVon, Timestamp dBis, Integer artikelIId, Integer artikelgruppeIId,
+			TheClientDto theClientDto);
+	public BigDecimal berechneSummeDeckungsbeitrag(String mandantCNr, String sKriterium, GregorianCalendar gcVon,
+			GregorianCalendar gcBis,boolean bOhneAndereMandanten, TheClientDto theClientDto);
+
 }

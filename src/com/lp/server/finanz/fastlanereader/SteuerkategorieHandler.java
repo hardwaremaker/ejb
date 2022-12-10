@@ -36,25 +36,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
-import org.hibernate.HibernateException;
 import org.hibernate.Query;
-import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie;
-import com.lp.server.finanz.service.FinanzFac;
-import com.lp.server.finanz.service.FinanzServiceFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
-import com.lp.server.util.fastlanereader.service.query.FilterBlock;
-import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
-import com.lp.util.Helper;
 
 public class SteuerkategorieHandler extends UseCaseHandler {
 
@@ -93,7 +86,6 @@ public class SteuerkategorieHandler extends UseCaseHandler {
 				rows[row][col++] = steuerkategorie.getI_id();
 				rows[row][col++] = steuerkategorie.getC_nr();
 				rows[row][col++] = steuerkategorie.getC_bez();
-				rows[row][col++] = Helper.short2Boolean( steuerkategorie.getB_reversecharge());
 				row++;
 				col = 0;
 			}
@@ -102,40 +94,40 @@ public class SteuerkategorieHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			sessionClose(session);
 		}
 		return result;
 	}
 
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
-		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
-			}
-		}
-		return rowCount;
+		String queryString = "select count(*) " + this.getFromClause()
+				+ this.buildWhereClause();
+		return getRowCountFromDataBaseByQuery(queryString) ;
+		
+//		long rowCount = 0;
+//		SessionFactory factory = FLRSessionFactory.getFactory();
+//		Session session = null;
+//		try {
+//			session = factory.openSession();
+//			String queryString = "select count(*) " + this.getFromClause()
+//					+ this.buildWhereClause();
+//			Query query = session.createQuery(queryString);
+//			List<?> rowCountResult = query.list();
+//			if (rowCountResult != null && rowCountResult.size() > 0) {
+//				rowCount = ((Long) rowCountResult.get(0)).longValue();
+//			}
+//		} catch (Exception e) {
+//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
+//		} finally {
+//			if (session != null) {
+//				try {
+//					session.close();
+//				} catch (HibernateException he) {
+//					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
+//				}
+//			}
+//		}
+//		return rowCount;
 	}
 
 	/**
@@ -145,35 +137,36 @@ public class SteuerkategorieHandler extends UseCaseHandler {
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
-		StringBuffer where = new StringBuffer("");
-
-		if (this.getQuery() != null && this.getQuery().getFilterBlock() != null
-				&& this.getQuery().getFilterBlock().filterKrit != null) {
-
-			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
-			String booleanOperator = filterBlock.boolOperator;
-			boolean filterAdded = false;
-
-			for (int i = 0; i < filterKriterien.length; i++) {
-				if (filterKriterien[i].isKrit) {
-					if (filterAdded) {
-						where.append(" " + booleanOperator);
-					}
-					filterAdded = true;
-					where.append(" " + FLR_STEUERKATEGORIE
-							+ filterKriterien[i].kritName);
-					where.append(" " + filterKriterien[i].operator);
-					where.append(" " + filterKriterien[i].value);
-				}
-			}
-			if (filterAdded) {
-				where.insert(0, " WHERE");
-			}
-		}
-
-		return where.toString();
+		return buildDefaultWhereClause(FLR_STEUERKATEGORIE) ;
+//		StringBuffer where = new StringBuffer("");
+//
+//		if (this.getQuery() != null && this.getQuery().getFilterBlock() != null
+//				&& this.getQuery().getFilterBlock().filterKrit != null) {
+//
+//			FilterBlock filterBlock = this.getQuery().getFilterBlock();
+//			FilterKriterium[] filterKriterien = this.getQuery()
+//					.getFilterBlock().filterKrit;
+//			String booleanOperator = filterBlock.boolOperator;
+//			boolean filterAdded = false;
+//
+//			for (int i = 0; i < filterKriterien.length; i++) {
+//				if (filterKriterien[i].isKrit) {
+//					if (filterAdded) {
+//						where.append(" " + booleanOperator);
+//					}
+//					filterAdded = true;
+//					where.append(" " + FLR_STEUERKATEGORIE
+//							+ filterKriterien[i].kritName);
+//					where.append(" " + filterKriterien[i].operator);
+//					where.append(" " + filterKriterien[i].value);
+//				}
+//			}
+//			if (filterAdded) {
+//				where.insert(0, " WHERE");
+//			}
+//		}
+//
+//		return where.toString();
 	}
 
 	/**
@@ -236,53 +229,58 @@ public class SteuerkategorieHandler extends UseCaseHandler {
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
 			Object selectedId) throws EJBExceptionLP {
-		this.getQuery().setSortKrit(sortierKriterien);
-
-		QueryResult result = null;
-		int rowNumber = 0;
-
-		// if (selectedId != null && ( (String) selectedId).intValue() >= 0) {
-		if (selectedId != null) {
-			SessionFactory factory = FLRSessionFactory.getFactory();
-			Session session = null;
-
-			try {
-				session = factory.openSession();
-				String queryString = "select " + FLR_STEUERKATEGORIE
-						+ "i_id"
-						+ FLR_STEUERKATEGORIE_FROM_CLAUSE
-						+ this.buildWhereClause() + this.buildOrderByClause();
-				Query query = session.createQuery(queryString);
-				ScrollableResults scrollableResult = query.scroll();
-				if (scrollableResult != null) {
-					scrollableResult.beforeFirst();
-					while (scrollableResult.next()) {
-						Integer id = (Integer) scrollableResult.getInteger(0);
-						if (selectedId.equals(id)) {
-							rowNumber = scrollableResult.getRowNumber();
-							break;
-						}
-					}
-				}
-			} catch (Exception e) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
-			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
-			}
-		}
-
-		if (rowNumber < 0 || rowNumber >= this.getRowCount()) {
-			rowNumber = 0;
-		}
-
-		result = this.getPageAt(new Integer(rowNumber));
-		result.setIndexOfSelectedRow(rowNumber);
-
-		return result;
+		String queryString = "select " + FLR_STEUERKATEGORIE
+				+ "i_id"
+				+ FLR_STEUERKATEGORIE_FROM_CLAUSE
+				+ this.buildWhereClause() + this.buildOrderByClause();
+		return defaultSort(sortierKriterien, selectedId, queryString) ;
+//		this.getQuery().setSortKrit(sortierKriterien);
+//
+//		QueryResult result = null;
+//		int rowNumber = 0;
+//
+//		// if (selectedId != null && ( (String) selectedId).intValue() >= 0) {
+//		if (selectedId != null) {
+//			SessionFactory factory = FLRSessionFactory.getFactory();
+//			Session session = null;
+//
+//			try {
+//				session = factory.openSession();
+//				String queryString = "select " + FLR_STEUERKATEGORIE
+//						+ "i_id"
+//						+ FLR_STEUERKATEGORIE_FROM_CLAUSE
+//						+ this.buildWhereClause() + this.buildOrderByClause();
+//				Query query = session.createQuery(queryString);
+//				ScrollableResults scrollableResult = query.scroll();
+//				if (scrollableResult != null) {
+//					scrollableResult.beforeFirst();
+//					while (scrollableResult.next()) {
+//						Integer id = (Integer) scrollableResult.getInteger(0);
+//						if (selectedId.equals(id)) {
+//							rowNumber = scrollableResult.getRowNumber();
+//							break;
+//						}
+//					}
+//				}
+//			} catch (Exception e) {
+//				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
+//			} finally {
+//				try {
+//					session.close();
+//				} catch (HibernateException he) {
+//					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
+//				}
+//			}
+//		}
+//
+//		if (rowNumber < 0 || rowNumber >= this.getRowCount()) {
+//			rowNumber = 0;
+//		}
+//
+//		result = this.getPageAt(new Integer(rowNumber));
+//		result.setIndexOfSelectedRow(rowNumber);
+//
+//		return result;
 	}
 
 	public TableInfo getTableInfo() {
@@ -290,21 +288,15 @@ public class SteuerkategorieHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							Boolean.class },
+					new Class[] { Integer.class, String.class, String.class },
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("fb.reversecharge", mandantCNr,
-									locUI) },
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)},
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XM },
-					new String[] { "i_id", "c_nr", "c_bez",
-							FinanzServiceFac.FLR_STEUERKATEGORIE_B_REVERSECHRGE }));
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new String[] { "i_id", "c_nr", "c_bez"}));
 		}
 		return super.getTableInfo();
 	}

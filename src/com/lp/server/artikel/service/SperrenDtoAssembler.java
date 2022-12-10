@@ -54,6 +54,7 @@ public class SperrenDtoAssembler {
 					.getBGesperrtstueckliste());
 			sperrenDto.setBDurchfertigung(sperren.getBDurchfertigung());
 			sperrenDto.setOBild(sperren.getOBild());
+			sperrenDto.setBDefaultBeiArtikelneuanlage(sperren.getBDefaultBeiArtikelneuanlage());
 		}
 		return sperrenDto;
 	}

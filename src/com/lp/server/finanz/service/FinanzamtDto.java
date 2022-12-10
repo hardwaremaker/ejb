@@ -66,10 +66,14 @@ public class FinanzamtDto implements Serializable, IModificationData {
 
 	// Reverse Charge Konten
 	private Integer kontoIIdRCAnzahlungErhaltVerr;
-	private Integer kontoIIdRCAnzahlungErhaltBezahlt;
-	private Integer kontoIIdRCAnzahlungGegebenVerr;
-	private Integer kontoIIdRCAnzahlungGegebenBezahlt;
+//	private Integer kontoIIdRCAnzahlungErhaltBezahlt;
+//	private Integer kontoIIdRCAnzahlungGegebenVerr;
+//	private Integer kontoIIdRCAnzahlungGegebenBezahlt;
 
+	// G+V Konten
+	private Integer kontoIIdGewinnvortrag;
+	private Integer kontoIIdJahresgewinn;
+	
 	public Integer getKontoIIdRCAnzahlungErhaltVerr() {
 		return kontoIIdRCAnzahlungErhaltVerr;
 	}
@@ -79,32 +83,32 @@ public class FinanzamtDto implements Serializable, IModificationData {
 		this.kontoIIdRCAnzahlungErhaltVerr = kontoIIdRCAnzahlungErhaltVerr;
 	}
 
-	public Integer getKontoIIdRCAnzahlungErhaltBezahlt() {
-		return kontoIIdRCAnzahlungErhaltBezahlt;
-	}
-
-	public void setKontoIIdRCAnzahlungErhaltBezahlt(
-			Integer kontoIIdRCAnzahlungErhaltBezahlt) {
-		this.kontoIIdRCAnzahlungErhaltBezahlt = kontoIIdRCAnzahlungErhaltBezahlt;
-	}
-
-	public Integer getKontoIIdRCAnzahlungGegebenVerr() {
-		return kontoIIdRCAnzahlungGegebenVerr;
-	}
-
-	public void setKontoIIdRCAnzahlungGegebenVerr(
-			Integer kontoIIdRCAnzahlungGegebenVerr) {
-		this.kontoIIdRCAnzahlungGegebenVerr = kontoIIdRCAnzahlungGegebenVerr;
-	}
-
-	public Integer getKontoIIdRCAnzahlungGegebenBezahlt() {
-		return kontoIIdRCAnzahlungGegebenBezahlt;
-	}
-
-	public void setKontoIIdRCAnzahlungGegebenBezahlt(
-			Integer kontoIIdRCAnzahlungGegebenBezahlt) {
-		this.kontoIIdRCAnzahlungGegebenBezahlt = kontoIIdRCAnzahlungGegebenBezahlt;
-	}
+//	public Integer getKontoIIdRCAnzahlungErhaltBezahlt() {
+//		return kontoIIdRCAnzahlungErhaltBezahlt;
+//	}
+//
+//	public void setKontoIIdRCAnzahlungErhaltBezahlt(
+//			Integer kontoIIdRCAnzahlungErhaltBezahlt) {
+//		this.kontoIIdRCAnzahlungErhaltBezahlt = kontoIIdRCAnzahlungErhaltBezahlt;
+//	}
+//
+//	public Integer getKontoIIdRCAnzahlungGegebenVerr() {
+//		return kontoIIdRCAnzahlungGegebenVerr;
+//	}
+//
+//	public void setKontoIIdRCAnzahlungGegebenVerr(
+//			Integer kontoIIdRCAnzahlungGegebenVerr) {
+//		this.kontoIIdRCAnzahlungGegebenVerr = kontoIIdRCAnzahlungGegebenVerr;
+//	}
+//
+//	public Integer getKontoIIdRCAnzahlungGegebenBezahlt() {
+//		return kontoIIdRCAnzahlungGegebenBezahlt;
+//	}
+//
+//	public void setKontoIIdRCAnzahlungGegebenBezahlt(
+//			Integer kontoIIdRCAnzahlungGegebenBezahlt) {
+//		this.kontoIIdRCAnzahlungGegebenBezahlt = kontoIIdRCAnzahlungGegebenBezahlt;
+//	}
 
 	public Integer getIFormularnummer() {
 		return iFormularnummer;
@@ -256,6 +260,24 @@ public class FinanzamtDto implements Serializable, IModificationData {
 		return kontoIIdAnzahlungGegebenBezahlt;
 	}
 
+	public void setKontoIIdGewinnvortrag(
+			Integer kontoIIdGewinnvortrag) {
+		this.kontoIIdGewinnvortrag = kontoIIdGewinnvortrag;
+	}
+	
+	public Integer getKontoIIdGewinnvortrag() {
+		return this.kontoIIdGewinnvortrag;
+	}
+	
+	public void setKontoIIdJahresgewinn(
+			Integer kontoIIdJahresgewinn) {
+		this.kontoIIdJahresgewinn = kontoIIdJahresgewinn;
+	}
+	
+	public Integer getKontoIIdJahresgewinn() {
+		return this.kontoIIdJahresgewinn;
+	}
+	
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -336,27 +358,37 @@ public class FinanzamtDto implements Serializable, IModificationData {
 						.equals(this.kontoIIdAnzahlungGegebenVerr))) {
 			return false;
 		}
+		if (!(that.kontoIIdGewinnvortrag == null ? this.kontoIIdGewinnvortrag == null
+				: that.kontoIIdGewinnvortrag
+						.equals(this.kontoIIdGewinnvortrag))) {
+			return false;
+		}
+		if (!(that.kontoIIdJahresgewinn == null ? this.kontoIIdJahresgewinn == null
+				: that.kontoIIdJahresgewinn
+						.equals(this.kontoIIdJahresgewinn))) {
+			return false;
+		}
 
-		if (!(that.kontoIIdRCAnzahlungErhaltBezahlt == null ? this.kontoIIdRCAnzahlungErhaltBezahlt == null
-				: that.kontoIIdRCAnzahlungErhaltBezahlt
-						.equals(this.kontoIIdRCAnzahlungErhaltBezahlt))) {
-			return false;
-		}
-		if (!(that.kontoIIdRCAnzahlungErhaltVerr == null ? this.kontoIIdRCAnzahlungErhaltVerr == null
-				: that.kontoIIdRCAnzahlungErhaltVerr
-						.equals(this.kontoIIdRCAnzahlungErhaltVerr))) {
-			return false;
-		}
-		if (!(that.kontoIIdRCAnzahlungGegebenBezahlt == null ? this.kontoIIdRCAnzahlungGegebenBezahlt == null
-				: that.kontoIIdRCAnzahlungGegebenBezahlt
-						.equals(this.kontoIIdRCAnzahlungGegebenBezahlt))) {
-			return false;
-		}
-		if (!(that.kontoIIdRCAnzahlungGegebenVerr == null ? this.kontoIIdRCAnzahlungGegebenVerr == null
-				: that.kontoIIdRCAnzahlungGegebenVerr
-						.equals(this.kontoIIdRCAnzahlungGegebenVerr))) {
-			return false;
-		}
+//		if (!(that.kontoIIdRCAnzahlungErhaltBezahlt == null ? this.kontoIIdRCAnzahlungErhaltBezahlt == null
+//				: that.kontoIIdRCAnzahlungErhaltBezahlt
+//						.equals(this.kontoIIdRCAnzahlungErhaltBezahlt))) {
+//			return false;
+//		}
+//		if (!(that.kontoIIdRCAnzahlungErhaltVerr == null ? this.kontoIIdRCAnzahlungErhaltVerr == null
+//				: that.kontoIIdRCAnzahlungErhaltVerr
+//						.equals(this.kontoIIdRCAnzahlungErhaltVerr))) {
+//			return false;
+//		}
+//		if (!(that.kontoIIdRCAnzahlungGegebenBezahlt == null ? this.kontoIIdRCAnzahlungGegebenBezahlt == null
+//				: that.kontoIIdRCAnzahlungGegebenBezahlt
+//						.equals(this.kontoIIdRCAnzahlungGegebenBezahlt))) {
+//			return false;
+//		}
+//		if (!(that.kontoIIdRCAnzahlungGegebenVerr == null ? this.kontoIIdRCAnzahlungGegebenVerr == null
+//				: that.kontoIIdRCAnzahlungGegebenVerr
+//						.equals(this.kontoIIdRCAnzahlungGegebenVerr))) {
+//			return false;
+//		}
 		return true;
 	}
 
@@ -381,10 +413,13 @@ public class FinanzamtDto implements Serializable, IModificationData {
 		result = 37 * result + this.kontoIIdAnzahlungGegebenBezahlt.hashCode();
 		result = 37 * result + this.kontoIIdAnzahlungGegebenVerr.hashCode();
 
-		result = 37 * result + this.kontoIIdRCAnzahlungErhaltBezahlt.hashCode();
-		result = 37 * result + this.kontoIIdRCAnzahlungErhaltVerr.hashCode();
-		result = 37 * result + this.kontoIIdRCAnzahlungGegebenBezahlt.hashCode();
-		result = 37 * result + this.kontoIIdRCAnzahlungGegebenVerr.hashCode();
+		result = 37 * result + this.kontoIIdGewinnvortrag.hashCode();
+		result = 37 * result + this.kontoIIdJahresgewinn.hashCode();
+		
+//		result = 37 * result + this.kontoIIdRCAnzahlungErhaltBezahlt.hashCode();
+//		result = 37 * result + this.kontoIIdRCAnzahlungErhaltVerr.hashCode();
+//		result = 37 * result + this.kontoIIdRCAnzahlungGegebenBezahlt.hashCode();
+//		result = 37 * result + this.kontoIIdRCAnzahlungGegebenVerr.hashCode();
 		return result;
 	}
 
@@ -407,10 +442,10 @@ public class FinanzamtDto implements Serializable, IModificationData {
 		returnString += ", " + kontoIIdAnzahlungErhaltVerr;
 		returnString += ", " + kontoIIdAnzahlungGegebenBezahlt;
 		returnString += ", " + kontoIIdAnzahlungGegebenVerr;
-		returnString += ", " + kontoIIdRCAnzahlungErhaltBezahlt;
-		returnString += ", " + kontoIIdRCAnzahlungErhaltVerr;
-		returnString += ", " + kontoIIdRCAnzahlungGegebenBezahlt;
-		returnString += ", " + kontoIIdRCAnzahlungGegebenVerr;
+//		returnString += ", " + kontoIIdRCAnzahlungErhaltBezahlt;
+//		returnString += ", " + kontoIIdRCAnzahlungErhaltVerr;
+//		returnString += ", " + kontoIIdRCAnzahlungGegebenBezahlt;
+//		returnString += ", " + kontoIIdRCAnzahlungGegebenVerr;
 		return returnString;
 	}
 }

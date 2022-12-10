@@ -52,6 +52,16 @@ public class VkpfMengenstaffelDto implements Serializable {
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
 
+	private String cBemerkung;
+	
+	public String getCBemerkung() {
+		return cBemerkung;
+	}
+
+	public void setCBemerkung(String cBemerkung) {
+		this.cBemerkung = cBemerkung;
+	}
+	
 	private Integer vkpfartikelpreislisteIId;
 
 	public Integer getVkpfartikelpreislisteIId() {

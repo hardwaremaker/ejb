@@ -33,9 +33,11 @@
 package com.lp.server.system.automatikjob;
 
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.system.service.VersandauftragDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.logger.ILPLogger;
 import com.lp.server.util.logger.LPLogService;
+import com.lp.util.Helper;
 
 public abstract class AutomatikjobBasis extends Facade {
 
@@ -49,5 +51,22 @@ public abstract class AutomatikjobBasis extends Facade {
 	// Methode die vom Timer aufgerufen wird.
 	public abstract boolean performJob(TheClientDto theClientDto);
 
-	
+	protected VersandauftragDto setupVersandauftragDto(String sender, String recipient, String subject, String message) {
+		if (Helper.isStringEmpty(recipient)) {
+			throw new IllegalArgumentException("Nachricht kann nicht gesendet werden. Email-Adresse '"
+					+ recipient + " ist nicht angegeben.");
+		}
+		if (!Helper.validateEmailadresse(recipient)) {
+			throw new IllegalArgumentException("Nachricht kann nicht gesendet werden. Email-Adresse '" 
+					+ recipient + "' ist nicht gueltig.");
+		}
+		
+		VersandauftragDto dto = new VersandauftragDto();
+		dto.setCEmpfaenger(recipient);
+		dto.setCBetreff(subject);
+		dto.setCText(message);
+		dto.setCAbsenderadresse(sender);
+		
+		return dto;
+	}
 }

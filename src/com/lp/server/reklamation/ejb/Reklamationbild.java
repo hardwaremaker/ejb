@@ -62,6 +62,12 @@ public class Reklamationbild implements Serializable {
 
 	@Column(name = "C_BEZ")
 	private String cBez;
+	
+	@Column(name = "DATENFORMAT_C_NR")
+	private String datenformatCNr;
+
+	@Column(name = "C_DATEINAME")
+	private String cDateiname;
 
 	public Integer getReklamationIId() {
 		return reklamationIId;
@@ -101,11 +107,13 @@ public class Reklamationbild implements Serializable {
 		super();
 	}
 
-	public Reklamationbild(Integer id, Integer reklamationIId, Integer iSort, byte[] oBild) {
+	public Reklamationbild(Integer id, Integer reklamationIId, Integer iSort, byte[] oBild, String cDateiname, String datenformatCNr) {
 		setIId(id);
 		setOBild(oBild);
 		setISort(iSort);
 		setReklamationIId(reklamationIId);
+		setCDateiname(cDateiname);
+		setDatenformatCNr(datenformatCNr);
 	}
 
 	public Integer getIId() {
@@ -114,6 +122,22 @@ public class Reklamationbild implements Serializable {
 
 	public void setIId(Integer iId) {
 		this.iId = iId;
+	}
+
+	public String getDatenformatCNr() {
+		return datenformatCNr;
+	}
+
+	public void setDatenformatCNr(String datenformatCNr) {
+		this.datenformatCNr = datenformatCNr;
+	}
+
+	public String getCDateiname() {
+		return cDateiname;
+	}
+
+	public void setCDateiname(String cDateiname) {
+		this.cDateiname = cDateiname;
 	}
 
 

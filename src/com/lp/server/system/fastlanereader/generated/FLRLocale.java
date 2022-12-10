@@ -52,10 +52,10 @@ public class FLRLocale implements Serializable {
 	private Short b_aktiv;
 
 	/** persistent field */
-	private Set<?> localestatussprset;
+	private Set<FLRStatusspr> localestatussprset;
 
 	/** full constructor */
-	public FLRLocale(Short b_aktiv, Set<?> localestatussprset) {
+	public FLRLocale(Short b_aktiv, Set<FLRStatusspr> localestatussprset) {
 		this.b_aktiv = b_aktiv;
 		this.localestatussprset = localestatussprset;
 	}
@@ -65,7 +65,7 @@ public class FLRLocale implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRLocale(Set<?> localestatussprset) {
+	public FLRLocale(Set<FLRStatusspr> localestatussprset) {
 		this.localestatussprset = localestatussprset;
 	}
 
@@ -85,11 +85,11 @@ public class FLRLocale implements Serializable {
 		this.b_aktiv = b_aktiv;
 	}
 
-	public Set<?> getLocalestatussprset() {
+	public Set<FLRStatusspr> getLocalestatussprset() {
 		return this.localestatussprset;
 	}
 
-	public void setLocalestatussprset(Set<?> localestatussprset) {
+	public void setLocalestatussprset(Set<FLRStatusspr> localestatussprset) {
 		this.localestatussprset = localestatussprset;
 	}
 

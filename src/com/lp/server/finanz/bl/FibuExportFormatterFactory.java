@@ -68,6 +68,8 @@ abstract class FibuExportFormatterFactory {
 		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_BMD)) {
 			exportFormatter = new FibuExportFormatterBMD(exportKriterienDto,
 					theClientDto);
+		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_BMD_NTCS)) {
+			exportFormatter = new FibuExportFormatterBMD(exportKriterienDto, theClientDto, true);
 		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_ABACUS)) {
 			exportFormatter = new FibuExportFormatterAbacus(exportKriterienDto,
 					theClientDto);
@@ -75,6 +77,8 @@ abstract class FibuExportFormatterFactory {
 			exportFormatter = new FibuExportFormatterSchleupen(exportKriterienDto,theClientDto);
 		} else if(sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_DATEV)){
 			exportFormatter = new FibuExportFormatterDatev(exportKriterienDto,theClientDto);
+		} else if(sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_DATEV_EXTF)){
+			exportFormatter = new FibuExportFormatterDatevExt(exportKriterienDto,theClientDto);
 		} else {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
 					new Exception(

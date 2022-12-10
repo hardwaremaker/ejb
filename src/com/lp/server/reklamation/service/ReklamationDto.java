@@ -66,7 +66,7 @@ public class ReklamationDto implements Serializable {
 	private Integer lieferantIId;
 	private Integer ansprechpartnerIId;
 	private String cProjekt;
-	private String cTelansprechpartner;
+
 	private String xAnalyse;
 	private String xKommentar;
 	private Integer fehlerIId;
@@ -104,6 +104,26 @@ public class ReklamationDto implements Serializable {
 	private String cKdreklanr;
 	private String cKdlsnr;
 
+	private String cLfreklanr;
+
+	public String getCLfreklanr() {
+		return cLfreklanr;
+	}
+
+	public void setCLfreklanr(String cLfreklanr) {
+		this.cLfreklanr = cLfreklanr;
+	}
+
+	public String getCLflsnr() {
+		return cLflsnr;
+	}
+
+	public void setCLflsnr(String cLflsnr) {
+		this.cLflsnr = cLflsnr;
+	}
+
+	private String cLflsnr;
+
 	private Integer ansprechpartnerIIdLieferant;
 
 	public Integer getAnsprechpartnerIIdLieferant() {
@@ -115,15 +135,33 @@ public class ReklamationDto implements Serializable {
 		this.ansprechpartnerIIdLieferant = ansprechpartnerIIdLieferant;
 	}
 
-	private String cTelansprechpartnerLieferant;
-
-	public String getCTelansprechpartnerLieferant() {
-		return cTelansprechpartnerLieferant;
+	public String getCBestellnummer() {
+		return cBestellnummer;
 	}
 
-	public void setCTelansprechpartnerLieferant(
-			String cTelansprechpartnerLieferant) {
-		this.cTelansprechpartnerLieferant = cTelansprechpartnerLieferant;
+	public void setCBestellnummer(String cBestellnummer) {
+		this.cBestellnummer = cBestellnummer;
+	}
+
+	public String getCWareneingang() {
+		return cWareneingang;
+	}
+
+	public void setCWareneingang(String cWareneingang) {
+		this.cWareneingang = cWareneingang;
+	}
+
+	private String cBestellnummer;
+	private String cWareneingang;
+
+	private Timestamp tWareErhalten;
+
+	public Timestamp getTWareErhalten() {
+		return tWareErhalten;
+	}
+
+	public void setTWareErhalten(Timestamp tWareErhalten) {
+		this.tWareErhalten = tWareErhalten;
 	}
 
 	private Integer iKundeunterart;
@@ -386,6 +424,16 @@ public class ReklamationDto implements Serializable {
 		this.fehlerangabeIId = fehlerangabeIId;
 	}
 
+	private Integer projektIId;
+
+	public Integer getProjektIId() {
+		return projektIId;
+	}
+
+	public void setProjektIId(Integer projektIId) {
+		this.projektIId = projektIId;
+	}
+
 	public Integer getAufnahmeartIId() {
 		return aufnahmeartIId;
 	}
@@ -512,14 +560,6 @@ public class ReklamationDto implements Serializable {
 
 	public void setCProjekt(String cProjekt) {
 		this.cProjekt = cProjekt;
-	}
-
-	public String getCTelansprechpartner() {
-		return cTelansprechpartner;
-	}
-
-	public void setCTelansprechpartner(String cTelansprechpartner) {
-		this.cTelansprechpartner = cTelansprechpartner;
 	}
 
 	public String getXAnalyse() {
@@ -820,9 +860,6 @@ public class ReklamationDto implements Serializable {
 		if (!(that.cProjekt == null ? this.cProjekt == null : that.cProjekt
 				.equals(this.cProjekt)))
 			return false;
-		if (!(that.cTelansprechpartner == null ? this.cTelansprechpartner == null
-				: that.cTelansprechpartner.equals(this.cTelansprechpartner)))
-			return false;
 		if (!(that.xAnalyse == null ? this.xAnalyse == null : that.xAnalyse
 				.equals(this.xAnalyse)))
 			return false;
@@ -939,7 +976,6 @@ public class ReklamationDto implements Serializable {
 		result = 37 * result + this.lieferantIId.hashCode();
 		result = 37 * result + this.ansprechpartnerIId.hashCode();
 		result = 37 * result + this.cProjekt.hashCode();
-		result = 37 * result + this.cTelansprechpartner.hashCode();
 		result = 37 * result + this.xAnalyse.hashCode();
 		result = 37 * result + this.xKommentar.hashCode();
 		result = 37 * result + this.fehlerIId.hashCode();
@@ -1000,8 +1036,6 @@ public class ReklamationDto implements Serializable {
 		returnStringBuffer.append("ansprechpartnerIId:").append(
 				ansprechpartnerIId);
 		returnStringBuffer.append("cProjekt:").append(cProjekt);
-		returnStringBuffer.append("cTelansprechpartner:").append(
-				cTelansprechpartner);
 		returnStringBuffer.append("xAnalyse:").append(xAnalyse);
 		returnStringBuffer.append("xKommentar:").append(xKommentar);
 		returnStringBuffer.append("fehlerIId:").append(fehlerIId);

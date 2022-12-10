@@ -43,14 +43,18 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries( {
 		@NamedQuery(name = "WareneingangfindByWareneingang", query = "SELECT OBJECT (o) FROM Wareneingang o WHERE o.bestellungIId=?1 ORDER BY o.iSort"),
 		@NamedQuery(name = "WareneingangfindByBestellungIId", query = "SELECT OBJECT (o) FROM Wareneingang o WHERE o.bestellungIId=?1"),
 		@NamedQuery(name = "WareneingangfindByBestellungIIdTWareneingangsdatum", query = "SELECT OBJECT (o) FROM Wareneingang o WHERE o.bestellungIId=?1 AND o.tWareneingangsdatum=?2"),
 		@NamedQuery(name = "WareneingangfindByEingangsrechnungIId", query = "SELECT OBJECT (o) FROM Wareneingang o WHERE o.eingangsrechnungIId=?1"),
-		@NamedQuery(name = "WareneingangejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Wareneingang o WHERE o.bestellungIId = ?1") })
+		@NamedQuery(name = "WareneingangejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Wareneingang o WHERE o.bestellungIId = ?1"),
+		@NamedQuery(name = WareneingangQuery.ByLieferscheinnummer, 
+			query = "SELECT OBJECT(o) FROM Wareneingang o WHERE o.bestellungIId = :bestellungId AND o.cLieferscheinnr = :lieferscheinnummer ORDER BY o.tLieferscheindatum DESC")})
 @Entity
-@Table(name = "BES_WARENEINGANG")
+@Table(name = ITablenames.BES_WARENEINGANG)
 public class Wareneingang implements Serializable {
 	@Id
 	@Column(name = "I_ID")

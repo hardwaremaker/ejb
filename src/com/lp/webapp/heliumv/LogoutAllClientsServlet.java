@@ -44,7 +44,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.lp.server.system.ejbfac.TheClientFacBean;
 import com.lp.server.system.service.TheClientFac;
+import com.lp.server.util.FacLookup;
 
 public class LogoutAllClientsServlet extends HttpServlet {
 
@@ -63,12 +65,16 @@ public class LogoutAllClientsServlet extends HttpServlet {
 	
 	private TheClientFac getClientFac() {
 		if(null == clientFac) {
-			try {
+			clientFac = FacLookup.lookup(context, TheClientFacBean.class, TheClientFac.class);
+/*	
+			 try {
+			
 				clientFac = (TheClientFac) context
 						.lookup("lpserver/TheClientFacBean/remote");
 			} catch (NamingException e) {
 				e.printStackTrace();
 			}		
+*/			
 		}
 
 		return clientFac ;

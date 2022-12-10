@@ -65,7 +65,10 @@ public class ZahlungszielDtoAssembler {
 					.getBStichtagMonatsletzter());
 			zahlungszielDto.setIFolgemonat(zahlungsziel.getIFolgemonat());
 			zahlungszielDto.setIStichtag(zahlungsziel.getIStichtag());
-
+			zahlungszielDto.setBLastschrift(zahlungsziel.getBLastschrift());
+			zahlungszielDto.setIFolgemonatSkontotage1(zahlungsziel.getIFolgemonatSkontotage1());
+			zahlungszielDto.setIFolgemonatSkontotage2(zahlungsziel.getIFolgemonatSkontotage2());
+			zahlungszielDto.setNAnzahlungProzent(zahlungsziel.getNAnzahlungProzent());
 		}
 		return zahlungszielDto;
 	}

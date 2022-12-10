@@ -1,38 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.fertigung.fastlanereader.generated;
 
+import com.lp.server.artikel.fastlanereader.generated.FLRLager;
+import com.lp.server.artikel.fastlanereader.generated.FLRLagerplatz;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
+import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
+import com.lp.server.forecast.fastlanereader.generated.FLRForecastpositionProduktion;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe;
@@ -63,7 +35,19 @@ public class FLRLos implements Serializable {
     private String c_projekt;
 
     /** nullable persistent field */
+    private String c_abposnr;
+
+    /** nullable persistent field */
+    private String c_kommentar;
+
+    /** nullable persistent field */
+    private String x_text;
+
+    /** nullable persistent field */
     private Integer stueckliste_i_id;
+
+    /** nullable persistent field */
+    private Integer lager_i_id_ziel;
 
     /** nullable persistent field */
     private Integer personal_i_id_techniker;
@@ -99,6 +83,21 @@ public class FLRLos implements Serializable {
     private Double f_bewertung;
 
     /** nullable persistent field */
+    private String c_schachtelplan;
+
+    /** nullable persistent field */
+    private Date t_abliefertermin;
+
+    /** nullable persistent field */
+    private Integer forecastposition_i_id;
+
+    /** nullable persistent field */
+    private Integer partner_i_id_fertigungsort;
+
+    /** nullable persistent field */
+    private Integer lagerplatz_i_id;
+
+    /** nullable persistent field */
     private FLRStueckliste flrstueckliste;
 
     /** nullable persistent field */
@@ -108,24 +107,46 @@ public class FLRLos implements Serializable {
     private FLRProjekt flrprojekt;
 
     /** nullable persistent field */
+    private FLRLager flrlager;
+
+    /** nullable persistent field */
     private FLRFertigungsgruppe flrfertigungsgruppe;
 
     /** nullable persistent field */
     private FLRKunde flrkunde;
 
+    /** nullable persistent field */
+    private FLRForecastpositionProduktion flrforecastposition;
+
+    /** nullable persistent field */
+    private FLRAuftragposition flrauftragposition;
+
+    /** nullable persistent field */
+    private FLRLagerplatz flrlagerplatz;
+
     /** persistent field */
     private Set ablieferungset;
+
+    /** persistent field */
+    private Set lagerentnahmeset;
+
+    /** persistent field */
+    private Set verfuegbarkei;
 
     /** persistent field */
     private Set technikerset;
 
     /** full constructor */
-    public FLRLos(String mandant_c_nr, String c_nr, String status_c_nr, String c_projekt, Integer stueckliste_i_id, Integer personal_i_id_techniker, Integer fertigungsgruppe_i_id, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_produktionsstop, BigDecimal n_losgroesse, Integer kostenstelle_i_id, Double f_bewertung, FLRStueckliste flrstueckliste, FLRAuftragReport flrauftrag, FLRProjekt flrprojekt, FLRFertigungsgruppe flrfertigungsgruppe, FLRKunde flrkunde, Set ablieferungset, Set technikerset) {
+    public FLRLos(String mandant_c_nr, String c_nr, String status_c_nr, String c_projekt, String c_abposnr, String c_kommentar, String x_text, Integer stueckliste_i_id, Integer lager_i_id_ziel, Integer personal_i_id_techniker, Integer fertigungsgruppe_i_id, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_produktionsstop, BigDecimal n_losgroesse, Integer kostenstelle_i_id, Double f_bewertung, String c_schachtelplan, Date t_abliefertermin, Integer forecastposition_i_id, Integer partner_i_id_fertigungsort, Integer lagerplatz_i_id, FLRStueckliste flrstueckliste, FLRAuftragReport flrauftrag, FLRProjekt flrprojekt, FLRLager flrlager, FLRFertigungsgruppe flrfertigungsgruppe, FLRKunde flrkunde, FLRForecastpositionProduktion flrforecastposition, FLRAuftragposition flrauftragposition, FLRLagerplatz flrlagerplatz, Set ablieferungset, Set lagerentnahmeset, Set verfuegbarkei, Set technikerset) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.status_c_nr = status_c_nr;
         this.c_projekt = c_projekt;
+        this.c_abposnr = c_abposnr;
+        this.c_kommentar = c_kommentar;
+        this.x_text = x_text;
         this.stueckliste_i_id = stueckliste_i_id;
+        this.lager_i_id_ziel = lager_i_id_ziel;
         this.personal_i_id_techniker = personal_i_id_techniker;
         this.fertigungsgruppe_i_id = fertigungsgruppe_i_id;
         this.t_produktionsende = t_produktionsende;
@@ -137,12 +158,23 @@ public class FLRLos implements Serializable {
         this.n_losgroesse = n_losgroesse;
         this.kostenstelle_i_id = kostenstelle_i_id;
         this.f_bewertung = f_bewertung;
+        this.c_schachtelplan = c_schachtelplan;
+        this.t_abliefertermin = t_abliefertermin;
+        this.forecastposition_i_id = forecastposition_i_id;
+        this.partner_i_id_fertigungsort = partner_i_id_fertigungsort;
+        this.lagerplatz_i_id = lagerplatz_i_id;
         this.flrstueckliste = flrstueckliste;
         this.flrauftrag = flrauftrag;
         this.flrprojekt = flrprojekt;
+        this.flrlager = flrlager;
         this.flrfertigungsgruppe = flrfertigungsgruppe;
         this.flrkunde = flrkunde;
+        this.flrforecastposition = flrforecastposition;
+        this.flrauftragposition = flrauftragposition;
+        this.flrlagerplatz = flrlagerplatz;
         this.ablieferungset = ablieferungset;
+        this.lagerentnahmeset = lagerentnahmeset;
+        this.verfuegbarkei = verfuegbarkei;
         this.technikerset = technikerset;
     }
 
@@ -151,8 +183,10 @@ public class FLRLos implements Serializable {
     }
 
     /** minimal constructor */
-    public FLRLos(Set ablieferungset, Set technikerset) {
+    public FLRLos(Set ablieferungset, Set lagerentnahmeset, Set verfuegbarkei, Set technikerset) {
         this.ablieferungset = ablieferungset;
+        this.lagerentnahmeset = lagerentnahmeset;
+        this.verfuegbarkei = verfuegbarkei;
         this.technikerset = technikerset;
     }
 
@@ -196,12 +230,44 @@ public class FLRLos implements Serializable {
         this.c_projekt = c_projekt;
     }
 
+    public String getC_abposnr() {
+        return this.c_abposnr;
+    }
+
+    public void setC_abposnr(String c_abposnr) {
+        this.c_abposnr = c_abposnr;
+    }
+
+    public String getC_kommentar() {
+        return this.c_kommentar;
+    }
+
+    public void setC_kommentar(String c_kommentar) {
+        this.c_kommentar = c_kommentar;
+    }
+
+    public String getX_text() {
+        return this.x_text;
+    }
+
+    public void setX_text(String x_text) {
+        this.x_text = x_text;
+    }
+
     public Integer getStueckliste_i_id() {
         return this.stueckliste_i_id;
     }
 
     public void setStueckliste_i_id(Integer stueckliste_i_id) {
         this.stueckliste_i_id = stueckliste_i_id;
+    }
+
+    public Integer getLager_i_id_ziel() {
+        return this.lager_i_id_ziel;
+    }
+
+    public void setLager_i_id_ziel(Integer lager_i_id_ziel) {
+        this.lager_i_id_ziel = lager_i_id_ziel;
     }
 
     public Integer getPersonal_i_id_techniker() {
@@ -292,6 +358,46 @@ public class FLRLos implements Serializable {
         this.f_bewertung = f_bewertung;
     }
 
+    public String getC_schachtelplan() {
+        return this.c_schachtelplan;
+    }
+
+    public void setC_schachtelplan(String c_schachtelplan) {
+        this.c_schachtelplan = c_schachtelplan;
+    }
+
+    public Date getT_abliefertermin() {
+        return this.t_abliefertermin;
+    }
+
+    public void setT_abliefertermin(Date t_abliefertermin) {
+        this.t_abliefertermin = t_abliefertermin;
+    }
+
+    public Integer getForecastposition_i_id() {
+        return this.forecastposition_i_id;
+    }
+
+    public void setForecastposition_i_id(Integer forecastposition_i_id) {
+        this.forecastposition_i_id = forecastposition_i_id;
+    }
+
+    public Integer getPartner_i_id_fertigungsort() {
+        return this.partner_i_id_fertigungsort;
+    }
+
+    public void setPartner_i_id_fertigungsort(Integer partner_i_id_fertigungsort) {
+        this.partner_i_id_fertigungsort = partner_i_id_fertigungsort;
+    }
+
+    public Integer getLagerplatz_i_id() {
+        return this.lagerplatz_i_id;
+    }
+
+    public void setLagerplatz_i_id(Integer lagerplatz_i_id) {
+        this.lagerplatz_i_id = lagerplatz_i_id;
+    }
+
     public FLRStueckliste getFlrstueckliste() {
         return this.flrstueckliste;
     }
@@ -316,6 +422,14 @@ public class FLRLos implements Serializable {
         this.flrprojekt = flrprojekt;
     }
 
+    public FLRLager getFlrlager() {
+        return this.flrlager;
+    }
+
+    public void setFlrlager(FLRLager flrlager) {
+        this.flrlager = flrlager;
+    }
+
     public FLRFertigungsgruppe getFlrfertigungsgruppe() {
         return this.flrfertigungsgruppe;
     }
@@ -332,12 +446,52 @@ public class FLRLos implements Serializable {
         this.flrkunde = flrkunde;
     }
 
+    public FLRForecastpositionProduktion getFlrforecastposition() {
+        return this.flrforecastposition;
+    }
+
+    public void setFlrforecastposition(FLRForecastpositionProduktion flrforecastposition) {
+        this.flrforecastposition = flrforecastposition;
+    }
+
+    public FLRAuftragposition getFlrauftragposition() {
+        return this.flrauftragposition;
+    }
+
+    public void setFlrauftragposition(FLRAuftragposition flrauftragposition) {
+        this.flrauftragposition = flrauftragposition;
+    }
+
+    public FLRLagerplatz getFlrlagerplatz() {
+        return this.flrlagerplatz;
+    }
+
+    public void setFlrlagerplatz(FLRLagerplatz flrlagerplatz) {
+        this.flrlagerplatz = flrlagerplatz;
+    }
+
     public Set getAblieferungset() {
         return this.ablieferungset;
     }
 
     public void setAblieferungset(Set ablieferungset) {
         this.ablieferungset = ablieferungset;
+    }
+
+    public Set getLagerentnahmeset() {
+        return this.lagerentnahmeset;
+    }
+
+    public void setLagerentnahmeset(Set lagerentnahmeset) {
+        this.lagerentnahmeset = lagerentnahmeset;
+    }
+
+    public Set getVerfuegbarkei() {
+        return this.verfuegbarkei;
+    }
+
+    public void setVerfuegbarkei(Set verfuegbarkei) {
+        this.verfuegbarkei = verfuegbarkei;
     }
 
     public Set getTechnikerset() {

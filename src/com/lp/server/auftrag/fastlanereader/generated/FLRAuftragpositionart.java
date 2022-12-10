@@ -37,6 +37,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 
+import com.lp.server.system.fastlanereader.generated.FLRPositionsartspr;
+
 /** @author Hibernate CodeGenerator */
 public class FLRAuftragpositionart implements Serializable {
 
@@ -52,11 +54,11 @@ public class FLRAuftragpositionart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> auftragpositionsart_positionsart_set;
+	private Set<FLRPositionsartspr> auftragpositionsart_positionsart_set;
 
 	/** full constructor */
 	public FLRAuftragpositionart(String positionsart_c_nr, Integer i_sort,
-			Set<?> auftragpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> auftragpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.i_sort = i_sort;
 		this.auftragpositionsart_positionsart_set = auftragpositionsart_positionsart_set;
@@ -68,7 +70,7 @@ public class FLRAuftragpositionart implements Serializable {
 
 	/** minimal constructor */
 	public FLRAuftragpositionart(String positionsart_c_nr,
-			Set<?> auftragpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> auftragpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.auftragpositionsart_positionsart_set = auftragpositionsart_positionsart_set;
 	}
@@ -89,12 +91,12 @@ public class FLRAuftragpositionart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getAuftragpositionsart_positionsart_set() {
+	public Set<FLRPositionsartspr> getAuftragpositionsart_positionsart_set() {
 		return this.auftragpositionsart_positionsart_set;
 	}
 
 	public void setAuftragpositionsart_positionsart_set(
-			Set<?> auftragpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> auftragpositionsart_positionsart_set) {
 		this.auftragpositionsart_positionsart_set = auftragpositionsart_positionsart_set;
 	}
 

@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.artikel.ejbfac;
 
+import java.sql.Timestamp;
+
 import javax.annotation.Resource;
 import javax.ejb.Stateless;
 import javax.interceptor.Interceptors;
@@ -49,19 +51,29 @@ import javax.xml.ws.BindingType;
 import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.soap.MTOM;
 
-import org.jboss.wsf.spi.annotation.WebContext;
+// import org.jboss.wsf.spi.annotation.WebContext;
 
+import com.lp.server.artikel.service.ShopgroupResult;
+import com.lp.server.artikel.service.ShopgroupsFlatResult;
+import com.lp.server.artikel.service.ShopgroupsResult;
+import com.lp.server.artikel.service.WebshopItemImageResult;
+import com.lp.server.artikel.service.WebshopItemResult;
+import com.lp.server.artikel.service.WebshopItemServiceInterface;
+import com.lp.server.artikel.service.WebshopItemsResult;
+import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.WebshopAuthHeader;
 import com.lp.server.util.Facade;
+import com.lp.server.util.WebshopId;
 import com.lp.server.util.logger.webservice.WebserviceCallInterceptor;
 
 @MTOM
-@WebService(name="IWebshop2ItemServices", serviceName="HeliumVItemServiceOpenTrans")
+//@WebService(name="IWebshop2ItemServices", serviceName="HeliumVItemServiceOpenTrans")
+@WebService
 @SOAPBinding(style = Style.DOCUMENT, use = Use.LITERAL, parameterStyle = ParameterStyle.WRAPPED)
 @BindingType(value = "http://schemas.xmlsoap.org/wsdl/soap/http?mtom=true")
 @Stateless
 // @Path(ArtikelFacBeanRest.BASE_PATH)
-@WebContext (urlPattern="/version2/ArtikelFacBeanRest")  
+// @WebContext (urlPattern="/version2/ArtikelFacBeanRest")  
 @Interceptors(WebserviceCallInterceptor.class)
 public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInterface {
 
@@ -86,16 +98,24 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	WebServiceContext context ;
 	
 	public ArtikelFacBeanRest() {
-		// delegate = new WebshopItemServiceMock() ;
-		delegate = getWebshopItemServiceFac() ;
 	}
+	
+	
+	private WebshopItemServiceInterface getDelegate() {
+		if (delegate == null) {
+			delegate = getWebshopItemServiceFac();
+		}
+		return delegate;
+
+	}
+
 	
 	@Override
 	@WebMethod
 	public ShopgroupsResult getShopGroupsFindAll(
 //			@WebParam(header = true) WebshopAuthHeader header) {
 			@WebParam  WebshopAuthHeader header) {
-		return delegate.getShopGroupsFindAll(header) ;
+		return getDelegate().getShopGroupsFindAll(header) ;
 	}
 
 	@Override
@@ -103,14 +123,14 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public ShopgroupsResult getShopGroupsFindAllChanged(
 			@WebParam WebshopAuthHeader header, 
 			@WebParam(name="changedDateTime") String changedDate) {
-		return delegate.getShopGroupsFindAllChanged(header, changedDate) ;
+		return getDelegate().getShopGroupsFindAllChanged(header, changedDate) ;
 	}
 
 	@Override
 	@WebMethod
 	public ShopgroupsFlatResult getShopGroupsFlatFindAll(
 			@WebParam WebshopAuthHeader header) {
-		return delegate.getShopGroupsFlatFindAll(header) ;
+		return getDelegate().getShopGroupsFlatFindAll(header) ;
 	}
 
 	@Override
@@ -118,7 +138,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public ShopgroupsFlatResult getShopGroupsFlatFindAllChanged(
 			@WebParam WebshopAuthHeader header, 
 			@WebParam(name="changedDateTime") String changedDate) {
-		return delegate.getShopGroupsFlatFindAllChanged(header, changedDate);
+		return getDelegate().getShopGroupsFlatFindAllChanged(header, changedDate);
 	}
 
 	@GET
@@ -127,7 +147,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public ShopgroupResult getShopGroupFindByCnr(
 			@WebParam WebshopAuthHeader header,
 			@WebParam(name="cnr") String cnr) {
-		return delegate.getShopGroupFindByCnr(header, cnr) ;
+		return getDelegate().getShopGroupFindByCnr(header, cnr) ;
 	}
 	
 	@GET
@@ -137,7 +157,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 			@WebParam WebshopAuthHeader header, 
 			@WebParam(name="cnr") String rootShopgruppe,
 			@WebParam(name="changedDateTime") String changedDate) {
-		return delegate.getShopGroupsFindByCnrChanged(header, rootShopgruppe, changedDate);
+		return getDelegate().getShopGroupsFindByCnrChanged(header, rootShopgruppe, changedDate);
 	}
 	
 	@GET
@@ -147,7 +167,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 			@WebParam WebshopAuthHeader header, 
 			@WebParam(name="id") Integer rootShopgruppeIId,
 			@WebParam(name="changedDateTime") String changedDate) {
-		return delegate.getShopGroupsFindByIdChanged(header, rootShopgruppeIId, changedDate);
+		return getDelegate().getShopGroupsFindByIdChanged(header, rootShopgruppeIId, changedDate);
 	}
 
 	@Override
@@ -155,7 +175,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public ShopgroupResult getShopGroupFindById(
 			@WebParam WebshopAuthHeader header, 
 			@WebParam(name="id") Integer id) {
-		return delegate.getShopGroupFindById(header, id) ;
+		return getDelegate().getShopGroupFindById(header, id) ;
 	}
 
 	
@@ -166,7 +186,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public WebshopItemResult getItemFindByCnr(
 			@WebParam WebshopAuthHeader header,
 			@PathParam("cnr") @WebParam(name="cnr") String name) {
-		return delegate.getItemFindByCnr(header, name) ;
+		return getDelegate().getItemFindByCnr(header, name) ;
 	}
 
  	@GET
@@ -176,7 +196,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public WebshopItemResult getItemFindById(
 			@WebParam WebshopAuthHeader header,
 			@PathParam("id") @WebParam(name="id") Integer id) {
-		return delegate.getItemFindById(header, id) ;
+		return getDelegate().getItemFindById(header, id) ;
 	}
  	
  	@GET
@@ -185,7 +205,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	@WebMethod	
 	public WebshopItemsResult getItems(
 			@WebParam WebshopAuthHeader header) {
-		return delegate.getItems(header);
+		return getDelegate().getItems(header);
 	}
 
 
@@ -196,7 +216,7 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public WebshopItemsResult getItemsChanged(
 			@WebParam WebshopAuthHeader header,
 			@PathParam("changedDateTime") @WebParam(name="changedDateTime") String changedDate) {
-		return delegate.getItemsChanged(header, changedDate) ;
+		return getDelegate().getItemsChanged(header, changedDate) ;
 	}
 
 	@GET
@@ -206,6 +226,12 @@ public class ArtikelFacBeanRest extends Facade implements WebshopItemServiceInte
 	public WebshopItemImageResult getItemImage(
 			@WebParam WebshopAuthHeader header,
 			@PathParam("name") @WebParam(name="itemImageName") String itemImageName) {
-		return delegate.getItemImage(header, itemImageName);
+		return getDelegate().getItemImage(header, itemImageName);
+	}
+
+	@Override
+	public WebshopItemsResult getItemsRestChanged(TheClientDto theClientDto, WebshopId shopId, Timestamp changedTimestamp) {
+		// TODO Auto-generated method stub
+		return new WebshopItemsResult();
 	}
 }

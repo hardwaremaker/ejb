@@ -32,8 +32,11 @@
  ******************************************************************************/
 package com.lp.server.auftrag.ejbfac;
 
+import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -57,6 +60,9 @@ import org.hibernate.SessionFactory;
 import com.lp.server.artikel.ejb.Artgru;
 import com.lp.server.artikel.ejb.Artgruspr;
 import com.lp.server.artikel.ejb.ArtgrusprPK;
+import com.lp.server.artikel.ejb.Artikelart;
+import com.lp.server.artikel.ejb.Artikelartspr;
+import com.lp.server.artikel.ejb.ArtikelartsprPK;
 import com.lp.server.artikel.service.ArtgruDto;
 import com.lp.server.artikel.service.ArtgrusprDto;
 import com.lp.server.auftrag.ejb.Auftragart;
@@ -65,9 +71,11 @@ import com.lp.server.auftrag.ejb.AuftragartsprPK;
 import com.lp.server.auftrag.ejb.Auftragauftragdokument;
 import com.lp.server.auftrag.ejb.Auftragbegruendung;
 import com.lp.server.auftrag.ejb.Auftragdokument;
+import com.lp.server.auftrag.ejb.Auftragkostenstelle;
 import com.lp.server.auftrag.ejb.Auftragpositionart;
 import com.lp.server.auftrag.ejb.Auftragpositionstatus;
 import com.lp.server.auftrag.ejb.Auftragstatus;
+import com.lp.server.auftrag.ejb.Auftragteilnehmer;
 import com.lp.server.auftrag.ejb.Auftragtext;
 import com.lp.server.auftrag.ejb.Auftragwiederholungsintervall;
 import com.lp.server.auftrag.ejb.Auftragwiederholungsintervallspr;
@@ -75,9 +83,12 @@ import com.lp.server.auftrag.ejb.AuftragwiederholungsintervallsprPK;
 import com.lp.server.auftrag.ejb.Meilenstein;
 import com.lp.server.auftrag.ejb.Meilensteinspr;
 import com.lp.server.auftrag.ejb.MeilensteinsprPK;
+import com.lp.server.auftrag.ejb.Verrechenbar;
 import com.lp.server.auftrag.ejb.Zahlungsplan;
 import com.lp.server.auftrag.ejb.Zahlungsplanmeilenstein;
 import com.lp.server.auftrag.ejb.Zeitplan;
+import com.lp.server.auftrag.ejb.Zeitplantyp;
+import com.lp.server.auftrag.ejb.Zeitplantypdetail;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragstatus;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragStatusDto;
@@ -92,10 +103,13 @@ import com.lp.server.auftrag.service.AuftragbegruendungDto;
 import com.lp.server.auftrag.service.AuftragbegruendungDtoAssembler;
 import com.lp.server.auftrag.service.AuftragdokumentDto;
 import com.lp.server.auftrag.service.AuftragdokumentDtoAssembler;
+import com.lp.server.auftrag.service.AuftragkostenstelleDto;
+import com.lp.server.auftrag.service.AuftragkostenstelleDtoAssembler;
 import com.lp.server.auftrag.service.AuftragpositionArtDto;
 import com.lp.server.auftrag.service.AuftragpositionArtDtoAssembler;
 import com.lp.server.auftrag.service.AuftragpositionstatusDto;
 import com.lp.server.auftrag.service.AuftragpositionstatusDtoAssembler;
+import com.lp.server.auftrag.service.AuftragteilnehmerDto;
 import com.lp.server.auftrag.service.AuftragtextDto;
 import com.lp.server.auftrag.service.AuftragtextDtoAssembler;
 import com.lp.server.auftrag.service.AuftragwiederholungsintervallDto;
@@ -106,12 +120,18 @@ import com.lp.server.auftrag.service.MeilensteinDto;
 import com.lp.server.auftrag.service.MeilensteinDtoAssembler;
 import com.lp.server.auftrag.service.MeilensteinsprDto;
 import com.lp.server.auftrag.service.MeilensteinsprDtoAssembler;
+import com.lp.server.auftrag.service.VerrechenbarDto;
+import com.lp.server.auftrag.service.VerrechenbarDtoAssembler;
 import com.lp.server.auftrag.service.ZahlungsplanDto;
 import com.lp.server.auftrag.service.ZahlungsplanDtoAssembler;
 import com.lp.server.auftrag.service.ZahlungsplanmeilensteinDto;
 import com.lp.server.auftrag.service.ZahlungsplanmeilensteinDtoAssembler;
 import com.lp.server.auftrag.service.ZeitplanDto;
 import com.lp.server.auftrag.service.ZeitplanDtoAssembler;
+import com.lp.server.auftrag.service.ZeitplantypDto;
+import com.lp.server.auftrag.service.ZeitplantypDtoAssembler;
+import com.lp.server.auftrag.service.ZeitplantypdetailDto;
+import com.lp.server.auftrag.service.ZeitplantypdetailDtoAssembler;
 
 import com.lp.server.system.fastlanereader.generated.FLRStatusspr;
 import com.lp.server.system.pkgenerator.PKConst;
@@ -150,6 +170,86 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		return auftragartDtoI.getCNr();
 	}
 
+	public void vertauscheMeilenstein(Integer iIdPosition1I,
+			Integer iIdPosition2I) {
+		Meilenstein oPosition1 = em.find(Meilenstein.class, iIdPosition1I);
+		if (oPosition1 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Meilenstein oPosition2 = em.find(Meilenstein.class, iIdPosition2I);
+
+		Integer iSort1 = oPosition1.getISort();
+		Integer iSort2 = oPosition2.getISort();
+
+		oPosition2.setISort(new Integer(-1));
+
+		oPosition1.setISort(iSort2);
+		oPosition2.setISort(iSort1);
+	}
+
+	public void vertauscheVerrechenbar(Integer iIdPosition1I,
+			Integer iIdPosition2I) {
+		Verrechenbar oPosition1 = em.find(Verrechenbar.class, iIdPosition1I);
+		if (oPosition1 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Verrechenbar oPosition2 = em.find(Verrechenbar.class, iIdPosition2I);
+
+		Integer iSort1 = oPosition1.getISort();
+		Integer iSort2 = oPosition2.getISort();
+
+		oPosition2.setISort(new Integer(-1));
+
+		oPosition1.setISort(iSort2);
+		oPosition2.setISort(iSort1);
+	}
+
+	public void vertauscheZeitplantypdetail(Integer iIdPosition1I,
+			Integer iIdPosition2I) {
+		Zeitplantypdetail oPosition1 = em.find(Zeitplantypdetail.class,
+				iIdPosition1I);
+		if (oPosition1 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Zeitplantypdetail oPosition2 = em.find(Zeitplantypdetail.class,
+				iIdPosition2I);
+
+		Integer iSort1 = oPosition1.getISort();
+		Integer iSort2 = oPosition2.getISort();
+
+		oPosition2.setISort(new Integer(-1));
+
+		oPosition1.setISort(iSort2);
+		oPosition2.setISort(iSort1);
+	}
+
+	public void vertauscheZahlungsplanmeilenstein(Integer iIdPosition1I,
+			Integer iIdPosition2I) {
+		Zahlungsplanmeilenstein oPosition1 = em.find(
+				Zahlungsplanmeilenstein.class, iIdPosition1I);
+		if (oPosition1 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Zahlungsplanmeilenstein oPosition2 = em.find(
+				Zahlungsplanmeilenstein.class, iIdPosition2I);
+
+		Integer iSort1 = oPosition1.getISort();
+		Integer iSort2 = oPosition2.getISort();
+
+		oPosition2.setISort(new Integer(-1));
+
+		oPosition1.setISort(iSort2);
+		oPosition2.setISort(iSort1);
+	}
+
 	public Integer createMeilenstein(MeilensteinDto meilensteinDto,
 			TheClientDto theClientDto) {
 
@@ -171,8 +271,22 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_MEILENSTEIN);
 			meilensteinDto.setIId(pk);
+
+			Query queryNext = em
+					.createNamedQuery("MeilensteinejbSelectMaxISort");
+			queryNext.setParameter(1, theClientDto.getMandant());
+
+			Integer i = (Integer) queryNext.getSingleResult();
+
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+			meilensteinDto.setISort(i);
+
 			Meilenstein meilenstein = new Meilenstein(meilensteinDto.getIId(),
-					meilensteinDto.getCNr(), meilensteinDto.getMandantCNr());
+					meilensteinDto.getCNr(), meilensteinDto.getMandantCNr(),
+					meilensteinDto.getISort());
 			em.persist(meilenstein);
 			em.flush();
 			setMeilensteinFromMeilensteinDto(meilenstein, meilensteinDto);
@@ -186,6 +300,112 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 
 			}
 			return meilensteinDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+	}
+
+	public Integer createZeitplantyp(ZeitplantypDto dto,
+			TheClientDto theClientDto) {
+
+		dto.setMandantCNr(theClientDto.getMandant());
+
+		try {
+			Query query = em
+					.createNamedQuery("ZeitplantypFindByCBezMandantCNr");
+			query.setParameter(1, dto.getCBez());
+			query.setParameter(2, theClientDto.getMandant());
+			Zeitplantyp doppelt = (Zeitplantyp) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("AUFT_ZEITPLANTYP.UK"));
+		} catch (NoResultException ex) {
+
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ZEITPLANTYP);
+			dto.setIId(pk);
+
+			Zeitplantyp zeitplantyp = new Zeitplantyp(dto.getIId(),
+					dto.getCBez(), dto.getMandantCNr());
+			em.persist(zeitplantyp);
+			em.flush();
+			setZeitplantypFromZeitplantypDto(zeitplantyp, dto);
+
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+	}
+
+	public void importierteZeitplanAusZeitplantyp(Integer zeitplantypIId,
+			Integer auftragIId, TheClientDto theClientDto) {
+
+		Query query = em
+				.createNamedQuery("ZeitplantypdetailFindByZeitplantypIId");
+		query.setParameter(1, zeitplantypIId);
+		List l = query.getResultList();
+		Iterator it = l.iterator();
+
+		Calendar c = Calendar.getInstance();
+
+		c.set(Calendar.MONTH, 0);
+		c.set(Calendar.DAY_OF_MONTH, 1);
+		c.set(Calendar.YEAR, 2000);
+		Timestamp tTermin = new Timestamp(c.getTimeInMillis());
+
+		while (it.hasNext()) {
+			Zeitplantypdetail zpd = (Zeitplantypdetail) it.next();
+			ZeitplanDto zpDto = new ZeitplanDto();
+			zpDto.setCKommentar(zpd.getCKommentar());
+			zpDto.setNDauer(BigDecimal.ZERO);
+			zpDto.setNMaterial(BigDecimal.ZERO);
+			zpDto.setTTermin(tTermin);
+			zpDto.setAuftragIId(auftragIId);
+			tTermin = new Timestamp(tTermin.getTime() + 1000);
+
+			createZeitplan(zpDto);
+
+		}
+
+	}
+
+	public Integer createZeitplantypdetail(
+			ZeitplantypdetailDto zeitplantypdetailDto, TheClientDto theClientDto) {
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ZEITPLANTYPDETAIL);
+			zeitplantypdetailDto.setIId(pk);
+
+			Query queryNext = em
+					.createNamedQuery("ZeitplantypdetailejbSelectMaxISort");
+			queryNext.setParameter(1, zeitplantypdetailDto.getZeitplantypIId());
+
+			Integer i = (Integer) queryNext.getSingleResult();
+
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+			zeitplantypdetailDto.setISort(i);
+
+			Zeitplantypdetail zeitplantypdetail = new Zeitplantypdetail(
+					zeitplantypdetailDto.getIId(),
+					zeitplantypdetailDto.getZeitplantypIId(),
+					zeitplantypdetailDto.getCKommentar(),
+					zeitplantypdetailDto.getISort());
+			em.persist(zeitplantypdetail);
+			em.flush();
+			setZeitplantypdetailFromZeitplantypdetailDto(zeitplantypdetail,
+					zeitplantypdetailDto);
+
+			return zeitplantypdetailDto.getIId();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
 					new Exception(e));
@@ -216,10 +436,25 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			Integer pk = pkGen
 					.getNextPrimaryKey(PKConst.PK_ZAHLUNGSPLANMEILENSTEIN);
 			zahlungsplanmeilensteinDto.setIId(pk);
+
+			Query queryNext = em
+					.createNamedQuery("ZahlungsplanmeilensteinejbSelectMaxISort");
+			queryNext.setParameter(1,
+					zahlungsplanmeilensteinDto.getZahlungsplaniId());
+
+			Integer i = (Integer) queryNext.getSingleResult();
+
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+			zahlungsplanmeilensteinDto.setISort(i);
+
 			Zahlungsplanmeilenstein zahlungsplanmeilenstein = new Zahlungsplanmeilenstein(
 					zahlungsplanmeilensteinDto.getIId(),
 					zahlungsplanmeilensteinDto.getZahlungsplaniId(),
-					zahlungsplanmeilensteinDto.getMeilensteinId());
+					zahlungsplanmeilensteinDto.getMeilensteinId(),
+					zahlungsplanmeilensteinDto.getISort());
 			em.persist(zahlungsplanmeilenstein);
 			em.flush();
 			setZahlungsplanmeilensteinFromZahlungsplanmeilensteinDto(
@@ -232,11 +467,82 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		}
 	}
 
+	public Integer createVerrechenbar(VerrechenbarDto dto,
+			TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("VerrechenbarFindByCBez");
+			query.setParameter(1, dto.getCBez());
+
+			Verrechenbar doppelt = (Verrechenbar) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("AUFT_VERRECHENBAR.UK"));
+		} catch (NoResultException ex) {
+
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_VERRECHENBAR);
+			dto.setIId(pk);
+
+			Query queryNext = em
+					.createNamedQuery("VerrechenbarSelectNextReihung");
+
+			Integer i = (Integer) queryNext.getSingleResult();
+
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+			dto.setISort(i);
+
+			Verrechenbar verrechenbar = new Verrechenbar(dto.getIId(),
+					dto.getCBez(), dto.getBVerrechenbar(), dto.getISort());
+			em.persist(verrechenbar);
+			em.flush();
+			setVerrechenbarFromVerrechenbarDto(verrechenbar, dto);
+
+			return verrechenbar.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+	}
+
+	private void setVerrechenbarFromVerrechenbarDto(Verrechenbar verrechenbar,
+			VerrechenbarDto verrechenbarDto) {
+		verrechenbar.setCBez(verrechenbarDto.getCBez());
+		verrechenbar.setBVerrechenbar(verrechenbarDto.getBVerrechenbar());
+		verrechenbar.setISort(verrechenbarDto.getISort());
+		em.merge(verrechenbar);
+		em.flush();
+	}
+
 	private void setMeilensteinFromMeilensteinDto(Meilenstein meilenstein,
 			MeilensteinDto meilensteinDto) {
 		meilenstein.setCNr(meilensteinDto.getCNr());
-
+		meilenstein.setISort(meilensteinDto.getISort());
 		em.merge(meilenstein);
+		em.flush();
+	}
+
+	private void setZeitplantypdetailFromZeitplantypdetailDto(
+			Zeitplantypdetail zeitplantypdetail,
+			ZeitplantypdetailDto zeitplantypdetailDto) {
+		zeitplantypdetail.setCKommentar(zeitplantypdetailDto.getCKommentar());
+		zeitplantypdetail.setZeitplantypIId(zeitplantypdetailDto
+				.getZeitplantypIId());
+		zeitplantypdetail.setISort(zeitplantypdetailDto.getISort());
+		em.merge(zeitplantypdetail);
+		em.flush();
+	}
+
+	private void setZeitplantypFromZeitplantypDto(Zeitplantyp zeitplantyp,
+			ZeitplantypDto zeitplantypDto) {
+		zeitplantyp.setCBez(zeitplantypDto.getCBez());
+		em.merge(zeitplantyp);
 		em.flush();
 	}
 
@@ -314,6 +620,58 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
+	}
+
+	public void updateVerrechenbar(VerrechenbarDto dto,
+			TheClientDto theClientDto) {
+
+		Integer iId = dto.getIId();
+		Verrechenbar verrechenbar = em.find(Verrechenbar.class, iId);
+
+		try {
+			Query query = em.createNamedQuery("VerrechenbarFindByCBez");
+			query.setParameter(1, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Verrechenbar) query.getSingleResult())
+					.getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"AUFT_VERRECHENBAR.UK"));
+
+			}
+		} catch (NoResultException ex) {
+
+		}
+		setVerrechenbarFromVerrechenbarDto(verrechenbar, dto);
+	}
+
+	public void updateZeitplantyp(ZeitplantypDto dto, TheClientDto theClientDto) {
+
+		Integer iId = dto.getIId();
+		Zeitplantyp zeitplantyp = em.find(Zeitplantyp.class, iId);
+
+		// duplicateunique: Pruefung: Artikelgruppe bereits vorhanden.
+		try {
+			Query query = em
+					.createNamedQuery("ZeitplantypFindByCBezMandantCNr");
+			query.setParameter(1, dto.getCBez());
+			query.setParameter(2, theClientDto.getMandant());
+
+			Integer iIdVorhanden = ((Zeitplantyp) query.getSingleResult())
+					.getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"AUFT_ZEITPLANTYP.UK"));
+
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setZeitplantypFromZeitplantypDto(zeitplantyp, dto);
+
 	}
 
 	public void updateZahlungsplanmeilenstein(
@@ -1115,6 +1473,23 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		return map;
 	}
 
+	public Map getAllVerrechenbar() {
+		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
+		// try {
+		Query query = em.createNamedQuery("VerrechenbarFindAll");
+		Collection<?> clArten = query.getResultList();
+
+		Iterator<?> itArten = clArten.iterator();
+		while (itArten.hasNext()) {
+			Verrechenbar v = (Verrechenbar) itArten.next();
+			Object key = v.getIId();
+			Object value = v.getCBez();
+
+			tmArten.put(key, value);
+		}
+		return tmArten;
+	}
+
 	private void checkAuftragpositionartDto(
 			AuftragpositionArtDto auftragpositionartDtoI) throws EJBExceptionLP {
 		if (auftragpositionartDtoI == null) {
@@ -1413,6 +1788,11 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		// }
 	}
 
+	public VerrechenbarDto verrechenbarFindByPrimaryKey(Integer iId) {
+		Verrechenbar verrechenbar = em.find(Verrechenbar.class, iId);
+		return VerrechenbarDtoAssembler.createDto(verrechenbar);
+	}
+
 	public AuftragStatusDto[] auftragStatusFindAll() throws EJBExceptionLP {
 		// try {
 		Query query = em.createNamedQuery("AuftragStatusfindAll");
@@ -1540,8 +1920,7 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 
 		try {
 			Zeitplan auftragtext = new Zeitplan(zeitplanDto.getIId(),
-					zeitplanDto.getAuftragIId(),
-					zeitplanDto.getITerminVorLiefertermin());
+					zeitplanDto.getAuftragIId(), zeitplanDto.getTTermin());
 			em.persist(auftragtext);
 			em.flush();
 			setZeitplanFromZeitplanDto(auftragtext, zeitplanDto);
@@ -1552,7 +1931,8 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		return iId;
 	}
 
-	public Integer createZahlungsplan(ZahlungsplanDto zahlungsplanDto) {
+	public Integer createZahlungsplan(ZahlungsplanDto zahlungsplanDto,
+			TheClientDto theClientDto) {
 		// den PK erzeugen und setzen
 		Integer iId = null;
 
@@ -1564,12 +1944,16 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		try {
 			Zahlungsplan zahlungsplan = new Zahlungsplan(
 					zahlungsplanDto.getIId(), zahlungsplanDto.getAuftragIId(),
-					zahlungsplanDto.getITageVorLiefertermin(),
-					zahlungsplanDto.getNBetrag(),
+					zahlungsplanDto.getTTermin(), zahlungsplanDto.getNBetrag(),
 					zahlungsplanDto.getNBetragUrsprung());
 			em.persist(zahlungsplan);
 			em.flush();
 			setZahlungsplanFromZahlungsplanDto(zahlungsplan, zahlungsplanDto);
+			zahlungsplanDto.getZahlungsplanmeilensteinDto().setZahlungsplaniId(
+					zahlungsplanDto.getIId());
+			createZahlungsplanmeilenstein(
+					zahlungsplanDto.getZahlungsplanmeilensteinDto(),
+					theClientDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -1662,13 +2046,32 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		setZeitplanFromZeitplanDto(zeitplan, dto);
 	}
 
-	public void updateZahlungsplan(ZahlungsplanDto dto) {
+	public void updateZeitplantypdetail(ZeitplantypdetailDto dto) {
+		Zeitplantypdetail zeitplantypdetail = em.find(Zeitplantypdetail.class,
+				dto.getIId());
+		if (zeitplantypdetail == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		setZeitplantypdetailFromZeitplantypdetailDto(zeitplantypdetail, dto);
+	}
+
+	public void updateZahlungsplan(ZahlungsplanDto dto,
+			TheClientDto theClientDto) {
 		Zahlungsplan zahlungsplan = em.find(Zahlungsplan.class, dto.getIId());
 		if (zahlungsplan == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		setZahlungsplanFromZahlungsplanDto(zahlungsplan, dto);
+		if (dto.getZahlungsplanmeilensteinDto().getIId() == null) {
+			createZahlungsplanmeilenstein(dto.getZahlungsplanmeilensteinDto(),
+					theClientDto);
+		} else {
+			updateZahlungsplanmeilenstein(dto.getZahlungsplanmeilensteinDto(),
+					theClientDto);
+		}
+
 	}
 
 	public void updateAuftragdokument(AuftragdokumentDto auftragdokumentDto) {
@@ -1748,8 +2151,65 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		}
 	}
 
+	public void removeZeitplantyp(ZeitplantypDto zeitplantypDto) {
+		Zeitplantyp toRemove = em.find(Zeitplantyp.class,
+				zeitplantypDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+
+	public void removeVerrechenbar(VerrechenbarDto dto) {
+		Verrechenbar toRemove = em.find(Verrechenbar.class, dto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+
+	public void removeZeitplantypdetail(
+			ZeitplantypdetailDto zeitplantypdetailDto) {
+		Zeitplantypdetail toRemove = em.find(Zeitplantypdetail.class,
+				zeitplantypdetailDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+
 	public void removeZahlungsplanmeilenstein(
 			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto) {
+
+		Query query = em
+				.createNamedQuery("ZahlungsplanmeilensteinFindByZahlungplanIId");
+		query.setParameter(1, zahlungsplanmeilensteinDto.getZahlungsplaniId());
+
+		Collection cl = query.getResultList();
+		if (cl.size() == 1) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_ES_MUSS_MINDESTENS_EIN_MEILENSTEIN_VORHANDEN_SEIN,
+					"");
+		}
+
 		Zahlungsplanmeilenstein toRemove = em.find(
 				Zahlungsplanmeilenstein.class,
 				zahlungsplanmeilensteinDto.getIId());
@@ -1766,6 +2226,19 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 	}
 
 	public void removeZahlungsplan(ZahlungsplanDto zahlungsplanDto) {
+
+		if (zahlungsplanDto.getZahlungsplanmeilensteinDto() != null
+				&& zahlungsplanDto.getZahlungsplanmeilensteinDto().getIId() != null) {
+
+			Zahlungsplanmeilenstein toRemove = em.find(
+					Zahlungsplanmeilenstein.class, zahlungsplanDto
+							.getZahlungsplanmeilensteinDto().getIId());
+
+			em.remove(toRemove);
+			em.flush();
+
+		}
+
 		Zahlungsplan toRemove = em.find(Zahlungsplan.class,
 				zahlungsplanDto.getIId());
 		if (toRemove == null) {
@@ -1834,9 +2307,37 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 
 	}
 
+	public ZeitplantypDto zeitplantypFindByPrimaryKey(Integer iId) {
+		return ZeitplantypDtoAssembler.createDto(em
+				.find(Zeitplantyp.class, iId));
+
+	}
+
+	public ZeitplantypdetailDto zeitplantypdetailFindByPrimaryKey(Integer iId) {
+		return ZeitplantypdetailDtoAssembler.createDto(em.find(
+				Zeitplantypdetail.class, iId));
+
+	}
+
 	public ZahlungsplanDto zahlungsplanFindByPrimaryKey(Integer iId) {
-		return ZahlungsplanDtoAssembler.createDto(em.find(Zahlungsplan.class,
-				iId));
+
+		ZahlungsplanDto zpDto = ZahlungsplanDtoAssembler.createDto(em.find(
+				Zahlungsplan.class, iId));
+
+		Query query = em
+				.createNamedQuery("ZahlungsplanmeilensteinFindByZahlungplanIId");
+		query.setParameter(1, iId);
+
+		Collection cl = query.getResultList();
+		if (cl.size() > 0) {
+			Zahlungsplanmeilenstein zm = (Zahlungsplanmeilenstein) cl
+					.iterator().next();
+			zpDto.setZahlungsplanmeilensteinDto(ZahlungsplanmeilensteinDtoAssembler
+					.createDto(zm));
+
+		}
+
+		return zpDto;
 
 	}
 
@@ -1857,10 +2358,53 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 
 	}
 
+	public void toggleZeitplanDauerErledigt(Integer zeitplanIId,
+			TheClientDto theClientDto) {
+		Zeitplan zeitplan = em.find(Zeitplan.class, zeitplanIId);
+
+		if (zeitplan.getTDauerErledigt() == null) {
+			zeitplan.setTDauerErledigt(new java.sql.Timestamp(System
+					.currentTimeMillis()));
+			zeitplan.setPersonalIIdDauerErledigt(theClientDto.getIDPersonal());
+		} else {
+			zeitplan.setTDauerErledigt(null);
+			zeitplan.setPersonalIIdDauerErledigt(null);
+		}
+
+	}
+
+	public void toggleZeitplanMaterialErledigt(Integer zeitplanIId,
+			TheClientDto theClientDto) {
+		Zeitplan zeitplan = em.find(Zeitplan.class, zeitplanIId);
+
+		if (zeitplan.getTMaterialErledigt() == null) {
+			zeitplan.setTMaterialErledigt(new java.sql.Timestamp(System
+					.currentTimeMillis()));
+			zeitplan.setPersonalIIdMaterialErledigt(theClientDto
+					.getIDPersonal());
+		} else {
+			zeitplan.setTMaterialErledigt(null);
+			zeitplan.setPersonalIIdMaterialErledigt(null);
+		}
+
+	}
+
 	public ZahlungsplanmeilensteinDto zahlungsplanmeilensteinFindByPrimaryKey(
 			Integer iId) {
 		return ZahlungsplanmeilensteinDtoAssembler.createDto(em.find(
 				Zahlungsplanmeilenstein.class, iId));
+
+	}
+
+	public ZahlungsplanmeilensteinDto[] zahlungsplanmeilensteinFindByZahlungplanIIdOrderByTErledigt(
+			Integer zahlungsplanIId) {
+
+		Query query = em
+				.createNamedQuery("ZahlungsplanmeilensteinFindByZahlungplanIIdOrderByTErledigt");
+		query.setParameter(1, zahlungsplanIId);
+		Collection cl = query.getResultList();
+
+		return ZahlungsplanmeilensteinDtoAssembler.createDtos(cl);
 
 	}
 
@@ -2010,13 +2554,20 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			ZeitplanDto zeitplanDto) {
 		zeitplan.setAuftragIId(zeitplanDto.getAuftragIId());
 		zeitplan.setCKommentar(zeitplanDto.getCKommentar());
-		zeitplan.setITerminVorLiefertermin(zeitplanDto
-				.getITerminVorLiefertermin());
+		zeitplan.setTTermin(zeitplanDto.getTTermin());
 		zeitplan.setNDauer(zeitplanDto.getNDauer());
 		zeitplan.setNDauerUrsprung(zeitplanDto.getNDauerUrsprung());
 		zeitplan.setNMaterial(zeitplanDto.getNMaterial());
 		zeitplan.setNMaterialUrsprung(zeitplanDto.getNMaterialUrsprung());
 		zeitplan.setXText(zeitplanDto.getXText());
+
+		zeitplan.setPersonalIIdDauerErledigt(zeitplanDto
+				.getPersonalIIdDauerErledigt());
+		zeitplan.setPersonalIIdMaterialErledigt(zeitplanDto
+				.getPersonalIIdMaterialErledigt());
+		zeitplan.setTDauerErledigt(zeitplanDto.getTDauerErledigt());
+		zeitplan.setTMaterialErledigt(zeitplanDto.getTMaterialErledigt());
+
 		em.merge(zeitplan);
 		em.flush();
 	}
@@ -2026,8 +2577,7 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		zahlungsplan.setAuftragIId(zahlungsplanDto.getAuftragIId());
 		zahlungsplan.setNBetrag(zahlungsplanDto.getNBetrag());
 		zahlungsplan.setNBetragUrsprung(zahlungsplanDto.getNBetragUrsprung());
-		zahlungsplan.setITageVorLiefertermin(zahlungsplanDto
-				.getITageVorLiefertermin());
+		zahlungsplan.setTTermin(zahlungsplanDto.getTTermin());
 
 		em.merge(zahlungsplan);
 		em.flush();
@@ -2404,4 +2954,139 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		return (AuftragwiederholungsintervallsprDto[]) list
 				.toArray(returnArray);
 	}
+
+	public Integer createAuftragkostenstelle(AuftragkostenstelleDto dto,
+			TheClientDto theClientDto) {
+
+		Integer pkTeilnehmer = null;
+		try {
+
+			try {
+				Query query = em
+						.createNamedQuery("AuftragkostenstellefindByAuftragIIdKostenstelleIId");
+				query.setParameter(1, dto.getAuftragIId());
+				query.setParameter(2, dto.getKostenstelleIId());
+				Auftragkostenstelle doppelt = (Auftragkostenstelle) query
+						.getSingleResult();
+
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"AUFT_AUFTRAGKOSTENSTELLE.UK"));
+
+			} catch (NoResultException ex) {
+
+			}
+
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj();
+			pkTeilnehmer = pkGen
+					.getNextPrimaryKey(PKConst.PK_AUFTRAGKOSTENSTELLE);
+
+			Auftragkostenstelle auftragkostenstelle = new Auftragkostenstelle(
+					pkTeilnehmer, dto.getAuftragIId(), dto.getKostenstelleIId());
+			em.persist(auftragkostenstelle);
+			em.flush();
+
+			setAuftragkostenstelleFromAuftragkostenstelleDto(
+					auftragkostenstelle, dto);
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+
+		return pkTeilnehmer;
+	}
+
+	private void setAuftragkostenstelleFromAuftragkostenstelleDto(
+			Auftragkostenstelle auftragteilnehmer,
+			AuftragkostenstelleDto auftragteilnehmerDto) {
+		auftragteilnehmer.setAuftragIId(auftragteilnehmerDto.getAuftragIId());
+		auftragteilnehmer.setKostenstelleIId(auftragteilnehmerDto
+				.getKostenstelleIId());
+
+		em.merge(auftragteilnehmer);
+		em.flush();
+	}
+
+	public void removeAuftragkostenstelle(
+			AuftragkostenstelleDto auftragkostenstelleDto) {
+
+		Auftragkostenstelle toRemove = em.find(Auftragkostenstelle.class,
+				auftragkostenstelleDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	/**
+	 * Einen Auftragsteilnehmer aktualisieren.
+	 * 
+	 * @param auftragteilnehmerDto
+	 *            AuftragteilnehmerDto
+	 * @throws EJBExceptionLP
+	 */
+	public void updateAuftragkostenstelle(AuftragkostenstelleDto dto) {
+
+		Integer iId = dto.getIId();
+
+		Auftragkostenstelle auftragkostenstelle = em.find(
+				Auftragkostenstelle.class, iId);
+
+		try {
+			Query query = em
+					.createNamedQuery("AuftragkostenstellefindByAuftragIIdKostenstelleIId");
+			query.setParameter(1, dto.getAuftragIId());
+			query.setParameter(2, dto.getKostenstelleIId());
+			Integer iIdVorhanden = ((Auftragkostenstelle) query
+					.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"AUFT_AUFTRAGKOSTENSTELLE.CNR"));
+			}
+
+		} catch (NoResultException ex) {
+
+		}
+
+		setAuftragkostenstelleFromAuftragkostenstelleDto(auftragkostenstelle,
+				dto);
+
+	}
+
+	/**
+	 * Einen bestimmten Auftragteilnehmer ueber seinen Schluessel holen.
+	 * 
+	 * @param iId
+	 *            Integer
+	 * @throws EJBExceptionLP
+	 * @return AuftragteilnehmerDto
+	 */
+	public AuftragkostenstelleDto auftragkostenstelleFindByPrimaryKey(
+			Integer iId) {
+		Auftragkostenstelle bean = em.find(Auftragkostenstelle.class, iId);
+		if (bean == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return AuftragkostenstelleDtoAssembler.createDto(bean);
+	}
+
+	public AuftragkostenstelleDto[] auftragkostenstellefindByAuftrag(
+			Integer auftragIId) {
+
+		Query query = em.createNamedQuery("AuftragkostenstellefindByAuftrag");
+		query.setParameter(1, auftragIId);
+		Collection c = query.getResultList();
+
+		return AuftragkostenstelleDtoAssembler.createDtos(c);
+	}
+
 }

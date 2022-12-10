@@ -37,18 +37,27 @@ import java.rmi.RemoteException;
 
 import com.lp.service.StklImportSpezifikation;
 
+/**
+ * Interface f&uuml;r das Beschaffen von Kopfinformationen der betreffenden
+ * Belegpositionenst&uuml;ckliste f&uuml;r das Anlegen von Belegpositionen
+ * durch den Intelligenten St&uuml;cklistenimport.
+ * 
+ * @author andi
+ *
+ */
 public interface IImportHead extends Serializable {
 
 	/**
-	 * Liefert die IId des Kunden auf den die St&uuml;ckliste angelegt wurde.
+	 * Liefert die IId des Bezugsobjektes der St&uuml;ckliste
+	 * (Kunde oder Lieferant) auf das die St&uuml;ckliste angelegt wurde.
 	 * 
 	 * @param spez Spezifikation der St&uuml;ckliste
 	 * @param theClientDto der aktuelle Benutzer
 	 * 
-	 * @return IId des Kunden
+	 * @return IId des Kunden oder Lieferanten
 	 * @throws RemoteException
 	 */
-	public Integer getKundeIIdDerStueckliste(StklImportSpezifikation spez, TheClientDto theClientDto) 
+	public Integer getBezugsobjektIIdDerStueckliste(StklImportSpezifikation spez, TheClientDto theClientDto) 
 			throws RemoteException;
 	
 }

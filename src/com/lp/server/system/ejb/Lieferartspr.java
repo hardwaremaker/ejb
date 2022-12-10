@@ -41,7 +41,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "LieferartsprfindByLieferartIId", query = "SELECT OBJECT(C) FROM Lieferartspr c WHERE c.pk.lieferartIId = ?1") })
+@NamedQueries({
+		@NamedQuery(name = "LieferartsprfindByLieferartIId", query = "SELECT OBJECT(C) FROM Lieferartspr c WHERE c.pk.lieferartIId = ?1"),
+		@NamedQuery(name = "LieferartsprfindByCBezeichnungLocaleCNr", query = "SELECT OBJECT(C) FROM Lieferartspr c WHERE c.cBezeichnung=?1 AND c.pk.localeCNr = ?2") })
 @Entity
 @Table(name = "LP_LIEFERARTSPR")
 public class Lieferartspr implements Serializable {
@@ -51,7 +53,6 @@ public class Lieferartspr implements Serializable {
 	@Column(name = "C_BEZEICHNUNG")
 	private String cBezeichnung;
 
-
 	private static final long serialVersionUID = 1L;
 
 	public Lieferartspr() {
@@ -59,7 +60,7 @@ public class Lieferartspr implements Serializable {
 	}
 
 	public Lieferartspr(Integer lieferartIId, String localeCNr) {
-		pk=new LieferartsprPK(lieferartIId,localeCNr);
+		pk = new LieferartsprPK(lieferartIId, localeCNr);
 	}
 
 	public LieferartsprPK getPk() {
@@ -77,7 +78,5 @@ public class Lieferartspr implements Serializable {
 	public void setCBezeichnung(String cBezeichnung) {
 		this.cBezeichnung = cBezeichnung;
 	}
-
-
 
 }

@@ -39,11 +39,18 @@ import java.util.Locale;
 import com.lp.util.Helper;
 
 public class TheClientDto implements Serializable {
-
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1l;
+	
+	// TheClientDto "muss" die gleiche serialVersionUID behalten, 
+	// damit ein alter Client (vor dem Update) kompatibel zur 
+	// neuen Server-Version bleibt. Es ist daher auch nicht 
+	// moeglich, TheClientDto extends TheClientLoggedInDto zu
+	// schreiben.
+	
+	private char aKennwort[] = null;
+	private Integer iStatus = null;
+	private Integer reportvarianteIId = null;
+	private Integer geschaeftsJahr = null ;
 	private String idUser = null;
 	private String mandant = null;
 	private Integer idPersonal = null;
@@ -53,12 +60,13 @@ public class TheClientDto implements Serializable {
 	private String benutzername = null;
 	private Timestamp tsLoggedin = null;
 	private Timestamp tsLoggedout = null;
-	private char aKennwort[] = null;
 	private String sMandantenwaehrung = null;
-	private Integer iStatus = null;
-	private Integer reportvarianteIId = null;
 	private Integer systemrolleIId = null;
-
+	private boolean desktopBenutzer = true ;
+	private Integer hvmaLizenzId = null;
+	private String hvmaResource = null;
+	private int concurrentUser = 0;
+	
 	public Integer getSystemrolleIId() {
 		return systemrolleIId;
 	}
@@ -66,8 +74,6 @@ public class TheClientDto implements Serializable {
 	public void setSystemrolleIId(Integer systemrolleIId) {
 		this.systemrolleIId = systemrolleIId;
 	}
-
-	private Integer geschaeftsJahr = null ;
 	
 	public String getIDUser() {
 		return idUser;
@@ -83,14 +89,6 @@ public class TheClientDto implements Serializable {
 
 	public void setMandant(String mandantI) {
 		this.mandant = mandantI;
-	}
-
-	public Integer getReportvarianteIId() {
-		return reportvarianteIId;
-	}
-
-	public void setReportvarianteIId(Integer reportvarianteIId) {
-		this.reportvarianteIId = reportvarianteIId;
 	}
 
 	public Integer getIDPersonal() {
@@ -193,16 +191,13 @@ public class TheClientDto implements Serializable {
 				: that.tsLoggedout.equals(this.tsLoggedout))) {
 			return false;
 		}
-//		if (!(that.aKennwort == null ? this.aKennwort == null : that.aKennwort
-//				.equals(this.aKennwort))) {
-//			return false;
-//		}
-		if (!(that.aKennwort == null ? this.aKennwort == null : java.util.Arrays.equals(that.aKennwort, this.aKennwort))) {
+
+		if (!(that.hvmaLizenzId == null ? this.hvmaLizenzId == null
+				: that.hvmaLizenzId.equals(this.hvmaLizenzId))) {
 			return false;
 		}
-
-		if (!(that.geschaeftsJahr == null ? this.geschaeftsJahr == null
-				: that.geschaeftsJahr.equals(this.geschaeftsJahr))) {
+		if (!(that.hvmaResource == null ? this.hvmaResource == null
+				: that.hvmaResource.equals(this.hvmaResource))) {
 			return false;
 		}
 		return true;
@@ -219,36 +214,23 @@ public class TheClientDto implements Serializable {
 		result = 37 * result + this.benutzername.hashCode();
 		result = 37 * result + this.tsLoggedin.hashCode();
 		result = 37 * result + this.tsLoggedout.hashCode();
-		result = 37 * result + java.util.Arrays.hashCode(this.aKennwort);
-		result = 37 * result + this.geschaeftsJahr.hashCode() ;
+		result = 37 * result + this.hvmaLizenzId.hashCode();
+		result = 37 * result + this.hvmaResource.hashCode();
 		return result;
 	}
 
 	public String toString() {
-		String returnString = "";
-		returnString += idUser;
-		returnString += ", " + mandant;
-		returnString += ", " + idPersonal;
-		returnString += ", " + locUi;
-		returnString += ", " + locKonzern;
-		returnString += ", " + locMandant;
-		returnString += ", " + benutzername;
-		returnString += ", " + tsLoggedin;
-		returnString += ", " + tsLoggedout;
-		returnString += ", " + aKennwort.toString() ;
-		return returnString;
-	}
-
-	public char[] getKennwortAsCharArray() {
-		return aKennwort;
-	}
-
-	public String getKennwortAsString() {
-		return String.valueOf(aKennwort);
-	}
-
-	public void setKennwort(char[] aKennwortI) {
-		this.aKennwort = aKennwortI;
+		StringBuffer sb = new StringBuffer(benutzername)
+				.append(", ").append(concurrentUser)
+				.append(", ").append(mandant)
+				.append(", ").append(idPersonal)
+				.append(", ").append(locUi)
+				.append(", ").append(locKonzern)
+				.append(", ").append(locMandant)
+				.append(", ").append(idUser)
+				.append(", ").append(tsLoggedin)
+				.append(", ").append(tsLoggedout);
+		return sb.toString();
 	}
 
 	public String getLocMandantAsString() {
@@ -263,10 +245,6 @@ public class TheClientDto implements Serializable {
 		this.sMandantenwaehrung = sMandantenwaehrung;
 	}
 
-	public void setIStatus(Integer iStatus) {
-		this.iStatus = iStatus;
-	}
-
 	public Locale getLocMandant() {
 		return this.locMandant;
 	}
@@ -274,6 +252,64 @@ public class TheClientDto implements Serializable {
 	public String getSMandantenwaehrung() {
 		return sMandantenwaehrung;
 	}
+
+	public boolean isDesktopBenutzer() {
+		return desktopBenutzer;
+	}
+
+	public void setDesktopBenutzer(boolean desktopBenutzer) {
+		this.desktopBenutzer = desktopBenutzer;
+	}
+
+	public Integer getHvmaLizenzId() {
+		return hvmaLizenzId;
+	}
+
+	public void setHvmaLizenzId(Integer hvmaLizenzId) {
+		this.hvmaLizenzId = hvmaLizenzId;
+	}
+
+	public String getHvmaResource() {
+		return hvmaResource;
+	}
+
+	public void setHvmaResource(String resource) {
+		this.hvmaResource = resource;
+	}
+
+	public int getConcurrentUserCount() {
+		return concurrentUser;
+	}
+
+	public void setConcurrentUserCount(int concurrentUser) {
+		this.concurrentUser = concurrentUser;
+	}	
+
+	public Integer getReportvarianteIId() {
+		return reportvarianteIId;
+	}
+
+	public void setReportvarianteIId(Integer reportvarianteIId) {
+		this.reportvarianteIId = reportvarianteIId;
+	}
+
+	public char[] getKennwortAsCharArray() {
+		return aKennwort;
+	}
+
+	public String getKennwortAsString() {
+		return String.valueOf(aKennwort);
+	}
+
+	public void setKennwort(char[] aKennwortI) {
+		this.aKennwort = aKennwortI;
+	}
+
+
+	public void setIStatus(Integer iStatus) {
+		this.iStatus = iStatus;
+	}
+
 
 	public Integer getIStatus() {
 		return iStatus;
@@ -287,4 +323,22 @@ public class TheClientDto implements Serializable {
 		this.geschaeftsJahr = geschaeftsJahr;
 	}
 
+	public TheClientLoggedInDto asLoggedIn() {
+		TheClientLoggedInDto o = new TheClientLoggedInDto();
+		o.setBenutzername(this.getBenutzername());
+		o.setDesktopBenutzer(this.isDesktopBenutzer());
+		o.setHvmaLizenzId(this.getHvmaLizenzId());
+		o.setHvmaResource(this.getHvmaResource());
+		o.setIDPersonal(this.getIDPersonal() );
+		o.setIDUser(this.getIDUser());
+		o.setLocKonzern(this.getLocKonzern());
+		o.setLocMandant(this.getLocMandant());
+		o.setMandant(this.getMandant());
+		o.setSMandantenwaehrung(this.getSMandantenwaehrung());
+		o.setSystemrolleIId(this.getSystemrolleIId());
+		o.setTsLoggedin(this.getDLoggedin());
+		o.setTsLoggedout(this.getTsLoggedout());
+		o.setUiLoc(this.getLocUi());
+		return o;
+	}
 }

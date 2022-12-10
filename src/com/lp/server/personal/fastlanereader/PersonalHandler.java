@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.personal.fastlanereader;
 
+import java.awt.Color;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -51,6 +52,7 @@ import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodePersonal;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.service.SystemFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -60,11 +62,12 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Personal implementiert. Pro UseCase
- * gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Personal implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -104,9 +107,10 @@ public class PersonalHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = getLimit() ;
-//			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
-			int startIndex = getStartIndex(rowIndex, pageSize) ;
+			int pageSize = getLimit();
+			// int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2),
+			// 0);
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -137,10 +141,17 @@ public class PersonalHandler extends UseCaseHandler {
 				rows[row][col++] = personal.getFlrpartner().getFlrlandplzort() == null ? null
 						: personal.getFlrpartner().getFlrlandplzort()
 								.getC_plz();
-				rows[row++][col++] = personal.getFlrpartner()
+				rows[row][col++] = personal.getFlrpartner()
 						.getFlrlandplzort() == null ? null : personal
 						.getFlrpartner().getFlrlandplzort().getFlrort()
 						.getC_name();
+				rows[row][col++] =getKommentarart(personal.getX_kommentar());
+				if (Helper.short2boolean(personal.getB_versteckt())) {
+					rows[row][col++] = Color.LIGHT_GRAY;
+				}
+				
+				
+				row++;
 
 				col = 0;
 			}
@@ -211,9 +222,7 @@ public class PersonalHandler extends UseCaseHandler {
 						where.append(" lower(personal."
 								+ filterKriterien[i].kritName + ")");
 					} else {
-						where
-								.append(" personal."
-										+ filterKriterien[i].kritName);
+						where.append(" personal." + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
@@ -351,8 +360,9 @@ public class PersonalHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, String.class, String.class,
-							String.class, String.class },
+							String.class, String.class, String.class,
+							String.class, String.class, String.class,String.class,
+							Color.class },
 					new String[] {
 							"Id",
 							getTextRespectUISpr("lp.personalnr", mandantCNr,
@@ -365,7 +375,8 @@ public class PersonalHandler extends UseCaseHandler {
 									locUI),
 							getTextRespectUISpr("lp.lkz", mandantCNr, locUI),
 							getTextRespectUISpr("lp.plz", mandantCNr, locUI),
-							getTextRespectUISpr("lp.ort", mandantCNr, locUI) },
+							getTextRespectUISpr("lp.ort", mandantCNr, locUI),getTextRespectUISpr("lp.kommentar", mandantCNr, locUI),
+							"" },
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
 							QueryParameters.FLR_BREITE_M,
@@ -374,7 +385,7 @@ public class PersonalHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_S,
 							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M },
+							QueryParameters.FLR_BREITE_M,1, -1 },
 					new String[] {
 							"i_id",
 							PersonalFac.FLR_PERSONAL_C_PERSONALNUMMER,
@@ -397,7 +408,7 @@ public class PersonalHandler extends UseCaseHandler {
 							PersonalFac.FLR_PERSONAL_FLRPARTNER + "."
 									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
 									+ "." + SystemFac.FLR_LP_FLRORT + "."
-									+ SystemFac.FLR_LP_ORTNAME }));
+									+ SystemFac.FLR_LP_ORTNAME,Facade.NICHT_SORTIERBAR, "" }));
 		}
 
 		return super.getTableInfo();
@@ -423,19 +434,20 @@ public class PersonalHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (partnerDto != null) {
-//			String sPersonal = partnerDto.getCName1nachnamefirmazeile1()
-//					.replace("/", ".");
-//			if (partnerDto.getCName2vornamefirmazeile2() != null) {
-//				sPersonal = sPersonal
-//						+ " "
-//						+ partnerDto.getCName2vornamefirmazeile2().replace("/",
-//								".");
-//			}
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_PERSONAL.trim() + "/"
-//					+ LocaleFac.BELEGART_PERSONAL.trim() + "/" + sPersonal;
-			DocPath docPath = new DocPath(new DocNodePersonal(personalDto, partnerDto));
+			// String sPersonal = partnerDto.getCName1nachnamefirmazeile1()
+			// .replace("/", ".");
+			// if (partnerDto.getCName2vornamefirmazeile2() != null) {
+			// sPersonal = sPersonal
+			// + " "
+			// + partnerDto.getCName2vornamefirmazeile2().replace("/",
+			// ".");
+			// }
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_PERSONAL.trim() + "/"
+			// + LocaleFac.BELEGART_PERSONAL.trim() + "/" + sPersonal;
+			DocPath docPath = new DocPath(new DocNodePersonal(personalDto,
+					partnerDto));
 			return new PrintInfoDto(docPath, null, getSTable());
 		} else {
 			return null;

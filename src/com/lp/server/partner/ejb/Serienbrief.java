@@ -97,6 +97,21 @@ public class Serienbrief implements Serializable {
 	@Column(name = "X_MAILTEXT")
 	private String xMailtext;
 
+	@Column(name = "B_HTML")
+	private Short bHtml ;
+
+	@Column(name = "LOCALE_C_NR")
+	private String localeCNr;
+	
+	
+	public String getLocaleCNr() {
+		return localeCNr;
+	}
+
+	public void setLocaleCNr(String localeCNr) {
+		this.localeCNr = localeCNr;
+	}
+
 	public String getXMailtext() {
 		return this.xMailtext;
 	}
@@ -236,7 +251,7 @@ public class Serienbrief implements Serializable {
 			Short bGehtanlieferanten, Short bGehtanmoeglichelieferanten,
 			Short bGehtanpartner, Short bMitzugeordnetenfirmen,
 			Short bNewsletterShort, Short bSelektionenLogischesOder,
-			Short bWennkeinanspmitfktDannersteransp) {
+			Short bWennkeinanspmitfktDannersteransp, Short bHtml, String localeCNr) {
 
 		setIId(iId);
 		setCBez(cBez);
@@ -256,6 +271,8 @@ public class Serienbrief implements Serializable {
 		setbNewsletter(bNewsletter);
 		setBWennkeinanspmitfktDannersteransp(bWennkeinanspmitfktDannersteransp);
 		setBSelektionenLogischesOder(bSelektionenLogischesOder);
+		setBHtml(bHtml) ;
+		setLocaleCNr(localeCNr);
 	}
 
 	public Integer getIId() {
@@ -411,4 +428,11 @@ public class Serienbrief implements Serializable {
 		this.personalIIdAnlegen = personalIIdAnlegen;
 	}
 
+	public Short getBHtml() {
+		return bHtml;
+	}
+
+	public void setBHtml(Short bHtml) {
+		this.bHtml = bHtml;
+	}
 }

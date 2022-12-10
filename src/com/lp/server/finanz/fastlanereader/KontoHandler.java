@@ -2,37 +2,35 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
-
-import java.util.List;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -64,56 +62,32 @@ import com.lp.util.EJBExceptionLP;
  * </p>
  * <p>
  * </p>
- * 
+ *
  * @author MB
  * @version 1.0
  */
 
 public abstract class KontoHandler extends UseCaseHandler {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 8100668485401670018L;
 
-	abstract public QueryResult getPageAt(Integer rowIndex)
-			throws EJBExceptionLP;
+	abstract public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP;
 
 	/**
 	 * gets the total number of rows represented by the current query.
-	 * 
+	 *
 	 * @see UseCaseHandler#getRowCountFromDataBase()
 	 * @return int
 	 */
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
-		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
-		}
-		return rowCount;
+		String queryString = "SELECT COUNT(distinct konto.i_id) " + getFromClause() + buildWhereClause();
+		return getRowCountFromDataBaseByQuery(queryString);
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
-	 * 
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
+	 *
 	 * @return the HQL where clause.
 	 */
 	protected String buildWhereClause() {
@@ -123,8 +97,7 @@ public abstract class KontoHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 
 			boolean filterAdded = false;
@@ -136,23 +109,25 @@ public abstract class KontoHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 
-					if(filterKriterien[i].kritName.equals(FinanzFac.FILTER_KONTO_OHNE_MITLAUFENDE)) {
+					if (filterKriterien[i].kritName.equals(FinanzFac.FILTER_KONTO_OHNE_MITLAUFENDE)) {
 						where.append(KontoQueryBuilder.buildOhneMitlaufendeKonten("konto"));
-					} else if(filterKriterien[i].kritName.equals(FinanzFac.FILTER_KONTO_OHNE_UST_VST_KONTEN_AUSSER_MWSTSATZBEZ)) {
-						where.append(
-								KontoQueryBuilder.buildOhneUstVstKontenAusserMwstsatzBez("konto",
-										new Integer(filterKriterien[i].value)));
+					} else if (filterKriterien[i].kritName
+							.equals(FinanzFac.FILTER_KONTO_OHNE_UST_VST_KONTEN_AUSSER_MWSTSATZBEZ)) {
+						where.append(KontoQueryBuilder.buildOhneUstVstKontenAusserMwstsatzBez("konto",
+								new Integer(filterKriterien[i].value)));
+					} else if (filterKriterien[i].kritName.equals(FinanzFac.FILTER_KONTEN_MIT_BUCHUNGEN)) {
+						where.append(KontoQueryBuilder.showKontenMitBuchungen(filterKriterien[i].value));
+					} else if (filterKriterien[i].kritName.equals("c_suche")) {
+						where.append(KontoQueryBuilder.findKonto(filterKriterien[i].value.toLowerCase()));
 					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower(konto."
-									+ filterKriterien[i].kritName + ")");
+							where.append(" lower(konto." + filterKriterien[i].kritName + ")");
 						} else {
 							where.append(" konto." + filterKriterien[i].kritName);
 						}
 						where.append(" " + filterKriterien[i].operator);
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
+							where.append(" " + filterKriterien[i].value.toLowerCase());
 						} else {
 							where.append(" " + filterKriterien[i].value);
 						}
@@ -163,14 +138,13 @@ public abstract class KontoHandler extends UseCaseHandler {
 				where.insert(0, " WHERE");
 			}
 		}
-
 		return where.toString();
 	}
 
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 * 
+	 *
 	 * @return the HQL order by clause.
 	 */
 	protected String buildOrderByClause() {
@@ -185,7 +159,13 @@ public abstract class KontoHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("konto." + kriterien[i].kritName);
+
+						if (kriterien[i].kritName.startsWith("flr_mwstsatz")) {
+							orderBy.append(kriterien[i].kritName);
+						} else {
+							orderBy.append("konto." + kriterien[i].kritName);
+						}
+
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -219,27 +199,24 @@ public abstract class KontoHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 * 
+	 *
 	 * @return the from clause.
 	 */
 	protected String getFromClause() {
-		return "from FLRFinanzKonto konto ";
+		return " from FLRFinanzKonto konto ";
 	}
 
 	/**
 	 * sorts the data described by the current query using the specified sort
 	 * criterias. The current query is also updated with the new sort criterias.
-	 * 
+	 *
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
-	 * @param sortierKriterien
-	 *            SortierKriterium[]
-	 * @param selectedId
-	 *            Object
+	 * @param sortierKriterien SortierKriterium[]
+	 * @param selectedId       Object
 	 * @return QueryResult
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -251,9 +228,8 @@ public abstract class KontoHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select konto." + FinanzFac.FLR_KONTO_I_ID
-						+ " from FLRFinanzKonto konto "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "SELECT konto." + FinanzFac.FLR_KONTO_I_ID + getFromClause() + buildWhereClause()
+						+ buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -289,7 +265,7 @@ public abstract class KontoHandler extends UseCaseHandler {
 
 	/**
 	 * gets information about the Kontentable.
-	 * 
+	 *
 	 * @return TableInfo
 	 */
 	public TableInfo getTableInfo() {

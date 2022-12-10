@@ -36,26 +36,32 @@ import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 
-import com.lp.server.auftrag.fastlanereader.generated.FLRPositionenSichtAuftrag;
+import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
 import com.lp.server.util.PositionNumberAdapter;
+import com.lp.util.Helper;
 
 public class FLRAuftragPositionNumberAdapter extends PositionNumberAdapter
 		implements Serializable {
 
 	private static final long serialVersionUID = -7523286373482591604L;
 
-	private List<FLRPositionenSichtAuftrag> positions ;
-	private FLRPositionenSichtAuftrag flrPosition ;
+	private List<FLRAuftragposition> positions ;
+	private FLRAuftragposition flrPosition ;
 	
-	public FLRAuftragPositionNumberAdapter(List<FLRPositionenSichtAuftrag> positions) {
+	public FLRAuftragPositionNumberAdapter(List<FLRAuftragposition> positions) {
 		this.positions = positions ;
 	}
 	
 	@Override 
 	public void setAdaptee(Object adaptee) {
-		flrPosition = (FLRPositionenSichtAuftrag) adaptee ;
+		flrPosition = (FLRAuftragposition) ((Object[])adaptee)[0] ;
 	}
 
+	@Override
+	public Object getAdaptee() {
+		return flrPosition ;
+	}
+	
 	@Override
 	public Integer getIId() {
 		return flrPosition.getI_id() ;
@@ -108,4 +114,14 @@ public class FLRAuftragPositionNumberAdapter extends PositionNumberAdapter
 		return positions.iterator() ;
 	}
 
+	@Override
+	public boolean isIdent() {
+		Short kalkulatorisch = flrPosition.getFlrartikel().getB_kalkulatorisch();
+		return !Helper.short2boolean(kalkulatorisch) ;
+	}
+	
+	@Override
+	public List<?> getPositionsListForHeadIId(Integer headIId) {
+		return positions;
+	}
 }

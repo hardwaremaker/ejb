@@ -34,7 +34,7 @@ package com.lp.server.fertigung.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-
+import java.sql.Timestamp;
 
 public class LosgutschlechtDto implements Serializable {
 	private Integer iId;
@@ -42,26 +42,53 @@ public class LosgutschlechtDto implements Serializable {
 	private Integer lossollarbeitsplanIId;
 	private BigDecimal nGut;
 	private BigDecimal nSchlecht;
+	private Timestamp tZeitpunkt;
+
+	private Integer personalIIdAnlegen;
+
+	public Integer getPersonalIIdAnlegen() {
+		return this.personalIIdAnlegen;
+	}
+
+	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
+		this.personalIIdAnlegen = personalIIdAnlegen;
+	}
+
+	private Timestamp tAnlegen;
+
+	public Timestamp getTAnlegen() {
+		return this.tAnlegen;
+	}
+
+	public void setTAnlegen(Timestamp tAnlegen) {
+		this.tAnlegen = tAnlegen;
+	}
+
 	public Integer getIId() {
 		return iId;
 	}
+
 	public void setIId(Integer id) {
 		iId = id;
 	}
+
 	public Integer getZeitdatenIId() {
 		return zeitdatenIId;
 	}
+
 	public Integer getLossollarbeitsplanIId() {
 		return lossollarbeitsplanIId;
 	}
+
 	public void setLossollarbeitsplanIId(Integer lossollarbeitsplanIId) {
 		this.lossollarbeitsplanIId = lossollarbeitsplanIId;
 	}
+
 	public void setZeitdatenIId(Integer zeitdatenIId) {
 		this.zeitdatenIId = zeitdatenIId;
 	}
+
 	private Integer maschinenzeitdatenIId;
-	
 
 	public Integer getMaschinenzeitdatenIId() {
 		return maschinenzeitdatenIId;
@@ -71,31 +98,45 @@ public class LosgutschlechtDto implements Serializable {
 		this.maschinenzeitdatenIId = maschinenzeitdatenIId;
 	}
 
-	
+	private Integer personalIIdErfasst;
+
+	public Integer getPersonalIIdErfasst() {
+		return personalIIdErfasst;
+	}
+
+	public void setPersonalIIdErfasst(Integer personalIIdErfasst) {
+		this.personalIIdErfasst = personalIIdErfasst;
+	}
+
 	public BigDecimal getNGut() {
 		return nGut;
 	}
+
 	public void setNGut(BigDecimal gut) {
 		nGut = gut;
 	}
+
 	public BigDecimal getNSchlecht() {
 		return nSchlecht;
 	}
+
 	public void setNSchlecht(BigDecimal schlecht) {
 		nSchlecht = schlecht;
 	}
+
 	public BigDecimal getNInarbeit() {
 		return nInarbeit;
 	}
+
 	public void setNInarbeit(BigDecimal inarbeit) {
 		nInarbeit = inarbeit;
 	}
-	private BigDecimal nInarbeit;
-	
-	private Integer fehlerIId;
-	
-	private String cKommentar;
 
+	private BigDecimal nInarbeit;
+
+	private Integer fehlerIId;
+
+	private String cKommentar;
 
 	public Integer getFehlerIId() {
 		return fehlerIId;
@@ -112,5 +153,13 @@ public class LosgutschlechtDto implements Serializable {
 	public void setCKommentar(String cKommentar) {
 		this.cKommentar = cKommentar;
 	}
-	
+
+	public Timestamp getTZeitpunkt() {
+		return tZeitpunkt;
+	}
+
+	public void setTZeitpunkt(Timestamp tZeitpunkt) {
+		this.tZeitpunkt = tZeitpunkt;
+	}
+
 }

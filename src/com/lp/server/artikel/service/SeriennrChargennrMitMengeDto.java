@@ -39,10 +39,19 @@ import java.util.List;
 
 import com.lp.server.system.service.PaneldatenDto;
 
-public class SeriennrChargennrMitMengeDto implements Serializable {
-	/**
-	 * 
-	 */
+public class SeriennrChargennrMitMengeDto implements Serializable, Cloneable {
+	
+
+	
+	
+	public Integer getLagerbewegungIIdLetzteintrag() {
+		return lagerbewegungIIdLetzteintrag;
+	}
+
+	public void setLagerbewegungIIdLetzteintrag(Integer lagerbewegungIIdLetzteintrag) {
+		this.lagerbewegungIIdLetzteintrag = lagerbewegungIIdLetzteintrag;
+	}
+
 	public static List<SeriennrChargennrMitMengeDto> erstelleDtoAusEinerSeriennummer(
 			String seriennummer) {
 		return erstelleSrnDtoArrayAusStringArray(new String[] { seriennummer });
@@ -62,6 +71,14 @@ public class SeriennrChargennrMitMengeDto implements Serializable {
 			BigDecimal menge) {
 		nMenge = menge;
 		this.cSeriennrChargennr = cSeriennrChargennr;
+	}
+
+	public SeriennrChargennrMitMengeDto(String cSeriennrChargennr,
+			BigDecimal menge, Integer gebindeIId, BigDecimal nGebindemenge) {
+		nMenge = menge;
+		this.cSeriennrChargennr = cSeriennrChargennr;
+		this.gebindeIId = gebindeIId;
+		this.nGebindemenge = nGebindemenge;
 	}
 
 	public SeriennrChargennrMitMengeDto(String cSeriennrChargennr,
@@ -265,8 +282,47 @@ public class SeriennrChargennrMitMengeDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private BigDecimal nMenge;
 	private String cSeriennrChargennr;
-	public Integer lossollmaterialIId = null;
+	private Integer lossollmaterialIId = null;
 	private String cVersion;
+	private Integer gebindeIId;
+	private Integer lagerbewegungIIdLetzteintrag;
+	private Integer lagerIId = null;
+	
+	public Integer getLagerIId() {
+		return lagerIId;
+	}
+
+	public void setLagerIId(Integer lagerIId) {
+		this.lagerIId = lagerIId;
+	}
+
+	private java.sql.Timestamp tBuchungszeit=null;
+
+	public java.sql.Timestamp getTBuchungszeit() {
+		return tBuchungszeit;
+	}
+
+	public void setTBuchungszeit(java.sql.Timestamp tBuchungszeit) {
+		this.tBuchungszeit = tBuchungszeit;
+	}
+
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
+	}
+
+	private BigDecimal nGebindemenge;
+
+	public BigDecimal getNGebindemenge() {
+		return nGebindemenge;
+	}
+
+	public void setNGebindemenge(BigDecimal nGebindemenge) {
+		this.nGebindemenge = nGebindemenge;
+	}
 
 	public String getCVersion() {
 		return cVersion;
@@ -276,7 +332,7 @@ public class SeriennrChargennrMitMengeDto implements Serializable {
 		this.cVersion = cVersion;
 	}
 
-	ArrayList<GeraetesnrDto> alGeraetesnr = null;
+	private ArrayList<GeraetesnrDto> alGeraetesnr = null;
 
 	PaneldatenDto[] paneldatenDtos = null;
 
@@ -300,6 +356,22 @@ public class SeriennrChargennrMitMengeDto implements Serializable {
 		return nMenge;
 	}
 
+	public BigDecimal getNMengeInAbhaengigkeitVonPositionsmenge(
+			BigDecimal bdPositionsmenge) {
+
+		if (bdPositionsmenge != null && bdPositionsmenge.signum() == -1) {
+			if (nMenge != null) {
+				return nMenge.negate();
+			} else {
+				return nMenge;
+			}
+
+		} else {
+			return nMenge;
+		}
+
+	}
+
 	public String getCSeriennrChargennr() {
 		return cSeriennrChargennr;
 	}
@@ -310,5 +382,47 @@ public class SeriennrChargennrMitMengeDto implements Serializable {
 
 	public void setCSeriennrChargennr(String cSeriennrChargennr) {
 		this.cSeriennrChargennr = cSeriennrChargennr;
+	}
+	
+	public Integer getLossollmaterialIId() {
+		return lossollmaterialIId;
+	}
+
+	public void setLossollmaterialIId(Integer lossollmaterialIId) {
+		this.lossollmaterialIId = lossollmaterialIId;
+	}
+
+	public boolean equalsIdentity(SeriennrChargennrMitMengeDto that) {
+		if (this == that) {
+			return true;
+		}
+
+		if (!(that.nMenge == null ? this.nMenge == null : that.nMenge.compareTo(this.nMenge) == 0)) {
+			return false;
+		}
+		String sthat = that.cSeriennrChargennr == null ? "" : that.cSeriennrChargennr;
+		String sthis = this.cSeriennrChargennr == null ? "" : this.cSeriennrChargennr;
+		if (!(sthat.equals(sthis))) {
+			return false;
+		}
+		sthat = that.cVersion == null ? "" : that.cVersion;
+		sthis = this.cVersion == null ? "" : this.cVersion;
+		if (!(sthat.equals(sthis))) {
+			return false;
+		}
+		if (!(that.nGebindemenge == null ? this.nGebindemenge == null : that.nGebindemenge.compareTo(this.nGebindemenge) == 0)) {
+			return false;
+		}
+
+		return true;
+	}
+	
+	@Override
+	public SeriennrChargennrMitMengeDto clone() {
+		try {
+			return (SeriennrChargennrMitMengeDto) super.clone();
+		} catch (CloneNotSupportedException e) {
+			return null;
+		}
 	}
 }

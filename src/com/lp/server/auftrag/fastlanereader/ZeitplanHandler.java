@@ -115,11 +115,20 @@ public class ZeitplanHandler extends UseCaseHandler {
 				FLRZeitplan zeitplan = (FLRZeitplan) resultListIterator.next();
 				rows[row][col++] = zeitplan.getI_id();
 
-				rows[row][col++] = Helper.addiereTageZuDatum(zeitplan
-						.getFlrauftrag().getT_liefertermin(), -zeitplan
-						.getI_termin_vor_liefertermin());
+				rows[row][col++] = zeitplan.getT_termin();
 				rows[row][col++] = zeitplan.getN_material();
+				if (zeitplan.getT_material_erledigt() != null) {
+					rows[row][col++] = Boolean.TRUE;
+				} else {
+					rows[row][col++] = Boolean.FALSE;
+				}
+
 				rows[row][col++] = zeitplan.getN_dauer();
+				if (zeitplan.getT_dauer_erledigt() != null) {
+					rows[row][col++] = Boolean.TRUE;
+				} else {
+					rows[row][col++] = Boolean.FALSE;
+				}
 				rows[row++][col++] = zeitplan.getC_kommentar();
 
 				col = 0;
@@ -233,7 +242,7 @@ public class ZeitplanHandler extends UseCaseHandler {
 					orderBy.append(", ");
 				}
 				orderBy.append(FLR_ZEITPLAN)
-						.append(AuftragServiceFac.FLR_ZEITPLAN_I_TERMIN_VOR_LIEFERTERMIN)
+						.append(AuftragServiceFac.FLR_ZEITPLAN_T_TERMIN)
 						.append(" ASC ");
 				sortAdded = true;
 			}
@@ -324,30 +333,39 @@ public class ZeitplanHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					java.sql.Date.class, BigDecimal.class, BigDecimal.class,
-					String.class }, new String[] {
-					"i_id",
-					getTextRespectUISpr("auft.zeitplan.termin", mandantCNr,
-							locUI),
-					getTextRespectUISpr("auft.zeitplan.material", mandantCNr,
-							locUI),
-					getTextRespectUISpr("auft.zeitplan.dauer", mandantCNr,
-							locUI),
-					getTextRespectUISpr("auft.zeitplan.kommentar", mandantCNr,
-							locUI), },
+					java.sql.Date.class, BigDecimal.class, Boolean.class,
+					BigDecimal.class, Boolean.class, String.class },
+					new String[] {
+							"i_id",
+							getTextRespectUISpr("auft.zeitplan.termin",
+									mandantCNr, locUI),
+							getTextRespectUISpr("auft.zeitplan.material",
+									mandantCNr, locUI),
+							getTextRespectUISpr("auft.zeitplan.erledigt",
+									mandantCNr, locUI),
+							getTextRespectUISpr("auft.zeitplan.dauer",
+									mandantCNr, locUI),
+							getTextRespectUISpr("auft.zeitplan.erledigt",
+									mandantCNr, locUI),
+							getTextRespectUISpr("auft.zeitplan.kommentar",
+									mandantCNr, locUI), },
 
-			new int[] {
-					-1, // diese Spalte wird ausgeblendet
-					QueryParameters.FLR_BREITE_M,
-					QueryParameters.FLR_BREITE_PREIS,
-					QueryParameters.FLR_BREITE_PREIS,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_PREIS,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_PREIS,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
-			new String[] { "i_id",
-					AuftragServiceFac.FLR_ZEITPLAN_I_TERMIN_VOR_LIEFERTERMIN,
-					AuftragServiceFac.FLR_ZEITPLAN_N_MATERIAL,
-					AuftragServiceFac.FLR_ZEITPLAN_N_DAUER,
-					AuftragServiceFac.FLR_ZEITPLAN_C_KOMMENTAR }));
+					new String[] { "i_id",
+							AuftragServiceFac.FLR_ZEITPLAN_T_TERMIN,
+							AuftragServiceFac.FLR_ZEITPLAN_N_MATERIAL,
+							AuftragServiceFac.FLR_ZEITPLAN_T_MATERIAL_ERLEDIGT,
+							AuftragServiceFac.FLR_ZEITPLAN_N_DAUER,
+							AuftragServiceFac.FLR_ZEITPLAN_T_DAUER_ERLEDIGT,
+							AuftragServiceFac.FLR_ZEITPLAN_C_KOMMENTAR }));
 		}
 
 		return super.getTableInfo();

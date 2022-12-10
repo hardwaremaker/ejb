@@ -148,7 +148,7 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 										.getFlrpersonalgespeichert()
 										.getFlrpartner()) + ")";
 					}
-					rows[row][col++] = LocaleFac.STATUS_GELIEFERT;
+					rows[row][col++] = LocaleFac.STATUS_GESPEICHERT;
 					tooltipData[row] = s;
 				}
 

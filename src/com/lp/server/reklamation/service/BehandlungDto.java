@@ -41,7 +41,6 @@ public class BehandlungDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
 	private String cNr;
-	private String cBez;
 	private Integer iPunkte;
 
 	public Integer getIId() {
@@ -51,14 +50,28 @@ public class BehandlungDto implements Serializable {
 	public void setIId(Integer iId) {
 		this.iId = iId;
 	}
+	
+	
+	private BehandlungsprDto sprDto;
+
+	public BehandlungsprDto getBehandlungsprDto() {
+		return sprDto;
+	}
+
+	public void setBehandlungsprDto(BehandlungsprDto sprDto) {
+		this.sprDto = sprDto;
+	}
+
 
 	public String formatBezeichnung() {
 		String bez = getCNr();
-		if (getCBez() != null) {
-			bez = " " + getCBez();
+		if (getBehandlungsprDto() != null && getBehandlungsprDto().getCBez() != null) {
+			bez = " " + getBehandlungsprDto().getCBez();
 		}
 		return bez;
 	}
+	
+
 
 	public String getCNr() {
 		return cNr;
@@ -68,13 +81,7 @@ public class BehandlungDto implements Serializable {
 		this.cNr = cNr;
 	}
 
-	public String getCBez() {
-		return cBez;
-	}
-
-	public void setCBez(String cBez) {
-		this.cBez = cBez;
-	}
+	
 
 	public Integer getIPunkte() {
 		return iPunkte;
@@ -94,9 +101,6 @@ public class BehandlungDto implements Serializable {
 			return false;
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr)))
 			return false;
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez)))
-			return false;
 		if (!(that.iPunkte == null ? this.iPunkte == null : that.iPunkte
 				.equals(this.iPunkte)))
 			return false;
@@ -107,7 +111,6 @@ public class BehandlungDto implements Serializable {
 		int result = 17;
 		result = 37 * result + this.iId.hashCode();
 		result = 37 * result + this.cNr.hashCode();
-		result = 37 * result + this.cBez.hashCode();
 		result = 37 * result + this.iPunkte.hashCode();
 		return result;
 	}
@@ -117,7 +120,6 @@ public class BehandlungDto implements Serializable {
 		returnStringBuffer.append("[");
 		returnStringBuffer.append("iId:").append(iId);
 		returnStringBuffer.append("cNr:").append(cNr);
-		returnStringBuffer.append("cBez:").append(cBez);
 		returnStringBuffer.append("iPunkte:").append(iPunkte);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();

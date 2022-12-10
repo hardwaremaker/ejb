@@ -42,7 +42,6 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.lp.server.stueckliste.fastlanereader.generated.FLRMontageart;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -89,7 +88,7 @@ public class MontageartHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
+			String queryString = "SELECT montageart.i_id, montageart.c_bez, artikel.c_nr, aspr.c_bez " + this.getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -100,23 +99,21 @@ public class MontageartHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRMontageart montageart = (FLRMontageart) resultListIterator
+				Object[] o = (Object[]) resultListIterator
 						.next();
-				rows[row][col++] = montageart.getI_id();
-				rows[row++][col++] = montageart.getC_bez();
-
+				rows[row][col++] = o[0];
+				rows[row][col++] = o[1];
+				rows[row][col++] = o[2];
+				rows[row][col++] = o[3];
+				++row;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
 					endIndex, 0);
-		} catch (HibernateException e) {
+		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			sessionClose(session);
 		}
 		return result;
 	}
@@ -212,7 +209,7 @@ public class MontageartHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("montageart." + kriterien[i].kritName);
+						orderBy.append(kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -252,7 +249,9 @@ public class MontageartHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRMontageart montageart ";
+		return " FROM FLRMontageart montageart "
+				+ " LEFT OUTER JOIN montageart.flrartikel AS artikel "
+				+ " LEFT OUTER JOIN montageart.flrartikel.artikelsprset AS aspr ";
 	}
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -268,7 +267,7 @@ public class MontageartHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select montageart.i_id from FLRMontageart montageart "
+				String queryString = "select montageart.i_id, montageart.c_bez, artikel.c_nr, aspr.c_bez  " + this.getFromClause()
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -311,22 +310,31 @@ public class MontageartHandler extends UseCaseHandler {
 			setTableInfo(new TableInfo(
 					new Class[] {
 							Integer.class,
+							String.class,
+							String.class,
 							String.class
 					},
 					
 					new String[] {
 							"Id",
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.artikelnummer", mandantCNr, locUI),
 							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)
 					},
 					
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_IDENT,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST
 					},
 					
 					new String[] {
 							"id",
-							StuecklisteFac.FLR_MONTAGEART_C_BEZ }));
+							"montageart.c_bez",
+							"artikel.c_nr",
+							"aspr.c_bez"
+					}));
 		}
 
 		return super.getTableInfo();

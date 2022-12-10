@@ -34,6 +34,8 @@ package com.lp.server.system.service;
 
 import java.io.Serializable;
 
+import com.lp.server.kpi.service.KpiReportStorage;
+
 /**
  * <p>
  * Diese Klasse kuemmert sich um ...
@@ -69,6 +71,9 @@ public class ReportJournalKriterienDto implements Serializable {
 	public final static int KRIT_SORT_NACH_ART = 7;
 	public final static int KRIT_SORT_NACH_DATUM = 8;
 	public final static int KRIT_SORT_NACH_FAELLIGKEIT = 9;
+	//PJ19178
+	public final static int KRIT_SORT_NACH_LIEFERADRESSE = 10;
+	public final static int KRIT_SORT_NACH_PROVISIONSEMPFAENGER = 11;
 
 	// Default Sortierung nach Belegnummer
 	public int iSortierung = KRIT_SORT_NACH_BELEGNUMMER;
@@ -86,4 +91,15 @@ public class ReportJournalKriterienDto implements Serializable {
 	public Integer lieferantIId = null;
 	public Integer partnerIId = null;
 	public Integer vertreterIId = null;
+	public Integer provisionsempfaengerIId = null;
+	
+	private KpiReportStorage kpiReportStorage = null;
+
+	public KpiReportStorage getKpiReportStorage() {
+		return kpiReportStorage;
+	}
+
+	public void setKpiReportStorage(KpiReportStorage kpiStorage) {
+		this.kpiReportStorage = kpiStorage;
+	}
 }

@@ -50,6 +50,8 @@ public class FLRFinanzWarenverkehrsnummer implements Serializable {
 	/** nullable persistent field */
 	private String c_bez;
 
+	private String c_bm;
+	
 	/** full constructor */
 	public FLRFinanzWarenverkehrsnummer(String c_bez) {
 		this.c_bez = c_bez;
@@ -75,8 +77,15 @@ public class FLRFinanzWarenverkehrsnummer implements Serializable {
 		this.c_bez = c_bez;
 	}
 
+	public String getC_bm() {
+		return this.c_bm;
+	}
+	
+	public void setC_bm(String c_bm) {
+		this.c_bm = c_bm;
+	}
+	
 	public String toString() {
 		return new ToStringBuilder(this).append("c_nr", getC_nr()).toString();
 	}
-
 }

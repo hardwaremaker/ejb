@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.partner.fastlanereader;
@@ -73,27 +73,27 @@ import com.lp.util.Helper;
  * <p>
  * Diese Klasse kuemmert sich um den Lieferanten-FLR.
  * </p>
- * 
+ *
  * <p>
  * Copyright Logistik Pur Software GmbH (c) 2004-2007
  * </p>
- * 
+ *
  * <p>
  * Erstellungsdatum 2005-01-10
  * </p>
- * 
+ *
  * <p>
- * 
+ *
  * @author $Author: robert $
  *         </p>
- * 
+ *
  * @version $Revision: 1.17 $ Date $Date: 2013/01/19 11:47:31 $
  */
 
 public class LieferantHandler extends UseCaseHandler {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	boolean bSuchenInklusiveKbez = true;
@@ -200,7 +200,7 @@ public class LieferantHandler extends UseCaseHandler {
 	/**
 	 * builds the where clause of the HQL (Hibernate Query Language) statement
 	 * using the current query.
-	 * 
+	 *
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
@@ -272,7 +272,7 @@ public class LieferantHandler extends UseCaseHandler {
 						suchstring += "||' '||coalesce(partneransprechpartner.c_name3vorname2abteilung,'')||' '||coalesce(lieferant.flrpartner.c_email,'')||' '||coalesce(lieferant.flrpartner.c_fax,'')";
 
 						suchstring += "||' '||coalesce(lieferant.flrpartner.c_telefon,'')||' '||coalesce(ansprechpartnerset.c_handy,'')||' '||coalesce(ansprechpartnerset.c_email,'')||' '||coalesce(ansprechpartnerset.c_fax,'')||' '||coalesce(ansprechpartnerset.c_telefon,'')";
-						suchstring += "||' '||coalesce(cast(ansprechpartnerset.x_bemerkung as string),'')||' '||coalesce(cast(lieferant.x_kommentar as string),'')";
+						suchstring += "||' '||coalesce(cast(ansprechpartnerset.x_bemerkung as text),'')||' '||coalesce(cast(lieferant.x_kommentar as text),'')||' '||coalesce(cast(lieferant.flrpartner.x_bemerkung as text),'')";
 						suchstring += "||' '||coalesce(lieferant.c_hinweisintern,'')||' '||coalesce(lieferant.c_hinweisextern,'')";
 
 						String[] teile = filterKriterien[i].value.toLowerCase()
@@ -294,6 +294,18 @@ public class LieferantHandler extends UseCaseHandler {
 							}
 						}
 
+					} else if (filterKriterien[i].kritName
+							.equals("kreditorennummer")) {
+						where.append(" (lower(lieferant.flrkonto.c_nr)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase()+ ")");
+					} else if (filterKriterien[i].kritName.equals("PLZOrt")) {
+						where.append(" (lower(lieferant.flrpartner.flrlandplzort.flrort.c_name)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase());
+						where.append(" OR lower(lieferant.flrpartner.flrlandplzort.c_plz)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase() + ")");
 					}
 
 					else {
@@ -328,7 +340,7 @@ public class LieferantHandler extends UseCaseHandler {
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 * 
+	 *
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
@@ -359,6 +371,7 @@ public class LieferantHandler extends UseCaseHandler {
 				orderBy.append("lieferant." + LieferantFac.FLR_PARTNER + "."
 						+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1
 						+ " ASC ");
+				sortAdded = true;
 			}
 			if (orderBy.indexOf("lieferant.i_id") < 0) {
 				// unique sort required because otherwise rowNumber of
@@ -381,7 +394,7 @@ public class LieferantHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 * 
+	 *
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
@@ -501,7 +514,7 @@ public class LieferantHandler extends UseCaseHandler {
 	/**
 	 * Die Liste aller Lieferanten holen. Dabei werden nicht die gesamten
 	 * Datensaetze benoetigt, sondern nur die IDs.
-	 * 
+	 *
 	 * @return String
 	 */
 	public static String getQueryLieferantenliste() {
@@ -519,7 +532,7 @@ public class LieferantHandler extends UseCaseHandler {
 
 	/**
 	 * Ueber diese Methode kann eine Facade auf eine Lieferantenliste zugreifen.
-	 * 
+	 *
 	 * @param cQueryStringI
 	 *            der Hibernate Query String
 	 * @return List<?> die Liste der Lieferanten.

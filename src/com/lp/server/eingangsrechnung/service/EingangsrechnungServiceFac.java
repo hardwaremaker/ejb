@@ -43,20 +43,31 @@ import com.lp.util.EJBExceptionLP;
 
 @Remote
 public interface EingangsrechnungServiceFac {
+
+	public static final String ER_DEFAULT_KOPFTEXT = "Vereinbarungsgem\u00E4\u00DF schreiben wir Ihnen wie folgt gut:"
+			+ new String(new byte[] { 13, 10 });
+	public static final String ER_DEFAULT_FUSSTEXT = "Wir danken f\u00FCr Ihre Unterst\u00FCtzung."
+			+ new String(new byte[] { 13, 10 })
+			+ "Mit freundlichen Gr\u00FC\u00DFen "
+			+ new String(new byte[] { 13, 10 });
+
 	public void createEingangsrechnungart(EingangsrechnungartDto erartDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void updateEingangsrechnungart(
-			EingangsrechnungartDto eingangsrechnungartDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			EingangsrechnungartDto eingangsrechnungartDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public EingangsrechnungartDto eingangsrechnungartFindByPrimaryKey(
-			String cNr, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			String cNr, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException;
 
 	public EingangsrechnungartDto[] eingangsrechnungartFindAll()
 			throws EJBExceptionLP, RemoteException;
+
 	public Map<String, String> getSprEingangsrechnungartNurZusatzkosten(
 			String cNrSpracheI);
+
 	public EingangsrechnungartsprDto eingangsrechnungartsprFindByPrimaryKey(
 			String eingangsrechnungartCNr, String localeCNr)
 			throws EJBExceptionLP, RemoteException;
@@ -65,8 +76,8 @@ public interface EingangsrechnungServiceFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public void createEingangsrechnungstatus(
-			EingangsrechnungstatusDto eingangsrechnungstatusDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			EingangsrechnungstatusDto eingangsrechnungstatusDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public EingangsrechnungstatusDto eingangsrechnungstatusFindByPrimaryKey(
 			String statusCNr) throws EJBExceptionLP, RemoteException;
@@ -75,6 +86,25 @@ public interface EingangsrechnungServiceFac {
 			Locale locale1, Locale locale2) throws RemoteException;
 
 	public void createEingangsrechnungartspr(
-			EingangsrechnungartsprDto eingangsrechnungartsprDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			EingangsrechnungartsprDto eingangsrechnungartsprDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void updateEingangsrechnungtext(EingangsrechnungtextDto textDto,
+			TheClientDto theClientDto);
+
+	public void removeEingangsrechnungtext(EingangsrechnungtextDto textDto,
+			TheClientDto theClientDto);
+
+	public EingangsrechnungtextDto eingangsrechnungtextFindByPrimaryKey(
+			Integer iId);
+
+	public EingangsrechnungtextDto eingangsrechnungtextFindByMandantLocaleCNr(
+			String pMandant, String pSprache, String pText);
+
+	public Integer createEingangsrechnungtext(EingangsrechnungtextDto textDto,
+			TheClientDto theClientDto);
+
+	public EingangsrechnungtextDto createDefaultEingangsRechnungtext(
+			String sMediaartI, String sTextinhaltI, String localeCNr,
+			TheClientDto theClientDto);
 }

@@ -50,6 +50,36 @@ public class AgstklpositionDto extends BelegpositionDto implements Serializable 
 	private BigDecimal nNettogesamtpreis;
 	private Short bDrucken;
 
+	private Short bRuestmenge;
+
+	public Short getBRuestmenge() {
+		return bRuestmenge;
+	}
+
+	public void setBRuestmenge(Short bRuestmenge) {
+		this.bRuestmenge = bRuestmenge;
+	}
+
+	private Short bMitPreisen;
+
+	public Short getBMitPreisen() {
+		return bMitPreisen;
+	}
+
+	public void setBMitPreisen(Short bMitPreisen) {
+		this.bMitPreisen = bMitPreisen;
+	}
+
+	private String cPosition;
+
+	public String getCPosition() {
+		return this.cPosition;
+	}
+
+	public void setCPosition(String cPosition) {
+		this.cPosition = cPosition;
+	}
+
 	public Integer getAgstklIId() {
 		return super.getBelegIId();
 	}
@@ -173,14 +203,11 @@ public class AgstklpositionDto extends BelegpositionDto implements Serializable 
 		if (!(obj instanceof AgstklpositionDto))
 			return false;
 		AgstklpositionDto that = (AgstklpositionDto) obj;
-		if (!(that.getIId() == null ? this.getIId() == null : that.getIId()
-				.equals(this.getIId())))
+		if (!(that.getIId() == null ? this.getIId() == null : that.getIId().equals(this.getIId())))
 			return false;
-		if (!(that.getBelegIId() == null ? this.getBelegIId() == null : that
-				.getBelegIId().equals(this.getBelegIId())))
+		if (!(that.getBelegIId() == null ? this.getBelegIId() == null : that.getBelegIId().equals(this.getBelegIId())))
 			return false;
-		if (!(that.getISort() == null ? this.getISort() == null : that
-				.getISort().equals(this.getISort())))
+		if (!(that.getISort() == null ? this.getISort() == null : that.getISort().equals(this.getISort())))
 			return false;
 		if (!(that.getPositionsartCNr() == null ? this.getPositionsartCNr() == null
 				: that.getPositionsartCNr().equals(this.getPositionsartCNr())))
@@ -188,26 +215,20 @@ public class AgstklpositionDto extends BelegpositionDto implements Serializable 
 		if (!(that.getArtikelIId() == null ? this.getArtikelIId() == null
 				: that.getArtikelIId().equals(this.getArtikelIId())))
 			return false;
-		if (!(that.getCBez() == null ? this.getCBez() == null : that.getCBez()
-				.equals(this.getCBez())))
+		if (!(that.getCBez() == null ? this.getCBez() == null : that.getCBez().equals(this.getCBez())))
 			return false;
-		if (!(that.getBArtikelbezeichnunguebersteuert() == null ? this
-				.getBArtikelbezeichnunguebersteuert() == null : that
-				.getBArtikelbezeichnunguebersteuert().equals(
-						this.getBArtikelbezeichnunguebersteuert())))
+		if (!(that.getBArtikelbezeichnunguebersteuert() == null ? this.getBArtikelbezeichnunguebersteuert() == null
+				: that.getBArtikelbezeichnunguebersteuert().equals(this.getBArtikelbezeichnunguebersteuert())))
 			return false;
-		if (!(that.getNMenge() == null ? this.getNMenge() == null : that
-				.getNMenge().equals(this.getNMenge())))
+		if (!(that.getNMenge() == null ? this.getNMenge() == null : that.getNMenge().equals(this.getNMenge())))
 			return false;
 		if (!(that.getEinheitCNr() == null ? this.getEinheitCNr() == null
 				: that.getEinheitCNr().equals(this.getEinheitCNr())))
 			return false;
-		if (!(that.fRabattsatz == null ? this.fRabattsatz == null
-				: that.fRabattsatz.equals(this.fRabattsatz)))
+		if (!(that.fRabattsatz == null ? this.fRabattsatz == null : that.fRabattsatz.equals(this.fRabattsatz)))
 			return false;
 		if (!(that.bRabattsatzuebersteuert == null ? this.bRabattsatzuebersteuert == null
-				: that.bRabattsatzuebersteuert
-						.equals(this.bRabattsatzuebersteuert)))
+				: that.bRabattsatzuebersteuert.equals(this.bRabattsatzuebersteuert)))
 			return false;
 		if (!(that.fZusatzrabattsatz == null ? this.fZusatzrabattsatz == null
 				: that.fZusatzrabattsatz.equals(this.fZusatzrabattsatz)))
@@ -218,8 +239,7 @@ public class AgstklpositionDto extends BelegpositionDto implements Serializable 
 		if (!(that.nNettogesamtpreis == null ? this.nNettogesamtpreis == null
 				: that.nNettogesamtpreis.equals(this.nNettogesamtpreis)))
 			return false;
-		if (!(that.bDrucken == null ? this.bDrucken == null : that.bDrucken
-				.equals(this.bDrucken)))
+		if (!(that.bDrucken == null ? this.bDrucken == null : that.bDrucken.equals(this.bDrucken)))
 			return false;
 		return true;
 	}
@@ -232,8 +252,7 @@ public class AgstklpositionDto extends BelegpositionDto implements Serializable 
 		result = 37 * result + this.getPositionsartCNr().hashCode();
 		result = 37 * result + this.getArtikelIId().hashCode();
 		result = 37 * result + this.getCBez().hashCode();
-		result = 37 * result
-				+ this.getBArtikelbezeichnunguebersteuert().hashCode();
+		result = 37 * result + this.getBArtikelbezeichnunguebersteuert().hashCode();
 		result = 37 * result + this.getNMenge().hashCode();
 		result = 37 * result + this.getEinheitCNr().hashCode();
 		result = 37 * result + this.fRabattsatz.hashCode();

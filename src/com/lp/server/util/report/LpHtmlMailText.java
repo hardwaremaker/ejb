@@ -34,22 +34,24 @@ package com.lp.server.util.report;
 
 import java.util.Locale;
 
+import com.lp.server.system.ejbfac.EJBExcFactory;
 import com.lp.server.system.service.TheClientDto;
-import com.lp.util.EJBExceptionLP;
 
 public class LpHtmlMailText extends LpMailText {
 	protected String getReportDir(String modul, String mandant, String xslFile, Locale sprache, TheClientDto theClientDto) {
+		String reportname = xslFile.replaceAll(".jasper", "");
 		String reportdir = getReportDirImpl(modul, 
-				xslFile.replaceAll(".jasper", "") + "_html", mandant, sprache, theClientDto);
+				reportname + "_html", mandant, sprache, theClientDto);
 
 		if (reportdir == null) {
 			reportdir = getReportDirImpl("allgemein", "mail_html", mandant, sprache, theClientDto);
 		}
 
 		if (reportdir == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
-					"Es konnte kein Reportdir gefunden werden. mandant: " + mandant + " sprache " + sprache);
+			throw EJBExcFactory.mailtextvorlageHtmlNichtGefunden(modul, mandant, reportname, sprache);
+//			throw new EJBExceptionLP(
+//					EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
+//					"Es konnte kein Reportdir gefunden werden. mandant: " + mandant + " sprache " + sprache);
 		}
 		
 		return reportdir ;

@@ -36,6 +36,8 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
+
 public class BestellvorschlagDto implements Serializable {
 	/**
 	 * 
@@ -56,9 +58,29 @@ public class BestellvorschlagDto implements Serializable {
 	private Double dRabattsatz;
 	private Integer iBelegartpositionid;
 	private Short bNettopreisuebersteuert;
-	
+
+	private Double fLagermindest;
+
+	public Double getFLagermindest() {
+		return this.fLagermindest;
+	}
+
+	public void setFLagermindest(Double fLagermindest) {
+		this.fLagermindest = fLagermindest;
+	}
+
+	private Integer personalIId;
+
+	public Integer getPersonalIId() {
+		return personalIId;
+	}
+
+	public void setPersonalIId(Integer personalIId) {
+		this.personalIId = personalIId;
+	}
+
 	private Integer personalIIdVormerkung;
-	
+
 	private Timestamp tVormerkung;
 
 	public Integer getPersonalIIdVormerkung() {
@@ -76,8 +98,29 @@ public class BestellvorschlagDto implements Serializable {
 	public void setTVormerkung(Timestamp tVormerkung) {
 		this.tVormerkung = tVormerkung;
 	}
-	
+
+	private BigDecimal nAnzahlgebinde;
+
+	public BigDecimal getNAnzahlgebinde() {
+		return nAnzahlgebinde;
+	}
+
+	public void setNAnzahlgebinde(BigDecimal nAnzahlgebinde) {
+		this.nAnzahlgebinde = nAnzahlgebinde;
+	}
+
+	private Integer gebindeIId;
+
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
+	}
+
 	private String xTextinhalt;
+
 	public final String getXTextinhalt() {
 		return this.xTextinhalt;
 	}
@@ -95,7 +138,7 @@ public class BestellvorschlagDto implements Serializable {
 	public void setBVormerkung(Short bVormerkung) {
 		this.bVormerkung = bVormerkung;
 	}
-	
+
 	private Integer projektIId;
 
 	public Integer getProjektIId() {
@@ -105,8 +148,17 @@ public class BestellvorschlagDto implements Serializable {
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
 	}
-	
-	
+
+	private Integer partnerIIdStandort;
+
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -175,6 +227,16 @@ public class BestellvorschlagDto implements Serializable {
 		return iLieferantId;
 	}
 
+	private Integer iWiederbeschaffungszeit;
+
+	public Integer getIWiederbeschaffungszeit() {
+		return this.iWiederbeschaffungszeit;
+	}
+
+	public void setIWiederbeschaffungszeit(Integer iWiederbeschaffungszeit) {
+		this.iWiederbeschaffungszeit = iWiederbeschaffungszeit;
+	}
+
 	public void setILieferantId(Integer iLieferantId) {
 		this.iLieferantId = iLieferantId;
 	}
@@ -203,8 +265,7 @@ public class BestellvorschlagDto implements Serializable {
 		this.nNettogesamtpreis = nNettogesamtpreis;
 	}
 
-	public void setNNettoGesamtPreisMinusRabatte(
-			BigDecimal nNettoGesamtPreisMinusRabatte) {
+	public void setNNettoGesamtPreisMinusRabatte(BigDecimal nNettoGesamtPreisMinusRabatte) {
 		this.nNettoGesamtPreisMinusRabatte = nNettoGesamtPreisMinusRabatte;
 	}
 
@@ -220,6 +281,26 @@ public class BestellvorschlagDto implements Serializable {
 		return iBelegartpositionid;
 	}
 
+	private Integer personalIIdBearbeitet;
+
+	public Integer getPersonalIIdBearbeitet() {
+		return personalIIdBearbeitet;
+	}
+
+	public void setPersonalIIdBearbeitet(Integer personalIIdBearbeitet) {
+		this.personalIIdBearbeitet = personalIIdBearbeitet;
+	}
+
+	public Timestamp getTBearbeitet() {
+		return tBearbeitet;
+	}
+
+	public void setTBearbeitet(Timestamp tBearbeitet) {
+		this.tBearbeitet = tBearbeitet;
+	}
+
+	private Timestamp tBearbeitet;
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -231,12 +312,10 @@ public class BestellvorschlagDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.cMandantCNr == null ? this.cMandantCNr == null
-				: that.cMandantCNr.equals(this.cMandantCNr))) {
+		if (!(that.cMandantCNr == null ? this.cMandantCNr == null : that.cMandantCNr.equals(this.cMandantCNr))) {
 			return false;
 		}
-		if (!(that.iArtikelId == null ? this.iArtikelId == null
-				: that.iArtikelId.equals(this.iArtikelId))) {
+		if (!(that.iArtikelId == null ? this.iArtikelId == null : that.iArtikelId.equals(this.iArtikelId))) {
 			return false;
 		}
 		if (!(that.nZubestellendeMenge == null ? this.nZubestellendeMenge == null
@@ -247,16 +326,13 @@ public class BestellvorschlagDto implements Serializable {
 				: that.tLiefertermin.equals(this.tLiefertermin))) {
 			return false;
 		}
-		if (!(that.cBelegartCNr == null ? this.cBelegartCNr == null
-				: that.cBelegartCNr.equals(this.cBelegartCNr))) {
+		if (!(that.cBelegartCNr == null ? this.cBelegartCNr == null : that.cBelegartCNr.equals(this.cBelegartCNr))) {
 			return false;
 		}
-		if (!(that.iBelegartId == null ? this.iBelegartId == null
-				: that.iBelegartId.equals(this.iBelegartId))) {
+		if (!(that.iBelegartId == null ? this.iBelegartId == null : that.iBelegartId.equals(this.iBelegartId))) {
 			return false;
 		}
-		if (!(that.iLieferantId == null ? this.iLieferantId == null
-				: that.iLieferantId.equals(this.iLieferantId))) {
+		if (!(that.iLieferantId == null ? this.iLieferantId == null : that.iLieferantId.equals(this.iLieferantId))) {
 			return false;
 		}
 		if (!(that.nNettoeinzelpreis == null ? this.nNettoeinzelpreis == null
@@ -272,12 +348,10 @@ public class BestellvorschlagDto implements Serializable {
 			return false;
 		}
 		if (!(that.nNettoGesamtPreisMinusRabatte == null ? this.nNettoGesamtPreisMinusRabatte == null
-				: that.nNettoGesamtPreisMinusRabatte
-						.equals(this.nNettoGesamtPreisMinusRabatte))) {
+				: that.nNettoGesamtPreisMinusRabatte.equals(this.nNettoGesamtPreisMinusRabatte))) {
 			return false;
 		}
-		if (!(that.dRabattsatz == null ? this.dRabattsatz == null
-				: that.dRabattsatz.equals(this.dRabattsatz))) {
+		if (!(that.dRabattsatz == null ? this.dRabattsatz == null : that.dRabattsatz.equals(this.dRabattsatz))) {
 			return false;
 		}
 
@@ -292,7 +366,6 @@ public class BestellvorschlagDto implements Serializable {
 		this.bNettopreisuebersteuert = bNettopreisuebersteuert;
 	}
 
-	
 	public int hashCode() {
 		int result = 17;
 		result = 37 * result + this.iId.hashCode();

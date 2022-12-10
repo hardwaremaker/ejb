@@ -39,7 +39,8 @@ import javax.sql.ConnectionPoolDataSource;
 public class PooledDatasource {
 	private static final PooledDatasource OBJ = new PooledDatasource();
 	//private static net.sourceforge.jtds.jdbcx.JtdsDataSource ds;
-	private static Object datasource;
+//	private static Object datasource;
+	private static ConnectionPoolDataSource datasource ;
 	private static boolean initialized = false;
 	private static javax.sql.PooledConnection pc = null;
 	private static String cachedConnectionUrl = null ;
@@ -51,7 +52,7 @@ public class PooledDatasource {
 		return OBJ;
 	}
 	
-	public void initalize(String url) {
+	protected synchronized void initializeFrom(String url) {
 		// jdbc:jtds:sqlserver://localhost:1433/LP
 		// jdbc:postgresql://localhost:5432/LP
 		String host;
@@ -72,6 +73,7 @@ public class PooledDatasource {
 		} catch (NumberFormatException e1) {
 			e1.printStackTrace();
 		}
+		
 		if (host.length()==0 || database.length()==0 || port==0)
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_INVALID_REPORT_URL, "Ungueltige Reportconnection: " + url);
 
@@ -81,21 +83,24 @@ public class PooledDatasource {
 			initPsql(host, port, database);
 		} else
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_INVALID_REPORT_URL, "Ungueltige Reportconnection: " + url);
-		cachedConnectionUrl = url ;
+
+		cachedConnectionUrl = url ;			
 	}
 
-	protected void initPsql(String host, int port, String database) {
+	protected synchronized void initPsql(String host, int port, String database) {
 		org.postgresql.ds.PGConnectionPoolDataSource ds = new org.postgresql.ds.PGConnectionPoolDataSource();
 		ds.setServerName(host);
 		ds.setDatabaseName(database);
 		ds.setPortNumber(port);
 		ds.setUser("hvguest");
 		ds.setPassword("h4gzfdavfs");
+
 		datasource = ds;
+		pc = null ;
 		initialized = true;
 	}
 	
-	protected void initJtds(String host, int port, String database) {
+	protected synchronized void initJtds(String host, int port, String database) {
 		net.sourceforge.jtds.jdbcx.JtdsDataSource ds = new net.sourceforge.jtds.jdbcx.JtdsDataSource();
 		
 		String instance = null;
@@ -116,12 +121,15 @@ public class PooledDatasource {
 		ds.setUser("hvguest");
 		ds.setPassword("h4gzfdavfs");
 		ds.setMaxStatements(5);
+
 		try {
 			ds.setSocketTimeout(300);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		
 		datasource = ds;
+		pc = null ;
 		initialized = true;
 	}
 
@@ -130,12 +138,15 @@ public class PooledDatasource {
 	}
 	
 	public javax.sql.PooledConnection getPooledConnection() throws SQLException {
-		return ((ConnectionPoolDataSource)datasource).getPooledConnection();
+//		return ((ConnectionPoolDataSource)datasource).getPooledConnection();
+		return datasource.getPooledConnection() ;
 	}
 	
-	public java.sql.Connection getConnection() throws SQLException {
-		if (pc == null)
-			pc = ((ConnectionPoolDataSource)datasource).getPooledConnection();
+	public synchronized java.sql.Connection getConnection() throws SQLException {
+		if (pc == null) {
+//			pc = ((ConnectionPoolDataSource)datasource).getPooledConnection();
+			pc = datasource.getPooledConnection() ;
+		}
 		return pc.getConnection();
 	}
 	
@@ -145,19 +156,24 @@ public class PooledDatasource {
 	 * aufgebaut. Ansonsten wird eine bereits bestehende verwendet</p>
 	 * @param url die neue Database-Connection-URL. Kann auch null sein.
 	 */
-	public void setUrl(String url) {
+	public synchronized void setUrl(String url) {
 		if(url == null) {
 			cachedConnectionUrl = null ;
 			initialized = false ;
+			pc = null ;				
 			datasource = null ;
-		} else {			
-			if(cachedConnectionUrl == null) {
-				initalize(url) ;
-			} else {
-				if(url.compareTo(cachedConnectionUrl) != 0) {
-					initalize(url) ;
-				}				
+		} else {
+			if(!url.equals(cachedConnectionUrl)) {
+				initializeFrom(url) ;
 			}
-		}
+			
+//			if(cachedConnectionUrl == null) {
+//				initializeFrom(url) ;
+//			} else {
+//				if(url.compareTo(cachedConnectionUrl) != 0) {
+//					initializeFrom(url) ;
+//				}				
+//			}
+		}			
 	}
 }

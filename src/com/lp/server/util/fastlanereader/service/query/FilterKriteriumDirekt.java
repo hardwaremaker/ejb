@@ -42,11 +42,13 @@ package com.lp.server.util.fastlanereader.service.query;
  */
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.lp.server.util.Facade;
 
-public class FilterKriteriumDirekt extends FilterKriterium implements
-		Serializable {
+public class FilterKriteriumDirekt extends FilterKriterium implements Serializable {
 	/**
 	 * 
 	 */
@@ -56,53 +58,71 @@ public class FilterKriteriumDirekt extends FilterKriterium implements
 	public static final int PROZENT_TRAILING = 2;
 	public static final int PROZENT_BOTH = 3;
 	public static final int EXTENDED_SEARCH = 4;
+	public static final int AP_FIRMA_PROZENT_TRAILING = 5;
+	public static final int AP_FIRMA_PROZENT_BOTH = 6;
 
 	public String uiName = null;
 	public int iWrapWithProzent = PROZENT_NONE;
-	public boolean wrapWithSingleQuotes = false;
+//	public boolean wrapWithSingleQuotes = false;
 	public int iEingabebreite = Facade.MAX_UNBESCHRAENKT;
 
-	public static final int TYP_STRING = 1;
-	public static final int TYP_DECIMAL = 2;
-	public int iTyp = TYP_STRING;
+	public Object defaultWert = null;
 
-	public FilterKriteriumDirekt(String pNameI, String pValueI,
-			String pOperatorI, String uiNameI, int iWrapWithProzentI,
-			boolean bWrapWithSingleQuotesI, boolean bIgnoreCaseI,
-			int iEingabebreiteI) {
+	public Map comboboxValues = new LinkedHashMap<String, String>();
 
-		this(pNameI, pValueI, pOperatorI, uiNameI, iWrapWithProzentI,
-				bWrapWithSingleQuotesI, bIgnoreCaseI, iEingabebreiteI,
-				TYP_STRING);
+	public Object getDefaultWert() {
+		return defaultWert;
 	}
 
-	public FilterKriteriumDirekt(String pNameI, String pValueI,
-			String pOperatorI, String uiNameI, int iWrapWithProzentI,
-			boolean bWrapWithSingleQuotesI, boolean bIgnoreCaseI,
-			int iEingabebreiteI, int iTyp) {
+	public void setDefaultWert(Object defaultWert) {
+		this.defaultWert = defaultWert;
+	}
+
+	public FilterKriteriumDirekt(String pNameI, String pValueI, String pOperatorI, String uiNameI,
+			int iWrapWithProzentI, boolean bWrapWithSingleQuotesI, boolean bIgnoreCaseI, int iEingabebreiteI) {
+
+		this(pNameI, pValueI, pOperatorI, uiNameI, iWrapWithProzentI, bWrapWithSingleQuotesI, bIgnoreCaseI,
+				iEingabebreiteI, TYP_STRING);
+	}
+
+	public FilterKriteriumDirekt(String pNameI, String pValueI, String pOperatorI, String uiNameI,
+			int iWrapWithProzentI, boolean bWrapWithSingleQuotesI, boolean bIgnoreCaseI, int iEingabebreiteI,
+			int iTyp) {
 
 		super(pNameI, true, pValueI, pOperatorI, bIgnoreCaseI);
-		this.iTyp=iTyp;
+		this.iTyp = iTyp;
 		uiName = uiNameI;
 		iWrapWithProzent = iWrapWithProzentI;
-		wrapWithSingleQuotes = bWrapWithSingleQuotesI;
+		this.wrapWithSingleQuotes = bWrapWithSingleQuotesI;
 		iEingabebreite = iEingabebreiteI;
+	}
+
+	public FilterKriteriumDirekt(String pNameI, String pValueI, String pOperatorI, String uiNameI,
+			int iWrapWithProzentI, boolean bWrapWithSingleQuotesI, boolean bIgnoreCaseI, int iEingabebreiteI, int iTyp,
+			Map comboboxValues) {
+
+		super(pNameI, true, pValueI, pOperatorI, bIgnoreCaseI);
+		this.iTyp = iTyp;
+		uiName = uiNameI;
+		iWrapWithProzent = iWrapWithProzentI;
+		this.wrapWithSingleQuotes = bWrapWithSingleQuotesI;
+		iEingabebreite = iEingabebreiteI;
+		this.comboboxValues = comboboxValues;
 	}
 
 	public void wrapWithProzent() {
 		if (iWrapWithProzent == PROZENT_LEADING) {
 			value = "%" + value;
-		} else if (iWrapWithProzent == PROZENT_TRAILING) {
+		} else if (iWrapWithProzent == PROZENT_TRAILING || iWrapWithProzent == AP_FIRMA_PROZENT_TRAILING) {
 			value = value + "%";
-		} else if (iWrapWithProzent == PROZENT_BOTH) {
+		} else if (iWrapWithProzent == PROZENT_BOTH || iWrapWithProzent == AP_FIRMA_PROZENT_BOTH) {
 			value = "%" + value + "%";
 		}
 	}
 
 	public void wrapWithSingleQuotes() {
 		if (wrapWithSingleQuotes) {
-			StringBuffer sbWrappedValue = new StringBuffer("'").append(value)
-					.append("'");
+			StringBuffer sbWrappedValue = new StringBuffer("'").append(value).append("'");
 
 			value = sbWrappedValue.toString();
 		}

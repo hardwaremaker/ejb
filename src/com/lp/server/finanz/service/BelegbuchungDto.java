@@ -34,7 +34,9 @@ package com.lp.server.finanz.service;
 
 import java.io.Serializable;
 
-public class BelegbuchungDto implements Serializable {
+import com.lp.server.util.logger.LogEventPayload;
+
+public class BelegbuchungDto implements Serializable, LogEventPayload {
 	/**
 	 * 
 	 */
@@ -127,4 +129,12 @@ public class BelegbuchungDto implements Serializable {
 		returnString += ", " + buchungIIdZahlung;
 		return returnString;
 	}
+	
+	@Override
+	public String asString() {
+		return "BB: [id:" + getIId()
+			+ ", Art:" + getBelegartCNr()
+			+ ", BelegId:" + getIBelegiid()
+			+ ", BuchungId:" + getBuchungIId() + "]";
+	}	
 }

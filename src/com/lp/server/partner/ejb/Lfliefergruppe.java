@@ -43,7 +43,9 @@ import javax.persistence.Table;
 
 import com.lp.server.util.ICNr;
 
-@NamedQueries( { @NamedQuery(name = "LfliefergruppeFindByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Lfliefergruppe o WHERE o.cNr = ?1 AND o.mandantCNr = ?2") })
+@NamedQueries({
+		@NamedQuery(name = "LfliefergruppeFindByMandantCNr", query = "SELECT OBJECT(o) FROM Lfliefergruppe o WHERE o.mandantCNr = ?1 ORDER BY o.cNr ASC"),
+		@NamedQuery(name = "LfliefergruppeFindByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Lfliefergruppe o WHERE o.cNr = ?1 AND o.mandantCNr = ?2") })
 @Entity
 @Table(name = "PART_LFLIEFERGRUPPE")
 public class Lfliefergruppe implements Serializable, ICNr {

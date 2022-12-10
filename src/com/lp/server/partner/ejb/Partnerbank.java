@@ -33,6 +33,7 @@
 package com.lp.server.partner.ejb;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -45,7 +46,11 @@ import javax.persistence.Table;
 		@NamedQuery(name = "PartnerbankfindByPartnerIIdBankPartnerIId", query = "SELECT OBJECT(c) FROM Partnerbank c WHERE c.partnerIId = ?1 AND c.partnerbankIId = ?2 AND c.cKtonr = ?3"),
 		@NamedQuery(name = "PartnerbankejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Partnerbank o WHERE o.partnerIId = ?1"),
 		@NamedQuery(name = "PartnerbankfindByPartnerIId", query = "SELECT OBJECT(c) FROM Partnerbank c WHERE c.partnerIId = ?1 ORDER BY c.iSort ASC"),
-		@NamedQuery(name = "PartnerbankfindByBankPartnerIId", query = "SELECT OBJECT(c) FROM Partnerbank c WHERE c.partnerbankIId = ?1") })
+		@NamedQuery(name = "PartnerbankfindByBankPartnerIId", query = "SELECT OBJECT(c) FROM Partnerbank c WHERE c.partnerbankIId = ?1"),
+		@NamedQuery(name = "PartnerbankfindByPartnerbankIIdCKtonr", query = "SELECT OBJECT(c) FROM Partnerbank c WHERE c.partnerbankIId = ?1 AND  c.cKtonr = ?2"),
+		@NamedQuery(name = PartnerbankQuery.ByIban, query = "SELECT OBJECT(o) FROM Partnerbank o WHERE o.cIban = :iban"),
+		@NamedQuery(name = PartnerbankQuery.PartnerIIdsByIban, query = "SELECT o.partnerIId FROM Partnerbank o WHERE o.cIban = :iban"),
+		@NamedQuery(name = PartnerbankQuery.ByESRUndKontonumer, query = "SELECT OBJECT(b) FROM Partnerbank b WHERE b.cEsr=:esr AND b.cKtonr=:cKtonr")})
 @Entity
 @Table(name = "PART_PARTNERBANK")
 public class Partnerbank implements Serializable {
@@ -62,6 +67,50 @@ public class Partnerbank implements Serializable {
 
 	@Column(name = "C_IBAN")
 	private String cIban;
+	
+	@Column(name = "C_ESR")
+	private String cEsr;
+	
+	public String getCEsr() {
+		return cEsr;
+	}
+	public void setCEsr(String cEsr) {
+		this.cEsr = cEsr;
+	}
+
+	@Column(name = "WAEHRUNG_C_NR")
+	private String waehrungCNr;
+	
+	public String getWaehrungCNr() {
+		return this.waehrungCNr;
+	}
+
+	public void setWaehrungCNr(String waehrungCNr) {
+		this.waehrungCNr = waehrungCNr;
+	}
+	
+	@Column(name = "C_SEPAMANDATSNUMMER")
+	private String cSepamandatsnummer;
+	
+
+	public String getCSepamandatsnummer() {
+		return cSepamandatsnummer;
+	}
+
+	public void setCSepamandatsnummer(String cSepamandatsnummer) {
+		this.cSepamandatsnummer = cSepamandatsnummer;
+	}
+
+	@Column(name = "T_SEPAERTEILT")
+	private Timestamp tSepaerteilt;
+	
+	public Timestamp getTSepaerteilt() {
+		return tSepaerteilt;
+	}
+
+	public void setTSepaerteilt(Timestamp tSepaerteilt) {
+		this.tSepaerteilt = tSepaerteilt;
+	}
 
 	@Column(name = "I_SORT")
 	private Integer iSort;

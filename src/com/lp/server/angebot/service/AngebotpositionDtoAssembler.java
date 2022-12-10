@@ -38,84 +38,73 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.angebot.ejb.Angebotposition;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.util.Helper;
 
 public class AngebotpositionDtoAssembler {
 	public static AngebotpositionDto createDto(Angebotposition angebotposition) {
 		AngebotpositionDto angebotpositionDto = new AngebotpositionDto();
 		if (angebotposition != null) {
+			angebotpositionDto.setUsecaseIIdQuelle(QueryParameters.UC_ID_ANGEBOTPOSITION);
 			angebotpositionDto.setIId(angebotposition.getIId());
 			angebotpositionDto.setBelegIId(angebotposition.getAngebotIId());
 			angebotpositionDto.setISort(angebotposition.getISort());
-			angebotpositionDto.setPositionsartCNr(angebotposition
-					.getAngebotpositionartCNr());
+			angebotpositionDto.setPositionsartCNr(angebotposition.getAngebotpositionartCNr());
 			angebotpositionDto.setArtikelIId(angebotposition.getArtikelIId());
 			angebotpositionDto.setCBez(angebotposition.getCBez());
 			angebotpositionDto.setCZusatzbez(angebotposition.getCZbez());
-			angebotpositionDto.setNGestehungspreis(angebotposition
-					.getNGestehungspreis());
+			angebotpositionDto.setNGestehungspreis(angebotposition.getNGestehungspreis());
 			angebotpositionDto.setXTextinhalt(angebotposition.getXTextinhalt());
-			angebotpositionDto.setMediastandardIId(angebotposition
-					.getMediastandardIId());
+			angebotpositionDto.setMediastandardIId(angebotposition.getMediastandardIId());
 			angebotpositionDto.setNMenge(angebotposition.getNMenge());
 			angebotpositionDto.setEinheitCNr(angebotposition.getEinheitCNr());
 			angebotpositionDto.setFRabattsatz(angebotposition.getFRabattsatz());
-			angebotpositionDto.setBRabattsatzuebersteuert(angebotposition
-					.getBRabattsatzuebersteuert());
-			angebotpositionDto.setFZusatzrabattsatz(angebotposition
-					.getFZusatzrabattsatz());
+			angebotpositionDto.setBRabattsatzuebersteuert(angebotposition.getBRabattsatzuebersteuert());
+			angebotpositionDto.setFZusatzrabattsatz(angebotposition.getFZusatzrabattsatz());
 			angebotpositionDto.setMwstsatzIId(angebotposition.getMwstsatzIId());
-			angebotpositionDto.setBMwstsatzuebersteuert(angebotposition
-					.getBMwstsatzuebersteuert());
-			angebotpositionDto.setBNettopreisuebersteuert(angebotposition
-					.getBNettopreisuebersteuert());
-			angebotpositionDto.setNEinzelpreis(angebotposition
-					.getNNettoeinzelpreis());
-			angebotpositionDto
-					.setNEinzelpreisplusversteckteraufschlag(angebotposition
-							.getNNettoeinzelpreisplusversteckteraufschlag());
-			angebotpositionDto.setNRabattbetrag(angebotposition
-					.getNRabattbetrag());
-			angebotpositionDto.setNNettoeinzelpreis(angebotposition
-					.getNNettogesamtpreis());
-			angebotpositionDto
-					.setNNettoeinzelpreisplusversteckteraufschlag(angebotposition
-							.getNNettogesamtpreisplusversteckteraufschlag());
-			angebotpositionDto
-					.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(angebotposition
-							.getNNettogesamtpreisplusversteckteraufschlagminusrabatte());
+			angebotpositionDto.setBMwstsatzuebersteuert(angebotposition.getBMwstsatzuebersteuert());
+			angebotpositionDto.setBNettopreisuebersteuert(angebotposition.getBNettopreisuebersteuert());
+			angebotpositionDto.setNEinzelpreis(angebotposition.getNNettoeinzelpreis());
+			angebotpositionDto.setNEinzelpreisplusversteckteraufschlag(
+					angebotposition.getNNettoeinzelpreisplusversteckteraufschlag());
+			angebotpositionDto.setNRabattbetrag(angebotposition.getNRabattbetrag());
+			angebotpositionDto.setNNettoeinzelpreis(angebotposition.getNNettogesamtpreis());
+			angebotpositionDto.setNNettoeinzelpreisplusversteckteraufschlag(
+					angebotposition.getNNettogesamtpreisplusversteckteraufschlag());
+			angebotpositionDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+					angebotposition.getNNettogesamtpreisplusversteckteraufschlagminusrabatte());
 			angebotpositionDto.setNMwstbetrag(angebotposition.getNMwstbetrag());
-			angebotpositionDto.setNBruttoeinzelpreis(angebotposition
-					.getNBruttogesamtpreis());
+			angebotpositionDto.setNBruttoeinzelpreis(angebotposition.getNBruttogesamtpreis());
 			angebotpositionDto.setAgstklIId(angebotposition.getAgstklIId());
 			angebotpositionDto
-					.setNGesamtwertagstklinangebotswaehrung(angebotposition
-							.getNGesamtwertagstklinangebotswaehrung());
-			angebotpositionDto.setBAlternative(angebotposition
-					.getBAlternative());
+					.setNGesamtwertagstklinangebotswaehrung(angebotposition.getNGesamtwertagstklinangebotswaehrung());
+			angebotpositionDto.setBAlternative(angebotposition.getBAlternative());
 			angebotpositionDto.setPositioniId(angebotposition.getPositionIId());
 
 			angebotpositionDto.setTypCNr(angebotposition.getTypCNr());
-			angebotpositionDto.setPositioniIdArtikelset(angebotposition
-					.getPositionIIdArtikelset());
+			angebotpositionDto.setPositioniIdArtikelset(angebotposition.getPositionIIdArtikelset());
 			angebotpositionDto.setVerleihIId(angebotposition.getVerleihIId());
-			angebotpositionDto.setKostentraegerIId(angebotposition
-					.getKostentraegerIId());
-			angebotpositionDto.setCLvposition(angebotposition
-					.getCLvposition());
-			
-			angebotpositionDto.setZwsVonPosition(angebotposition.getZwsVonPosition()) ;
-			angebotpositionDto.setZwsBisPosition(angebotposition.getZwsBisPosition()) ;
-			angebotpositionDto.setZwsNettoSumme(angebotposition.getZwsNettoSumme()) ;	
-			angebotpositionDto.setBZwsPositionspreisDrucken(
-					angebotposition.getBZwsPositionspreisZeigen());
+			angebotpositionDto.setKostentraegerIId(angebotposition.getKostentraegerIId());
+			angebotpositionDto.setCLvposition(angebotposition.getCLvposition());
+
+			angebotpositionDto.setZwsVonPosition(angebotposition.getZwsVonPosition());
+			angebotpositionDto.setZwsBisPosition(angebotposition.getZwsBisPosition());
+			angebotpositionDto.setZwsNettoSumme(angebotposition.getZwsNettoSumme());
+			angebotpositionDto.setBZwsPositionspreisDrucken(angebotposition.getBZwsPositionspreisZeigen());
 			angebotpositionDto.setNMaterialzuschlag(angebotposition.getNMaterialzuschlag());
 			angebotpositionDto.setLieferantIId(angebotposition.getLieferantIId());
 			angebotpositionDto.setNEinkaufpreis(angebotposition.getNEinkaufpreis());
 			angebotpositionDto.setNMaterialzuschlagKurs(angebotposition.getNMaterialzuschlagKurs());
 			angebotpositionDto.setTMaterialzuschlagDatum(angebotposition.getTMaterialzuschlagDatum());
+			angebotpositionDto.setPositionIIdZugehoerig(angebotposition.getPositionIIdZugehoerig());
+			angebotpositionDto.setILieferzeitinstunden(angebotposition.getILieferzeitinstunden());
+			angebotpositionDto.setNDimBreite(angebotposition.getNDimBreite());
+			angebotpositionDto.setNDimHoehe(angebotposition.getNDimHoehe());
+			angebotpositionDto.setNDimTiefe(angebotposition.getNDimTiefe());
+			angebotpositionDto.setNDimMenge(angebotposition.getNDimMenge());
+
 		}
-		
+
 		return angebotpositionDto;
 	}
 

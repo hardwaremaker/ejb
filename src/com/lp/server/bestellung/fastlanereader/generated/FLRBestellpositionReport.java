@@ -1,41 +1,11 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.bestellung.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRGebinde;
 import com.lp.server.system.fastlanereader.generated.FLRMediastandard;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -60,6 +30,9 @@ public class FLRBestellpositionReport implements Serializable {
     private String c_bezeichnung;
 
     /** nullable persistent field */
+    private String c_zusatzbezeichnung;
+
+    /** nullable persistent field */
     private BigDecimal n_nettogesamtpreis;
 
     /** nullable persistent field */
@@ -69,7 +42,7 @@ public class FLRBestellpositionReport implements Serializable {
     private String bestellpositionart_c_nr;
 
     /** nullable persistent field */
-    private java.sql.Timestamp t_uebersteuerterliefertermin;
+    private Timestamp t_uebersteuerterliefertermin;
 
     /** nullable persistent field */
     private Date t_lieferterminbestaetigt;
@@ -78,7 +51,7 @@ public class FLRBestellpositionReport implements Serializable {
     private BigDecimal n_offenemenge;
 
     /** nullable persistent field */
-    private java.sql.Timestamp t_auftragsbestaetigungstermin;
+    private Timestamp t_auftragsbestaetigungstermin;
 
     /** nullable persistent field */
     private String c_abnummer;
@@ -90,7 +63,16 @@ public class FLRBestellpositionReport implements Serializable {
     private Date t_abursprungstermin;
 
     /** nullable persistent field */
+    private BigDecimal n_fixkosten;
+
+    /** nullable persistent field */
     private Integer position_i_id_artikelset;
+
+    /** nullable persistent field */
+    private Integer gebinde_i_id;
+
+    /** nullable persistent field */
+    private BigDecimal n_anzahlgebinde;
 
     /** nullable persistent field */
     private com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung;
@@ -101,15 +83,19 @@ public class FLRBestellpositionReport implements Serializable {
     /** nullable persistent field */
     private FLRMediastandard flrmediastandard;
 
+    /** nullable persistent field */
+    private FLRGebinde flrgebinde;
+
     /** persistent field */
     private Set abrufpositionenset;
 
     /** full constructor */
-    public FLRBestellpositionReport(Integer i_sort, BigDecimal n_menge, String einheit_c_nr, String c_bezeichnung, BigDecimal n_nettogesamtpreis, String bestellpositionstatus_c_nr, String bestellpositionart_c_nr, java.sql.Timestamp t_uebersteuerterliefertermin, Date t_lieferterminbestaetigt, BigDecimal n_offenemenge, java.sql.Timestamp t_auftragsbestaetigungstermin, String c_abnummer, String c_abkommentar, Date t_abursprungstermin, Integer position_i_id_artikelset, com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, Set abrufpositionenset) {
+    public FLRBestellpositionReport(Integer i_sort, BigDecimal n_menge, String einheit_c_nr, String c_bezeichnung, String c_zusatzbezeichnung, BigDecimal n_nettogesamtpreis, String bestellpositionstatus_c_nr, String bestellpositionart_c_nr, Timestamp t_uebersteuerterliefertermin, Date t_lieferterminbestaetigt, BigDecimal n_offenemenge, Timestamp t_auftragsbestaetigungstermin, String c_abnummer, String c_abkommentar, Date t_abursprungstermin, BigDecimal n_fixkosten, Integer position_i_id_artikelset, Integer gebinde_i_id, BigDecimal n_anzahlgebinde, com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, FLRGebinde flrgebinde, Set abrufpositionenset) {
         this.i_sort = i_sort;
         this.n_menge = n_menge;
         this.einheit_c_nr = einheit_c_nr;
         this.c_bezeichnung = c_bezeichnung;
+        this.c_zusatzbezeichnung = c_zusatzbezeichnung;
         this.n_nettogesamtpreis = n_nettogesamtpreis;
         this.bestellpositionstatus_c_nr = bestellpositionstatus_c_nr;
         this.bestellpositionart_c_nr = bestellpositionart_c_nr;
@@ -120,10 +106,14 @@ public class FLRBestellpositionReport implements Serializable {
         this.c_abnummer = c_abnummer;
         this.c_abkommentar = c_abkommentar;
         this.t_abursprungstermin = t_abursprungstermin;
+        this.n_fixkosten = n_fixkosten;
         this.position_i_id_artikelset = position_i_id_artikelset;
+        this.gebinde_i_id = gebinde_i_id;
+        this.n_anzahlgebinde = n_anzahlgebinde;
         this.flrbestellung = flrbestellung;
         this.flrartikel = flrartikel;
         this.flrmediastandard = flrmediastandard;
+        this.flrgebinde = flrgebinde;
         this.abrufpositionenset = abrufpositionenset;
     }
 
@@ -177,6 +167,14 @@ public class FLRBestellpositionReport implements Serializable {
         this.c_bezeichnung = c_bezeichnung;
     }
 
+    public String getC_zusatzbezeichnung() {
+        return this.c_zusatzbezeichnung;
+    }
+
+    public void setC_zusatzbezeichnung(String c_zusatzbezeichnung) {
+        this.c_zusatzbezeichnung = c_zusatzbezeichnung;
+    }
+
     public BigDecimal getN_nettogesamtpreis() {
         return this.n_nettogesamtpreis;
     }
@@ -201,11 +199,11 @@ public class FLRBestellpositionReport implements Serializable {
         this.bestellpositionart_c_nr = bestellpositionart_c_nr;
     }
 
-    public java.sql.Timestamp getT_uebersteuerterliefertermin() {
+    public Timestamp getT_uebersteuerterliefertermin() {
         return this.t_uebersteuerterliefertermin;
     }
 
-    public void setT_uebersteuerterliefertermin(java.sql.Timestamp t_uebersteuerterliefertermin) {
+    public void setT_uebersteuerterliefertermin(Timestamp t_uebersteuerterliefertermin) {
         this.t_uebersteuerterliefertermin = t_uebersteuerterliefertermin;
     }
 
@@ -225,11 +223,11 @@ public class FLRBestellpositionReport implements Serializable {
         this.n_offenemenge = n_offenemenge;
     }
 
-    public java.sql.Timestamp getT_auftragsbestaetigungstermin() {
+    public Timestamp getT_auftragsbestaetigungstermin() {
         return this.t_auftragsbestaetigungstermin;
     }
 
-    public void setT_auftragsbestaetigungstermin(java.sql.Timestamp t_auftragsbestaetigungstermin) {
+    public void setT_auftragsbestaetigungstermin(Timestamp t_auftragsbestaetigungstermin) {
         this.t_auftragsbestaetigungstermin = t_auftragsbestaetigungstermin;
     }
 
@@ -257,12 +255,36 @@ public class FLRBestellpositionReport implements Serializable {
         this.t_abursprungstermin = t_abursprungstermin;
     }
 
+    public BigDecimal getN_fixkosten() {
+        return this.n_fixkosten;
+    }
+
+    public void setN_fixkosten(BigDecimal n_fixkosten) {
+        this.n_fixkosten = n_fixkosten;
+    }
+
     public Integer getPosition_i_id_artikelset() {
         return this.position_i_id_artikelset;
     }
 
     public void setPosition_i_id_artikelset(Integer position_i_id_artikelset) {
         this.position_i_id_artikelset = position_i_id_artikelset;
+    }
+
+    public Integer getGebinde_i_id() {
+        return this.gebinde_i_id;
+    }
+
+    public void setGebinde_i_id(Integer gebinde_i_id) {
+        this.gebinde_i_id = gebinde_i_id;
+    }
+
+    public BigDecimal getN_anzahlgebinde() {
+        return this.n_anzahlgebinde;
+    }
+
+    public void setN_anzahlgebinde(BigDecimal n_anzahlgebinde) {
+        this.n_anzahlgebinde = n_anzahlgebinde;
     }
 
     public com.lp.server.bestellung.fastlanereader.generated.FLRBestellung getFlrbestellung() {
@@ -287,6 +309,14 @@ public class FLRBestellpositionReport implements Serializable {
 
     public void setFlrmediastandard(FLRMediastandard flrmediastandard) {
         this.flrmediastandard = flrmediastandard;
+    }
+
+    public FLRGebinde getFlrgebinde() {
+        return this.flrgebinde;
+    }
+
+    public void setFlrgebinde(FLRGebinde flrgebinde) {
+        this.flrgebinde = flrgebinde;
     }
 
     public Set getAbrufpositionenset() {

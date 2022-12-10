@@ -1,40 +1,11 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.rechnung.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
+import com.lp.server.system.fastlanereader.generated.FLRSpediteur;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -138,13 +109,23 @@ public class FLRRechnung implements Serializable {
     private FLRPersonal flrpersonalaenderer;
 
     /** nullable persistent field */
+    private FLRProjekt flrprojekt;
+
+    /** nullable persistent field */
     private FLRKunde flrstatistikadresse;
 
     /** nullable persistent field */
     private FLRKostenstelle flrkostenstelle;
 
+    /** nullable persistent field */
+    private com.lp.server.rechnung.fastlanereader.generated.FLRRechnungtextsuche flrrechnungtextsuche;
+
+    /** nullable persistent field */
+    private Integer spediteur_i_id;
+    private FLRSpediteur flrspediteur;
+    
     /** full constructor */
-    public FLRRechnung(String mandant_c_nr, String c_nr, String c_bez, String c_bestellnummer, Integer i_geschaeftsjahr, Integer ansprechpartner_i_id, Date d_belegdatum, String waehrung_c_nr, String status_c_nr, BigDecimal n_wertfw, BigDecimal n_wert, BigDecimal n_wertust, BigDecimal n_wertustfw, BigDecimal n_kurs, Integer auftrag_i_id, Integer projekt_i_id, Integer lieferschein_i_id, Integer rechnung_i_id_zurechnung, Integer kunde_i_id_statistikadresse, Date t_mahnsperrebis, Date t_fibuuebernahme, Date t_bezahltdatum, Date t_versandzeitpunkt, Date t_aendern, String c_versandtype, FLRKunde flrkunde, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungart flrrechnungart, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRKunde flrstatistikadresse, FLRKostenstelle flrkostenstelle) {
+    public FLRRechnung(String mandant_c_nr, String c_nr, String c_bez, String c_bestellnummer, Integer i_geschaeftsjahr, Integer ansprechpartner_i_id, Date d_belegdatum, String waehrung_c_nr, String status_c_nr, BigDecimal n_wertfw, BigDecimal n_wert, BigDecimal n_wertust, BigDecimal n_wertustfw, BigDecimal n_kurs, Integer auftrag_i_id, Integer projekt_i_id, Integer lieferschein_i_id, Integer rechnung_i_id_zurechnung, Integer kunde_i_id_statistikadresse, Date t_mahnsperrebis, Date t_fibuuebernahme, Date t_bezahltdatum, Date t_versandzeitpunkt, Date t_aendern, String c_versandtype, FLRKunde flrkunde, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungart flrrechnungart, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRProjekt flrprojekt, FLRKunde flrstatistikadresse, FLRKostenstelle flrkostenstelle, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungtextsuche flrrechnungtextsuche, Integer spediteur_i_id, FLRSpediteur flrspediteur) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.c_bez = c_bez;
@@ -175,8 +156,12 @@ public class FLRRechnung implements Serializable {
         this.flrvertreter = flrvertreter;
         this.flrpersonalanleger = flrpersonalanleger;
         this.flrpersonalaenderer = flrpersonalaenderer;
+        this.flrprojekt = flrprojekt;
         this.flrstatistikadresse = flrstatistikadresse;
         this.flrkostenstelle = flrkostenstelle;
+        this.flrrechnungtextsuche = flrrechnungtextsuche;
+        this.spediteur_i_id = spediteur_i_id;
+        this.flrspediteur = flrspediteur;
     }
 
     /** default constructor */
@@ -431,6 +416,14 @@ public class FLRRechnung implements Serializable {
         this.flrpersonalaenderer = flrpersonalaenderer;
     }
 
+    public FLRProjekt getFlrprojekt() {
+        return this.flrprojekt;
+    }
+
+    public void setFlrprojekt(FLRProjekt flrprojekt) {
+        this.flrprojekt = flrprojekt;
+    }
+
     public FLRKunde getFlrstatistikadresse() {
         return this.flrstatistikadresse;
     }
@@ -447,6 +440,30 @@ public class FLRRechnung implements Serializable {
         this.flrkostenstelle = flrkostenstelle;
     }
 
+    public com.lp.server.rechnung.fastlanereader.generated.FLRRechnungtextsuche getFlrrechnungtextsuche() {
+        return this.flrrechnungtextsuche;
+    }
+
+    public void setFlrrechnungtextsuche(com.lp.server.rechnung.fastlanereader.generated.FLRRechnungtextsuche flrrechnungtextsuche) {
+        this.flrrechnungtextsuche = flrrechnungtextsuche;
+    }
+
+    public Integer getSpediteur_i_id() {
+        return this.spediteur_i_id;
+    }
+
+    public void setSpediteur_i_id(Integer spediteur_i_id) {
+        this.spediteur_i_id = spediteur_i_id;
+    }
+
+    public FLRSpediteur getFlrspediteur() {
+        return this.flrspediteur;
+    }
+
+    public void setFlrspediteur(FLRSpediteur flrspediteur) {
+        this.flrspediteur = flrspediteur;
+    }
+    
     public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())

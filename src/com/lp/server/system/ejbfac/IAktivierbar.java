@@ -36,7 +36,8 @@ import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.util.List;
 
-import com.lp.server.rechnung.ejbfac.RechnungFacBean;
+import com.lp.server.rechnung.ejbfac.RechnungPruefbarFacBean;
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.service.BelegDto;
 import com.lp.service.BelegpositionDto;
@@ -52,7 +53,7 @@ import com.lp.util.EJBExceptionLP;
  * die Belegabh&auml;ngigen Pendants) durchzuf&uuml;hren</li>
  * <li>die Werte des Beleges zu berechnen.</li>
  * <li>auf (fremde) &Auml;nderungen nach der letzten Berechnung zu pr&uuml;fen.</li><br><br>
- * Wird von den FacBeans implementiert (zB.: {@link RechnungFacBean})
+ * Wird von den FacBeans implementiert (zB.: {@link RechnungPruefbarFacBean})
  * @author robert
  *
  */
@@ -68,7 +69,7 @@ public interface IAktivierbar {
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	void aktiviereBeleg(Integer iid, TheClientDto theClientDto)
+	BelegPruefungDto aktiviereBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 	
 	/**
@@ -101,6 +102,22 @@ public interface IAktivierbar {
 	 * @throws RemoteException
 	 */
 	void pruefeAktivierbar(Integer iid, TheClientDto theClientDto) 
+			throws EJBExceptionLP, RemoteException;
+		
+	/**
+	 * Wird vom {@link BelegAktivierungController} verwendet.
+	 * Pr&uuml;ft ob alle "rechtlichen" Bedingungen erf&uuml;llt sind, 
+	 * um den Status des Belegs seinen Status von Angelegt auf Offen
+	 * (bzw das in das jeweilige belegabh&auml;ngige Pendant) zu &auml;ndern.
+	 * Wirft eine EJBExceptionLP mit einem entsprechendem Fehlercode wenn nicht.</br>
+	 * <p>Beispielsweise, ob der Anwender das Recht hat, einen Beleg zu aktivieren</p> 
+	 * @param belegId
+	 * 	die IId des Beleges (zb Auftrag, Rechnung...)
+	 * @param theClientDto
+	 * @throws EJBExceptionLP
+	 * @throws RemoteException
+	 */
+	void pruefeAktivierbarRecht(Integer belegId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 	
 	/**

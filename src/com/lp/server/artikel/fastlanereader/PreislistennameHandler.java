@@ -322,7 +322,7 @@ public class PreislistennameHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.whg", mandantCNr, locUI),
 							getTextRespectUISpr("lp.stdrabattsatz", mandantCNr, locUI),
 							getTextRespectUISpr("lp.automatik.aktiv", mandantCNr, locUI),
-							getTextRespectUISpr("lp.sort", mandantCNr, locUI)},
+							getTextRespectUISpr("artikel.sortierung", mandantCNr, locUI)},
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_WAEHRUNG,QueryParameters.FLR_BREITE_SHARE_WITH_REST,QueryParameters.FLR_BREITE_SHARE_WITH_REST,QueryParameters.FLR_BREITE_SHARE_WITH_REST, },
@@ -332,7 +332,11 @@ public class PreislistennameHandler extends UseCaseHandler {
 							VkPreisfindungFac.FLR_VKPFARTIKELPREISLISTE_WAEHRUNG_C_NR,
 							VkPreisfindungFac.FLR_VKPFARTIKELPREISLISTE_N_STANDARDRABATTSATZ,
 							VkPreisfindungFac.FLR_VKPFARTIKELPREISLISTE_B_PREISLISTEAKTIV,
-							VkPreisfindungFac.FLR_VKPFARTIKELPREISLISTE_I_SORT}));
+							VkPreisfindungFac.FLR_VKPFARTIKELPREISLISTE_I_SORT},
+					new String[]{null, null, null, null, null, 
+							getTextRespectUISpr("artikel.sortierung.tooltip", mandantCNr, locUI)
+							}
+					));
 
 		}
 		return super.getTableInfo();

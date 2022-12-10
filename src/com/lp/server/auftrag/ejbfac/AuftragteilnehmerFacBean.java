@@ -32,7 +32,6 @@
  ******************************************************************************/
 package com.lp.server.auftrag.ejbfac;
 
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -48,6 +47,7 @@ import com.lp.server.auftrag.ejb.Auftragteilnehmer;
 import com.lp.server.auftrag.service.AuftragteilnehmerDto;
 import com.lp.server.auftrag.service.AuftragteilnehmerDtoAssembler;
 import com.lp.server.auftrag.service.AuftragteilnehmerFac;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.TheClientDto;
@@ -55,22 +55,20 @@ import com.lp.server.util.Facade;
 import com.lp.util.EJBExceptionLP;
 
 @Stateless
-public class AuftragteilnehmerFacBean
-extends Facade implements AuftragteilnehmerFac {
+public class AuftragteilnehmerFacBean extends Facade implements AuftragteilnehmerFac {
 	@PersistenceContext
 	private EntityManager em;
 
-
 	/**
 	 * Einen neuen Auftragsteilnehmer anlegen.
+	 * 
 	 * @param auftragteilnehmerDto die Daten des Teilnehmers
-	 * @param pUser der aktuelle User
+	 * @param pUser                der aktuelle User
 	 * @return Integer PK des Teilnehmers
 	 * @throws EJBExceptionLP
 	 */
-	public Integer createAuftragteilnehmer(AuftragteilnehmerDto
-			auftragteilnehmerDto, String pUser)
-	throws EJBExceptionLP {
+	public Integer createAuftragteilnehmer(AuftragteilnehmerDto auftragteilnehmerDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		final String METHOD_NAME = "createAuftragteilnehmer";
 		myLogger.entry();
 
@@ -83,84 +81,73 @@ extends Facade implements AuftragteilnehmerFac {
 			PKGeneratorObj pkGen = new PKGeneratorObj();
 			pkTeilnehmer = pkGen.getNextPrimaryKey(PKConst.PK_AUFTRAGTEILNEHMER);
 
-			// festhalten, wer den Datensatz angelegt hat
-			TheClientDto client = getTheClient(pUser);
-
-			Auftragteilnehmer auftragteilnehmer = new Auftragteilnehmer(pkTeilnehmer,auftragteilnehmerDto.getISort(),auftragteilnehmerDto.getAuftragIId(),auftragteilnehmerDto.getPartnerIIdAuftragteilnehmer(),auftragteilnehmerDto.getAuftragteilnehmerfunktionIId(),client.getIDPersonal());
+			Auftragteilnehmer auftragteilnehmer = new Auftragteilnehmer(pkTeilnehmer, auftragteilnehmerDto.getISort(),
+					auftragteilnehmerDto.getAuftragIId(), auftragteilnehmerDto.getPartnerIIdAuftragteilnehmer(),
+					auftragteilnehmerDto.getAuftragteilnehmerfunktionIId(), theClientDto.getIDPersonal());
 			em.persist(auftragteilnehmer);
-  em.flush();
+			em.flush();
 
-			setAuftragteilnehmerFromAuftragteilnehmerDto(auftragteilnehmer,
-					auftragteilnehmerDto);
+			setAuftragteilnehmerFromAuftragteilnehmerDto(auftragteilnehmer, auftragteilnehmerDto);
 
-			// @todo eine Aufgabe beim neuen Teilnehmer erzeugen  PJ 3829
-		}
-		catch (EntityExistsException ex) {
+			// @todo eine Aufgabe beim neuen Teilnehmer erzeugen PJ 3829
+		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 
 		return pkTeilnehmer;
 	}
 
-
 	/**
 	 * Einen Auftragteilnehmer ueber seinen key aus der DB loeschen.
+	 * 
 	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 */
-	private void removeAuftragteilnehmer(Integer iId)
-	throws EJBExceptionLP {
-		//   try {
-Auftragteilnehmer toRemove = em.find(Auftragteilnehmer.class, iId);
-if (toRemove == null) {
-  throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-}
-try {
-  em.remove(toRemove);
-  em.flush();
-} catch (EntityExistsException er) {
-  throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
-}
-		//   }
-		//  catch (RemoveException ex) {
-		//     throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
-		//  }
+	private void removeAuftragteilnehmer(Integer iId) throws EJBExceptionLP {
+		// try {
+		Auftragteilnehmer toRemove = em.find(Auftragteilnehmer.class, iId);
+		if (toRemove == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+		// }
+		// catch (RemoveException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		// }
 	}
-
 
 	/**
 	 * Einen Auftragteilnehmer von der der db loeschen.
+	 * 
 	 * @param auftragteilnehmerDto AuftragteilnehmerDto
 	 * @throws EJBExceptionLP
 	 */
-	public void removeAuftragteilnehmer(AuftragteilnehmerDto auftragteilnehmerDto)
-	throws EJBExceptionLP {
+	public void removeAuftragteilnehmer(AuftragteilnehmerDto auftragteilnehmerDto) throws EJBExceptionLP {
 		final String METHOD_NAME = "removeAuftragteilnehmer";
 		myLogger.entry();
-
-
 
 		try {
 			removeAuftragteilnehmer(auftragteilnehmerDto.getIId());
 
-			sortierungAnpassenBeiLoeschenEinerPosition(
-					auftragteilnehmerDto.getAuftragIId(),
+			sortierungAnpassenBeiLoeschenEinerPosition(auftragteilnehmerDto.getAuftragIId(),
 					auftragteilnehmerDto.getISort().intValue());
-		}
-		catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.
-					FEHLER_BEIM_LOESCHEN, new Exception(t));
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, new Exception(t));
 		}
 	}
 
-
 	/**
 	 * Einen Auftragsteilnehmer aktualisieren.
+	 * 
 	 * @param auftragteilnehmerDto AuftragteilnehmerDto
 	 * @throws EJBExceptionLP
 	 */
-	public void updateAuftragteilnehmer(AuftragteilnehmerDto auftragteilnehmerDto)
-	throws EJBExceptionLP {
+	public void updateAuftragteilnehmer(AuftragteilnehmerDto auftragteilnehmerDto) throws EJBExceptionLP {
 		final String METHOD_NAME = "updateAuftragteilnehmer";
 		myLogger.entry();
 
@@ -168,73 +155,70 @@ try {
 
 		Integer iId = auftragteilnehmerDto.getIId();
 
-		//    try {
+		// try {
 		Auftragteilnehmer auftragteilnehmer = em.find(Auftragteilnehmer.class, iId);
 		if (auftragteilnehmer == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		setAuftragteilnehmerFromAuftragteilnehmerDto(auftragteilnehmer,
-				auftragteilnehmerDto);
-		//     }
-		//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		//     }
+		setAuftragteilnehmerFromAuftragteilnehmerDto(auftragteilnehmer, auftragteilnehmerDto);
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
 	}
-
 
 	/**
 	 * Einen bestimmten Auftragteilnehmer ueber seinen Schluessel holen.
+	 * 
 	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 * @return AuftragteilnehmerDto
 	 */
-	public AuftragteilnehmerDto auftragteilnehmerFindByPrimaryKey(Integer iId)
-	throws EJBExceptionLP {
+	public AuftragteilnehmerDto auftragteilnehmerFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.
-					FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception("iId == null"));
 		}
 
 		AuftragteilnehmerDto teilnehmerDto = null;
 
-		//    try {
+		// try {
 		Auftragteilnehmer teilnehmer = em.find(Auftragteilnehmer.class, iId);
 		if (teilnehmer == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		teilnehmerDto = this.assembleAuftragteilnehmerDto(teilnehmer);
-		//     }
-		//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		//     }
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
 
 		return teilnehmerDto;
 	}
 
-
 	public AuftragteilnehmerDto[] auftragteilnehmerFindByPartnerIIdAuftragteilnehmer(Integer iId)
-	throws EJBExceptionLP {
+			throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.
-					FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception("iId == null"));
 		}
 
 		AuftragteilnehmerDto[] teilnehmerDtos = null;
 
-		//    try {
+		// try {
 		Query query = em.createNamedQuery("AuftragteilnehmerfindByPartnerIidTeilnehmer");
 		query.setParameter(1, iId);
 		Collection<?> cTeilnehmer = query.getResultList();
-//		if (cTeilnehmer.isEmpty()) {
-//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, null);
-//		}
+		// if (cTeilnehmer.isEmpty()) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// null);
+		// }
 		teilnehmerDtos = this.assembleAuftragteilnehmerDtos(cTeilnehmer);
-		//     }
-		//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		//     }
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
 
 		return teilnehmerDtos;
 	}
@@ -242,139 +226,159 @@ try {
 	/**
 	 * Feststellen, ob ein bestimmter Partner bereits in der Teilnehmerliste eines
 	 * bestimmten Auftrags enthalten ist.
+	 * 
 	 * @param iIdPartnerI PK des Partners
 	 * @param iIdAuftragI PK des Auftrags
-	 * @return boolean true, wenn der Partner in der Liste der Teilnehmer enthalten ist
+	 * @return boolean true, wenn der Partner in der Liste der Teilnehmer enthalten
+	 *         ist
 	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public boolean istPartnerEinAuftragteilnehmer(Integer iIdPartnerI,
-			Integer iIdAuftragI)
-	throws EJBExceptionLP {
+	public boolean istPartnerEinAuftragteilnehmer(Integer iIdPartnerI, Integer iIdAuftragI) throws EJBExceptionLP {
 		boolean bIstTeilnehmerO = false;
 
-
-
 		if (iIdPartnerI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdPartnerI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdPartnerI == null"));
 		}
 
 		if (iIdAuftragI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAuftragI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAuftragI == null"));
 		}
 
-		//    try {
+		// try {
 		Query query = em.createNamedQuery("AuftragteilnehmerfindByAuftrag");
 		query.setParameter(1, iIdAuftragI);
 		Collection<?> collection = query.getResultList();
-//		if (collection.isEmpty()) {
-//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, null);
-//		}
+		// if (collection.isEmpty()) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, null);
+		// }
 
 		Iterator<?> it = collection.iterator();
 
 		while (it.hasNext()) {
 			Auftragteilnehmer auftragteilnehmer = (Auftragteilnehmer) it.next();
 
-			if (auftragteilnehmer.getPartnerIIdAuftragteilnehmer().intValue() ==
-				iIdPartnerI.intValue()) {
+			if (auftragteilnehmer.getPartnerIIdAuftragteilnehmer().intValue() == iIdPartnerI.intValue()) {
 				bIstTeilnehmerO = true;
 			}
 		}
-		//     }
-	//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
-		//     }
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
+		// }
 
 		return bIstTeilnehmerO;
 	}
 
-
-	// Methoden zur Bestimmung der Sortierung der Auftragteilnehmer --------------
+	// Methoden zur Bestimmung der Sortierung der Auftragteilnehmer
+	// --------------
 
 	/**
-	 * Das maximale iSort bei den Teilnehmer fuer einen bestimmten
-	 * Auftrag bestimmen.
+	 * Das maximale iSort bei den Teilnehmer fuer einen bestimmten Auftrag
+	 * bestimmen.
+	 * 
 	 * @param iIdAuftragI der aktuelle Auftrag
 	 * @return Integer das maximale iSort
 	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Integer getMaxISort(Integer iIdAuftragI)
-	throws EJBExceptionLP {
-	    Integer iiMaxISortO = null;
-		try{
-		Query query = em.createNamedQuery("AuftragteilnehmerejbSelectMaxISort");
-		query.setParameter(1, iIdAuftragI);
-		iiMaxISortO =(Integer) query.getSingleResult();
-		if (iiMaxISortO == null) {
-	        iiMaxISortO = new Integer(0);
-	      }
-		}
-		catch(Throwable e){
+	public Integer getMaxISort(Integer iIdAuftragI) throws EJBExceptionLP {
+		Integer iiMaxISortO = null;
+		try {
+			Query query = em.createNamedQuery("AuftragteilnehmerejbSelectMaxISort");
+			query.setParameter(1, iIdAuftragI);
+			iiMaxISortO = (Integer) query.getSingleResult();
+			if (iiMaxISortO == null) {
+				iiMaxISortO = new Integer(0);
+			}
+		} catch (Throwable e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_EJBSELECT, new Exception(e));
 		}
 		return iiMaxISortO;
 	}
 
+	public String getErstenAuftragsteilnehmer(Integer auftragIId, TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("AuftragteilnehmerfindByAuftrag");
+		query.setParameter(1, auftragIId);
+		Collection<?> collection = query.getResultList();
+
+		if (collection.size() > 0) {
+			Auftragteilnehmer teilnehmer = (Auftragteilnehmer) collection.iterator().next();
+			return getPartnerFac().partnerFindByPrimaryKey(teilnehmer.getPartnerIIdAuftragteilnehmer(), theClientDto)
+					.formatFixName1Name2();
+		} else {
+			return null;
+		}
+
+	}
+
+	public PartnerDto getErstenAuftragsteilnehmerPartnerDto(Integer auftragIId, TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("AuftragteilnehmerfindByAuftrag");
+		query.setParameter(1, auftragIId);
+		Collection<?> collection = query.getResultList();
+
+		if (collection.size() > 0) {
+			Auftragteilnehmer teilnehmer = (Auftragteilnehmer) collection.iterator().next();
+			return getPartnerFac().partnerFindByPrimaryKey(teilnehmer.getPartnerIIdAuftragteilnehmer(), theClientDto);
+		} else {
+			return null;
+		}
+
+	}
 
 	/**
 	 * Zwei bestehende Teilnehmer in Bezug auf ihr iSort umreihen.
+	 * 
 	 * @param iIdPosition1I PK der ersten Position
 	 * @param iIdPosition2I PK der zweiten Position
 	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void vertauscheAuftragteilnehmer(Integer iIdPosition1I,
-			Integer iIdPosition2I)
-	throws EJBExceptionLP {
+	public void vertauscheAuftragteilnehmer(Integer iIdPosition1I, Integer iIdPosition2I) throws EJBExceptionLP {
 		final String METHOD_NAME = "vertauscheAuftragteilnehmer";
 		myLogger.entry();
 
-		//    try {
-		Auftragteilnehmer oPosition1 =em.find(Auftragteilnehmer.class, iIdPosition1I);
+		// try {
+		Auftragteilnehmer oPosition1 = em.find(Auftragteilnehmer.class, iIdPosition1I);
 		if (oPosition1 == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
-		Auftragteilnehmer oPosition2 =em.find(Auftragteilnehmer.class, iIdPosition2I);
+		Auftragteilnehmer oPosition2 = em.find(Auftragteilnehmer.class, iIdPosition2I);
 
 		Integer iSort1 = oPosition1.getISort();
 		Integer iSort2 = oPosition2.getISort();
 
-		// das zweite iSort auf ungueltig setzen, damit UK constraint nicht verletzt wird
-		oPosition2.setISort(new Integer( -1));
+		// das zweite iSort auf ungueltig setzen, damit UK constraint nicht
+		// verletzt wird
+		oPosition2.setISort(new Integer(-1));
 
 		oPosition1.setISort(iSort2);
 		oPosition2.setISort(iSort1);
-		//     }
-		//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		//     }
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
 	}
-
 
 	/**
 	 * Wenn eine neue Position im Hinblick auf iSort vor einer bestehenden
 	 * eingefuegt werden soll, dann schafft diese Methode Platz fuer den neuen
-	 * Datensatz.
-	 * <br>Diese Methode wird am Client aufgerufen, bevor die neue Position
+	 * Datensatz. <br>
+	 * Diese Methode wird am Client aufgerufen, bevor die neue Position
 	 * abgespeichert wird.
-	 * @param iIdAuftragI der aktuelle Auftrag
+	 * 
+	 * @param iIdAuftragI              der aktuelle Auftrag
 	 * @param iSortierungNeuePositionI die Stelle, an der eingefuegt werden soll
 	 * @throws EJBExceptionLP Ausnahme
 	 */
 	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(Integer iIdAuftragI,
-			int iSortierungNeuePositionI)
-	throws EJBExceptionLP {
-		//    try {
+			int iSortierungNeuePositionI) throws EJBExceptionLP {
+		// try {
 		Query query = em.createNamedQuery("AuftragteilnehmerfindByAuftrag");
 		query.setParameter(1, iIdAuftragI);
 		Collection<?> cl = query.getResultList();
-// 		if (cl.isEmpty()) {
-// 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, null);
-// 		}
+		// if (cl.isEmpty()) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, null);
+		// }
 		Iterator<?> it = cl.iterator();
 
 		while (it.hasNext()) {
@@ -385,25 +389,24 @@ try {
 				oPosition.setISort(new Integer(iSortierungNeuePositionI));
 			}
 		}
-		//     }
-	//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
-		//     }
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
+		// }
 	}
-
 
 	/**
 	 * Wenn fuer einen Auftrag eine Position geloescht wurden, dann muss die
 	 * Sortierung der Positionen angepasst werden, damit keine Luecken entstehen.
-	 * <br>Diese Methode wird im Zuge des Loeschens der Position am Server
-	 * aufgerufen.
-	 * @param iIdAuftragI PK des Auftrags
+	 * <br>
+	 * Diese Methode wird im Zuge des Loeschens der Position am Server aufgerufen.
+	 * 
+	 * @param iIdAuftragI                    PK des Auftrags
 	 * @param iSortierungGeloeschtePositionI die Position der geloschten Position
 	 * @throws Throwable Ausnahme
 	 */
-	private void sortierungAnpassenBeiLoeschenEinerPosition(Integer iIdAuftragI,
-			int iSortierungGeloeschtePositionI)
-	throws Throwable {
+	private void sortierungAnpassenBeiLoeschenEinerPosition(Integer iIdAuftragI, int iSortierungGeloeschtePositionI)
+			throws Throwable {
 		Query query = em.createNamedQuery("AuftragteilnehmerfindByAuftrag");
 		query.setParameter(1, iIdAuftragI);
 		Collection<?> clPositionen = query.getResultList();
@@ -419,42 +422,37 @@ try {
 		}
 	}
 
-
-	private void setAuftragteilnehmerFromAuftragteilnehmerDto(Auftragteilnehmer auftragteilnehmer, AuftragteilnehmerDto auftragteilnehmerDto) {
+	private void setAuftragteilnehmerFromAuftragteilnehmerDto(Auftragteilnehmer auftragteilnehmer,
+			AuftragteilnehmerDto auftragteilnehmerDto) {
 		if (auftragteilnehmerDto.getISort() != null) {
 			auftragteilnehmer.setISort(auftragteilnehmerDto.getISort());
 		}
 		if (auftragteilnehmerDto.getAuftragIId() != null) {
 			auftragteilnehmer.setAuftragIId(auftragteilnehmerDto.getAuftragIId());
 		}
-		auftragteilnehmer.setBIstexternerteilnehmer(auftragteilnehmerDto.
-				getBIstExternerTeilnehmer());
+		auftragteilnehmer.setBIstexternerteilnehmer(auftragteilnehmerDto.getBIstExternerTeilnehmer());
 		if (auftragteilnehmerDto.getPartnerIIdAuftragteilnehmer() != null) {
-			auftragteilnehmer.setPartnerIIdAuftragteilnehmer(auftragteilnehmerDto.
-					getPartnerIIdAuftragteilnehmer());
+			auftragteilnehmer.setPartnerIIdAuftragteilnehmer(auftragteilnehmerDto.getPartnerIIdAuftragteilnehmer());
 		}
-		auftragteilnehmer.setFunktionIId(auftragteilnehmerDto.
-				getAuftragteilnehmerfunktionIId());
+		auftragteilnehmer.setFunktionIId(auftragteilnehmerDto.getAuftragteilnehmerfunktionIId());
 		if (auftragteilnehmerDto.getTAnlegen() != null) {
 			auftragteilnehmer.setTAnlegen(auftragteilnehmerDto.getTAnlegen());
 		}
 		if (auftragteilnehmerDto.getPersonalIIDAnlegen() != null) {
-			auftragteilnehmer.setPersonalIIdAnlegen(auftragteilnehmerDto.
-					getPersonalIIDAnlegen());
+			auftragteilnehmer.setPersonalIIdAnlegen(auftragteilnehmerDto.getPersonalIIDAnlegen());
 		}
+
+		auftragteilnehmer.setKostenstelleIId(auftragteilnehmerDto.getKostenstelleIId());
+
 		em.merge(auftragteilnehmer);
-  em.flush();
+		em.flush();
 	}
 
-
-	private AuftragteilnehmerDto assembleAuftragteilnehmerDto(Auftragteilnehmer
-			auftragteilnehmer) {
+	private AuftragteilnehmerDto assembleAuftragteilnehmerDto(Auftragteilnehmer auftragteilnehmer) {
 		return AuftragteilnehmerDtoAssembler.createDto(auftragteilnehmer);
 	}
 
-
-	private AuftragteilnehmerDto[] assembleAuftragteilnehmerDtos(Collection<?>
-			auftragteilnehmers) {
+	private AuftragteilnehmerDto[] assembleAuftragteilnehmerDtos(Collection<?> auftragteilnehmers) {
 		List<AuftragteilnehmerDto> list = new ArrayList<AuftragteilnehmerDto>();
 		if (auftragteilnehmers != null) {
 			Iterator<?> iterator = auftragteilnehmers.iterator();
@@ -466,6 +464,5 @@ try {
 		AuftragteilnehmerDto[] returnArray = new AuftragteilnehmerDto[list.size()];
 		return (AuftragteilnehmerDto[]) list.toArray(returnArray);
 	}
-
 
 }

@@ -44,5 +44,7 @@ public class LpAuftragseriennummerFormat extends LpBelegnummerFormat {
 		String result = dfBelegNummer.format(lpBelegnummer.getBelegNummer());
 		return result;
 	}
-
+	public String formatMitStellenZufall(LpBelegnummer lpBelegnummer) {
+		return format(lpBelegnummer);
+	}
 }

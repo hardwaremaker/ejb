@@ -41,16 +41,21 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.server.util.ICNr;
 
 @NamedQueries( {
-		@NamedQuery(name = "LagerfindByMandantCNr", query = "SELECT OBJECT(C) FROM Lager c WHERE c.mandantCNr = ?1"),
-		@NamedQuery(name = "LagerfindAll", query = "SELECT OBJECT(C) FROM Lager c"),
+		@NamedQuery(name = "LagerfindByMandantCNr", query = "SELECT OBJECT(C) FROM Lager c WHERE c.mandantCNr = ?1 ORDER BY c.iSort"),
+		@NamedQuery(name = "LagerfindAll", query = "SELECT OBJECT(C) FROM Lager c ORDER BY c.iSort"),
 		@NamedQuery(name = "LagerfindByCNrByMandantCNr", query = "SELECT OBJECT(C) FROM Lager c WHERE c.cNr = ?1 AND  c.mandantCNr = ?2"),
+		@NamedQuery(name = "LagerfindByPartnerIIdStandortMandantCNr", query = "SELECT OBJECT(C) FROM Lager c WHERE c.partnerIIdStandort = ?1 AND  c.mandantCNr = ?2 ORDER BY c.iSort"),
+		@NamedQuery(name = "LagerfindByPartnerIIdStandortMandantCNrOhneVersteckte", query = "SELECT OBJECT(C) FROM Lager c WHERE c.partnerIIdStandort = ?1 AND  c.mandantCNr = ?2 AND c.bVersteckt = 0 ORDER BY c.iSort"),
 		@NamedQuery(name = "LagerfindByMandantCNrOrderByILoslagersort", query = "SELECT OBJECT(C) FROM Lager c WHERE c.mandantCNr = ?1 AND c.iLoslagersort IS NOT NULL ORDER BY c.iLoslagersort ASC"),
-		@NamedQuery(name = "LagerfindByMandantCNrLagerartCNr", query = "SELECT OBJECT (o) FROM Lager o WHERE o.mandantCNr=?1 AND o.lagerartCNr=?2") })
+		@NamedQuery(name = "LagerejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Lager o"),
+		@NamedQuery(name = LagerQuery.ByMandantCNrLagerartCNr, query = "SELECT OBJECT (o) FROM Lager o WHERE o.mandantCNr=?1 AND o.lagerartCNr=?2"),
+		@NamedQuery(name = LagerQuery.IIdsByMandantCNr, query = "SELECT c.iId FROM Lager c WHERE c.mandantCNr = ?1") })
 @Entity
-@Table(name = "WW_LAGER")
+@Table(name = ITablenames.WW_LAGER)
 public class Lager implements Serializable, ICNr {
 	@Id
 	@Column(name = "I_ID")
@@ -73,7 +78,42 @@ public class Lager implements Serializable, ICNr {
 	
 	@Column(name = "B_VERSTECKT")
 	private Short bVersteckt;
+	
+	@Column(name = "B_LAGERSTAND_BEI_0_ANZEIGEN")
+	private Short bLagerstandBei0Anzeigen;
 
+	public Short getBLagerstandBei0Anzeigen() {
+		return bLagerstandBei0Anzeigen;
+	}
+
+	public void setBLagerstandBei0Anzeigen(Short bLagerstandBei0Anzeigen) {
+		this.bLagerstandBei0Anzeigen = bLagerstandBei0Anzeigen;
+	}
+
+
+	@Column(name = "I_SORT")
+	private Integer iSort;
+	
+	public Integer getISort() {
+		return this.iSort;
+	}
+
+	public void setISort(Integer iSort) {
+		this.iSort = iSort;
+	}
+
+	
+	@Column(name = "PARTNER_I_ID")
+	private Integer partnerIId;
+
+	public Integer getPartnerIId() {
+		return this.partnerIId;
+	}
+
+	public void setPartnerIId(Integer partnerIId) {
+		this.partnerIId = partnerIId;
+	}
+	
 	@Column(name = "B_KONSIGNATIONSLAGER")
 	private Short bKonsignationslager;
 
@@ -93,6 +133,19 @@ public class Lager implements Serializable, ICNr {
 	public void setBVersteckt(Short versteckt) {
 		bVersteckt = versteckt;
 	}
+
+	
+	@Column(name = "PARTNER_I_ID_STANDORT")
+	private Integer partnerIIdStandort;
+	
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
+
 
 	@Column(name = "I_LOSLAGERSORT")
 	private Integer iLoslagersort;
@@ -130,7 +183,7 @@ public class Lager implements Serializable, ICNr {
 		super();
 	}
 
-	public Lager(Integer id, String nr, String lagerartCNr2, String mandantCNr2, Short bBestellvorschlag, Short bInternebestellung, Short bVersteckt, Short bKonsignationslager) {
+	public Lager(Integer id, String nr, String lagerartCNr2, String mandantCNr2, Short bBestellvorschlag, Short bInternebestellung, Short bVersteckt, Short bKonsignationslager, Integer iSort, Short bLagerstandBei0Anzeigen) {
 		setIId(id);
 		setCNr(nr);
 		setLagerartCNr(lagerartCNr2);
@@ -139,6 +192,8 @@ public class Lager implements Serializable, ICNr {
 		setBInternebestellung(bInternebestellung);
 		setBVersteckt(bVersteckt);
 		setBKonsignationslager(bKonsignationslager);
+		setISort(iSort);
+		setBLagerstandBei0Anzeigen(bLagerstandBei0Anzeigen);
 	}
 
 	public Integer getIId() {

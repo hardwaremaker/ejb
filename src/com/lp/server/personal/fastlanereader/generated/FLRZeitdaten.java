@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
@@ -84,6 +52,21 @@ public class FLRZeitdaten implements Serializable {
     private String x_kommentar;
 
     /** nullable persistent field */
+    private String x_kommentar_intern;
+
+    /** nullable persistent field */
+    private Double f_verrechenbar;
+
+    /** nullable persistent field */
+    private Double f_dauer_uebersteuert;
+
+    /** nullable persistent field */
+    private Date t_erledigt;
+
+    /** nullable persistent field */
+    private com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt;
+
+    /** nullable persistent field */
     private com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit flrtaetigkeit;
 
     /** nullable persistent field */
@@ -92,8 +75,11 @@ public class FLRZeitdaten implements Serializable {
     /** nullable persistent field */
     private FLRArtikelliste flrartikel;
 
+    /** nullable persistent field */
+    private com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine;
+
     /** full constructor */
-    public FLRZeitdaten(Date t_zeit, String c_belegartnr, Short b_taetigkeitgeaendert, Short b_automatikbuchung, Integer i_belegartid, Integer i_belegartpositionid, Date t_aendern, Integer personal_i_id, Integer artikel_i_id, Integer taetigkeit_i_id, String c_bemerkungzubelegart, String c_wowurdegebucht, String x_kommentar, com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit flrtaetigkeit, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal, FLRArtikelliste flrartikel) {
+    public FLRZeitdaten(Date t_zeit, String c_belegartnr, Short b_taetigkeitgeaendert, Short b_automatikbuchung, Integer i_belegartid, Integer i_belegartpositionid, Date t_aendern, Integer personal_i_id, Integer artikel_i_id, Integer taetigkeit_i_id, String c_bemerkungzubelegart, String c_wowurdegebucht, String x_kommentar, String x_kommentar_intern, Double f_verrechenbar, Double f_dauer_uebersteuert, Date t_erledigt, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt, com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit flrtaetigkeit, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal, FLRArtikelliste flrartikel, com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine) {
         this.t_zeit = t_zeit;
         this.c_belegartnr = c_belegartnr;
         this.b_taetigkeitgeaendert = b_taetigkeitgeaendert;
@@ -107,9 +93,15 @@ public class FLRZeitdaten implements Serializable {
         this.c_bemerkungzubelegart = c_bemerkungzubelegart;
         this.c_wowurdegebucht = c_wowurdegebucht;
         this.x_kommentar = x_kommentar;
+        this.x_kommentar_intern = x_kommentar_intern;
+        this.f_verrechenbar = f_verrechenbar;
+        this.f_dauer_uebersteuert = f_dauer_uebersteuert;
+        this.t_erledigt = t_erledigt;
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
         this.flrtaetigkeit = flrtaetigkeit;
         this.flrpersonal = flrpersonal;
         this.flrartikel = flrartikel;
+        this.flrmaschine = flrmaschine;
     }
 
     /** default constructor */
@@ -228,6 +220,46 @@ public class FLRZeitdaten implements Serializable {
         this.x_kommentar = x_kommentar;
     }
 
+    public String getX_kommentar_intern() {
+        return this.x_kommentar_intern;
+    }
+
+    public void setX_kommentar_intern(String x_kommentar_intern) {
+        this.x_kommentar_intern = x_kommentar_intern;
+    }
+
+    public Double getF_verrechenbar() {
+        return this.f_verrechenbar;
+    }
+
+    public void setF_verrechenbar(Double f_verrechenbar) {
+        this.f_verrechenbar = f_verrechenbar;
+    }
+
+    public Double getF_dauer_uebersteuert() {
+        return this.f_dauer_uebersteuert;
+    }
+
+    public void setF_dauer_uebersteuert(Double f_dauer_uebersteuert) {
+        this.f_dauer_uebersteuert = f_dauer_uebersteuert;
+    }
+
+    public Date getT_erledigt() {
+        return this.t_erledigt;
+    }
+
+    public void setT_erledigt(Date t_erledigt) {
+        this.t_erledigt = t_erledigt;
+    }
+
+    public com.lp.server.personal.fastlanereader.generated.FLRPersonal getFlrpersonal_erledigt() {
+        return this.flrpersonal_erledigt;
+    }
+
+    public void setFlrpersonal_erledigt(com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt) {
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
+    }
+
     public com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit getFlrtaetigkeit() {
         return this.flrtaetigkeit;
     }
@@ -250,6 +282,14 @@ public class FLRZeitdaten implements Serializable {
 
     public void setFlrartikel(FLRArtikelliste flrartikel) {
         this.flrartikel = flrartikel;
+    }
+
+    public com.lp.server.personal.fastlanereader.generated.FLRMaschine getFlrmaschine() {
+        return this.flrmaschine;
+    }
+
+    public void setFlrmaschine(com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine) {
+        this.flrmaschine = flrmaschine;
     }
 
     public String toString() {

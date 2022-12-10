@@ -38,4 +38,7 @@ public interface IVersandwegPartner {
 
 	Integer getPartnerIId() ;
 	void setPartnerIId(Integer partnerIId) ;
+	
+	Integer getVersandwegId() ;
+	void setVersandwegId(Integer versandwegId);
 }

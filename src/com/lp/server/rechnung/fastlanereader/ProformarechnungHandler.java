@@ -33,6 +33,7 @@
 package com.lp.server.rechnung.fastlanereader;
 
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -47,17 +48,24 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnung;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeGutschrift;
 import com.lp.server.system.jcr.service.docnode.DocNodeProformarechnung;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
+import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -88,12 +96,13 @@ import com.lp.util.EJBExceptionLP;
  */
 
 public class ProformarechnungHandler extends UseCaseHandler {
-	
+
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	
+	boolean bBruttoStattNetto = false;
+	Integer iAnlegerStattVertreterAnzeigen = 0;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -119,6 +128,10 @@ public class ProformarechnungHandler extends UseCaseHandler {
 			HashMap<?, ?> hmStatus = getSystemMultilanguageFac()
 					.getAllStatiMitUebersetzung(theClientDto.getLocUi(),
 							theClientDto);
+
+			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
+					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF, theClientDto);
+
 			while (resultListIterator.hasNext()) {
 				FLRRechnung proformarechnung = (FLRRechnung) resultListIterator
 						.next();
@@ -130,10 +143,82 @@ public class ProformarechnungHandler extends UseCaseHandler {
 				rows[row][col++] = proformarechnung.getFlrkunde() == null ? null
 						: proformarechnung.getFlrkunde().getFlrpartner()
 								.getC_name1nachnamefirmazeile1();
+				
+				
+				if (proformarechnung.getFlrkunde()!=null && proformarechnung.getFlrkunde().getFlrpartner()
+						.getFlrlandplzort() != null) {
+					
+					FLRLandplzort anschrift =proformarechnung.getFlrkunde().getFlrpartner()
+					.getFlrlandplzort();
+					
+					rows[row][col++] = anschrift.getFlrland().getC_lkz() + "-"
+							+ anschrift.getC_plz() + " "
+							+ anschrift.getFlrort().getC_name();
+				} else {
+					rows[row][col++] = "";
+				}
+				
+				String proj_bestellnummer = "";
+				if (proformarechnung.getC_bez() != null) {
+					proj_bestellnummer = proformarechnung.getC_bez();
+				}
+
+				if (proformarechnung.getC_bestellnummer() != null) {
+					proj_bestellnummer += " | " + proformarechnung.getC_bestellnummer();
+				}
+
+				rows[row][col++] = proj_bestellnummer;
+				
 				rows[row][col++] = proformarechnung.getD_belegdatum();
-				rows[row][col++] = getStatusMitUebersetzung((String)hmStatus.get(proformarechnung
-						.getStatus_c_nr()));
-				rows[row][col++] = proformarechnung.getN_wert();
+				
+				
+				if (iAnlegerStattVertreterAnzeigen == 1) {
+					if (proformarechnung.getFlrpersonalanleger() != null) {
+						rows[row][col++] = proformarechnung.getFlrpersonalanleger()
+								.getC_kurzzeichen();
+					} else {
+						rows[row][col++] = null;
+					}
+				} else if (iAnlegerStattVertreterAnzeigen == 2) {
+					if (proformarechnung.getFlrpersonalaenderer() != null) {
+						rows[row][col++] = proformarechnung.getFlrpersonalaenderer()
+								.getC_kurzzeichen();
+					} else {
+						rows[row][col++] = null;
+					}
+				} else {
+					if (proformarechnung.getFlrvertreter() != null) {
+						rows[row][col++] = proformarechnung.getFlrvertreter()
+								.getC_kurzzeichen();
+					} else {
+						rows[row][col++] = null;
+					}
+				}
+				
+				rows[row][col++] = getStatusMitUebersetzung(proformarechnung.getStatus_c_nr(),
+						proformarechnung.getT_versandzeitpunkt(),
+						proformarechnung.getC_versandtype());
+				
+
+				if (bDarfPreiseSehen) {
+					if (bBruttoStattNetto == false) {
+						rows[row][col++] = proformarechnung.getN_wertfw();
+					} else {
+
+						if (proformarechnung.getN_wertfw() != null
+								&& proformarechnung.getN_wertustfw() != null) {
+							rows[row][col++] = proformarechnung.getN_wertfw()
+									.add(proformarechnung.getN_wertustfw());
+						} else {
+							rows[row][col++] = null;
+						}
+
+					}
+
+				} else {
+					rows[row][col++] = null;
+				}
+
 				rows[row++][col++] = proformarechnung.getWaehrung_c_nr();
 				col = 0;
 			}
@@ -210,8 +295,17 @@ public class ProformarechnungHandler extends UseCaseHandler {
 					if (filterKriterien[i].kritName
 							.equals(RechnungFac.FLR_RECHNUNG_C_NR)) {
 						try {
-							String sValue = super.buildWhereBelegnummer(filterKriterien[i], true);
-//TODO: AD - Vorjahr suche
+							String sValue = super.buildWhereBelegnummer(
+									filterKriterien[i], false);
+							if (!istBelegnummernInJahr(
+									"FLRRechnung",
+									sValue,
+									"flrrechnungart.rechnungtyp_c_nr='"
+											+ RechnungFac.RECHNUNGTYP_PROFORMARECHNUNG
+											+ "'")) {
+								sValue = super.buildWhereBelegnummer(
+										filterKriterien[i], true);
+							}
 							where.append(" proformarechnung."
 									+ filterKriterien[i].kritName);
 							where.append(" " + filterKriterien[i].operator);
@@ -380,23 +474,62 @@ public class ProformarechnungHandler extends UseCaseHandler {
 	 */
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+
+			try {
+				ParametermandantDto parameter = getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_RECHNUNG,
+								ParameterFac.PARAMETER_BRUTTO_STATT_NETTO_IN_AUSWAHLLISTE);
+				bBruttoStattNetto = (Boolean) parameter.getCWertAsObject();
+
+				parameter = getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ALLGEMEIN,
+								ParameterFac.PARAMETER_ANZEIGE_ANLEGER_STATT_VERTRETER);
+				iAnlegerStattVertreterAnzeigen = (Integer) parameter
+						.getCWertAsObject();
+				
+			} catch (RemoteException ex) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+			}
+
+			String orderVertreter = "flrvertreter.c_kurzzeichen";
+			if (iAnlegerStattVertreterAnzeigen == 1) {
+				orderVertreter = "flrpersonalanleger.c_kurzzeichen";
+			} else if (iAnlegerStattVertreterAnzeigen == 2) {
+				orderVertreter = "flrpersonalaenderer.c_kurzzeichen";
+
+			}
+			
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, Date.class, Icon.class,
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class,
+							String.class, Date.class,String.class, Icon.class,
 							BigDecimal.class, String.class },
 					new String[] {
 							"Id",
 							" ",
 							getTextRespectUISpr("lp.rechnr", mandantCNr, locUI),
 							getTextRespectUISpr("lp.kunde", mandantCNr, locUI),
+							getTextRespectUISpr("lp.ort", mandantCNr, locUI),
+							getTextRespectUISpr("re.projektbestellnummer", mandantCNr, locUI),
 							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
+							getTextRespectUISpr("lp.vertreter", mandantCNr, locUI),
 							getTextRespectUISpr("lp.status", mandantCNr, locUI),
-							getTextRespectUISpr("lp.wert", mandantCNr, locUI),
+							bBruttoStattNetto ? getTextRespectUISpr(
+									"lp.bruttobetrag", mandantCNr, locUI)
+									: getTextRespectUISpr("lp.nettobetrag",
+											mandantCNr, locUI),
 							getTextRespectUISpr("lp.whg", mandantCNr, locUI) },
 					new int[] { -1, 1, QueryParameters.FLR_BREITE_M, -1,
-							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_XS,
 							QueryParameters.FLR_BREITE_PREIS,
 							QueryParameters.FLR_BREITE_WAEHRUNG },
 					new String[] {
@@ -407,7 +540,22 @@ public class ProformarechnungHandler extends UseCaseHandler {
 							RechnungFac.FLR_RECHNUNG_FLRKUNDE
 									+ "."
 									+ KundeFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
+									RechnungFac.FLR_RECHNUNG_FLRKUNDE + "."
+											+ KundeFac.FLR_PARTNER + "."
+											+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+											+ SystemFac.FLR_LP_FLRLAND
+											+ "."
+											+ SystemFac.FLR_LP_LANDLKZ
+											+ ", "
+											+
+											// und dann nach plz
+											"proformarechnung." + RechnungFac.FLR_RECHNUNG_FLRKUNDE
+											+ "." + KundeFac.FLR_PARTNER + "."
+											+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+											+ SystemFac.FLR_LP_LANDPLZORTPLZ,
+											RechnungFac.FLR_RECHNUNG_C_BEZ,
 							RechnungFac.FLR_RECHNUNG_D_BELEGDATUM,
+							orderVertreter,
 							RechnungFac.FLR_RECHNUNG_STATUS_C_NR,
 							RechnungFac.FLR_RECHNUNG_N_WERTFW,
 							RechnungFac.FLR_RECHNUNG_WAEHRUNG_C_NR }));
@@ -416,7 +564,7 @@ public class ProformarechnungHandler extends UseCaseHandler {
 
 		return super.getTableInfo();
 	}
-	
+
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
 		RechnungDto rechnungDto = null;
 		KundeDto kundeDto = null;
@@ -432,12 +580,13 @@ public class ProformarechnungHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (rechnungDto != null) {
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_RECHNUNG.trim() + "/"
-//					+ LocaleFac.BELEGART_GUTSCHRIFT.trim() + "/"
-//					+ rechnungDto.getCNr().replace("/", ".");
-			DocPath docPath = new DocPath(new DocNodeProformarechnung(rechnungDto));
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_RECHNUNG.trim() + "/"
+			// + LocaleFac.BELEGART_GUTSCHRIFT.trim() + "/"
+			// + rechnungDto.getCNr().replace("/", ".");
+			DocPath docPath = new DocPath(new DocNodeProformarechnung(
+					rechnungDto));
 			Integer iPartnerIId = null;
 			if (partnerDto != null) {
 				iPartnerIId = partnerDto.getIId();
@@ -447,6 +596,7 @@ public class ProformarechnungHandler extends UseCaseHandler {
 			return null;
 		}
 	}
+
 	public String getSTable() {
 		return "RECHNUNG";
 	};

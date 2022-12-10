@@ -47,6 +47,8 @@ import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import org.hibernate.Session;
+
 import com.lp.server.angebot.ejb.Angebot;
 import com.lp.server.angebot.ejb.Angebotposition;
 import com.lp.server.angebot.service.AngebotDto;
@@ -59,8 +61,6 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelsprDto;
 import com.lp.server.artikel.service.MaterialzuschlagDto;
-import com.lp.server.artikel.service.VerkaufspreisDto;
-import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
@@ -74,36 +74,35 @@ import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.AngebotPositionNumberAdapter;
 import com.lp.server.util.Facade;
+import com.lp.server.util.IBelegVerkaufEntity;
+import com.lp.server.util.MwstsatzbezId;
 import com.lp.server.util.PositionNumberHandler;
+import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.isort.CompositeISort;
 import com.lp.server.util.isort.IPrimitiveSwapper;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
-public class AngebotpositionFacBean extends Facade implements
-		AngebotpositionFac, IPrimitiveSwapper {
+public class AngebotpositionFacBean extends Facade implements AngebotpositionFac, IPrimitiveSwapper {
 	@PersistenceContext
 	private EntityManager em;
 
-	private void istSteuersatzInPositionsartPositionGleich(
-			AngebotpositionDto agposDto, TheClientDto theClientDto) {
+	private void istSteuersatzInPositionsartPositionGleich(AngebotpositionDto agposDto, TheClientDto theClientDto) {
 		if (agposDto.getTypCNr() != null
-				&& (agposDto.getTypCNr().equals(LocaleFac.POSITIONTYP_EBENE1) || agposDto
-						.getTypCNr().equals(LocaleFac.POSITIONTYP_EBENE2))
+				&& (agposDto.getTypCNr().equals(LocaleFac.POSITIONTYP_EBENE1)
+						|| agposDto.getTypCNr().equals(LocaleFac.POSITIONTYP_EBENE2))
 				&& agposDto.getPositioniId() != null) {
-			AngebotpositionDto[] dtos = angebotpositionFindByPositionIId(
-					agposDto.getPositioniId(), theClientDto);
+			AngebotpositionDto[] dtos = angebotpositionFindByPositionIId(agposDto.getPositioniId(), theClientDto);
 			for (int i = 0; i < dtos.length; i++) {
 				if (agposDto.getMwstsatzIId() != null) {
 					if (dtos[i].getMwstsatzIId() != null) {
-						if (!agposDto.getMwstsatzIId().equals(
-								dtos[i].getMwstsatzIId())) {
+						if (!agposDto.getMwstsatzIId().equals(dtos[i].getMwstsatzIId())) {
 							// MWST-Saetze innerhalb "Position" muessen
 							// immer gleich sein
 							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_STEUERSATZ_INNERHALB_UNTERPOSITIONEN_UNGLEICH,
-									"");
+									EJBExceptionLP.FEHLER_STEUERSATZ_INNERHALB_UNTERPOSITIONEN_UNGLEICH, "");
 						}
 					}
 				}
@@ -111,13 +110,11 @@ public class AngebotpositionFacBean extends Facade implements
 		}
 	}
 
-	public Integer createAngebotposition(
-			AngebotpositionDto angebotpositionDtoI, TheClientDto theClientDto) {
+	public Integer createAngebotposition(AngebotpositionDto angebotpositionDtoI, TheClientDto theClientDto) {
 		return createAngebotposition(angebotpositionDtoI, true, theClientDto);
 	}
 
-	private void updateTAendernAngebot(Integer angebotIId,
-			TheClientDto theClientDto) {
+	private void updateTAendernAngebot(Integer angebotIId, TheClientDto theClientDto) {
 		Angebot angebot = em.find(Angebot.class, angebotIId);
 		angebot.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		angebot.setTAendern(getTimestamp());
@@ -125,9 +122,8 @@ public class AngebotpositionFacBean extends Facade implements
 		em.flush();
 	}
 
-	public Integer createAngebotposition(
-			AngebotpositionDto angebotpositionDtoI,
-			boolean bArtikelSetAufloesen, TheClientDto theClientDto) {
+	public Integer createAngebotposition(AngebotpositionDto angebotpositionDtoI, boolean bArtikelSetAufloesen,
+			TheClientDto theClientDto) {
 		checkAngebotpositionDto(angebotpositionDtoI);
 		Integer angebotpositionIId = null;
 		pruefePflichtfelderBelegposition(angebotpositionDtoI, theClientDto);
@@ -135,22 +131,17 @@ public class AngebotpositionFacBean extends Facade implements
 
 		try {
 			// endsumme: 5 Es kann nur eine Position Endsumme geben
-			if (angebotpositionDtoI.getPositionsartCNr().equals(
-					AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME)
-					&& angebotpositionFindByAngebotIIdAngebotpositionsartCNrOhneExc(
-							angebotpositionDtoI.getBelegIId(),
+			if (angebotpositionDtoI.getPositionsartCNr().equals(AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME)
+					&& angebotpositionFindByAngebotIIdAngebotpositionsartCNrOhneExc(angebotpositionDtoI.getBelegIId(),
 							AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME) != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_ENDSUMME_EXISTIERT,
-						new Exception(
-								"Eine Position Endsumme existiert bereits."));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ENDSUMME_EXISTIERT,
+						new Exception("Eine Position Endsumme existiert bereits."));
 			}
-			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI,
-					theClientDto);
+			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI, theClientDto);
 
 			// Handartikel anlegen
-			if (angebotpositionDtoI.getPositionsartCNr().equalsIgnoreCase(
-					AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)) {
+			if (angebotpositionDtoI.getPositionsartCNr()
+					.equalsIgnoreCase(AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)) {
 				ArtikelDto oArtikelDto = new ArtikelDto();
 				oArtikelDto.setArtikelartCNr(ArtikelFac.ARTIKELART_HANDARTIKEL);
 
@@ -161,137 +152,162 @@ public class AngebotpositionFacBean extends Facade implements
 				oArtikelDto.setArtikelsprDto(oArtikelsprDto);
 				oArtikelDto.setEinheitCNr(angebotpositionDtoI.getEinheitCNr());
 				// Der Artikel erhaelt die Mwst-Satz-Bezeichnung
-				MwstsatzDto mwstsatzDto = getMandantFac()
-						.mwstsatzFindByPrimaryKey(
-								angebotpositionDtoI.getMwstsatzIId(),
-								theClientDto);
+				MwstsatzDto mwstsatzDto = getMandantFac().mwstsatzFindByPrimaryKey(angebotpositionDtoI.getMwstsatzIId(),
+						theClientDto);
 				oArtikelDto.setMwstsatzbezIId(mwstsatzDto.getIIMwstsatzbezId());
 				// Handartikel anlegen
-				Integer iIdArtikel = getArtikelFac().createArtikel(oArtikelDto,
-						theClientDto);
+				Integer iIdArtikel = getArtikelFac().createArtikel(oArtikelDto, theClientDto);
 
 				angebotpositionDtoI.setArtikelIId(iIdArtikel);
 
-				myLogger.info("Handartikel wurde angelegt, iIdArtikel:"
-						+ iIdArtikel);
+				myLogger.info("Handartikel wurde angelegt, iIdArtikel:" + iIdArtikel);
 			}
 
-			if (angebotpositionDtoI.getPositionsartCNr().equalsIgnoreCase(
-					AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)) {
+			if (angebotpositionDtoI.getPositionsartCNr().equalsIgnoreCase(AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)) {
 
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(
-								angebotpositionDtoI.getArtikelIId(),
+				// SP5235
+				if (angebotpositionDtoI.getTMaterialzuschlagDatum() == null
+						&& angebotpositionDtoI.getNMaterialzuschlagKurs() == null) {
+
+					ArtikelDto artikelDto = getArtikelFac()
+							.artikelFindByPrimaryKeySmall(angebotpositionDtoI.getArtikelIId(), theClientDto);
+					if (artikelDto.getMaterialIId() != null) {
+						AngebotDto agDto = getAngebotFac().angebotFindByPrimaryKey(angebotpositionDtoI.getBelegIId(),
 								theClientDto);
-				if (artikelDto.getMaterialIId() != null) {
-					AngebotDto agDto = getAngebotFac().angebotFindByPrimaryKey(
-							angebotpositionDtoI.getBelegIId(), theClientDto);
 
-					MaterialzuschlagDto mDto = getMaterialFac()
-							.getKursMaterialzuschlagDtoInZielwaehrung(
-									artikelDto.getMaterialIId(),
-									new java.sql.Date(agDto.getTBelegdatum()
-											.getTime()),
-									agDto.getWaehrungCNr(), theClientDto);
-					if (mDto != null) {
-						angebotpositionDtoI.setNMaterialzuschlagKurs(mDto
-								.getNZuschlag());
-						angebotpositionDtoI.setTMaterialzuschlagDatum(mDto
-								.getTGueltigab());
+						MaterialzuschlagDto mDto = getMaterialFac().getKursMaterialzuschlagDtoVKInZielwaehrung(
+								agDto.getKundeIIdAngebotsadresse(), artikelDto.getIId(),
+								new java.sql.Date(agDto.getTBelegdatum().getTime()), agDto.getWaehrungCNr(),
+								theClientDto);
+						if (mDto != null) {
+							angebotpositionDtoI.setNMaterialzuschlagKurs(mDto.getNZuschlag());
+							angebotpositionDtoI.setTMaterialzuschlagDatum(mDto.getTGueltigab());
+						}
 					}
+
+					// SP9080 Wenn ein kalkulatorischer Artikel manuell oder per Zwischenablage
+					// eingefuegt wird, muss zwingend eine
+					// zugehoerige Artikelposition gesucht werden
+					if (Helper.short2boolean(artikelDto.getBKalkulatorisch())
+							&& angebotpositionDtoI.getPositionIIdZugehoerig() == null) {
+
+						Session session = FLRSessionFactory.getFactory().openSession();
+
+						String sQuery = "SELECT ap.i_id FROM FLRAngebotposition ap WHERE ap.flrangebot.i_id="
+								+ angebotpositionDtoI.getBelegIId() + " AND ap.positionart_c_nr ='"
+								+ AuftragServiceFac.AUFTRAGPOSITIONART_IDENT
+								+ "' AND ap.flrartikel.b_kalkulatorisch = 0 ORDER BY ap.i_sort DESC";
+						org.hibernate.Query query = session.createQuery(sQuery);
+						List<?> resultList = query.list();
+						Iterator<?> resultListIterator = resultList.iterator();
+
+						// FEHLER
+						ArrayList al = new ArrayList();
+						al.add(artikelDto.getCNr());
+
+						if (resultListIterator.hasNext()) {
+							Integer position_i_id_letzter_nicht_kalkulatorische_artikel = (Integer) resultListIterator
+									.next();
+
+							Query queryZugeh = em.createNamedQuery("AngebotpositionfindByPositionIIdZugehoerig");
+							queryZugeh.setParameter(1, position_i_id_letzter_nicht_kalkulatorische_artikel);
+							Collection<?> posZugehoerig = queryZugeh.getResultList();
+
+							if (posZugehoerig == null || posZugehoerig.size() == 0) {
+								// Dann verknuepfen
+								angebotpositionDtoI
+										.setPositionIIdZugehoerig(position_i_id_letzter_nicht_kalkulatorische_artikel);
+							} else {
+
+								throw new EJBExceptionLP(
+										EJBExceptionLP.FEHLER_KALKULATORISCHER_ARTIKEL_KONNTE_NICHT_VERKETTET_WERDEN,
+										al,
+										new Exception("FEHLER_KALKULATORISCHER_ARTIKEL_KONNTE_NICHT_VERKETTET_WERDEN"));
+
+							}
+
+						} else {
+							// SP9882
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_KALKULATORISCHER_ARTIKEL_KONNTE_NICHT_VERKETTET_WERDEN, al,
+									new Exception("FEHLER_KALKULATORISCHER_ARTIKEL_KONNTE_NICHT_VERKETTET_WERDEN"));
+
+						}
+
+					}
+
 				}
 			}
 
 			// generieren von primary key
-			angebotpositionIId = getPKGeneratorObj().getNextPrimaryKey(
-					PKConst.PK_ANGEBOTPOSITION);
+			angebotpositionIId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_ANGEBOTPOSITION);
 			angebotpositionDtoI.setIId(angebotpositionIId);
 
 			// Sortierung: falls nicht anders definiert, hinten dran haengen.
 			if (angebotpositionDtoI.getISort() == null) {
-				int iSortNeu = getMaxISort(angebotpositionDtoI.getBelegIId(),
-						theClientDto) + 1;
+				int iSortNeu = getMaxISort(angebotpositionDtoI.getBelegIId(), theClientDto) + 1;
 				angebotpositionDtoI.setISort(iSortNeu);
 			}
 
 			AngebotpositionDto vorherigeDtoI = null;
-			int iSort = getMaxISort(angebotpositionDtoI.getBelegIId(),
-					theClientDto);
+			int iSort = getMaxISort(angebotpositionDtoI.getBelegIId(), theClientDto);
 			try {
 
 				if (angebotpositionDtoI.getISort() != null) {
 					iSort = angebotpositionDtoI.getISort() - 1;
 				}
-				Query query = em
-						.createNamedQuery("AngebotpositionfindByAngebotIIdISort");
+				Query query = em.createNamedQuery("AngebotpositionfindByAngebotIIdISort");
 				query.setParameter(1, angebotpositionDtoI.getBelegIId());
 				query.setParameter(2, iSort);
-				vorherigeDtoI = assembleAngebotpositionDto((Angebotposition) query
-						.getSingleResult());
+				vorherigeDtoI = assembleAngebotpositionDto((Angebotposition) query.getSingleResult());
 			} catch (EJBExceptionLP ex1) {
 			} catch (NoResultException ex1) {
 			} catch (NonUniqueResultException e1) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-						"Fehler bei AngebotpositionfindByIsort. Es gibt mehrere Angebotpositionen mit isort "
-								+ iSort
-								+ "fuer AngebotIId "
-								+ angebotpositionDtoI.getBelegIId());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
+						"Fehler bei AngebotpositionfindByIsort. Es gibt mehrere Angebotpositionen mit isort " + iSort
+								+ "fuer AngebotIId " + angebotpositionDtoI.getBelegIId());
 			}
-			angebotpositionDtoI = (AngebotpositionDto) befuellepositionBelegpositionDtoVerkauf(
-					vorherigeDtoI, angebotpositionDtoI, theClientDto);
-			istSteuersatzInPositionsartPositionGleich(angebotpositionDtoI,
-					theClientDto);
+			angebotpositionDtoI = (AngebotpositionDto) befuellepositionBelegpositionDtoVerkauf(vorherigeDtoI,
+					angebotpositionDtoI, theClientDto);
+			istSteuersatzInPositionsartPositionGleich(angebotpositionDtoI, theClientDto);
 
-			Angebotposition angebotposition = new Angebotposition(
-					angebotpositionDtoI.getIId(),
-					angebotpositionDtoI.getBelegIId(),
-					angebotpositionDtoI.getISort(),
-					angebotpositionDtoI.getPositionsartCNr(),
-					angebotpositionDtoI.getNGestehungspreis(),
-					angebotpositionDtoI.getMwstsatzIId(),
-					angebotpositionDtoI.getBNettopreisuebersteuert());
-			angebotposition.setBZwsPositionspreisZeigen(Helper
-					.boolean2Short(true));
+			Angebotposition angebotposition = new Angebotposition(angebotpositionDtoI.getIId(),
+					angebotpositionDtoI.getBelegIId(), angebotpositionDtoI.getISort(),
+					angebotpositionDtoI.getPositionsartCNr(), angebotpositionDtoI.getNGestehungspreis(),
+					angebotpositionDtoI.getMwstsatzIId(), angebotpositionDtoI.getBNettopreisuebersteuert());
+			angebotposition.setBZwsPositionspreisZeigen(Helper.boolean2Short(true));
 			em.persist(angebotposition);
 			em.flush();
 
-			setAngebotpositionFromAngebotpositionDto(angebotposition,
-					angebotpositionDtoI);
+			setAngebotpositionFromAngebotpositionDto(angebotposition, angebotpositionDtoI);
+
+			getBelegartmediaFac().kopiereBelegartmedia(angebotpositionDtoI.getUsecaseIIdQuelle(),
+					angebotpositionDtoI.getIKeyQuelle(), QueryParameters.UC_ID_ANGEBOTPOSITION,
+					angebotpositionDtoI.getIId(), theClientDto);
 
 			befuelleZusaetzlichePreisfelder(angebotpositionIId, theClientDto);
 
 			// endsumme: 6 Nach dem Abspeichern wird die Reihenfolge der
 			// Positionen
 			// in Hinblick auf die Position Endsumme geprueft und ev. korrigiert
-			sortierungAnpassenInBezugAufEndsumme(
-					angebotpositionDtoI.getBelegIId(), theClientDto);
+			sortierungAnpassenInBezugAufEndsumme(angebotpositionDtoI.getBelegIId(), theClientDto);
 
 			// PJ 14648 Wenn Setartikel, dann die zugehoerigen Artikle ebenfalls
 			// buchen:
-			if (bArtikelSetAufloesen == true
-					&& angebotpositionDtoI.getArtikelIId() != null) {
+			if (bArtikelSetAufloesen == true && angebotpositionDtoI.getArtikelIId() != null) {
 
-				StuecklisteDto stklDto = getStuecklisteFac()
-						.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
-								angebotpositionDtoI.getArtikelIId(),
-								theClientDto);
+				StuecklisteDto stklDto = getStuecklisteFac().stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+						angebotpositionDtoI.getArtikelIId(), theClientDto);
 				if (stklDto != null
-						&& stklDto.getStuecklisteartCNr().equals(
-								StuecklisteFac.STUECKLISTEART_SETARTIKEL)) {
+						&& stklDto.getStuecklisteartCNr().equals(StuecklisteFac.STUECKLISTEART_SETARTIKEL)) {
 					AngebotpositionDto angebotpositionDtoKopfartikel = angebotpositionFindByPrimaryKey(
 							angebotpositionDtoI.getIId(), theClientDto);
 
 					List<?> m = null;
 					try {
-						m = getStuecklisteFac()
-								.getStrukturDatenEinerStueckliste(
-										stklDto.getIId(),
-										theClientDto,
-										StuecklisteReportFac.REPORT_STUECKLISTE_OPTION_SORTIERUNG_OHNE,
-										0, null, false, false,
-										angebotpositionDtoI.getNMenge(), null,
-										true);
+						m = getStuecklisteFac().getStrukturDatenEinerStueckliste(stklDto.getIId(), theClientDto,
+								StuecklisteReportFac.REPORT_STUECKLISTE_OPTION_SORTIERUNG_OHNE, 0, null, false, false,
+								angebotpositionDtoI.getNMenge(), null, true);
 					} catch (RemoteException ex4) {
 						throwEJBExceptionLPRespectOld(ex4);
 					}
@@ -299,56 +315,37 @@ public class AngebotpositionFacBean extends Facade implements
 					Iterator<?> it = m.listIterator();
 
 					while (it.hasNext()) {
-						StuecklisteMitStrukturDto struktur = (StuecklisteMitStrukturDto) it
-								.next();
-						StuecklistepositionDto position = struktur
-								.getStuecklistepositionDto();
+						StuecklisteMitStrukturDto struktur = (StuecklisteMitStrukturDto) it.next();
+						StuecklistepositionDto position = struktur.getStuecklistepositionDto();
 
 						angebotpositionDtoI.setNEinzelpreis(new BigDecimal(0));
-						angebotpositionDtoI
-								.setNNettoeinzelpreis(new BigDecimal(0));
+						angebotpositionDtoI.setNNettoeinzelpreis(new BigDecimal(0));
 						angebotpositionDtoI.setNMwstbetrag(new BigDecimal(0));
 						angebotpositionDtoI.setNRabattbetrag(new BigDecimal(0));
 						angebotpositionDtoI.setFZusatzrabattsatz(0D);
 						angebotpositionDtoI.setFRabattsatz(0D);
-						angebotpositionDtoI
-								.setNNettoeinzelpreisplusversteckteraufschlag(new BigDecimal(
-										0));
-						angebotpositionDtoI
-								.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(new BigDecimal(
-										0));
-						angebotpositionDtoI
-								.setNBruttoeinzelpreis(new BigDecimal(0));
+						angebotpositionDtoI.setNNettoeinzelpreisplusversteckteraufschlag(new BigDecimal(0));
+						angebotpositionDtoI.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(new BigDecimal(0));
+						angebotpositionDtoI.setNBruttoeinzelpreis(new BigDecimal(0));
 
-						angebotpositionDtoI.setNMenge(Helper
-								.rundeKaufmaennisch(
-										position.getNZielmenge().multiply(
-												angebotpositionDtoKopfartikel
-														.getNMenge()), 4));
+						angebotpositionDtoI.setNMenge(Helper.rundeKaufmaennisch(
+								position.getNZielmenge(angebotpositionDtoKopfartikel.getNMenge()), 4));
 
-						angebotpositionDtoI.setArtikelIId(position
-								.getArtikelIId());
-						angebotpositionDtoI.setEinheitCNr(position
-								.getEinheitCNr());
-						angebotpositionDtoI
-								.setPositioniIdArtikelset(angebotpositionDtoKopfartikel
-										.getIId());
+						angebotpositionDtoI.setArtikelIId(position.getArtikelIId());
+						angebotpositionDtoI.setEinheitCNr(position.getEinheitCNr());
+						angebotpositionDtoI.setPositioniIdArtikelset(angebotpositionDtoKopfartikel.getIId());
 						angebotpositionDtoI.setIId(null);
 
 						int iSortNeu = angebotpositionDtoI.getISort() + 1;
 
-						sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(
-								angebotpositionDtoI.getBelegIId(), iSortNeu,
-								theClientDto);
+						sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(angebotpositionDtoI.getBelegIId(),
+								iSortNeu, theClientDto);
 
 						angebotpositionDtoI.setISort(iSortNeu);
-						createAngebotposition(angebotpositionDtoI, false,
-								theClientDto);
+						createAngebotposition(angebotpositionDtoI, false, theClientDto);
 
 					}
-					preiseEinesArtikelsetsUpdaten(
-							angebotpositionDtoKopfartikel.getIId(),
-							theClientDto);
+					preiseEinesArtikelsetsUpdaten(angebotpositionDtoKopfartikel.getIId(), theClientDto);
 				}
 
 			}
@@ -363,15 +360,12 @@ public class AngebotpositionFacBean extends Facade implements
 		return angebotpositionIId;
 	}
 
-	private void pruefeAngebotpositionAendernErlaubt(
-			AngebotpositionDto angebotpositionDtoI, TheClientDto theClientDto)
+	private void pruefeAngebotpositionAendernErlaubt(AngebotpositionDto angebotpositionDtoI, TheClientDto theClientDto)
 			throws RemoteException, EJBExceptionLP {
-		AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(
-				angebotpositionDtoI.getBelegIId(), theClientDto);
-		if (!angebotDto.getStatusCNr().equals(
-				AngebotServiceFac.ANGEBOTSTATUS_ANGELEGT)) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BELEG_IST_BEREITS_AKTIVIERT,
+		AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(angebotpositionDtoI.getBelegIId(),
+				theClientDto);
+		if (!angebotDto.getStatusCNr().equals(AngebotServiceFac.ANGEBOTSTATUS_ANGELEGT)) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BELEG_IST_BEREITS_AKTIVIERT,
 					new Exception("Status: " + angebotDto.getStatusCNr()));
 		}
 	}
@@ -380,124 +374,93 @@ public class AngebotpositionFacBean extends Facade implements
 	 * Fuer eine Angebotposition vom Typ Ident oder Handeingabe werden die
 	 * zusaetzlichen Preisfelder befuellt.
 	 * 
-	 * @param iIdPositionI
-	 *            PK der Position
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdPositionI PK der Position
+	 * @param theClientDto der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void befuelleZusaetzlichePreisfelder(Integer iIdPositionI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void befuelleZusaetzlichePreisfelder(Integer iIdPositionI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotpositionIId(iIdPositionI);
 		try {
-			Angebotposition angebotposition = em.find(Angebotposition.class,
-					iIdPositionI);
+			Angebotposition angebotposition = em.find(Angebotposition.class, iIdPositionI);
 			if (angebotposition == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						new Exception(
-								"Fehler bei befuellezusaetzlichePreisfelder. Es gibt keine Angebotsposition mit der iid "
-										+ iIdPositionI));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
+						"Fehler bei befuellezusaetzlichePreisfelder. Es gibt keine Angebotsposition mit der iid "
+								+ iIdPositionI));
 			}
 
-			if (angebotposition.getAngebotpositionartCNr().equals(
-					AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)
-					|| angebotposition.getAngebotpositionartCNr().equals(
-							AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)
-					|| angebotposition.getAngebotpositionartCNr().equals(
-							AngebotServiceFac.ANGEBOTPOSITIONART_AGSTUECKLISTE)) {
+			if (angebotposition.getAngebotpositionartCNr().equals(AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)
+					|| angebotposition.getAngebotpositionartCNr()
+							.equals(AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)
+					|| angebotposition.getAngebotpositionartCNr()
+							.equals(AngebotServiceFac.ANGEBOTPOSITIONART_AGSTUECKLISTE)) {
 
-				AngebotDto angebotDto = getAngebotFac()
-						.angebotFindByPrimaryKey(
-								angebotposition.getAngebotIId(), theClientDto);
-				AngebotpositionDto angebotpositionDto = angebotpositionFindByPrimaryKey(
-						iIdPositionI, theClientDto);
+				AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(angebotposition.getAngebotIId(),
+						theClientDto);
+				AngebotpositionDto angebotpositionDto = angebotpositionFindByPrimaryKey(iIdPositionI, theClientDto);
 				angebotpositionDto = (AngebotpositionDto) getBelegVerkaufFac()
-						.berechneBelegpositionVerkauf(angebotpositionDto,
-								angebotDto);
+						.berechneBelegpositionVerkauf(angebotpositionDto, angebotDto);
 
-				angebotposition
-						.setNNettoeinzelpreisplusversteckteraufschlag(angebotpositionDto
-								.getNEinzelpreisplusversteckteraufschlag());
-				angebotposition
-						.setNNettogesamtpreisplusversteckteraufschlag(angebotpositionDto
-								.getNNettoeinzelpreisplusversteckteraufschlag());
-				angebotposition
-						.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(angebotpositionDto
-								.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+				angebotposition.setNNettoeinzelpreisplusversteckteraufschlag(
+						angebotpositionDto.getNEinzelpreisplusversteckteraufschlag());
+				angebotposition.setNNettogesamtpreisplusversteckteraufschlag(
+						angebotpositionDto.getNNettoeinzelpreisplusversteckteraufschlag());
+				angebotposition.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
+						angebotpositionDto.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
 
 				/*
-				 * // den versteckten Aufschlag aus den Konditionen
-				 * beruecksichtigen BigDecimal nVersteckterAufschlag = new
-				 * BigDecimal(angebotDto. getFVersteckterAufschlag().
-				 * doubleValue()).movePointLeft(2); nVersteckterAufschlag =
-				 * Helper.rundeKaufmaennisch(nVersteckterAufschlag, 4);
+				 * // den versteckten Aufschlag aus den Konditionen beruecksichtigen BigDecimal
+				 * nVersteckterAufschlag = new BigDecimal(angebotDto.
+				 * getFVersteckterAufschlag(). doubleValue()).movePointLeft(2);
+				 * nVersteckterAufschlag = Helper.rundeKaufmaennisch(nVersteckterAufschlag, 4);
 				 * 
-				 * BigDecimal nNettoeinzelpreisVersteckterAufschlagSumme =
-				 * angebotposition
+				 * BigDecimal nNettoeinzelpreisVersteckterAufschlagSumme = angebotposition
 				 * .getNNettoeinzelpreis().multiply(nVersteckterAufschlag);
-				 * nNettoeinzelpreisVersteckterAufschlagSumme =
-				 * Helper.rundeKaufmaennisch(
+				 * nNettoeinzelpreisVersteckterAufschlagSumme = Helper.rundeKaufmaennisch(
 				 * nNettoeinzelpreisVersteckterAufschlagSumme, 4);
 				 * 
 				 * angebotposition.setNNettoeinzelpreisplusversteckteraufschlag(
 				 * angebotposition. getNNettoeinzelpreis().
 				 * add(nNettoeinzelpreisVersteckterAufschlagSumme));
 				 * 
-				 * BigDecimal nNettogesamtpreisVersteckterAufschlagSumme =
-				 * angebotposition
+				 * BigDecimal nNettogesamtpreisVersteckterAufschlagSumme = angebotposition
 				 * .getNNettogesamtpreis().multiply(nVersteckterAufschlag);
-				 * nNettogesamtpreisVersteckterAufschlagSumme =
-				 * Helper.rundeKaufmaennisch(
-				 * nNettogesamtpreisVersteckterAufschlagSumme, 4);
-				 * angebotposition
-				 * .setNNettogesamtpreisplusversteckteraufschlag(angebotposition
-				 * . getNNettogesamtpreis().
-				 * add(nNettogesamtpreisVersteckterAufschlagSumme));
+				 * nNettogesamtpreisVersteckterAufschlagSumme = Helper.rundeKaufmaennisch(
+				 * nNettogesamtpreisVersteckterAufschlagSumme, 4); angebotposition
+				 * .setNNettogesamtpreisplusversteckteraufschlag(angebotposition .
+				 * getNNettogesamtpreis(). add(nNettogesamtpreisVersteckterAufschlagSumme));
 				 * 
-				 * // die Abschlaege werden auf Basis des Versteckten Aufschlags
-				 * beruecksichtigt
+				 * // die Abschlaege werden auf Basis des Versteckten Aufschlags beruecksichtigt
 				 * 
 				 * // - Allgemeiner Rabatt BigDecimal nAllgemeinerRabatt = new
 				 * BigDecimal(angebotDto. getFAllgemeinerRabattsatz().
 				 * doubleValue()).movePointLeft(2); nAllgemeinerRabatt =
 				 * Helper.rundeKaufmaennisch(nAllgemeinerRabatt, 4);
 				 * 
-				 * BigDecimal nNettogesamtpreisAllgemeinerRabattSumme =
-				 * angebotposition
+				 * BigDecimal nNettogesamtpreisAllgemeinerRabattSumme = angebotposition
 				 * .getNNettogesamtpreisplusversteckteraufschlag().multiply(
 				 * nAllgemeinerRabatt);
 				 * 
-				 * nNettogesamtpreisAllgemeinerRabattSumme =
-				 * Helper.rundeKaufmaennisch(
+				 * nNettogesamtpreisAllgemeinerRabattSumme = Helper.rundeKaufmaennisch(
 				 * nNettogesamtpreisAllgemeinerRabattSumme, 4);
 				 * 
-				 * angebotposition.
-				 * setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
-				 * angebotposition.
-				 * getNNettogesamtpreisplusversteckteraufschlag().subtract(
+				 * angebotposition. setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
+				 * angebotposition. getNNettogesamtpreisplusversteckteraufschlag().subtract(
 				 * nNettogesamtpreisAllgemeinerRabattSumme));
 				 * 
-				 * // - Projektierungsrabatt BigDecimal nProjektierungsRabatt =
-				 * new BigDecimal(angebotDto.
-				 * getFProjektierungsrabattsatz().doubleValue
+				 * // - Projektierungsrabatt BigDecimal nProjektierungsRabatt = new
+				 * BigDecimal(angebotDto. getFProjektierungsrabattsatz().doubleValue
 				 * ()).movePointLeft(2); nProjektierungsRabatt =
 				 * Helper.rundeKaufmaennisch(nProjektierungsRabatt, 4);
 				 * 
-				 * BigDecimal nNettogesamtpreisProjektierungsrabattSumme =
-				 * angebotposition
-				 * .getNNettogesamtpreisplusversteckteraufschlagminusrabatte().
-				 * multiply( nProjektierungsRabatt);
+				 * BigDecimal nNettogesamtpreisProjektierungsrabattSumme = angebotposition
+				 * .getNNettogesamtpreisplusversteckteraufschlagminusrabatte(). multiply(
+				 * nProjektierungsRabatt);
 				 * 
-				 * nNettogesamtpreisProjektierungsrabattSumme =
-				 * Helper.rundeKaufmaennisch(
+				 * nNettogesamtpreisProjektierungsrabattSumme = Helper.rundeKaufmaennisch(
 				 * nNettogesamtpreisProjektierungsrabattSumme, 4);
 				 * 
-				 * angebotposition.
-				 * setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
-				 * angebotposition
-				 * .getNNettogesamtpreisplusversteckteraufschlagminusrabatte().
+				 * angebotposition. setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
+				 * angebotposition .getNNettogesamtpreisplusversteckteraufschlagminusrabatte().
 				 * subtract( nNettogesamtpreisProjektierungsrabattSumme));
 				 */
 			}
@@ -508,38 +471,30 @@ public class AngebotpositionFacBean extends Facade implements
 		myLogger.exit("Die zusaetzlichen Preisfelder wurden befuellt.");
 	}
 
-	public void berechnePauschalposition(BigDecimal neuWert,
-			Integer positionIId, Integer belegIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException {
+	public void berechnePauschalposition(BigDecimal neuWert, Integer positionIId, Integer belegIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		BigDecimal altWert = getGesamtpreisPosition(positionIId, theClientDto);
-		AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(
-				belegIId, theClientDto);
-		AngebotpositionDto[] angebotpositionDtos = angebotpositionFindByPositionIId(
-				positionIId, theClientDto);
+		AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(belegIId, theClientDto);
+		AngebotpositionDto[] angebotpositionDtos = angebotpositionFindByPositionIId(positionIId, theClientDto);
 		for (int i = 0; i < angebotpositionDtos.length; i++) {
 			AngebotpositionDto angebotpositionDto = (AngebotpositionDto) getBelegVerkaufFac()
-					.berechnePauschalposition(angebotpositionDtos[i],
-							angebotDto, neuWert, altWert);
-			Angebotposition position = em.find(Angebotposition.class,
-					angebotpositionDto.getIId());
+					.berechnePauschalposition(angebotpositionDtos[i], angebotDto, neuWert, altWert);
+			Angebotposition position = em.find(Angebotposition.class, angebotpositionDto.getIId());
 
-			position.setNNettogesamtpreis(angebotpositionDto
-					.getNNettoeinzelpreis());
-			position.setNNettogesamtpreisplusversteckteraufschlag(angebotpositionDto
-					.getNNettoeinzelpreisplusversteckteraufschlag());
-			position.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(angebotpositionDto
-					.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+			position.setNNettogesamtpreis(angebotpositionDto.getNNettoeinzelpreis());
+			position.setNNettogesamtpreisplusversteckteraufschlag(
+					angebotpositionDto.getNNettoeinzelpreisplusversteckteraufschlag());
+			position.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
+					angebotpositionDto.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
 			position.setBNettopreisuebersteuert(Helper.boolean2Short(true));
 		}
 	}
 
-	public Double berechneArbeitszeitSoll(Integer iIdAngebotI,
-			TheClientDto theClientDto) {
+	public Double berechneArbeitszeitSoll(Integer iIdAngebotI, TheClientDto theClientDto) {
 
 		double dArbeitszeitSoll = 0;
 
-		Query query = em
-				.createNamedQuery("AngebotpositionfindByAngebotIIdOhneAlternative");
+		Query query = em.createNamedQuery("AngebotpositionfindByAngebotIIdOhneAlternative");
 		query.setParameter(1, iIdAngebotI);
 		Collection<?> cl = query.getResultList();
 		Iterator<?> it = cl.iterator();
@@ -547,15 +502,11 @@ public class AngebotpositionFacBean extends Facade implements
 		while (it.hasNext()) {
 			Angebotposition pos = (Angebotposition) it.next();
 
-			if (pos.getAngebotpositionartCNr().equals(
-					AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)) {
+			if (pos.getAngebotpositionartCNr().equals(AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)) {
 				if (pos.getArtikelIId() != null) {
-					ArtikelDto artikelDto = getArtikelFac()
-							.artikelFindByPrimaryKey(pos.getArtikelIId(),
-									theClientDto);
+					ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(pos.getArtikelIId(), theClientDto);
 
-					if (artikelDto.getArtikelartCNr().equals(
-							ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
+					if (artikelDto.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
 						dArbeitszeitSoll += pos.getNMenge().doubleValue();
 					}
 				}
@@ -569,86 +520,125 @@ public class AngebotpositionFacBean extends Facade implements
 	/**
 	 * Eine bestehende Angebotposition loeschen.
 	 * 
-	 * @param angebotpositionDtoI
-	 *            die bestehende Angebotposition
-	 * @param theClientDto
-	 *            der aktuelle Bentuzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param angebotpositionDtoI die bestehende Angebotposition
+	 * @param theClientDto        der aktuelle Bentuzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeAngebotposition(AngebotpositionDto angebotpositionDtoI,
+	public void removeAngebotposition(AngebotpositionDto angebotpositionDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
+		removeAngebotpositionImpl(angebotpositionDtoI, true, theClientDto);
+	}
+
+	private void removeAngebotpositionImpl(AngebotpositionDto angebotpositionDtoI, boolean artikelsetAufloesen,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotpositionDto(angebotpositionDtoI);
 		try {
-			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI,
-					theClientDto);
-			updateTAendernAngebot(angebotpositionDtoI.getBelegIId(),
-					theClientDto);
+			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI, theClientDto);
+			updateTAendernAngebot(angebotpositionDtoI.getBelegIId(), theClientDto);
 
 			if (angebotpositionDtoI.getPositioniIdArtikelset() == null) {
 
-				Query query = em
-						.createNamedQuery("AngebotpositionpositionfindByPositionIIdArtikelset");
+				Query query = em.createNamedQuery("AngebotpositionpositionfindByPositionIIdArtikelset");
 				query.setParameter(1, angebotpositionDtoI.getIId());
 				Collection<?> angebotpositionDtos = query.getResultList();
 				AngebotpositionDto[] zugehoerigeLSPosDtos = assembleAngebotpositionDtos(angebotpositionDtos);
 
 				for (int i = 0; i < zugehoerigeLSPosDtos.length; i++) {
-					removeAngebotposition(zugehoerigeLSPosDtos[i], theClientDto);
+					removeAngebotpositionImpl(zugehoerigeLSPosDtos[i], false, theClientDto);
 				}
 			}
 
-			Angebotposition toRemove = em.find(Angebotposition.class,
-					angebotpositionDtoI.getIId());
+			Angebotposition toRemove = em.find(Angebotposition.class, angebotpositionDtoI.getIId());
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						new Exception(
-								"Fehler beim entfernen der Angebotsposition. Es gibt keine Position mit iid "
-										+ angebotpositionDtoI.getIId()));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						new Exception("Fehler beim entfernen der Angebotsposition. Es gibt keine Position mit iid "
+								+ angebotpositionDtoI.getIId()));
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 			// die Sortierung muss angepasst werden
-			sortierungAnpassenBeiLoeschenEinerPosition(
-					angebotpositionDtoI.getBelegIId(), angebotpositionDtoI
-							.getISort().intValue());
+			sortierungAnpassenBeiLoeschenEinerPosition(angebotpositionDtoI.getBelegIId(),
+					angebotpositionDtoI.getISort().intValue());
 
-			if (angebotpositionDtoI.getPositioniIdArtikelset() != null) {
-				preiseEinesArtikelsetsUpdaten(
-						angebotpositionDtoI.getPositioniIdArtikelset(),
-						theClientDto);
+			if (artikelsetAufloesen && angebotpositionDtoI.getPositioniIdArtikelset() != null) {
+				preiseEinesArtikelsetsUpdaten(angebotpositionDtoI.getPositioniIdArtikelset(), theClientDto);
 			}
 
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, new Exception(t));
 		}
+	}
+
+	public void sortiereNachArtikelnummer(Integer angebotIId, TheClientDto theClientDto) {
+
+		Query query = em.createNamedQuery("AngebotpositionfindByAngebotIId");
+		query.setParameter(1, angebotIId);
+		AngebotpositionDto[] dtos = assembleAngebotpositionDtos(query.getResultList());
+
+		for (int i = 0; i < dtos.length; i++) {
+			if (dtos[i].isIntelligenteZwischensumme()) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_UMSORTIEREN_INTELLIGENTE_ZWS,
+						new Exception("FEHLER_UMSORTIEREN_INTELLIGENTE_ZWS"));
+			}
+		}
+
+		for (int i = dtos.length - 1; i > 0; --i) {
+			for (int j = 0; j < i; ++j) {
+				AngebotpositionDto o = dtos[j];
+
+				AngebotpositionDto o1 = dtos[j + 1];
+
+				String artikelNR = "";
+
+				if (o.getArtikelIId() != null) {
+					artikelNR = getArtikelFac().artikelFindByPrimaryKeySmall(o.getArtikelIId(), theClientDto).getCNr();
+				}
+				String artikelNR1 = "";
+
+				if (o1.getArtikelIId() != null) {
+					artikelNR1 = getArtikelFac().artikelFindByPrimaryKeySmall(o1.getArtikelIId(), theClientDto)
+							.getCNr();
+
+				}
+
+				if (artikelNR.compareTo(artikelNR1) > 0) {
+					dtos[j] = o1;
+					dtos[j + 1] = o;
+				}
+			}
+		}
+
+		int iSort = 1;
+		for (int i = 0; i < dtos.length; i++) {
+			Angebotposition pos = em.find(Angebotposition.class, dtos[i].getIId());
+
+			pos.setISort(iSort);
+
+			em.merge(pos);
+			em.flush();
+
+			iSort++;
+		}
+
 	}
 
 	/**
 	 * Wenn fuer ein Angebot eine Position geloescht wurden, dann muss die
-	 * Sortierung der Positionen angepasst werden, damit keine Luecken
-	 * entstehen. <br>
-	 * Diese Methode wird im Zuge des Loeschens der Position am Server
-	 * aufgerufen.
+	 * Sortierung der Positionen angepasst werden, damit keine Luecken entstehen.
+	 * <br>
+	 * Diese Methode wird im Zuge des Loeschens der Position am Server aufgerufen.
 	 * 
-	 * @param iIdAngebotI
-	 *            PK des Angebots
-	 * @param iSortierungGeloeschtePositionI
-	 *            die Position der geloschten Position
-	 * @throws Throwable
-	 *             Ausnahme
+	 * @param iIdAngebotI                    PK des Angebots
+	 * @param iSortierungGeloeschtePositionI die Position der geloschten Position
+	 * @throws Throwable Ausnahme
 	 */
-	private void sortierungAnpassenBeiLoeschenEinerPosition(
-			Integer iIdAngebotI, int iSortierungGeloeschtePositionI)
+	private void sortierungAnpassenBeiLoeschenEinerPosition(Integer iIdAngebotI, int iSortierungGeloeschtePositionI)
 			throws Throwable {
 		Query query = em.createNamedQuery("AngebotpositionfindByAngebotIId");
 		query.setParameter(1, iIdAngebotI);
@@ -659,8 +649,7 @@ public class AngebotpositionFacBean extends Facade implements
 			Angebotposition angebotposition = (Angebotposition) it.next();
 
 			if (angebotposition.getISort().intValue() > iSortierungGeloeschtePositionI) {
-				angebotposition.setISort(new Integer(
-						iSortierungGeloeschtePositionI));
+				angebotposition.setISort(new Integer(iSortierungGeloeschtePositionI));
 				iSortierungGeloeschtePositionI++;
 			}
 		}
@@ -670,20 +659,17 @@ public class AngebotpositionFacBean extends Facade implements
 
 	public Integer gehoertZuArtikelset(Integer angebotpositionIId) {
 
-		Angebotposition oPosition1 = em.find(Angebotposition.class,
-				angebotpositionIId);
+		Angebotposition oPosition1 = em.find(Angebotposition.class, angebotpositionIId);
 
 		if (oPosition1.getPositionIIdArtikelset() != null) {
 			return oPosition1.getPositionIIdArtikelset();
 		}
 
-		Query query = em
-				.createNamedQuery("AngebotpositionpositionfindByPositionIIdArtikelset");
+		Query query = em.createNamedQuery("AngebotpositionpositionfindByPositionIIdArtikelset");
 		query.setParameter(1, angebotpositionIId);
 		Collection<?> lieferscheinpositionDtos = query.getResultList();
 
-		if (lieferscheinpositionDtos != null
-				&& lieferscheinpositionDtos.size() > 0) {
+		if (lieferscheinpositionDtos != null && lieferscheinpositionDtos.size() > 0) {
 			return angebotpositionIId;
 		} else {
 			return null;
@@ -694,54 +680,242 @@ public class AngebotpositionFacBean extends Facade implements
 	/**
 	 * Eine bestehende Angebotposition aktualisieren.
 	 * 
-	 * @param angebotpositionDtoI
-	 *            die bestehende Angebotposition
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param angebotpositionDtoI die bestehende Angebotposition
+	 * @param theClientDto        der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateAngebotposition(AngebotpositionDto angebotpositionDtoI,
+	public void updateAngebotposition(AngebotpositionDto angebotpositionDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
+		updateAngebotposition(angebotpositionDtoI, true, theClientDto);
+//		checkAngebotpositionDto(angebotpositionDtoI);
+//		pruefePflichtfelderBelegposition(angebotpositionDtoI, theClientDto);
+//		updateTAendernAngebot(angebotpositionDtoI.getBelegIId(), theClientDto);
+//		try {
+//			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI,
+//					theClientDto);
+//
+//			AngebotpositionDto savedAngebotpositionDto = angebotpositionFindByPrimaryKey(
+//					angebotpositionDtoI.getIId(), theClientDto);
+//
+//			AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(
+//					angebotpositionDtoI.getBelegIId(), theClientDto);
+//
+//			Angebotposition angebotposition = em.find(Angebotposition.class,
+//					angebotpositionDtoI.getIId());
+//			if (angebotposition == null) {
+//				throw new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+//						new Exception(
+//								"Fehler bei Update Angebotsposition. Es gibt keine Position mit iid "
+//										+ angebotpositionDtoI.getIId()));
+//			}
+//
+//			// SP4317
+//			if (angebotpositionDtoI.getNMaterialzuschlag() != null
+//					&& savedAngebotpositionDto.getNMaterialzuschlag() != null
+//					&& angebotpositionDtoI.getNMaterialzuschlag().doubleValue() != savedAngebotpositionDto
+//							.getNMaterialzuschlag().doubleValue()
+//					|| (angebotpositionDtoI.getNMaterialzuschlag() != null && savedAngebotpositionDto
+//							.getNMaterialzuschlag() == null)) {
+//				ArtikelDto artikelDto = getArtikelFac()
+//						.artikelFindByPrimaryKeySmall(
+//								angebotpositionDtoI.getArtikelIId(),
+//								theClientDto);
+//				if (artikelDto.getMaterialIId() != null) {
+//
+//					MaterialzuschlagDto mDto = getMaterialFac()
+//							.getKursMaterialzuschlagDtoVKInZielwaehrung(
+//									angebotDto.getKundeIIdAngebotsadresse(),
+//									artikelDto.getIId(),
+//									new java.sql.Date(angebotDto
+//											.getTBelegdatum().getTime()),
+//									angebotDto.getWaehrungCNr(), theClientDto);
+//					if (mDto != null) {
+//						angebotpositionDtoI.setNMaterialzuschlagKurs(mDto
+//								.getNZuschlag());
+//						angebotpositionDtoI.setTMaterialzuschlagDatum(mDto
+//								.getTGueltigab());
+//					}
+//				}
+//			}
+//
+//			setAngebotpositionFromAngebotpositionDto(angebotposition,
+//					angebotpositionDtoI);
+//
+//			befuelleZusaetzlichePreisfelder(angebotposition.getIId(),
+//					theClientDto);
+//
+//			Integer angebotspositionIIdKopfartikel = gehoertZuArtikelset(angebotpositionDtoI
+//					.getIId());
+//			if (angebotspositionIIdKopfartikel != null) {
+//				preiseEinesArtikelsetsUpdaten(angebotspositionIIdKopfartikel,
+//						theClientDto);
+//			}
+//
+//			// PJ20394
+//			if (parameterDazugehoertMengeNeuberechnen(theClientDto.getMandant())) {
+//				Query query = em
+//						.createNamedQuery("AngebotpositionfindByPositionIIdZugehoerig");
+//				query.setParameter(1, angebotpositionDtoI.getIId());
+//				Collection<?> posZugehoerig = query.getResultList();
+//
+//				if (posZugehoerig != null && posZugehoerig.size() > 0) {
+//					Iterator it = posZugehoerig.iterator();
+//					while (it.hasNext()) {
+//						Angebotposition ap = (Angebotposition) it.next();
+//						AngebotpositionDto apDtoZugehoerig = angebotpositionFindByPrimaryKey(
+//								ap.getIId(), theClientDto);
+//						apDtoZugehoerig
+//								.setNMenge(mengeZugehoerigerArtikelNeuBerechnen(
+//										angebotpositionDtoI,
+//										apDtoZugehoerig, theClientDto));
+//						updateAngebotposition(apDtoZugehoerig, theClientDto);
+//
+//					}
+//
+//				}
+//			}
+//
+//			// spezielle Behandlung fuer eine Handeingabeposition
+//			if (angebotpositionDtoI.getPositionsartCNr().equals(
+//					AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)) {
+//				// in diesem Fall muss auch der angelegte Handartikel
+//				// aktualisiert werden
+//				ArtikelDto artikelDto = getArtikelFac()
+//						.artikelFindByPrimaryKey(
+//								angebotpositionDtoI.getArtikelIId(),
+//								theClientDto);
+//
+//				ArtikelsprDto oArtikelsprDto = artikelDto.getArtikelsprDto();
+//				oArtikelsprDto.setCBez(angebotpositionDtoI.getCBez());
+//				oArtikelsprDto.setCZbez(angebotpositionDtoI.getCZusatzbez());
+//
+//				artikelDto.setArtikelsprDto(oArtikelsprDto);
+//				artikelDto.setEinheitCNr(angebotpositionDtoI.getEinheitCNr());
+//				// Der Artikel erhaelt die Mwst-Satz-Bezeichnung
+//				MwstsatzDto mwstsatzDto = getMandantFac()
+//						.mwstsatzFindByPrimaryKey(
+//								angebotpositionDtoI.getMwstsatzIId(),
+//								theClientDto);
+//				artikelDto.setMwstsatzbezIId(mwstsatzDto.getIIMwstsatzbezId());
+//				// Artikel speichern
+//				getArtikelFac().updateArtikel(artikelDto, theClientDto);
+//			}
+//			// PJ 09/0014648 spezielle Behandlung fuer eine Position
+//			if (angebotpositionDtoI.getPositionsartCNr().equals(
+//					LocaleFac.POSITIONSART_POSITION)) {
+//				try {
+//					Query query = em
+//							.createNamedQuery("AngebotpositionfindByPositionIId");
+//					query.setParameter(1, angebotpositionDtoI.getIId());
+//					Collection<?> cl = query.getResultList();
+//					Iterator<?> iterator = cl.iterator();
+//					while (iterator.hasNext()) {
+//						Angebotposition position = (Angebotposition) iterator
+//								.next();
+//						position.setNMenge(angebotpositionDtoI.getNMenge());
+//					}
+//
+//				} catch (NoResultException ex) {
+//
+//				}
+//			}
+//
+//		} catch (RemoteException ex) {
+//			throwEJBExceptionLPRespectOld(ex);
+//		} catch (Throwable t) {
+//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
+//					new Exception(t));
+//		}
+//
+//		istSteuersatzInPositionsartPositionGleich(angebotpositionDtoI,
+//				theClientDto);
+//
+	}
+
+	public void updateAngebotposition(AngebotpositionDto angebotpositionDtoI, boolean recalculateSetPrice,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotpositionDto(angebotpositionDtoI);
 		pruefePflichtfelderBelegposition(angebotpositionDtoI, theClientDto);
 		updateTAendernAngebot(angebotpositionDtoI.getBelegIId(), theClientDto);
+
 		try {
-			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI,
+			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI, theClientDto);
+
+			AngebotpositionDto savedAngebotpositionDto = angebotpositionFindByPrimaryKey(angebotpositionDtoI.getIId(),
 					theClientDto);
 
-			Angebotposition angebotposition = em.find(Angebotposition.class,
-					angebotpositionDtoI.getIId());
+			AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(angebotpositionDtoI.getBelegIId(),
+					theClientDto);
+
+			Angebotposition angebotposition = em.find(Angebotposition.class, angebotpositionDtoI.getIId());
 			if (angebotposition == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						new Exception(
-								"Fehler bei Update Angebotsposition. Es gibt keine Position mit iid "
-										+ angebotpositionDtoI.getIId()));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						new Exception("Fehler bei Update Angebotsposition. Es gibt keine Position mit iid "
+								+ angebotpositionDtoI.getIId()));
 			}
 
-			setAngebotpositionFromAngebotpositionDto(angebotposition,
-					angebotpositionDtoI);
+			// SP4317
+			if (angebotpositionDtoI.getNMaterialzuschlag() != null
+					&& savedAngebotpositionDto.getNMaterialzuschlag() != null
+					&& angebotpositionDtoI.getNMaterialzuschlag().doubleValue() != savedAngebotpositionDto
+							.getNMaterialzuschlag().doubleValue()
+					|| (angebotpositionDtoI.getNMaterialzuschlag() != null
+							&& savedAngebotpositionDto.getNMaterialzuschlag() == null)) {
+				ArtikelDto artikelDto = getArtikelFac()
+						.artikelFindByPrimaryKeySmall(angebotpositionDtoI.getArtikelIId(), theClientDto);
+				if (artikelDto.getMaterialIId() != null) {
 
-			befuelleZusaetzlichePreisfelder(angebotposition.getIId(),
-					theClientDto);
+					MaterialzuschlagDto mDto = getMaterialFac().getKursMaterialzuschlagDtoVKInZielwaehrung(
+							angebotDto.getKundeIIdAngebotsadresse(), artikelDto.getIId(),
+							new java.sql.Date(angebotDto.getTBelegdatum().getTime()), angebotDto.getWaehrungCNr(),
+							theClientDto);
+					if (mDto != null) {
+						angebotpositionDtoI.setNMaterialzuschlagKurs(mDto.getNZuschlag());
+						angebotpositionDtoI.setTMaterialzuschlagDatum(mDto.getTGueltigab());
+					}
+				}
+			}
 
-			Integer angebotspoitionIIdKopfartikel = gehoertZuArtikelset(angebotpositionDtoI
-					.getIId());
-			if (angebotspoitionIIdKopfartikel != null) {
-				preiseEinesArtikelsetsUpdaten(angebotspoitionIIdKopfartikel,
-						theClientDto);
+			setAngebotpositionFromAngebotpositionDto(angebotposition, angebotpositionDtoI);
+
+			befuelleZusaetzlichePreisfelder(angebotposition.getIId(), theClientDto);
+
+			Integer angebotspositionIIdKopfartikel = gehoertZuArtikelset(angebotpositionDtoI.getIId());
+			if (angebotspositionIIdKopfartikel != null) {
+				updateArtikelsetMengen(savedAngebotpositionDto, angebotpositionDtoI, theClientDto);
+
+				if (recalculateSetPrice) {
+					preiseEinesArtikelsetsUpdaten(angebotspositionIIdKopfartikel, theClientDto);
+				}
+			}
+
+			// PJ20394
+			if (parameterDazugehoertMengeNeuberechnen(theClientDto.getMandant())) {
+				Query query = em.createNamedQuery("AngebotpositionfindByPositionIIdZugehoerig");
+				query.setParameter(1, angebotpositionDtoI.getIId());
+				Collection<?> posZugehoerig = query.getResultList();
+
+				if (posZugehoerig != null && posZugehoerig.size() > 0) {
+					Iterator it = posZugehoerig.iterator();
+					while (it.hasNext()) {
+						Angebotposition ap = (Angebotposition) it.next();
+						AngebotpositionDto apDtoZugehoerig = angebotpositionFindByPrimaryKey(ap.getIId(), theClientDto);
+						apDtoZugehoerig.setNMenge(mengeZugehoerigerArtikelNeuBerechnen(angebotpositionDtoI,
+								apDtoZugehoerig, theClientDto));
+						updateAngebotposition(apDtoZugehoerig, theClientDto);
+
+					}
+
+				}
 			}
 
 			// spezielle Behandlung fuer eine Handeingabeposition
-			if (angebotpositionDtoI.getPositionsartCNr().equals(
-					AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)) {
+			if (angebotpositionDtoI.getPositionsartCNr().equals(AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)) {
 				// in diesem Fall muss auch der angelegte Handartikel
 				// aktualisiert werden
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKey(
-								angebotpositionDtoI.getArtikelIId(),
-								theClientDto);
+				ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(angebotpositionDtoI.getArtikelIId(),
+						theClientDto);
 
 				ArtikelsprDto oArtikelsprDto = artikelDto.getArtikelsprDto();
 				oArtikelsprDto.setCBez(angebotpositionDtoI.getCBez());
@@ -750,26 +924,21 @@ public class AngebotpositionFacBean extends Facade implements
 				artikelDto.setArtikelsprDto(oArtikelsprDto);
 				artikelDto.setEinheitCNr(angebotpositionDtoI.getEinheitCNr());
 				// Der Artikel erhaelt die Mwst-Satz-Bezeichnung
-				MwstsatzDto mwstsatzDto = getMandantFac()
-						.mwstsatzFindByPrimaryKey(
-								angebotpositionDtoI.getMwstsatzIId(),
-								theClientDto);
+				MwstsatzDto mwstsatzDto = getMandantFac().mwstsatzFindByPrimaryKey(angebotpositionDtoI.getMwstsatzIId(),
+						theClientDto);
 				artikelDto.setMwstsatzbezIId(mwstsatzDto.getIIMwstsatzbezId());
 				// Artikel speichern
 				getArtikelFac().updateArtikel(artikelDto, theClientDto);
 			}
 			// PJ 09/0014648 spezielle Behandlung fuer eine Position
-			if (angebotpositionDtoI.getPositionsartCNr().equals(
-					LocaleFac.POSITIONSART_POSITION)) {
+			if (angebotpositionDtoI.getPositionsartCNr().equals(LocaleFac.POSITIONSART_POSITION)) {
 				try {
-					Query query = em
-							.createNamedQuery("AngebotpositionfindByPositionIId");
+					Query query = em.createNamedQuery("AngebotpositionfindByPositionIId");
 					query.setParameter(1, angebotpositionDtoI.getIId());
 					Collection<?> cl = query.getResultList();
 					Iterator<?> iterator = cl.iterator();
 					while (iterator.hasNext()) {
-						Angebotposition position = (Angebotposition) iterator
-								.next();
+						Angebotposition position = (Angebotposition) iterator.next();
 						position.setNMenge(angebotpositionDtoI.getNMenge());
 					}
 
@@ -781,42 +950,33 @@ public class AngebotpositionFacBean extends Facade implements
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, new Exception(t));
 		}
 
-		istSteuersatzInPositionsartPositionGleich(angebotpositionDtoI,
-				theClientDto);
-
+		istSteuersatzInPositionsartPositionGleich(angebotpositionDtoI, theClientDto);
 	}
 
 	/**
 	 * Das maximale iSort bei den Angebotpositionen fuer ein bestimmtes Angebot
 	 * bestimmen.
 	 * 
-	 * @param iIdAngebotI
-	 *            PK des Angebots
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdAngebotI  PK des Angebots
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return Integer das maximale iSort
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private Integer getMaxISort(Integer iIdAngebotI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	private Integer getMaxISort(Integer iIdAngebotI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotpositionIId(iIdAngebotI);
 		Integer maxISort = null;
 		try {
-			Query query = em
-					.createNamedQuery("AngebotpositionejbSelectMaxISort");
+			Query query = em.createNamedQuery("AngebotpositionejbSelectMaxISort");
 			query.setParameter(1, iIdAngebotI);
 			maxISort = (Integer) query.getSingleResult();
 			if (maxISort == null) {
 				maxISort = new Integer(0);
 			}
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_EJBSELECT,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_EJBSELECT, new Exception(t));
 		}
 		myLogger.exit("Max isort: " + maxISort);
 		return maxISort;
@@ -825,22 +985,15 @@ public class AngebotpositionFacBean extends Facade implements
 	/**
 	 * Zwei bestehende Angbotpositionen in Bezug auf ihr iSort umreihen.
 	 * 
-	 * @param iIdAngebotposition1I
-	 *            PK der ersten Position
-	 * @param iIdAngebotposition2I
-	 *            PK der zweiten Position
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdAngebotposition1I PK der ersten Position
+	 * @param iIdAngebotposition2I PK der zweiten Position
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void vertauschePositionen(Integer iIdAngebotposition1I,
-			Integer iIdAngebotposition2I) throws EJBExceptionLP {
+	public void vertauschePositionen(Integer iIdAngebotposition1I, Integer iIdAngebotposition2I) throws EJBExceptionLP {
 		checkAngebotpositionIId(iIdAngebotposition1I);
-		myLogger.info("Vertausche: " + iIdAngebotposition1I + ", "
-				+ iIdAngebotposition2I);
-		Angebotposition oPosition1 = em.find(Angebotposition.class,
-				iIdAngebotposition1I);
-		Angebotposition oPosition2 = em.find(Angebotposition.class,
-				iIdAngebotposition2I);
+		myLogger.info("Vertausche: " + iIdAngebotposition1I + ", " + iIdAngebotposition2I);
+		Angebotposition oPosition1 = em.find(Angebotposition.class, iIdAngebotposition1I);
+		Angebotposition oPosition2 = em.find(Angebotposition.class, iIdAngebotposition2I);
 		Integer iSort1 = oPosition1.getISort();
 		Integer iSort2 = oPosition2.getISort();
 
@@ -852,20 +1005,15 @@ public class AngebotpositionFacBean extends Facade implements
 
 			oPosition1.setISort(iSort2);
 			oPosition2.setISort(iSort1);
-		} else if (oPosition1.getTypCNr() == null
-				&& oPosition2.getTypCNr() != null) {
+		} else if (oPosition1.getTypCNr() == null && oPosition2.getTypCNr() != null) {
 
 			if (oPosition2.getTypCNr().equals(LocaleFac.POSITIONTYP_EBENE1)) {
-				if (oPosition2.getCZbez() != null
-						&& oPosition2.getCZbez().equals(
-								LocaleFac.POSITIONBEZ_ENDE)) {
-					Query query = em
-							.createNamedQuery("AngebotpositionfindByAngebotIIdISort");
+				if (oPosition2.getCZbez() != null && oPosition2.getCZbez().equals(LocaleFac.POSITIONBEZ_ENDE)) {
+					Query query = em.createNamedQuery("AngebotpositionfindByAngebotIIdISort");
 					query.setParameter(1, oPosition2.getAngebotIId());
 					query.setParameter(2, oPosition2.getISort() - 1);
 					// @todo getSingleResult oder getResultList ?
-					Angebotposition oPos = (Angebotposition) query
-							.getSingleResult();
+					Angebotposition oPos = (Angebotposition) query.getSingleResult();
 					oPosition1.setTypCNr(oPos.getTypCNr());
 					oPosition1.setPositionIId(oPos.getPositionIId());
 					// das zweite iSort auf ungueltig setzen, damit UK
@@ -875,17 +1023,11 @@ public class AngebotpositionFacBean extends Facade implements
 					oPosition1.setISort(iSort2);
 					oPosition2.setISort(iSort1);
 				}
-			} else if (oPosition2.getTypCNr().equals(
-					LocaleFac.POSITIONTYP_ALLES)
-					|| oPosition2.getTypCNr().equals(
-							LocaleFac.POSITIONTYP_VERDICHTET)
-					|| oPosition2.getTypCNr().equals(
-							LocaleFac.POSITIONTYP_OHNEPREISE)
-					|| oPosition2.getTypCNr().equals(
-							LocaleFac.POSITIONTYP_MITPREISE)) {
-				if (oPosition2.getCZbez() != null
-						&& oPosition2.getCZbez().equals(
-								LocaleFac.POSITIONBEZ_BEGINN)) {
+			} else if (oPosition2.getTypCNr().equals(LocaleFac.POSITIONTYP_ALLES)
+					|| oPosition2.getTypCNr().equals(LocaleFac.POSITIONTYP_VERDICHTET)
+					|| oPosition2.getTypCNr().equals(LocaleFac.POSITIONTYP_OHNEPREISE)
+					|| oPosition2.getTypCNr().equals(LocaleFac.POSITIONTYP_MITPREISE)) {
+				if (oPosition2.getCZbez() != null && oPosition2.getCZbez().equals(LocaleFac.POSITIONBEZ_BEGINN)) {
 					oPosition1.setTypCNr(LocaleFac.POSITIONTYP_EBENE1);
 					oPosition1.setPositionIId(oPosition2.getIId());
 					// das zweite iSort auf ungueltig setzen, damit UK
@@ -896,15 +1038,11 @@ public class AngebotpositionFacBean extends Facade implements
 					oPosition2.setISort(iSort1);
 				}
 			}
-		} else if (oPosition1.getTypCNr() != null
-				&& oPosition2.getTypCNr() == null) {
+		} else if (oPosition1.getTypCNr() != null && oPosition2.getTypCNr() == null) {
 
-		} else if (oPosition1.getTypCNr() != null
-				&& oPosition2.getTypCNr() != null) {
+		} else if (oPosition1.getTypCNr() != null && oPosition2.getTypCNr() != null) {
 			if (oPosition2.getTypCNr().equals(LocaleFac.POSITIONTYP_EBENE1)) {
-				if (oPosition2.getCZbez() != null
-						&& oPosition2.getCZbez().equals(
-								LocaleFac.POSITIONBEZ_ENDE)) {
+				if (oPosition2.getCZbez() != null && oPosition2.getCZbez().equals(LocaleFac.POSITIONBEZ_ENDE)) {
 					oPosition1.setTypCNr(null);
 					oPosition1.setPositionIId(null);
 					// das zweite iSort auf ungueltig setzen, damit UK
@@ -925,26 +1063,22 @@ public class AngebotpositionFacBean extends Facade implements
 		myLogger.exit("Positionen vertauscht.");
 	}
 
-	public void vertauscheAngebotpositionenMinus(Integer iIdBasePosition,
-			List<Integer> possibleIIds, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void vertauscheAngebotpositionenMinus(Integer iIdBasePosition, List<Integer> possibleIIds,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		CompositeISort<Angebotposition> comp = new CompositeISort<Angebotposition>(
 				new AngebotpositionSwapper(this, em));
 		comp.vertauschePositionenMinus(iIdBasePosition, possibleIIds);
-		updateTAendernAngebot(
-				angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto)
-						.getBelegIId(), theClientDto);
+		updateTAendernAngebot(angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto).getBelegIId(),
+				theClientDto);
 	}
 
-	public void vertauscheAngebotpositionenPlus(Integer iIdBasePosition,
-			List<Integer> possibleIIds, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void vertauscheAngebotpositionenPlus(Integer iIdBasePosition, List<Integer> possibleIIds,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		CompositeISort<Angebotposition> comp = new CompositeISort<Angebotposition>(
 				new AngebotpositionSwapper(this, em));
 		comp.vertauschePositionenPlus(iIdBasePosition, possibleIIds);
-		updateTAendernAngebot(
-				angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto)
-						.getBelegIId(), theClientDto);
+		updateTAendernAngebot(angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto).getBelegIId(),
+				theClientDto);
 	}
 
 	/**
@@ -954,21 +1088,15 @@ public class AngebotpositionFacBean extends Facade implements
 	 * Diese Methode wird am Client aufgerufen, bevor die neue Position
 	 * abgespeichert wird.
 	 * 
-	 * @param iIdAngebotI
-	 *            PK des Angebots
-	 * @param iSortierungNeuePositionI
-	 *            die Stelle, an der eingefuegt werden soll
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdAngebotI              PK des Angebots
+	 * @param iSortierungNeuePositionI die Stelle, an der eingefuegt werden soll
+	 * @param theClientDto             der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(
-			Integer iIdAngebotI, int iSortierungNeuePositionI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(Integer iIdAngebotI,
+			int iSortierungNeuePositionI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotpositionIId(iIdAngebotI);
-		myLogger.info("Sortierung der neuen Position: "
-				+ iSortierungNeuePositionI);
+		myLogger.info("Sortierung der neuen Position: " + iSortierungNeuePositionI);
 		Query query = em.createNamedQuery("AngebotpositionfindByAngebotIId");
 		query.setParameter(1, iIdAngebotI);
 		Collection<?> cl = query.getResultList();
@@ -985,36 +1113,29 @@ public class AngebotpositionFacBean extends Facade implements
 	}
 
 	/**
-	 * endsumme: 6 Wenn eine Position Endsumme in den Angebotpositionen
-	 * enthalten ist, dann muss sie am Ende der preisbehafteten Positionen
-	 * stehen.
+	 * endsumme: 6 Wenn eine Position Endsumme in den Angebotpositionen enthalten
+	 * ist, dann muss sie am Ende der preisbehafteten Positionen stehen.
 	 * 
-	 * @param iIdAngebotI
-	 *            PK des Angebots
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdAngebotI  PK des Angebots
+	 * @param theClientDto der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void sortierungAnpassenInBezugAufEndsumme(Integer iIdAngebotI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void sortierungAnpassenInBezugAufEndsumme(Integer iIdAngebotI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (iIdAngebotI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAngebotI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAngebotI == null"));
 		}
 		myLogger.logData(iIdAngebotI);
 		AngebotpositionDto angebotpositionDto = angebotpositionFindByAngebotIIdAngebotpositionsartCNrOhneExc(
 				iIdAngebotI, AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME);
 
 		if (angebotpositionDto != null) {
-			AngebotpositionDto[] aAngebotpositionDto = angebotpositionFindByAngebotIId(
-					iIdAngebotI, theClientDto);
+			AngebotpositionDto[] aAngebotpositionDto = angebotpositionFindByAngebotIId(iIdAngebotI, theClientDto);
 
 			updateTAendernAngebot(iIdAngebotI, theClientDto);
 
 			for (int i = 0; i < aAngebotpositionDto.length; i++) {
-				if (aAngebotpositionDto[i].getPositionsartCNr().equals(
-						AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME)) {
+				if (aAngebotpositionDto[i].getPositionsartCNr().equals(AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME)) {
 					int iIndexLetztePreisbehaftetePositionNachEndsumme = -1;
 
 					for (int j = i + 1; j < aAngebotpositionDto.length; j++) {
@@ -1029,9 +1150,7 @@ public class AngebotpositionFacBean extends Facade implements
 						// die Endsumme muss nach die letzte preisbehaftete
 						// Position verschoben werden
 						for (int k = i; k < iIndexLetztePreisbehaftetePositionNachEndsumme; k++) {
-							vertauschePositionen(
-									aAngebotpositionDto[i].getIId(),
-									aAngebotpositionDto[k + 1].getIId());
+							vertauschePositionen(aAngebotpositionDto[i].getIId(), aAngebotpositionDto[k + 1].getIId());
 						}
 					}
 				}
@@ -1039,151 +1158,88 @@ public class AngebotpositionFacBean extends Facade implements
 		}
 	}
 
-	private void preiseEinesArtikelsetsUpdaten(
-			Integer angbotpositionIIdKopfartikel, TheClientDto theClientDto) {
+	private void updateArtikelsetMengen(AngebotpositionDto oldPositionDto, AngebotpositionDto newPositionDto,
+			TheClientDto theClientDto) {
+		if (newPositionDto.getNMenge() == null)
+			return;
+		if (newPositionDto.getNMenge().compareTo(oldPositionDto.getNMenge()) == 0)
+			return;
 
-		AngebotpositionDto angbeotpositionDtoKopfartikel = angebotpositionFindByPrimaryKey(
-				angbotpositionIIdKopfartikel, theClientDto);
+		if (newPositionDto.getArtikelIId() == null)
+			return;
 
-		Query query = em
-				.createNamedQuery("AngebotpositionpositionfindByPositionIIdArtikelset");
-		query.setParameter(1, angbeotpositionDtoKopfartikel.getIId());
-		Collection<?> lieferscheinpositionDtos = query.getResultList();
+		StuecklisteDto stklDto = getStuecklisteFac()
+				.stuecklisteFindByMandantCNrArtikelIIdOhneExc(newPositionDto.getArtikelIId(), theClientDto);
+		if (stklDto == null)
+			return;
+		if (!stklDto.isSetartikel())
+			return;
+
+		// Wir haben einen Setartikel-Kopf und es wurde die Menge geaendert ->
+		// die Mengen des Sets anpassen
+		Query query = em.createNamedQuery("AngebotpositionpositionfindByPositionIIdArtikelset");
+		query.setParameter(1, newPositionDto.getIId());
+		Collection<Angebotposition> positions = query.getResultList();
+
+		BigDecimal oldHeadAmount = oldPositionDto.getNMenge();
+		BigDecimal newHeadAmount = newPositionDto.getNMenge();
+
+		for (Angebotposition position : positions) {
+			AngebotpositionDto positionDto = assembleAngebotpositionDto(position);
+
+			if (positionDto.getNMenge() != null) {
+				positionDto.setNMenge(positionDto.getNMenge().divide(oldHeadAmount).multiply(newHeadAmount));
+				updateAngebotposition(positionDto, false, theClientDto);
+			}
+		}
+		updateTAendernAngebot(newPositionDto.getBelegIId(), theClientDto);
+	}
+
+	private void preiseEinesArtikelsetsUpdaten(Integer angbotpositionIIdKopfartikel, TheClientDto theClientDto) {
+
+		AngebotpositionDto angebotpositionDtoKopfartikel = angebotpositionFindByPrimaryKey(angbotpositionIIdKopfartikel,
+				theClientDto);
+
+		Query query = em.createNamedQuery("AngebotpositionpositionfindByPositionIIdArtikelset");
+		query.setParameter(1, angebotpositionDtoKopfartikel.getIId());
+		Collection<IBelegVerkaufEntity> angebotpositions = query.getResultList();
 		try {
-			AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(
-					angbeotpositionDtoKopfartikel.getBelegIId(), theClientDto);
+			AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(angebotpositionDtoKopfartikel.getBelegIId(),
+					theClientDto);
 
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-					angebotDto.getKundeIIdAngebotsadresse(), theClientDto);
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(angebotDto.getKundeIIdAngebotsadresse(),
+					theClientDto);
 
-			Integer mwstsatzbezIId = getMandantFac().mwstsatzFindByPrimaryKey(
-					angbeotpositionDtoKopfartikel.getMwstsatzIId(),
-					theClientDto).getIIMwstsatzbezId();
+			Integer mwstsatzbezIId = getMandantFac()
+					.mwstsatzFindByPrimaryKey(angebotpositionDtoKopfartikel.getMwstsatzIId(), theClientDto)
+					.getIIMwstsatzbezId();
 
-			// Zuerst Gesamtwert berechnen
-			BigDecimal bdMenge = angbeotpositionDtoKopfartikel.getNMenge();
+			BigDecimal bdMenge = angebotpositionDtoKopfartikel.getNMenge();
 
-			BigDecimal bdNettoeinzelpreis = angbeotpositionDtoKopfartikel
-					.getNNettoeinzelpreis();
+			BigDecimal bdNettoeinzelpreis = angebotpositionDtoKopfartikel.getNNettoeinzelpreis();
 
-			BigDecimal bdGesamtwertposition = bdMenge
-					.multiply(bdNettoeinzelpreis);
+			BigDecimal bdGesamtwertposition = bdMenge.multiply(bdNettoeinzelpreis);
 
-			BigDecimal bdGesamtVKwert = new BigDecimal(0);
-
-			Iterator<?> it = lieferscheinpositionDtos.iterator();
-
-			while (it.hasNext()) {
-				Angebotposition struktur = (Angebotposition) it.next();
-
-				VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
-						.verkaufspreisfindung(
-								struktur.getArtikelIId(),
-								angebotDto.getKundeIIdAngebotsadresse(),
-
-								struktur.getNMenge(),
-								new java.sql.Date(System.currentTimeMillis()),
-								kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-								getMandantFac()
-										.mwstsatzFindByMwstsatzbezIIdAktuellster(
-												mwstsatzbezIId, theClientDto)
-										.getIId(), angebotDto.getWaehrungCNr(),
-								theClientDto);
-
-				VerkaufspreisDto kundenVKPreisDto = Helper
-						.getVkpreisBerechnet(vkpreisDto);
-
-				if (kundenVKPreisDto != null
-						&& kundenVKPreisDto.nettopreis != null) {
-					bdGesamtVKwert = bdGesamtVKwert
-							.add(kundenVKPreisDto.nettopreis.multiply(struktur
-									.getNMenge()));
-				}
-
-			}
-
-			bdGesamtVKwert = Helper.rundeKaufmaennisch(bdGesamtVKwert, 4);
-
-			it = lieferscheinpositionDtos.iterator();
-
-			while (it.hasNext()) {
-				Angebotposition struktur = (Angebotposition) it.next();
-
-				struktur.setNNettoeinzelpreis(new BigDecimal(0));
-				struktur.setNNettogesamtpreisplusversteckteraufschlag(new BigDecimal(
-						0));
-				struktur.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(new BigDecimal(
-						0));
-				struktur.setNBruttogesamtpreis(new BigDecimal(0));
-
-				// Mehrwertsteuersatz: Kommt immer aus dem Kopfartikel,
-				// da dieser die Hauptleistung darstellt
-
-				VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
-						.verkaufspreisfindung(
-								struktur.getArtikelIId(),
-								angebotDto.getKundeIIdAngebotsadresse(),
-								struktur.getNMenge(),
-								new java.sql.Date(System.currentTimeMillis()),
-								kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-								getMandantFac()
-										.mwstsatzFindByMwstsatzbezIIdAktuellster(
-												mwstsatzbezIId, theClientDto)
-										.getIId(), angebotDto.getWaehrungCNr(),
-								theClientDto);
-
-				VerkaufspreisDto kundenVKPreisDto = Helper
-						.getVkpreisBerechnet(vkpreisDto);
-
-				if (kundenVKPreisDto != null
-						&& kundenVKPreisDto.nettopreis != null
-						&& bdGesamtVKwert.doubleValue() != 0) {
-					// Preis berechnen
-					BigDecimal bdAnteilVKWert = kundenVKPreisDto.nettopreis
-							.multiply(struktur.getNMenge().multiply(bdMenge))
-							.divide(bdGesamtVKwert, 4,
-									BigDecimal.ROUND_HALF_EVEN);
-
-					BigDecimal bdPreis = bdGesamtwertposition.multiply(
-							bdAnteilVKWert).divide(
-							struktur.getNMenge().multiply(bdMenge), 4,
-							BigDecimal.ROUND_HALF_EVEN);
-
-					struktur.setNNettoeinzelpreis(bdPreis);
-
-					struktur.setNMaterialzuschlag(kundenVKPreisDto.bdMaterialzuschlag);
-					struktur.setNBruttogesamtpreis(bdPreis);
-					struktur.setNMwstbetrag(new BigDecimal(0));
-					struktur.setNRabattbetrag(new BigDecimal(0));
-					struktur.setNNettogesamtpreisplusversteckteraufschlag(bdPreis);
-					struktur.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(bdPreis);
-					struktur.setNNettogesamtpreis(bdPreis);
-
-				}
-
-			}
+			getBelegVerkaufFac().preiseEinesArtikelsetsUpdaten(angebotpositions, bdMenge, bdGesamtwertposition,
+					kundeDto, new MwstsatzbezId(mwstsatzbezIId), angebotDto.getWaehrungCNr(),
+					new AngebotpositionArtikelsetPreisUpdate(), theClientDto);
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
-
 		}
 	}
 
 	/**
 	 * Berechnet die Anzahl der Positionen zu einem bestimmten Angebot.
 	 * 
-	 * @param iIdAngebotI
-	 *            PK des Angebots
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdAngebotI  PK des Angebots
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return int die Anzahl der Positonen
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public int getAnzahlMengenbehafteteAngebotpositionen(Integer iIdAngebotI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public int getAnzahlMengenbehafteteAngebotpositionen(Integer iIdAngebotI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (iIdAngebotI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAngebotI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAngebotI == null"));
 		}
 		myLogger.logData(iIdAngebotI);
 		int iAnzahl = 0;
@@ -1196,9 +1252,7 @@ public class AngebotpositionFacBean extends Facade implements
 			if (pos.getNMenge() != null) {
 
 				if (pos.getArtikelIId() != null) {
-					ArtikelDto aDto = getArtikelFac()
-							.artikelFindByPrimaryKeySmall(pos.getArtikelIId(),
-									theClientDto);
+					ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(pos.getArtikelIId(), theClientDto);
 					if (Helper.short2boolean(aDto.getBKalkulatorisch())) {
 						continue;
 					}
@@ -1212,13 +1266,11 @@ public class AngebotpositionFacBean extends Facade implements
 		return iAnzahl;
 	}
 
-	public AngebotpositionDto angebotpositionFindByPrimaryKey(
-			Integer iIdAngebotpositionI, TheClientDto theClientDto)
+	public AngebotpositionDto angebotpositionFindByPrimaryKey(Integer iIdAngebotpositionI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		AngebotpositionDto angebotpositionDto = angebotpositionFindByPrimaryKeyOhneExc(iIdAngebotpositionI);
 		if (angebotpositionDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					new Exception(
 							"Fehler bei Angebotsposition find by Primary Key. Es gibt keine angebotsposition mit iid "
 									+ iIdAngebotpositionI));
@@ -1227,27 +1279,22 @@ public class AngebotpositionFacBean extends Facade implements
 		return angebotpositionDto;
 	}
 
-	public AngebotpositionDto angebotpositionFindByPrimaryKeyOhneExc(
-			Integer iIdAngebotpositionI) {
-		Angebotposition angebotposition = em.find(Angebotposition.class,
-				iIdAngebotpositionI);
+	public AngebotpositionDto angebotpositionFindByPrimaryKeyOhneExc(Integer iIdAngebotpositionI) {
+		Angebotposition angebotposition = em.find(Angebotposition.class, iIdAngebotpositionI);
 		if (angebotposition == null) {
 			return null;
 		}
 		return assembleAngebotpositionDto(angebotposition);
 	}
 
-	public AngebotpositionDto[] angebotpositionFindByAngebotIId(
-			Integer iIdAngebotI, TheClientDto theClientDto)
+	public AngebotpositionDto[] angebotpositionFindByAngebotIId(Integer iIdAngebotI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		return angebotpositionFindByAngebotIId(iIdAngebotI);
 	}
 
-	public AngebotpositionDto[] angebotpositionFindByAngebotIId(
-			Integer iIdAngebotI) throws EJBExceptionLP {
+	public AngebotpositionDto[] angebotpositionFindByAngebotIId(Integer iIdAngebotI) throws EJBExceptionLP {
 		if (iIdAngebotI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAngebotI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAngebotI == null"));
 		}
 
 		myLogger.logData(iIdAngebotI.toString());
@@ -1260,8 +1307,7 @@ public class AngebotpositionFacBean extends Facade implements
 		return aAngebotpositionDto;
 	}
 
-	public AngebotpositionDto[] angebotpositionFindByPositionIId(
-			Integer iIPositionI, TheClientDto theClientDto)
+	public AngebotpositionDto[] angebotpositionFindByPositionIId(Integer iIPositionI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		AngebotpositionDto[] aAngebotpositionDto = null;
 		Query query = em.createNamedQuery("AngebotpositionfindByPositionIId");
@@ -1271,17 +1317,14 @@ public class AngebotpositionFacBean extends Facade implements
 		return aAngebotpositionDto;
 	}
 
-	public AngebotpositionDto[] angebotpositionFindByAngebotIIdOhneAlternative(
-			Integer iIdAngebotI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public AngebotpositionDto[] angebotpositionFindByAngebotIIdOhneAlternative(Integer iIdAngebotI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdAngebotI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAngebotI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAngebotI == null"));
 		}
 		myLogger.logData(iIdAngebotI.toString());
 		AngebotpositionDto[] aAngebotpositionDto = null;
-		Query query = em
-				.createNamedQuery("AngebotpositionfindByAngebotIIdOhneAlternative");
+		Query query = em.createNamedQuery("AngebotpositionfindByAngebotIIdOhneAlternative");
 		query.setParameter(1, iIdAngebotI);
 		Collection<?> cl = query.getResultList();
 
@@ -1290,8 +1333,7 @@ public class AngebotpositionFacBean extends Facade implements
 		while (iterator.hasNext()) {
 			Angebotposition angebotposition = (Angebotposition) iterator.next();
 			if (angebotposition.getArtikelIId() != null) {
-				Artikel a = em.find(Artikel.class,
-						angebotposition.getArtikelIId());
+				Artikel a = em.find(Artikel.class, angebotposition.getArtikelIId());
 				if (Helper.short2boolean(a.getBKalkulatorisch())) {
 					continue;
 				}
@@ -1305,102 +1347,83 @@ public class AngebotpositionFacBean extends Facade implements
 		return aAngebotpositionDto;
 	}
 
-	private void setAngebotpositionFromAngebotpositionDto(
-			Angebotposition angebotposition,
+	private void setAngebotpositionFromAngebotpositionDto(Angebotposition angebotposition,
 			AngebotpositionDto angebotpositionDto) {
 		angebotposition.setAngebotIId(angebotpositionDto.getBelegIId());
 		angebotposition.setISort(angebotpositionDto.getISort());
-		angebotposition.setAngebotpositionartCNr(angebotpositionDto
-				.getPositionsartCNr());
+		angebotposition.setAngebotpositionartCNr(angebotpositionDto.getPositionsartCNr());
 		angebotposition.setArtikelIId(angebotpositionDto.getArtikelIId());
 		angebotposition.setCBez(angebotpositionDto.getCBez());
 		angebotposition.setCZbez(angebotpositionDto.getCZusatzbez());
-		angebotposition.setNGestehungspreis(angebotpositionDto
-				.getNGestehungspreis());
+		angebotposition.setNGestehungspreis(angebotpositionDto.getNGestehungspreis());
 		angebotposition.setXTextinhalt(angebotpositionDto.getXTextinhalt());
-		angebotposition.setMediastandardIId(angebotpositionDto
-				.getMediastandardIId());
+		angebotposition.setMediastandardIId(angebotpositionDto.getMediastandardIId());
 		angebotposition.setNMenge(angebotpositionDto.getNMenge());
 		angebotposition.setEinheitCNr(angebotpositionDto.getEinheitCNr());
 		angebotposition.setFRabattsatz(angebotpositionDto.getFRabattsatz());
-		angebotposition.setBRabattsatzuebersteuert(angebotpositionDto
-				.getBRabattsatzuebersteuert());
-		angebotposition.setBNettopreisuebersteuert(angebotpositionDto
-				.getBNettopreisuebersteuert());
-		angebotposition.setFZusatzrabattsatz(angebotpositionDto
-				.getFZusatzrabattsatz());
+		angebotposition.setBRabattsatzuebersteuert(angebotpositionDto.getBRabattsatzuebersteuert());
+		angebotposition.setBNettopreisuebersteuert(angebotpositionDto.getBNettopreisuebersteuert());
+		angebotposition.setFZusatzrabattsatz(angebotpositionDto.getFZusatzrabattsatz());
 		angebotposition.setMwstsatzIId(angebotpositionDto.getMwstsatzIId());
-		angebotposition.setBMwstsatzuebersteuert(angebotpositionDto
-				.getBMwstsatzuebersteuert());
-		angebotposition.setNNettoeinzelpreis(angebotpositionDto
-				.getNEinzelpreis());
-		angebotposition
-				.setNNettoeinzelpreisplusversteckteraufschlag(angebotpositionDto
-						.getNEinzelpreisplusversteckteraufschlag());
+		angebotposition.setBMwstsatzuebersteuert(angebotpositionDto.getBMwstsatzuebersteuert());
+		angebotposition.setNNettoeinzelpreis(angebotpositionDto.getNEinzelpreis());
+		angebotposition.setNNettoeinzelpreisplusversteckteraufschlag(
+				angebotpositionDto.getNEinzelpreisplusversteckteraufschlag());
 		angebotposition.setNRabattbetrag(angebotpositionDto.getNRabattbetrag());
-		angebotposition.setNNettogesamtpreis(angebotpositionDto
-				.getNNettoeinzelpreis());
-		angebotposition
-				.setNNettogesamtpreisplusversteckteraufschlag(angebotpositionDto
-						.getNNettoeinzelpreisplusversteckteraufschlag());
-		angebotposition
-				.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(angebotpositionDto
-						.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+		angebotposition.setNNettogesamtpreis(angebotpositionDto.getNNettoeinzelpreis());
+		angebotposition.setNNettogesamtpreisplusversteckteraufschlag(
+				angebotpositionDto.getNNettoeinzelpreisplusversteckteraufschlag());
+		angebotposition.setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
+				angebotpositionDto.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
 		angebotposition.setNMwstbetrag(angebotpositionDto.getNMwstbetrag());
-		angebotposition.setNBruttogesamtpreis(angebotpositionDto
-				.getNBruttoeinzelpreis());
+		angebotposition.setNBruttogesamtpreis(angebotpositionDto.getNBruttoeinzelpreis());
 		angebotposition.setAgstklIId(angebotpositionDto.getAgstklIId());
 		angebotposition
-				.setNGesamtwertagstklinangebotswaehrung(angebotpositionDto
-						.getNGesamtwertagstklinangebotswaehrung());
+				.setNGesamtwertagstklinangebotswaehrung(angebotpositionDto.getNGesamtwertagstklinangebotswaehrung());
 		angebotposition.setBAlternative(angebotpositionDto.getBAlternative());
 		angebotposition.setPositionIId(angebotpositionDto.getPositioniId());
 		angebotposition.setTypCNr(angebotpositionDto.getTypCNr());
-		angebotposition.setPositionIIdArtikelset(angebotpositionDto
-				.getPositioniIdArtikelset());
+		angebotposition.setPositionIIdArtikelset(angebotpositionDto.getPositioniIdArtikelset());
 		angebotposition.setVerleihIId(angebotpositionDto.getVerleihIId());
-		angebotposition.setKostentraegerIId(angebotpositionDto
-				.getKostentraegerIId());
-		angebotposition.setZwsVonPosition(angebotpositionDto
-				.getZwsVonPosition());
-		angebotposition.setZwsBisPosition(angebotpositionDto
-				.getZwsBisPosition());
+		angebotposition.setKostentraegerIId(angebotpositionDto.getKostentraegerIId());
+		angebotposition.setZwsVonPosition(angebotpositionDto.getZwsVonPosition());
+		angebotposition.setZwsBisPosition(angebotpositionDto.getZwsBisPosition());
 		angebotposition.setZwsNettoSumme(angebotpositionDto.getZwsNettoSumme());
 		if (angebotpositionDto.getBZwsPositionspreisZeigen() != null) {
-			angebotposition.setBZwsPositionspreisZeigen(angebotpositionDto
-					.getBZwsPositionspreisZeigen());
+			angebotposition.setBZwsPositionspreisZeigen(angebotpositionDto.getBZwsPositionspreisZeigen());
 		} else {
-			angebotposition.setBZwsPositionspreisZeigen(Helper
-					.boolean2Short(true));
+			angebotposition.setBZwsPositionspreisZeigen(Helper.boolean2Short(true));
 		}
 		angebotposition.setCLvposition(angebotpositionDto.getCLvposition());
-		angebotposition.setNMaterialzuschlag(angebotpositionDto
-				.getNMaterialzuschlag());
+		angebotposition.setNMaterialzuschlag(angebotpositionDto.getNMaterialzuschlag());
 		angebotposition.setLieferantIId(angebotpositionDto.getLieferantIId());
 		angebotposition.setNEinkaufpreis(angebotpositionDto.getNEinkaufpreis());
 
-		angebotposition.setNMaterialzuschlagKurs(angebotpositionDto
-				.getNMaterialzuschlagKurs());
-		angebotposition.setTMaterialzuschlagDatum(angebotpositionDto
-				.getTMaterialzuschlagDatum());
+		angebotposition.setNMaterialzuschlagKurs(angebotpositionDto.getNMaterialzuschlagKurs());
+		angebotposition.setTMaterialzuschlagDatum(angebotpositionDto.getTMaterialzuschlagDatum());
+		angebotposition.setPositionIIdZugehoerig(angebotpositionDto.getPositionIIdZugehoerig());
+
+		angebotposition.setILieferzeitinstunden(angebotpositionDto.getILieferzeitinstunden());
+
+		angebotposition.setNDimBreite(angebotpositionDto.getNDimBreite());
+		angebotposition.setNDimHoehe(angebotpositionDto.getNDimHoehe());
+		angebotposition.setNDimTiefe(angebotpositionDto.getNDimTiefe());
+		angebotposition.setNDimMenge(angebotpositionDto.getNDimMenge());
 
 		em.merge(angebotposition);
 		em.flush();
 	}
 
-	private AngebotpositionDto assembleAngebotpositionDto(
-			Angebotposition angebotposition) {
+	private AngebotpositionDto assembleAngebotpositionDto(Angebotposition angebotposition) {
 		return AngebotpositionDtoAssembler.createDto(angebotposition);
 	}
 
-	private AngebotpositionDto[] assembleAngebotpositionDtos(
-			Collection<?> angebotpositions) {
+	private AngebotpositionDto[] assembleAngebotpositionDtos(Collection<?> angebotpositions) {
 		List<AngebotpositionDto> list = new ArrayList<AngebotpositionDto>();
 		if (angebotpositions != null) {
 			Iterator<?> iterator = angebotpositions.iterator();
 			while (iterator.hasNext()) {
-				Angebotposition angebotposition = (Angebotposition) iterator
-						.next();
+				Angebotposition angebotposition = (Angebotposition) iterator.next();
 				list.add(assembleAngebotpositionDto(angebotposition));
 			}
 		}
@@ -1408,70 +1431,60 @@ public class AngebotpositionFacBean extends Facade implements
 		return list.toArray(returnArray);
 	}
 
-	private void checkAngebotpositionDto(AngebotpositionDto angebotpositionDtoI)
-			throws EJBExceptionLP {
+	private void checkAngebotpositionDto(AngebotpositionDto angebotpositionDtoI) throws EJBExceptionLP {
 		if (angebotpositionDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("angebotpositionI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("angebotpositionI == null"));
 		}
 
 		myLogger.info("AngebotpositionDto: " + angebotpositionDtoI.toString());
 	}
 
-	private void checkAngebotpositionIId(Integer iIdAngebotpositionI)
-			throws EJBExceptionLP {
+	private void checkAngebotpositionIId(Integer iIdAngebotpositionI) throws EJBExceptionLP {
 		if (iIdAngebotpositionI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iIdAngebotpositionI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iIdAngebotpositionI == null"));
 		}
 
 		myLogger.info("AngebotpositionIId: " + iIdAngebotpositionI.toString());
 	}
 
-	public AngebotpositionDto angebotpositionFindByAngebotIIdAngebotpositionsartCNrOhneExc(
-			Integer iIdAngebotI, String positionsartCNrI) {
+	public AngebotpositionDto angebotpositionFindByAngebotIIdAngebotpositionsartCNrOhneExc(Integer iIdAngebotI,
+			String positionsartCNrI) {
 		AngebotpositionDto angebotpositionDto = null;
 		try {
-			angebotpositionDto = angebotpositionFindByAngebotIIdAngebotpositionsartCNr(
-					iIdAngebotI, positionsartCNrI);
+			angebotpositionDto = angebotpositionFindByAngebotIIdAngebotpositionsartCNr(iIdAngebotI, positionsartCNrI);
 		} catch (EJBExceptionLP ex) {
 			// do nothing
 		}
 		return angebotpositionDto;
 	}
 
-	public AngebotpositionDto angebotpositionFindByAngebotIIdAngebotpositionsartCNr(
-			Integer iIdAngebotI, String positionsartCNrI) throws EJBExceptionLP {
+	public AngebotpositionDto angebotpositionFindByAngebotIIdAngebotpositionsartCNr(Integer iIdAngebotI,
+			String positionsartCNrI) throws EJBExceptionLP {
 		AngebotpositionDto angebotpositionDto = null;
 		try {
-			Query query = em
-					.createNamedQuery("AngebotpositionfindByAngebotIIdAngebotpositionsartCNr");
+			Query query = em.createNamedQuery("AngebotpositionfindByAngebotIIdAngebotpositionsartCNr");
 			query.setParameter(1, iIdAngebotI);
 			query.setParameter(2, positionsartCNrI);
-			Angebotposition angebotposition = (Angebotposition) query
-					.getSingleResult();
+			Angebotposition angebotposition = (Angebotposition) query.getSingleResult();
 			angebotpositionDto = assembleAngebotpositionDto(angebotposition);
 		} catch (NoResultException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
 		} catch (NonUniqueResultException e1) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-					"Fehler. Es gibt mehere Angebotspositionen mit positionsart "
-							+ positionsartCNrI + " fuer angebotIId "
-							+ iIdAngebotI);
+					"Fehler. Es gibt mehere Angebotspositionen mit positionsart " + positionsartCNrI
+							+ " fuer angebotIId " + iIdAngebotI);
 		}
 		return angebotpositionDto;
 	}
 
-	public AngebotpositionDto angebotpositionFindByAngebotIIdISort(
-			Integer iIdAngebotI, Integer iSort) throws EJBExceptionLP {
+	public AngebotpositionDto angebotpositionFindByAngebotIIdISort(Integer iIdAngebotI, Integer iSort)
+			throws EJBExceptionLP {
 		AngebotpositionDto angebotpositionDto = null;
 		try {
-			Query query = em
-					.createNamedQuery("AngebotpositionfindByAngebotIIdISort");
+			Query query = em.createNamedQuery("AngebotpositionfindByAngebotIIdISort");
 			query.setParameter(1, iIdAngebotI);
 			query.setParameter(2, iSort);
-			Angebotposition angebotposition = (Angebotposition) query
-					.getSingleResult();
+			Angebotposition angebotposition = (Angebotposition) query.getSingleResult();
 			angebotpositionDto = assembleAngebotpositionDto(angebotposition);
 		} catch (NoResultException ex) {
 			return null;
@@ -1479,54 +1492,49 @@ public class AngebotpositionFacBean extends Facade implements
 		return angebotpositionDto;
 	}
 
-	private void pruefePflichtfelderBelegposition(AngebotpositionDto agPosDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	private void pruefePflichtfelderBelegposition(AngebotpositionDto agPosDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		super.pruefePflichtfelderBelegpositionDtoVerkauf(agPosDto, theClientDto);
 
 		if (agPosDto.getPositionsartCNr().equals(LocaleFac.POSITIONSART_IDENT)
-				|| agPosDto.getPositionsartCNr().equals(
-						LocaleFac.POSITIONSART_HANDEINGABE)) {
+				|| agPosDto.getPositionsartCNr().equals(LocaleFac.POSITIONSART_HANDEINGABE)) {
 
 			if (agPosDto.getBAlternative() == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 						new Exception("belegPosDto.getBAlternative() == null"));
 			}
 		}
 	}
 
-	public BigDecimal getGesamtpreisPosition(Integer iIdPositionI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BigDecimal getGesamtpreisPosition(Integer iIdPositionI, TheClientDto theClientDto) throws EJBExceptionLP {
 		BigDecimal wert = new BigDecimal(0);
-		wert = getBelegVerkaufFac().getWertPoisitionsartPosition(iIdPositionI,
-				LocaleFac.BELEGART_ANGEBOT, theClientDto);
+		wert = getBelegVerkaufFac().getWertPoisitionsartPosition(iIdPositionI, LocaleFac.BELEGART_ANGEBOT,
+				theClientDto);
 		/*
 		 * Session session = null; try { SessionFactory factory =
-		 * FLRSessionFactory.getFactory(); session = factory.openSession();
-		 * Criteria crit = session.createCriteria(FLRAngebotposition.class);
+		 * FLRSessionFactory.getFactory(); session = factory.openSession(); Criteria
+		 * crit = session.createCriteria(FLRAngebotposition.class);
 		 * crit.add(Restrictions.eq("position_i_id",iIdPositionI)); List<?> l =
 		 * crit.list(); Iterator<?> iter = l.iterator(); while(iter.hasNext()){
 		 * FLRAngebotposition pos = (FLRAngebotposition) iter.next();
 		 * if(pos.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_IDENT) ||
-		 * pos.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_HANDEINGABE)
-		 * ){ wert =wert.add(pos.getN_menge().multiply(pos.
-		 * getN_nettogesamtpreisplusversteckteraufschlagminusrabatte())); } else
-		 * if
+		 * pos.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_HANDEINGABE) ){ wert
+		 * =wert.add(pos.getN_menge().multiply(pos.
+		 * getN_nettogesamtpreisplusversteckteraufschlagminusrabatte())); } else if
 		 * (pos.getPositionart_c_nr().equals(LocaleFac.POSITIONSART_POSITION)){
 		 * if(pos.getC_zbez().equals(LocaleFac.POSITIONBEZ_BEGINN))
-		 * if(pos.getPosition_i_id() != null){ BigDecimal posWert = new
-		 * BigDecimal(0); session = factory.openSession(); Criteria critPosition
-		 * = session.createCriteria(FLRAngebotposition.class);
-		 * critPosition.add(Restrictions.eq("position_i_id",pos.getI_id()));
-		 * List<?> posList = critPosition.list(); for (Iterator<?> ipos =
-		 * posList.iterator(); ipos.hasNext(); ) { FLRAngebotposition item =
-		 * (FLRAngebotposition) ipos.next();
-		 * if(!pos.getPositionart_c_nr().equals
+		 * if(pos.getPosition_i_id() != null){ BigDecimal posWert = new BigDecimal(0);
+		 * session = factory.openSession(); Criteria critPosition =
+		 * session.createCriteria(FLRAngebotposition.class);
+		 * critPosition.add(Restrictions.eq("position_i_id",pos.getI_id())); List<?>
+		 * posList = critPosition.list(); for (Iterator<?> ipos = posList.iterator();
+		 * ipos.hasNext(); ) { FLRAngebotposition item = (FLRAngebotposition)
+		 * ipos.next(); if(!pos.getPositionart_c_nr().equals
 		 * (LocaleFac.POSITIONSART_POSITION)){ posWert =
 		 * posWert.add(item.getN_menge().multiply(item.
-		 * getN_nettogesamtpreisplusversteckteraufschlagminusrabatte())); } }
-		 * wert = wert.add(posWert); } } } } finally { if (session != null) {
-		 * session.close(); } }
+		 * getN_nettogesamtpreisplusversteckteraufschlagminusrabatte())); } } wert =
+		 * wert.add(posWert); } } } } finally { if (session != null) { session.close();
+		 * } }
 		 */
 		return wert;
 	}
@@ -1580,46 +1588,39 @@ public class AngebotpositionFacBean extends Facade implements
 
 	public Integer getPositionNummer(Integer auftragpositionIId) {
 		PositionNumberHandler numberHandler = new PositionNumberHandler();
-		return numberHandler.getPositionNummer(auftragpositionIId,
-				new AngebotPositionNumberAdapter(em));
+		return numberHandler.getPositionNummer(auftragpositionIId, new AngebotPositionNumberAdapter(em));
 	}
 
 	/**
 	 * Liefert die IId der Position fuer die angegebene Positionsnummer zurueck
 	 * 
 	 * @param auftragIId
-	 * @param position
-	 *            die Positionsnummer f&uuml;r die die IId ermittelt werden soll
+	 * @param position   die Positionsnummer f&uuml;r die die IId ermittelt werden
+	 *                   soll
 	 * @return null wenn es position nicht gibt, ansonsten die IId
 	 */
-	public Integer getPositionIIdFromPositionNummer(Integer auftragIId,
-			Integer position) {
+	public Integer getPositionIIdFromPositionNummer(Integer auftragIId, Integer position) {
 		PositionNumberHandler numberHandler = new PositionNumberHandler();
-		return numberHandler.getPositionIIdFromPositionNummer(auftragIId,
-				position, new AngebotPositionNumberAdapter(em));
+		return numberHandler.getPositionIIdFromPositionNummer(auftragIId, position,
+				new AngebotPositionNumberAdapter(em));
 	}
 
 	public Integer getLastPositionNummer(Integer auftragposIId) {
 		PositionNumberHandler numberHandler = new PositionNumberHandler();
-		return numberHandler.getLastPositionNummer(auftragposIId,
-				new AngebotPositionNumberAdapter(em));
+		return numberHandler.getLastPositionNummer(auftragposIId, new AngebotPositionNumberAdapter(em));
 	}
 
-	public Integer getHighestPositionNumber(Integer auftragIId)
-			throws EJBExceptionLP {
+	public Integer getHighestPositionNumber(Integer auftragIId) throws EJBExceptionLP {
 		AngebotpositionDto angebotposDtos[] = angebotpositionFindByAngebotIId(auftragIId);
 		if (angebotposDtos.length == 0)
 			return 0;
 
-		return getLastPositionNummer(angebotposDtos[angebotposDtos.length - 1]
-				.getIId());
+		return getLastPositionNummer(angebotposDtos[angebotposDtos.length - 1].getIId());
 	}
 
-	public boolean pruefeAufGleichenMwstSatz(Integer auftragIId,
-			Integer vonPositionNumber, Integer bisPositionNumber)
+	public boolean pruefeAufGleichenMwstSatz(Integer auftragIId, Integer vonPositionNumber, Integer bisPositionNumber)
 			throws EJBExceptionLP {
 		AngebotpositionDto dtos[] = angebotpositionFindByAngebotIId(auftragIId);
-		return getBelegVerkaufFac().pruefeAufGleichenMwstSatz(dtos,
-				vonPositionNumber, bisPositionNumber);
+		return getBelegVerkaufFac().pruefeAufGleichenMwstSatz(dtos, vonPositionNumber, bisPositionNumber);
 	}
 }

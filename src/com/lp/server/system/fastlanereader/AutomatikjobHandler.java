@@ -43,6 +43,8 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.system.fastlanereader.generated.FLRAutomatikjob;
 import com.lp.server.system.service.AutomatikjobFac;
+import com.lp.server.system.service.AutomatiktimerFac;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -106,10 +108,10 @@ public class AutomatikjobHandler extends UseCaseHandler {
 				FLRAutomatikjob automatikjob = (FLRAutomatikjob) resultListIterator
 						.next();
 				rows[row][col++] = automatikjob.getI_id();
-				rows[row][col++] = automatikjob.getI_sort();
 				rows[row][col++] = automatikjob.getC_name();
 				rows[row][col++] = automatikjob.getC_beschreibung();
 				rows[row][col++] = automatikjob.getI_intervall();
+				rows[row][col++] = getIntervallEinheit(automatikjob);
 				if (automatikjob.getB_active().equals("1")) {
 					rows[row][col++] = new Boolean(true);
 				} else {
@@ -131,6 +133,13 @@ public class AutomatikjobHandler extends UseCaseHandler {
 		}
 		return result;
 
+	}
+
+	private String getIntervallEinheit(FLRAutomatikjob automatikjob) {
+		if (AutomatiktimerFac.Scheduler.AUTOMATIKJOB.equals(automatikjob.getI_scheduler())) {
+			return SystemFac.EINHEIT_TAG.trim();
+		}
+		return SystemFac.EINHEIT_MINUTE.trim();
 	}
 
 	private String buildWhereClause() {
@@ -169,7 +178,7 @@ public class AutomatikjobHandler extends UseCaseHandler {
 		StringBuffer orderBy = new StringBuffer("");
 		if (this.getQuery() != null) {
 			SortierKriterium[] kriterien = this.getQuery().getSortKrit();
-			kriterien = null;
+//			kriterien = null;
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
@@ -211,7 +220,7 @@ public class AutomatikjobHandler extends UseCaseHandler {
 				orderBy.insert(0, " ORDER BY ");
 			}
 		}
-		return " ORDER BY automatikjob.i_sort ASC ";
+		return orderBy.toString();//" ORDER BY automatikjob.i_sort ASC ";
 	}
 
 	private String getFromClause() {
@@ -274,8 +283,6 @@ public class AutomatikjobHandler extends UseCaseHandler {
 
 		try {
 			int rowNumber = 0;
-			// Damit immer nach iSort sortiert wird.
-			selectedId = null;
 			getQuery().setSortKrit(sortierKriterien);
 
 			if (selectedId != null && ((Integer) selectedId).intValue() >= 0) {
@@ -284,13 +291,11 @@ public class AutomatikjobHandler extends UseCaseHandler {
 
 				try {
 					session = factory.openSession();
-					String queryString = "select " + FLR_AUTOMATIKJOB
-							+ "i_sort" + FLR_AUTOMATIKJOB_FROM_CLAUSE
+					String queryString = "select automatikjob.i_id " + FLR_AUTOMATIKJOB_FROM_CLAUSE
 							+ this.buildWhereClause()
 							+ this.buildOrderByClause();
 					Query query = session.createQuery(queryString);
 					ScrollableResults scrollableResult = query.scroll();
-					boolean idFound = false;
 					if (scrollableResult != null) {
 						scrollableResult.beforeFirst();
 						while (scrollableResult.next()) {
@@ -328,13 +333,10 @@ public class AutomatikjobHandler extends UseCaseHandler {
 
 		if (super.getTableInfo() == null) {
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					Integer.class, String.class, String.class, Integer.class,
+					String.class, String.class, Integer.class, String.class,
 					Boolean.class, },
 					new String[] {
 							"i_id",
-							getTextRespectUISpr("lp.automatik.ablauf",
-									theClientDto.getMandant(), theClientDto
-											.getLocUi()),
 							getTextRespectUISpr("lp.automatik.name",
 									theClientDto.getMandant(), theClientDto
 											.getLocUi()),
@@ -344,6 +346,9 @@ public class AutomatikjobHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.automatik.intervall",
 									theClientDto.getMandant(), theClientDto
 											.getLocUi()),
+							getTextRespectUISpr("lp.einheit",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
 							getTextRespectUISpr("lp.automatik.aktiv",
 									theClientDto.getMandant(), theClientDto
 											.getLocUi()), }, new int[] {
@@ -351,16 +356,17 @@ public class AutomatikjobHandler extends UseCaseHandler {
 							// Spalte
 							// wird
 							// ausgeblendet
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_XL,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M, }, new String[] {
+							QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_M, }, 
+					new String[] {
 							AutomatikjobFac.FLR_AUTOMATIKJOB_I_ID,
-							AutomatikjobFac.FLR_AUTOMATIKJOB_I_SORT,
 							AutomatikjobFac.FLR_AUTOMATIKJOB_C_NAME,
 							AutomatikjobFac.FLR_AUTOMATIKJOB_C_BESCHREIBUNG,
 							AutomatikjobFac.FLR_AUTOMATIKJOB_I_INTERVALL,
+							Facade.NICHT_SORTIERBAR,
 							AutomatikjobFac.FLR_AUTOMATIKJOB_B_ACTIVE, }));
 		}
 

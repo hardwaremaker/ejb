@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.personal.fastlanereader;
 
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -105,9 +106,13 @@ public class PersonalgehaltHandler extends UseCaseHandler {
 				FLRPersonalgehalt personalgehalt = (FLRPersonalgehalt) resultListIterator
 						.next();
 				rows[row][col++] = personalgehalt.getI_id();
-				rows[row][col++] = personalgehalt.getI_jahr();
-				rows[row][col++] = defaultMonths[personalgehalt.getI_monat()
-						.intValue()];
+				
+				
+				GregorianCalendar gc = new GregorianCalendar();
+				gc.setTimeInMillis(personalgehalt.getT_gueltigab().getTime());
+				
+				rows[row][col++] = gc.get(GregorianCalendar.YEAR);
+				rows[row][col++] = defaultMonths[gc.get(GregorianCalendar.MONTH)];
 				rows[row][col++] = personalgehalt.getN_gehalt();
 				rows[row][col++] = personalgehalt.getF_uestpauschale();
 				rows[row++][col++] = personalgehalt.getN_stundensatz();
@@ -220,14 +225,10 @@ public class PersonalgehaltHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("personalgehalt."
-						+ PersonalFac.FLR_PERSONALGEHALT_I_JAHR
-						+ " DESC ,personalgehalt."
-						+ PersonalFac.FLR_PERSONALGEHALT_I_MONAT + " DESC ");
+				orderBy.append("personalgehalt.t_gueltigab DESC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("personalgehalt."
-					+ PersonalFac.FLR_PERSONALGEHALT_I_JAHR) < 0) {
+			if (orderBy.indexOf("personalgehalt.t_gueltigab") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -236,8 +237,7 @@ public class PersonalgehaltHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" personalgehalt."
-						+ PersonalFac.FLR_PERSONALGEHALT_I_JAHR + " ");
+				orderBy.append(" personalgehalt.t_gueltigab ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -333,8 +333,8 @@ public class PersonalgehaltHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
 					new String[] { "i_id",
-							PersonalFac.FLR_PERSONALGEHALT_I_JAHR,
-							PersonalFac.FLR_PERSONALGEHALT_I_MONAT,
+							"t_gueltigab",
+							"t_gueltigab",
 							PersonalFac.FLR_PERSONALGEHALT_N_GEHALT,
 							PersonalFac.FLR_PERSONALGEHALT_F_UESTPAUSCHALE,
 							PersonalFac.FLR_PERSONALGEHALT_N_STUNDENSATZ }));

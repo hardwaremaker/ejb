@@ -141,11 +141,32 @@ public class AuftragDtoAssembler {
 					.getAnsprechpartnerIIdRechnungsadresse());
 			auftragDto.setCLieferartort(auftrag.getCLieferartort());
 			auftragDto.setTVerrechenbar(auftrag.getTVerrechenbar());
-			auftragDto.setPersonalIIdVerrechenbar(auftrag.getPersonalIIdVerrechenbar());
+			auftragDto.setPersonalIIdVerrechenbar(auftrag
+					.getPersonalIIdVerrechenbar());
 			auftragDto.setProjektIId(auftrag.getProjektIId());
 			auftragDto.setNKorrekturbetrag(auftrag.getNKorrekturbetrag());
 			auftragDto.setTResponse(auftrag.getTResponse());
 			auftragDto.setPersonalIIdResponse(auftrag.getPersonalIIdResponse());
+
+			auftragDto.setPersonalIIdFreigabe(auftrag.getPersonalIIdFreigabe());
+			auftragDto.setTFreigabe(auftrag.getTFreigabe());
+			auftragDto.setNPraemie(auftrag.getNPraemie());
+			auftragDto.setTWunschtermin(auftrag.getTWunschtermin());
+			auftragDto.setTAenderungsauftrag(auftrag.getTAenderungsauftrag());
+			auftragDto.setTLaufterminBis(auftrag.getTLaufterminBis());
+			auftragDto.setBestellungIIdAndererMandant(auftrag
+					.getBestellungIIdAndererMandant());
+			auftragDto.setPersonalIIdAuftragsfreigabe(auftrag
+					.getPersonalIIdAuftragsfreigabe());
+			auftragDto.setTAuftragsfreigabe(auftrag.getTAuftragsfreigabe());
+			auftragDto.setNIndexanpassung(auftrag.getNIndexanpassung());
+			auftragDto.setVerrechenbarIId(auftrag.getVerrechenbarIId());
+			auftragDto.setIVersion(auftrag.getIVersion());
+			auftragDto.setLaenderartCnr(auftrag.getLaenderartCnr());
+			auftragDto.setVerrechnungsmodellIId(auftrag.getVerrechnungsmodellIId());
+			auftragDto.setBMindermengenzuschlag(auftrag.getBMindermengenzuschlag());
+			auftragDto.setPersonalIIdVertreter2(auftrag.getPersonalIIdVertreter2());
+			auftragDto.setCKommission(auftrag.getCKommission());
 		}
 		return auftragDto;
 	}

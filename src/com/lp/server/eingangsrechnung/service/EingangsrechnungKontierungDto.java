@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.eingangsrechnung.service;
@@ -36,12 +36,15 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
-public class EingangsrechnungKontierungDto implements Serializable {
+import com.lp.server.finanz.service.IBuchungDetailKommentar;
+
+public class EingangsrechnungKontierungDto implements Serializable, IBuchungDetailKommentar {
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
+	private Integer artikelIId;
 	private Integer eingangsrechnungIId;
 	private BigDecimal nBetrag;
 	private BigDecimal nBetragUst;
@@ -52,7 +55,39 @@ public class EingangsrechnungKontierungDto implements Serializable {
 	private Timestamp tAnlegen;
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
+	private String cKommentar;
 
+	private String sHandeingabeBez;
+	private String sHandeingabeZbez;
+	private String positionsartCNr = null;
+	private Integer reversechargeartId ;
+	
+	
+	public String getSHandeingabeBez() {
+		return sHandeingabeBez;
+	}
+
+	public void setSHandeingabeBez(String sHandeingabeBez) {
+		this.sHandeingabeBez = sHandeingabeBez;
+	}
+
+	public String getSHandeingabeZbez() {
+		return sHandeingabeZbez;
+	}
+
+	public void setSHandeingabeZbez(String sHandeingabeZbez) {
+		this.sHandeingabeZbez = sHandeingabeZbez;
+	}
+
+
+	public final String getPositionsartCNr() {
+		return positionsartCNr;
+	}
+
+	public final void setPositionsartCNr(String positionsartCNr) {
+		this.positionsartCNr = positionsartCNr;
+	}
+	
 	public Integer getIId() {
 		return iId;
 	}
@@ -60,7 +95,13 @@ public class EingangsrechnungKontierungDto implements Serializable {
 	public void setIId(Integer iId) {
 		this.iId = iId;
 	}
+	public Integer getArtikelIId() {
+		return this.artikelIId;
+	}
 
+	public void setArtikelIId(Integer artikelIId) {
+		this.artikelIId = artikelIId;
+	}
 	public Integer getEingangsrechnungIId() {
 		return eingangsrechnungIId;
 	}
@@ -179,7 +220,30 @@ public class EingangsrechnungKontierungDto implements Serializable {
 		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
 				.equals(this.tAendern)))
 			return false;
+		if (!(that.reversechargeartId == null ? this.reversechargeartId == null : that.reversechargeartId 
+				.equals(this.reversechargeartId)))
+			return false;
+ 
 		return true;
+	}
+
+	@Override
+	public void setCKommentar(String cKommentar) {
+		this.cKommentar = cKommentar;
+
+	}
+
+	@Override
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
+	public Integer getReversechargeartId() {
+		return reversechargeartId;
+	}
+
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId;
 	}
 
 	public int hashCode() {
@@ -195,6 +259,7 @@ public class EingangsrechnungKontierungDto implements Serializable {
 		result = 37 * result + this.tAnlegen.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
 		result = 37 * result + this.tAendern.hashCode();
+		result = 37 * result + this.reversechargeartId.hashCode();
 		return result;
 	}
 
@@ -213,4 +278,5 @@ public class EingangsrechnungKontierungDto implements Serializable {
 		returnString += ", " + tAendern;
 		return returnString;
 	}
+
 }

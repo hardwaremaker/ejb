@@ -33,12 +33,33 @@
 package com.lp.server.util;
 
 import java.util.Iterator;
+import java.util.List;
 
 public abstract class PositionNumberAdapter {
 	public PositionNumberAdapter() {
 	}
 
 	public abstract void setAdaptee(Object adaptee) ;
+	
+	public abstract Object getAdaptee() ;
+
+	/**
+	 * Handelt es sich tats&auml;chlich um eine zu numerierende Ident-Position?</br>
+	 * <p>Das hier ist ein Quick-Hack. Der {@link PositionNumberHandler} ermittelt zuerst
+	 * f&uuml;r sich, ob es sich um eine Ident-Position handelt. Dann ruft er {@link #isIdent()}
+	 * auf, um sicherzustellen, dass auch der Adaptee der Meinung ist, dass diese Position
+	 * zu numerieren sei.</p>
+	 * <p>Das heisst, diese Methode wird nur aufgerufen, wenn der Handler der Meinung ist,
+	 * dass es sich um eine Ident-Position handelt. Der Adapter kann nur einschr&auml;nken,
+	 * nicht erweitern</p>
+	 * <p>Daher ist der Default f&uuml;r praktisch alle Handler true und hier bereits 
+	 * implementiert</p>
+	 * 
+	 * @return true wenn es eine zu numerierende Ident-Position handelt
+	 */
+	public boolean isIdent() {
+		return true ;
+	}
 	
 	/**
 	 * Die IId der aktuellen Entity ermitteln
@@ -102,5 +123,7 @@ public abstract class PositionNumberAdapter {
 	 * @return Iterator oder null
 	 */
 	public abstract Iterator<?> getPositionsIteratorForHeadIId(Integer headIId) ;
+	
+	public abstract List<?> getPositionsListForHeadIId(Integer headIId);
 	
 }

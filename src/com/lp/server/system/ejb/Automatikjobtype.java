@@ -41,9 +41,11 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "AutomatikjobtypefindByCJobType", query = "SELECT OBJECT (o) FROM Automatikjobtype o WHERE o.cJobtype=?1") })
+import com.lp.server.system.service.ITablenames;
+
+@NamedQueries( { @NamedQuery(name = AutomatikjobtypeQuery.ByCJobType, query = "SELECT OBJECT (o) FROM Automatikjobtype o WHERE o.cJobtype=?1") })
 @Entity
-@Table(name = "LP_AUTOMATIKJOBTYPE")
+@Table(name = ITablenames.LP_AUTOMATIKJOBTYPE)
 public class Automatikjobtype implements Serializable {
 	@Id
 	@Column(name = "I_ID")

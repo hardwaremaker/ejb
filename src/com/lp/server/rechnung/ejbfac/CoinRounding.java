@@ -50,7 +50,7 @@ public class CoinRounding {
 	}
 	
 	public CoinRounding(BigDecimal minimalCoin) {
-		setRoundingValue(minimalCoin) ;
+		setRoundingValue(minimalCoin == null ? new BigDecimal("0.01") : minimalCoin);
 	}
 		
 	public BigDecimal getRoundingValue() {
@@ -58,8 +58,10 @@ public class CoinRounding {
 	}
 
 	public void setRoundingValue(BigDecimal newRoundingValue) {
-		roundingValue = newRoundingValue ;
-		roundingFactor = new BigDecimal("1").divide(newRoundingValue).setScale(moneyScale) ;
+		roundingValue = newRoundingValue.abs();
+		roundingFactor = BigDecimal.ONE.divide(roundingValue).setScale(moneyScale);
+		
+		setRoundUp(newRoundingValue.signum() > 0);
 	}
 
 	public boolean getRoundUp() {
@@ -67,8 +69,9 @@ public class CoinRounding {
 	}
 
 	/**
-	 * "Kaufmaennisch" auf- bzw. abrunden?
-	 * @param roundUp true wenn aufgerundet werden soll, ansonsten false
+	 * "Kaufm&auml;nnisch" auf- bzw. abrunden?
+	 * @param roundUp true wenn auch aufgerundet werden soll, ansonsten false um
+	 * immer abzurunden
 	 */
 	public void setRoundUp(boolean roundUp) {
 		this.roundUp = roundUp ;
@@ -80,7 +83,7 @@ public class CoinRounding {
 	
 	public BigDecimal round(BigDecimal value, BigDecimal minimalCoin) {
 		BigDecimal d = value.multiply(roundingFactor) ;
-		d = d.setScale(0, roundUp ? RoundingMode.HALF_UP : RoundingMode.DOWN) ;
+		d = d.setScale(0, roundUp ? RoundingMode.HALF_EVEN : RoundingMode.DOWN) ;
 		d = d.divide(roundingFactor).setScale(moneyScale) ;
 		return d ;
 	}

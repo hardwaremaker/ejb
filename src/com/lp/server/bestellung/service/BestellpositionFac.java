@@ -35,11 +35,13 @@ package com.lp.server.bestellung.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
 import javax.ejb.Remote;
 
+import com.lp.server.system.service.IImportPositionen;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
@@ -227,7 +229,7 @@ public interface BestellpositionFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public void setForAllPositionenABTermin(Integer bestellungIId, Integer[] markierteBestellpositionenIIds,
-			Date abDatum, String abNummer, int iOption,
+			Date abDatum, java.sql.Date abBelegDatum,  String abNummer, int iOption,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public int getAnzahlMengenbehaftetBSPOS(Integer iIdBestellungI,
@@ -269,5 +271,77 @@ public interface BestellpositionFac {
 			String sPreispflegeI, Integer artikellieferantstaffelIId_ZuAendern, boolean bNullPreiseZurueckpflegen,
 			TheClientDto theClientDto);
 	
+	/**
+	 * Liefert die Bean als PositionImporter zur&uuml;ck, um auf die Methoden
+	 * des Interfaces {@link IImportPositionen} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportPositionen asPositionImporter() ;
+
+	
+	/**
+	 * Ist diese Bestellposition Teil eines Artikelsets? (Egal ob Kopfartikel, oder Artikelsetposition)
+	 * @param positionDto die zu pruefende Bestellposition
+	 * @param theClientDto
+	 * @return true wenn es sich um eine Position innerhalb des Artikelsets handelt
+	 */
+	boolean istTeilEinesArtikelsets(BestellpositionDto positionDto, TheClientDto theClientDto);
+
+	/**
+	 * Die Artikelsetpositions-Artikel, die serien/chargennr behaftet sind.
+	 * @param positionDto
+	 * @param theClientDto
+	 * @return null wenn es keine Position eines Artikelsets ist, oder eine (leere) Liste aller Artikel die 
+	 *   in diesem Set serien- oder chargennummerbehaftet sind
+	 */
+	List<Integer> getArtikelIdsEinesArtikelsetsMitSnrCharge(BestellpositionDto positionDto, TheClientDto theClientDto);
+
+	/**
+	 * Ist das Artikelset noch unbearbeitet?</br>
+	 * <p>Es geht darum, herauszufinden, ob diese Bestellposition Teil eines Artikelsets ist,
+	 * und falls ja, ob das gesamte Artikelset noch unbearbeitet ist.</p> 
+	 * 
+	 * @param positionDto
+	 * @param theClientDto
+	 * @return true wenn die Bestellposition Teil des Artikelset ist, welches noch g&auml;nzlich unbearbeitet ist
+	 */
+	boolean istArtikelsetUnbearbeitet(BestellpositionDto positionDto, TheClientDto theClientDto);
+	
+	/**
+	 * Die Anzahl an erf&uuml;llbaren S&auml;tzen ermitteln
+	 * 
+	 * @param menge die gew&uuml;nschte Menge
+	 * @param positionDto
+	 * @param theClientDto
+	 * @return null wenn es kein Artikelset ist, ansonsten die Anzahl der ganzen S&auml;tze, die sich unter 
+	 *   Ber&uuml;cksichtigung der offenen Menge je Position ergibt
+	 */
+	BigDecimal getErfuellbareSaetzeArtikelset(BigDecimal menge,
+			BestellpositionDto positionDto, final Integer wareneingangId, TheClientDto theClientDto) throws RemoteException;
+
+	/**
+	 * L&auml;dt die Bestellposition und optional auch gleich den Artikel
+	 * 
+	 * @param positionId die gew&uuml;nschte Bestellposition
+	 * @param ladeArtikel true wenn der Artikel ebenfalls geladen werden soll
+	 * @param theClientDto
+	 * @return
+	 * @throws EJBExceptionLP
+	 */
+	public BestellpositionServiceDto bestellpositionFindByPrimaryKey(Integer positionId,
+			boolean ladeArtikel, TheClientDto theClientDto) throws EJBExceptionLP;
+	public Integer bestellpositionSplitten(Integer bestellpositionIId,
+			BigDecimal bdMengeNeu, Timestamp dLieferterminNeu,
+			TheClientDto theClientDto);
+	
+	public BigDecimal getSummeMengeGleicherArtikelInBestellung(Integer iIdBestellungI, Integer bestellpositionIId,
+			Integer artikelIId, TheClientDto theClientDto);
+
+	public BestellpositionDto[] bestellpositionfindByArtikelOrderByTAuftragsbestaetigungstermin2(Integer iIdArtikelI,
+			TheClientDto theClientDto);
+	
+	public void preispflege(BestellpositionDto besPosDto, String sPreispflegeI,
+			Integer artikellieferantstaffelIId_ZuAendern, boolean bNullPreiseZurueckpflegen,boolean zuschnittsartikelNeuBerechnen, TheClientDto theClientDto);
 	
 }

@@ -45,7 +45,12 @@ import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuexportDto;
 import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.finanz.service.FinanzReportFac;
+import com.lp.server.finanz.service.FinanzServiceFac;
+import com.lp.server.finanz.service.FinanzamtDto;
+import com.lp.server.finanz.service.ReversechargeartDto;
 import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.system.ejbfac.EJBExcFactory;
+import com.lp.server.system.ejbfac.HvCreatingCachingProvider;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.TheClientDto;
@@ -105,7 +110,10 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 	private final static String P_BUCHUNGSTEXT = "Buchungstext";
 	private final static String P_BUCHUNGSTEXT_ZEILE_2 = "Buchungstext2";
 	private final static String P_UID_NUMMER = "UID-Nummer";
-
+	private final static String P_HV_REVERSECHARGEARTID = "HV-ReversechargeartId";
+	private final static String P_HV_REVERSECHARGEARTCNR = "HV-ReversechargeartCnr";
+	private final static String P_HV_FINANZAMT_KBEZ = "HV-FinanzamtKbez";
+	
 	private final static String UST_CODE_KEINE_STEUER = "0";
 	private final static String UST_CODE_VORSTEUER = "1";
 	private final static String UST_CODE_MWST = "2";
@@ -141,9 +149,25 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 
 	private HashMap<String, String> ustCodeCache = new HashMap<String, String>();
 
+	private final HashMap<String, String> ustSonderCodeMap = new HashMap<String, String>() {{
+//		put(FinanzServiceFac.ReversechargeArt.OHNE, "00");
+//		put(FinanzServiceFac.ReversechargeArt.BAULEISTUNG, "15");
+// SP6166 Bauleistung soll lt. Kunde fuer RZL mit "B01" ausgegeben werden
+//        Das wird mit USt.Sondercode 14 erreicht.
+		put(FinanzServiceFac.ReversechargeArt.BAULEISTUNG, "14");
+		put(FinanzServiceFac.ReversechargeArt.SCHROTT, "26");
+		put(FinanzServiceFac.ReversechargeArt.LEISTUNG, "05");
+//		put(FinanzServiceFac.ReversechargeArt.TELEKOM, "00");
+	}};
+	
+	private final FinanzamtCache finanzamtCache;
+	private final ReversechargeartCache reversechargeartCache;
+	
 	protected FibuExportFormatterRZL(FibuExportKriterienDto exportKriterienDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		super(exportKriterienDto, theClientDto);
+		finanzamtCache = new FinanzamtCache();
+		reversechargeartCache = new ReversechargeartCache();
 	}
 
 	/**
@@ -166,8 +190,7 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 				PartnerDto partnerDtoFinanzamt = null;
 				// FA holen, wenn eines zugeordnet werden konnte.
 				if (finanzamtPartnerIId != null) {
-					partnerDtoFinanzamt = super
-							.getFinanzamtPartner(finanzamtPartnerIId);
+					partnerDtoFinanzamt = getFinanzamtPartner(finanzamtPartnerIId);
 				}
 				final boolean bFinanzamtImPartnerLand = isFinanzamtImPartnerland(
 						sPartnerUstLkz, partnerDtoFinanzamt);
@@ -195,7 +218,7 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 	private String exportiereDatenER(final FibuexportDto[] fibuExportDtos,
 			final PartnerDto partnerDtoFinanzamt,
 			final boolean bInnerGemeinschaftlich, final String sPartnerUstLkz)
-			throws EJBExceptionLP {
+			throws RemoteException, EJBExceptionLP {
 		StringBuffer sb = null;
 		AddableHashMap<Integer, BigDecimal> hmSalden = new AddableHashMap<Integer, BigDecimal>();
 		sb = new StringBuffer();
@@ -216,7 +239,9 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			// --
 			if (i > 0) { // Wirkt nur auf die erste Buchungszeile
 				if (bInnerGemeinschaftlich || fibuExportDtos[i].isBReverseCharge()) {
-					BigDecimal bdSteuerbetragTheoretisch = fibuExportDtos[i].getSteuerBD().abs() ;// new BigDecimal(0);
+					//BigDecimal bdSteuerbetragTheoretisch = fibuExportDtos[i].getSteuerBD().abs() ;// new BigDecimal(0);
+					//SP7744 Warum wird der Steuerbetrag.abs() genommen? Gutschrift ist negativ.
+					BigDecimal bdSteuerbetragTheoretisch = fibuExportDtos[i].getSteuerBD();
 					// for (int j = 0; j < fibuExportDtos.length; j++) {
 					// BigDecimal bdUSTProzentsatz =
 					// getMehrwertsteuersatzDesMandanten();
@@ -253,7 +278,7 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			// --
 			mt.addParameter(P_SOLLBETRAG, fibuExportDtos[i].getSollbetrag());
 			hmSalden.add(KEY_SOLL, fibuExportDtos[i].getSollbetragBD());
-			myLogger.logData(" Soll: " + fibuExportDtos[i].getSollbetragBD());
+			myLogger.logData(" Soll[" + i + "]: " + fibuExportDtos[i].getSollbetragBD());
 			//------------------------------------------------------------------
 			// --
 			// Habenbetrag
@@ -261,7 +286,7 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			// --
 			mt.addParameter(P_HABENBETRAG, fibuExportDtos[i].getHabenbetrag());
 			hmSalden.add(KEY_HABEN, fibuExportDtos[i].getHabenbetragBD());
-			myLogger.logData("Haben: " + fibuExportDtos[i].getHabenbetragBD());
+			myLogger.logData("Haben[" + i + "]: " + fibuExportDtos[i].getHabenbetragBD());
 			//------------------------------------------------------------------
 			// --
 			// Steuerbetrag
@@ -294,7 +319,7 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			}
 			mt.addParameter(P_STEUERBETRAG, formatNumber(bdSteuerbetrag));
 			hmSalden.add(KEY_UST, bdSteuerbetrag);
-			myLogger.logData("  UST: " + bdSteuerbetrag);
+			myLogger.logData("  UST[" + i + "]: " + bdSteuerbetrag);
 			//------------------------------------------------------------------
 			// --
 			// Spalten Fremdwaehrung bis UST-Land
@@ -313,7 +338,25 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			if (fibuExportDtos[i].getLaenderartCNr().equals(
 					FinanzFac.LAENDERART_DRITTLAND)) {
 				sUSTProzentsatz = UST_PROZENTSATZ_EXPORT_IN_NICHT_EU_LAENDER;
+//			} else if(bInnerGemeinschaftlich) {
+//				sUSTProzentsatz = UST_PROZENTSATZ_IG_LIEFERUNG_IN_EIN_EU_LAND;
+			} else if(fibuExportDtos[i].isBReverseCharge()) {
+				sUSTProzentsatz = isRcLeistung(fibuExportDtos[i].getReversechargeartId())
+						? UST_PROZENTSATZ_IG_LEISTUNG_IN_EIN_EU_LAND
+						: UST_PROZENTSATZ_IG_LIEFERUNG_IN_EIN_EU_LAND;								
 			}
+			else if (bInnerGemeinschaftlich) {
+				// da wirds der UST-Satz des Mandanten
+				// ist notwendig, damit die Vorsteuerkennzeichnung erhalten
+				// bleibt
+//				BigDecimal bdUSTProzentsatz = getMehrwertsteuersatzDesMandanten();
+//				sUSTProzentsatz = Helper.formatZahl(bdUSTProzentsatz, 0,
+//						theClientDto.getLocUi());
+// Innergemeinschaftlich soll jetzt der USt Prozentsatz ausgegeben werden (Feld 17)				
+				sUSTProzentsatz = formatMwstsatz(fibuExportDtos[i]
+						.getMwstsatz());
+			}
+
 /*			// fuer IG Erwerb ist das der Code 02
 			else if (bInnerGemeinschaftlich || fibuExportDtos[i].isBReverseCharge()) {
 				// da wirds der UST-Satz des Mandanten
@@ -353,7 +396,7 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			// die restlichen Spalten sind wieder unabhaengig von der Belegart
 			//------------------------------------------------------------------
 			// --
-			exportiereSpaltenAbSondercode(fibuExportDtos, i, mt, false);
+			exportiereSpaltenAbSondercode(fibuExportDtos, i, mt, false, bInnerGemeinschaftlich);
 			//------------------------------------------------------------------
 			// --
 			// exportieren
@@ -383,10 +426,11 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 		return sb.toString();
 	}
 
+/*	
 	private BigDecimal getMehrwertsteuersatzDesMandanten()
 			throws EJBExceptionLP {
 		BigDecimal bdUSTProzentsatz = null;
-		;
+
 		try {
 			if (mandantDto.getMwstsatzbezIIdStandardinlandmwstsatz() != null) {
 				MwstsatzDto mwst = getMandantFac()
@@ -405,11 +449,12 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 		}
 		return bdUSTProzentsatz;
 	}
-
+*/
+	
 	private String exportiereDatenAR(final FibuexportDto[] fibuExportDtos,
 			final PartnerDto partnerDtoFinanzamt,
 			final boolean bInnerGemeinschaftlich, final String sPartnerUstLkz)
-			throws EJBExceptionLP {
+			throws RemoteException, EJBExceptionLP {
 		AddableHashMap<Integer, BigDecimal> hmSalden = new AddableHashMap<Integer, BigDecimal>();
 
 		/*
@@ -483,9 +528,8 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			// Steuerbetrag
 			//------------------------------------------------------------------
 			// --
-			mt
-					.addParameter(P_STEUERBETRAG, fibuExportDtos[i]
-							.getSteuerbetrag());
+			mt.addParameter(
+					P_STEUERBETRAG, fibuExportDtos[i].getSteuerbetrag());
 			hmSalden.add(KEY_UST, fibuExportDtos[i].getSteuerBD());
 			//------------------------------------------------------------------
 			// --
@@ -517,13 +561,21 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 				}
 				// Normalfall: IG Lieferung/Erwerb -> spezieller Code 02 dafuer
 				else {
-					sUSTProzentsatz = UST_PROZENTSATZ_IG_LIEFERUNG_IN_EIN_EU_LAND;
+//					sUSTProzentsatz = UST_PROZENTSATZ_IG_LIEFERUNG_IN_EIN_EU_LAND;
+					sUSTProzentsatz = isRcLeistung(
+							fibuExportDtos[i].getReversechargeartId()) 
+							? UST_PROZENTSATZ_IG_LEISTUNG_IN_EIN_EU_LAND 
+							: UST_PROZENTSATZ_IG_LIEFERUNG_IN_EIN_EU_LAND;
 				}
 			}
 			// Inland: der UST-Satz ohne Nachkommastellen.
 			else {
-				sUSTProzentsatz = formatMwstsatz(fibuExportDtos[i]
+				if(isRcBauleistung(fibuExportDtos[i].getReversechargeartId())) {
+					sUSTProzentsatz = UST_PROZENTSATZ_EXPORT_IN_NICHT_EU_LAENDER;
+				} else {
+					sUSTProzentsatz = formatMwstsatz(fibuExportDtos[i]
 						.getMwstsatz());
+				}
 			}
 			mt.addParameter(P_UST_PROZENTSATZ, sUSTProzentsatz);
 			//------------------------------------------------------------------
@@ -531,13 +583,16 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			// UST-Code
 			//------------------------------------------------------------------
 			// --
+			// Achtung: Der Ust-Code ist teilweise abhaengig vom Ust-Sondercode 13.6.2018
+			// Da wir hier aber "nur" Sondercode 14 haben, der wiederum 2 (USt.Code) 
+			// benoetigt, geht das gerade noch.
 			mt.addParameter(P_UST_CODE, UST_CODE_MWST);
 			//------------------------------------------------------------------
 			// --
 			// die restlichen Spalten sind wieder unabhaengig von der Belegart
 			//------------------------------------------------------------------
 			// --
-			exportiereSpaltenAbSondercode(fibuExportDtos, i, mt, istGutschrift);
+			exportiereSpaltenAbSondercode(fibuExportDtos, i, mt, istGutschrift, false);
 			//------------------------------------------------------------------
 			// --
 			// exportieren
@@ -656,20 +711,48 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 		mt.addParameter(P_WAEHRUNG, fibuExportDto.getWaehrung());
 	}
 
-	private void exportiereSpaltenAbSondercode(FibuexportDto[] fibuExportDtos,
-			int i, LpMailText mt, boolean istGutschrift) {
+	private void exportiereUstSondercode(
+			FibuexportDto exportDto, LpMailText mt, boolean isGutschrift,
+			boolean isIGErwerb) throws RemoteException {
 		// --------------------------------------------------------------------
 		// Sondercode
 		// 19.06.07 lt. WH: IG Erwerb _ohne_ vorsteuerabzug.
 		// nach Ruecksprache mit RZL lassen wir den immer auf "00", sonderfaelle
 		// muessen extra bestellt werden.
 		// --------------------------------------------------------------------
-		if (fibuExportDtos[i].isBReverseCharge())
-			mt.addParameter(P_SONDERCODE,
-					SONDERCODE_UEBERNOMMENE_UST_GEM_PARAGRAPH_19_MIT_VORSTEUERABZUG);
-		else
-			mt.addParameter(P_SONDERCODE,
-				SONDERCODE_KEIN_SONDERFALL_HINSICHTLICH_UST);
+		String rcartCnr = FinanzServiceFac.ReversechargeArt.OHNE;
+		if(exportDto.getReversechargeartId() != null) {
+			ReversechargeartDto rcDto = getFinanzServiceFac()
+					.reversechargeartFindByPrimaryKey(
+							exportDto.getReversechargeartId(), theClientDto);
+			rcartCnr = rcDto.getCNr();
+		}
+		String sonderCode = SONDERCODE_KEIN_SONDERFALL_HINSICHTLICH_UST;
+
+		if(isIGErwerb) {
+			sonderCode = SONDERCODE_IG_ERWERB_OHNE_VORSTEUERABZUG;
+		} else {
+			sonderCode = ustSonderCodeMap.get(rcartCnr.trim());
+		}
+		mt.addParameter(P_SONDERCODE, sonderCode == null ?
+			SONDERCODE_KEIN_SONDERFALL_HINSICHTLICH_UST : sonderCode);
+	}
+	
+	private void exportiereSpaltenAbSondercode(FibuexportDto[] fibuExportDtos,
+			int i, LpMailText mt, boolean istGutschrift, boolean isIGErwerb) throws RemoteException {
+		exportiereUstSondercode(fibuExportDtos[i], mt, istGutschrift, isIGErwerb);
+		// --------------------------------------------------------------------
+		// Sondercode
+		// 19.06.07 lt. WH: IG Erwerb _ohne_ vorsteuerabzug.
+		// nach Ruecksprache mit RZL lassen wir den immer auf "00", sonderfaelle
+		// muessen extra bestellt werden.
+		// --------------------------------------------------------------------
+//		if (fibuExportDtos[i].isBReverseCharge())
+//			mt.addParameter(P_SONDERCODE,
+//					SONDERCODE_UEBERNOMMENE_UST_GEM_PARAGRAPH_19_MIT_VORSTEUERABZUG);
+//		else
+//			mt.addParameter(P_SONDERCODE,
+//				SONDERCODE_KEIN_SONDERFALL_HINSICHTLICH_UST);
 		// --------------------------------------------------------------------
 		// Buchungsart
 		// --------------------------------------------------------------------
@@ -781,19 +864,37 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 		// --------------------------------------------------------------------
 		// UID - Nummer
 		// --------------------------------------------------------------------
-		String sUID;
-		if (fibuExportDtos[i].getUidNummer() != null) {
-			// Upper Case
-			sUID = fibuExportDtos[i].getUidNummer().toUpperCase();
-			// Leerzeichen entfernen
-			sUID = sUID.replaceAll(" ", "");
-		} else {
-			// wenn nicht angegeben, bleibts leer
-			sUID = "";
-		}
-		mt.addParameter(P_UID_NUMMER, sUID);
+		exportiereUID(fibuExportDtos[i], mt);
+		
+		exportiereHVCodes(fibuExportDtos[i], mt);
 	}
 
+	private void exportiereUID(FibuexportDto exportDto, LpMailText mt) {
+		String sUID = "";
+		if (exportDto.getUidNummer() != null) {
+			sUID = exportDto.getUidNummer()
+					.toUpperCase().replaceAll(" ", "");
+		}
+		mt.addParameter(P_UID_NUMMER, sUID);	
+	}
+	
+	private void exportiereHVCodes(FibuexportDto exportDto, LpMailText mt) {
+		ReversechargeartDto rcartDto = null;
+		if(exportDto.getReversechargeartId() != null) {
+			rcartDto = reversechargeartCache
+					.getValueOfKey(exportDto.getReversechargeartId());
+		}
+		mt.addParameter(P_HV_REVERSECHARGEARTID,
+				rcartDto == null ? "" : rcartDto.getIId().toString());
+		mt.addParameter(P_HV_REVERSECHARGEARTCNR,
+				rcartDto == null ? "" : rcartDto.getCNr());
+		mt.addParameter(P_HV_FINANZAMT_KBEZ,
+				exportDto.getKontoDto() == null
+				? "" : finanzamtCache.getValueOfKey(
+						exportDto.getKontoDto().getFinanzamtIId())
+							.getPartnerDto().getCKbez());		
+	}
+	
 	protected String getXSLFile() {
 		return XSL_FILE_RZL;
 	}
@@ -850,6 +951,7 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 					//
 				}
 				if (landDto != null) {
+					validUstcode(landDto);
 					ustCodeCache.put(sLKZ, landDto.getCUstcode());
 					return landDto.getCUstcode();
 				}
@@ -893,6 +995,59 @@ public class FibuExportFormatterRZL extends FibuExportFormatter {
 			return nf.format(n.doubleValue());
 		} else {
 			return "";
+		}
+	}
+	
+	private boolean isRcLeistung(Integer reversechargeartId) throws RemoteException {
+		if(reversechargeartId == null) return false;
+		
+		ReversechargeartDto rcartDto = reversechargeartCache
+				.getValueOfKey(reversechargeartId);
+		return FinanzServiceFac.ReversechargeArt.LEISTUNG.equals(rcartDto.getCNr());
+	}
+	
+	private boolean isRcBauleistung(Integer reversechargeartId) throws RemoteException {
+		if(reversechargeartId == null) return false;
+		
+		ReversechargeartDto rcartDto = reversechargeartCache
+				.getValueOfKey(reversechargeartId);
+		return FinanzServiceFac.ReversechargeArt.BAULEISTUNG.equals(rcartDto.getCNr());		
+	}
+
+	private class FinanzamtCache extends HvCreatingCachingProvider<Integer, FinanzamtDto> {
+		@Override
+		protected FinanzamtDto provideValue(Integer key, Integer transformedKey) {
+			try {
+				return getFinanzFac().finanzamtFindByPrimaryKey(
+						key, theClientDto.getMandant(), theClientDto);				
+			} catch(RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+				return null;
+			}
+		}		
+	}
+	
+	private class ReversechargeartCache extends HvCreatingCachingProvider<Integer, ReversechargeartDto> {
+		@Override
+		protected ReversechargeartDto provideValue(Integer key, Integer transformedKey) {
+			try {
+				return getFinanzServiceFac()
+					.reversechargeartFindByPrimaryKey(key, theClientDto);
+			} catch(RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+				return null;				
+			}
+		}		
+	}
+
+	private void validUstcode(LandDto landDto) {
+		String ustcode = landDto.getCUstcode();
+		if (Helper.isStringEmpty(ustcode)) {
+			throw EJBExcFactory.fibuExportRZLUstLandfehlt(landDto);
+		}
+		
+		if (!Helper.istStringNumerisch(ustcode)) {
+			throw EJBExcFactory.fibuExportRZLUstLandNichtNumerisch(landDto);
 		}
 	}
 }

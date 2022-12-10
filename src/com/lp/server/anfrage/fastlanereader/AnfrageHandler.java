@@ -34,6 +34,7 @@ package com.lp.server.anfrage.fastlanereader;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +48,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage;
+import com.lp.server.anfrage.fastlanereader.generated.FLRAnfragetextsuche;
 import com.lp.server.anfrage.service.AnfrageDto;
 import com.lp.server.anfrage.service.AnfrageFac;
 import com.lp.server.anfrage.service.AnfrageServiceFac;
@@ -64,6 +66,7 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.FlrFirmaAnsprechpartnerFilterBuilder;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
@@ -98,19 +101,34 @@ public class AnfrageHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_ANFRAGE = "flranfrage.";
-	public static final String FLR_ANFRAGE_FROM_CLAUSE = " from FLRAnfrage flranfrage ";
+	public static final String FLR_ANFRAGE_FROM_CLAUSE = " from FLRAnfrage flranfrage left join flranfrage.flranfrage_liefergruppenanfrage as flranfrage_liefergruppenanfrage  left join flranfrage.flrprojekt as flrprojekt";
 
 	Integer iAnlegerStattVertreterAnzeigen = 0;
 
+	private class AnfrageLieferantAnsprechpartnerFilterBuilder extends FlrFirmaAnsprechpartnerFilterBuilder {
+
+		public AnfrageLieferantAnsprechpartnerFilterBuilder(boolean bSuchenInklusiveKBez) {
+			super(bSuchenInklusiveKBez);
+		}
+
+		@Override
+		public String getFlrPartner() {
+			return FLR_ANFRAGE + AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT + "." + LieferantFac.FLR_PARTNER;
+		}
+
+		@Override
+		public String getFlrPropertyAnsprechpartnerIId() {
+			return FLR_ANFRAGE + "ansprechpartner_i_id_lieferant";
+		}
+	}
+
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
 	 * 
-	 * @param rowIndex
-	 *            diese Zeile soll selektiert sein
+	 * @param rowIndex diese Zeile soll selektiert sein
 	 * @return QueryResult das Ergebnis der Abfrage
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 * @see UseCaseHandler#getPageAt(java.lang.Integer)
 	 */
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
@@ -124,8 +142,7 @@ public class AnfrageHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			// myLogger.info("HQL: " + queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -139,39 +156,31 @@ public class AnfrageHandler extends UseCaseHandler {
 
 			while (resultListIterator.hasNext()) {
 				// FLRAnfrage anfrage = (FLRAnfrage) resultListIterator.next();
-				FLRAnfrage anfrage = (FLRAnfrage) ((Object[]) resultListIterator
-						.next())[0];
+				FLRAnfrage anfrage = (FLRAnfrage) ((Object[]) resultListIterator.next())[0];
 
 				rows[row][col++] = anfrage.getI_id();
 
 				// Kuerzel fuer die Auftragart
 				String anfrageart = null;
 
-				if (anfrage.getAnfrageart_c_nr().equals(
-						AnfrageServiceFac.ANFRAGEART_LIEFERGRUPPE)) {
+				if (anfrage.getAnfrageart_c_nr().equals(AnfrageServiceFac.ANFRAGEART_LIEFERGRUPPE)) {
 					anfrageart = AnfrageServiceFac.ANFRAGEART_LIEFERGRUPPE_SHORT;
 				}
 
 				rows[row][col++] = anfrageart;
 				rows[row][col++] = anfrage.getC_nr();
 
-				if (anfrage.getAnfrageart_c_nr().equals(
-						AnfrageServiceFac.ANFRAGEART_LIEFERGRUPPE)) {
+				if (anfrage.getAnfrageart_c_nr().equals(AnfrageServiceFac.ANFRAGEART_LIEFERGRUPPE)) {
 					if (anfrage.getFlrliefergruppe() != null) {
-						String sUebersetzung = anfrage.getFlrliefergruppe()
-								.getC_nr();
-						Iterator iterUebersetzungenI = anfrage
-								.getFlrliefergruppe()
-								.getLiefergruppe_liefergruppespr_set()
-								.iterator();
+						String sUebersetzung = anfrage.getFlrliefergruppe().getC_nr();
+						Iterator iterUebersetzungenI = anfrage.getFlrliefergruppe()
+								.getLiefergruppe_liefergruppespr_set().iterator();
 
 						while (iterUebersetzungenI.hasNext()) {
-							FLRLiefergruppespr bestellungartspr = (FLRLiefergruppespr) iterUebersetzungenI
-									.next();
+							FLRLiefergruppespr bestellungartspr = (FLRLiefergruppespr) iterUebersetzungenI.next();
 							if (bestellungartspr.getLocale().getC_nr()
 									.compareTo(theClientDto.getLocUiAsString()) == 0) {
-								if (bestellungartspr.getC_bez() != null
-										&& bestellungartspr.getC_bez().length() > 0) {
+								if (bestellungartspr.getC_bez() != null && bestellungartspr.getC_bez().length() > 0) {
 									sUebersetzung = bestellungartspr.getC_bez();
 									break;
 								}
@@ -186,8 +195,7 @@ public class AnfrageHandler extends UseCaseHandler {
 				} else {
 
 					rows[row][col++] = anfrage.getFlrlieferant() == null ? null
-							: anfrage.getFlrlieferant().getFlrpartner()
-									.getC_name1nachnamefirmazeile1();
+							: anfrage.getFlrlieferant().getFlrpartner().getC_name1nachnamefirmazeile1();
 				}
 
 				// IMS 1757 die Anschrift des Lieferanten anzeigen im Format
@@ -196,50 +204,55 @@ public class AnfrageHandler extends UseCaseHandler {
 				// keinen Lieferanten
 
 				if (anfrage.getFlrlieferant() != null) {
-					FLRLandplzort flranschrift = anfrage.getFlrlieferant()
-							.getFlrpartner().getFlrlandplzort();
+					FLRLandplzort flranschrift = anfrage.getFlrlieferant().getFlrpartner().getFlrlandplzort();
 
 					if (flranschrift != null) {
-						cAnschrift = flranschrift.getFlrland().getC_lkz() + "-"
-								+ flranschrift.getC_plz() + " "
+						cAnschrift = flranschrift.getFlrland().getC_lkz() + "-" + flranschrift.getC_plz() + " "
 								+ flranschrift.getFlrort().getC_name();
 					}
 				}
 				rows[row][col++] = cAnschrift;
 
-				rows[row][col++] = anfrage.getC_bez();
+				String projekt = "";
+
+				if (bTitelInAF_BS_LS_RE_LOS) {
+
+					if (anfrage.getFlrprojekt() != null) {
+						projekt = anfrage.getFlrprojekt().getC_titel() + " | ";
+					}
+				}
+				if (anfrage.getC_bez() != null) {
+					projekt += anfrage.getC_bez();
+				}
+
+				rows[row][col++] = projekt;
+
 				rows[row][col++] = anfrage.getT_belegdatum();
 
 				if (iAnlegerStattVertreterAnzeigen == 2) {
 					if (anfrage.getFlrpersonalaenderer() != null) {
-						rows[row][col++] = anfrage.getFlrpersonalaenderer()
-								.getC_kurzzeichen();
+						rows[row][col++] = anfrage.getFlrpersonalaenderer().getC_kurzzeichen();
 					} else {
 						rows[row][col++] = null;
 					}
 				} else {
 					// Bei 0 und 1
 					if (anfrage.getFlrpersonalanleger() != null) {
-						rows[row][col++] = anfrage.getFlrpersonalanleger()
-								.getC_kurzzeichen();
+						rows[row][col++] = anfrage.getFlrpersonalanleger().getC_kurzzeichen();
 					} else {
 						rows[row][col++] = null;
 					}
 				}
 
 				String sStatus = anfrage.getAnfragestatus_c_nr();
-				rows[row][col++] = getStatusMitUebersetzung(sStatus,
-						anfrage.getT_versandzeitpunkt(),
+				rows[row][col++] = getStatusMitUebersetzung(sStatus, anfrage.getT_versandzeitpunkt(),
 						anfrage.getC_versandtype());
 
-				BigDecimal nGesamtwertAnfrageInAnfragewaehrung = new BigDecimal(
-						0);
+				BigDecimal nGesamtwertAnfrageInAnfragewaehrung = new BigDecimal(0);
 
 				if (anfrage.getN_gesamtanfragewertinanfragewaehrung() != null
-						&& !anfrage.getAnfragestatus_c_nr().equals(
-								AnfrageServiceFac.ANFRAGESTATUS_STORNIERT)) {
-					nGesamtwertAnfrageInAnfragewaehrung = anfrage
-							.getN_gesamtanfragewertinanfragewaehrung();
+						&& !anfrage.getAnfragestatus_c_nr().equals(AnfrageServiceFac.ANFRAGESTATUS_STORNIERT)) {
+					nGesamtwertAnfrageInAnfragewaehrung = anfrage.getN_gesamtanfragewertinanfragewaehrung();
 				}
 
 				rows[row][col++] = nGesamtwertAnfrageInAnfragewaehrung;
@@ -247,8 +260,7 @@ public class AnfrageHandler extends UseCaseHandler {
 
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -273,8 +285,7 @@ public class AnfrageHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -287,8 +298,7 @@ public class AnfrageHandler extends UseCaseHandler {
 				try {
 					session.close();
 				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE,
-							he);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE, he);
 				}
 			}
 		}
@@ -296,8 +306,8 @@ public class AnfrageHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -308,8 +318,7 @@ public class AnfrageHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -324,99 +333,58 @@ public class AnfrageHandler extends UseCaseHandler {
 					// veraendert
 					if (filterKriterien[i].kritName.equals("c_nr")) {
 						try {
-							String sValue = super.buildWhereBelegnummer(
-									filterKriterien[i], false);
+							String sValue = super.buildWhereBelegnummer(filterKriterien[i], false,
+									ParameterFac.KATEGORIE_ANFRAGE,
+									ParameterFac.PARAMETER_ANFRAGE_BELEGNUMMERSTARTWERT);
 							// Belegnummernsuche auch in "altem" Jahr, wenn im
 							// neuen noch keines vorhanden ist
 							if (!istBelegnummernInJahr("FLRAnfrage", sValue)) {
-								sValue = super.buildWhereBelegnummer(
-										filterKriterien[i], true);
+								sValue = super.buildWhereBelegnummer(filterKriterien[i], true);
 							}
-							where.append(" " + FLR_ANFRAGE
-									+ filterKriterien[i].kritName);
+							where.append(" " + FLR_ANFRAGE + filterKriterien[i].kritName);
 							where.append(" " + filterKriterien[i].operator);
 							where.append(" " + sValue);
 						} catch (Throwable ex) {
-							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-									new Exception(ex));
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(ex));
 						}
-					} else if (filterKriterien[i].kritName
-							.equals(AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT
-									+ "."
-									+ LieferantFac.FLR_PARTNER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
-						ParametermandantDto parameter = null;
-						try {
-							parameter = getParameterFac()
-									.getMandantparameter(
-											theClientDto.getMandant(),
-											ParameterFac.KATEGORIE_ALLGEMEIN,
-											ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
-						} catch (RemoteException ex) {
-							throwEJBExceptionLPRespectOld(ex);
-						}
-						Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter
-								.getCWertAsObject();
-						if (bSuchenInklusiveKbez) {
-							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" upper(" + FLR_ANFRAGE
-										+ filterKriterien[i].kritName + ")");
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase());
-								where.append("OR upper(" + FLR_ANFRAGE
-										+ "flrlieferant.flrpartner.c_kbez"
-										+ ")");
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase());
-							} else {
-								where.append(" " + FLR_ANFRAGE
-										+ filterKriterien[i].kritName);
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" " + filterKriterien[i].value);
-								where.append("OR " + FLR_ANFRAGE
-										+ "flrlieferant.flrpartner.c_kbez");
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" " + filterKriterien[i].value);
-							}
-						} else {
-							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" upper(" + FLR_ANFRAGE
-										+ filterKriterien[i].kritName + ")");
-							} else {
-								where.append(" " + FLR_ANFRAGE
-										+ filterKriterien[i].kritName);
-							}
+					} else if (isLieferantFilter(filterKriterien[i])) {
+						AnfrageLieferantAnsprechpartnerFilterBuilder filterBuilder = new AnfrageLieferantAnsprechpartnerFilterBuilder(
+								getParameterFac().getSuchenInklusiveKBez(theClientDto.getMandant()));
+						filterBuilder.buildFirmaAnsprechpartnerFilter(filterKriterien[i], where);
+//						buildFirmaFilterOld(filterKriterien[i], where);
+					} else if (filterKriterien[i].kritName.equals("c_suche")) {
 
-							where.append(" " + filterKriterien[i].operator);
+						where.append(buildWhereClauseExtendedSearchWithoutDuplicates(
+								FLRAnfragetextsuche.class.getSimpleName(), FLR_ANFRAGE, filterKriterien[i]));
 
-							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase());
-							} else {
-								where.append(" " + filterKriterien[i].value);
-							}
-						}
+					} else if (filterKriterien[i].kritName.equals("c_bez")) {
+
+						where.append(" (");
+						where.append(buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+								FLR_ANFRAGE + filterKriterien[i].kritName, filterKriterien[i].isBIgnoreCase()));
+						where.append(" OR ");
+						where.append(
+								buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+										"flrprojekt.c_titel", filterKriterien[i].isBIgnoreCase()));
+						where.append(") ");
+
+					} else if (filterKriterien[i].kritName.equals("COMBOBOX_LIEFERGRUPPE")) {
+
+						where.append(" (flranfrage.lfliefergruppe_i_id=" + filterKriterien[i].value
+								+ " OR flranfrage_liefergruppenanfrage.lfliefergruppe_i_id=" + filterKriterien[i].value
+								+ ") ");
 
 					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" upper(" + FLR_ANFRAGE
-									+ filterKriterien[i].kritName + ")");
+							where.append(" upper(" + FLR_ANFRAGE + filterKriterien[i].kritName + ")");
 						} else {
-							where.append(" " + FLR_ANFRAGE
-									+ filterKriterien[i].kritName);
+							where.append(" " + FLR_ANFRAGE + filterKriterien[i].kritName);
 						}
 
 						where.append(" " + filterKriterien[i].operator);
 
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toUpperCase());
+							where.append(" " + filterKriterien[i].value.toUpperCase());
 						} else {
 							where.append(" " + filterKriterien[i].value);
 						}
@@ -429,6 +397,53 @@ public class AnfrageHandler extends UseCaseHandler {
 		}
 
 		return where.toString();
+	}
+
+	private boolean isLieferantFilter(FilterKriterium filterKriterium) {
+		return filterKriterium.kritName.equals(AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT + "." + LieferantFac.FLR_PARTNER
+				+ "." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
+	}
+
+	private void buildFirmaFilterOld(FilterKriterium filterKriterium, StringBuffer where) {
+		ParametermandantDto parameter = null;
+		try {
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter.getCWertAsObject();
+		if (bSuchenInklusiveKbez) {
+			if (filterKriterium.isBIgnoreCase()) {
+				where.append(" ( upper(" + FLR_ANFRAGE + filterKriterium.kritName + ")");
+				where.append(" " + filterKriterium.operator);
+				where.append(" " + filterKriterium.value.toUpperCase());
+				where.append(" OR upper(" + FLR_ANFRAGE + "flrlieferant.flrpartner.c_kbez" + ")");
+				where.append(" " + filterKriterium.operator);
+				where.append(" " + filterKriterium.value.toUpperCase() + ") ");
+			} else {
+				where.append(" " + FLR_ANFRAGE + filterKriterium.kritName);
+				where.append(" " + filterKriterium.operator);
+				where.append(" " + filterKriterium.value);
+				where.append(" OR " + FLR_ANFRAGE + "flrlieferant.flrpartner.c_kbez");
+				where.append(" " + filterKriterium.operator);
+				where.append(" " + filterKriterium.value);
+			}
+		} else {
+			if (filterKriterium.isBIgnoreCase()) {
+				where.append(" upper(" + FLR_ANFRAGE + filterKriterium.kritName + ")");
+			} else {
+				where.append(" " + FLR_ANFRAGE + filterKriterium.kritName);
+			}
+
+			where.append(" " + filterKriterium.operator);
+
+			if (filterKriterium.isBIgnoreCase()) {
+				where.append(" " + filterKriterium.value.toUpperCase());
+			} else {
+				where.append(" " + filterKriterium.value);
+			}
+		}
 	}
 
 	/**
@@ -444,8 +459,7 @@ public class AnfrageHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -474,8 +488,7 @@ public class AnfrageHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_ANFRAGE).append("i_id")
-						.append(" ");
+				orderBy.append(" ").append(FLR_ANFRAGE).append("i_id").append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -493,8 +506,10 @@ public class AnfrageHandler extends UseCaseHandler {
 	private String getFromClause() {
 		// return FLR_ANFRAGE_FROM_CLAUSE;
 		return "from FLRAnfrage as flranfrage "
+				+ " left join flranfrage.flranfrage_liefergruppenanfrage as flranfrage_liefergruppenanfrage "
 				+ " left join flranfrage.flrlieferant.flrpartner.flrlandplzort as flrlandplzort "
 				+ " left join flranfrage.flrlieferant.flrpartner.flrlandplzort.flrort as flrort "
+				+ " left join flranfrage.flrprojekt as flrprojekt "
 				+ " left join flranfrage.flrlieferant.flrpartner.flrlandplzort.flrland as flrland ";
 	}
 
@@ -502,17 +517,13 @@ public class AnfrageHandler extends UseCaseHandler {
 	 * sorts the data described by the current query using the specified sort
 	 * criterias. The current query is also updated with the new sort criterias.
 	 * 
-	 * @param sortierKriterien
-	 *            nach diesen Kriterien wird das Ergebnis sortiert
-	 * @param selectedId
-	 *            auf diesem Datensatz soll der Cursor stehen
+	 * @param sortierKriterien nach diesen Kriterien wird das Ergebnis sortiert
+	 * @param selectedId       auf diesem Datensatz soll der Cursor stehen
 	 * @return QueryResult das Ergebnis der Abfrage
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		QueryResult result = null;
 
 		try {
@@ -526,16 +537,14 @@ public class AnfrageHandler extends UseCaseHandler {
 
 				try {
 					session = factory.openSession();
-					String queryString = "select " + FLR_ANFRAGE + "i_id"
-							+ FLR_ANFRAGE_FROM_CLAUSE + this.buildWhereClause()
-							+ this.buildOrderByClause();
+					String queryString = "select " + FLR_ANFRAGE + "i_id" + FLR_ANFRAGE_FROM_CLAUSE
+							+ this.buildWhereClause() + this.buildOrderByClause();
 					Query query = session.createQuery(queryString);
 					ScrollableResults scrollableResult = query.scroll();
 					if (scrollableResult != null) {
 						scrollableResult.beforeFirst();
 						while (scrollableResult.next()) {
-							Integer id = (Integer) scrollableResult
-									.getInteger(0);
+							Integer id = (Integer) scrollableResult.getInteger(0);
 							if (selectedId.equals(id)) {
 								rowNumber = scrollableResult.getRowNumber();
 								break;
@@ -546,8 +555,7 @@ public class AnfrageHandler extends UseCaseHandler {
 					try {
 						session.close();
 					} catch (HibernateException he) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_HIBERNATE, he);
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE, he);
 					}
 				}
 			}
@@ -569,94 +577,56 @@ public class AnfrageHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 
 			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ALLGEMEIN,
-								ParameterFac.PARAMETER_ANZEIGE_ANLEGER_STATT_VERTRETER);
-				iAnlegerStattVertreterAnzeigen = (Integer) parameter
-						.getCWertAsObject();
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_ANZEIGE_ANLEGER_STATT_VERTRETER);
+				iAnlegerStattVertreterAnzeigen = (Integer) parameter.getCWertAsObject();
 			} catch (RemoteException ex) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 			}
 
+			String orderVertreter = "flrpersonalanleger.c_kurzzeichen";
+			if (iAnlegerStattVertreterAnzeigen == 2) {
+				orderVertreter = "flrpersonalaenderer.c_kurzzeichen";
+
+			}
+
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, String.class,
-							Date.class, String.class, Icon.class,
-							BigDecimal.class, String.class },
-					new String[] {
-							"i_id",
-							"",
-							getTextRespectUISpr("anf.anfragenummer",
-									theClientDto.getMandant(),
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class, String.class,
+							Date.class, String.class, Icon.class, BigDecimal.class, String.class },
+					new String[] { "i_id", "",
+							getTextRespectUISpr("anf.anfragenummer", theClientDto.getMandant(),
 									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.lieferant",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.ort",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.projekt",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.datum",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.vertreter",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.status",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.wert",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()), "" },
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
+							getTextRespectUISpr("lp.lieferant", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.ort", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.projekt", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.datum", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.vertreter", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.status", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.wert", theClientDto.getMandant(), theClientDto.getLocUi()), "" },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
 							// Spalte
 							// wird
 							// ausgeblendet
 							QueryParameters.FLR_BREITE_XXS, // Kuerzel
 							// Anfrageart
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_WAEHRUNG },
-					new String[] {
-							"i_id",
-							Facade.NICHT_SORTIERBAR, // AnfrageFac.
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_XS, QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_PREIS, QueryParameters.FLR_BREITE_WAEHRUNG },
+					new String[] { "i_id", Facade.NICHT_SORTIERBAR, // AnfrageFac.
 							// FLR_ANFRAGEART_C_NR
 							"c_nr",
-							AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT
-									+ "."
-									+ KundeFac.FLR_PARTNER
-									+ "."
+							AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT + "." + KundeFac.FLR_PARTNER + "."
 									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
 							// Sortierung fuers erste mal nach LKZ
-							AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT + "."
-									+ KundeFac.FLR_PARTNER + "."
-									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-									+ "."
-									+ SystemFac.FLR_LP_FLRLAND
-									+ "."
-									+ SystemFac.FLR_LP_LANDLKZ
-									+ ", "
-									+
+							AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT + "." + KundeFac.FLR_PARTNER + "."
+									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "." + SystemFac.FLR_LP_FLRLAND + "."
+									+ SystemFac.FLR_LP_LANDLKZ + ", " +
 									// und dann nach plz
-									AnfrageHandler.FLR_ANFRAGE
-									+ AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT + "."
-									+ KundeFac.FLR_PARTNER + "."
-									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-									+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
-							"c_bez",
-							AnfrageFac.FLR_ANFRAGE_T_BELEGDATUM,
-							"flrpersonalaenderer.i_id",
+									AnfrageHandler.FLR_ANFRAGE + AnfrageFac.FLR_ANFRAGE_FLRLIEFERANT + "."
+									+ KundeFac.FLR_PARTNER + "." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+									+ SystemFac.FLR_LP_LANDPLZORTPLZ,
+							"c_bez", AnfrageFac.FLR_ANFRAGE_T_BELEGDATUM, orderVertreter,
 							AnfrageFac.FLR_ANFRAGE_ANFRAGESTATUS_C_NR,
 							AnfrageFac.FLR_ANFRAGE_N_GESAMTANFRAGEWERTINANFRAGEWAEHRUNG,
 							AnfrageFac.FLR_ANFRAGE_WAEHRUNG_C_NR_ANFRAGEWAEHRUNG }));
@@ -669,10 +639,11 @@ public class AnfrageHandler extends UseCaseHandler {
 		AnfrageDto anfrageDto = null;
 		LieferantDto lieferantDto = null;
 		try {
-			anfrageDto = getAnfrageFac().anfrageFindByPrimaryKey((Integer) key,
-					theClientDto);
-			lieferantDto = getLieferantFac().lieferantFindByPrimaryKeySmall(
-					anfrageDto.getLieferantIIdAnfrageadresse());
+			anfrageDto = getAnfrageFac().anfrageFindByPrimaryKey((Integer) key, theClientDto);
+			if (anfrageDto.getLieferantIIdAnfrageadresse() != null) {
+				lieferantDto = getLieferantFac()
+						.lieferantFindByPrimaryKeySmall(anfrageDto.getLieferantIIdAnfrageadresse());
+			}
 
 		} catch (Exception e) {
 			// Nicht gefunden

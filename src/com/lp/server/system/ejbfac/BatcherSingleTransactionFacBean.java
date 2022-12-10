@@ -36,8 +36,10 @@ import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 
+import com.lp.server.util.Facade;
+
 @Stateless
-public class BatcherSingleTransactionFacBean implements BatcherSingleTransactionFac {
+public class BatcherSingleTransactionFacBean extends Facade implements BatcherSingleTransactionFac {
 	
 	@TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
 	public void singleTransaction(IBatchAction action) {

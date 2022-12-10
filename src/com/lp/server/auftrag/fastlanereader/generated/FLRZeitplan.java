@@ -1,39 +1,9 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.auftrag.fastlanereader.generated;
 
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -44,13 +14,19 @@ public class FLRZeitplan implements Serializable {
     private Integer i_id;
 
     /** nullable persistent field */
-    private Integer i_termin_vor_liefertermin;
+    private Date t_termin;
 
     /** nullable persistent field */
     private BigDecimal n_material;
 
     /** nullable persistent field */
+    private BigDecimal n_material_ursprung;
+
+    /** nullable persistent field */
     private BigDecimal n_dauer;
+
+    /** nullable persistent field */
+    private BigDecimal n_dauer_ursprung;
 
     /** nullable persistent field */
     private String c_kommentar;
@@ -59,16 +35,34 @@ public class FLRZeitplan implements Serializable {
     private String x_text;
 
     /** nullable persistent field */
+    private Date t_material_erledigt;
+
+    /** nullable persistent field */
+    private Date t_dauer_erledigt;
+
+    /** nullable persistent field */
     private com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag;
 
+    /** nullable persistent field */
+    private FLRPersonal flrpersonalmaterialerledigt;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonaldauererledigt;
+
     /** full constructor */
-    public FLRZeitplan(Integer i_termin_vor_liefertermin, BigDecimal n_material, BigDecimal n_dauer, String c_kommentar, String x_text, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag) {
-        this.i_termin_vor_liefertermin = i_termin_vor_liefertermin;
+    public FLRZeitplan(Date t_termin, BigDecimal n_material, BigDecimal n_material_ursprung, BigDecimal n_dauer, BigDecimal n_dauer_ursprung, String c_kommentar, String x_text, Date t_material_erledigt, Date t_dauer_erledigt, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag, FLRPersonal flrpersonalmaterialerledigt, FLRPersonal flrpersonaldauererledigt) {
+        this.t_termin = t_termin;
         this.n_material = n_material;
+        this.n_material_ursprung = n_material_ursprung;
         this.n_dauer = n_dauer;
+        this.n_dauer_ursprung = n_dauer_ursprung;
         this.c_kommentar = c_kommentar;
         this.x_text = x_text;
+        this.t_material_erledigt = t_material_erledigt;
+        this.t_dauer_erledigt = t_dauer_erledigt;
         this.flrauftrag = flrauftrag;
+        this.flrpersonalmaterialerledigt = flrpersonalmaterialerledigt;
+        this.flrpersonaldauererledigt = flrpersonaldauererledigt;
     }
 
     /** default constructor */
@@ -83,12 +77,12 @@ public class FLRZeitplan implements Serializable {
         this.i_id = i_id;
     }
 
-    public Integer getI_termin_vor_liefertermin() {
-        return this.i_termin_vor_liefertermin;
+    public Date getT_termin() {
+        return this.t_termin;
     }
 
-    public void setI_termin_vor_liefertermin(Integer i_termin_vor_liefertermin) {
-        this.i_termin_vor_liefertermin = i_termin_vor_liefertermin;
+    public void setT_termin(Date t_termin) {
+        this.t_termin = t_termin;
     }
 
     public BigDecimal getN_material() {
@@ -99,12 +93,28 @@ public class FLRZeitplan implements Serializable {
         this.n_material = n_material;
     }
 
+    public BigDecimal getN_material_ursprung() {
+        return this.n_material_ursprung;
+    }
+
+    public void setN_material_ursprung(BigDecimal n_material_ursprung) {
+        this.n_material_ursprung = n_material_ursprung;
+    }
+
     public BigDecimal getN_dauer() {
         return this.n_dauer;
     }
 
     public void setN_dauer(BigDecimal n_dauer) {
         this.n_dauer = n_dauer;
+    }
+
+    public BigDecimal getN_dauer_ursprung() {
+        return this.n_dauer_ursprung;
+    }
+
+    public void setN_dauer_ursprung(BigDecimal n_dauer_ursprung) {
+        this.n_dauer_ursprung = n_dauer_ursprung;
     }
 
     public String getC_kommentar() {
@@ -123,12 +133,44 @@ public class FLRZeitplan implements Serializable {
         this.x_text = x_text;
     }
 
+    public Date getT_material_erledigt() {
+        return this.t_material_erledigt;
+    }
+
+    public void setT_material_erledigt(Date t_material_erledigt) {
+        this.t_material_erledigt = t_material_erledigt;
+    }
+
+    public Date getT_dauer_erledigt() {
+        return this.t_dauer_erledigt;
+    }
+
+    public void setT_dauer_erledigt(Date t_dauer_erledigt) {
+        this.t_dauer_erledigt = t_dauer_erledigt;
+    }
+
     public com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport getFlrauftrag() {
         return this.flrauftrag;
     }
 
     public void setFlrauftrag(com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag) {
         this.flrauftrag = flrauftrag;
+    }
+
+    public FLRPersonal getFlrpersonalmaterialerledigt() {
+        return this.flrpersonalmaterialerledigt;
+    }
+
+    public void setFlrpersonalmaterialerledigt(FLRPersonal flrpersonalmaterialerledigt) {
+        this.flrpersonalmaterialerledigt = flrpersonalmaterialerledigt;
+    }
+
+    public FLRPersonal getFlrpersonaldauererledigt() {
+        return this.flrpersonaldauererledigt;
+    }
+
+    public void setFlrpersonaldauererledigt(FLRPersonal flrpersonaldauererledigt) {
+        this.flrpersonaldauererledigt = flrpersonaldauererledigt;
     }
 
     public String toString() {

@@ -34,6 +34,7 @@ package com.lp.server.fertigung.ejb;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -61,6 +62,7 @@ public class Losgutschlecht implements Serializable {
 	@Column(name = "MASCHINENZEITDATEN_I_ID")
 	private Integer maschinenzeitdatenIId;
 	
+	
 
 	public Integer getMaschinenzeitdatenIId() {
 		return maschinenzeitdatenIId;
@@ -70,6 +72,46 @@ public class Losgutschlecht implements Serializable {
 		this.maschinenzeitdatenIId = maschinenzeitdatenIId;
 	}
 
+	@Column(name = "PERSONAL_I_ID_ERFASST")
+	private Integer personalIIdErfasst;
+	
+	public Integer getPersonalIIdErfasst() {
+		return personalIIdErfasst;
+	}
+
+	public void setPersonalIIdErfasst(Integer personalIIdErfasst) {
+		this.personalIIdErfasst = personalIIdErfasst;
+	}
+
+	
+	
+	
+	
+	@Column(name = "PERSONAL_I_ID_ANLEGEN")
+	private Integer personalIIdAnlegen;
+	
+	public Integer getPersonalIIdAnlegen() {
+		return this.personalIIdAnlegen;
+	}
+
+	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
+		this.personalIIdAnlegen = personalIIdAnlegen;
+	}
+
+	
+	@Column(name = "T_ANLEGEN")
+	private Timestamp tAnlegen;
+	
+	public Timestamp getTAnlegen() {
+		return this.tAnlegen;
+	}
+
+	public void setTAnlegen(Timestamp tAnlegen) {
+		this.tAnlegen = tAnlegen;
+	}
+
+	
+	
 	@Column(name = "LOSSOLLARBEITSPLAN_I_ID")
 	private Integer lossollarbeitsplanIId;
 	@Column(name = "FEHLER_I_ID")
@@ -77,6 +119,8 @@ public class Losgutschlecht implements Serializable {
 	@Column(name = "C_KOMMENTAR")
 	private String cKommentar;
 
+	@Column(name = "T_ZEITPUNKT")
+	private Timestamp tZeitpunkt;
 
 	public Integer getFehlerIId() {
 		return fehlerIId;
@@ -152,13 +196,16 @@ public class Losgutschlecht implements Serializable {
 	public Losgutschlecht(Integer id,
 
 	Integer lossollarbeitsplanIId, BigDecimal nGut,
-			BigDecimal nSchlecht, BigDecimal nInarbeit) {
+			BigDecimal nSchlecht, BigDecimal nInarbeit, Timestamp tZeitpunkt, Integer personalIIdAnlegen , Timestamp tAnlegen) {
 		setIId(id);
 		setLossollarbeitsplanIId(lossollarbeitsplanIId);
 		setZeitdatenIId(zeitdatenIId);
 		setNGut(nGut);
 		setNSchlecht(nSchlecht);
 		setNInarbeit(nInarbeit);
+		setTZeitpunkt(tZeitpunkt);
+		setPersonalIIdAnlegen(personalIIdAnlegen);
+		setTAnlegen(tAnlegen);
 	}
 
 	public Integer getIId() {
@@ -167,6 +214,14 @@ public class Losgutschlecht implements Serializable {
 
 	public void setIId(Integer iId) {
 		this.iId = iId;
+	}
+
+	public Timestamp getTZeitpunkt() {
+		return tZeitpunkt;
+	}
+
+	public void setTZeitpunkt(Timestamp tZeitpunkt) {
+		this.tZeitpunkt = tZeitpunkt;
 	}
 
 }

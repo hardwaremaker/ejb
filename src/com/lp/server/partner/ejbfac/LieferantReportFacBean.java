@@ -34,6 +34,7 @@ package com.lp.server.partner.ejbfac;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -48,6 +49,7 @@ import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.interceptor.Interceptors;
+import javax.persistence.NamedQuery;
 
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.JRException;
@@ -64,6 +66,7 @@ import com.lp.server.anfrage.service.AnfrageFac;
 import com.lp.server.angebot.fastlanereader.generated.FLRAngebot;
 import com.lp.server.angebot.service.AngebotFac;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferantstaffel;
 import com.lp.server.artikel.service.ArtgruDto;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
@@ -76,13 +79,21 @@ import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellung;
 import com.lp.server.bestellung.service.BestellungFac;
+import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung;
+import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
+import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
 import com.lp.server.partner.fastlanereader.generated.FLRKontakt;
 import com.lp.server.partner.fastlanereader.generated.FLRKurzbrief;
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
+import com.lp.server.partner.fastlanereader.generated.FLRLieferantbeurteilung;
 import com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe;
+import com.lp.server.partner.fastlanereader.generated.FLRPartnerbank;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.AnsprechpartnerfunktionDto;
+import com.lp.server.partner.service.BankDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeReportFac;
 import com.lp.server.partner.service.LflfliefergruppeDto;
@@ -97,9 +108,14 @@ import com.lp.server.partner.service.StatistikParamDto;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.projekt.service.ProjektServiceFac;
+import com.lp.server.system.service.LieferartDto;
+import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MwstsatzbezDto;
+import com.lp.server.system.service.SpediteurDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.system.service.ZahlungszielDto;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.report.JasperPrintLP;
@@ -110,8 +126,7 @@ import com.lp.util.LPDatenSubreport;
 
 @Stateless
 @Interceptors(TimingInterceptor.class)
-public class LieferantReportFacBean extends LPReport implements
-		LieferantReportFac, JRDataSource {
+public class LieferantReportFacBean extends LPReport implements LieferantReportFac, JRDataSource {
 
 	private String sAktuellerReport = null;
 	private ArrayList<?> alWEPOS = null;
@@ -153,7 +168,26 @@ public class LieferantReportFacBean extends LPReport implements
 	private static int REPORT_ARTIKELDESLIEFERANTEN_VERSTECKT = 33;
 	private static int REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT = 34;
 	private static int REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT_MINDESTBESTELLWERT = 36;
-	private static int REPORT_ARTIKELDESLIEFERANTEN_ANZAHL_SPALTEN = 37;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_LIEF_GUELTIGBIS = 37;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_STAFFEL1 = 38;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL1 = 39;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL1 = 40;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_STAFFEL2 = 41;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL2 = 42;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL2 = 43;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_STAFFEL3 = 44;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL3 = 45;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL3 = 46;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_STAFFEL4 = 47;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL4 = 48;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL4 = 49;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_STAFFEL5 = 50;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL5 = 51;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL5 = 52;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_WAEHRUNG = 53;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_LIEF_NETTOPREIS_IN_MANDANTENWAEHRUNG = 54;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_MANDANT = 55;
+	private static int REPORT_ARTIKELDESLIEFERANTEN_ANZAHL_SPALTEN = 56;
 
 	private static int REPORT_LIEFERANTENLISTE_BRIEFANREDE = 0;
 	private static int REPORT_LIEFERANTENLISTE_PARTNERART = 1;
@@ -232,7 +266,8 @@ public class LieferantReportFacBean extends LPReport implements
 	private static int REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_KOMMENTAR = 74;
 	private static int REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_DATUM = 75;
 	private static int REPORT_LIEFERANTENLISTE_LIEFERANT_I_ID = 76;
-	private static int REPORT_LIEFERANTENLISTE_ANZAHL_SPALTEN = 77;
+	private static int REPORT_LIEFERANTENLISTE_LIEFERART_KENNUNG = 77;
+	private static int REPORT_LIEFERANTENLISTE_ANZAHL_SPALTEN = 78;
 
 	private static int REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_VORNAME = 0;
 	private static int REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_NACHNAME = 1;
@@ -242,51 +277,48 @@ public class LieferantReportFacBean extends LPReport implements
 	private static int REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_FAXDW = 5;
 	private static int REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_MOBIL = 6;
 	private static int REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_EMAIL = 7;
+	private static int REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_VERSTECKT = 8;
+	private static int REPORT_LIEFERANTENSTAMMBLATT_ANZAHL_SPALTEN = 9;
 
-	public JasperPrintLP printLieferantenStatistik(
-			StatistikParamDto statistikParamDtoI,
-			boolean bVerdichtetNachArtikel, boolean bEingeschraenkt,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public JasperPrintLP printLieferantenStatistik(StatistikParamDto statistikParamDtoI, boolean bVerdichtetNachArtikel,
+			boolean bEingeschraenkt, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		alWEPOS = new ArrayList<Object>(10);
 
 		try {
 			com.lp.server.system.service.MandantDto mandantDto = getMandantFac()
-					.mandantFindByPrimaryKey(theClientDto.getMandant(),
-							theClientDto);
+					.mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
 
-			LieferantDto lieferantDto = getLieferantFac()
-					.lieferantFindByPrimaryKey(statistikParamDtoI.getId(),
-							theClientDto);
+			LieferantDto lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(statistikParamDtoI.getId(),
+					theClientDto);
 
 			sAktuellerReport = LieferantReportFac.REPORT_LIEFERANT_LIEFERSTATISTIK;
 
 			String sMandantWaehrung = theClientDto.getSMandantenwaehrung();
 			// in die gewuenschte Waehrung umrechnen
-			alWEPOS = getLieferantFac().getWareneingangspositionen(
-					statistikParamDtoI, sMandantWaehrung,
+			alWEPOS = getLieferantFac().getWareneingangspositionen(statistikParamDtoI, sMandantWaehrung,
 					bVerdichtetNachArtikel, bEingeschraenkt, theClientDto);
 
 			HashMap<String, Object> parameter = new HashMap<String, Object>();
 			parameter.put("P_VON", statistikParamDtoI.getDDatumVon());
 			parameter.put("P_BIS", statistikParamDtoI.getDDatumBis());
 
-			parameter.put("P_ANREDE", lieferantDto.getPartnerDto()
-					.formatAnrede());
+			parameter.put("P_VERDICHTET", new Boolean(bVerdichtetNachArtikel));
+
+			parameter.put("P_EINGESCHRAENKT", new Boolean(bEingeschraenkt));
+
+			parameter.put("P_ANREDE", lieferantDto.getPartnerDto().formatAnrede());
+
+			parameter.put("P_LIEFERANT_I_ID", lieferantDto.getIId());
 
 			parameter.put(P_WAEHRUNG, theClientDto.getSMandantenwaehrung());
 
-			parameter.put(
-					P_ADRESSBLOCK,
-					formatAdresseFuerAusdruck(lieferantDto.getPartnerDto(),
-							null, mandantDto, theClientDto.getLocUi()));
+			parameter.put(P_ADRESSBLOCK,
+					formatAdresseFuerAusdruck(lieferantDto.getPartnerDto(), null, mandantDto, theClientDto.getLocUi()));
 
-			Collections.sort(alWEPOS, new ComparatorLF(statistikParamDtoI
-					.getISortierungNachWas().intValue()));
-			initJRDS(parameter, LieferantReportFac.REPORT_MODUL,
-					LieferantReportFac.REPORT_LIEFERANT_LIEFERSTATISTIK,
-					theClientDto.getMandant(), theClientDto.getLocUi(),
-					theClientDto);
+			Collections.sort(alWEPOS, new ComparatorLF(statistikParamDtoI.getISortierungNachWas().intValue()));
+			initJRDS(parameter, LieferantReportFac.REPORT_MODUL, LieferantReportFac.REPORT_LIEFERANT_LIEFERSTATISTIK,
+					theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 
 			return getReportPrint();
 		} catch (RemoteException ex) {
@@ -296,33 +328,33 @@ public class LieferantReportFacBean extends LPReport implements
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printLieferantenstammblatt(Integer lieferantIId,
-			TheClientDto theClientDto) {
+	public JasperPrintLP printLieferantenstammblatt(Integer lieferantIId, TheClientDto theClientDto) {
 		sAktuellerReport = LieferantReportFac.REPORT_LIEFERANTENSTAMMBLATT;
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		try {
-			LieferantDto lieferantDto = getLieferantFac()
-					.lieferantFindByPrimaryKey(lieferantIId, theClientDto);
+			LieferantDto lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(lieferantIId, theClientDto);
 
-			parameter.put("P_NAME1", lieferantDto.getPartnerDto()
-					.getCName1nachnamefirmazeile1());
-			parameter.put("P_NAME2", lieferantDto.getPartnerDto()
-					.getCName2vornamefirmazeile2());
-			parameter.put("P_NAME3", lieferantDto.getPartnerDto()
-					.getCName3vorname2abteilung());
-			parameter.put("P_STRASSE", lieferantDto.getPartnerDto()
-					.getCStrasse());
+			parameter.put("P_NAME1", lieferantDto.getPartnerDto().getCName1nachnamefirmazeile1());
+			parameter.put("P_NAME2", lieferantDto.getPartnerDto().getCName2vornamefirmazeile2());
+			parameter.put("P_NAME3", lieferantDto.getPartnerDto().getCName3vorname2abteilung());
+			parameter.put("P_STRASSE", lieferantDto.getPartnerDto().getCStrasse());
 
 			if (lieferantDto.getPartnerDto().getLandplzortDto() != null) {
-				parameter.put("P_LANDPLZORT", lieferantDto.getPartnerDto()
-						.getLandplzortDto().formatLandPlzOrt());
+				parameter.put("P_LANDPLZORT", lieferantDto.getPartnerDto().getLandplzortDto().formatLandPlzOrt());
 			}
+			ZahlungszielDto zzDto = getMandantFac().zahlungszielFindByPrimaryKey(lieferantDto.getZahlungszielIId(),
+					theClientDto);
+			parameter.put("P_ZAHLUNGSZIEL", zzDto.getCBez());
+			parameter.put("P_ZAHLUNGSZIEL_NETTOTAGE", zzDto.getAnzahlZieltageFuerNetto());
 
-			parameter.put("P_TELEFON", lieferantDto.getPartnerDto()
-					.getCTelefon());
+			parameter.put("P_LIEFERART", getLocaleFac().lieferartFindByIIdLocaleOhneExc(lieferantDto.getLieferartIId(),
+					theClientDto.getLocUi(), theClientDto));
+			SpediteurDto spediteurDto = getMandantFac().spediteurFindByPrimaryKey(lieferantDto.getIdSpediteur());
+			parameter.put("P_SPEDITEUR", spediteurDto.getCNamedesspediteurs());
 
-			parameter.put("P_HOMEPAGE", lieferantDto.getPartnerDto()
-					.getCHomepage());
+			parameter.put("P_TELEFON", lieferantDto.getPartnerDto().getCTelefon());
+
+			parameter.put("P_HOMEPAGE", lieferantDto.getPartnerDto().getCHomepage());
 
 			parameter.put("P_FAX", lieferantDto.getPartnerDto().getCFax());
 
@@ -331,26 +363,34 @@ public class LieferantReportFacBean extends LPReport implements
 			parameter.put("P_HINWEISEXTERN", lieferantDto.getCHinweisextern());
 			parameter.put("P_HINWEISINTERN", lieferantDto.getCHinweisintern());
 
+			if (lieferantDto.getKontoIIdKreditorenkonto() != null) {
+				KontoDto kredKontoDto = getFinanzFac().kontoFindByPrimaryKey(lieferantDto.getKontoIIdKreditorenkonto());
+
+				parameter.put("P_KREDITORENNUMMER", kredKontoDto.getCNr());
+			}
+
+			// PJ20113
+			parameter.put("P_LIEFERANT_I_ID", lieferantDto.getIId());
+			parameter.put("P_UID", lieferantDto.getPartnerDto().getCUid());
+			parameter.put("P_FIRMENBUCHNUMMER", lieferantDto.getPartnerDto().getCFirmenbuchnr());
+			parameter.put("P_GERICHTSSTAND", lieferantDto.getPartnerDto().getCGerichtsstand());
+			parameter.put("P_KUNDENNUMMER", lieferantDto.getCKundennr());
+
 			String sKommentar = null;
 
 			if (lieferantDto.getPartnerDto().getXBemerkung() != null
 					&& lieferantDto.getPartnerDto().getXBemerkung().length() > 0) {
-				sKommentar = getTextRespectUISpr("lp.partner",
-						theClientDto.getMandant(), theClientDto.getLocUi());
-				sKommentar += ":\n"
-						+ lieferantDto.getPartnerDto().getXBemerkung() + "\n";
+				sKommentar = getTextRespectUISpr("lp.partner", theClientDto.getMandant(), theClientDto.getLocUi());
+				sKommentar += ":\n" + lieferantDto.getPartnerDto().getXBemerkung() + "\n";
 			}
 
-			if (lieferantDto.getXKommentar() != null
-					&& lieferantDto.getXKommentar().length() > 0) {
+			if (lieferantDto.getXKommentar() != null && lieferantDto.getXKommentar().length() > 0) {
 				if (sKommentar == null) {
-					sKommentar = getTextRespectUISpr("lp.kunde",
-							theClientDto.getMandant(), theClientDto.getLocUi());
+					sKommentar = getTextRespectUISpr("lp.lieferant", theClientDto.getMandant(),
+							theClientDto.getLocUi());
 				} else {
 					sKommentar += "\n"
-							+ getTextRespectUISpr("lp.kunde",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi());
+							+ getTextRespectUISpr("lp.lieferant", theClientDto.getMandant(), theClientDto.getLocUi());
 				}
 				sKommentar += ":\n" + lieferantDto.getXKommentar();
 			}
@@ -358,60 +398,49 @@ public class LieferantReportFacBean extends LPReport implements
 			parameter.put("P_KOMMENTAR", sKommentar);
 
 			// Selektionen
-			PASelektionDto[] paselDtos = getPartnerFac()
-					.pASelektionFindByPartnerIId(lieferantDto.getPartnerIId());
+			PASelektionDto[] paselDtos = getPartnerFac().pASelektionFindByPartnerIId(lieferantDto.getPartnerIId());
 			if (paselDtos != null && paselDtos.length > 0) {
 				String sPasel = "";
 				for (int i = 0; i < paselDtos.length; i++) {
 					PASelektionDto paselDto = paselDtos[i];
 					SelektionDto selektionDto = getPartnerServicesFac()
-							.selektionFindByPrimaryKey(
-									paselDto.getSelektionIId(), theClientDto);
-					sPasel += " " + (i + 1) + ": "
-							+ selektionDto.getBezeichnung();
+							.selektionFindByPrimaryKey(paselDto.getSelektionIId(), theClientDto);
+					sPasel += " " + (i + 1) + ": " + selektionDto.getBezeichnung();
 				}
 				parameter.put("P_SELEKTIONEN", sPasel);
 			}
 
-			ArrayList<?> alAnsprechpartner = getAnsprechpartnerFac()
-					.getAllAnsprechpartner(lieferantDto.getPartnerIId(),
-							theClientDto);
+			ArrayList<?> alAnsprechpartner = getAnsprechpartnerFac().getAllAnsprechpartner(lieferantDto.getPartnerIId(),
+					theClientDto);
 
-			data = new Object[alAnsprechpartner.size()][8];
+			data = new Object[alAnsprechpartner.size()][REPORT_LIEFERANTENSTAMMBLATT_ANZAHL_SPALTEN];
 			if (alAnsprechpartner.size() == 0) {
-				data = new Object[0][8];
+				data = new Object[0][REPORT_LIEFERANTENSTAMMBLATT_ANZAHL_SPALTEN];
 			}
 
 			for (int i = 0; i < alAnsprechpartner.size(); i++) {
-				AnsprechpartnerDto dtoTemp = (AnsprechpartnerDto) alAnsprechpartner
-						.get(i);
-				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_NACHNAME] = dtoTemp
-						.getPartnerDto().getCName1nachnamefirmazeile1();
-				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_VORNAME] = dtoTemp
-						.getPartnerDto().getCName2vornamefirmazeile2();
-				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_TITEL] = dtoTemp
-						.getPartnerDto().getCTitel();
+				AnsprechpartnerDto dtoTemp = (AnsprechpartnerDto) alAnsprechpartner.get(i);
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_NACHNAME] = dtoTemp.getPartnerDto()
+						.getCName1nachnamefirmazeile1();
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_VORNAME] = dtoTemp.getPartnerDto()
+						.getCName2vornamefirmazeile2();
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_TITEL] = dtoTemp.getPartnerDto().getCTitel();
 
 				if (dtoTemp.getAnsprechpartnerfunktionIId() != null) {
-					AnsprechpartnerfunktionDto dto = getAnsprechpartnerFac()
-							.ansprechpartnerfunktionFindByPrimaryKey(
-									dtoTemp.getAnsprechpartnerfunktionIId(),
-									theClientDto);
-					data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_FUNKTION] = dto
-							.getBezeichnung();
+					AnsprechpartnerfunktionDto dto = getAnsprechpartnerFac().ansprechpartnerfunktionFindByPrimaryKey(
+							dtoTemp.getAnsprechpartnerfunktionIId(), theClientDto);
+					data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_FUNKTION] = dto.getBezeichnung();
 				}
 
-				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_FAXDW] = dtoTemp
-						.getCFax();
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_FAXDW] = dtoTemp.getCFax();
 
-				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_TELDW] = dtoTemp
-						.getCTelefon();
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_TELDW] = dtoTemp.getCTelefon();
 
-				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_MOBIL] = dtoTemp
-						.getCHandy();
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_MOBIL] = dtoTemp.getCHandy();
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_VERSTECKT] = Helper
+						.short2Boolean(dtoTemp.getBVersteckt());
 
-				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_EMAIL] = dtoTemp
-						.getCEmail();
+				data[i][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_EMAIL] = dtoTemp.getCEmail();
 
 			}
 
@@ -421,9 +450,7 @@ public class LieferantReportFacBean extends LPReport implements
 			// Filter und Sortierung
 			Criteria crit = session.createCriteria(FLRBestellung.class);
 			// Filter nach Kunde
-			crit.add(Restrictions.eq(
-					BestellungFac.FLR_BESTELLUNG_LIEFERANT_I_ID_BESTELLADRESSE,
-					lieferantIId));
+			crit.add(Restrictions.eq(BestellungFac.FLR_BESTELLUNG_LIEFERANT_I_ID_BESTELLADRESSE, lieferantIId));
 			crit.addOrder(Order.desc(BestellungFac.FLR_BESTELLUNG_C_NR));
 
 			List<?> list = crit.list();
@@ -440,12 +467,8 @@ public class LieferantReportFacBean extends LPReport implements
 
 				if (wert != null) {
 
-					wert = getLocaleFac()
-							.rechneUmInMandantenWaehrung(
-									wert,
-									new BigDecimal(
-											flrauftrag
-													.getF_wechselkursmandantwaehrungbestellungswaehrung()));
+					wert = getLocaleFac().rechneUmInMandantenWaehrung(wert,
+							new BigDecimal(flrauftrag.getF_wechselkursmandantwaehrungbestellungswaehrung()));
 
 					o[2] = wert;
 				}
@@ -455,15 +478,12 @@ public class LieferantReportFacBean extends LPReport implements
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Bestellnummer", "Status",
-						"Wert", "Liefertermin", "Projekt" };
+				String[] fieldnames = new String[] { "Bestellnummer", "Status", "Wert", "Liefertermin", "Projekt" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_BESTELLUNGEN",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_BESTELLUNGEN",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 			session.close();
 
@@ -472,8 +492,10 @@ public class LieferantReportFacBean extends LPReport implements
 			// Filter und Sortierung
 			crit = session.createCriteria(FLRKurzbrief.class);
 			// Filter nach Kunde
-			crit.add(Restrictions.eq("partner_i_id",
-					lieferantDto.getPartnerIId()));
+			crit.add(Restrictions.eq("partner_i_id", lieferantDto.getPartnerIId()));
+			crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
+			crit.add(Restrictions.eq("belegart_c_nr", LocaleFac.BELEGART_LIEFERANT));
+
 			crit.addOrder(Order.desc("t_aendern"));
 
 			list = crit.list();
@@ -487,15 +509,11 @@ public class LieferantReportFacBean extends LPReport implements
 
 				if (kurzbrief.getFlransprechpartner() != null) {
 					AnsprechpartnerDto oAnsprechpartner = getAnsprechpartnerFac()
-							.ansprechpartnerFindByPrimaryKey(
-									kurzbrief.getFlransprechpartner().getI_id(),
-									theClientDto);
+							.ansprechpartnerFindByPrimaryKey(kurzbrief.getFlransprechpartner().getI_id(), theClientDto);
 					o[1] = oAnsprechpartner.getPartnerDto().formatAnrede();
 				}
 				PersonalDto personalDto = getPersonalFac()
-						.personalFindByPrimaryKey(
-								kurzbrief.getPersonal_i_id_aendern(),
-								theClientDto);
+						.personalFindByPrimaryKey(kurzbrief.getPersonal_i_id_aendern(), theClientDto);
 
 				o[2] = personalDto.getPartnerDto().formatAnrede();
 				o[3] = kurzbrief.getT_aendern();
@@ -503,15 +521,209 @@ public class LieferantReportFacBean extends LPReport implements
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Betreff",
-						"Ansprechpartner", "Person", "Zeitpunkt" };
+				String[] fieldnames = new String[] { "Betreff", "Ansprechpartner", "Person", "Zeitpunkt" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_KURZBRIEFE",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_KURZBRIEFE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
+			}
+
+			session.close();
+
+			// Bankverbindungen
+			session = FLRSessionFactory.getFactory().openSession();
+			crit = session.createCriteria(FLRPartnerbank.class);
+			crit.add(Restrictions.eq("partner_i_id", lieferantDto.getPartnerIId()));
+			crit.addOrder(Order.asc("i_sort"));
+
+			list = crit.list();
+			it = list.iterator();
+			al = new ArrayList<Object[]>();
+			while (it.hasNext()) {
+				FLRPartnerbank partnerbank = (FLRPartnerbank) it.next();
+
+				BankDto bankDto = getBankFac().bankFindByPrimaryKey(partnerbank.getFlrpartner().getI_id(),
+						theClientDto);
+
+				Object[] o = new Object[5];
+				o[0] = partnerbank.getFlrpartner().getC_name1nachnamefirmazeile1();
+				o[1] = partnerbank.getC_iban();
+				o[2] = bankDto.getCBic();
+				o[3] = partnerbank.getC_sepamandatsnummer();
+				o[4] = partnerbank.getT_sepaerteilt();
+
+				al.add(o);
+			}
+
+			if (al.size() > 0) {
+				String[] fieldnames = new String[] { "Name", "Iban", "Bic", "SepaMandatsnummer",
+						"SepaMandatsnummerErteiltAm" };
+				Object[][] dataSub = new Object[al.size()][fieldnames.length];
+				dataSub = (Object[][]) al.toArray(dataSub);
+
+				parameter.put("P_SUBREPORT_BANKVERBINDUNGEN",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
+			}
+
+			session.close();
+
+			// Kurzbriefe
+			session = FLRSessionFactory.getFactory().openSession();
+			// Filter und Sortierung
+			crit = session.createCriteria(FLRLieferantbeurteilung.class);
+			// Filter nach Kunde
+			crit.add(Restrictions.eq("lieferant_i_id", lieferantIId));
+			crit.addOrder(Order.desc("t_datum"));
+
+			list = crit.list();
+			it = list.iterator();
+			al = new ArrayList<Object[]>();
+			while (it.hasNext()) {
+				FLRLieferantbeurteilung beurteilung = (FLRLieferantbeurteilung) it.next();
+
+				LieferantbeurteilungDto lfbDto = getLieferantFac()
+						.lieferantbeurteilungFindByPrimaryKey(beurteilung.getI_id());
+
+				Object[] o = new Object[6];
+				o[0] = beurteilung.getT_datum();
+				o[1] = beurteilung.getI_punkte();
+				o[2] = Helper.short2Boolean(beurteilung.getB_gesperrt());
+				o[3] = Helper.short2Boolean(lfbDto.getBManuellgeaendert());
+				o[4] = lfbDto.getCKlasse();
+				o[5] = lfbDto.getCKommentar();
+
+				al.add(o);
+			}
+
+			if (al.size() > 0) {
+				String[] fieldnames = new String[] { "Datum", "Punkte", "Gesperrt", "ManuellGeaendert", "Klasse",
+						"Kommentar" };
+				Object[][] dataSub = new Object[al.size()][fieldnames.length];
+				dataSub = (Object[][]) al.toArray(dataSub);
+
+				parameter.put("P_SUBREPORT_LFBEURTEILUNG",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
+			}
+
+			// Umsaetze der vergangenen Jahre
+
+			al = new ArrayList<Object[]>();
+
+			Calendar cVon = Calendar.getInstance();
+			cVon = Helper.cutCalendar(cVon);
+			cVon.set(Calendar.MONTH, Calendar.JANUARY);
+			cVon.set(Calendar.DAY_OF_MONTH, 1);
+
+			Calendar cBis = Calendar.getInstance();
+			cBis = Helper.cutCalendar(cBis);
+			cBis.set(Calendar.MONTH, Calendar.DECEMBER);
+			cBis.set(Calendar.DAY_OF_MONTH, 31);
+
+			for (int i = 0; i < 10; i++) {
+
+				int iJahr = cVon.get(Calendar.YEAR);
+
+				java.sql.Date dVon = new java.sql.Date(cVon.getTime().getTime());
+				java.sql.Date dBis = new java.sql.Date(cBis.getTime().getTime());
+
+				// den Umsatz errechnen
+				BigDecimal bdUmsatz[] = getLieferantFac().getUmsaetzeVomLieferantenImZeitraum(theClientDto,
+						lieferantIId, dVon, dBis);
+				Object[] o = new Object[5];
+				o[0] = new Integer(iJahr);
+				o[1] = bdUmsatz[LieferantFac.UMSAETZE_BESTELLUNGSUMSATZ];
+				o[2] = bdUmsatz[LieferantFac.UMSAETZE_WARENEINGANGSUMSATZ];
+				o[3] = bdUmsatz[LieferantFac.UMSAETZE_EINGANGSRECHNUNGSUMSATZ];
+				o[4] = getEingangsrechnungFac().getZahlungsmoralZuEinemLieferanten(lieferantIId, dVon, dBis,
+						theClientDto);
+
+				cVon.set(Calendar.YEAR, cVon.get(Calendar.YEAR) - 1);
+				cBis.set(Calendar.YEAR, cBis.get(Calendar.YEAR) - 1);
+				al.add(o);
+			}
+
+			if (al.size() > 0) {
+				String[] fieldnames = new String[] { "Jahr", "BSUmsatz", "WEUmsatz", "ERUmsatz", "Zahlungsmoral" };
+				Object[][] dataSub = new Object[al.size()][fieldnames.length];
+				dataSub = (Object[][]) al.toArray(dataSub);
+
+				parameter.put("P_SUBREPORT_UMSAETZE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
+			}
+
+			// Eingangsrechnungen
+
+			session = FLRSessionFactory.getFactory().openSession();
+			// Filter und Sortierung
+			crit = session.createCriteria(FLREingangsrechnungReport.class);
+			// Filter nach Kunde
+			crit.add(Restrictions.eq("lieferant_i_id", lieferantIId));
+			crit.addOrder(Order.desc("c_nr"));
+
+			list = crit.list();
+			it = list.iterator();
+			al = new ArrayList<Object[]>();
+			while (it.hasNext()) {
+				FLREingangsrechnungReport flrEr = (FLREingangsrechnungReport) it.next();
+
+				Object[] o = new Object[7];
+				o[0] = flrEr.getC_nr();
+				o[1] = flrEr.getStatus_c_nr();
+
+				BigDecimal bdWertNetto = flrEr.getN_betrag().subtract(flrEr.getN_ustbetrag());
+				o[2] = bdWertNetto;
+				o[3] = flrEr.getT_belegdatum();
+
+				al.add(o);
+			}
+
+			if (al.size() > 0) {
+				String[] fieldnames = new String[] { "Eingangsrechnung", "Status", "Wert", "Belegdatum" };
+				Object[][] dataSub = new Object[al.size()][fieldnames.length];
+				dataSub = (Object[][]) al.toArray(dataSub);
+
+				parameter.put("P_SUBREPORT_EINGANGSRECHNUNGEN",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
+			}
+
+			// Umsaetze der vergangenen Geschaeftsjahre
+
+			Integer gfJahr = getParameterFac().getGeschaeftsjahr(theClientDto.getMandant());
+
+			al = new ArrayList<Object[]>();
+
+			for (int i = 0; i < 10; i++) {
+
+				int iJahr = gfJahr;
+
+				Timestamp[] tVonBis = getBuchenFac().getDatumVonBisGeschaeftsjahr(gfJahr, theClientDto);
+
+				java.sql.Date dVon = new java.sql.Date(tVonBis[0].getTime());
+				java.sql.Date dBis = new java.sql.Date(tVonBis[1].getTime());
+
+				// den Umsatz errechnen
+				BigDecimal bdUmsatz[] = getLieferantFac().getUmsaetzeVomLieferantenImZeitraum(theClientDto,
+						lieferantIId, dVon, dBis);
+				Object[] o = new Object[5];
+				o[0] = new Integer(iJahr);
+				o[1] = bdUmsatz[LieferantFac.UMSAETZE_BESTELLUNGSUMSATZ];
+				o[2] = bdUmsatz[LieferantFac.UMSAETZE_WARENEINGANGSUMSATZ];
+				o[3] = bdUmsatz[LieferantFac.UMSAETZE_EINGANGSRECHNUNGSUMSATZ];
+				o[4] = getEingangsrechnungFac().getZahlungsmoralZuEinemLieferanten(lieferantIId, dVon, dBis,
+						theClientDto);
+				al.add(o);
+
+				gfJahr--;
+			}
+
+			if (al.size() > 0) {
+				String[] fieldnames = new String[] { "Jahr", "BSUmsatz", "WEUmsatz", "ERUmsatz", "Zahlungsmoral" };
+				Object[][] dataSub = new Object[al.size()][fieldnames.length];
+				dataSub = (Object[][]) al.toArray(dataSub);
+
+				parameter.put("P_SUBREPORT_UMSAETZEGFJAHR",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 
 			// Kontakte
@@ -521,8 +733,7 @@ public class LieferantReportFacBean extends LPReport implements
 			// Filter und Sortierung
 			crit = session.createCriteria(FLRKontakt.class);
 			// Filter nach Kunde
-			crit.add(Restrictions.eq("partner_i_id",
-					lieferantDto.getPartnerIId()));
+			crit.add(Restrictions.eq("partner_i_id", lieferantDto.getPartnerIId()));
 			crit.addOrder(Order.desc("t_kontakt"));
 
 			list = crit.list();
@@ -537,25 +748,20 @@ public class LieferantReportFacBean extends LPReport implements
 				o[2] = kontakt.getT_kontakt();
 				o[3] = kontakt.getT_kontaktbis();
 
-				PersonalDto personalDto = getPersonalFac()
-						.personalFindByPrimaryKey(
-								kontakt.getFlrpersonal().getI_id(),
-								theClientDto);
+				PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(kontakt.getFlrpersonal().getI_id(),
+						theClientDto);
 
 				o[4] = personalDto.getPartnerDto().formatAnrede();
 				al.add(o);
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Titel", "Kontaktart",
-						"Von", "Bis", "Zugewiesener" };
+				String[] fieldnames = new String[] { "Titel", "Kontaktart", "Von", "Bis", "Zugewiesener" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_KONTAKTE",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_KONTAKTE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 
 			// Angebote
@@ -578,16 +784,12 @@ public class LieferantReportFacBean extends LPReport implements
 				o[0] = angebot.getC_nr();
 				o[1] = angebot.getAnfragestatus_c_nr();
 
-				BigDecimal wert = angebot
-						.getN_gesamtanfragewertinanfragewaehrung();
+				BigDecimal wert = angebot.getN_gesamtanfragewertinanfragewaehrung();
 
 				if (wert != null) {
 
-					wert = getLocaleFac()
-							.rechneUmInMandantenWaehrung(
-									wert,
-									new BigDecimal(
-											angebot.getF_wechselkursmandantwaehrungzuanfragewaehrung()));
+					wert = getLocaleFac().rechneUmInMandantenWaehrung(wert,
+							new BigDecimal(angebot.getF_wechselkursmandantwaehrungzuanfragewaehrung()));
 
 					o[2] = wert;
 				}
@@ -599,69 +801,56 @@ public class LieferantReportFacBean extends LPReport implements
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Anfragenummer", "Status",
-						"Wert", "Belegdatum", "Projekt" };
+				String[] fieldnames = new String[] { "Anfragenummer", "Status", "Wert", "Belegdatum", "Projekt" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_ANFRAGEN",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_ANFRAGEN",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 			session.close();
 
-			parameter.put(
-					"P_SUBREPORT_PROJEKTE",
-					getKundeReportFac().getSubreportProjekte(
-							lieferantDto.getPartnerIId(), false, theClientDto));
+			parameter.put("P_SUBREPORT_PROJEKTE",
+					getKundeReportFac().getSubreportProjekte(lieferantDto.getPartnerIId(), false, theClientDto));
+
+			parameter.put("P_SUBREPORT_PARTNERKOMMENTAR", getPartnerServicesFacLocal()
+					.getSubreportAllerPartnerkommentare(lieferantDto.getPartnerIId(), false, theClientDto));
 
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
 
-		parameter.put("P_MANDANTENWAEHRUNG",
-				theClientDto.getSMandantenwaehrung());
+		parameter.put("P_MANDANTENWAEHRUNG", theClientDto.getSMandantenwaehrung());
 
-		initJRDS(parameter, LieferantReportFac.REPORT_MODUL,
-				LieferantReportFac.REPORT_LIEFERANTENSTAMMBLATT,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+		initJRDS(parameter, LieferantReportFac.REPORT_MODUL, LieferantReportFac.REPORT_LIEFERANTENSTAMMBLATT,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 		return getReportPrint();
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printArtikeldesLieferanten(Integer lieferantIId,
-			boolean bSortiertNachBezeichnung, boolean bMitVersteckten,
-			boolean bSortiertNachLieferant, boolean bNurLagerbewirtschaftete,
-			java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
+	public JasperPrintLP printArtikeldesLieferanten(Integer lieferantIId, boolean bSortiertNachBezeichnung,
+			boolean bMitVersteckten, boolean bSortiertNachLieferant, boolean bNurLagerbewirtschaftete,
+			java.sql.Timestamp tStichtag, boolean bMitStaffelpreisen, TheClientDto theClientDto) {
 
 		sAktuellerReport = LieferantReportFac.REPORT_ARTIKELDESLIEFERANTEN;
 
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 
 		parameter.put("P_MITVERSTECKTEN", new Boolean(bMitVersteckten));
-		parameter.put("P_SORTIERTNACHLIEFERANT", new Boolean(
-				bSortiertNachLieferant));
-		parameter.put("P_SORTIERTNACHBEZEICHNUNG", new Boolean(
-				bSortiertNachBezeichnung));
-		parameter.put("P_NURLAGERBEWIRTSCHAFTETE", new Boolean(
-				bNurLagerbewirtschaftete));
+		parameter.put("P_MITSTAFFELPREISEN", new Boolean(bMitStaffelpreisen));
+		parameter.put("P_SORTIERTNACHLIEFERANT", new Boolean(bSortiertNachLieferant));
+		parameter.put("P_SORTIERTNACHBEZEICHNUNG", new Boolean(bSortiertNachBezeichnung));
+		parameter.put("P_NURLAGERBEWIRTSCHAFTETE", new Boolean(bNurLagerbewirtschaftete));
 
 		if (lieferantIId != null) {
 			try {
-				LieferantDto lieferantDto = getLieferantFac()
-						.lieferantFindByPrimaryKey(lieferantIId, theClientDto);
-				MandantDto mandantDto = getMandantFac()
-						.mandantFindByPrimaryKey(theClientDto.getMandant(),
-								theClientDto);
-				parameter.put(
-						"P_LIEFERANT_ADRESSBLOCK",
-						formatAdresseFuerAusdruck(lieferantDto.getPartnerDto(),
-								null, mandantDto, theClientDto.getLocUi()));
+				LieferantDto lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(lieferantIId, theClientDto);
+				MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(),
+						theClientDto);
+				parameter.put("P_LIEFERANT_ADRESSBLOCK", formatAdresseFuerAusdruck(lieferantDto.getPartnerDto(), null,
+						mandantDto, theClientDto.getLocUi()));
 
-				parameter.put("P_LIEFERANT_MINDESTBESTELLWERT",
-						lieferantDto.getNMindestbestellwert());
+				parameter.put("P_LIEFERANT_MINDESTBESTELLWERT", lieferantDto.getNMindestbestellwert());
 
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
@@ -670,7 +859,7 @@ public class LieferantReportFacBean extends LPReport implements
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		String sQuery = "SELECT distinct al.lieferant_i_id, al.artikel_i_id,flrartikel.c_nr,al.flrlieferant.flrpartner.c_name1nachnamefirmazeile1  FROM FLRArtikellieferant al LEFT JOIN al.flrartikel as flrartikel WHERE 1=1 ";
+		String sQuery = "SELECT distinct al.lieferant_i_id, al.artikel_i_id,flrartikel.c_nr,al.flrlieferant.flrpartner.c_name1nachnamefirmazeile1, al.i_sort  FROM FLRArtikellieferant al LEFT JOIN al.flrartikel as flrartikel WHERE 1=1 ";
 		if (lieferantIId != null) {
 			sQuery += " AND al.lieferant_i_id=" + lieferantIId;
 		}
@@ -678,22 +867,23 @@ public class LieferantReportFacBean extends LPReport implements
 		if (tStichtag != null) {
 
 			parameter.put("P_STICHTAG", tStichtag);
-			sQuery += " AND al.t_preisgueltigab<='"
-					+ Helper.formatTimestampWithSlashes(Helper
-							.cutTimestamp(tStichtag)) + "'";
+			sQuery += " AND al.t_preisgueltigab<='" + Helper.formatTimestampWithSlashes(Helper.cutTimestamp(tStichtag))
+					+ "'";
 		}
 
 		if (bNurLagerbewirtschaftete) {
 			sQuery += " AND al.flrartikel.b_lagerbewirtschaftet=1 ";
 		}
-		if (bMitVersteckten==false) {
+		if (bMitVersteckten == false) {
 			sQuery += " AND al.flrartikel.b_versteckt=0 ";
 		}
-
+		
+		
+		
 		if (bSortiertNachLieferant) {
-			sQuery += " ORDER BY al.flrlieferant.flrpartner.c_name1nachnamefirmazeile1 ASC, flrartikel.c_nr ASC";
+			sQuery += " ORDER BY al.flrlieferant.flrpartner.c_name1nachnamefirmazeile1 ASC,al.i_sort ASC, flrartikel.c_nr ASC";
 		} else {
-			sQuery += " ORDER BY flrartikel.c_nr ASC";
+			sQuery += " ORDER BY al.i_sort ASC, flrartikel.c_nr ASC";
 		}
 
 		Query query = session.createQuery(sQuery);
@@ -711,92 +901,70 @@ public class LieferantReportFacBean extends LPReport implements
 			Integer lieferantIIdZeile = (Integer) o[0];
 
 			if (!hmLieferanten.containsKey(lieferantIIdZeile)) {
-				hmLieferanten.put(
-						lieferantIIdZeile,
-						getLieferantFac().lieferantFindByPrimaryKey(
-								lieferantIIdZeile, theClientDto));
+				hmLieferanten.put(lieferantIIdZeile,
+						getLieferantFac().lieferantFindByPrimaryKey(lieferantIIdZeile, theClientDto));
 			}
 
 			Integer artikelIId = (Integer) o[1];
 			try {
 
 				LieferantDto lfDto = hmLieferanten.get(lieferantIIdZeile);
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT] = lfDto
-						.getPartnerDto().formatFixName1Name2();
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT_MINDESTBESTELLWERT] = lfDto
-						.getNMindestbestellwert();
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT] = lfDto.getPartnerDto().formatFixName1Name2();
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT_MINDESTBESTELLWERT] = lfDto.getNMindestbestellwert();
+				ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
 
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_ARTIKELNUMMER] = artikelDto
-						.getCNr();
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_ARTIKELNUMMER] = artikelDto.getCNr();
 
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_EINHEIT] = artikelDto
-						.getEinheitCNr();
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_VERSTECKT] = Helper
-						.short2Boolean(artikelDto.getBVersteckt());
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_BESTELLMENENEINHEIT] = artikelDto
-						.getEinheitCNrBestellung();
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_UMRECHNUNGSFAKTOR] = artikelDto
-						.getNUmrechnungsfaktor();
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_WAEHRUNG] = lfDto.getWaehrungCNr();
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_MANDANT] = lfDto.getMandantCNr();
+
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_EINHEIT] = artikelDto.getEinheitCNr();
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_VERSTECKT] = Helper.short2Boolean(artikelDto.getBVersteckt());
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_BESTELLMENENEINHEIT] = artikelDto.getEinheitCNrBestellung();
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_UMRECHNUNGSFAKTOR] = artikelDto.getNUmrechnungsfaktor();
 
 				if (artikelDto.getArtikelsprDto() != null) {
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_BEZEICHNUNG] = artikelDto
-							.getArtikelsprDto().getCBez();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_KURZBEZEICHNUNG] = artikelDto
-							.getArtikelsprDto().getCKbez();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_ZUSATZBEZEICHNUNG] = artikelDto
-							.getArtikelsprDto().getCZbez();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_ZUSATZBEZEICHNUNG2] = artikelDto
-							.getArtikelsprDto().getCZbez2();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_BEZEICHNUNG] = artikelDto.getArtikelsprDto().getCBez();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_KURZBEZEICHNUNG] = artikelDto.getArtikelsprDto().getCKbez();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_ZUSATZBEZEICHNUNG] = artikelDto.getArtikelsprDto()
+							.getCZbez();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_ZUSATZBEZEICHNUNG2] = artikelDto.getArtikelsprDto()
+							.getCZbez2();
 				}
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_REFERENZNUMMER] = artikelDto
-						.getCReferenznr();
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_REFERENZNUMMER] = artikelDto.getCReferenznr();
 
 				// Artikelklasse
 				if (artikelDto.getArtklaIId() != null) {
-					ArtklaDto akDto = getArtikelFac().artklaFindByPrimaryKey(
-							artikelDto.getArtklaIId(), theClientDto);
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_ARTIKELKLASSE] = akDto
-							.getBezeichnung();
+					ArtklaDto akDto = getArtikelFac().artklaFindByPrimaryKey(artikelDto.getArtklaIId(), theClientDto);
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_ARTIKELKLASSE] = akDto.getBezeichnung();
 				}
 				// Artikelgruppe
 				if (artikelDto.getArtgruIId() != null) {
-					ArtgruDto agDto = getArtikelFac().artgruFindByPrimaryKey(
-							artikelDto.getArtgruIId(), theClientDto);
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_ARTIKELGRUPPE] = agDto
-							.getBezeichnung();
+					ArtgruDto agDto = getArtikelFac().artgruFindByPrimaryKey(artikelDto.getArtgruIId(), theClientDto);
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_ARTIKELGRUPPE] = agDto.getBezeichnung();
 				}
 
 				// Hersteller
 				if (artikelDto.getHerstellerIId() != null) {
-					HerstellerDto hDto = getArtikelFac()
-							.herstellerFindByPrimaryKey(
-									artikelDto.getHerstellerIId(), theClientDto);
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_HERSTELLER] = hDto
-							.getCNr();
+					HerstellerDto hDto = getArtikelFac().herstellerFindByPrimaryKey(artikelDto.getHerstellerIId(),
+							theClientDto);
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_HERSTELLER] = hDto.getCNr();
 				}
 				// MWstsatz
 				if (artikelDto.getMwstsatzbezIId() != null) {
-					MwstsatzbezDto mDto = getMandantFac()
-							.mwstsatzbezFindByPrimaryKey(
-									artikelDto.getMwstsatzbezIId(),
-									theClientDto);
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_MWSTSATZ] = mDto
-							.getCBezeichnung();
+					MwstsatzbezDto mDto = getMandantFac().mwstsatzbezFindByPrimaryKey(artikelDto.getMwstsatzbezIId(),
+							theClientDto);
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_MWSTSATZ] = mDto.getCBezeichnung();
 				}
 
-				java.sql.Date tDatumPreisgueltigkeit = new java.sql.Date(
-						System.currentTimeMillis());
+				java.sql.Date tDatumPreisgueltigkeit = new java.sql.Date(System.currentTimeMillis());
 				if (tStichtag != null) {
-					tDatumPreisgueltigkeit = new java.sql.Date(
-							tStichtag.getTime());
+					tDatumPreisgueltigkeit = new java.sql.Date(tStichtag.getTime());
 				}
 
 				ArtikellieferantDto artikellieferantDto = getArtikelFac()
-						.artikellieferantFindByArtikellIIdLieferantIIdTPreisgueltigabKleiner(
-								artikelIId, lieferantIIdZeile,
-								tDatumPreisgueltigkeit, theClientDto);
+						.artikellieferantFindByArtikellIIdLieferantIIdTPreisgueltigabKleiner(artikelIId,
+								lieferantIIdZeile, tDatumPreisgueltigkeit, null, theClientDto);
 
 				if (artikellieferantDto != null) {
 
@@ -806,47 +974,45 @@ public class LieferantReportFacBean extends LPReport implements
 							.getFMindestbestelmenge();
 					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_BEZEICHNUNG] = artikellieferantDto
 							.getCBezbeilieferant();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_EINZELPREIS] = artikellieferantDto
-							.getNEinzelpreis();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_FIXKOSTEN] = artikellieferantDto
-							.getNFixkosten();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_GUELTIGAB] = artikellieferantDto
-							.getTPreisgueltigab();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_NETTOPREIS] = artikellieferantDto
-							.getNNettopreis();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_RABATT] = artikellieferantDto
-							.getFRabatt();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_STDMENGE] = artikellieferantDto
-							.getFStandardmenge();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_EINZELPREIS] = artikellieferantDto.getNEinzelpreis();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_FIXKOSTEN] = artikellieferantDto.getNFixkosten();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_GUELTIGAB] = artikellieferantDto.getTPreisgueltigab();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_GUELTIGBIS] = artikellieferantDto.getTPreisgueltigbis();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_NETTOPREIS] = artikellieferantDto.getNNettopreis();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_RABATT] = artikellieferantDto.getFRabatt();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_STDMENGE] = artikellieferantDto.getFStandardmenge();
 					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_VERPACKUNGSEINHEIT] = artikellieferantDto
 							.getNVerpackungseinheit();
 					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_WIEDERBESCHAFFUNGSZEIT] = artikellieferantDto
 							.getIWiederbeschaffungszeit();
-					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_REIHUNG] = artikellieferantDto
-							.getISort();
+					data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_REIHUNG] = artikellieferantDto.getISort();
+
+					if (artikellieferantDto.getNNettopreis() != null) {
+						Date datum = new Date(System.currentTimeMillis());
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_LIEF_NETTOPREIS_IN_MANDANTENWAEHRUNG] = getLocaleFac()
+								.rechneUmInAndereWaehrungZuDatum(artikellieferantDto.getNNettopreis(),
+										lfDto.getWaehrungCNr(), theClientDto.getSMandantenwaehrung(), datum, theClientDto);
+					}
 				}
 				//
 				data[row][REPORT_ARTIKELDESLIEFERANTEN_LAGERSTAND] = getLagerFac()
-						.getLagerstandAllerLagerEinesMandanten(artikelIId,
-								theClientDto);
+						.getLagerstandAllerLagerEinesMandanten(artikelIId, theClientDto);
 				data[row][REPORT_ARTIKELDESLIEFERANTEN_RESERVIERT] = getReservierungFac()
 						.getAnzahlReservierungen(artikelIId, theClientDto);
 				data[row][REPORT_ARTIKELDESLIEFERANTEN_FEHLMENGE] = getFehlmengeFac()
-						.getAnzahlFehlmengeEinesArtikels(artikelIId,
-								theClientDto);
+						.getAnzahlFehlmengeEinesArtikels(artikelIId, theClientDto);
 
-				data[row][REPORT_ARTIKELDESLIEFERANTEN_INFERTIGUNG] = getFertigungFac()
-						.getAnzahlInFertigung(artikelIId, theClientDto);
+				data[row][REPORT_ARTIKELDESLIEFERANTEN_INFERTIGUNG] = getFertigungFac().getAnzahlInFertigung(artikelIId,
+						theClientDto);
 				data[row][REPORT_ARTIKELDESLIEFERANTEN_BESTELLT] = getArtikelbestelltFac()
 						.getAnzahlBestellt(artikelIId);
 				data[row][REPORT_ARTIKELDESLIEFERANTEN_RAHMENRESERVIERT] = getReservierungFac()
 						.getAnzahlRahmenreservierungen(artikelIId, theClientDto);
 
-				Hashtable htAnzahlRahmenbestellt = getArtikelbestelltFac()
-						.getAnzahlRahmenbestellt(artikelIId, theClientDto);
+				Hashtable htAnzahlRahmenbestellt = getArtikelbestelltFac().getAnzahlRahmenbestellt(artikelIId,
+						theClientDto);
 
-				if (htAnzahlRahmenbestellt
-						.containsKey(ArtikelbestelltFac.KEY_RAHMENBESTELLT_ANZAHL)) {
+				if (htAnzahlRahmenbestellt.containsKey(ArtikelbestelltFac.KEY_RAHMENBESTELLT_ANZAHL)) {
 					BigDecimal rahmenbestellt = (BigDecimal) htAnzahlRahmenbestellt
 							.get(ArtikelbestelltFac.KEY_RAHMENBESTELLT_ANZAHL);
 					data[row][REPORT_ARTIKELDESLIEFERANTEN_RAHMENBESTELLT] = rahmenbestellt;
@@ -855,6 +1021,63 @@ public class LieferantReportFacBean extends LPReport implements
 
 				data[row][REPORT_ARTIKELDESLIEFERANTEN_RAHMENDETAILBEDARF] = getRahmenbedarfeFac()
 						.getSummeAllerRahmenbedarfeEinesArtikels(artikelIId);
+
+				if (bMitStaffelpreisen) {
+
+					String sQueryStaffeln = "SELECT als  FROM FLRArtikellieferantstaffel als WHERE als.flrartikellieferant.artikel_i_id="
+							+ artikelIId + " AND als.flrartikellieferant.lieferant_i_id=" + lieferantIIdZeile;
+					sQueryStaffeln += " AND (als.t_preisgueltigab <= '"
+							+ Helper.formatDateWithSlashes(tDatumPreisgueltigkeit) + "' AND  ( als.t_preisgueltigbis>='"
+							+ Helper.formatDateWithSlashes(tDatumPreisgueltigkeit)
+							+ "' OR als.t_preisgueltigbis IS NULL) ) OR (als.t_preisgueltigbis <= '"
+							+ Helper.formatDateWithSlashes(tDatumPreisgueltigkeit)
+							+ "' AND als.t_preisgueltigbis IS NULL)";
+
+					sQueryStaffeln += " ORDER BY als.n_menge ASC";
+					Session sessionStaffeln = FLRSessionFactory.getFactory().openSession();
+					Query queryStaffeln = sessionStaffeln.createQuery(sQueryStaffeln);
+					queryStaffeln.setMaxResults(5);
+					List<?> resultsStaffeln = queryStaffeln.list();
+
+					Iterator<?> resultListIteratorStaffeln = resultsStaffeln.iterator();
+
+					ArrayList<FLRArtikellieferantstaffel> alStaffeln = new ArrayList<FLRArtikellieferantstaffel>();
+
+					while (resultListIteratorStaffeln.hasNext()) {
+						alStaffeln.add((FLRArtikellieferantstaffel) resultListIteratorStaffeln.next());
+					}
+
+					if (alStaffeln.size() > 0) {
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL1] = alStaffeln.get(0).getN_menge();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL1] = alStaffeln.get(0).getN_nettopreis();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL1] = alStaffeln.get(0).getF_rabatt();
+					}
+
+					if (alStaffeln.size() > 1) {
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL2] = alStaffeln.get(1).getN_menge();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL2] = alStaffeln.get(1).getN_nettopreis();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL2] = alStaffeln.get(1).getF_rabatt();
+					}
+
+					if (alStaffeln.size() > 2) {
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL3] = alStaffeln.get(2).getN_menge();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL3] = alStaffeln.get(2).getN_nettopreis();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL3] = alStaffeln.get(2).getF_rabatt();
+					}
+
+					if (alStaffeln.size() > 3) {
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL4] = alStaffeln.get(3).getN_menge();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL4] = alStaffeln.get(3).getN_nettopreis();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL4] = alStaffeln.get(3).getF_rabatt();
+					}
+
+					if (alStaffeln.size() > 4) {
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL5] = alStaffeln.get(4).getN_menge();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL5] = alStaffeln.get(4).getN_nettopreis();
+						data[row][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL5] = alStaffeln.get(4).getF_rabatt();
+					}
+
+				}
 
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
@@ -880,15 +1103,9 @@ public class LieferantReportFacBean extends LPReport implements
 					}
 
 					if (bSortiertNachLieferant) {
-						wert = Helper
-								.fitString2Length(
-										(String) o[REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT],
-										80, ' ')
+						wert = Helper.fitString2Length((String) o[REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT], 80, ' ')
 								+ wert;
-						wert1 = Helper
-								.fitString2Length(
-										(String) o1[REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT],
-										80, ' ')
+						wert1 = Helper.fitString2Length((String) o1[REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT], 80, ' ')
 								+ wert1;
 					}
 
@@ -901,10 +1118,8 @@ public class LieferantReportFacBean extends LPReport implements
 
 		}
 
-		initJRDS(parameter, LieferantReportFac.REPORT_MODUL,
-				LieferantReportFac.REPORT_ARTIKELDESLIEFERANTEN,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+		initJRDS(parameter, LieferantReportFac.REPORT_MODUL, LieferantReportFac.REPORT_ARTIKELDESLIEFERANTEN,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 
 		return getReportPrint();
 	}
@@ -913,8 +1128,7 @@ public class LieferantReportFacBean extends LPReport implements
 
 		index++;
 
-		if (sAktuellerReport
-				.equals(LieferantReportFac.REPORT_LIEFERANT_LIEFERSTATISTIK)) {
+		if (sAktuellerReport.equals(LieferantReportFac.REPORT_LIEFERANT_LIEFERSTATISTIK)) {
 			return (index < alWEPOS.size());
 
 		} else {
@@ -927,38 +1141,27 @@ public class LieferantReportFacBean extends LPReport implements
 
 		Object ret = null;
 		String fieldName = jRField.getName();
-		if (sAktuellerReport
-				.equals(LieferantReportFac.REPORT_LIEFERANT_LIEFERSTATISTIK)) {
+		if (sAktuellerReport.equals(LieferantReportFac.REPORT_LIEFERANT_LIEFERSTATISTIK)) {
 			if ("F_BELEGDATUM".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getDBelegdatum();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getDBelegdatum();
 			} else if ("F_WAS".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getSWas();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getSWas();
 			} else if ("F_MENGE".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getBdMenge();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getBdMenge();
 			} else if ("F_EINHEIT".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getSEinheit();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getSEinheit();
 			} else if ("F_WERT".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getBdWert();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getBdWert();
 			} else if ("F_IDENT".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getSIdent();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getSIdent();
 			} else if ("F_NR".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getSNr();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getSNr();
 			} else if (F_BEZEICHNUNG.equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getSBezeichnung();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getSBezeichnung();
 			} else if ("F_PREIS".equals(fieldName)) {
-				ret = ((WareneingangspositionenDto) alWEPOS.get(index))
-						.getBdPreis();
+				ret = ((WareneingangspositionenDto) alWEPOS.get(index)).getBdPreis();
 			}
-		} else if (sAktuellerReport
-				.equals(LieferantReportFac.REPORT_ARTIKELDESLIEFERANTEN)) {
+		} else if (sAktuellerReport.equals(LieferantReportFac.REPORT_ARTIKELDESLIEFERANTEN)) {
 			if ("Artikelnummer".equals(fieldName)) {
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_ARTIKELNUMMER];
 			} else if ("Bezeichnung".equals(fieldName)) {
@@ -993,6 +1196,8 @@ public class LieferantReportFacBean extends LPReport implements
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_LIEF_FIXKOSTEN];
 			} else if ("LiefGueltigab".equals(fieldName)) {
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_LIEF_GUELTIGAB];
+			} else if ("LiefGueltigbis".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_LIEF_GUELTIGBIS];
 			} else if ("LiefNettopreis".equals(fieldName)) {
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_LIEF_NETTOPREIS];
 			} else if ("LiefRabatt".equals(fieldName)) {
@@ -1027,14 +1232,49 @@ public class LieferantReportFacBean extends LPReport implements
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_BESTELLMENENEINHEIT];
 			} else if ("Umrechnungsfaktor".equals(fieldName)) {
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_UMRECHNUNGSFAKTOR];
-			}else if ("Lieferant".equals(fieldName)) {
+			} else if ("Lieferant".equals(fieldName)) {
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT];
-			}else if ("LieferantMindestbestellwert".equals(fieldName)) {
+			} else if ("LieferantMindestbestellwert".equals(fieldName)) {
 				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_LIEFERANT_MINDESTBESTELLWERT];
+			} else if ("StaffelMenge1".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL1];
+			} else if ("StaffelMenge2".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL2];
+			} else if ("StaffelMenge3".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL3];
+			} else if ("StaffelMenge4".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL4];
+			} else if ("StaffelMenge5".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_STAFFEL5];
+			} else if ("StaffelPreis1".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL1];
+			} else if ("StaffelPreis2".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL2];
+			} else if ("StaffelPreis3".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL3];
+			} else if ("StaffelPreis4".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL4];
+			} else if ("StaffelPreis5".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_PREISSTAFFEL5];
+			} else if ("StaffelRabatt1".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL1];
+			} else if ("StaffelRabatt2".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL2];
+			} else if ("StaffelRabatt3".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL3];
+			} else if ("StaffelRabatt4".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL4];
+			} else if ("StaffelRabatt5".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_RABATTSTAFFEL5];
+			} else if ("LiefNettopreisInMandantenwaehrung".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_LIEF_NETTOPREIS_IN_MANDANTENWAEHRUNG];
+			} else if ("Waehrung".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_WAEHRUNG];
+			}else if ("Mandant".equals(fieldName)) {
+				ret = data[index][REPORT_ARTIKELDESLIEFERANTEN_MANDANT];
 			}
 
-		} else if (sAktuellerReport
-				.equals(LieferantReportFac.REPORT_LIEFERANTENLISTE)) {
+		} else if (sAktuellerReport.equals(LieferantReportFac.REPORT_LIEFERANTENLISTE)) {
 			if ("F_ABW_UST_LAND".equals(fieldName)) {
 				ret = data[index][REPORT_LIEFERANTENLISTE_ABW_UST_LAND];
 			} else if ("F_ANREDE".equals(fieldName)) {
@@ -1101,6 +1341,8 @@ public class LieferantReportFacBean extends LPReport implements
 				ret = data[index][REPORT_LIEFERANTENLISTE_LIEFERANTENNUMMER];
 			} else if ("F_LIEFERART".equals(fieldName)) {
 				ret = data[index][REPORT_LIEFERANTENLISTE_LIEFERART];
+			} else if ("F_LIEFERART_KENNUNG".equals(fieldName)) {
+				ret = data[index][REPORT_LIEFERANTENLISTE_LIEFERART_KENNUNG];
 			} else if ("F_MWSTSATZ".equals(fieldName)) {
 				ret = data[index][REPORT_LIEFERANTENLISTE_MWSTSATZ];
 			} else if ("F_ORT".equals(fieldName)) {
@@ -1190,8 +1432,7 @@ public class LieferantReportFacBean extends LPReport implements
 			} else if ("F_LIEFERANT_I_ID".equals(fieldName)) {
 				ret = data[index][REPORT_LIEFERANTENLISTE_LIEFERANT_I_ID];
 			}
-		} else if (sAktuellerReport
-				.equals(LieferantReportFac.REPORT_LIEFERANTENSTAMMBLATT)) {
+		} else if (sAktuellerReport.equals(LieferantReportFac.REPORT_LIEFERANTENSTAMMBLATT)) {
 			if ("F_FAXDW".equals(fieldName)) {
 				ret = data[index][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_FAXDW];
 			} else if ("F_FUNKTION".equals(fieldName)) {
@@ -1208,13 +1449,14 @@ public class LieferantReportFacBean extends LPReport implements
 				ret = data[index][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_TITEL];
 			} else if ("F_VORNAME".equals(fieldName)) {
 				ret = data[index][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_VORNAME];
+			} else if ("F_VERSTECKT".equals(fieldName)) {
+				ret = data[index][REPORT_LIEFERANTENSTAMMBLATT_ANSPRECHPARTNER_VERSTECKT];
 			}
 		}
 		return ret;
 	}
 
-	private LPDatenSubreport getSubreportLiefergruppen(Integer lieferantIId,
-			TheClientDto theClientDto) {
+	private LPDatenSubreport getSubreportLiefergruppen(Integer lieferantIId, TheClientDto theClientDto) {
 
 		// Projekte
 		Session session = FLRSessionFactory.getFactory().openSession();
@@ -1237,9 +1479,8 @@ public class LieferantReportFacBean extends LPReport implements
 			Boolean b = Boolean.FALSE;
 
 			if (lieferantIId != null) {
-				LflfliefergruppeDto[] dto = getLieferantFac()
-						.lflfliefergruppeFindByLieferantIIdLiefergruppeIIdOhneExc(
-								lieferantIId, projekt.getI_id(), theClientDto);
+				LflfliefergruppeDto[] dto = getLieferantFac().lflfliefergruppeFindByLieferantIIdLiefergruppeIIdOhneExc(
+						lieferantIId, projekt.getI_id(), theClientDto);
 
 				if (dto != null && dto.length > 0) {
 					b = Boolean.TRUE;
@@ -1252,8 +1493,7 @@ public class LieferantReportFacBean extends LPReport implements
 		}
 
 		if (al.size() > 0) {
-			String[] fieldnames = new String[] { "Liefergruppe",
-					"IstInLiefergruppe" };
+			String[] fieldnames = new String[] { "Liefergruppe", "IstInLiefergruppe" };
 			Object[][] dataSub = new Object[al.size()][fieldnames.length];
 			dataSub = (Object[][]) al.toArray(dataSub);
 
@@ -1264,20 +1504,16 @@ public class LieferantReportFacBean extends LPReport implements
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printLieferantenliste(TheClientDto theClientDto,
-			boolean bMitVersteckten, boolean bMitMoeglichen,
-			boolean bMitAnsprechpartner, boolean bNurFreigegebeneLieferanten,
-			Integer lieferantIIdSelektiert, String cPlz, Integer landIId,
-			Integer brancheIId, Integer partnerklasseIId,
+	public JasperPrintLP printLieferantenliste(TheClientDto theClientDto, boolean bMitVersteckten,
+			boolean bMitMoeglichen, boolean bMitAnsprechpartner, boolean bNurFreigegebeneLieferanten,
+			Integer lieferantIIdSelektiert, String cPlz, Integer landIId, Integer brancheIId, Integer partnerklasseIId,
 			Integer liefergruppeIId) {
 		sAktuellerReport = LieferantReportFac.REPORT_LIEFERANTENLISTE;
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLieferant.class);
+		org.hibernate.Criteria crit = session.createCriteria(FLRLieferant.class);
 		crit.createAlias(LieferantFac.FLR_PARTNER, "p");
-		crit.createAlias("p." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT,
-				"landplzort");
+		crit.createAlias("p." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT, "landplzort");
 		crit.createAlias("landplzort.flrland", "land");
 		if (lieferantIIdSelektiert != null) {
 			crit.add(Restrictions.eq("i_id", lieferantIIdSelektiert));
@@ -1304,197 +1540,141 @@ public class LieferantReportFacBean extends LPReport implements
 		}
 
 		crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
-		crit.addOrder(Order.asc("p."
-				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1));
+		crit.addOrder(Order.asc("p." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1));
 		if (bMitVersteckten == false) {
-			crit.add(Restrictions.eq("p." + PartnerFac.FLR_PARTNER_VERSTECKT,
-					Helper.boolean2Short(false)));
+			crit.add(Restrictions.eq("p." + PartnerFac.FLR_PARTNER_VERSTECKT, Helper.boolean2Short(false)));
 		}
 		if (bMitMoeglichen == false) {
-			crit.add(Restrictions.eq(
-					LieferantFac.FLR_LIEFERANT_B_MOEGLICHERLIEFERANT,
-					Helper.boolean2Short(false)));
+			crit.add(Restrictions.eq(LieferantFac.FLR_LIEFERANT_B_MOEGLICHERLIEFERANT, Helper.boolean2Short(false)));
 		}
 
 		if (bNurFreigegebeneLieferanten == true) {
-			crit.add(Restrictions
-					.isNotNull(LieferantFac.FLR_LIEFERANT_T_FREIGABE));
+			crit.add(Restrictions.isNotNull(LieferantFac.FLR_LIEFERANT_T_FREIGABE));
 		}
 
 		ArrayList<Object[]> daten = new ArrayList<Object[]>();
 		List<?> list = crit.list();
 		Iterator<?> resultListIterator = list.iterator();
 		while (resultListIterator.hasNext()) {
-			Object[] zeile = new Object[92];
+			Object[] zeile = new Object[REPORT_LIEFERANTENLISTE_ANZAHL_SPALTEN];
 			FLRLieferant lieferant = (FLRLieferant) resultListIterator.next();
 
 			try {
-				LieferantDto lieferantDto = getLieferantFac()
-						.lieferantFindByPrimaryKey(lieferant.getI_id(),
-								theClientDto);
+				LieferantDto lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(lieferant.getI_id(),
+						theClientDto);
 
-				if (lieferantDto.getPartnerDto()
-						.getLandIIdAbweichendesustland() != null) {
+				if (lieferantDto.getPartnerDto().getLandIIdAbweichendesustland() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_ABW_UST_LAND] = getSystemFac()
-							.landFindByPrimaryKey(
-									lieferantDto.getPartnerDto()
-											.getLandIIdAbweichendesustland())
+							.landFindByPrimaryKey(lieferantDto.getPartnerDto().getLandIIdAbweichendesustland())
 							.getCLkz();
 				}
-				zeile[REPORT_LIEFERANTENLISTE_ANREDE] = lieferantDto
-						.getPartnerDto().getAnredeCNr();
+				zeile[REPORT_LIEFERANTENLISTE_ANREDE] = lieferantDto.getPartnerDto().getAnredeCNr();
 
 				if (lieferantDto.getPartnerDto().getBrancheIId() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_BRANCHE] = getPartnerServicesFac()
-							.brancheFindByPrimaryKey(
-									lieferantDto.getPartnerDto()
-											.getBrancheIId(), theClientDto)
+							.brancheFindByPrimaryKey(lieferantDto.getPartnerDto().getBrancheIId(), theClientDto)
 							.getBezeichnung();
 				}
 
-				zeile[REPORT_LIEFERANTENLISTE_LIEFERANT_I_ID] = lieferantDto
-						.getIId();
+				zeile[REPORT_LIEFERANTENLISTE_LIEFERANT_I_ID] = lieferantDto.getIId();
 
-				zeile[REPORT_LIEFERANTENLISTE_CNAME1] = lieferantDto
-						.getPartnerDto().getCName1nachnamefirmazeile1();
-				zeile[REPORT_LIEFERANTENLISTE_CNAME2] = lieferantDto
-						.getPartnerDto().getCName2vornamefirmazeile2();
-				zeile[REPORT_LIEFERANTENLISTE_CNAME3] = lieferantDto
-						.getPartnerDto().getCName3vorname2abteilung();
+				zeile[REPORT_LIEFERANTENLISTE_CNAME1] = lieferantDto.getPartnerDto().getCName1nachnamefirmazeile1();
+				zeile[REPORT_LIEFERANTENLISTE_CNAME2] = lieferantDto.getPartnerDto().getCName2vornamefirmazeile2();
+				zeile[REPORT_LIEFERANTENLISTE_CNAME3] = lieferantDto.getPartnerDto().getCName3vorname2abteilung();
 
-				zeile[REPORT_LIEFERANTENLISTE_BEMERKUNG] = lieferantDto
-						.getPartnerDto().getXBemerkung();
+				zeile[REPORT_LIEFERANTENLISTE_BEMERKUNG] = lieferantDto.getPartnerDto().getXBemerkung();
 
-				zeile[REPORT_LIEFERANTENLISTE_KUNDENNUMMER] = lieferantDto
-						.getCKundennr();
+				zeile[REPORT_LIEFERANTENLISTE_KUNDENNUMMER] = lieferantDto.getCKundennr();
 
 				if (lieferantDto.getKontoIIdWarenkonto() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_WARENKONTO] = getFinanzFac()
-							.kontoFindByPrimaryKey(
-									lieferantDto.getKontoIIdWarenkonto())
-							.getCNr();
+							.kontoFindByPrimaryKey(lieferantDto.getKontoIIdWarenkonto()).getCNr();
 				}
 				if (lieferant.getFlrkonto() != null) {
-					zeile[REPORT_LIEFERANTENLISTE_KREDITORENKONTO] = lieferant
-							.getFlrkonto().getC_nr();
+					zeile[REPORT_LIEFERANTENLISTE_KREDITORENKONTO] = lieferant.getFlrkonto().getC_nr();
 				}
 
-				zeile[REPORT_LIEFERANTENLISTE_EMAIL] = lieferantDto
-						.getPartnerDto().getCEmail();
+				zeile[REPORT_LIEFERANTENLISTE_EMAIL] = lieferantDto.getPartnerDto().getCEmail();
 
-				zeile[REPORT_LIEFERANTENLISTE_FAX] = lieferantDto
-						.getPartnerDto().getCFax();
+				zeile[REPORT_LIEFERANTENLISTE_FAX] = lieferantDto.getPartnerDto().getCFax();
 
-				zeile[REPORT_LIEFERANTENLISTE_HOMEPAGE] = lieferantDto
-						.getPartnerDto().getCHomepage();
+				zeile[REPORT_LIEFERANTENLISTE_HOMEPAGE] = lieferantDto.getPartnerDto().getCHomepage();
 
-				zeile[REPORT_LIEFERANTENLISTE_TELEFON] = lieferantDto
-						.getPartnerDto().getCTelefon();
+				zeile[REPORT_LIEFERANTENLISTE_TELEFON] = lieferantDto.getPartnerDto().getCTelefon();
 
 				zeile[REPORT_LIEFERANTENLISTE_SUBREPORT_LIEFERGRUPPEN] = getSubreportLiefergruppen(
 						lieferantDto.getIId(), theClientDto);
 
-				zeile[REPORT_LIEFERANTENLISTE_FIRMENBUCHNUMMER] = lieferantDto
-						.getPartnerDto().getCFirmenbuchnr();
-				zeile[REPORT_LIEFERANTENLISTE_GERICHTSSTAND] = lieferantDto
-						.getPartnerDto().getCGerichtsstand();
-				zeile[REPORT_LIEFERANTENLISTE_MOEGLICHERLIEFERANT] = lieferantDto
-						.getBMoeglicherLieferant();
-				zeile[REPORT_LIEFERANTENLISTE_KOMMUNIKATIONSSPRACHE] = lieferantDto
-						.getPartnerDto().getLocaleCNrKommunikation();
+				zeile[REPORT_LIEFERANTENLISTE_FIRMENBUCHNUMMER] = lieferantDto.getPartnerDto().getCFirmenbuchnr();
+				zeile[REPORT_LIEFERANTENLISTE_GERICHTSSTAND] = lieferantDto.getPartnerDto().getCGerichtsstand();
+				zeile[REPORT_LIEFERANTENLISTE_MOEGLICHERLIEFERANT] = lieferantDto.getBMoeglicherLieferant();
+				zeile[REPORT_LIEFERANTENLISTE_KOMMUNIKATIONSSPRACHE] = lieferantDto.getPartnerDto()
+						.getLocaleCNrKommunikation();
 
 				if (lieferantDto.getIIdKostenstelle() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_KOSTENSTELLE] = getSystemFac()
-							.kostenstelleFindByPrimaryKey(
-									lieferantDto.getIIdKostenstelle()).getCNr();
+							.kostenstelleFindByPrimaryKey(lieferantDto.getIIdKostenstelle()).getCNr();
 				}
-				zeile[REPORT_LIEFERANTENLISTE_KREDITLIMIT] = lieferantDto
-						.getNKredit();
-				zeile[REPORT_LIEFERANTENLISTE_KURZBEZEICHNUNG] = lieferantDto
-						.getPartnerDto().getCKbez();
+				zeile[REPORT_LIEFERANTENLISTE_KREDITLIMIT] = lieferantDto.getNKredit();
+				zeile[REPORT_LIEFERANTENLISTE_KURZBEZEICHNUNG] = lieferantDto.getPartnerDto().getCKbez();
 				if (lieferantDto.getPartnerDto().getLandplzortDto() != null) {
-					zeile[REPORT_LIEFERANTENLISTE_LAND] = lieferantDto
-							.getPartnerDto().getLandplzortDto().getLandDto()
+					zeile[REPORT_LIEFERANTENLISTE_LAND] = lieferantDto.getPartnerDto().getLandplzortDto().getLandDto()
 							.getCLkz();
-					zeile[REPORT_LIEFERANTENLISTE_PLZ] = lieferantDto
-							.getPartnerDto().getLandplzortDto().getCPlz();
-					zeile[REPORT_LIEFERANTENLISTE_ORT] = lieferantDto
-							.getPartnerDto().getLandplzortDto().getOrtDto()
+					zeile[REPORT_LIEFERANTENLISTE_PLZ] = lieferantDto.getPartnerDto().getLandplzortDto().getCPlz();
+					zeile[REPORT_LIEFERANTENLISTE_ORT] = lieferantDto.getPartnerDto().getLandplzortDto().getOrtDto()
 							.getCName();
 				}
 				if (lieferantDto.getPartnerDto().getLandplzortDto_Postfach() != null) {
-					zeile[REPORT_LIEFERANTENLISTE_LAND_POSTFACH] = lieferantDto
-							.getPartnerDto().getLandplzortDto_Postfach()
-							.getLandDto().getCLkz();
-					zeile[REPORT_LIEFERANTENLISTE_PLZ_POSTFACH] = lieferantDto
-							.getPartnerDto().getLandplzortDto_Postfach()
-							.getCPlz();
-					zeile[REPORT_LIEFERANTENLISTE_ORT_POSTFACH] = lieferantDto
-							.getPartnerDto().getLandplzortDto_Postfach()
-							.getOrtDto().getCName();
+					zeile[REPORT_LIEFERANTENLISTE_LAND_POSTFACH] = lieferantDto.getPartnerDto()
+							.getLandplzortDto_Postfach().getLandDto().getCLkz();
+					zeile[REPORT_LIEFERANTENLISTE_PLZ_POSTFACH] = lieferantDto.getPartnerDto()
+							.getLandplzortDto_Postfach().getCPlz();
+					zeile[REPORT_LIEFERANTENLISTE_ORT_POSTFACH] = lieferantDto.getPartnerDto()
+							.getLandplzortDto_Postfach().getOrtDto().getCName();
 				}
-				zeile[REPORT_LIEFERANTENLISTE_POSTFACH] = lieferantDto
-						.getPartnerDto().getCPostfach();
+				zeile[REPORT_LIEFERANTENLISTE_POSTFACH] = lieferantDto.getPartnerDto().getCPostfach();
 
-				zeile[REPORT_LIEFERANTENLISTE_PARTNERART] = lieferantDto
-						.getPartnerDto().getPartnerartCNr();
+				zeile[REPORT_LIEFERANTENLISTE_PARTNERART] = lieferantDto.getPartnerDto().getPartnerartCNr();
 
 				if (lieferantDto.getPartnerDto().getPartnerklasseIId() != null) {
-					zeile[REPORT_LIEFERANTENLISTE_PARTNERKLASSE] = getPartnerFac()
-							.partnerklasseFindByPrimaryKey(
-									lieferantDto.getPartnerDto()
-											.getPartnerklasseIId(),
-									theClientDto).getCNr();
+					zeile[REPORT_LIEFERANTENLISTE_PARTNERKLASSE] = getPartnerFac().partnerklasseFindByPrimaryKey(
+							lieferantDto.getPartnerDto().getPartnerklasseIId(), theClientDto).getCNr();
 				}
-				zeile[REPORT_LIEFERANTENLISTE_RABATT] = lieferantDto
-						.getNRabatt();
+				zeile[REPORT_LIEFERANTENLISTE_RABATT] = lieferantDto.getNRabatt();
 
 				if (lieferantDto.getPartnerRechnungsadresseDto() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_ANREDE] = lieferantDto
 							.getPartnerRechnungsadresseDto().getAnredeCNr();
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_CNAME1] = lieferantDto
-							.getPartnerRechnungsadresseDto()
-							.getCName1nachnamefirmazeile1();
+							.getPartnerRechnungsadresseDto().getCName1nachnamefirmazeile1();
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_CNAME2] = lieferantDto
-							.getPartnerRechnungsadresseDto()
-							.getCName2vornamefirmazeile2();
+							.getPartnerRechnungsadresseDto().getCName2vornamefirmazeile2();
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_CNAME3] = lieferantDto
-							.getPartnerRechnungsadresseDto()
-							.getCName3vorname2abteilung();
+							.getPartnerRechnungsadresseDto().getCName3vorname2abteilung();
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_KURZBEZEICHNUNG] = lieferantDto
 							.getPartnerRechnungsadresseDto().getCKbez();
-					if (lieferantDto.getPartnerRechnungsadresseDto()
-							.getLandplzortDto() != null) {
+					if (lieferantDto.getPartnerRechnungsadresseDto().getLandplzortDto() != null) {
 						zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_LAND] = lieferantDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto().getLandDto().getCName();
+								.getPartnerRechnungsadresseDto().getLandplzortDto().getLandDto().getCName();
 						zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_PLZ] = lieferantDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto().getCPlz();
+								.getPartnerRechnungsadresseDto().getLandplzortDto().getCPlz();
 						zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_ORT] = lieferantDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto().getOrtDto().getCName();
+								.getPartnerRechnungsadresseDto().getLandplzortDto().getOrtDto().getCName();
 					}
-					if (lieferantDto.getPartnerRechnungsadresseDto()
-							.getLandplzortDto_Postfach() != null) {
+					if (lieferantDto.getPartnerRechnungsadresseDto().getLandplzortDto_Postfach() != null) {
 						zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_LAND_POSTFACH] = lieferantDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto_Postfach().getLandDto()
-								.getCName();
+								.getPartnerRechnungsadresseDto().getLandplzortDto_Postfach().getLandDto().getCName();
 						zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_PLZ_POSTFACH] = lieferantDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto_Postfach().getCPlz();
+								.getPartnerRechnungsadresseDto().getLandplzortDto_Postfach().getCPlz();
 						zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_ORT] = lieferantDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto_Postfach().getOrtDto()
-								.getCName();
+								.getPartnerRechnungsadresseDto().getLandplzortDto_Postfach().getOrtDto().getCName();
 					}
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_POSTFACH] = lieferantDto
 							.getPartnerRechnungsadresseDto().getCPostfach();
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_STRASSE] = lieferantDto
 							.getPartnerRechnungsadresseDto().getCStrasse();
-					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_TITEL] = lieferantDto
-							.getPartnerRechnungsadresseDto().getCTitel();
+					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_TITEL] = lieferantDto.getPartnerRechnungsadresseDto()
+							.getCTitel();
 					zeile[REPORT_LIEFERANTENLISTE_RECHNUNGSADRESSE_UIDNUMMER] = lieferantDto
 							.getPartnerRechnungsadresseDto().getCUid();
 
@@ -1502,81 +1682,60 @@ public class LieferantReportFacBean extends LPReport implements
 
 				// Beurteilung
 				LieferantbeurteilungDto[] bDtos = getLieferantFac()
-						.lieferantbeurteilungfindByLetzteBeurteilungByLieferantIId(
-								lieferantDto.getIId(),
-								new java.sql.Timestamp(System
-										.currentTimeMillis()));
+						.lieferantbeurteilungfindByLetzteBeurteilungByLieferantIId(lieferantDto.getIId(),
+								new java.sql.Timestamp(System.currentTimeMillis()));
 
 				if (bDtos != null && bDtos.length > 0) {
-					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_PUNKTE] = bDtos[0]
-							.getIPunkte();
-					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_KLASSE] = bDtos[0]
-							.getCKlasse();
-					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_KOMMENTAR] = bDtos[0]
-							.getCKommentar();
-					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_DATUM] = bDtos[0]
-							.getTDatum();
+					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_PUNKTE] = bDtos[0].getIPunkte();
+					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_KLASSE] = bDtos[0].getCKlasse();
+					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_KOMMENTAR] = bDtos[0].getCKommentar();
+					zeile[REPORT_LIEFERANTENLISTE_LETZTE_BEURTEILUNG_DATUM] = bDtos[0].getTDatum();
 
 				}
 
-				zeile[REPORT_LIEFERANTENLISTE_STRASSE] = lieferantDto
-						.getPartnerDto().getCStrasse();
-				zeile[REPORT_LIEFERANTENLISTE_TITEL] = lieferantDto
-						.getPartnerDto().getCTitel();
-				zeile[REPORT_LIEFERANTENLISTE_UIDNUMMER] = lieferantDto
-						.getPartnerDto().getCUid();
-				zeile[REPORT_LIEFERANTENLISTE_WAEHRUNG] = lieferantDto
-						.getWaehrungCNr();
+				zeile[REPORT_LIEFERANTENLISTE_STRASSE] = lieferantDto.getPartnerDto().getCStrasse();
+				zeile[REPORT_LIEFERANTENLISTE_TITEL] = lieferantDto.getPartnerDto().getCTitel();
+				zeile[REPORT_LIEFERANTENLISTE_UIDNUMMER] = lieferantDto.getPartnerDto().getCUid();
+				zeile[REPORT_LIEFERANTENLISTE_WAEHRUNG] = lieferantDto.getWaehrungCNr();
 
-				zeile[REPORT_LIEFERANTENLISTE_BESTELLSPERRE_AM] = lieferantDto
-						.getTBestellsperream();
-				zeile[REPORT_LIEFERANTENLISTE_KOMMENTAR] = lieferantDto
-						.getXKommentar();
-				zeile[REPORT_LIEFERANTENLISTE_FREIGABE] = lieferantDto
-						.getTFreigabe();
-				zeile[REPORT_LIEFERANTENLISTE_FREIGABE_TEXT] = lieferantDto
-						.getCFreigabe();
-				zeile[REPORT_LIEFERANTENLISTE_FREIGABE_PERSONDATUM] = lieferantDto
-						.getTPersonalFreigabe();
+				zeile[REPORT_LIEFERANTENLISTE_BESTELLSPERRE_AM] = lieferantDto.getTBestellsperream();
+				zeile[REPORT_LIEFERANTENLISTE_KOMMENTAR] = lieferantDto.getXKommentar();
+				zeile[REPORT_LIEFERANTENLISTE_FREIGABE] = lieferantDto.getTFreigabe();
+				zeile[REPORT_LIEFERANTENLISTE_FREIGABE_TEXT] = lieferantDto.getCFreigabe();
+				zeile[REPORT_LIEFERANTENLISTE_FREIGABE_PERSONDATUM] = lieferantDto.getTPersonalFreigabe();
 
 				if (lieferantDto.getPersonalIIdFreigabe() != null) {
 					PersonalDto personalDto = getPersonalFac()
-							.personalFindByPrimaryKey(
-									lieferantDto.getPersonalIIdFreigabe(),
-									theClientDto);
-					zeile[REPORT_LIEFERANTENLISTE_FREIGABE_PERSON] = personalDto
-							.getCKurzzeichen();
+							.personalFindByPrimaryKey(lieferantDto.getPersonalIIdFreigabe(), theClientDto);
+					zeile[REPORT_LIEFERANTENLISTE_FREIGABE_PERSON] = personalDto.getCKurzzeichen();
 
 				}
 
 				if (lieferantDto.getZahlungszielIId() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_ZAHLUNGSZIEL] = getMandantFac()
-							.zahlungszielFindByPrimaryKey(
-									lieferantDto.getZahlungszielIId(),
-									theClientDto).getCBez();
+							.zahlungszielFindByPrimaryKey(lieferantDto.getZahlungszielIId(), theClientDto).getCBez();
 				}
 
 				if (lieferantDto.getIdSpediteur() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_SPEDITEUR] = getMandantFac()
-							.spediteurFindByPrimaryKey(
-									lieferantDto.getIdSpediteur())
-							.getCNamedesspediteurs();
+							.spediteurFindByPrimaryKey(lieferantDto.getIdSpediteur()).getCNamedesspediteurs();
 				}
 				if (lieferantDto.getLieferartIId() != null) {
-					zeile[REPORT_LIEFERANTENLISTE_LIEFERART] = getLocaleFac()
-							.lieferartFindByPrimaryKey(
-									lieferantDto.getLieferartIId(),
-									theClientDto).formatBez();
+
+					LieferartDto lfaDto = getLocaleFac().lieferartFindByPrimaryKey(lieferantDto.getLieferartIId(),
+							theClientDto);
+
+					zeile[REPORT_LIEFERANTENLISTE_LIEFERART_KENNUNG] = lfaDto.getCNr();
+					zeile[REPORT_LIEFERANTENLISTE_LIEFERART] = lfaDto.formatBez();
+
 				}
 				if (lieferantDto.getMwstsatzbezIId() != null) {
 					zeile[REPORT_LIEFERANTENLISTE_MWSTSATZ] = getMandantFac()
-							.mwstsatzbezFindByPrimaryKey(
-									lieferantDto.getMwstsatzbezIId(),
-									theClientDto).getCBezeichnung();
+							.mwstsatzbezFindByPrimaryKey(lieferantDto.getMwstsatzbezIId(), theClientDto)
+							.getCBezeichnung();
 				}
 
-				Set<?> ansprechpartner = lieferant.getFlrpartner()
-						.getAnsprechpartner();
+				Set<?> ansprechpartner = lieferant.getFlrpartner().getAnsprechpartner();
 				if (ansprechpartner.size() > 0) {
 
 					int z = 0;
@@ -1584,47 +1743,30 @@ public class LieferantReportFacBean extends LPReport implements
 					while (anspIt.hasNext()) {
 						z++;
 
-						if (z == 2) {
-							int u = 0;
-						}
+						Object[] oKopie = zeile.clone();
 
-						Object[] oKopie = new Object[92];
-
-						for (int i = 0; i < 90; i++) {
-							oKopie[i] = zeile[i];
-						}
-
-						FLRAnsprechpartner flrAnsprechpartner = (FLRAnsprechpartner) anspIt
-								.next();
+						FLRAnsprechpartner flrAnsprechpartner = (FLRAnsprechpartner) anspIt.next();
 
 						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_ANREDE] = flrAnsprechpartner
-								.getFlrpartneransprechpartner()
-								.getAnrede_c_nr();
+								.getFlrpartneransprechpartner().getAnrede_c_nr();
 
-						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_EMAIL] = flrAnsprechpartner
-								.getC_email();
+						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_EMAIL] = flrAnsprechpartner.getC_email();
 
-						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_FAXDW] = flrAnsprechpartner
-								.getC_fax();
+						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_FAXDW] = flrAnsprechpartner.getC_fax();
 
-						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_MOBIL] = flrAnsprechpartner
-								.getC_handy();
+						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_MOBIL] = flrAnsprechpartner.getC_handy();
 
-						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_BEMERKUNG] = flrAnsprechpartner
-								.getX_bemerkung();
+						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_BEMERKUNG] = flrAnsprechpartner.getX_bemerkung();
 
 						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_NACHNAME] = flrAnsprechpartner
-								.getFlrpartneransprechpartner()
-								.getC_name1nachnamefirmazeile1();
+								.getFlrpartneransprechpartner().getC_name1nachnamefirmazeile1();
 
-						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_TELDW] = flrAnsprechpartner
-								.getC_telefon();
+						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_TELDW] = flrAnsprechpartner.getC_telefon();
 
 						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_TITEL] = flrAnsprechpartner
 								.getFlrpartneransprechpartner().getC_titel();
 						oKopie[REPORT_LIEFERANTENLISTE_ANSPRECHPARTNER_VORNAME] = flrAnsprechpartner
-								.getFlrpartneransprechpartner()
-								.getC_name2vornamefirmazeile2();
+								.getFlrpartneransprechpartner().getC_name2vornamefirmazeile2();
 
 						if (z == 1) {
 
@@ -1637,10 +1779,8 @@ public class LieferantReportFacBean extends LPReport implements
 
 					}
 				} else {
-					zeile[REPORT_LIEFERANTENLISTE_BRIEFANREDE] = getPartnerServicesFac()
-							.getBriefanredeFuerBeleg(null,
-									lieferantDto.getPartnerIId(),
-									theClientDto.getLocUi(), theClientDto);
+					zeile[REPORT_LIEFERANTENLISTE_BRIEFANREDE] = getPartnerServicesFac().getBriefanredeFuerBeleg(null,
+							lieferantDto.getPartnerIId(), theClientDto.getLocUi(), theClientDto);
 					daten.add(zeile);
 				}
 			} catch (RemoteException ex) {
@@ -1651,8 +1791,7 @@ public class LieferantReportFacBean extends LPReport implements
 
 		parameter.put("P_MITANSPRECHPARTNER", new Boolean(bMitAnsprechpartner));
 		parameter.put("P_MITVERSTECKTEN", new Boolean(bMitVersteckten));
-		parameter.put("P_NURFREIGEGEBENE", new Boolean(
-				bNurFreigegebeneLieferanten));
+		parameter.put("P_NURFREIGEGEBENE", new Boolean(bNurFreigegebeneLieferanten));
 		parameter.put("P_MITMOEGLICHEN", new Boolean(bMitMoeglichen));
 
 		if (lieferantIIdSelektiert == null) {
@@ -1661,33 +1800,25 @@ public class LieferantReportFacBean extends LPReport implements
 			parameter.put("P_NURSELEKTIERTER", Boolean.FALSE);
 		}
 
-		parameter
-				.put("P_SUBREPORT_LIEFERGRUPPEN",
-						(net.sf.jasperreports.engine.JRDataSource) getSubreportLiefergruppen(
-								null, theClientDto));
+		parameter.put("P_SUBREPORT_LIEFERGRUPPEN",
+				(net.sf.jasperreports.engine.JRDataSource) getSubreportLiefergruppen(null, theClientDto));
 
 		parameter.put("P_PLZ", cPlz);
 		if (landIId != null) {
-			parameter.put("P_LAND", getSystemFac()
-					.landFindByPrimaryKey(landIId).getCLkz());
+			parameter.put("P_LAND", getSystemFac().landFindByPrimaryKey(landIId).getCLkz());
 		}
 		if (brancheIId != null) {
-			parameter.put("P_BRANCHE", getPartnerServicesFac()
-					.brancheFindByPrimaryKey(brancheIId, theClientDto)
-					.getBezeichnung());
+			parameter.put("P_BRANCHE",
+					getPartnerServicesFac().brancheFindByPrimaryKey(brancheIId, theClientDto).getBezeichnung());
 		}
 
 		if (partnerklasseIId != null) {
-			parameter.put(
-					"P_PARTNERKLASSE",
-					getPartnerFac().partnerklasseFindByPrimaryKey(
-							partnerklasseIId, theClientDto).getBezeichnung());
+			parameter.put("P_PARTNERKLASSE",
+					getPartnerFac().partnerklasseFindByPrimaryKey(partnerklasseIId, theClientDto).getBezeichnung());
 		}
 		if (liefergruppeIId != null) {
-			parameter.put(
-					"P_LIEFERGUPPE",
-					getLieferantServicesFac().lfliefergruppeFindByPrimaryKey(
-							liefergruppeIId, theClientDto).getBezeichnung());
+			parameter.put("P_LIEFERGUPPE", getLieferantServicesFac()
+					.lfliefergruppeFindByPrimaryKey(liefergruppeIId, theClientDto).getBezeichnung());
 		}
 
 		data = new Object[daten.size()][87];
@@ -1696,10 +1827,8 @@ public class LieferantReportFacBean extends LPReport implements
 			data[i] = (Object[]) daten.get(i);
 		}
 
-		initJRDS(parameter, KundeReportFac.REPORT_MODUL,
-				LieferantReportFac.REPORT_LIEFERANTENLISTE,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+		initJRDS(parameter, KundeReportFac.REPORT_MODUL, LieferantReportFac.REPORT_LIEFERANTENLISTE,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 		return getReportPrint();
 	}
 }

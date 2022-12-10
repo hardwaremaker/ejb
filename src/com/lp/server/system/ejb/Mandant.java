@@ -84,7 +84,52 @@ public class Mandant implements Serializable {
 
 	@Column(name = "WAEHRUNG_C_NR")
 	private String waehrungCNr;
+	
+	@Column(name = "WAEHRUNG_C_NR_ZUSAETZLICH")
+	private String waehrungCNrZusaetzlich;
 
+	public String getWaehrungCNrZusaetzlich() {
+		return waehrungCNrZusaetzlich;
+	}
+
+	public void setWaehrungCNrZusaetzlich(String waehrungCNrZusaetzlich) {
+		this.waehrungCNrZusaetzlich = waehrungCNrZusaetzlich;
+	}
+	
+	@Column(name = "ZAHLUNGSZIEL_I_ID_ANZAHLUNG")
+	private Integer zahlungszielIIdAnzahlung;
+	
+	public Integer getZahlungszielIIdAnzahlung() {
+		return zahlungszielIIdAnzahlung;
+	}
+
+	public void setZahlungszielIIdAnzahlung(Integer zahlungszielIIdAnzahlung) {
+		this.zahlungszielIIdAnzahlung = zahlungszielIIdAnzahlung;
+	}
+
+	@Column(name = "I_MAXPERSONEN")
+	private Integer iMaxpersonen;
+	
+	public Integer getIMaxpersonen() {
+		return iMaxpersonen;
+	}
+
+	public void setIMaxpersonen(Integer iMaxpersonen) {
+		this.iMaxpersonen = iMaxpersonen;
+	}
+
+	@Column(name = "VERRECHNUNGSMODELL_I_ID")
+	private Integer verrechnungsmodellIId;
+	
+	
+
+	public Integer getVerrechnungsmodellIId() {
+		return verrechnungsmodellIId;
+	}
+
+	public void setVerrechnungsmodellIId(Integer verrechnungsmodellIId) {
+		this.verrechnungsmodellIId = verrechnungsmodellIId;
+	}
 	@Column(name = "ZAHLUNGSZIEL_I_ID_KUNDE")
 	private Integer zahlungszielIIdKunde;
 
@@ -127,9 +172,125 @@ public class Mandant implements Serializable {
 	@Column(name = "I_JAHRE_RUECKDATIERBAR")
 	private Integer jahreRueckdatierbar;
 	
+	
+	@Column(name = "LAGER_I_ID_ZIELLAGER")
+	private Integer lagerIIdZiellager;
+
+	public Integer getLagerIIdZiellager() {
+		return lagerIIdZiellager;
+	}
+
+	public void setLagerIIdZiellager(Integer lagerIIdZiellager) {
+		this.lagerIIdZiellager = lagerIIdZiellager;
+	}
+	
+	
+	@Column(name= "B_PREISLISTE_FUER_NEUKUNDE")
+	private Short bPreislisteFuerNeukunde;
+	
+	public Short getBPreislisteFuerNeukunde() {
+		return bPreislisteFuerNeukunde;
+	}
+
+	public void setBPreislisteFuerNeukunde(Short bPreislisteFuerNeukunde) {
+		this.bPreislisteFuerNeukunde = bPreislisteFuerNeukunde;
+	}
+
+	@Column(name= "B_AGB_ANHANG")
+	private Short bAgbAnhang;
+	public Short getBAgbAnhang() {
+		return bAgbAnhang;
+	}
+
+	public void setBAgbAnhang(Short bAgbAnhang) {
+		this.bAgbAnhang = bAgbAnhang;
+	}
+
+	public Short getBAgbAngebot() {
+		return bAgbAngebot;
+	}
+
+	public void setBAgbAngebot(Short bAgbAngebot) {
+		this.bAgbAngebot = bAgbAngebot;
+	}
+
+	public Short getBAgbAuftrag() {
+		return bAgbAuftrag;
+	}
+
+	public void setBAgbAuftrag(Short bAgbAuftrag) {
+		this.bAgbAuftrag = bAgbAuftrag;
+	}
+
+	public Short getBAgbLieferschein() {
+		return bAgbLieferschein;
+	}
+
+	public void setBAgbLieferschein(Short bAgbLieferschein) {
+		this.bAgbLieferschein = bAgbLieferschein;
+	}
+
+	public Short getBAgbRechnung() {
+		return bAgbRechnung;
+	}
+
+	public void setBAgbRechnung(Short bAgbRechnung) {
+		this.bAgbRechnung = bAgbRechnung;
+	}
+
+	public Short getBAgbAnfrage() {
+		return bAgbAnfrage;
+	}
+
+	public void setBAgbAnfrage(Short bAgbAnfrage) {
+		this.bAgbAnfrage = bAgbAnfrage;
+	}
+
+	public Short getBAgbBestellung() {
+		return bAgbBestellung;
+	}
+
+	public void setBAgbBestellung(Short bAgbBestellung) {
+		this.bAgbBestellung = bAgbBestellung;
+	}
+
+	@Column(name= "B_AGB_ANGEBOT")
+	private Short bAgbAngebot;
+	@Column(name= "B_AGB_AUFTRAG")
+	private Short bAgbAuftrag;
+	@Column(name= "B_AGB_LIEFERSCHEIN")
+	private Short bAgbLieferschein;
+	@Column(name= "B_AGB_RECHNUNG")
+	private Short bAgbRechnung;
+	@Column(name= "B_AGB_ANFRAGE")
+	private Short bAgbAnfrage;
+	@Column(name= "B_AGB_BESTELLUNG")
+	private Short bAgbBestellung;
+	
+	@Column(name = "C_GLAEUBIGER")
+	private String cGlauebiger;
+	
 	@Column(name = "KOSTENSTELLE_I_ID_FIBU")
 	private Integer kostenstelleIIdFibu;
+
+	@Column(name= "MWSTSATZ_I_ID_STANDARDDRITTLANDMWSTSATZ")
+	private Integer mwstsatzIIdStandarddrittlandmwstsatz;
 	
+	@Column(name= "KUNDE_I_ID_STUECKLISTE")
+	private Integer kundeIIdStueckliste;
+	
+	@Column(name = "C_INTRASTATREGION")
+	private String cIntrastatRegion;
+
+	
+	public String getCGlauebiger() {
+		return cGlauebiger;
+	}
+
+	public void setCGlauebiger(String cGlauebiger) {
+		this.cGlauebiger = cGlauebiger;
+	}
+
 	public Integer getKostenstelleIIdFibu() {
 		return kostenstelleIIdFibu;
 	}
@@ -154,12 +315,7 @@ public class Mandant implements Serializable {
 		this.kundeIIdStueckliste = kundeIIdStueckliste;
 	}
 
-	@Column(name= "MWSTSATZ_I_ID_STANDARDDRITTLANDMWSTSATZ")
-	private Integer mwstsatzIIdStandarddrittlandmwstsatz;
-	
-	@Column(name= "KUNDE_I_ID_STUECKLISTE")
-	private Integer kundeIIdStueckliste;
-	
+
 	public Integer getMwstsatzIIdStandarddrittlandmwstsatz() {
 		return mwstsatzIIdStandarddrittlandmwstsatz;
 	}
@@ -189,6 +345,14 @@ public class Mandant implements Serializable {
 		this.partnerIIdLieferadresse = partnerIIdLieferadresse;
 	}
 
+	public String getIntrastatRegion() {
+		return cIntrastatRegion;
+	}
+
+	public void setIntrastatRegion(String intrastatRegion) {
+		this.cIntrastatRegion = intrastatRegion;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Mandant() {
@@ -203,7 +367,7 @@ public class Mandant implements Serializable {
 			Integer mwstsatzbezIIdStandardauslandmwstsatz,
 			Integer lieferartIIdLF, Integer spediteurIIdLF,
 			Integer zahlungszielIIdLF,
-			Integer iPartnerIIdLieferadresse) {
+			Integer iPartnerIIdLieferadresse, Integer iMaxpersonen) {
 
 		setCNr(nr);
 		setCKbez(kbez);
@@ -223,14 +387,19 @@ public class Mandant implements Serializable {
 		setSpediteurIIdLieferant(spediteurIIdLF);
 		setZahlungszielIIdLieferant(zahlungszielIIdLF);
 		setPartnerIIdLieferadresse(iPartnerIIdLieferadresse);
+		setIMaxpersonen(iMaxpersonen);
 		this.bDemo = 0;
 		this.jahreRueckdatierbar = 1;
+		this.bAgbAnfrage = 0;
+		this.bAgbAngebot = 0;
+		this.bAgbAnhang = 0;
+		this.bAgbAuftrag = 0;
+		this.bAgbBestellung = 0;
+		this.bAgbLieferschein = 0;
+		this.bAgbRechnung = 0;
+		this.bPreislisteFuerNeukunde = 1;
 	}
 	
-	public Mandant(String nr, String kbez){
-		setCNr(nr);
-		setCKbez(kbez);
-	}
 
 	public String getCNr() {
 		return this.cNr;

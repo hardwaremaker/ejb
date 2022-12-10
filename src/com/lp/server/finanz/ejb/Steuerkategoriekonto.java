@@ -33,33 +33,62 @@
 package com.lp.server.finanz.ejb;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-	@NamedQueries({ @NamedQuery(name = "SteuerkategoriekontoBySteuerkategorieIId", 
-			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE o.pk.steuerkategorieiid = ?1"),
-	@NamedQuery(name = "SteuerkategoriekontoBySteuerkategorieIIdandMwStSatzBeziid", 
-			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE o.pk.steuerkategorieiid = ?1 AND o.pk.mwstsatzbeziid = ?2"),
-	@NamedQuery(name = "SteuerkategoriekontoByKontoIIdandMwStSatzBeziid", 
-			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE (o.kontoIIdVk = ?1 OR o.kontoIIdEk = ?1 OR o.kontoIIdEinfuhrUst = ?1) AND o.pk.mwstsatzbeziid = ?2")
+import com.lp.server.util.Validator;
+
+@NamedQueries({ 
+	@NamedQuery(name = SteuerkategoriekontoQuery.BySteuerkategorieIIdAll, 
+			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o " +
+					"WHERE o.steuerkategorieIId = ?1 ORDER BY o.tGueltigAb"),
+	@NamedQuery(name = SteuerkategoriekontoQuery.BySteuerkategorieIId, 
+		query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o " +
+				"WHERE o.steuerkategorieIId = ?1 AND o.tGueltigAb <= ?2 ORDER BY o.tGueltigAb"),
+	@NamedQuery(name = SteuerkategoriekontoQuery.BySteuerkategorieIIdWithMwstsatzBezIId, 
+		query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE o.steuerkategorieIId = ?1 AND o.mwstsatzbezIId = ?2"),
+	@NamedQuery(name = SteuerkategoriekontoQuery.ByKontoIIdWithMwstsatzBezIId, 
+		query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o " +
+				"WHERE (o.kontoIIdVk = ?1 OR o.kontoIIdEk = ?1 OR o.kontoIIdEinfuhrUst = ?1) " +
+				"AND o.mwstsatzbezIId = ?2 AND o.tGueltigAb <= ?3 ORDER BY o.tGueltigAb DESC"),
+	@NamedQuery(name = SteuerkategoriekontoQuery.ByKontoIId, 
+		query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o " +
+				"WHERE (o.kontoIIdVk = ?1 OR o.kontoIIdEk = ?1 OR o.kontoIIdEinfuhrUst = ?1) " +
+				"AND o.tGueltigAb <= ?2 ORDER BY o.tGueltigAb DESC"),
+	@NamedQuery(name = SteuerkategoriekontoQuery.ByCompound,
+			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE o.steuerkategorieIId = ?1 and o.mwstsatzbezIId = ?2 and o.tGueltigAb = ?3"),
+	@NamedQuery(name = SteuerkategoriekontoQuery.ByDate,
+		query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o " +
+				"WHERE o.steuerkategorieIId = ?1 and o.mwstsatzbezIId = ?2 " +
+				"AND o.tGueltigAb <= ?3 ORDER BY o.tGueltigAb DESC")
 })
 @Entity
 @Table(name = "FB_STEUERKATEGORIEKONTO")
 public class Steuerkategoriekonto  implements Serializable {
-	@EmbeddedId
-	private SteuerkategoriekontoPK pk;
+	@Id
+	@Column(name = "I_ID")
+	private Integer iId;
 
-	@Column(name = "STEUERKATEGORIE_I_ID", insertable = false, updatable = false)
+//	@EmbeddedId
+//	private SteuerkategoriekontoPK pk;
+
+//	@Column(name = "STEUERKATEGORIE_I_ID", insertable = false, updatable = false)
+	@Column(name = "STEUERKATEGORIE_I_ID")
 	private Integer steuerkategorieIId;
 
-	@Column(name = "MWSTSATZBEZ_I_ID", insertable = false, updatable = false)
+//	@Column(name = "MWSTSATZBEZ_I_ID", insertable = false, updatable = false)
+	@Column(name = "MWSTSATZBEZ_I_ID")
 	private Integer mwstsatzbezIId;
 
+	@Column(name = "T_GUELTIGAB")
+	private Timestamp tGueltigAb;
+	
 	@Column(name = "KONTO_I_ID_VK")
 	private Integer kontoIIdVk;
 
@@ -78,29 +107,38 @@ public class Steuerkategoriekonto  implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
 	public Steuerkategoriekonto() {
-		super();
 	}
 
+	public Steuerkategoriekonto(Integer id) {
+		this.iId = id;
+	}
+	
 	public Steuerkategoriekonto(Integer steuerkategorieIId, Integer mwstsatzbezIId) {
-		setPk(new SteuerkategoriekontoPK(steuerkategorieIId, mwstsatzbezIId));
+//		setPk(new SteuerkategoriekontoPK(steuerkategorieIId, mwstsatzbezIId));
 		setSteuerkategorieIId(steuerkategorieIId);
 		setMwstsatzbezIId(mwstsatzbezIId);
 	}
 
-	public SteuerkategoriekontoPK getPk() {
-		return this.pk;
-	}
-
-	public void setPk(SteuerkategoriekontoPK pk) {
-		this.pk = pk;
+	public Steuerkategoriekonto(Integer steuerkategorieIId, Integer mwstsatzbezIId, Timestamp gueltigAb) {
+		setSteuerkategorieIId(steuerkategorieIId);
+		setMwstsatzbezIId(mwstsatzbezIId);
+		setTGueltigAb(gueltigAb);
 	}
 	
-	public Steuerkategoriekonto(SteuerkategoriekontoPK pkI) {
-		this.pk = new SteuerkategoriekontoPK();
-		setSteuerkategorieIId(pkI.getSteuerkategorieiid());
-		setMwstsatzbezIId(pkI.getMwstsatzbeziid());
-	}
+//	public SteuerkategoriekontoPK getPk() {
+//		return this.pk;
+//	}
+//
+//	public void setPk(SteuerkategoriekontoPK pk) {
+//		this.pk = pk;
+//	}
 	
+//	public Steuerkategoriekonto(SteuerkategoriekontoPK pkI) {
+//		this.pk = new SteuerkategoriekontoPK();
+//		setSteuerkategorieIId(pkI.getSteuerkategorieiid());
+//		setMwstsatzbezIId(pkI.getMwstsatzbeziid());
+//	}
+//	
 	public Integer getSteuerkategorieIId() {
 		return steuerkategorieIId;
 	}
@@ -156,5 +194,21 @@ public class Steuerkategoriekonto  implements Serializable {
 	public Integer getKontoIIdEinfuhrUst() {
 		return kontoIIdEinfuhrUst;
 	}
+
+	public Integer getIId() {
+		return this.iId;
+	}
+
+	public void setIId(Integer iId) {
+		this.iId = iId;
+	}
+
+	public Timestamp getTGueltigAb() {
+		return tGueltigAb;
+	}
 	
+	public void setTGueltigAb(Timestamp gueltigAb) {
+		Validator.notNull(gueltigAb, "gueltigAb");
+		tGueltigAb = gueltigAb;
+	}
 }

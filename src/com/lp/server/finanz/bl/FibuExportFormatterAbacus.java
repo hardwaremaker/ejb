@@ -42,9 +42,12 @@ import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuexportDto;
 import com.lp.server.finanz.service.FinanzReportFac;
 import com.lp.server.partner.service.KundeDto;
+import com.lp.server.system.ejbfac.SteuercodeInfo;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.HvOptional;
+import com.lp.server.util.MwstsatzId;
 import com.lp.server.util.report.LpMailText;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
@@ -698,7 +701,7 @@ public class FibuExportFormatterAbacus extends FibuExportFormatter {
 				+ "\n";
 	}
 
-	private String exportiereTA102(FibuexportDto fibuExportDto) {
+	private String exportiereTA102(FibuexportDto fibuExportDto) throws RemoteException {
 		LpMailText mt = new LpMailText();
 		mt.addParameter(P_TA102_UEBERTRAGUNGSNUMMER, iUebertragungsnummer + "");
 		mt.addParameter(P_TA102_ZEILENNUMMER, iRowCount + "");
@@ -710,10 +713,11 @@ public class FibuExportFormatterAbacus extends FibuExportFormatter {
 		if (fibuExportDto.getMwstsatz() != null
 				&& fibuExportDto.getMwstsatz().getIId() != null) {
 			try {
-				Integer iFibuMwstCode = fibuExportDto.getMwstsatz()
-						.getIFibumwstcode();
-				if (iFibuMwstCode != null) {
-					mt.addParameter(P_TA102_MWST_CODE, "\"" + iFibuMwstCode
+				HvOptional<SteuercodeInfo> steuercode = getMandantFac().getSteuercodeArDefault(
+						new MwstsatzId(fibuExportDto.getMwstsatz().getIId()));
+				
+				if (steuercode.isPresent()) {
+					mt.addParameter(P_TA102_MWST_CODE, "\"" + steuercode.get()
 							+ "\"");
 				} else {
 					mt.addParameter(P_TA102_MWST_CODE, "\"\"");

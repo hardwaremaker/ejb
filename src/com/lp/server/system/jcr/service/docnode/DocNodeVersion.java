@@ -81,11 +81,11 @@ public class DocNodeVersion extends DocNodeBase {
 	}
 	
 	@Override
-	protected void applyPropertiesSub(Node node) throws RepositoryException {
+	protected void loadFromImpl(Node node) throws RepositoryException {
 	}
 
 	@Override
-	protected void persistSub(Node node) throws RepositoryException {
+	protected void persistToImpl(Node node) throws RepositoryException {
 	}
 
 	@Override

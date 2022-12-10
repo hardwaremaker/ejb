@@ -34,10 +34,12 @@ package com.lp.server.util.report;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Map;
 
 import net.sf.jasperreports.engine.JasperPrint;
 
 import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.util.LPDatenSubreport;
 
 public class JasperPrintLP implements Serializable {
 
@@ -52,7 +54,7 @@ public class JasperPrintLP implements Serializable {
 	public final static String KEY_RECHNUNG_C_NR = "rechnung_c_nr";
 	public final static String KEY_BELEGART = "key_belegart";
 	public final static String KEY_BELEGIID = "key_belegiid";
-	
+
 	// Wie wurde gedruckt. Achtung max 15 Zeichen
 	public final static String DRUCKTYP_DRUCKER = "DRUCKER";
 	public final static String DRUCKTYP_MAIL = "MAIL";
@@ -60,12 +62,15 @@ public class JasperPrintLP implements Serializable {
 	public final static String DRUCKTYP_PREVIEW = "PREVIEW";
 	public final static String DRUCKTYP_SAVE = "SAVE";
 	public final static String DRUCKTYP_CSV = "CSV";
-	
+	public final static String DRUCKTYP_FULLSCREEN = "FULLSCREEN";
 
 	private String sReportName = null;
 	private JasperPrint print = null;
 	private boolean bMitLogo = true;
 	private Object[][] datenMitUeberschrift = null;
+
+	private Map<String, Object> mapParameters = null;
+
 	public Object[][] getDatenMitUeberschrift() {
 		return datenMitUeberschrift;
 	}
@@ -74,8 +79,29 @@ public class JasperPrintLP implements Serializable {
 		this.datenMitUeberschrift = datenMitUeberschrift;
 	}
 
+	public LPDatenSubreport transformToSubreport() {
+		if (datenMitUeberschrift != null && datenMitUeberschrift.length > 0) {
+
+			String[] fieldnames = new String[datenMitUeberschrift[0].length];
+			for (int i = 0; i < datenMitUeberschrift[0].length; i++) {
+				fieldnames[i] = datenMitUeberschrift[0][i].toString();
+			}
+
+			Object[][] dataSub = new Object[datenMitUeberschrift.length - 1][fieldnames.length];
+			for (int i = 1; i < datenMitUeberschrift.length; i++) {
+				dataSub[i - 1] = datenMitUeberschrift[i];
+			}
+
+			return new LPDatenSubreport(dataSub, fieldnames);
+
+		} else {
+			return null;
+		}
+
+	}
+
 	private HashMap<String, Object> hmAdditionalInformation = new HashMap<String, Object>();
-	private PrintInfoDto oInfoForArchive= null;
+	private PrintInfoDto oInfoForArchive = null;
 
 	// private LPReportParameter lpReportParameter = null;
 
@@ -91,7 +117,7 @@ public class JasperPrintLP implements Serializable {
 		this.sReportName = sReportName;
 	}
 
-	public void setPrint(JasperPrint print) {
+	public void setPrintLP(JasperPrint print) {
 		this.print = print;
 	}
 
@@ -110,13 +136,21 @@ public class JasperPrintLP implements Serializable {
 	public void putAdditionalInformation(String key, Object oInformation) {
 		hmAdditionalInformation.put(key, oInformation);
 	}
-	
-	public void setOInfoForArchive(PrintInfoDto oInfoForArchive){
-		this.oInfoForArchive=oInfoForArchive;
+
+	public void setOInfoForArchive(PrintInfoDto oInfoForArchive) {
+		this.oInfoForArchive = oInfoForArchive;
 	}
-	
-	public PrintInfoDto getOInfoForArchive(){
+
+	public PrintInfoDto getOInfoForArchive() {
 		return this.oInfoForArchive;
+	}
+
+	public Map<String, Object> getMapParameters() {
+		return mapParameters;
+	}
+
+	public void setMapParameters(Map<String, Object> mapParameters) {
+		this.mapParameters = mapParameters;
 	}
 
 	// public LPReportParameter getLpReportParameter() {

@@ -46,7 +46,9 @@ import javax.persistence.Table;
 		@NamedQuery(name = "VersandauftragfindByPersonalIIdStatus", query = "SELECT OBJECT(o) FROM Versandauftrag o WHERE o.personalIId=?1 AND o.statusCNr=?2"),
 		@NamedQuery(name = "VersandauftragfindByEmpfaengerPartnerIId", query = "SELECT OBJECT(o) FROM Versandauftrag o WHERE o.partnerIIdEmpfaenger=?1"),
 		@NamedQuery(name = "VersandauftragfindAllOhneDaten", query = "SELECT OBJECT(o) FROM Versandauftrag o WHERE o.oInhalt <>null AND o.tSendezeitpunkt <>null AND o.statusCNr='Erledigt'"),
-		@NamedQuery(name = "VersandauftragfindBySenderPartnerIId", query = "SELECT OBJECT(o) FROM Versandauftrag o WHERE o.partnerIIdSender=?1") })
+		@NamedQuery(name = "VersandauftragfindBySenderPartnerIId", query = "SELECT OBJECT(o) FROM Versandauftrag o WHERE o.partnerIIdSender=?1"),
+		@NamedQuery(name = "VersandauftragfindOffen", query = "SELECT OBJECT(o) FROM Versandauftrag o WHERE o.statusCNr IS NULL AND o.cJobid IS NULL AND o.tSendezeitpunktwunsch<?1 ORDER BY o.tSendezeitpunktwunsch"),
+		@NamedQuery(name = "VersandauftragfindStatusCNr", query = "SELECT OBJECT(o) FROM Versandauftrag o WHERE o.statusCNr=?1 AND o.cJobid <> NULL ORDER BY o.tSendezeitpunktwunsch")})
 @Entity
 @Table(name = "LP_VERSANDAUFTRAG")
 public class Versandauftrag implements Serializable {
@@ -110,7 +112,16 @@ public class Versandauftrag implements Serializable {
 
 	@Column(name = "PERSONAL_I_ID")
 	private Integer personalIId;
+	
+	@Column(name = "C_BCCEMPFAENGER")
+	private String cBccempfaenger;
 
+	@Column(name = "O_VERSANDINFO")
+	private byte[] oVersandinfo;
+
+	@Column(name = "O_MESSAGE")
+	private byte[] oMessage;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Versandauftrag() {
@@ -309,6 +320,30 @@ public class Versandauftrag implements Serializable {
 		this.personalIId = personal;
 	}
 
+	public String getCBccempfaenger() {
+		return cBccempfaenger;
+	}
+	
+	public void setCBccempfaenger(String cBccempfaenger) {
+		this.cBccempfaenger = cBccempfaenger;
+	}
+	
+	public byte[] getOVersandinfo() {
+		return this.oVersandinfo;
+	}
+
+	public void setOVersandinfo(byte[] oVersandinfo) {
+		this.oVersandinfo = oVersandinfo;
+	}
+
+	public byte[] getOMessage() {
+		return this.oMessage;
+	}
+
+	public void setOMessage(byte[] oMessage) {
+		this.oMessage = oMessage;
+	}
+
 	public String toLogString() {
 		StringBuffer sb = new StringBuffer();
 		sb.append("[MAIL] ");
@@ -318,13 +353,21 @@ public class Versandauftrag implements Serializable {
 		sb.append("BETR:" + cBetreff + " ");
 		if (cCcempfaenger != null)
 			sb.append("CC:" + cCcempfaenger + " ");
+		if (cBccempfaenger != null)
+			sb.append("BCC:" + cBccempfaenger + " ");
 		if (oInhalt != null) {
 			if (oInhalt.length>0) {
 				if (cDateiname == null)
-					sb.append("ANHANG:" + "Anhang.pdf" + " " + oInhalt.length + "Bytes");
+					sb.append("ANHANG:" + "Anhang.pdf" + " " + oInhalt.length + "Bytes ");
 				else
-					sb.append("ANHANG:" + cDateiname + " " + oInhalt.length + "Bytes");
+					sb.append("ANHANG:" + cDateiname + " " + oInhalt.length + "Bytes ");
 			}
+		}
+		if (oVersandinfo != null) {
+			sb.append("VERSANDINFO:" + oVersandinfo.length + "Bytes ");
+		}
+		if (oMessage != null) {
+			sb.append("MESSAGE:" + oMessage.length + "Bytes ");
 		}
 		return new String(sb);
 	}

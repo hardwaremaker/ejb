@@ -1,37 +1,26 @@
 <?xml version="1.0"?>
-<!--
-  HELIUM V, Open Source ERP software for sustained success
-  at small and medium-sized enterprises.
-  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as published 
-  by the Free Software Foundation, either version 3 of theLicense, or 
-  (at your option) any later version.
-  
-  According to sec. 7 of the GNU Affero General Public License, version 3, 
-  the terms of the AGPL are supplemented with the following terms:
-  
-  "HELIUM V" and "HELIUM 5" are registered trademarks of 
-  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
-  AGPL does not imply a trademark license. Therefore any rights, title and
-  interest in our trademarks remain entirely with us. If you want to propagate
-  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
-  you may only do so if you have a written permission by HELIUM V IT-Solutions 
-  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
-  at trademark@heliumv.com).
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Affero General Public License for more details.
-  
-  You should have received a copy of the GNU Affero General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  Contact: developers@heliumv.com
--->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
+ <!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">--> 
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="com.lp.server.benutzer.fastlanereader.generated">
 	<class name="FLRBenutzer" table="PERS_BENUTZER">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -40,6 +29,7 @@
 		<property name="c_benutzerkennung" column="C_BENUTZERKENNUNG"
 			type="java.lang.String" />
 		<property name="t_gueltigbis" column="T_GUELTIGBIS" type="java.sql.Date" />
+		<property name="b_gesperrt" column="B_GESPERRT" type="java.lang.Short" />
 		<many-to-one name="flrmandantdefault"
 			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
 			column="MANDANT_C_NR_DEFAULT" />
@@ -61,9 +51,18 @@
 		<many-to-one name="flrsystemrolle"
 			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
 			column="SYSTEMROLLE_I_ID" />
+		<many-to-one name="flrsystemrolle_restapi"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID_RESTAPI" />
+		<many-to-one name="flrsystemrolle_hvma"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID_HVMA" />
 		<many-to-one name="flrmandant"
 			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
 			column="MANDANT_C_NR" />
+		<many-to-one name="flrpersonal_zugeordnet"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ZUGEORDNET" />
 	</class>
 	<class name="FLRRecht" table="PERS_RECHT">
 		<id name="c_nr" column="C_NR" type="java.lang.String">
@@ -121,7 +120,8 @@
 			<generator class="native" />
 		</id>
 		<property name="c_nachricht" column="C_NACHRICHT" type="java.lang.String" />
-		<property name="c_erledigungsgrund" column="C_ERLEDIGUNGSGRUND" type="java.lang.String" />
+		<property name="c_erledigungsgrund" column="C_ERLEDIGUNGSGRUND"
+			type="java.lang.String" />
 		<property name="t_zeit" column="T_ZEIT" type="java.sql.Timestamp" />
 		<property name="t_erledigt" column="T_ERLEDIGT" type="java.sql.Timestamp" />
 		<property name="t_bearbeitung" column="T_BEARBEITUNG" type="java.sql.Timestamp" />
@@ -156,6 +156,17 @@
 		<many-to-one name="flrfertigungsgruppe"
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
 			column="FERTIGUNGSGRUPPE_I_ID" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" />
+	</class>
+	<class name="FLRArtgrurolle" table="PERS_ARTGRUROLLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrartikelgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe"
+			column="ARTGRU_I_ID" />
 		<many-to-one name="flrsystemrolle"
 			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
 			column="SYSTEMROLLE_I_ID" />

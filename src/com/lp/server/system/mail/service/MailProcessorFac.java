@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.system.mail.service;
 
+import com.lp.server.system.service.TheClientDto;
+
 public interface MailProcessorFac {
 	public javax.ejb.TimerHandle addMail(LPMailDto lpMailDto);
 
@@ -40,5 +42,7 @@ public interface MailProcessorFac {
 	public void killTimer(Integer versandauftragIId);
 
 	public javax.ejb.TimerHandle updateTimer(Integer versandauftragIId, java.sql.Timestamp tSendezeitpunktwunsch);
+
+	public MailTestMessageResult testMailConfiguration(MailTestMessage testMessage, TheClientDto theClientDto);
 
 }

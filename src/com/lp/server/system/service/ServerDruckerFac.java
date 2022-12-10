@@ -38,7 +38,20 @@ import javax.ejb.Remote;
 
 @Remote
 public interface ServerDruckerFac {
+	public enum Format {
+		Page,
+		Label
+	}
+	
+	public final static String PROXY_PROTOCOL_PREFIX = "proxy://";
+	
+	public static final String NICHT_DRUCKEN = "Nicht Drucken";
+	public static final String DONT_PRINT = "|DON'T PRINT";
+	public static final String KEIN_DRUCKER_GEFUNDEN = "Kein Drucker gefunden";
+	
 	public String getServerStandardPrinter() throws RemoteException;
 
 	public String[] getServerPrinters() throws RemoteException;
+
+
 }

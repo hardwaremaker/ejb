@@ -1,39 +1,8 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.eingangsrechnung.fastlanereader.generated;
 
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
 import com.lp.server.system.fastlanereader.generated.FLRZahlungsziel;
 import java.io.Serializable;
@@ -103,6 +72,9 @@ public class FLREingangsrechnungReport implements Serializable {
     private Date t_manuellerledigt;
 
     /** nullable persistent field */
+    private Short b_mitpositionen;
+
+    /** nullable persistent field */
     private Integer zahlungsziel_i_id;
 
     /** nullable persistent field */
@@ -127,6 +99,21 @@ public class FLREingangsrechnungReport implements Serializable {
     private Date t_faelligkeit_skonto2;
 
     /** nullable persistent field */
+    private Date t_faelligkeit_belegdatum;
+
+    /** nullable persistent field */
+    private Date t_faelligkeit_skonto1_belegdatum;
+
+    /** nullable persistent field */
+    private Date t_faelligkeit_skonto2_belegdatum;
+
+    /** nullable persistent field */
+    private Integer personal_i_id_geprueft;
+
+    /** nullable persistent field */
+    private Date t_geprueft;
+
+    /** nullable persistent field */
     private FLRKostenstelle flrkostenstelle;
 
     /** nullable persistent field */
@@ -138,8 +125,11 @@ public class FLREingangsrechnungReport implements Serializable {
     /** nullable persistent field */
     private FLRFinanzKonto flrkonto;
 
+    /** nullable persistent field */
+    private FLRPersonal flrpersonal_geprueft;
+
     /** full constructor */
-    public FLREingangsrechnungReport(String c_nr, String c_text, String c_weartikel, String c_zollimportpapier, String mandant_c_nr, Integer i_geschaeftsjahr, String eingangsrechnungart_c_nr, Date t_belegdatum, Date t_freigabedatum, BigDecimal n_kurs, BigDecimal n_betrag, BigDecimal n_betragfw, BigDecimal n_ustbetrag, BigDecimal n_ustbetragfw, String status_c_nr, String waehrung_c_nr, Date t_bezahltdatum, Date t_manuellerledigt, Integer zahlungsziel_i_id, Integer mahnstufe_i_id, Integer lieferant_i_id, Integer kostenstelle_i_id, String c_lieferantenrechnungsnummer, Date t_faelligkeit, Date t_faelligkeit_skonto1, Date t_faelligkeit_skonto2, FLRKostenstelle flrkostenstelle, FLRLieferant flrlieferant, FLRZahlungsziel flrzahlungsziel, FLRFinanzKonto flrkonto) {
+    public FLREingangsrechnungReport(String c_nr, String c_text, String c_weartikel, String c_zollimportpapier, String mandant_c_nr, Integer i_geschaeftsjahr, String eingangsrechnungart_c_nr, Date t_belegdatum, Date t_freigabedatum, BigDecimal n_kurs, BigDecimal n_betrag, BigDecimal n_betragfw, BigDecimal n_ustbetrag, BigDecimal n_ustbetragfw, String status_c_nr, String waehrung_c_nr, Date t_bezahltdatum, Date t_manuellerledigt, Short b_mitpositionen, Integer zahlungsziel_i_id, Integer mahnstufe_i_id, Integer lieferant_i_id, Integer kostenstelle_i_id, String c_lieferantenrechnungsnummer, Date t_faelligkeit, Date t_faelligkeit_skonto1, Date t_faelligkeit_skonto2, Date t_faelligkeit_belegdatum, Date t_faelligkeit_skonto1_belegdatum, Date t_faelligkeit_skonto2_belegdatum, Integer personal_i_id_geprueft, Date t_geprueft, FLRKostenstelle flrkostenstelle, FLRLieferant flrlieferant, FLRZahlungsziel flrzahlungsziel, FLRFinanzKonto flrkonto, FLRPersonal flrpersonal_geprueft) {
         this.c_nr = c_nr;
         this.c_text = c_text;
         this.c_weartikel = c_weartikel;
@@ -158,6 +148,7 @@ public class FLREingangsrechnungReport implements Serializable {
         this.waehrung_c_nr = waehrung_c_nr;
         this.t_bezahltdatum = t_bezahltdatum;
         this.t_manuellerledigt = t_manuellerledigt;
+        this.b_mitpositionen = b_mitpositionen;
         this.zahlungsziel_i_id = zahlungsziel_i_id;
         this.mahnstufe_i_id = mahnstufe_i_id;
         this.lieferant_i_id = lieferant_i_id;
@@ -166,10 +157,16 @@ public class FLREingangsrechnungReport implements Serializable {
         this.t_faelligkeit = t_faelligkeit;
         this.t_faelligkeit_skonto1 = t_faelligkeit_skonto1;
         this.t_faelligkeit_skonto2 = t_faelligkeit_skonto2;
+        this.t_faelligkeit_belegdatum = t_faelligkeit_belegdatum;
+        this.t_faelligkeit_skonto1_belegdatum = t_faelligkeit_skonto1_belegdatum;
+        this.t_faelligkeit_skonto2_belegdatum = t_faelligkeit_skonto2_belegdatum;
+        this.personal_i_id_geprueft = personal_i_id_geprueft;
+        this.t_geprueft = t_geprueft;
         this.flrkostenstelle = flrkostenstelle;
         this.flrlieferant = flrlieferant;
         this.flrzahlungsziel = flrzahlungsziel;
         this.flrkonto = flrkonto;
+        this.flrpersonal_geprueft = flrpersonal_geprueft;
     }
 
     /** default constructor */
@@ -328,6 +325,14 @@ public class FLREingangsrechnungReport implements Serializable {
         this.t_manuellerledigt = t_manuellerledigt;
     }
 
+    public Short getB_mitpositionen() {
+        return this.b_mitpositionen;
+    }
+
+    public void setB_mitpositionen(Short b_mitpositionen) {
+        this.b_mitpositionen = b_mitpositionen;
+    }
+
     public Integer getZahlungsziel_i_id() {
         return this.zahlungsziel_i_id;
     }
@@ -392,6 +397,46 @@ public class FLREingangsrechnungReport implements Serializable {
         this.t_faelligkeit_skonto2 = t_faelligkeit_skonto2;
     }
 
+    public Date getT_faelligkeit_belegdatum() {
+        return this.t_faelligkeit_belegdatum;
+    }
+
+    public void setT_faelligkeit_belegdatum(Date t_faelligkeit_belegdatum) {
+        this.t_faelligkeit_belegdatum = t_faelligkeit_belegdatum;
+    }
+
+    public Date getT_faelligkeit_skonto1_belegdatum() {
+        return this.t_faelligkeit_skonto1_belegdatum;
+    }
+
+    public void setT_faelligkeit_skonto1_belegdatum(Date t_faelligkeit_skonto1_belegdatum) {
+        this.t_faelligkeit_skonto1_belegdatum = t_faelligkeit_skonto1_belegdatum;
+    }
+
+    public Date getT_faelligkeit_skonto2_belegdatum() {
+        return this.t_faelligkeit_skonto2_belegdatum;
+    }
+
+    public void setT_faelligkeit_skonto2_belegdatum(Date t_faelligkeit_skonto2_belegdatum) {
+        this.t_faelligkeit_skonto2_belegdatum = t_faelligkeit_skonto2_belegdatum;
+    }
+
+    public Integer getPersonal_i_id_geprueft() {
+        return this.personal_i_id_geprueft;
+    }
+
+    public void setPersonal_i_id_geprueft(Integer personal_i_id_geprueft) {
+        this.personal_i_id_geprueft = personal_i_id_geprueft;
+    }
+
+    public Date getT_geprueft() {
+        return this.t_geprueft;
+    }
+
+    public void setT_geprueft(Date t_geprueft) {
+        this.t_geprueft = t_geprueft;
+    }
+
     public FLRKostenstelle getFlrkostenstelle() {
         return this.flrkostenstelle;
     }
@@ -422,6 +467,14 @@ public class FLREingangsrechnungReport implements Serializable {
 
     public void setFlrkonto(FLRFinanzKonto flrkonto) {
         this.flrkonto = flrkonto;
+    }
+
+    public FLRPersonal getFlrpersonal_geprueft() {
+        return this.flrpersonal_geprueft;
+    }
+
+    public void setFlrpersonal_geprueft(FLRPersonal flrpersonal_geprueft) {
+        this.flrpersonal_geprueft = flrpersonal_geprueft;
     }
 
     public String toString() {

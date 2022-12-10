@@ -33,6 +33,7 @@
 package com.lp.server.system.service;
 
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 
 import javax.ejb.Remote;
 
@@ -53,6 +54,7 @@ import com.lp.server.lieferschein.service.LieferscheinpositionDto;
 import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.server.stueckliste.service.StuecklistearbeitsplanDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
+import com.lp.server.util.KundeId;
 import com.lp.service.BelegpositionDto;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
@@ -73,12 +75,13 @@ public interface BelegpositionkonvertierungFac {
 			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public RechnungPositionDto[] konvertiereNachRechnungpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
+//	public RechnungPositionDto[] konvertiereNachRechnungpositionDto(
+//			BelegpositionDto[] belegpositionDto, Timestamp belegDatum, TheClientDto theClientDto)
+//			throws EJBExceptionLP, RemoteException;
+//
 	public LieferscheinpositionDto[] konvertiereNachLieferscheinpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
+			BelegpositionDto[] belegpositionDto,Integer kundeIId,
+			Timestamp tBelegdatum, boolean bMwstSatzNeuBestimmen, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public AnfragepositionDto[] konvertiereNachAnfragepositionDto(AnfrageDto anfrageDto, 
@@ -86,11 +89,13 @@ public interface BelegpositionkonvertierungFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public AngebotpositionDto[] konvertiereNachAngebotpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
+			BelegpositionDto[] belegpositionDto,Integer kundeIId,
+			Timestamp tBelegdatum, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public AuftragpositionDto[] konvertiereNachAuftragpositionDto(
-			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto)
+			BelegpositionDto[] belegpositionDto,Integer kundeIId,
+			Timestamp tBelegdatum, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public LossollarbeitsplanDto[] konvertiereNachLossollarbeitsplanDto(
@@ -115,5 +120,14 @@ public interface BelegpositionkonvertierungFac {
 	public AgstklarbeitsplanDto[] konvertiereNachAgstklarbeitsplanDto(
 			BelegpositionDto[] belegpositionDto, TheClientDto theClientDto);
 	
+	public BelegpositionDto cloneBelegpositionDtoFromBelegpositionDto(
+			BelegpositionDto target, BelegpositionDto source,
+			TheClientDto theClientDto) throws EJBExceptionLP;
 	
+	public MwstsatzDto ermittleMwstSatz(BelegpositionDto belegpositionDto,
+			Timestamp belegDatum, TheClientDto theClientDto);
+
+	RechnungPositionDto[] konvertiereNachRechnungpositionDto(
+			BelegpositionDto[] belegpositionDto, Integer kundeId,
+			Timestamp tBelegDatum, TheClientDto theClientDto);
 }

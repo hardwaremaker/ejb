@@ -43,13 +43,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.util.Helper;
 
 @NamedQueries( {
 		@NamedQuery(name = "LosablieferungfindByLosIId", query = "SELECT OBJECT(o) FROM Losablieferung o WHERE o.losIId=?1 ORDER BY o.tAendern ASC"),
 		@NamedQuery(name = "LosablieferungfindByLosIIdTAendernBis", query = "SELECT OBJECT(o) FROM Losablieferung o WHERE o.losIId=?1 AND o.tAendern>=?2") })
 @Entity
-@Table(name = "FERT_LOSABLIEFERUNG")
+@Table(name = ITablenames.FERT_LOSABLIEFERUNG)
 public class Losablieferung implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -85,6 +86,17 @@ public class Losablieferung implements Serializable {
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
+	@Column(name = "LAGER_I_ID")
+	private Integer lagerIId;
+
+	public Integer getLagerIId() {
+		return lagerIId;
+	}
+
+	public void setLagerIId(Integer lagerIId) {
+		this.lagerIId = lagerIId;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public Losablieferung() {

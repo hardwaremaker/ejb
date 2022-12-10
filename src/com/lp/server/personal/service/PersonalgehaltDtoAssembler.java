@@ -34,6 +34,7 @@ package com.lp.server.personal.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
 
@@ -45,36 +46,30 @@ public class PersonalgehaltDtoAssembler {
 		if (personalgehalt != null) {
 			personalgehaltDto.setIId(personalgehalt.getIId());
 			personalgehaltDto.setPersonalIId(personalgehalt.getPersonalIId());
-			personalgehaltDto.setIJahr(personalgehalt.getIJahr());
-			personalgehaltDto.setIMonat(personalgehalt.getIMonat());
+
+			GregorianCalendar gc = new GregorianCalendar();
+			gc.setTimeInMillis(personalgehalt.getTGueltigab().getTime());
+
+			personalgehaltDto.setIJahr(gc.get(GregorianCalendar.YEAR));
+			personalgehaltDto.setIMonat(gc.get(GregorianCalendar.MONTH));
 			personalgehaltDto.setNGehalt(personalgehalt.getNGehalt());
-			personalgehaltDto.setFUestpauschale(personalgehalt
-					.getFUestpauschale());
+			personalgehaltDto.setFUestpauschale(personalgehalt.getFUestpauschale());
 			personalgehaltDto.setNStundensatz(personalgehalt.getNStundensatz());
-			personalgehaltDto.setFVerfuegbarkeit(personalgehalt
-					.getFVerfuegbarkeit());
+			personalgehaltDto.setFVerfuegbarkeit(personalgehalt.getFVerfuegbarkeit());
 			personalgehaltDto.setFLeistungswert(personalgehalt.getFLeistungswert());
-			
+
 			personalgehaltDto.setNKmgeld1(personalgehalt.getNKmgeld1());
 			personalgehaltDto.setNUestdpuffer(personalgehalt.getNUestdpuffer());
-			personalgehaltDto.setFBiskilometer(personalgehalt
-					.getFBiskilometer());
+			personalgehaltDto.setFBiskilometer(personalgehalt.getFBiskilometer());
 			personalgehaltDto.setNKmgeld2(personalgehalt.getNKmgeld2());
-			personalgehaltDto.setBKksgebbefreit(personalgehalt
-					.getBKksgebbefreit());
-			personalgehaltDto.setBUestdauszahlen(personalgehalt
-					.getBUestdauszahlen());
-			personalgehaltDto.setCGrundkksgebbefreit(personalgehalt
-					.getCGrundkksgebbefreit());
-			personalgehaltDto.setBAlleinverdiener(personalgehalt
-					.getBAlleinverdiener());
-			personalgehaltDto.setBAlleinerzieher(personalgehalt
-					.getBAlleinerzieher());
-			personalgehaltDto.setPersonalIIdAendern(personalgehalt
-					.getPersonalIIdAendern());
+			personalgehaltDto.setBKksgebbefreit(personalgehalt.getBKksgebbefreit());
+			personalgehaltDto.setIUestdauszahlen(personalgehalt.getIUestdauszahlen());
+			personalgehaltDto.setCGrundkksgebbefreit(personalgehalt.getCGrundkksgebbefreit());
+			personalgehaltDto.setBAlleinverdiener(personalgehalt.getBAlleinverdiener());
+			personalgehaltDto.setBAlleinerzieher(personalgehalt.getBAlleinerzieher());
+			personalgehaltDto.setPersonalIIdAendern(personalgehalt.getPersonalIIdAendern());
 			personalgehaltDto.setTAendern(personalgehalt.getTAendern());
-			
-			
+
 			personalgehaltDto.setBStundensatzFixiert(personalgehalt.getBStundensatzFixiert());
 			personalgehaltDto.setNGehaltBruttobrutto(personalgehalt.getNGehaltBruttobrutto());
 			personalgehaltDto.setNGehaltNetto(personalgehalt.getNGehaltNetto());
@@ -83,6 +78,11 @@ public class PersonalgehaltDtoAssembler {
 			personalgehaltDto.setFFaktorLohnmittelstundensatz(personalgehalt.getFFaktorLohnmittelstundensatz());
 			personalgehaltDto.setFKalkIstJahresstunden(personalgehalt.getFKalkIstJahresstunden());
 			personalgehaltDto.setNAufschlagLohnmittelstundensatz(personalgehalt.getNAufschlagLohnmittelstundensatz());
+			personalgehaltDto.setNLohnsteuer(personalgehalt.getNLohnsteuer());
+			personalgehaltDto.setNDrzpauschale(personalgehalt.getNDrzpauschale());
+			personalgehaltDto.setBNegativstundenInUrlaubUmwandelnTageweiseBetrachten(
+			personalgehalt.getBNegativstundenInUrlaubUmwandelnTageweiseBetrachten());
+			personalgehaltDto.setNKmgeldMitfahrer(personalgehalt.getNKmgeldMitfahrer());
 		}
 		return personalgehaltDto;
 	}

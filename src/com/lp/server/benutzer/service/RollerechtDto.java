@@ -35,7 +35,10 @@ package com.lp.server.benutzer.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
-public class RollerechtDto implements Serializable {
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
+@HvDtoLogClass(name = HvDtoLogClass.ROLLERECHT)
+public class RollerechtDto implements Serializable,IIId {
 	/**
 	 * 
 	 */

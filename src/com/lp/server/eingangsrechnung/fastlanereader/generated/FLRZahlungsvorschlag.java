@@ -70,15 +70,19 @@ public class FLRZahlungsvorschlag implements Serializable {
 
     /** nullable persistent field */
     private Short b_waere_vollstaendig_bezahlt;
+    
+    private String c_auftraggeberreferenz;
 
     /** nullable persistent field */
     private com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport flreingangsrechnungreport;
 
     /** nullable persistent field */
     private com.lp.server.eingangsrechnung.fastlanereader.generated.FLRZahlungsvorschlaglauf flrzahlungsvorschlaglauf;
+    
+    private FLREingangsrechnung flreingangsrechnung;
 
     /** full constructor */
-    public FLRZahlungsvorschlag(Integer zahlungsvorschlaglauf_i_id, Integer eingangsrechnung_i_id, Short b_bezahlen, Date t_faellig, BigDecimal n_angewandterskontosatz, BigDecimal n_er_brutto_betrag, BigDecimal n_bereits_bezahlt, BigDecimal n_zahlbetrag, Short b_waere_vollstaendig_bezahlt, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport flreingangsrechnungreport, com.lp.server.eingangsrechnung.fastlanereader.generated.FLRZahlungsvorschlaglauf flrzahlungsvorschlaglauf) {
+    public FLRZahlungsvorschlag(Integer zahlungsvorschlaglauf_i_id, Integer eingangsrechnung_i_id, Short b_bezahlen, Date t_faellig, BigDecimal n_angewandterskontosatz, BigDecimal n_er_brutto_betrag, BigDecimal n_bereits_bezahlt, BigDecimal n_zahlbetrag, Short b_waere_vollstaendig_bezahlt, String c_auftraggeberreferenz, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport flreingangsrechnungreport, com.lp.server.eingangsrechnung.fastlanereader.generated.FLRZahlungsvorschlaglauf flrzahlungsvorschlaglauf, FLREingangsrechnung flreingangsrechnung) {
         this.zahlungsvorschlaglauf_i_id = zahlungsvorschlaglauf_i_id;
         this.eingangsrechnung_i_id = eingangsrechnung_i_id;
         this.b_bezahlen = b_bezahlen;
@@ -88,8 +92,10 @@ public class FLRZahlungsvorschlag implements Serializable {
         this.n_bereits_bezahlt = n_bereits_bezahlt;
         this.n_zahlbetrag = n_zahlbetrag;
         this.b_waere_vollstaendig_bezahlt = b_waere_vollstaendig_bezahlt;
+        this.c_auftraggeberreferenz = c_auftraggeberreferenz;
         this.flreingangsrechnungreport = flreingangsrechnungreport;
         this.flrzahlungsvorschlaglauf = flrzahlungsvorschlaglauf;
+        this.flreingangsrechnung = flreingangsrechnung;
     }
 
     /** default constructor */
@@ -176,7 +182,15 @@ public class FLRZahlungsvorschlag implements Serializable {
         this.b_waere_vollstaendig_bezahlt = b_waere_vollstaendig_bezahlt;
     }
 
-    public com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport getFlreingangsrechnungreport() {
+    public String getC_auftraggeberreferenz() {
+		return c_auftraggeberreferenz;
+	}
+
+	public void setC_auftraggeberreferenz(String c_auftraggeberreferenz) {
+		this.c_auftraggeberreferenz = c_auftraggeberreferenz;
+	}
+
+	public com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport getFlreingangsrechnungreport() {
         return this.flreingangsrechnungreport;
     }
 
@@ -192,7 +206,15 @@ public class FLRZahlungsvorschlag implements Serializable {
         this.flrzahlungsvorschlaglauf = flrzahlungsvorschlaglauf;
     }
 
-    public String toString() {
+    public FLREingangsrechnung getFlreingangsrechnung() {
+		return flreingangsrechnung;
+	}
+
+	public void setFlreingangsrechnung(FLREingangsrechnung flreingangsrechnung) {
+		this.flreingangsrechnung = flreingangsrechnung;
+	}
+
+	public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();

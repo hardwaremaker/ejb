@@ -271,6 +271,18 @@ public class DocNodeFactory {
 		int nodeType = (int)node.getProperty(DocNodeBase.NODEPROPERTY_NODETYPE).getLong();
 		
 		if(nodeType==DocNodeBase.FOLDER) {
+			String belegart = node.getProperty(DocNodeBase.NODEPROPERTY_BELEGART).getString();
+			
+			if (DocNodeBase.BELEGART_BANK.equals(belegart) 
+					|| DocNodeBase.BELEGART_BANKVERBINDUNG.equals(belegart)
+					|| DocNodeBase.BELEGART_ZAHLUNGSVORSCHLAGLAUF.equals(belegart)
+					|| DocNodeBase.BELEGART_MAHNLAUF.equals(belegart))
+				return new DocNodeFolderId(node);
+
+			if (DocNodeBase.BELEGART_GESCHAEFTSJAHR.equals(belegart)) {
+				return new DocNodeGeschaeftsjahr(node);
+			}
+			
 			return new DocNodeFolder(node);
 		}
 		if(nodeType==DocNodeBase.LITERAL) {
@@ -281,6 +293,9 @@ public class DocNodeFactory {
 		}
 		if(nodeType==DocNodeBase.LAGERSTANDSLISTE) {
 			return new DocNodeLagerstandsliste(node);
+		}
+		if(nodeType==DocNodeBase.BEDARFSZUSAMMENSCHAU) {
+			return new DocNodeBedarfszusammenschau(node);
 		}
 		if(nodeType==DocNodeBase.MAIL) {
 			return new DocNodeMail(node);
@@ -431,6 +446,12 @@ public class DocNodeFactory {
 			
 			if(DocNodeBase.BELEGART_RE_ZAHLUNG.equals(belegart))
 				return new DocNodeRechnungZahlung(node);
+			
+			if(DocNodeBase.BELEGART_PROFORMARECHNG.equals(belegart))
+				return new DocNodeProformarechnung(node);
+			
+			if(DocNodeBase.BELEGART_PROFORMAPOS.equals(belegart))
+				return new DocNodeProformaPosition(node);
 			
 			/**
 			 * Reklamation

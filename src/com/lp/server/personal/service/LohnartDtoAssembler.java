@@ -51,6 +51,8 @@ public class LohnartDtoAssembler {
 			lohnartDto.setILohnart(lohnart.getILohnart());
 			lohnartDto.setPersonalartCNr(lohnart.getPersonalartCNr());
 			lohnartDto.setTaetigkeitIIdNl(lohnart.getTaetigkeitIIdNl());
+			lohnartDto.setIAusfallWochen(lohnart.getIAusfallWochen());
+			lohnartDto.setFMindestuestd(lohnart.getFMindestuestd());
 		}
 		return lohnartDto;
 	}

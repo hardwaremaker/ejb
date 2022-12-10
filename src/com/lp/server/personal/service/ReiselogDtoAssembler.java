@@ -63,7 +63,7 @@ public class ReiselogDtoAssembler {
 			reiselogDto.setBelegartCNr(reiselog.getBelegartCNr());
 			reiselogDto.setIBelegartid(reiselog.getIBelegartid());
 			reiselogDto.setFahrzeugIId(reiselog.getFahrzeugIId());
-			reiselogDto.setFFaktor(reiselog.getFFaktor());
+		
 		}
 		return reiselogDto;
 	}

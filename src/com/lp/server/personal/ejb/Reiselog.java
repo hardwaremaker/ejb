@@ -107,8 +107,6 @@ public class Reiselog implements Serializable {
 	@Column(name = "BELEGART_C_NR")
 	private String belegartCNr;
 	
-	@Column(name = "F_FAKTOR")
-	private Double fFaktor;
 	
 	public Integer getFahrzeugIId() {
 		return fahrzeugIId;
@@ -132,14 +130,6 @@ public class Reiselog implements Serializable {
 
 	public void setBelegartCNr(String belegartCNr) {
 		this.belegartCNr = belegartCNr;
-	}
-
-	public Double getFFaktor() {
-		return fFaktor;
-	}
-
-	public void setFFaktor(Double fFaktor) {
-		this.fFaktor = fFaktor;
 	}
 	
 	private static final long serialVersionUID = 1L;

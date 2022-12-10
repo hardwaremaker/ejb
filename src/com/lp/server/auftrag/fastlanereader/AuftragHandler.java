@@ -36,6 +36,7 @@ import java.awt.Color;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -49,6 +50,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag;
+import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragtextsuche;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragFLRDataDto;
 import com.lp.server.auftrag.service.AuftragFac;
@@ -68,6 +70,7 @@ import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeAuftrag;
 import com.lp.server.system.jcr.service.docnode.DocPath;
@@ -79,6 +82,7 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.FlrFirmaAnsprechpartnerFilterBuilder;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
@@ -103,7 +107,7 @@ import com.lp.util.Helper;
  * </p>
  * <p>
  * </p>
- *
+ * 
  * @author martin werner, uli walch
  * @version 1.0
  */
@@ -116,76 +120,95 @@ public class AuftragHandler extends UseCaseHandler {
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_AUFTRAG = "flrauftrag.";
 	public static final String FLR_AUFTRAG_FROM_CLAUSE = " from FLRAuftrag flrauftrag ";
+	public static final String FLR_AUFTRAG_TEXTSUCHE_CLASSNAME = FLRAuftragtextsuche.class.getSimpleName();
 	Integer iAnlegerStattVertreterAnzeigen = 0;
 
 	boolean verrechenbarStattRohsAnzeigen = false;
+	boolean bAuftragsfreigabe = false;
+	boolean bProjekttitelInAG_AB = false;
+	boolean bAbbuchungslagerAnzeigen = false;
+	boolean bZweiterVertreter = false;
+	boolean bAuftragspositionstermin_in_auswahl_anzeigen = false;
 
-	private Feature cachedFeature = null ;
+	private Feature cachedFeature = null;
+	private Integer filterPartnerId = null;
+
+	private Integer filterPartnerIdOderVertreter = null;
 
 	private class Feature {
-		private boolean featureAdresse = false ;
-		private boolean featureAdresseAnschrift = false ;
-		private boolean featureAdresseKurzanschrift = false ;
-		private List<IAddressContact> addresses = new ArrayList<IAddressContact>() ;
-		private boolean featureUseLieferadresse = false ;
-		private int flrRowCount = 0 ;
-		private IAuftragFLRData[] flrData = null ;
+		private boolean featureAdresse = false;
+		private boolean featureAdresseAnschrift = false;
+		private boolean featureAdresseKurzanschrift = false;
+		private List<IAddressContact> addresses = new ArrayList<IAddressContact>();
+		private boolean featureUseLieferadresse = false;
+		private int flrRowCount = 0;
+		private IAuftragFLRData[] flrData = null;
+		private boolean featureKundenIIds = false;
 
 		public Feature() {
-			if(getQuery() instanceof QueryParametersFeatures) {
-				QueryParametersFeatures qpf = (QueryParametersFeatures) getQuery() ;
-				featureAdresse = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_KOMPLETT) ;
-				featureAdresseAnschrift = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_ANSCHRIFT) ;
-				featureAdresseKurzanschrift = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_KURZANSCHRIFT) ;
-				featureUseLieferadresse = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_IST_LIEFERADRESSE) ;
+			if (getQuery() instanceof QueryParametersFeatures) {
+				QueryParametersFeatures qpf = (QueryParametersFeatures) getQuery();
+				featureAdresse = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_KOMPLETT);
+				featureAdresseAnschrift = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_ANSCHRIFT);
+				featureAdresseKurzanschrift = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_KURZANSCHRIFT);
+				featureUseLieferadresse = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_IST_LIEFERADRESSE);
+				featureKundenIIds = qpf.hasFeature(AuftragHandlerFeature.KUNDEN_IIDS);
 			}
 		}
 
 		public void setFlrRowCount(int rows) {
-			flrRowCount = rows ;
-			flrData = new AuftragFLRDataDto[flrRowCount] ;
+			flrRowCount = rows;
+			flrData = new AuftragFLRDataDto[flrRowCount];
 		}
 
 		public IAuftragFLRData[] getFlrData() {
-			return flrData ;
+			return flrData;
 		}
 
 		public boolean hasAdresse() {
-			return featureAdresse ;
+			return featureAdresse;
 		}
 
 		public boolean hasAdresseAnschrift() {
-			return featureAdresseAnschrift ;
+			return featureAdresseAnschrift;
 		}
 
 		public boolean hasAdresseKurzanschrift() {
-			return featureAdresseKurzanschrift ;
+			return featureAdresseKurzanschrift;
 		}
 
 		public boolean useLieferadresse() {
-			return featureUseLieferadresse ;
+			return featureUseLieferadresse;
+		}
+
+		public boolean hasKundenIIds() {
+			return featureKundenIIds;
+		}
+
+		public boolean hasFeature() {
+			return hasAdresse() || hasKundenIIds();
 		}
 
 		public void buildAddress(int row, FLRAuftrag auftrag) throws RemoteException {
-			if(! hasAdresse()) return ;
+			if (!hasAdresse())
+				return;
 
-			FLRPartner flrpartner = useLieferadresse()
-					? auftrag.getFlrlieferkunde().getFlrpartner()
-					: auftrag.getFlrkunde().getFlrpartner() ;
+			FLRPartner flrpartner = useLieferadresse() ? auftrag.getFlrlieferkunde().getFlrpartner()
+					: auftrag.getFlrkunde().getFlrpartner();
 
-			Integer contactId = useLieferadresse() ?
-					auftrag.getAnsprechpartner_i_id_lieferadresse() : auftrag.getAnsprechpartner_i_id_kunde();
+			Integer contactId = useLieferadresse() ? auftrag.getAnsprechpartner_i_id_lieferadresse()
+					: auftrag.getAnsprechpartner_i_id_kunde();
 
 			IAdresse address = new AdresseDto();
 			address.setPartnerId(flrpartner.getI_id());
 
 			FLRLandplzort flranschrift = flrpartner.getFlrlandplzort();
 			if (flranschrift != null) {
-				if(flranschrift.getFlrland() != null) {
-					address.setCountryCode(flranschrift.getFlrland().getC_lkz()) ;
+				if (flranschrift.getFlrland() != null) {
+					address.setCountryCode(flranschrift.getFlrland().getC_lkz());
 				}
 				address.setZipcode(flranschrift.getC_plz());
-				if(flranschrift.getFlrort() != null) {
+				if (flranschrift.getFlrort() != null) {
 					address.setCity(flranschrift.getFlrort().getC_name());
 				}
 			}
@@ -200,41 +223,41 @@ public class AuftragHandler extends UseCaseHandler {
 			address.setEmail(flrpartner.getC_email());
 			address.setPhone(flrpartner.getC_telefon());
 
-
-			IAdresse contactAdresse = null ;
-			AnsprechpartnerDto anspDto = contactId == null ? null : getAnsprechpartnerFac()
-					.ansprechpartnerFindByPrimaryKey(contactId, theClientDto) ;
-			if(anspDto != null) {
-				contactAdresse = buildAdresse(anspDto, address) ;
+			IAdresse contactAdresse = null;
+			AnsprechpartnerDto anspDto = contactId == null ? null
+					: getAnsprechpartnerFac().ansprechpartnerFindByPrimaryKey(contactId, theClientDto);
+			if (anspDto != null) {
+				contactAdresse = buildAdresse(anspDto, address);
 			}
 
-			if(hasAdresseAnschrift()) {
-				PartnerDto partnerDto = getPartnerFac()
-						.partnerFindByPrimaryKey(flrpartner.getI_id(), theClientDto) ;
+			if (hasAdresseAnschrift()) {
+				PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(flrpartner.getI_id(), theClientDto);
 
-				MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto) ;
-				Locale locale = theClientDto.getLocUi() ;
-				String s = formatAdresseFuerAusdruck(partnerDto, anspDto, mandantDto, locale, LocaleFac.BELEGART_AUFTRAG) ;
+				MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(),
+						theClientDto);
+				Locale locale = theClientDto.getLocUi();
+				String s = formatAdresseFuerAusdruck(partnerDto, anspDto, mandantDto, locale,
+						LocaleFac.BELEGART_AUFTRAG);
 				address.setLines(s.split("\n"));
 			}
 
-			if(hasAdresseKurzanschrift()) {
+			if (hasAdresseKurzanschrift()) {
 			}
 
-			IAddressContact addressContact = new AddressContactDto(address, contactAdresse) ;
+			IAddressContact addressContact = new AddressContactDto(address, contactAdresse);
 			setAddressContact(row, addressContact);
-//			addresses.add(addressContact) ;
+			// addresses.add(addressContact) ;
 		}
 
 		private IAdresse buildAdresse(AnsprechpartnerDto anspDto, IAdresse companyAddress) {
 			IAdresse address = new AdresseDto();
-			PartnerDto partnerDto = anspDto.getPartnerDto() ;
+			PartnerDto partnerDto = anspDto.getPartnerDto();
 			address.setPartnerId(partnerDto.getIId());
 
-			address.setCountryCode(companyAddress.getCountryCode()) ;
+			address.setCountryCode(companyAddress.getCountryCode());
 			address.setZipcode(companyAddress.getZipcode());
-			address.setCity(companyAddress.getCity()) ;
-			address.setStreet(companyAddress.getStreet()) ;
+			address.setCity(companyAddress.getCity());
+			address.setStreet(companyAddress.getStreet());
 
 			address.setName1Lastname(partnerDto.getCName1nachnamefirmazeile1());
 			address.setName2Firstname(partnerDto.getCName2vornamefirmazeile2());
@@ -245,31 +268,36 @@ public class AuftragHandler extends UseCaseHandler {
 			address.setEmail(anspDto.getCEmail());
 			address.setPhone(anspDto.getCTelefon());
 
-			return address ;
+			return address;
 		}
 
 		public List<IAddressContact> getAddresses() {
-			return addresses ;
+			return addresses;
 		}
 
 		private IAuftragFLRData getFlrDataObject(int row) {
-			if(flrData[row] == null) {
-				flrData[row] = new AuftragFLRDataDto() ;
+			if (flrData[row] == null) {
+				flrData[row] = new AuftragFLRDataDto();
 			}
-			return flrData[row] ;
+			return flrData[row];
 		}
 
-		public void setInternerKommentar(int row, Boolean value) {
-			getFlrDataObject(row).setInternerKommentar(value);
+		public void setInternerKommentar(int row, String kommentar) {
+			getFlrDataObject(row).setInternerKommentar(kommentar != null);
+			getFlrDataObject(row).setInternerKommentarText(kommentar);
 		}
+
 		public Boolean getInternerKommentar(int row) {
-			return getFlrDataObject(row).hasInternerKommentar() ;
+			return getFlrDataObject(row).hasInternerKommentar();
 		}
-		public void setExternerKommentar(int row, Boolean value) {
-			getFlrDataObject(row).setExternerKommentar(value);
+
+		public void setExternerKommentar(int row, String kommentar) {
+			getFlrDataObject(row).setExternerKommentar(kommentar != null);
+			getFlrDataObject(row).setExternerKommentarText(kommentar);
 		}
+
 		public Boolean getExternerKommentar(int row) {
-			return getFlrDataObject(row).hasExternerKommentar() ;
+			return getFlrDataObject(row).hasExternerKommentar();
 		}
 
 		public void setAddressContact(int row, IAddressContact addressContact) {
@@ -277,26 +305,63 @@ public class AuftragHandler extends UseCaseHandler {
 		}
 
 		public IAddressContact getAddressContact(int row) {
-			return getFlrDataObject(row).getAddressContact() ;
+			return getFlrDataObject(row).getAddressContact();
+		}
+
+		public void setKundenIIds(int row, FLRAuftrag auftrag) {
+			if (!hasKundenIIds()) {
+				return;
+			}
+			getFlrDataObject(row).setKundeIIdAuftragsadresse(auftrag.getKunde_i_id_auftragsadresse());
+			getFlrDataObject(row).setKundeIIdLieferadresse(auftrag.getKunde_i_id_lieferadresse());
+			getFlrDataObject(row).setKundeIIdRechnungsadresse(auftrag.getKunde_i_id_rechnungsadresse());
+		}
+
+		public void setVertreter(int row, FLRAuftrag auftrag) {
+			if (auftrag.getFlrvertreter() == null) {
+				return;
+			}
+
+			getFlrDataObject(row).setVertreterKurzzeichen(auftrag.getFlrvertreter().getC_kurzzeichen());
+		}
+		
+		public void setStatusCnr(int row, FLRAuftrag auftrag) {
+			getFlrDataObject(row).setStatusCnr(auftrag.getAuftragstatus_c_nr());
 		}
 	}
 
 	private Feature getFeature() {
-		if(cachedFeature == null) {
-			cachedFeature = new Feature() ;
+		if (cachedFeature == null) {
+			cachedFeature = new Feature();
 		}
-		return cachedFeature ;
+		return cachedFeature;
+	}
+
+	private class AuftragKundeAnsprechpartnerFilterBuilder extends FlrFirmaAnsprechpartnerFilterBuilder {
+
+		public AuftragKundeAnsprechpartnerFilterBuilder(boolean bSuchenInklusiveKBez) {
+			super(bSuchenInklusiveKBez);
+		}
+
+		@Override
+		public String getFlrPartner() {
+			return FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_FLRKUNDE + "." + LieferantFac.FLR_PARTNER;
+		}
+
+		@Override
+		public String getFlrPropertyAnsprechpartnerIId() {
+			return FLR_AUFTRAG + "ansprechpartner_i_id_kunde";
+		}
+
 	}
 
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
-	 *
-	 * @param rowIndex
-	 *            diese Zeile soll selektiert sein
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
+	 * 
+	 * @param rowIndex diese Zeile soll selektiert sein
 	 * @return QueryResult das Ergebnis der Abfrage
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 * @see UseCaseHandler#getPageAt(java.lang.Integer)
 	 */
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
@@ -305,14 +370,21 @@ public class AuftragHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = getLimit() ;
-			int startIndex = getStartIndex(rowIndex, pageSize) ;
+			int pageSize = getLimit();
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = getFromClause() + buildWhereClause()
-					+ buildOrderByClause();
-//			logQuery(queryString);
+			String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
+
+			if (filterPartnerId != null) {
+				session.enableFilter("filterPartner").setParameter("paramPartnerId", filterPartnerId);
+			}
+			if (filterPartnerIdOderVertreter != null) {
+				session.enableFilter("filterPartner").setParameter("paramPartnerId", filterPartnerIdOderVertreter);
+			}
+
+			// logQuery(queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -323,8 +395,8 @@ public class AuftragHandler extends UseCaseHandler {
 			int col = 0;
 
 			// darf Preise sehen.
-			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
-					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF, theClientDto);
+			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF,
+					theClientDto);
 
 			getFeature().setFlrRowCount(rows.length);
 
@@ -333,177 +405,237 @@ public class AuftragHandler extends UseCaseHandler {
 				Object[] o = (Object[]) resultListIterator.next();
 				FLRAuftrag auftrag = (FLRAuftrag) o[0];
 
-				boolean hasERs = false ;
-				long iAnzahlER = 0;
-				if (o[1] != null) {
-					iAnzahlER = (Long) o[1];
-					hasERs = (Long)o[1] > 0 ;
-				}
+				java.util.Date dNaechsterTerminAusPosition = (java.util.Date) o[2];
+
+				long iAnzahlER = o[1] != null ? (Long) o[1] : 0l;
+				boolean hasERs = iAnzahlER > 0;
+
+				Object[] rowToAddCandidate = new Object[colCount];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")] = auftrag.getI_id();
+
 				rows[row][col++] = auftrag.getI_id();
 
 				// Kuerzel fuer die Auftragart
 				String auftragart = null;
 
-				if (auftrag.getAuftragart_c_nr().equals(
-						AuftragServiceFac.AUFTRAGART_ABRUF)) {
+				if (auftrag.getAuftragart_c_nr().equals(AuftragServiceFac.AUFTRAGART_ABRUF)) {
 					auftragart = AuftragServiceFac.AUFTRAGART_ABRUF_SHORT;
-				} else if (auftrag.getAuftragart_c_nr().equals(
-						AuftragServiceFac.AUFTRAGART_RAHMEN)) {
+				} else if (auftrag.getAuftragart_c_nr().equals(AuftragServiceFac.AUFTRAGART_RAHMEN)) {
 					auftragart = AuftragServiceFac.AUFTRAGART_RAHMEN_SHORT;
-				} else if (auftrag.getAuftragart_c_nr().equals(
-						AuftragServiceFac.AUFTRAGART_WIEDERHOLEND)) {
+				} else if (auftrag.getAuftragart_c_nr().equals(AuftragServiceFac.AUFTRAGART_WIEDERHOLEND)) {
 					auftragart = AuftragServiceFac.AUFTRAGART_WIEDERHOLEND_SHORT;
+				} else if (auftrag.getBestellung_i_id_anderermandant() != null) {
+					auftragart = "M";
 				}
 
-				rows[row][col++] = auftragart;
-				rows[row][col++] = auftrag.getC_nr();
-				rows[row][col++] = auftrag.getFlrkunde() == null ? null
-						: auftrag.getFlrkunde().getFlrpartner()
-								.getC_name1nachnamefirmazeile1();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("art")] = auftragart;
 
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("auft.auftragsnummer")] = auftrag.getC_nr();
+
+				
+
+				//PJ22392
+				//if (auftrag.getFlrkunde() != null) {
+				//	rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.kunde")] = getPartnerName(
+				//			auftrag.getFlrkunde().getFlrpartner());
+				//}
+				
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.kunde")] = auftrag.getFlrkunde() == null
+						? null
+						: auftrag.getFlrkunde().getFlrpartner().getC_name1nachnamefirmazeile1();
+				
+				
 				// IMS 1757 die Anschrift des Kunden anzeigen
 				String cAnschrift = null; // eine Liefergruppenanfrage hat
 				// keinen Lieferanten
 
 				if (auftrag.getFlrkunde() != null) {
-					FLRLandplzort flranschrift = auftrag.getFlrkunde()
-							.getFlrpartner().getFlrlandplzort();
+					FLRLandplzort flranschrift = auftrag.getFlrkunde().getFlrpartner().getFlrlandplzort();
 
 					if (flranschrift != null) {
-						cAnschrift = flranschrift.getFlrland().getC_lkz() + "-"
-								+ flranschrift.getC_plz() + " "
+						cAnschrift = flranschrift.getFlrland().getC_lkz() + "-" + flranschrift.getC_plz() + " "
 								+ flranschrift.getFlrort().getC_name();
 					}
 
-					getFeature().buildAddress(row, auftrag) ;
+					getFeature().buildAddress(row, auftrag);
 				}
 
-				rows[row][col++] = cAnschrift;
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.ort")] = cAnschrift;
 				String proj_bestellnummer = "";
+
+				if (bProjekttitelInAG_AB) {
+
+					if (auftrag.getFlrprojekt() != null) {
+						proj_bestellnummer = auftrag.getFlrprojekt().getC_titel() + " | ";
+					} else if (auftrag.getFlrangebot() != null && auftrag.getFlrangebot().getFlrprojekt() != null) {
+						proj_bestellnummer = auftrag.getFlrangebot().getFlrprojekt().getC_titel() + " | ";
+					}
+
+				}
+
 				if (auftrag.getC_bez() != null) {
-					proj_bestellnummer = auftrag.getC_bez();
+					proj_bestellnummer += auftrag.getC_bez();
 				}
 
 				if (auftrag.getC_bestellnummer() != null) {
 					proj_bestellnummer += " | " + auftrag.getC_bestellnummer();
 				}
 
-				rows[row][col++] = proj_bestellnummer;
-				rows[row][col++] = auftrag.getT_liefertermin();
-				rows[row][col++] = auftrag.getT_belegdatum();
+				rowToAddCandidate[getTableColumnInformation()
+						.getViewIndex("auft.projektbestellnummer")] = proj_bestellnummer;
+
+				if (bAuftragspositionstermin_in_auswahl_anzeigen) {
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("lp.termin")] = dNaechsterTerminAusPosition;
+				} else {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.termin")] = auftrag
+							.getT_liefertermin();
+				}
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.datum")] = auftrag.getT_belegdatum();
 
 				if (iAnlegerStattVertreterAnzeigen == 1) {
 					if (auftrag.getFlrpersonalanleger() != null) {
-						rows[row][col++] = auftrag.getFlrpersonalanleger()
-								.getC_kurzzeichen();
-					} else {
-						rows[row][col++] = null;
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.vertreter")] = auftrag
+								.getFlrpersonalanleger().getC_kurzzeichen();
 					}
 				} else if (iAnlegerStattVertreterAnzeigen == 2) {
 					if (auftrag.getFlrpersonalaenderer() != null) {
-						rows[row][col++] = auftrag.getFlrpersonalaenderer()
-								.getC_kurzzeichen();
-					} else {
-						rows[row][col++] = null;
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.vertreter")] = auftrag
+								.getFlrpersonalaenderer().getC_kurzzeichen();
 					}
 				} else {
 					if (auftrag.getFlrvertreter() != null) {
-						rows[row][col++] = auftrag.getFlrvertreter()
-								.getC_kurzzeichen();
-					} else {
-						rows[row][col++] = null;
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.vertreter")] = auftrag
+								.getFlrvertreter().getC_kurzzeichen();
+					}
+				}
+
+				if (bZweiterVertreter) {
+					if (auftrag.getFlrvertreter2() != null) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.vertreter2")] = auftrag
+								.getFlrvertreter2().getC_kurzzeichen();
 					}
 				}
 
 				String sStatus = auftrag.getAuftragstatus_c_nr();
-				rows[row][col++] = getStatusMitUebersetzung(sStatus,
-						auftrag.getT_versandzeitpunkt(),
-						auftrag.getC_versandtype());
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.status")] = getStatusMitUebersetzung(
+						sStatus, auftrag.getT_versandzeitpunkt(), auftrag.getC_versandtype());
 
-				BigDecimal nGesamtwertAuftragInAuftragswaehrung = new BigDecimal(
-						0);
+				BigDecimal nGesamtwertAuftragInAuftragswaehrung = new BigDecimal(0);
 
 				if (auftrag.getN_gesamtauftragswertinauftragswaehrung() != null
-						&& !auftrag.getAuftragstatus_c_nr().equals(
-								AuftragServiceFac.AUFTRAGSTATUS_STORNIERT)) {
-					nGesamtwertAuftragInAuftragswaehrung = auftrag
-							.getN_gesamtauftragswertinauftragswaehrung();
+						&& !auftrag.getAuftragstatus_c_nr().equals(AuftragServiceFac.AUFTRAGSTATUS_STORNIERT)) {
+					nGesamtwertAuftragInAuftragswaehrung = auftrag.getN_gesamtauftragswertinauftragswaehrung();
 				}
 
 				if (bDarfPreiseSehen) {
-					rows[row][col++] = nGesamtwertAuftragInAuftragswaehrung;
-				} else {
-					rows[row][col++] = null;
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("lp.wert")] = nGesamtwertAuftragInAuftragswaehrung;
 				}
-				rows[row][col++] = auftrag.getWaehrung_c_nr_auftragswaehrung();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("waehrung")] = auftrag
+						.getWaehrung_c_nr_auftragswaehrung();
 
 				if (verrechenbarStattRohsAnzeigen) {
 					if (auftrag.getT_verrechenbar() != null) {
-						rows[row][col++] = Boolean.TRUE;
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("auft.verrechenbar")] = Boolean.TRUE;
 					} else {
-						rows[row][col++] = Boolean.FALSE;
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("auft.verrechenbar")] = Boolean.FALSE;
 					}
+
 				} else {
-					rows[row][col++] = Helper
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("detail.label.rohs")] = Helper
 							.short2Boolean(auftrag.getB_rohs());
 				}
 
-				rows[row][col++] = Helper.short2Boolean(auftrag
-						.getB_lieferterminunverbindlich());
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("detail.label.unverbindlich")] = Helper
+						.short2Boolean(auftrag.getB_lieferterminunverbindlich());
 
-				if (auftrag.getB_poenale().equals(new Short((short) 1))) {
-//					rows[row][col++] = iAnzahlER == 0 ? Color.RED : Color.MAGENTA ;
-					rows[row][col++] = hasERs ? Color.MAGENTA : Color.RED ;
-				} else {
-//					rows[row][col++] = iAnzahlER == 0 ? null : Color.BLUE ;
-					rows[row][col++] = hasERs ? Color.BLUE : null ;
+				if (bAuftragsfreigabe) {
+					if (auftrag.getT_auftragsfreigabe() != null) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("auft.freigabe")] = Boolean.TRUE;
+					}
 				}
 
-				getFeature().setInternerKommentar(row, auftrag.getX_internerkommentar() != null);
-				getFeature().setExternerKommentar(row, auftrag.getX_externerkommentar() != null) ;
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.kommentar")] = getKommentarart(
+						auftrag.getX_internerkommentar(), auftrag.getX_externerkommentar());
 
-				++row ;
+				if (bAbbuchungslagerAnzeigen) {
+					if (auftrag.getFlrlager() != null) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("auft.abbuchungslager")] = auftrag
+								.getFlrlager().getC_nr();
+					}
+				}
+
+				if (auftrag.getB_poenale().equals(new Short((short) 1))) {
+					// rows[row][col++] = iAnzahlER == 0 ? Color.RED :
+					// Color.MAGENTA ;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = hasERs ? Color.MAGENTA
+							: Color.RED;
+				} else {
+					// rows[row][col++] = iAnzahlER == 0 ? null : Color.BLUE ;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = hasERs ? Color.BLUE : null;
+				}
+
+				// PJ19958
+				if (rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] == null) {
+					if (Helper.short2boolean(auftrag.getFlrverrechenbar().getB_verrechenbar()) == false) {
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = Color.LIGHT_GRAY;
+					}
+				}
+
+				rows[row] = rowToAddCandidate;
+				getFeature().setInternerKommentar(row, auftrag.getX_internerkommentar());
+				getFeature().setExternerKommentar(row, auftrag.getX_externerkommentar());
+				getFeature().setKundenIIds(row, auftrag);
+				getFeature().setVertreter(row, auftrag);
+				getFeature().setStatusCnr(row, auftrag);
+
+				++row;
 				col = 0;
 			}
 
-			if(getFeature().hasAdresse()) {
+			if (getFeature().hasFeature()) {
 				AuftragQueryResult auftragResult = new AuftragQueryResult(rows, this.getRowCount(), startIndex,
 						endIndex, 0);
-//				auftragResult.setAddresses(getFeature().getAddresses()) ;
+				// auftragResult.setAddresses(getFeature().getAddresses()) ;
 				auftragResult.setFlrData(getFeature().getFlrData());
-				result = auftragResult ;
+				result = auftragResult;
 			} else {
-				result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0) ;
+				result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 			}
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
 
 	/**
 	 * gets the total number of rows represented by the current query.
-	 *
+	 * 
 	 * @return int die Anzehl der Zeilen im Ergebnis
 	 * @see UseCaseHandler#getRowCountFromDataBase()
 	 */
 	protected long getRowCountFromDataBase() {
+		String queryString = "SELECT  COUNT(*) from FLRAuftrag  as flrauftrag "
+				+ " left join flrauftrag.flrprojekt as flrprojekt "
+				+ "left join flrauftrag.flrangebot.flrprojekt as ag_flrprojekt " + buildWhereClause();
+
 		long rowCount = 0;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) from FLRAuftrag  as flrauftrag "
-					+ this.buildWhereClause();
+			session = setFilter(session);
 
-//			logQuery(queryString);
+			if (filterPartnerIdOderVertreter != null) {
+				session.enableFilter("filterPartner").setParameter("paramPartnerId", filterPartnerIdOderVertreter);
+			}
+
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -512,108 +644,83 @@ public class AuftragHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE,
-							he);
-				}
-			}
+			sessionClose(session);
 		}
+
 		return rowCount;
+
 	}
 
 	private boolean isAdresseKunde(FilterKriterium filterKriterium) {
-		return filterKriterium.kritName
-				.equals(AuftragFac.FLR_AUFTRAG_FLRKUNDE
-				+ "."
-				+ LieferantFac.FLR_PARTNER
-				+ "."
-				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1) ;
+		return filterKriterium.kritName.equals(AuftragFac.FLR_AUFTRAG_FLRKUNDE + "." + LieferantFac.FLR_PARTNER + "."
+				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
 	}
 
 	private boolean isAdresseLieferadresse(FilterKriterium filterKriterium) {
-		return filterKriterium.kritName
-				.equals(AuftragFac.FLR_AUFTRAG_FLRKUNDELIEFERADRESSE
-				+ "."
-				+ LieferantFac.FLR_PARTNER
-				+ "."
-				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1) ;
+		return filterKriterium.kritName.equals(AuftragFac.FLR_AUFTRAG_FLRKUNDELIEFERADRESSE + "."
+				+ LieferantFac.FLR_PARTNER + "." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
 	}
 
 	private String buildAdresseFilterImpl(String adresseTyp, FilterKriterium filterKriterium) {
-		StringBuffer where = new StringBuffer() ;
-
+		StringBuffer where = new StringBuffer();
 		ParametermandantDto parameter = null;
 		try {
-			parameter = getParameterFac()
-					.getMandantparameter(
-							theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
 
 		if (parameter.asBoolean()) {
 			if (filterKriterium.isBIgnoreCase()) {
-				where.append(" ( upper(" + FLR_AUFTRAG
-						+ filterKriterium.kritName + ")");
+				where.append(" ( upper(" + FLR_AUFTRAG + filterKriterium.kritName + ")");
 				where.append(" " + filterKriterium.operator);
-				where.append(" "
-						+ filterKriterium.value
-								.toUpperCase());
-				where.append(" OR upper(" + FLR_AUFTRAG
-						+ adresseTyp +".flrpartner.c_kbez" + ")");
+				where.append(" " + filterKriterium.value.toUpperCase());
+				where.append(" OR upper(" + FLR_AUFTRAG + adresseTyp + ".flrpartner.c_kbez" + ")");
 				where.append(" " + filterKriterium.operator);
-				where.append(" "
-						+ filterKriterium.value
-								.toUpperCase() + ") ");
+				where.append(" " + filterKriterium.value.toUpperCase() + ") ");
 			} else {
-				where.append(" " + FLR_AUFTRAG
-						+ filterKriterium.kritName);
+				where.append(" " + FLR_AUFTRAG + filterKriterium.kritName);
 				where.append(" " + filterKriterium.operator);
 				where.append(" " + filterKriterium.value);
-				where.append("OR " + FLR_AUFTRAG
-						+ adresseTyp + ".flrpartner.c_kbez");
+				where.append("OR " + FLR_AUFTRAG + adresseTyp + ".flrpartner.c_kbez");
 				where.append(" " + filterKriterium.operator);
 				where.append(" " + filterKriterium.value);
 			}
 		} else {
 			if (filterKriterium.isBIgnoreCase()) {
-				where.append(" upper(" + FLR_AUFTRAG
-						+ filterKriterium.kritName + ")");
+				where.append(" upper(" + FLR_AUFTRAG + filterKriterium.kritName + ")");
 			} else {
-				where.append(" " + FLR_AUFTRAG
-						+ filterKriterium.kritName);
+				where.append(" " + FLR_AUFTRAG + filterKriterium.kritName);
 			}
 
 			where.append(" " + filterKriterium.operator);
 
 			if (filterKriterium.isBIgnoreCase()) {
-				where.append(" "
-						+ filterKriterium.value
-								.toUpperCase());
+				where.append(" " + filterKriterium.value.toUpperCase());
 			} else {
 				where.append(" " + filterKriterium.value);
 			}
 		}
-		return where.toString() ;
+		return where.toString();
 	}
 
 	private String buildAdresseFilterKunde(FilterKriterium filterKriterium) {
-		return buildAdresseFilterImpl(AuftragFac.FLR_AUFTRAG_FLRKUNDE, filterKriterium) ;
+		AuftragKundeAnsprechpartnerFilterBuilder filterBuilder = new AuftragKundeAnsprechpartnerFilterBuilder(
+				getParameterFac().getSuchenInklusiveKBez(theClientDto.getMandant()));
+		return filterBuilder.buildFirmaAnsprechpartnerFilter(filterKriterium);
+		// return buildAdresseFilterImpl(AuftragFac.FLR_AUFTRAG_FLRKUNDE,
+		// filterKriterium) ;
 	}
 
 	private String buildAdresseFilterLieferadresse(FilterKriterium filterKriterium) {
-		return buildAdresseFilterImpl(AuftragFac.FLR_AUFTRAG_FLRKUNDELIEFERADRESSE, filterKriterium) ;
+		return buildAdresseFilterImpl(AuftragFac.FLR_AUFTRAG_FLRKUNDELIEFERADRESSE, filterKriterium);
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
-	 *
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
+	 * 
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
@@ -623,8 +730,7 @@ public class AuftragHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -638,146 +744,114 @@ public class AuftragHandler extends UseCaseHandler {
 					// veraendert
 					if (filterKriterien[i].kritName.equals("c_nr")) {
 						try {
-							String sValue = super.buildWhereBelegnummer(
-									filterKriterien[i], false);
+							String sValue = super.buildWhereBelegnummer(filterKriterien[i], false,
+									ParameterFac.KATEGORIE_AUFTRAG,
+									ParameterFac.PARAMETER_AUFTRAG_BELEGNUMMERSTARTWERT);
 							// Belegnummernsuche auch in "altem" Jahr, wenn im
 							// neuen noch keines vorhanden ist
 							if (!istBelegnummernInJahr("FLRAuftrag", sValue)) {
-								sValue = super.buildWhereBelegnummer(
-										filterKriterien[i], true);
+								sValue = super.buildWhereBelegnummer(filterKriterien[i], true);
 							}
-							where.append(" " + FLR_AUFTRAG
-									+ filterKriterien[i].kritName);
+							where.append(" " + FLR_AUFTRAG + filterKriterien[i].kritName);
 							where.append(" " + filterKriterien[i].operator);
 							where.append(" " + sValue);
 						} catch (Exception ex) {
-							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-									ex);
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, ex);
 						}
-					} else if(isAdresseKunde(filterKriterien[i])) {
-						where.append(buildAdresseFilterKunde(filterKriterien[i])) ;
-					} else if(isAdresseLieferadresse(filterKriterien[i])) {
-						where.append(buildAdresseFilterLieferadresse(filterKriterien[i])) ;
-					} else if (filterKriterien[i].kritName
-							.equals(AuftragFac.FLR_AUFTRAG_FLRKUNDE
-									+ "."
-									+ LieferantFac.FLR_PARTNER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
+					} else if (isAdresseKunde(filterKriterien[i])) {
+						where.append(buildAdresseFilterKunde(filterKriterien[i]));
+					} else if (isAdresseLieferadresse(filterKriterien[i])) {
+						where.append(buildAdresseFilterLieferadresse(filterKriterien[i]));
+					} else if (filterKriterien[i].kritName.equals(AuftragFac.FLR_AUFTRAG_FLRKUNDE + "."
+							+ LieferantFac.FLR_PARTNER + "." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
 						ParametermandantDto parameter = null;
 						try {
-							parameter = getParameterFac()
-									.getMandantparameter(
-											theClientDto.getMandant(),
-											ParameterFac.KATEGORIE_ALLGEMEIN,
-											ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+							parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+									ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
 						} catch (RemoteException ex) {
 							throwEJBExceptionLPRespectOld(ex);
 						}
-						Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter
-								.getCWertAsObject();
+						Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter.getCWertAsObject();
 						if (bSuchenInklusiveKbez) {
 							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" ( upper(" + FLR_AUFTRAG
-										+ filterKriterien[i].kritName + ")");
+								where.append(" ( upper(" + FLR_AUFTRAG + filterKriterien[i].kritName + ")");
 								where.append(" " + filterKriterien[i].operator);
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase());
-								where.append(" OR upper(" + FLR_AUFTRAG
-										+ "flrkunde.flrpartner.c_kbez" + ")");
+								where.append(" " + filterKriterien[i].value.toUpperCase());
+								where.append(" OR upper(" + FLR_AUFTRAG + "flrkunde.flrpartner.c_kbez" + ")");
 								where.append(" " + filterKriterien[i].operator);
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase() + ") ");
+								where.append(" " + filterKriterien[i].value.toUpperCase() + ") ");
 							} else {
-								where.append(" " + FLR_AUFTRAG
-										+ filterKriterien[i].kritName);
+								where.append(" " + FLR_AUFTRAG + filterKriterien[i].kritName);
 								where.append(" " + filterKriterien[i].operator);
 								where.append(" " + filterKriterien[i].value);
-								where.append("OR " + FLR_AUFTRAG
-										+ "flrkunde.flrpartner.c_kbez");
+								where.append("OR " + FLR_AUFTRAG + "flrkunde.flrpartner.c_kbez");
 								where.append(" " + filterKriterien[i].operator);
 								where.append(" " + filterKriterien[i].value);
 							}
 						} else {
 							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" upper(" + FLR_AUFTRAG
-										+ filterKriterien[i].kritName + ")");
+								where.append(" upper(" + FLR_AUFTRAG + filterKriterien[i].kritName + ")");
 							} else {
-								where.append(" " + FLR_AUFTRAG
-										+ filterKriterien[i].kritName);
+								where.append(" " + FLR_AUFTRAG + filterKriterien[i].kritName);
 							}
 
 							where.append(" " + filterKriterien[i].operator);
 
 							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase());
+								where.append(" " + filterKriterien[i].value.toUpperCase());
 							} else {
 								where.append(" " + filterKriterien[i].value);
 							}
 						}
 					} else if (filterKriterien[i].kritName.equals("c_suche")) {
 
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower(" + FLR_AUFTRAG
-									+ "flrauftragtextsuche."
-									+ filterKriterien[i].kritName + ")");
-						} else {
-							where.append(" " + FLR_AUFTRAG
-									+ "flrauftragtextsuche."
-									+ filterKriterien[i].kritName);
-						}
-
-						where.append(" " + filterKriterien[i].operator);
-
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
-						} else {
-							where.append(" " + filterKriterien[i].value);
-						}
-
+						where.append(buildWhereClauseExtendedSearchWithoutDuplicates(FLR_AUFTRAG_TEXTSUCHE_CLASSNAME,
+								FLR_AUFTRAG, filterKriterien[i]));
 					}
 
 					else if (filterKriterien[i].kritName.equals("c_bez")) {
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" (lower(flrauftrag."
-									+ filterKriterien[i].kritName + ")");
-							where.append(" " + filterKriterien[i].operator);
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
-							where.append(" OR lower(flrauftrag.c_bestellnummer)");
-							where.append(" " + filterKriterien[i].operator);
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase()
-									+ ")");
+						where.append(" (");
+						where.append(buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+								FLR_AUFTRAG + filterKriterien[i].kritName, filterKriterien[i].isBIgnoreCase()));
+						where.append(" OR ");
+						where.append(buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+								FLR_AUFTRAG + "c_bestellnummer", filterKriterien[i].isBIgnoreCase()));
+
+						// 19915
+						if (bProjekttitelInAG_AB) {
+							where.append(" OR ");
+							where.append(
+									buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+											"flrprojekt.c_titel", filterKriterien[i].isBIgnoreCase()));
+							where.append(" OR ");
+							where.append(
+									buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+											"ag_flrprojekt.c_titel", filterKriterien[i].isBIgnoreCase()));
 						}
+
+						where.append(") ");
+					} else if (filterKriterien[i].kritName.equals(AuftragFac.FLR_AUFTRAG_FLRTEILNEHER_PARTNER_ID)) {
+						where.append(" flrteilnehmer.partner_i_id_auftragteilnehmer = ")
+								.append(filterKriterien[i].value);
+						filterPartnerId = Integer.valueOf(filterKriterien[i].value);
 					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower(" + FLR_AUFTRAG
-									+ filterKriterien[i].kritName + ")");
+							where.append(" lower(" + FLR_AUFTRAG + filterKriterien[i].kritName + ")");
 						} else {
-							where.append(" " + FLR_AUFTRAG
-									+ filterKriterien[i].kritName);
+							where.append(" " + FLR_AUFTRAG + filterKriterien[i].kritName);
 						}
 
 						where.append(" " + filterKriterien[i].operator);
 
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
-							if (filterKriterien[i].kritName
-									.equals("flrpaneldatenckey.x_inhalt")) {
+							where.append(" " + filterKriterien[i].value.toLowerCase());
+							if (filterKriterien[i].kritName.equals("flrpaneldatenckey.x_inhalt")) {
 								// Wenn wir nach paneldaten filtern zusaetzlich
 								// nur nach auftragpanels suchen und dort nur in
 								// Textfeldern
-								where.append(" AND flrpaneldatenckey.panel_c_nr = '"
-										+ PanelFac.PANEL_AUFTRAGSEIGENSCHAFTEN
-										+ "'"
-										+ " AND flrpaneldatenckey.flrpanelbeschreibung.c_typ = '"
+								where.append(" AND flrauftrag.flrpaneldatenckey.panel_c_nr = '"
+										+ PanelFac.PANEL_AUFTRAGSEIGENSCHAFTEN + "'"
+										+ " AND flrauftrag.flrpaneldatenckey.flrpanelbeschreibung.c_typ = '"
 										+ PanelFac.TYP_WRAPPERTEXTFIELD + "'");
 							}
 						} else {
@@ -786,9 +860,41 @@ public class AuftragHandler extends UseCaseHandler {
 					}
 				}
 			}
+
+			if (!getBenutzerServicesFac().hatRecht(RechteFac.RECHT_AUFT_DARF_ALLE_SEHEN, theClientDto)) {
+				if (filterAdded) {
+					where.append(" " + booleanOperator);
+				}
+
+				filterAdded = true;
+
+				Integer partnerIId = getPersonalFac().personalFindByPrimaryKeySmall(theClientDto.getIDPersonal())
+						.getPartnerIId();
+
+				where.append(" ( flrteilnehmer2.partner_i_id_auftragteilnehmer =" + partnerIId
+						+ " OR flrauftrag.flrvertreter.flrpartner.i_id=" + partnerIId + ")");
+				filterPartnerIdOderVertreter = Integer.valueOf(partnerIId);
+
+			}
+
 			if (filterAdded) {
 				where.insert(0, " WHERE");
 			}
+		}
+
+		// PJ19406 Nur wenn explizit nach einem(!) Teilnehmer gesucht wird,
+		// wird auch der notwendige Join gemacht. Join ist notwendig, weil
+		// in einer "Collection" (flrauftrag.flrauftragteilnehmer) nicht
+		// noch weiter eingeschraenkt werden kann. ACHTUNG: Wenn z.B. ein
+		// DirektFilter nach dem Teilnehmer hinzugefuegt wird, dann muss
+		// eine andere Such/Filter-Logik implementiert werden
+		// (DISTINCT(AUFTRAG.I_ID))
+		if (filterPartnerId != null) {
+			where.insert(0, " INNER JOIN " + FLR_AUFTRAG + "flrauftragteilnehmer as flrteilnehmer");
+		}
+
+		if (filterPartnerIdOderVertreter != null) {
+			where.insert(0, " LEFT OUTER JOIN " + FLR_AUFTRAG + "flrauftragteilnehmer as flrteilnehmer2");
 		}
 
 		return where.toString();
@@ -797,7 +903,7 @@ public class AuftragHandler extends UseCaseHandler {
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 *
+	 * 
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
@@ -807,14 +913,13 @@ public class AuftragHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_AUFTRAG + kriterien[i].kritName);
+							orderBy.append(kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -825,8 +930,7 @@ public class AuftragHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_AUFTRAG).append(AuftragFac.FLR_AUFTRAG_C_NR)
-						.append(" DESC ");
+				orderBy.append(FLR_AUFTRAG).append(AuftragFac.FLR_AUFTRAG_C_NR).append(" DESC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_I_ID) < 0) {
@@ -838,8 +942,7 @@ public class AuftragHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_AUFTRAG)
-						.append(AuftragFac.FLR_AUFTRAG_I_ID).append(" DESC ");
+				orderBy.append(" ").append(FLR_AUFTRAG).append(AuftragFac.FLR_AUFTRAG_I_ID).append(" DESC ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -851,24 +954,37 @@ public class AuftragHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 *
+	 * 
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "SELECT flrauftrag, (SELECT count(*) FROM FLREingangsrechnungAuftragszuordnung er WHERE er.flrauftrag.i_id=flrauftrag.i_id ) as er from FLRAuftrag  as flrauftrag ";
+
+		String naechster_termin = " flrauftrag.t_liefertermin ";
+
+		if (bAuftragspositionstermin_in_auswahl_anzeigen) {
+			naechster_termin = " (SELECT min(ap.t_uebersteuerterliefertermin) FROM FLRAuftragposition ap WHERE ap.flrartikel.b_kalkulatorisch=0 AND ap.auftragpositionstatus_c_nr NOT IN ('"
+					+ AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT + "','"
+					+ AuftragServiceFac.AUFTRAGPOSITIONSTATUS_STORNIERT
+					+ "') AND ap.flrauftrag.i_id=flrauftrag.i_id ) as naechster_termin ";
+		}
+
+		return "SELECT flrauftrag, "
+				+ "(SELECT count(*) FROM FLREingangsrechnungAuftragszuordnung er WHERE er.flrauftrag.i_id=flrauftrag.i_id ) as er, "
+				+ naechster_termin + " from FLRAuftrag  as flrauftrag "
+				+ " left join flrauftrag.flrprojekt as flrprojekt " + " left join flrauftrag.flrlager as flrlager "
+				+ " left join flrauftrag.flrvertreter2 as flrvertreter2 "
+				+ "left join flrauftrag.flrangebot.flrprojekt as ag_flrprojekt ";
+
 		/*
-		 * +
-		 * " left join flrauftrag.flrkunde.flrpartner.flrlandplzort as flrlandplzort "
-		 * +
-		 * " left join flrauftrag.flrkunde.flrpartner.flrlandplzort.flrort as flrort "
+		 * + " left join flrauftrag.flrkunde.flrpartner.flrlandplzort as flrlandplzort "
+		 * + " left join flrauftrag.flrkunde.flrpartner.flrlandplzort.flrort as flrort "
 		 * +
 		 * " left join flrauftrag.flrkunde.flrpartner.flrlandplzort.flrland as flrland "
 		 * ;
 		 */
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		QueryResult result = null;
 
 		try {
@@ -881,19 +997,31 @@ public class AuftragHandler extends UseCaseHandler {
 				Session session = null;
 
 				try {
+
+					String naechsterTermin = "";
+
+					if (bAuftragspositionstermin_in_auswahl_anzeigen) {
+						naechsterTermin = ",(SELECT count(*) FROM FLREingangsrechnungAuftragszuordnung er WHERE er.flrauftrag.i_id=flrauftrag.i_id ) as er "
+								+ ",(SELECT min(ap.t_uebersteuerterliefertermin) FROM FLRAuftragposition ap WHERE ap.flrartikel.b_kalkulatorisch=0 AND  ap.auftragpositionstatus_c_nr NOT IN ('"
+								+ AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT + "','"
+								+ AuftragServiceFac.AUFTRAGPOSITIONSTATUS_STORNIERT
+								+ "') AND ap.flrauftrag.i_id=flrauftrag.i_id ) as naechster_termin  ";
+					}
+
 					session = factory.openSession();
-					String queryString = "select " + FLR_AUFTRAG
-							+ AuftragFac.FLR_AUFTRAG_I_ID
-							+ FLR_AUFTRAG_FROM_CLAUSE + this.buildWhereClause()
+					String queryString = "select " + FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_I_ID + naechsterTermin
+							+ FLR_AUFTRAG_FROM_CLAUSE
+
+							+ " left join flrauftrag.flrprojekt as flrprojekt "
+							+ " left join flrauftrag.flrangebot.flrprojekt as ag_flrprojekt " + this.buildWhereClause()
 							+ this.buildOrderByClause();
-//					logQuery(queryString);
+					// logQuery(queryString);
 					Query query = session.createQuery(queryString);
 					ScrollableResults scrollableResult = query.scroll();
 					if (scrollableResult != null) {
 						scrollableResult.beforeFirst();
 						while (scrollableResult.next()) {
-							Integer id = (Integer) scrollableResult
-									.getInteger(0);
+							Integer id = (Integer) scrollableResult.getInteger(0);
 							if (selectedId.equals(id)) {
 								rowNumber = scrollableResult.getRowNumber();
 								break;
@@ -904,8 +1032,7 @@ public class AuftragHandler extends UseCaseHandler {
 					try {
 						session.close();
 					} catch (HibernateException he) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_HIBERNATE, he);
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE, he);
 					}
 				}
 			}
@@ -923,161 +1050,164 @@ public class AuftragHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
+	private void setupParameters() {
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_ANZEIGE_ANLEGER_STATT_VERTRETER);
+			iAnlegerStattVertreterAnzeigen = (Integer) parameter.getCWertAsObject();
 
-		if (super.getTableInfo() == null) {
-			String sortierungNachKunde = Facade.NICHT_SORTIERBAR;
-			String sortierungNachOrt = Facade.NICHT_SORTIERBAR;
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_ZUSATZSTATUS_VERRECHENBAR);
+			verrechenbarStattRohsAnzeigen = (Boolean) parameter.getCWertAsObject();
 
-			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ALLGEMEIN,
-								ParameterFac.PARAMETER_ANZEIGE_ANLEGER_STATT_VERTRETER);
-				iAnlegerStattVertreterAnzeigen = (Integer) parameter
-						.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_AUFTRAGSFREIGABE);
+			bAuftragsfreigabe = ((Boolean) parameter.getCWertAsObject());
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_PROJEKT_TITEL_IN_AG_AB_PROJEKT);
+			bProjekttitelInAG_AB = ((Boolean) parameter.getCWertAsObject());
 
-				parameter = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_AUFTRAG,
-						ParameterFac.PARAMETER_ZUSATZSTATUS_VERRECHENBAR);
-				verrechenbarStattRohsAnzeigen = (Boolean) parameter
-						.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_ABBUCHUNGSLAGER_IN_AUSWAHLLISTE);
+			bAbbuchungslagerAnzeigen = ((Boolean) parameter.getCWertAsObject());
 
-			} catch (RemoteException ex) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-			}
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_ZWEITER_VERTRETER);
+			bZweiterVertreter = ((Boolean) parameter.getCWertAsObject());
 
-			if (SORTIERUNG_UI_PARTNER_ORT) {
-				sortierungNachKunde = AuftragFac.FLR_AUFTRAG_FLRKUNDE + "."
-						+ KundeFac.FLR_PARTNER + "."
-						+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1;
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_AUFTRAGSPOSITIONSTERMIN_IN_AUSWAHL_ANZEIGEN);
+			bAuftragspositionstermin_in_auswahl_anzeigen = ((Boolean) parameter.getCWertAsObject());
 
-				sortierungNachOrt = // Sortierung fuers erste mal nach LKZ
-				AuftragFac.FLR_AUFTRAG_FLRKUNDE + "." + KundeFac.FLR_PARTNER
-						+ "." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-						+ "."
-						+ SystemFac.FLR_LP_FLRLAND
-						+ "."
-						+ SystemFac.FLR_LP_LANDLKZ
-						+ ", "
-						+
-						// und dann nach plz
-						AuftragHandler.FLR_AUFTRAG
-						+ AuftragFac.FLR_AUFTRAG_FLRKUNDE + "."
-						+ KundeFac.FLR_PARTNER + "."
-						+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
-						+ SystemFac.FLR_LP_LANDPLZORTPLZ;
-			}
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, String.class,
-							java.util.Date.class,
-							java.util.Date.class,
-							String.class,
-							Icon.class,
-							// flrimage: 0 fuer die
-							// Bestimmung des
-							// Spaltentyps in JTable
-							BigDecimal.class, String.class, Boolean.class,
-							Boolean.class, Color.class },
-					new String[] {
-							"i_id",
-							" ",
-							getTextRespectUISpr("auft.auftragsnummer",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.kunde",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.ort",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("auft.projektbestellnummer",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.termin",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.datum",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.vertreter",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.status",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.wert",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							" ",
-							verrechenbarStattRohsAnzeigen ? getTextRespectUISpr(
-									"auft.verrechenbar",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi())
-									: getTextRespectUISpr("detail.label.rohs",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-							getTextRespectUISpr("detail.label.unverbindlich",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()), " ", },
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-							// Spalte
-							// wird
-							// ausgeblendet
-							QueryParameters.FLR_BREITE_XXS, // Kuerzel
-							// Auftragart
-							QueryParameters.FLR_BREITE_M, // flrspalte: 1 Breite
-							// der Auftragnummer
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // flrspalte
-							// : 2
-							// Breite
-							// des
-							// Kunden
-							// ist
-							// variabel
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_XS, // XS, //
-							// flrimage: 0
-							// Breite fuer
-							// das Icon im
-							// TableHeader
-							// urspr. PREIS
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_WAEHRUNG, 3, 3, 1 },
-					new String[] {
-							AuftragFac.FLR_AUFTRAG_I_ID,
-							Facade.NICHT_SORTIERBAR, // AuftragFac.
-							// FLR_AUFTRAGART_C_NR
-							AuftragFac.FLR_AUFTRAG_C_NR,
-							sortierungNachKunde,
-							sortierungNachOrt,
-							AuftragFac.FLR_AUFTRAG_C_BEZ_PROJEKTBEZEICHNUNG,
-							AuftragFac.FLR_AUFTRAG_T_LIEFERTERMIN,
-							AuftragFac.FLR_AUFTRAG_D_BELEGDATUM,
-							AuftragFac.FLR_AUFTRAG_VERTRETER_I_ID,
-							AuftragFac.FLR_AUFTRAG_AUFTRAGSTATUS_C_NR, // flrimage
-							// : 1
-							// Sortierung
-							// funktioniert
-							// wie
-							// gewohnt
-							AuftragFac.FLR_AUFTRAG_N_GESAMTAUFTRAGSWERT_IN_AUFTRAGSWAEHRUNG,
-							AuftragFac.FLR_AUFTRAG_WAEHRUNG_C_NR_AUFTRAGSWAEHRUNG,
-							verrechenbarStattRohsAnzeigen ? AuftragFac.FLR_AUFTRAG_T_VERRECHENBAR
-									: AuftragFac.FLR_AUFTRAG_B_ROHS,
-							AuftragFac.FLR_AUFTRAG_B_LIEFERTERMINUNVERBINDLICH,
-							Facade.NICHT_SORTIERBAR }));
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+	}
+
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+
+		String sortierungNachKunde = Facade.NICHT_SORTIERBAR;
+		String sortierungNachOrt = Facade.NICHT_SORTIERBAR;
+
+		if (SORTIERUNG_UI_PARTNER_ORT) {
+			sortierungNachKunde = FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_FLRKUNDE + "." + KundeFac.FLR_PARTNER + "."
+					+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1;
+
+			sortierungNachOrt = // Sortierung fuers erste mal nach LKZ
+					FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_FLRKUNDE + "." + KundeFac.FLR_PARTNER + "."
+							+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "." + SystemFac.FLR_LP_FLRLAND + "."
+							+ SystemFac.FLR_LP_LANDLKZ + ", " +
+							// und dann nach plz
+							AuftragHandler.FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_FLRKUNDE + "." + KundeFac.FLR_PARTNER
+							+ "." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "." + SystemFac.FLR_LP_LANDPLZORTPLZ;
 		}
 
-		return super.getTableInfo();
+		TableColumnInformation columns = new TableColumnInformation();
+
+		columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+				FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_I_ID);
+		columns.add("art", String.class, " ", QueryParameters.FLR_BREITE_XXS, Facade.NICHT_SORTIERBAR);
+		columns.add("auft.auftragsnummer", String.class, getTextRespectUISpr("auft.auftragsnummer", mandant, locUi),
+				QueryParameters.FLR_BREITE_M, FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_C_NR);
+		columns.add("lp.kunde", String.class, getTextRespectUISpr("lp.kunde", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, sortierungNachKunde);
+		columns.add("lp.ort", String.class, getTextRespectUISpr("lp.ort", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, sortierungNachOrt);
+		columns.add("auft.projektbestellnummer", String.class,
+				getTextRespectUISpr("auft.projektbestellnummer", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+				FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_C_BEZ_PROJEKTBEZEICHNUNG);
+
+		String sortTermin = FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_T_LIEFERTERMIN;
+
+		if (bAuftragspositionstermin_in_auswahl_anzeigen) {
+			sortTermin = "col_2_0_";
+			/*
+			 * sortTermin =
+			 * "(SELECT min(ap.t_uebersteuerterliefertermin) FROM FLRAuftragposition ap WHERE ap.auftragpositionstatus_c_nr NOT IN ('"
+			 * + AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT + "','" +
+			 * AuftragServiceFac.AUFTRAGPOSITIONSTATUS_STORNIERT +
+			 * "') AND ap.flrauftrag.i_id=flrauftrag.i_id )";
+			 */
+		}
+
+		columns.add("lp.termin", java.util.Date.class, getTextRespectUISpr("lp.termin", mandant, locUi),
+				QueryParameters.FLR_BREITE_M, sortTermin);
+		columns.add("lp.datum", java.util.Date.class, getTextRespectUISpr("lp.datum", mandant, locUi),
+				QueryParameters.FLR_BREITE_M, FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_D_BELEGDATUM);
+
+		String orderVertreter = "flrvertreter.c_kurzzeichen";
+		if (iAnlegerStattVertreterAnzeigen == 1) {
+			orderVertreter = "flrpersonalanleger.c_kurzzeichen";
+		} else if (iAnlegerStattVertreterAnzeigen == 2) {
+			orderVertreter = "flrpersonalaenderer.c_kurzzeichen";
+
+		}
+
+		columns.add("lp.vertreter", String.class, getTextRespectUISpr("lp.vertreter", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, FLR_AUFTRAG + orderVertreter);
+
+		if (bZweiterVertreter) {
+			columns.add("lp.vertreter2", String.class, getTextRespectUISpr("lp.vertreter", mandant, locUi) + " 2",
+					QueryParameters.FLR_BREITE_XS, FLR_AUFTRAG + "flrvertreter2.c_kurzzeichen");
+		}
+
+		columns.add("lp.status", Icon.class, getTextRespectUISpr("lp.status", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_AUFTRAGSTATUS_C_NR);
+		columns.add("lp.wert", BigDecimal.class, getTextRespectUISpr("lp.wert", mandant, locUi),
+				QueryParameters.FLR_BREITE_PREIS,
+				FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_N_GESAMTAUFTRAGSWERT_IN_AUFTRAGSWAEHRUNG);
+		columns.add("waehrung", String.class, " ", QueryParameters.FLR_BREITE_WAEHRUNG,
+				FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_WAEHRUNG_C_NR_AUFTRAGSWAEHRUNG);
+		if (verrechenbarStattRohsAnzeigen) {
+			columns.add("auft.verrechenbar", Boolean.class, getTextRespectUISpr("auft.verrechnen", mandant, locUi), 3,
+					FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_T_VERRECHENBAR,
+					getTextRespectUISpr("auft.kannabgerechnetwerden", mandant, locUi));
+		} else {
+			columns.add("detail.label.rohs", Boolean.class, getTextRespectUISpr("detail.label.rohs", mandant, locUi), 3,
+					FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_B_ROHS);
+		}
+
+		columns.add("detail.label.unverbindlich", Boolean.class,
+				getTextRespectUISpr("auftrag.unverbindlich.short", mandant, locUi), 1,
+				FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_B_LIEFERTERMINUNVERBINDLICH,
+				getTextRespectUISpr("auftrag.unverbindlich.tooltip", mandant, locUi));
+
+		if (bAuftragsfreigabe) {
+			columns.add("auft.freigabe", Boolean.class, getTextRespectUISpr("auft.freigabe", mandant, locUi), 3,
+					FLR_AUFTRAG + AuftragFac.FLR_AUFTRAG_T_AUFTRAGSFREIGABE);
+		}
+
+		// SP5836 Kommentar
+		columns.add("lp.kommentar", String.class, getTextRespectUISpr("lp.kommentar", mandant, locUi), 1,
+				Facade.NICHT_SORTIERBAR);
+
+		if (bAbbuchungslagerAnzeigen) {
+			columns.add("auft.abbuchungslager", String.class,
+					getTextRespectUISpr("auft.abbuchungslager", mandant, locUi), QueryParameters.FLR_BREITE_XS,
+					FLR_AUFTRAG + "flrlager.c_nr");
+		}
+
+		columns.add("Color", Color.class, "", 1, Facade.NICHT_SORTIERBAR);
+
+		return columns;
+	}
+
+	public TableInfo getTableInfo() {
+
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setupParameters();
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
+
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
@@ -1086,8 +1216,7 @@ public class AuftragHandler extends UseCaseHandler {
 		Integer partnerIId = null;
 		try {
 			auftragDto = getAuftragFac().auftragFindByPrimaryKey((Integer) key);
-			partnerIId = getKundeFac().kundeFindByPrimaryKey(
-					auftragDto.getKundeIIdAuftragsadresse(), theClientDto)
+			partnerIId = getKundeFac().kundeFindByPrimaryKey(auftragDto.getKundeIIdAuftragsadresse(), theClientDto)
 					.getPartnerIId();
 		} catch (EJBExceptionLP e) {
 

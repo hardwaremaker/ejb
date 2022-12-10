@@ -33,7 +33,10 @@
 package com.lp.server.angebotstkl.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
+
+import javax.persistence.Column;
 
 public class AgstklDto implements Serializable {
 	/**
@@ -54,6 +57,67 @@ public class AgstklDto implements Serializable {
 	private Timestamp tAnlegen;
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
+
+	private BigDecimal nInitialkosten;
+	
+	public BigDecimal getNInitialkosten() {
+		return nInitialkosten;
+	}
+
+	public void setNInitialkosten(BigDecimal nInitialkosten) {
+		this.nInitialkosten = nInitialkosten;
+	}
+	
+	private String cDateiname;
+
+	public String getCDateiname() {
+		return cDateiname;
+	}
+
+	public void setCDateiname(String cDateiname) {
+		this.cDateiname = cDateiname;
+	}
+
+
+	private String cZeichnungsnummer;
+
+	public String getCZeichnungsnummer() {
+		return cZeichnungsnummer;
+	}
+
+	public void setCZeichnungsnummer(String cZeichnungsnummer) {
+		this.cZeichnungsnummer = cZeichnungsnummer;
+	}
+ 
+	private String datenformatCNr;
+
+	public String getDatenformatCNr() {
+		return datenformatCNr;
+	}
+
+	public void setDatenformatCNr(String datenformatCNr) {
+		this.datenformatCNr = datenformatCNr;
+	}
+
+	private byte[] oMedia;
+
+	public byte[] getOMedia() {
+		return oMedia;
+	}
+
+	public void setOMedia(byte[] oMedia) {
+		this.oMedia = oMedia;
+	}
+
+	private Integer iHoeheDialog;
+
+	public Integer getIHoeheDialog() {
+		return iHoeheDialog;
+	}
+
+	public void setIHoeheDialog(Integer iHoeheDialog) {
+		this.iHoeheDialog = iHoeheDialog;
+	}
 
 	public Integer getIId() {
 		return iId;
@@ -87,6 +151,16 @@ public class AgstklDto implements Serializable {
 
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
+	}
+
+	private Short bDatengeaendert;
+
+	public Short getBDatengeaendert() {
+		return bDatengeaendert;
+	}
+
+	public void setBDatengeaendert(Short bDatengeaendert) {
+		this.bDatengeaendert = bDatengeaendert;
 	}
 
 	public String getBelegartCNr() {
@@ -133,8 +207,7 @@ public class AgstklDto implements Serializable {
 		return fWechselkursmandantwaehrungzuagstklwaehrung;
 	}
 
-	public void setFWechselkursmandantwaehrungzuagstklwaehrung(
-			Double fWechselkursmandantwaehrungzuagstklwaehrung) {
+	public void setFWechselkursmandantwaehrungzuagstklwaehrung(Double fWechselkursmandantwaehrungzuagstklwaehrung) {
 		this.fWechselkursmandantwaehrungzuagstklwaehrung = fWechselkursmandantwaehrungzuagstklwaehrung;
 	}
 
@@ -144,6 +217,16 @@ public class AgstklDto implements Serializable {
 
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
+	}
+
+	private Short bVorlage;
+
+	public Short getBVorlage() {
+		return bVorlage;
+	}
+
+	public void setBVorlage(Short bVorlage) {
+		this.bVorlage = bVorlage;
 	}
 
 	public Timestamp getTAnlegen() {
@@ -188,6 +271,16 @@ public class AgstklDto implements Serializable {
 		this.iEkpreisbasis = iEkpreisbasis;
 	}
 
+	private Integer stuecklisteIId;
+
+	public Integer getStuecklisteIId() {
+		return this.stuecklisteIId;
+	}
+
+	public void setStuecklisteIId(Integer stuecklisteIId) {
+		this.stuecklisteIId = stuecklisteIId;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -196,45 +289,37 @@ public class AgstklDto implements Serializable {
 		AgstklDto that = (AgstklDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr)))
 			return false;
-		if (!(that.belegartCNr == null ? this.belegartCNr == null
-				: that.belegartCNr.equals(this.belegartCNr)))
+		if (!(that.belegartCNr == null ? this.belegartCNr == null : that.belegartCNr.equals(this.belegartCNr)))
 			return false;
-		if (!(that.kundeIId == null ? this.kundeIId == null : that.kundeIId
-				.equals(this.kundeIId)))
+		if (!(that.kundeIId == null ? this.kundeIId == null : that.kundeIId.equals(this.kundeIId)))
 			return false;
 		if (!(that.ansprechpartnerIIdKunde == null ? this.ansprechpartnerIIdKunde == null
-				: that.ansprechpartnerIIdKunde
-						.equals(this.ansprechpartnerIIdKunde)))
+				: that.ansprechpartnerIIdKunde.equals(this.ansprechpartnerIIdKunde)))
 			return false;
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez)))
+		if (!(that.cBez == null ? this.cBez == null : that.cBez.equals(this.cBez)))
 			return false;
-		if (!(that.waehrungCNr == null ? this.waehrungCNr == null
-				: that.waehrungCNr.equals(this.waehrungCNr)))
+		if (!(that.waehrungCNr == null ? this.waehrungCNr == null : that.waehrungCNr.equals(this.waehrungCNr)))
 			return false;
-		if (!(that.fWechselkursmandantwaehrungzuagstklwaehrung == null ? this.fWechselkursmandantwaehrungzuagstklwaehrung == null
+		if (!(that.fWechselkursmandantwaehrungzuagstklwaehrung == null
+				? this.fWechselkursmandantwaehrungzuagstklwaehrung == null
 				: that.fWechselkursmandantwaehrungzuagstklwaehrung
 						.equals(this.fWechselkursmandantwaehrungzuagstklwaehrung)))
 			return false;
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen)))
 			return false;
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen)))
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
-		if (!(that.tBelegdatum == null ? this.tBelegdatum == null
-				: that.tBelegdatum.equals(this.tBelegdatum)))
+		if (!(that.tBelegdatum == null ? this.tBelegdatum == null : that.tBelegdatum.equals(this.tBelegdatum)))
 			return false;
 		return true;
 	}
@@ -249,8 +334,7 @@ public class AgstklDto implements Serializable {
 		result = 37 * result + this.ansprechpartnerIIdKunde.hashCode();
 		result = 37 * result + this.cBez.hashCode();
 		result = 37 * result + this.waehrungCNr.hashCode();
-		result = 37 * result
-				+ this.fWechselkursmandantwaehrungzuagstklwaehrung.hashCode();
+		result = 37 * result + this.fWechselkursmandantwaehrungzuagstklwaehrung.hashCode();
 		result = 37 * result + this.personalIIdAnlegen.hashCode();
 		result = 37 * result + this.tAnlegen.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
@@ -267,18 +351,14 @@ public class AgstklDto implements Serializable {
 		returnStringBuffer.append("cNr:").append(cNr);
 		returnStringBuffer.append("belegartCNr:").append(belegartCNr);
 		returnStringBuffer.append("kundeIId:").append(kundeIId);
-		returnStringBuffer.append("ansprechpartnerIIdKunde:").append(
-				ansprechpartnerIIdKunde);
+		returnStringBuffer.append("ansprechpartnerIIdKunde:").append(ansprechpartnerIIdKunde);
 		returnStringBuffer.append("cBez:").append(cBez);
 		returnStringBuffer.append("waehrungCNr:").append(waehrungCNr);
-		returnStringBuffer.append(
-				"fWechselkursmandantwaehrungzuagstklwaehrung:").append(
-				fWechselkursmandantwaehrungzuagstklwaehrung);
-		returnStringBuffer.append("personalIIdAnlegen:").append(
-				personalIIdAnlegen);
+		returnStringBuffer.append("fWechselkursmandantwaehrungzuagstklwaehrung:")
+				.append(fWechselkursmandantwaehrungzuagstklwaehrung);
+		returnStringBuffer.append("personalIIdAnlegen:").append(personalIIdAnlegen);
 		returnStringBuffer.append("tAnlegen:").append(tAnlegen);
-		returnStringBuffer.append("personalIIdAendern:").append(
-				personalIIdAendern);
+		returnStringBuffer.append("personalIIdAendern:").append(personalIIdAendern);
 		returnStringBuffer.append("tAendern:").append(tAendern);
 		returnStringBuffer.append("tBelegdatum:").append(tBelegdatum);
 		returnStringBuffer.append("]");

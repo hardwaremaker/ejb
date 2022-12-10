@@ -37,6 +37,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 
+import com.lp.server.system.fastlanereader.generated.FLRPositionsartspr;
+
 /** @author Hibernate CodeGenerator */
 public class FLRProformarechnungpositionsart implements Serializable {
 	
@@ -53,11 +55,11 @@ public class FLRProformarechnungpositionsart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> proformarechnungpositionsart_positionsart_set;
+	private Set<FLRPositionsartspr> proformarechnungpositionsart_positionsart_set;
 
 	/** full constructor */
 	public FLRProformarechnungpositionsart(String positionsart_c_nr,
-			Integer i_sort, Set<?> proformarechnungpositionsart_positionsart_set) {
+			Integer i_sort, Set<FLRPositionsartspr> proformarechnungpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.i_sort = i_sort;
 		this.proformarechnungpositionsart_positionsart_set = proformarechnungpositionsart_positionsart_set;
@@ -69,7 +71,7 @@ public class FLRProformarechnungpositionsart implements Serializable {
 
 	/** minimal constructor */
 	public FLRProformarechnungpositionsart(String positionsart_c_nr,
-			Set<?> proformarechnungpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> proformarechnungpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.proformarechnungpositionsart_positionsart_set = proformarechnungpositionsart_positionsart_set;
 	}
@@ -90,12 +92,12 @@ public class FLRProformarechnungpositionsart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getProformarechnungpositionsart_positionsart_set() {
+	public Set<FLRPositionsartspr> getProformarechnungpositionsart_positionsart_set() {
 		return this.proformarechnungpositionsart_positionsart_set;
 	}
 
 	public void setProformarechnungpositionsart_positionsart_set(
-			Set<?> proformarechnungpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> proformarechnungpositionsart_positionsart_set) {
 		this.proformarechnungpositionsart_positionsart_set = proformarechnungpositionsart_positionsart_set;
 	}
 

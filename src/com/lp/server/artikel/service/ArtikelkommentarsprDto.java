@@ -35,8 +35,6 @@ package com.lp.server.artikel.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
-import javax.persistence.Column;
-
 public class ArtikelkommentarsprDto implements Serializable {
 	/**
 	 * 

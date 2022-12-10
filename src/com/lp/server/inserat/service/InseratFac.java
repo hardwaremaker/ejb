@@ -79,7 +79,7 @@ public interface InseratFac {
 			TheClientDto theClientDto);
 
 	
-	public BigDecimal berechneWerbeabgabeLFEinesInserates(Integer inseratIId,
+	public BigDecimal berechneWerbeabgabeLFEinesInserates(Integer inseratIId,BigDecimal teilbetrag,
 			TheClientDto theClientDto);
 	
 	public void storniereInserat(Integer inseratIId, TheClientDto theClientDto);

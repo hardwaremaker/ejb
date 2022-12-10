@@ -152,12 +152,10 @@ public class LandplzortDto implements Serializable {
 		// that.landCLkz.equals(this.landCLkz))) {
 		// return false;
 		// }
-		if (!(that.cPlz == null ? this.cPlz == null : that.cPlz
-				.equals(this.cPlz))) {
+		if (!(that.cPlz == null ? this.cPlz == null : that.cPlz.equals(this.cPlz))) {
 			return false;
 		}
-		if (!(that.ortIId == null ? this.ortIId == null : that.ortIId
-				.equals(this.ortIId))) {
+		if (!(that.ortIId == null ? this.ortIId == null : that.ortIId.equals(this.ortIId))) {
 			return false;
 		}
 		return true;
@@ -184,19 +182,25 @@ public class LandplzortDto implements Serializable {
 	// Formater
 	// ******************************************************************
 	public String formatLandPlzOrt() {
-			return landDto.getCLkz() + " " + getCPlz() + " "
-					+ getOrtDto().getCName();
+		return landDto.getCLkz() + " " + getCPlz() + " " + getOrtDto().getCName();
 	}
 
 	public String formatPlzOrt() {
+		return formatPlzOrt(false);
+	}
 
-		if (getLandDto() != null
-				&& Helper.short2boolean(getLandDto().getBPlznachort())) {
-			return getOrtDto().getCName() + " " + getCPlz();
+	public String formatPlzOrt(boolean bAusland) {
+
+		String ort = getOrtDto().getCName();
+		if (ort != null && bAusland) {
+			ort = ort.toUpperCase();
+		}
+
+		if (getLandDto() != null && Helper.short2boolean(getLandDto().getBPlznachort())) {
+			return ort + " " + getCPlz();
 		} else {
-			return getCPlz() + " " + getOrtDto().getCName();
+			return getCPlz() + " " + ort;
 		}
 
 	}
-
 }

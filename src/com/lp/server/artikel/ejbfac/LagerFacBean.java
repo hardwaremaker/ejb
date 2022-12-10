@@ -35,16 +35,21 @@ package com.lp.server.artikel.ejbfac;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import javax.ejb.EJBException;
@@ -63,38 +68,51 @@ import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRField;
 
 import org.hibernate.Criteria;
-import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Expression;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.engine.SessionFactoryImplementor;
+import org.hibernate.exception.SQLGrammarException;
+import org.jfree.util.Log;
 
+import com.lp.server.angebot.fastlanereader.generated.FLRAngebotpositionReport;
 import com.lp.server.angebotstkl.service.AgstklDto;
+import com.lp.server.artikel.ejb.Artgru;
 import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.artikel.ejb.Artikellager;
 import com.lp.server.artikel.ejb.ArtikellagerPK;
 import com.lp.server.artikel.ejb.Artikellagerplaetze;
+import com.lp.server.artikel.ejb.ArtikellagerplaetzeQuery;
+import com.lp.server.artikel.ejb.Artikelsnrchnr;
 import com.lp.server.artikel.ejb.Geraetesnr;
 import com.lp.server.artikel.ejb.Handlagerbewegung;
 import com.lp.server.artikel.ejb.Lager;
+import com.lp.server.artikel.ejb.LagerQuery;
 import com.lp.server.artikel.ejb.Lagerabgangursprung;
 import com.lp.server.artikel.ejb.LagerabgangursprungPK;
 import com.lp.server.artikel.ejb.Lagerart;
 import com.lp.server.artikel.ejb.Lagerartspr;
 import com.lp.server.artikel.ejb.LagerartsprPK;
 import com.lp.server.artikel.ejb.Lagerbewegung;
+import com.lp.server.artikel.ejb.LagerbewegungQuery;
 import com.lp.server.artikel.ejb.Lagerplatz;
+import com.lp.server.artikel.ejb.LagerplatzQuery;
 import com.lp.server.artikel.ejb.Lagerumbuchung;
 import com.lp.server.artikel.ejb.LagerumbuchungPK;
 import com.lp.server.artikel.ejb.Lagerzugangursprung;
 import com.lp.server.artikel.ejb.LagerzugangursprungPK;
+import com.lp.server.artikel.ejb.LagerzugangursprungQuery;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikellager;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikellagerplaetze;
+import com.lp.server.artikel.fastlanereader.generated.FLRGeraetesnr;
 import com.lp.server.artikel.fastlanereader.generated.FLRHandlagerbewegung;
+import com.lp.server.artikel.fastlanereader.generated.FLRLagerabgangursprung;
 import com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung;
+import com.lp.server.artikel.fastlanereader.generated.FLRLagerwert;
+import com.lp.server.artikel.fastlanereader.generated.FLRLagerzugangursprung;
 import com.lp.server.artikel.fastlanereader.generated.FLRWareneingangsreferez;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
@@ -108,7 +126,6 @@ import com.lp.server.artikel.service.GeraetesnrDto;
 import com.lp.server.artikel.service.GeraetesnrDtoAssembler;
 import com.lp.server.artikel.service.HandlagerbewegungDto;
 import com.lp.server.artikel.service.HandlagerbewegungDtoAssembler;
-import com.lp.server.artikel.service.HerstellerDto;
 import com.lp.server.artikel.service.InventurDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.LagerDtoAssembler;
@@ -122,6 +139,9 @@ import com.lp.server.artikel.service.LagerartsprDtoAssembler;
 import com.lp.server.artikel.service.LagerbewegungDto;
 import com.lp.server.artikel.service.LagerbewegungDtoAssembler;
 import com.lp.server.artikel.service.LagerplatzDto;
+import com.lp.server.artikel.service.LagerplatzInfoDto;
+import com.lp.server.artikel.service.LagerstandInfoDto;
+import com.lp.server.artikel.service.LagerstandInfoEntryDto;
 import com.lp.server.artikel.service.LagerumbuchungDto;
 import com.lp.server.artikel.service.LagerumbuchungDtoAssembler;
 import com.lp.server.artikel.service.LagerzugangursprungDto;
@@ -131,6 +151,7 @@ import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.artikel.service.VerleihDto;
 import com.lp.server.artikel.service.WarenabgangsreferenzDto;
 import com.lp.server.artikel.service.WarenzugangsreferenzDto;
+import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragseriennrn;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.benutzer.ejb.Lagerrolle;
 import com.lp.server.bestellung.ejb.Wareneingangsposition;
@@ -142,8 +163,10 @@ import com.lp.server.bestellung.service.WareneingangDto;
 import com.lp.server.bestellung.service.WareneingangspositionDto;
 import com.lp.server.fertigung.ejb.Los;
 import com.lp.server.fertigung.ejb.Losablieferung;
+import com.lp.server.fertigung.ejb.Lossollmaterial;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosablieferung;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
+import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
 import com.lp.server.fertigung.service.LosistmaterialDto;
@@ -157,6 +180,7 @@ import com.lp.server.lieferschein.service.LieferscheinpositionFac;
 import com.lp.server.partner.ejb.Kunde;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.LieferantDto;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerDtoSmall;
 import com.lp.server.personal.service.ArtikellagerplaetzeDtoAssembler;
 import com.lp.server.personal.service.LagerplatzDtoAssembler;
@@ -168,36 +192,46 @@ import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.server.reklamation.fastlanereader.generated.FLRReklamation;
 import com.lp.server.reklamation.service.ReklamationFac;
+import com.lp.server.stueckliste.ejb.Stuecklisteposition;
 import com.lp.server.stueckliste.service.MontageartDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.system.jcr.service.JCRDocDto;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
-import com.lp.server.system.service.LandDto;
+import com.lp.server.system.service.KeyvalueDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.PanelFac;
 import com.lp.server.system.service.PaneldatenDto;
 import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParameteranwenderDto;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.ProtokollDto;
 import com.lp.server.system.service.SystemFac;
+import com.lp.server.system.service.SystemServicesFac;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.ArtikelId;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
+import com.lp.server.util.logger.EventLogger;
+import com.lp.server.util.logger.LogEventProducer;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.HelperReport;
 import com.lp.util.LPDatenSubreport;
 
 @Stateless
 public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	@PersistenceContext
 	private EntityManager em;
+
+	private EventLogger evLog = new EventLogger(getEventLoggerFac(), LagerFacBean.class);
+
 	private Lagerart lagerart;
 	private Lagerartspr lagerartspr;
 
@@ -213,50 +247,50 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	private static int REPORT_SERIENNUMMERN_ZEITPUNKT = 6;
 	private static int REPORT_SERIENNUMMERN_SUBREPORT_GERAETESNR = 7;
 	private static int REPORT_SERIENNUMMERN_VERSION = 8;
+	private static int REPORT_SERIENNUMMERN_SORTIERUNG = 9;
+	private static int REPORT_SERIENNUMMERN_ARTIKELREFERENZNUMMER = 10;
+	private static int REPORT_SERIENNUMMERN_LAGER = 11;
+	private static int REPORT_SERIENNUMMERN_ANZAHL_SPALTEN = 12;
 
 	private Boolean bLagerLogging = null;;
 
 	public String CHARGENNUMMER_KEINE_CHARGE = "KEINE_CHARGE";
 
-	public BelegInfos getBelegInfos(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, TheClientDto theClientDto) {
+	public BelegInfos getBelegInfos(String belegartCNr, Integer belegartIId, Integer belegartpositionIId,
+			TheClientDto theClientDto) {
 		BelegInfos belegInfos = new BelegInfos();
+		belegInfos.setBelegart(belegartCNr);
+		belegInfos.setBelegartpositionIId(belegartpositionIId);
 		try {
 			// AUSGANGSBELEGE
 			if (belegartCNr.equals(LocaleFac.BELEGART_AGSTUECKLISTE)) {
-				AgstklDto dto = getAngebotstklFac().agstklFindByPrimaryKey(
-						belegartIId);
+				AgstklDto dto = getAngebotstklFac().agstklFindByPrimaryKey(belegartIId);
 				belegInfos.setBelegdatum(dto.getTBelegdatum());
 				belegInfos.setBelegnummer(dto.getCNr());
+				belegInfos.setMandantCNr(dto.getMandantCNr());
 
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						dto.getKundeIId(), theClientDto);
-				belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-						.formatFixName1Name2());
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(dto.getKundeIId(), theClientDto);
+				belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
 				belegInfos.setPartnerIId(kundeDto.getPartnerIId());
 				belegInfos.setBelegbezeichnung(dto.getCBez());
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_LIEFERSCHEIN)
 					|| belegartCNr.equals(LocaleFac.BELEGART_LSZIELLAGER)) {
-				LieferscheinDto dto = getLieferscheinFac()
-						.lieferscheinFindByPrimaryKey(belegartIId, theClientDto);
+				LieferscheinDto dto = getLieferscheinFac().lieferscheinFindByPrimaryKey(belegartIId, theClientDto);
 
 				if (belegartpositionIId != null) {
 
-					Lieferscheinposition lieferscheinposition = em.find(
-							Lieferscheinposition.class, belegartpositionIId);
+					Lieferscheinposition lieferscheinposition = em.find(Lieferscheinposition.class,
+							belegartpositionIId);
 
-					if (lieferscheinposition != null
-							&& lieferscheinposition.getVerleihIId() != null) {
+					if (lieferscheinposition != null && lieferscheinposition.getVerleihIId() != null) {
 						VerleihDto verleihDto = getArtikelFac()
-								.verleihFindByPrimaryKey(
-										lieferscheinposition.getVerleihIId());
+								.verleihFindByPrimaryKey(lieferscheinposition.getVerleihIId());
 						belegInfos.setVerleihfaktor(verleihDto.getFFaktor());
 						belegInfos.setVerleihtage(verleihDto.getITage());
 					}
 
 					if (lieferscheinposition != null) {
-						belegInfos.setBdMaterialzuschlag(lieferscheinposition
-								.getNMaterialzuschlag());
+						belegInfos.setBdMaterialzuschlag(lieferscheinposition.getNMaterialzuschlag());
 					}
 				}
 
@@ -265,28 +299,26 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				belegInfos.setBelegdatum(dto.getTBelegdatum());
 				belegInfos.setBelegnummer(dto.getCNr());
 
-				Kunde kunde = em.find(Kunde.class,
-						dto.getKundeIIdLieferadresse());
+				belegInfos.setMandantCNr(dto.getMandantCNr());
 
-				PartnerDtoSmall pDto = getPartnerFac()
-						.partnerFindByPrimaryKeySmall(kunde.getPartnerIId(),
-								theClientDto);
+				Kunde kunde = em.find(Kunde.class, dto.getKundeIIdLieferadresse());
+
+				PartnerDtoSmall pDto = getPartnerFac().partnerFindByPrimaryKeySmall(kunde.getPartnerIId(),
+						theClientDto);
 
 				belegInfos.setKundeLieferant(pDto.formatFixName1Name2());
 				belegInfos.setPartnerIId(kunde.getPartnerIId());
 				belegInfos.setBelegbezeichnung(dto.getCBezProjektbezeichnung());
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_AUFTRAG)) {
-				AuftragDto dto = getAuftragFac().auftragFindByPrimaryKey(
-						belegartIId);
+				AuftragDto dto = getAuftragFac().auftragFindByPrimaryKey(belegartIId);
 				belegInfos.setBelegdatum(dto.getTBelegdatum());
 				belegInfos.setBelegnummer(dto.getCNr());
 
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						dto.getKundeIIdLieferadresse(), theClientDto);
-				belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-						.formatFixName1Name2());
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(dto.getKundeIIdLieferadresse(), theClientDto);
+				belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
 				belegInfos.setPartnerIId(kundeDto.getPartnerIId());
 				belegInfos.setBelegbezeichnung(dto.getCBezProjektbezeichnung());
+				belegInfos.setMandantCNr(dto.getMandantCNr());
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_RECHNUNG)) {
 
 				com.lp.server.rechnung.service.RechnungDto rechnungDto = getRechnungFac()
@@ -294,89 +326,75 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				if (belegartpositionIId != null) {
 					RechnungPositionDto rechnungPositionDto = getRechnungFac()
-							.rechnungPositionFindByPrimaryKeyOhneExc(
-									belegartpositionIId);
-					if (rechnungPositionDto != null
-							&& rechnungPositionDto.getVerleihIId() != null) {
+							.rechnungPositionFindByPrimaryKeyOhneExc(belegartpositionIId);
+					if (rechnungPositionDto != null && rechnungPositionDto.getVerleihIId() != null) {
 						VerleihDto verleihDto = getArtikelFac()
-								.verleihFindByPrimaryKey(
-										rechnungPositionDto.getVerleihIId());
+								.verleihFindByPrimaryKey(rechnungPositionDto.getVerleihIId());
 						belegInfos.setVerleihfaktor(verleihDto.getFFaktor());
 						belegInfos.setVerleihtage(verleihDto.getITage());
 					}
 					if (rechnungPositionDto != null) {
-						belegInfos.setBdMaterialzuschlag(rechnungPositionDto
-								.getNMaterialzuschlag());
+						belegInfos.setBdMaterialzuschlag(rechnungPositionDto.getNMaterialzuschlag());
 					}
 				}
 
-				belegInfos.setBelegdatum(new Timestamp(rechnungDto
-						.getTBelegdatum().getTime()));
+				belegInfos.setBelegdatum(new Timestamp(rechnungDto.getTBelegdatum().getTime()));
 				belegInfos.setBelegnummer(rechnungDto.getCNr());
+				belegInfos.setMandantCNr(rechnungDto.getMandantCNr());
 
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						rechnungDto.getKundeIId(), theClientDto);
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(rechnungDto.getKundeIId(), theClientDto);
 				belegInfos.setPartnerIId(kundeDto.getPartnerIId());
-				belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-						.formatFixName1Name2());
+				belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
+
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_ANGEBOT)) {
 
 				com.lp.server.angebot.service.AngebotDto angebotDto = getAngebotFac()
 						.angebotFindByPrimaryKey(belegartIId, theClientDto);
-				belegInfos.setBelegdatum(new Timestamp(angebotDto
-						.getTBelegdatum().getTime()));
+				belegInfos.setBelegdatum(new Timestamp(angebotDto.getTBelegdatum().getTime()));
 				belegInfos.setBelegnummer(angebotDto.getCNr());
+				belegInfos.setMandantCNr(angebotDto.getMandantCNr());
 
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						angebotDto.getKundeIIdAngebotsadresse(), theClientDto);
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(angebotDto.getKundeIIdAngebotsadresse(),
+						theClientDto);
 				belegInfos.setPartnerIId(kundeDto.getPartnerIId());
-				belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-						.formatFixName1Name2());
+				belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
 			}
 			// EINGANGSBELEGE
 			else if (belegartCNr.equals(LocaleFac.BELEGART_BESTELLUNG)) {
-				BestellungDto dto = getBestellungFac()
-						.bestellungFindByPrimaryKey(belegartIId);
+				BestellungDto dto = getBestellungFac().bestellungFindByPrimaryKey(belegartIId);
 				belegInfos.setBelegnummer(dto.getCNr());
-				if (belegartpositionIId != null) {
-					WareneingangspositionDto wareneingangspositionDto = getWareneingangFac()
-							.wareneingangspositionFindByPrimaryKey(
-									belegartpositionIId);
-					WareneingangDto wareneingangDto = getWareneingangFac()
-							.wareneingangFindByPrimaryKey(
-									wareneingangspositionDto
-											.getWareneingangIId());
-					belegInfos.setBelegdatum(wareneingangDto
-							.getTWareneingangsdatum());
+				belegInfos.setMandantCNr(dto.getMandantCNr());
 
-					BestellpositionDto bestPos = getBestellpositionFac()
-							.bestellpositionFindByPrimaryKey(
-									wareneingangspositionDto
-											.getBestellpositionIId());
-					belegInfos.setBdMaterialzuschlag(bestPos
-							.getNMaterialzuschlag());
-				} else {
-					belegInfos.setBelegdatum(new Timestamp(dto.getDBelegdatum()
-							.getTime()));
-				}
-
-				if (dto.getLieferartIId() != null) {
+				if (dto.getLieferantIIdBestelladresse() != null) {
 					LieferantDto lieferantDto = getLieferantFac()
-							.lieferantFindByPrimaryKey(
-									dto.getLieferantIIdBestelladresse(),
-									theClientDto);
-					belegInfos.setKundeLieferant(lieferantDto.getPartnerDto()
-							.formatFixName1Name2());
+							.lieferantFindByPrimaryKey(dto.getLieferantIIdBestelladresse(), theClientDto);
+					belegInfos.setKundeLieferant(lieferantDto.getPartnerDto().formatFixName1Name2());
 					belegInfos.setPartnerIId(lieferantDto.getPartnerIId());
 				}
-				belegInfos.setBelegbezeichnung(dto.getCBez());
-			} else if (belegartCNr.equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
-				LosDto losDto = getFertigungFac().losFindByPrimaryKey(
-						belegartIId);
 
 				if (belegartpositionIId != null) {
-					Losablieferung losablieferung = em.find(
-							Losablieferung.class, belegartpositionIId);
+					WareneingangspositionDto wareneingangspositionDto = getWareneingangFac()
+							.wareneingangspositionFindByPrimaryKeyOhneExc(belegartpositionIId);
+					if (wareneingangspositionDto != null) {
+						WareneingangDto wareneingangDto = getWareneingangFac()
+								.wareneingangFindByPrimaryKey(wareneingangspositionDto.getWareneingangIId());
+						belegInfos.setBelegdatum(wareneingangDto.getTWareneingangsdatum());
+						belegInfos.setZusatz(wareneingangDto.getCLieferscheinnr());
+
+						BestellpositionDto bestPos = getBestellpositionFac()
+								.bestellpositionFindByPrimaryKey(wareneingangspositionDto.getBestellpositionIId());
+						belegInfos.setBdMaterialzuschlag(bestPos.getNMaterialzuschlag());
+					}
+				} else {
+					belegInfos.setBelegdatum(new Timestamp(dto.getDBelegdatum().getTime()));
+				}
+
+				belegInfos.setBelegbezeichnung(dto.getCBez());
+			} else if (belegartCNr.equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+				LosDto losDto = getFertigungFac().losFindByPrimaryKey(belegartIId);
+				belegInfos.setMandantCNr(losDto.getMandantCNr());
+				if (belegartpositionIId != null) {
+					Losablieferung losablieferung = em.find(Losablieferung.class, belegartpositionIId);
 					if (losablieferung != null) {
 						belegInfos.setBelegdatum(losablieferung.getTAendern());
 					}
@@ -389,81 +407,65 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				// Kunde nur, wenn auftragbezogen
 				if (losDto.getAuftragIId() != null) {
 					// losDto.getAuftragIId()
-					AuftragDto auftragDto = getAuftragFac()
-							.auftragFindByPrimaryKeyOhneExc(
-									losDto.getAuftragIId());
+					AuftragDto auftragDto = getAuftragFac().auftragFindByPrimaryKeyOhneExc(losDto.getAuftragIId());
 					if (auftragDto != null) {
-						KundeDto kundeDto = getKundeFac()
-								.kundeFindByPrimaryKey(
-										auftragDto.getKundeIIdAuftragsadresse(),
-										theClientDto);
-						belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-								.formatFixName1Name2());
+						KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(auftragDto.getKundeIIdAuftragsadresse(),
+								theClientDto);
+						belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
 						belegInfos.setPartnerIId(kundeDto.getPartnerIId());
 					}
 				}
 
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_INVENTUR)) {
 
-				InventurDto inventurDto = getInventurFac()
-						.inventurFindByPrimaryKey(belegartIId, theClientDto);
-				belegInfos.setBelegnummer(inventurDto.getCBez()
-						+ "("
-						+ Helper.formatDatum(inventurDto.getTInventurdatum(),
-								theClientDto.getLocUi()) + ")");
+				InventurDto inventurDto = getInventurFac().inventurFindByPrimaryKey(belegartIId, theClientDto);
+				belegInfos.setBelegnummer(inventurDto.getCBez() + "("
+						+ Helper.formatDatum(inventurDto.getTInventurdatum(), theClientDto.getLocUi()) + ")");
+
+				belegInfos.setMandantCNr(inventurDto.getMandantCNr());
+
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_GUTSCHRIFT)) {
 				com.lp.server.rechnung.service.RechnungDto rechnungDto = getRechnungFac()
 						.rechnungFindByPrimaryKey(belegartIId);
-				belegInfos.setBelegdatum(new Timestamp(rechnungDto
-						.getTBelegdatum().getTime()));
+				belegInfos.setBelegdatum(new Timestamp(rechnungDto.getTBelegdatum().getTime()));
 				belegInfos.setBelegnummer(rechnungDto.getCNr());
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						rechnungDto.getKundeIId(), theClientDto);
-				belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-						.formatFixName1Name2());
+				belegInfos.setMandantCNr(rechnungDto.getMandantCNr());
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(rechnungDto.getKundeIId(), theClientDto);
+				belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
 				belegInfos.setPartnerIId(kundeDto.getPartnerIId());
 
 				if (belegartpositionIId != null) {
 					RechnungPositionDto rechnungPositionDto = getRechnungFac()
-							.rechnungPositionFindByPrimaryKeyOhneExc(
-									belegartpositionIId);
+							.rechnungPositionFindByPrimaryKeyOhneExc(belegartpositionIId);
 					if (rechnungPositionDto != null) {
-						belegInfos.setBdMaterialzuschlag(rechnungPositionDto
-								.getNMaterialzuschlag());
+						belegInfos.setBdMaterialzuschlag(rechnungPositionDto.getNMaterialzuschlag());
 					}
 				}
 
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_HAND)) {
 				HandlagerbewegungDto dto = null;
-				dto = getLagerFac().handlagerbewegungFindByPrimaryKey(
-						belegartIId, theClientDto);
+				dto = getLagerFac().handlagerbewegungFindByPrimaryKey(belegartIId, theClientDto);
 				belegInfos.setBelegdatum(dto.getTBuchungszeit());
 				belegInfos.setBelegnummer(dto.getIId() + "");
 				belegInfos.setKundeLieferant(dto.getCKommentar());
+				belegInfos.setMandantCNr(dto.getLagerDto().getMandantCNr());
+
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_LOS)) {
-				LosDto losDto = getFertigungFac().losFindByPrimaryKey(
-						belegartIId);
+				LosDto losDto = getFertigungFac().losFindByPrimaryKey(belegartIId);
 				belegInfos.setBelegnummer(losDto.getCNr());
 				belegInfos.setBelegbezeichnung(losDto.getCProjekt());
-
+				belegInfos.setMandantCNr(losDto.getMandantCNr());
 				if (losDto.getKundeIId() != null) {
-					KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-							losDto.getKundeIId(), theClientDto);
-					belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-							.formatFixName1Name2());
+					KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(losDto.getKundeIId(), theClientDto);
+					belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
 					belegInfos.setPartnerIId(kundeDto.getPartnerIId());
 				} else {
 					if (losDto.getAuftragIId() != null) {
 
-						KundeDto kundeDto = getKundeFac()
-								.kundeFindByPrimaryKey(
-										getAuftragFac()
-												.auftragFindByPrimaryKey(
-														losDto.getAuftragIId())
-												.getKundeIIdAuftragsadresse(),
-										theClientDto);
-						belegInfos.setKundeLieferant(kundeDto.getPartnerDto()
-								.formatFixName1Name2());
+						KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(getAuftragFac()
+								.auftragFindByPrimaryKey(losDto.getAuftragIId()).getKundeIIdAuftragsadresse(),
+								theClientDto);
+						belegInfos.setKundeLieferant(kundeDto.getPartnerDto().formatFixName1Name2());
 						belegInfos.setPartnerIId(kundeDto.getPartnerIId());
 					}
 				}
@@ -476,10 +478,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				belegInfos.setBelegnummer(losDto.getCNr());
 				belegInfos.setBelegbezeichnung(losDto.getCTitel());
 				belegInfos.setPartnerIId(losDto.getPartnerIId());
+				belegInfos.setMandantCNr(losDto.getMandantCNr());
 				if (losDto.getPartnerIId() != null) {
 					belegInfos.setKundeLieferant(getPartnerFac()
-							.partnerFindByPrimaryKey(losDto.getPartnerIId(),
-									theClientDto).formatFixName1Name2());
+							.partnerFindByPrimaryKey(losDto.getPartnerIId(), theClientDto).formatFixName1Name2());
 				}
 			} else {
 				belegInfos.setBelegnummer(belegartCNr);
@@ -503,52 +505,56 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return belegInfos;
 	}
 
-	/**
-	 * @deprecated
-	 */
-	public LPDatenSubreport getWareneingangsreferenzSubreport(String sBelegart,
-			Integer belegartpositionIId, String cSeriennrChargennr,
-			boolean bMitJcrDocs, TheClientDto theClientDto) {
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public LPDatenSubreport getWareneingangsreferenzSubreport(String sBelegart, Integer belegartpositionIId,
+			List<SeriennrChargennrMitMengeDto> snrs, boolean bMitJcrDocs, TheClientDto theClientDto) {
 
-		ArrayList<WarenzugangsreferenzDto> al = getWareneingangsreferenz(
-				sBelegart, belegartpositionIId, cSeriennrChargennr,
+		ArrayList<WarenzugangsreferenzDto> al = getWareneingangsreferenz(sBelegart, belegartpositionIId, snrs,
 				bMitJcrDocs, theClientDto);
 
-		String[] fieldnames = new String[] { "F_BELEGART", "F_BELEGNUMMER",
-				"F_ZUSATZ", "F_BELEGDATUM", "F_POSITION1", "F_POSITION2",
-				"F_URSPRUNGSLAND", "F_HERSTELLER", "F_MENGE" };
+		// Alle moeglichen Gsnrs holen
 
-		Object[][] dataSub = new Object[al.size()][fieldnames.length];
+		HashMap<Integer, ArrayList<FLRGeraetesnr>> hmGsnr = new HashMap<Integer, ArrayList<FLRGeraetesnr>>();
 
-		for (int i = 0; i < al.size(); i++) {
-			WarenzugangsreferenzDto dto = (WarenzugangsreferenzDto) al.get(i);
-			dataSub[i][0] = dto.getBelegart();
-			dataSub[i][1] = dto.getBelegnummer();
-			dataSub[i][2] = dto.getZusatz();
-			dataSub[i][3] = dto.getTBelegdatum();
-			dataSub[i][4] = dto.getPosition1();
-			dataSub[i][5] = dto.getPosition2();
-			dataSub[i][6] = dto.getLand();
-			dataSub[i][7] = dto.getHersteller();
-			dataSub[i][8] = dto.getMenge();
+		HashMap<String, String> artikelbezeichnungen = new HashMap<String, String>();
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String s = " SELECT g,(SELECT spr.c_bez FROM FLRArtikellistespr as spr WHERE spr.Id.artikelliste=g.artikel_i_id AND spr.Id.locale='"
+				+ theClientDto.getLocUiAsString()
+				+ "')  FROM FLRGeraetesnr g WHERE g.i_id_buchung IN (SELECT wr.zubuchung.i_id_buchung FROM FLRWareneingangsreferez wr WHERE wr.abbuchung.c_belegartnr='"
+				+ sBelegart + "' AND wr.n_verbrauchtemenge > 0 AND wr.abbuchung.i_belegartpositionid="
+				+ belegartpositionIId + ")";
+		org.hibernate.Query query = session.createQuery(s);
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		while (resultListIterator.hasNext()) {
+
+			Object[] o = (Object[]) resultListIterator.next();
+
+			FLRGeraetesnr g = (FLRGeraetesnr) o[0];
+
+			artikelbezeichnungen.put(g.getFlrartikel().getC_nr(), (String) o[1]);
+
+			ArrayList<FLRGeraetesnr> alGsnr = null;
+			if (hmGsnr.containsKey(g.getI_id_buchung())) {
+
+				alGsnr = hmGsnr.get(g.getI_id_buchung());
+
+			} else {
+				alGsnr = new ArrayList<FLRGeraetesnr>();
+			}
+			alGsnr.add(g);
+
+			hmGsnr.put(g.getI_id_buchung(), alGsnr);
+
 		}
 
-		return new LPDatenSubreport(dataSub, fieldnames);
-	}
-
-	public LPDatenSubreport getWareneingangsreferenzSubreport(String sBelegart,
-			Integer belegartpositionIId,
-			List<SeriennrChargennrMitMengeDto> snrs, boolean bMitJcrDocs,
-			TheClientDto theClientDto) {
-
-		ArrayList<WarenzugangsreferenzDto> al = getWareneingangsreferenz(
-				sBelegart, belegartpositionIId, snrs, bMitJcrDocs, theClientDto);
-
-		String[] fieldnames = new String[] { "F_BELEGART", "F_BELEGNUMMER",
-				"F_ZUSATZ", "F_BELEGDATUM", "F_POSITION1", "F_POSITION2",
-				"F_URSPRUNGSLAND", "F_HERSTELLER", "F_MENGE", "F_LOS_AZANTEIL",
-				"F_LOS_MATERIALANTEIL", "F_I_ID_BUCHUNG", "F_PERSON_BUCHENDER",
-				"F_KURZZEICHEN_BUCHENDER" };
+		String[] fieldnames = new String[] { "F_BELEGART", "F_BELEGNUMMER", "F_ZUSATZ", "F_BELEGDATUM", "F_POSITION1",
+				"F_POSITION2", "F_URSPRUNGSLAND", "F_HERSTELLER", "F_MENGE", "F_LOS_AZANTEIL", "F_LOS_MATERIALANTEIL",
+				"F_I_ID_BUCHUNG", "F_PERSON_BUCHENDER", "F_KURZZEICHEN_BUCHENDER", "F_BELEGARTPOSITION_I_ID",
+				"F_SNRCHNR", "F_SUBREPORT_GERAETESNRS", "F_EINSTANDSPREIS", "F_GESTEHUNGSPREIS", "F_BUCHUNGSZEIT",
+				"F_ZIRKELBEZUG" };
 
 		Object[][] dataSub = new Object[al.size()][fieldnames.length];
 
@@ -568,21 +574,72 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			dataSub[i][11] = dto.getI_id_buchung();
 			dataSub[i][12] = dto.getPerson_buchender();
 			dataSub[i][13] = dto.getKurzzeichen_buchender();
+			dataSub[i][14] = dto.getBelegartpositionIId();
+			dataSub[i][15] = dto.getSnrChnr();
 
+			if (dto.getSnrChnr() != null) {
+
+				ArrayList<FLRGeraetesnr> alGsnrs = hmGsnr.get(dto.getI_id_buchung());
+
+				if (alGsnrs != null) {
+
+					String[] fieldnamesGsrns = new String[] { "F_ARTIKELNUMMER", "F_ARTIKELBEZEICHNUNG",
+							"F_GERAETESNR" };
+					Object[][] dataSubGsnrs = new Object[alGsnrs.size()][fieldnamesGsrns.length];
+
+					for (int k = 0; k < alGsnrs.size(); k++) {
+						FLRGeraetesnr gsnr = (FLRGeraetesnr) alGsnrs.get(k);
+
+						dataSubGsnrs[k][0] = gsnr.getFlrartikel().getC_nr();
+
+						dataSubGsnrs[k][1] = artikelbezeichnungen.get(gsnr.getFlrartikel().getC_nr());
+
+						dataSubGsnrs[k][2] = gsnr.getC_snr();
+					}
+
+					LPDatenSubreport oNeu = new LPDatenSubreport(dataSubGsnrs, fieldnamesGsrns);
+
+					dataSub[i][16] = oNeu;
+				}
+			}
+
+			dataSub[i][17] = dto.getnEinstandspreis();
+			dataSub[i][18] = dto.getNGestehungspreis();
+			dataSub[i][19] = dto.getTBuchungszeit();
+			dataSub[i][20] = dto.isbZirkelbezug();
+
+		}
+		session.close();
+		return new LPDatenSubreport(dataSub, fieldnames);
+	}
+
+	public LPDatenSubreport getSerienChargennummernEinerBelegpositionSubreport(String sBelegart,
+			Integer belegartpositionIId, TheClientDto theClientDto) {
+
+		List<SeriennrChargennrMitMengeDto> al = getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
+				sBelegart, belegartpositionIId);
+
+		String[] fieldnames = new String[] { "F_SNRCHNR", "F_MENGE" };
+
+		Object[][] dataSub = new Object[al.size()][fieldnames.length];
+
+		for (int i = 0; i < al.size(); i++) {
+			SeriennrChargennrMitMengeDto dto = (SeriennrChargennrMitMengeDto) al.get(i);
+			dataSub[i][0] = dto.getCSeriennrChargennr();
+			dataSub[i][1] = dto.getNMenge();
 		}
 
 		return new LPDatenSubreport(dataSub, fieldnames);
 	}
 
-	public LPDatenSubreport getWarenausgangsreferenzSubreport(String sBelegart,
-			Integer belegartpositionIId,
+	public LPDatenSubreport getWarenausgangsreferenzSubreport(String sBelegart, Integer belegartpositionIId,
 			List<SeriennrChargennrMitMengeDto> snrs, TheClientDto theClientDto) {
 
-		ArrayList<WarenabgangsreferenzDto> al = getWarenausgangsreferenz(
-				sBelegart, belegartpositionIId, snrs, theClientDto);
+		ArrayList<WarenabgangsreferenzDto> al = getWarenausgangsreferenz(sBelegart, belegartpositionIId, snrs,
+				theClientDto);
 
-		String[] fieldnames = new String[] { "F_BELEGART", "F_BELEGNUMMER",
-				"F_ZUSATZ", "F_BELEGDATUM", "F_MENGE" };
+		String[] fieldnames = new String[] { "F_BELEGART", "F_BELEGNUMMER", "F_ZUSATZ", "F_BELEGDATUM", "F_MENGE",
+				"F_BUCHUNGSZEIT" };
 
 		Object[][] dataSub = new Object[al.size()][fieldnames.length];
 
@@ -593,27 +650,66 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			dataSub[i][2] = dto.getZusatz();
 			dataSub[i][3] = dto.getTBelegdatum();
 			dataSub[i][4] = dto.getMenge();
+			dataSub[i][5] = dto.getTBuchungszeit();
 
 		}
 
 		return new LPDatenSubreport(dataSub, fieldnames);
 	}
 
-	public LPDatenSubreport getSubreportEnthaltenesLosIstMaterial(
-			String artikelnummer, String chargennummer,
+	public LPDatenSubreport getSubreportGeraeteseriennummernEinerLagerbewegung(String belegartCNr,
+			Integer belegartpositionIId, String snr, TheClientDto theClientDto) {
+		GeraetesnrDto[] gsnrDto = getLagerFac().getGeraeteseriennummerEinerLagerbewegung(belegartCNr,
+				belegartpositionIId, snr);
+
+		String[] fieldnames = new String[] { "F_ARTIKELNUMMER", "F_ARTIKELBEZEICHNUNG", "F_GERAETESNR" };
+		Object[][] dataSub = new Object[gsnrDto.length][fieldnames.length];
+
+		for (int k = 0; k < gsnrDto.length; k++) {
+			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(gsnrDto[k].getArtikelIId(), theClientDto);
+			dataSub[k][0] = aDto.getCNr();
+			if (aDto.getArtikelsprDto() != null) {
+				dataSub[k][1] = aDto.getArtikelsprDto().getCBez();
+			}
+			dataSub[k][2] = gsnrDto[k].getCSnr();
+		}
+
+		return new LPDatenSubreport(dataSub, fieldnames);
+	}
+
+	public LPDatenSubreport getSubreportSnrChnrEinerBelegposition(String belegartCNr, Integer belegartpositionIId,
 			TheClientDto theClientDto) {
-		String[] fieldnames = new String[] { "Losnummer", "Artikelnummer",
-				"Bezeichnung", "Menge", "Snrchnr" };
+		List<SeriennrChargennrMitMengeDto> snrchnr = getLagerFac()
+				.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(belegartCNr, belegartpositionIId);
+
+		if (snrchnr.size() == 1 && snrchnr.get(0).getCSeriennrChargennr() == null) {
+			snrchnr.remove(0);
+		}
+
+		String[] fieldnames = new String[] { "F_SNRCHNR", "F_MENGE" };
+		Object[][] dataSub = new Object[snrchnr.size()][fieldnames.length];
+
+		for (int k = 0; k < snrchnr.size(); k++) {
+
+			dataSub[k][0] = snrchnr.get(k).getCSeriennrChargennr();
+
+			dataSub[k][1] = snrchnr.get(k).getNMenge();
+		}
+
+		return new LPDatenSubreport(dataSub, fieldnames);
+	}
+
+	public LPDatenSubreport getSubreportEnthaltenesLosIstMaterial(String artikelnummer, String chargennummer,
+			TheClientDto theClientDto) {
+		String[] fieldnames = new String[] { "Losnummer", "Artikelnummer", "Bezeichnung", "Menge", "Snrchnr" };
 
 		ArrayList alDaten = new ArrayList();
 
-		ArtikelDto aDto = getArtikelFac().artikelFindByCNrMandantCNrOhneExc(
-				artikelnummer, theClientDto.getMandant());
+		ArtikelDto aDto = getArtikelFac().artikelFindByCNrMandantCNrOhneExc(artikelnummer, theClientDto.getMandant());
 
 		if (aDto != null) {
 
-			Query query = em
-					.createNamedQuery("LagerbewegungfindAllSnrChnrEinesArtikels");
+			Query query = em.createNamedQuery("LagerbewegungfindAllSnrChnrEinesArtikels");
 			query.setParameter(1, aDto.getIId());
 			query.setParameter(2, chargennummer);
 			Collection<?> cl = query.getResultList();
@@ -623,88 +719,65 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				Lagerbewegung lagerbewegung = (Lagerbewegung) it.next();
 
 				if (Helper.short2boolean(lagerbewegung.getBAbgang())) {
-					LagerabgangursprungDto[] dtos = lagerabgangursprungFindByLagerbewegungIIdBuchung(lagerbewegung
-							.getIIdBuchung());
+					LagerabgangursprungDto[] dtos = lagerabgangursprungFindByLagerbewegungIIdBuchung(
+							lagerbewegung.getIIdBuchung());
 
 					for (int i = 0; i < dtos.length; i++) {
 
 						if (dtos[i].getNVerbrauchtemenge().doubleValue() > 0) {
 
-							LagerbewegungDto[] urspDtos = lagerbewegungFindByIIdBuchung(dtos[i]
-									.getILagerbewegungidursprung());
+							LagerbewegungDto[] urspDtos = lagerbewegungFindByIIdBuchung(
+									dtos[i].getILagerbewegungidursprung());
 
 							if (urspDtos.length > 0) {
 
-								if (urspDtos[0].getCBelegartnr().equals(
-										LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+								if (urspDtos[0].getCBelegartnr().equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
 
-									LosablieferungDto laDto = getFertigungFac()
-											.losablieferungFindByPrimaryKeyOhneExc(
-													urspDtos[0]
-															.getIBelegartpositionid());
+									LosablieferungDto laDto = getFertigungFac().losablieferungFindByPrimaryKeyOhneExc(
+											urspDtos[0].getIBelegartpositionid());
 
 									if (laDto != null) {
 
 										try {
 
-											LosDto loDto = getFertigungFac()
-													.losFindByPrimaryKey(
-															laDto.getLosIId());
+											LosDto loDto = getFertigungFac().losFindByPrimaryKey(laDto.getLosIId());
 
 											LossollmaterialDto[] sollmatDtos = getFertigungFac()
-													.lossollmaterialFindByLosIIdOrderByISort(
-															laDto.getLosIId());
+													.lossollmaterialFindByLosIIdOrderByISort(laDto.getLosIId());
 
 											for (int u = 0; u < sollmatDtos.length; u++) {
 												LossollmaterialDto sollmatDto = sollmatDtos[u];
 
-												ArtikelDto aDto_Sollmat = getArtikelFac()
-														.artikelFindByPrimaryKey(
-																sollmatDto
-																		.getArtikelIId(),
-																theClientDto);
+												ArtikelDto aDto_Sollmat = getArtikelFac().artikelFindByPrimaryKey(
+														sollmatDto.getArtikelIId(), theClientDto);
 
 												LosistmaterialDto[] istmatDtos = getFertigungFac()
-														.losistmaterialFindByLossollmaterialIId(
-																sollmatDto
-																		.getIId());
+														.losistmaterialFindByLossollmaterialIId(sollmatDto.getIId());
 												for (int x = 0; x < istmatDtos.length; x++) {
 													LosistmaterialDto istmatDto = istmatDtos[x];
 
 													List<SeriennrChargennrMitMengeDto> snrDtos = getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
-															LocaleFac.BELEGART_LOS,
-															istmatDto.getIId());
+															LocaleFac.BELEGART_LOS, istmatDto.getIId());
 
 													Object[] oZeile = new Object[5];
 
 													oZeile[0] = loDto.getCNr();
-													oZeile[1] = aDto_Sollmat
-															.getCNr();
+													oZeile[1] = aDto_Sollmat.getCNr();
 
-													if (aDto_Sollmat
-															.getArtikelsprDto() != null) {
-														oZeile[2] = aDto_Sollmat
-																.getArtikelsprDto()
-																.getCBez();
+													if (aDto_Sollmat.getArtikelsprDto() != null) {
+														oZeile[2] = aDto_Sollmat.getArtikelsprDto().getCBez();
 													}
 
-													oZeile[3] = istmatDto
-															.getNMenge();
+													oZeile[3] = istmatDto.getNMenge();
 
 													if (snrDtos.size() == 0) {
 														alDaten.add(oZeile);
 													} else {
 
-														for (int z = 0; z < snrDtos
-																.size(); z++) {
-															Object[] oZeileKopie = oZeile
-																	.clone();
-															oZeileKopie[4] = snrDtos
-																	.get(z)
-																	.getCSeriennrChargennr();
-															oZeileKopie[3] = snrDtos
-																	.get(z)
-																	.getNMenge();
+														for (int z = 0; z < snrDtos.size(); z++) {
+															Object[] oZeileKopie = oZeile.clone();
+															oZeileKopie[4] = snrDtos.get(z).getCSeriennrChargennr();
+															oZeileKopie[3] = snrDtos.get(z).getNMenge();
 
 															alDaten.add(oZeileKopie);
 														}
@@ -737,234 +810,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return new LPDatenSubreport(dataSubKD, fieldnames);
 	}
 
-	/**
-	 * @deprecated
-	 */
-
-	public ArrayList<WarenzugangsreferenzDto> getWareneingangsreferenz(
-			String sBelegart, Integer belegartpositionIId,
-			String cSeriennrChargennr, boolean bMitJcrDocs,
-			TheClientDto theClientDto) {
-		// PJ14939
-
-		ArrayList<WarenzugangsreferenzDto> al = new ArrayList<WarenzugangsreferenzDto>();
-
-		String[] s = new String[] { null };
-		if (cSeriennrChargennr != null) {
-			s = Helper.erzeugeStringArrayAusString(cSeriennrChargennr);
-		}
-
-		for (int a = 0; a < s.length; a++) {
-			LagerbewegungDto lagebewDtos = getLagerFac().getLetzteintrag(
-					sBelegart, belegartpositionIId, s[a]);
-
-			if (lagebewDtos != null) {
-				LagerabgangursprungDto[] dtos = lagerabgangursprungFindByLagerbewegungIIdBuchung(lagebewDtos
-						.getIIdBuchung());
-
-				if (Helper.short2boolean(lagebewDtos.getBAbgang()) == false) {
-					dtos = new LagerabgangursprungDto[1];
-				}
-
-				for (int i = 0; i < dtos.length; i++) {
-
-					LagerbewegungDto referenzDto = null;
-					if (Helper.short2boolean(lagebewDtos.getBAbgang()) == true) {
-						LagerbewegungDto[] urspDtos = lagerbewegungFindByIIdBuchung(dtos[i]
-								.getILagerbewegungidursprung());
-
-						if (urspDtos != null && urspDtos.length > 0) {
-							referenzDto = urspDtos[0];
-						}
-
-					} else {
-						referenzDto = lagebewDtos;
-					}
-					if (referenzDto != null) {
-
-						try {
-							WarenzugangsreferenzDto wzu = new WarenzugangsreferenzDto();
-							if (Helper.short2boolean(lagebewDtos.getBAbgang()) == true) {
-								wzu.setMenge(dtos[i].getNVerbrauchtemenge());
-							} else {
-								wzu.setMenge(referenzDto.getNMenge());
-							}
-
-							wzu.setnEinstandspreis(referenzDto
-									.getNEinstandspreis());
-							wzu.setBelegartIId(referenzDto.getIBelegartid());
-							wzu.setBelegartpositionIId(referenzDto
-									.getIBelegartpositionid());
-							// Hersteller
-							if (referenzDto.getHerstellerIId() != null) {
-								HerstellerDto hst = getArtikelFac()
-										.herstellerFindByPrimaryKey(
-												referenzDto.getHerstellerIId(),
-												theClientDto);
-								wzu.setHersteller(hst.getCNr());
-							}
-
-							// Land
-							if (referenzDto.getLandIId() != null) {
-								LandDto landDto = getSystemFac()
-										.landFindByPrimaryKey(
-												referenzDto.getLandIId());
-								wzu.setLand(landDto.getCLkz());
-							}
-
-							if (referenzDto.getCBelegartnr().equals(
-									LocaleFac.BELEGART_BESTELLUNG)) {
-
-								Wareneingangsposition wareneingangsposition = em
-										.find(Wareneingangsposition.class,
-												referenzDto
-														.getIBelegartpositionid());
-
-								if (wareneingangsposition != null) {
-
-									WareneingangDto weDto = getWareneingangFac()
-											.wareneingangFindByPrimaryKey(
-													wareneingangsposition
-															.getWareneingangIId());
-
-									BestellungDto best = getBestellungFac()
-											.bestellungFindByPrimaryKey(
-													weDto.getBestellungIId());
-
-									BestellpositionDto bestellpositionDto = getBestellpositionFac()
-											.bestellpositionFindByPrimaryKey(
-													wareneingangsposition
-															.getBestellpositionIId());
-
-									wzu.setPosition1(getBestellpositionFac()
-											.getPositionNummer(
-													bestellpositionDto.getIId(),
-													theClientDto));
-
-									wzu.setBelegart(LocaleFac.BELEGART_BESTELLUNG
-											.trim());
-									wzu.setKostenstelleIId(best
-											.getKostenstelleIId());
-									wzu.setBelegnummer(best.getCNr());
-									wzu.setTBelegdatum(weDto
-											.getTWareneingangsdatum());
-									wzu.setZusatz(weDto.getCLieferscheinnr());
-
-									wzu.setPosition2(weDto.getISort());
-
-									ArtikelDto artikelDtoSmall = getArtikelFac()
-											.artikelFindByPrimaryKeySmall(
-													referenzDto.getArtikelIId(),
-													theClientDto);
-
-									// JCR-Referenz mitgeben
-									if (Helper.short2boolean(artikelDtoSmall
-											.getBDokumentenpflicht())) {
-
-										PrintInfoDto piDto = getJCRDocFac()
-												.getPathAndPartnerAndTable(
-														wareneingangsposition
-																.getIId(),
-														QueryParameters.UC_ID_BESTELLUNGWAREINEINGANGSPOSITIONEN,
-														theClientDto);
-
-										if (piDto != null
-												&& piDto.getDocPath() != null) {
-											wzu.setDocPath(piDto.getDocPath());
-
-											if (bMitJcrDocs)
-
-												try {
-													ArrayList objects = getJCRDocFac()
-															.getJCRDocDtoFromNodeChildren(
-																	piDto.getDocPath());
-
-													ArrayList<JCRDocDto> alTemp = new ArrayList<JCRDocDto>();
-													if (objects != null) {
-														for (int u = 0; u < objects
-																.size(); u++) {
-															if (objects.get(u) instanceof JCRDocDto) {
-
-																JCRDocDto dto = (JCRDocDto) objects
-																		.get(u);
-																dto = getJCRDocFac()
-																		.getData(
-																				dto);
-																alTemp.add(dto);
-															}
-														}
-													}
-													wzu.setJcrdocs(alTemp);
-
-												} catch (RepositoryException e) {
-													e.printStackTrace();
-												} catch (IOException e) {
-													e.printStackTrace();
-												}
-										}
-
-									}
-
-								}
-
-							}
-
-							if (referenzDto.getCBelegartnr().equals(
-									LocaleFac.BELEGART_LIEFERSCHEIN)) {
-								Lieferschein ls = em.find(Lieferschein.class,
-										referenzDto.getIBelegartid());
-								if (ls != null) {
-									wzu.setKostenstelleIId(ls
-											.getKostenstelleIId());
-								}
-							}
-							if (referenzDto.getCBelegartnr().equals(
-									LocaleFac.BELEGART_RECHNUNG)) {
-								Rechnung re = em.find(Rechnung.class,
-										referenzDto.getIBelegartid());
-								if (re != null) {
-									wzu.setKostenstelleIId(re
-											.getKostenstelleIId());
-								}
-							}
-
-							if (referenzDto.getCBelegartnr().equals(
-									LocaleFac.BELEGART_LOSABLIEFERUNG)) {
-
-								wzu.setBelegart(LocaleFac.BELEGART_LOSABLIEFERUNG);
-								wzu.setTBelegdatum(referenzDto
-										.getTBuchungszeit());
-								Los los = em.find(Los.class,
-										referenzDto.getIBelegartid());
-								if (los != null) {
-									wzu.setBelegnummer(los.getCNr().trim());
-									wzu.setKostenstelleIId(los
-											.getKostenstelleIId());
-								}
-							}
-
-							else {
-								wzu.setBelegart(referenzDto.getCBelegartnr()
-										.trim());
-								wzu.setBelegnummer(referenzDto.getCBelegartnr()
-										.trim());
-
-							}
-
-							al.add(wzu);
-
-						} catch (RemoteException e) {
-							throwEJBExceptionLPRespectOld(e);
-						}
-					}
-				}
-			}
-		}
-		return al;
-	}
-
-	public ArrayList<WarenabgangsreferenzDto> getWarenausgangsreferenz(
-			String sBelegart, Integer belegartpositionIId,
+	public ArrayList<WarenabgangsreferenzDto> getWarenausgangsreferenz(String sBelegart, Integer belegartpositionIId,
 			List<SeriennrChargennrMitMengeDto> snrs, TheClientDto theClientDto) {
 		// PJ14939
 
@@ -972,24 +818,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		String[] s = new String[] { null };
 		if (snrs != null && snrs.size() > 0) {
-			s = SeriennrChargennrMitMengeDto
-					.erstelleStringArrayAusMehrerenSeriennummern(snrs);
+			s = SeriennrChargennrMitMengeDto.erstelleStringArrayAusMehrerenSeriennummern(snrs);
 		}
 
 		for (int a = 0; a < s.length; a++) {
-			LagerbewegungDto lagebewDtos = getLagerFac().getLetzteintrag(
-					sBelegart, belegartpositionIId, s[a]);
+			LagerbewegungDto lagebewDtos = getLagerFac().getLetzteintrag(sBelegart, belegartpositionIId, s[a]);
 
 			if (lagebewDtos != null) {
-				LagerabgangursprungDto[] dtos = lagerabgangursprungFindByLagerbewegungIIdBuchungsursprung(lagebewDtos
-						.getIIdBuchung());
+				LagerabgangursprungDto[] dtos = lagerabgangursprungFindByLagerbewegungIIdBuchungsursprung(
+						lagebewDtos.getIIdBuchung());
 
 				for (int i = 0; i < dtos.length; i++) {
 
 					LagerbewegungDto referenzDto = null;
 
-					LagerbewegungDto[] urspDtos = lagerbewegungFindByIIdBuchung(dtos[i]
-							.getILagerbewegungid());
+					LagerbewegungDto[] urspDtos = lagerbewegungFindByIIdBuchung(dtos[i].getILagerbewegungid());
 
 					if (urspDtos != null && urspDtos.length > 0) {
 						referenzDto = urspDtos[0];
@@ -1001,14 +844,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						wzu.setBelegart(referenzDto.getCBelegartnr().trim());
 						wzu.setBelegnummer(referenzDto.getCBelegartnr().trim());
 						wzu.setTBelegdatum(referenzDto.getTBelegdatum());
+						wzu.setBelegartId(referenzDto.getIBelegartid());
+						wzu.setTBuchungszeit(referenzDto.getTBuchungszeit());
 						wzu.setMenge(dtos[i].getNVerbrauchtemenge());
 						wzu.setnVKpreis(referenzDto.getNVerkaufspreis());
 
-						if (referenzDto.getCBelegartnr().equals(
-								LocaleFac.BELEGART_LOS)) {
+						if (referenzDto.getCBelegartnr().equals(LocaleFac.BELEGART_LOS)) {
 
-							Los los = em.find(Los.class,
-									referenzDto.getIBelegartid());
+							Los los = em.find(Los.class, referenzDto.getIBelegartid());
 							if (los != null) {
 								wzu.setBelegnummer(los.getCNr().trim());
 
@@ -1016,19 +859,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 						}
 
-						else if (referenzDto.getCBelegartnr().equals(
-								LocaleFac.BELEGART_LIEFERSCHEIN)) {
-							Lieferschein ls = em.find(Lieferschein.class,
-									referenzDto.getIBelegartid());
+						else if (referenzDto.getCBelegartnr().equals(LocaleFac.BELEGART_LIEFERSCHEIN)) {
+							Lieferschein ls = em.find(Lieferschein.class, referenzDto.getIBelegartid());
 							if (ls != null) {
 								wzu.setBelegnummer(ls.getCNr().trim());
 
 							}
 
-						} else if (referenzDto.getCBelegartnr().equals(
-								LocaleFac.BELEGART_RECHNUNG)) {
-							Rechnung re = em.find(Rechnung.class,
-									referenzDto.getIBelegartid());
+						} else if (referenzDto.getCBelegartnr().equals(LocaleFac.BELEGART_RECHNUNG)) {
+							Rechnung re = em.find(Rechnung.class, referenzDto.getIBelegartid());
 							if (re != null) {
 								wzu.setBelegnummer(re.getCNr().trim());
 
@@ -1044,27 +883,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return al;
 	}
 
-	public ArrayList<WarenzugangsreferenzDto> getWareneingangsreferenz(
-			String sBelegart, Integer belegartpositionIId,
-			List<SeriennrChargennrMitMengeDto> snrs, boolean bMitJcrDocs,
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public ArrayList<WarenzugangsreferenzDto> getWareneingangsreferenz(String sBelegart, Integer belegartpositionIId,
+			List<SeriennrChargennrMitMengeDto> snrs, boolean bMitJcrDocs, TheClientDto theClientDto) {
+		return getWareneingangsreferenz(sBelegart, belegartpositionIId, snrs, bMitJcrDocs, new ArrayList<String>(),
+				theClientDto);
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	private ArrayList<WarenzugangsreferenzDto> getWareneingangsreferenz(String sBelegart, Integer belegartpositionIId,
+			List<SeriennrChargennrMitMengeDto> snrs, boolean bMitJcrDocs, List<String> bereitsBeruecksichtigt,
 			TheClientDto theClientDto) {
 		// PJ14939
+
 		ArrayList<WarenzugangsreferenzDto> al = new ArrayList<WarenzugangsreferenzDto>();
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		String sQuery = "SELECT wr FROM FLRWareneingangsreferez wr WHERE wr.abbuchung.c_belegartnr='"
-				+ sBelegart
-				+ "' AND wr.abbuchung.i_belegartpositionid="
-				+ belegartpositionIId;
+		String sQuery = "SELECT wr FROM FLRWareneingangsreferez wr WHERE wr.abbuchung.c_belegartnr='" + sBelegart
+				+ "' AND wr.n_verbrauchtemenge > 0 AND wr.abbuchung.i_belegartpositionid=" + belegartpositionIId;
 
-		if (snrs == null || snrs.size() == 0 || snrs.size() == 1
-				&& snrs.get(0).getCSeriennrChargennr() == null) {
+		if (snrs == null || snrs.size() == 0 || snrs.size() == 1 && snrs.get(0).getCSeriennrChargennr() == null) {
 			sQuery += " AND wr.abbuchung.c_seriennrchargennr IS NULL";
 		} else {
 			sQuery += " AND wr.abbuchung.c_seriennrchargennr IN (";
 
-			String[] s = SeriennrChargennrMitMengeDto
-					.erstelleStringArrayAusMehrerenSeriennummern(snrs);
+			String[] s = SeriennrChargennrMitMengeDto.erstelleStringArrayAusMehrerenSeriennummern(snrs);
 
 			for (int i = 0; i < s.length; i++) {
 
@@ -1086,32 +929,74 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		Iterator<?> resultListIterator = results.iterator();
 
 		while (resultListIterator.hasNext()) {
-			FLRWareneingangsreferez wr = (FLRWareneingangsreferez) resultListIterator
-					.next();
+			FLRWareneingangsreferez wr = (FLRWareneingangsreferez) resultListIterator.next();
 
 			FLRLagerbewegung zugang = wr.getZubuchung();
-			FLRLagerbewegung abgang = wr.getAbbuchung();
 
 			// SP3369
-			if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_HAND)) {
-				HandlagerbewegungDto umbuchung = getZugehoerigeUmbuchung(
-						zugang.getI_belegartid(), theClientDto);
+			WarenzugangsreferenzDto originalVorUmbuchung = null;
 
-				if (umbuchung != null
-						&& Helper.short2boolean(umbuchung.getBAbgang())) {
-					ArrayList<WarenzugangsreferenzDto> alOri = getWareneingangsreferenz(
-							LocaleFac.BELEGART_HAND, umbuchung.getIId(), snrs,
-							bMitJcrDocs, theClientDto);
+			String ref = zugang.getC_belegartnr() + zugang.getI_belegartpositionid() + zugang.getC_seriennrchargennr();
 
-					for (int i = 0; i < alOri.size(); i++) {
+			boolean bZirkelbezug = false;
 
-						if (alOri.get(i).getMenge().doubleValue() > 0) {
-							al.add(alOri.get(i));
+			if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_HAND)
+					&& wr.getN_verbrauchtemenge().doubleValue() > 0) {
+				if (bereitsBeruecksichtigt.contains(ref)) {
+					bZirkelbezug = true;
+				} else {
+					bereitsBeruecksichtigt.add(ref);
+
+					HandlagerbewegungDto umbuchung = getZugehoerigeUmbuchung(zugang.getI_belegartid(), theClientDto);
+
+					if (umbuchung != null && Helper.short2boolean(umbuchung.getBAbgang())) {
+						ArrayList<WarenzugangsreferenzDto> alOri = getWareneingangsreferenz(LocaleFac.BELEGART_HAND,
+								umbuchung.getIId(),
+								SeriennrChargennrMitMengeDto
+										.erstelleDtoAusEinerSeriennummer(zugang.getC_seriennrchargennr()),
+								bMitJcrDocs, bereitsBeruecksichtigt, theClientDto);
+
+						for (int i = 0; i < alOri.size(); i++) {
+
+							if (alOri.get(i).getMenge().doubleValue() > 0) {
+								originalVorUmbuchung = alOri.get(i);
+
+							}
 						}
 					}
+				}
+			} else if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_LSZIELLAGER)
+					&& wr.getN_verbrauchtemenge().doubleValue() > 0) {
 
-					continue;
+				if (bereitsBeruecksichtigt.contains(ref)) {
+					bZirkelbezug = true;
+				} else {
 
+					bereitsBeruecksichtigt.add(ref);
+
+					LieferscheinDto lsziellagerDto = getLieferscheinFac()
+							.lieferscheinFindByPrimaryKeyOhneExc(zugang.getI_belegartid());
+
+					LieferscheinpositionDto lsposDto = getLieferscheinpositionFac()
+							.lieferscheinpositionFindByPrimaryKeyOhneExcUndOhneSnrChnrList(
+									zugang.getI_belegartpositionid());
+
+					if (lsziellagerDto != null && lsposDto != null && lsposDto.getNMenge() != null
+							&& lsposDto.getNMenge().doubleValue() > 0) {
+						ArrayList<WarenzugangsreferenzDto> alOri = getWareneingangsreferenz(
+								LocaleFac.BELEGART_LIEFERSCHEIN, lsposDto.getIId(),
+								SeriennrChargennrMitMengeDto
+										.erstelleDtoAusEinerSeriennummer(zugang.getC_seriennrchargennr()),
+								bMitJcrDocs, bereitsBeruecksichtigt, theClientDto);
+
+						for (int i = 0; i < alOri.size(); i++) {
+
+							if (alOri.get(i).getMenge().doubleValue() > 0) {
+								originalVorUmbuchung = alOri.get(i);
+
+							}
+						}
+					}
 				}
 			}
 
@@ -1120,18 +1005,20 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				// PJ18617
 
-				wzu.setPerson_buchender(HelperServer
-						.formatPersonAusFLRPartner(zugang.getFlrpersonal()
-								.getFlrpartner()));
-				wzu.setKurzzeichen_buchender(zugang.getFlrpersonal()
-						.getC_kurzzeichen());
+				wzu.setPerson_buchender(
+						HelperServer.formatPersonAusFLRPartner(zugang.getFlrpersonal().getFlrpartner()));
+				wzu.setKurzzeichen_buchender(zugang.getFlrpersonal().getC_kurzzeichen());
 				wzu.setBelegartIId(zugang.getI_belegartid());
 				wzu.setBelegartpositionIId(zugang.getI_belegartpositionid());
 				wzu.setMenge(wr.getN_verbrauchtemenge());
+				wzu.setSnrChnr(zugang.getC_seriennrchargennr());
 
 				wzu.setI_id_buchung(zugang.getI_id_buchung());
+				wzu.setBZirkelbezug(bZirkelbezug);
+				wzu.setTBuchungszeit(new Timestamp(zugang.getT_buchungszeit().getTime()));
 
 				wzu.setnEinstandspreis(zugang.getN_einstandspreis());
+				wzu.setNGestehungspreis(zugang.getN_gestehungspreis());
 				// Hersteller
 				if (zugang.getFlrhersteller() != null) {
 
@@ -1144,50 +1031,39 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					wzu.setLand(zugang.getFlrland().getC_lkz());
 				}
 
-				if (zugang.getC_belegartnr().equals(
-						LocaleFac.BELEGART_BESTELLUNG)) {
+				if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_BESTELLUNG)) {
 
-					Wareneingangsposition wareneingangsposition = em.find(
-							Wareneingangsposition.class,
+					Wareneingangsposition wareneingangsposition = em.find(Wareneingangsposition.class,
 							zugang.getI_belegartpositionid());
 
 					if (wareneingangsposition != null) {
 
 						WareneingangDto weDto = getWareneingangFac()
-								.wareneingangFindByPrimaryKey(
-										wareneingangsposition
-												.getWareneingangIId());
+								.wareneingangFindByPrimaryKey(wareneingangsposition.getWareneingangIId());
 
-						BestellungDto best = getBestellungFac()
-								.bestellungFindByPrimaryKey(
-										weDto.getBestellungIId());
+						BestellungDto best = getBestellungFac().bestellungFindByPrimaryKey(weDto.getBestellungIId());
 
 						BestellpositionDto bestellpositionDto = getBestellpositionFac()
-								.bestellpositionFindByPrimaryKey(
-										wareneingangsposition
-												.getBestellpositionIId());
+								.bestellpositionFindByPrimaryKey(wareneingangsposition.getBestellpositionIId());
 
-						wzu.setPosition1(getBestellpositionFac()
-								.getPositionNummer(bestellpositionDto.getIId(),
-										theClientDto));
+						wzu.setPosition1(
+								getBestellpositionFac().getPositionNummer(bestellpositionDto.getIId(), theClientDto));
 
 						wzu.setBelegart(LocaleFac.BELEGART_BESTELLUNG.trim());
 						wzu.setKostenstelleIId(best.getKostenstelleIId());
 						wzu.setBelegnummer(best.getCNr());
 						wzu.setTBelegdatum(weDto.getTWareneingangsdatum());
+						wzu.setBelegstatus(best.getStatusCNr());
 						wzu.setZusatz(weDto.getCLieferscheinnr());
 
 						wzu.setPosition2(weDto.getISort());
 
 						// JCR-Referenz mitgeben
-						if (Helper.short2boolean(zugang.getFlrartikel()
-								.getB_dokumentenpflicht())) {
+						if (Helper.short2boolean(zugang.getFlrartikel().getB_dokumentenpflicht())) {
 
-							PrintInfoDto piDto = getJCRDocFac()
-									.getPathAndPartnerAndTable(
-											wareneingangsposition.getIId(),
-											QueryParameters.UC_ID_BESTELLUNGWAREINEINGANGSPOSITIONEN,
-											theClientDto);
+							PrintInfoDto piDto = getJCRDocFac().getPathAndPartnerAndTable(
+									wareneingangsposition.getIId(),
+									QueryParameters.UC_ID_BESTELLUNGWAREINEINGANGSPOSITIONEN, theClientDto);
 
 							if (piDto != null && piDto.getDocPath() != null) {
 								wzu.setDocPath(piDto.getDocPath());
@@ -1196,18 +1072,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 									try {
 										ArrayList objects = getJCRDocFac()
-												.getJCRDocDtoFromNodeChildren(
-														piDto.getDocPath());
+												.getJCRDocDtoFromNodeChildren(piDto.getDocPath());
 
 										ArrayList<JCRDocDto> alTemp = new ArrayList<JCRDocDto>();
 										if (objects != null) {
 											for (int u = 0; u < objects.size(); u++) {
 												if (objects.get(u) instanceof JCRDocDto) {
 
-													JCRDocDto dto = (JCRDocDto) objects
-															.get(u);
-													dto = getJCRDocFac()
-															.getData(dto);
+													JCRDocDto dto = (JCRDocDto) objects.get(u);
+													dto = getJCRDocFac().getData(dto);
 													alTemp.add(dto);
 												}
 											}
@@ -1227,20 +1100,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				}
 
-				else if (zugang.getC_belegartnr().equals(
-						LocaleFac.BELEGART_LIEFERSCHEIN)) {
-					Lieferschein ls = em.find(Lieferschein.class,
-							zugang.getI_belegartid());
+				else if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_LIEFERSCHEIN)) {
+					Lieferschein ls = em.find(Lieferschein.class, zugang.getI_belegartid());
 					if (ls != null) {
 						wzu.setKostenstelleIId(ls.getKostenstelleIId());
 						wzu.setBelegart(zugang.getC_belegartnr().trim());
 						wzu.setBelegnummer(ls.getCNr());
 						wzu.setTBelegdatum(ls.getTBelegdatum());
 					}
-				} else if (zugang.getC_belegartnr().equals(
-						LocaleFac.BELEGART_LSZIELLAGER)) {
-					Lieferschein ls = em.find(Lieferschein.class,
-							zugang.getI_belegartid());
+				} else if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_LSZIELLAGER)) {
+					Lieferschein ls = em.find(Lieferschein.class, zugang.getI_belegartid());
 					if (ls != null) {
 						wzu.setKostenstelleIId(ls.getKostenstelleIId());
 
@@ -1250,40 +1119,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 					}
 
-				} else if (zugang.getC_belegartnr().equals(
-						LocaleFac.BELEGART_RECHNUNG)) {
-					Rechnung re = em.find(Rechnung.class,
-							zugang.getI_belegartid());
+				} else if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_RECHNUNG)) {
+					Rechnung re = em.find(Rechnung.class, zugang.getI_belegartid());
 					if (re != null) {
 						wzu.setKostenstelleIId(re.getKostenstelleIId());
 					}
 				}
 
-				else if (zugang.getC_belegartnr().equals(
-						LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+				else if (zugang.getC_belegartnr().equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
 
 					wzu.setBelegart(LocaleFac.BELEGART_LOSABLIEFERUNG);
-					wzu.setTBelegdatum(new Timestamp(zugang.getT_buchungszeit()
-							.getTime()));
+					wzu.setTBelegdatum(new Timestamp(zugang.getT_buchungszeit().getTime()));
 					Los los = em.find(Los.class, zugang.getI_belegartid());
 					if (los != null) {
 						wzu.setBelegnummer(los.getCNr().trim());
+
+						wzu.setBelegstatus(los.getStatusCNr());
+
 						wzu.setKostenstelleIId(los.getKostenstelleIId());
 
-						ArtikelDto artikelDtoSmall = getArtikelFac()
-								.artikelFindByPrimaryKeySmall(
-										zugang.getFlrartikel().getI_id(),
-										theClientDto);
-
 						// JCR-Referenz mitgeben
-						if (Helper.short2boolean(artikelDtoSmall
-								.getBDokumentenpflicht())) {
+						if (Helper.short2boolean(zugang.getFlrartikel().getB_dokumentenpflicht())) {
 
-							PrintInfoDto piDto = getJCRDocFac()
-									.getPathAndPartnerAndTable(
-											zugang.getI_belegartpositionid(),
-											QueryParameters.UC_ID_LOSABLIEFERUNG,
-											theClientDto);
+							PrintInfoDto piDto = getJCRDocFac().getPathAndPartnerAndTable(
+									zugang.getI_belegartpositionid(), QueryParameters.UC_ID_LOSABLIEFERUNG,
+									theClientDto);
 
 							if (piDto != null && piDto.getDocPath() != null) {
 								wzu.setDocPath(piDto.getDocPath());
@@ -1292,18 +1152,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 									try {
 										ArrayList objects = getJCRDocFac()
-												.getJCRDocDtoFromNodeChildren(
-														piDto.getDocPath());
+												.getJCRDocDtoFromNodeChildren(piDto.getDocPath());
 
 										ArrayList<JCRDocDto> alTemp = new ArrayList<JCRDocDto>();
 										if (objects != null) {
 											for (int u = 0; u < objects.size(); u++) {
 												if (objects.get(u) instanceof JCRDocDto) {
 
-													JCRDocDto dto = (JCRDocDto) objects
-															.get(u);
-													dto = getJCRDocFac()
-															.getData(dto);
+													JCRDocDto dto = (JCRDocDto) objects.get(u);
+													dto = getJCRDocFac().getData(dto);
 													alTemp.add(dto);
 												}
 											}
@@ -1321,8 +1178,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 					}
 
-					Losablieferung la = em.find(Losablieferung.class,
-							zugang.getI_belegartpositionid());
+					Losablieferung la = em.find(Losablieferung.class, zugang.getI_belegartpositionid());
 					if (la != null) {
 						wzu.setLosAZAnteil(la.getNArbeitszeitwert());
 						wzu.setLosMaterialanteil(la.getNMaterialwert());
@@ -1333,9 +1189,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				else {
 					wzu.setBelegart(zugang.getC_belegartnr().trim());
 					wzu.setBelegnummer(zugang.getC_belegartnr().trim());
-					wzu.setTBelegdatum(new Timestamp(zugang.getT_belegdatum()
-							.getTime()));
+					wzu.setTBelegdatum(new Timestamp(zugang.getT_belegdatum().getTime()));
 
+				}
+
+				if (originalVorUmbuchung != null) {
+					wzu.setBelegartIId(originalVorUmbuchung.getBelegartIId());
+					wzu.setBelegartpositionIId(originalVorUmbuchung.getBelegartpositionIId());
+					wzu.setBelegart(originalVorUmbuchung.getBelegart());
+					wzu.setBelegnummer(originalVorUmbuchung.getBelegnummer());
+					wzu.setBelegstatus(originalVorUmbuchung.getBelegstatus());
 				}
 
 				al.add(wzu);
@@ -1350,34 +1213,26 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Legt ein neues Lager bei einem Mandanten mit einer bestimmten Lagerart
-	 * an.
+	 * Legt ein neues Lager bei einem Mandanten mit einer bestimmten Lagerart an.
 	 * 
-	 * @param lagerDto
-	 *            lagerDto
-	 * @throws EJBExceptionLP
-	 *             lagerDto == null oder lagerDto.getCNr() == null ||
-	 *             lagerDto.getLagerartCNr() == null || lagerDto.getMandantCNr()
-	 *             == null oder
+	 * @param lagerDto lagerDto
+	 * @throws EJBExceptionLP lagerDto == null oder lagerDto.getCNr() == null ||
+	 *                        lagerDto.getLagerartCNr() == null ||
+	 *                        lagerDto.getMandantCNr() == null oder
 	 * @return id des angelegten Lagers
 	 */
 	public Integer createLager(LagerDto lagerDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (lagerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lagerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lagerDto == null"));
 		}
-		if (lagerDto.getCNr() == null || lagerDto.getLagerartCNr() == null
-				|| lagerDto.getMandantCNr() == null
-				|| lagerDto.getBBestellvorschlag() == null
-				|| lagerDto.getBInternebestellung() == null
-				|| lagerDto.getBVersteckt() == null
-				|| lagerDto.getBKonsignationslager() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerDto.getCNr() == null || lagerDto.getLagerartCNr() == null || lagerDto.getMandantCNr() == null || lagerDto.getBBestellvorschlag() == null || lagerDto.getBInternebestellung() == null || lagerDto.getBVersteckt() == null || lagerDto.getBKonsignationslager() == null"));
-		}
+		Validator.notNull(lagerDto.getCNr(), "lagerDto.getCNr()");
+		Validator.notNull(lagerDto.getLagerartCNr(), "lagerDto.getLagerartCNr()");
+		Validator.notNull(lagerDto.getMandantCNr(), "lagerDto.getMandantCNr()");
+		Validator.notNull(lagerDto.getBBestellvorschlag(), "lagerDto.getBBestellvorschlag()");
+		Validator.notNull(lagerDto.getBInternebestellung(), "lagerDto.getBInternebestellung()");
+		Validator.notNull(lagerDto.getBVersteckt(), "lagerDto.getBVersteckt()");
+		Validator.notNull(lagerDto.getBKonsignationslager(), "lagerDto.getBKonsignationslager()");
 		Lager doppelt = null;
 		try {
 			Query query = em.createNamedQuery("LagerfindByCNrByMandantCNr");
@@ -1385,59 +1240,57 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			query.setParameter(2, lagerDto.getMandantCNr());
 			doppelt = (Lager) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"WW_LAGER.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_LAGER.UK"));
 
 			}
 		} catch (NoResultException ex) {
 			// nothing here
 		}
+
+		if (Helper.short2boolean(lagerDto.getBVersteckt()) == true) {
+			lagerDto.setBInternebestellung(Helper.boolean2Short(false));
+			lagerDto.setBBestellvorschlag(Helper.boolean2Short(false));
+		}
+
+		if (lagerDto.getBLagerstandBei0Anzeigen() == null) {
+			lagerDto.setBLagerstandBei0Anzeigen(Helper.boolean2Short(true));
+		}
+
 		try {
 			if (lagerDto.getLagerartCNr().equals(LagerFac.LAGERART_HAUPTLAGER)) {
-				Query query1 = em
-						.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
+				Query query1 = em.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
 				query1.setParameter(1, lagerDto.getMandantCNr());
 				query1.setParameter(2, LagerFac.LAGERART_HAUPTLAGER);
 				doppelt = (Lager) query1.getSingleResult();
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
-						new Exception(
-								"FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
+						new Exception("FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
 
 			}
 		} catch (NoResultException ex) {
 			// nothing here
 		}
 		try {
-			if (lagerDto.getLagerartCNr().equals(
-					LagerFac.LAGERART_WERTGUTSCHRIFT)) {
-				Query query1 = em
-						.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
+			if (lagerDto.getLagerartCNr().equals(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
+				Query query1 = em.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
 				query1.setParameter(1, lagerDto.getMandantCNr());
 				query1.setParameter(2, LagerFac.LAGERART_WERTGUTSCHRIFT);
 				doppelt = (Lager) query1.getSingleResult();
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_LAGER_WERTGUTSCHRIFT_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
-						new Exception(
-								"FEHLER_LAGER_WERTGUTSCHRIFT_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
+						new Exception("FEHLER_LAGER_WERTGUTSCHRIFT_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
 
 			}
 		} catch (NoResultException ex) {
 			// nothing here
 		}
 		try {
-			if (lagerDto.getLagerartCNr()
-					.equals(LagerFac.LAGERART_WARENEINGANG)) {
-				Query query1 = em
-						.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
+			if (lagerDto.getLagerartCNr().equals(LagerFac.LAGERART_WARENEINGANG)) {
+				Query query1 = em.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
 				query1.setParameter(1, lagerDto.getMandantCNr());
 				query1.setParameter(2, LagerFac.LAGERART_WARENEINGANG);
 				doppelt = (Lager) query1.getSingleResult();
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_LAGER_WARENEINGANG_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
-						new Exception(
-								"FEHLER_LAGER_WARENEINGANG_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LAGER_WARENEINGANG_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
+						new Exception("FEHLER_LAGER_WARENEINGANG_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
 
 			}
 		} catch (NoResultException ex) {
@@ -1451,50 +1304,75 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			lagerDto.setIId(pk);
 		}
 
+		if (lagerDto.getISort() == null) {
+			Integer i = null;
+			try {
+				Query querynext = em.createNamedQuery("LagerejbSelectNextReihung");
+				i = (Integer) querynext.getSingleResult();
+			} catch (NoResultException ex) {
+			}
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+			lagerDto.setISort(i);
+
+		}
+
 		try {
-			Lager lager = new Lager(lagerDto.getIId(), lagerDto.getCNr(),
-					lagerDto.getLagerartCNr(), lagerDto.getMandantCNr(),
-					lagerDto.getBBestellvorschlag(),
-					lagerDto.getBInternebestellung(), lagerDto.getBVersteckt(),
-					lagerDto.getBKonsignationslager());
+			Lager lager = new Lager(lagerDto.getIId(), lagerDto.getCNr(), lagerDto.getLagerartCNr(),
+					lagerDto.getMandantCNr(), lagerDto.getBBestellvorschlag(), lagerDto.getBInternebestellung(),
+					lagerDto.getBVersteckt(), lagerDto.getBKonsignationslager(), lagerDto.getISort(),
+					lagerDto.getBLagerstandBei0Anzeigen());
 			em.persist(lager);
 			em.flush();
 
 			setLagerFromLagerDto(lager, lagerDto);
 			return lager.getIId();
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
-	public Integer createLagerplatz(LagerplatzDto lagerplatzDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		if (lagerplatzDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lagerplatzDto == null"));
+	public void vertauscheLager(Integer iIdPosition1I, Integer iIdPosition2I) {
+		Lager oPosition1 = em.find(Lager.class, iIdPosition1I);
+		if (oPosition1 == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		if (lagerplatzDto.getCLagerplatz() == null
-				|| lagerplatzDto.getLagerIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerplatzDto.getCLagerplatz() == null || lagerplatzDto.getLagerIId() == null"));
+
+		Lager oPosition2 = em.find(Lager.class, iIdPosition2I);
+		if (oPosition2 == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Integer iSort1 = oPosition1.getISort();
+		Integer iSort2 = oPosition2.getISort();
+
+		oPosition2.setISort(new Integer(-1));
+
+		oPosition1.setISort(iSort2);
+		oPosition2.setISort(iSort1);
+
+	}
+
+	public Integer createLagerplatz(LagerplatzDto lagerplatzDto, TheClientDto theClientDto) throws EJBExceptionLP {
+		if (lagerplatzDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lagerplatzDto == null"));
+		}
+		if (lagerplatzDto.getCLagerplatz() == null || lagerplatzDto.getLagerIId() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("lagerplatzDto.getCLagerplatz() == null || lagerplatzDto.getLagerIId() == null"));
 		}
 		lagerplatzDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		lagerplatzDto.setTAendern(new java.sql.Timestamp(System
-				.currentTimeMillis()));
+		lagerplatzDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 		Lagerplatz doppelt = null;
 		try {
-			Query query = em
-					.createNamedQuery("LagerplatzfindByLagerIIdCLagerplatz");
+			Query query = em.createNamedQuery("LagerplatzfindByLagerIIdCLagerplatz");
 			query.setParameter(1, lagerplatzDto.getLagerIId());
 			query.setParameter(2, lagerplatzDto.getCLagerplatz());
 			doppelt = (Lagerplatz) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"WW_LAGERPLATZ.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_LAGERPLATZ.UK"));
 
 			}
 		} catch (NoResultException ex) {
@@ -1506,10 +1384,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_LAGERPLATZ);
 			lagerplatzDto.setIId(pk);
-			Lagerplatz lagerplatz = new Lagerplatz(lagerplatzDto.getIId(),
-					lagerplatzDto.getCLagerplatz(), new Integer(0),
-					lagerplatzDto.getLagerIId(),
-					lagerplatzDto.getPersonalIIdAendern(),
+			Lagerplatz lagerplatz = new Lagerplatz(lagerplatzDto.getIId(), lagerplatzDto.getCLagerplatz(),
+					new Integer(0), lagerplatzDto.getLagerIId(), lagerplatzDto.getPersonalIIdAendern(),
 					lagerplatzDto.getTAendern());
 			em.persist(lagerplatz);
 			em.flush();
@@ -1528,8 +1404,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	public void removeLagerplatz(Integer iId) throws EJBExceptionLP {
 		Lagerplatz toRemove = em.find(Lagerplatz.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"Fehler bei removeLagerplatz. Es gibt keine iid " + iId);
 		}
 		try {
@@ -1540,47 +1415,38 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	public void removeLagerplatz(LagerplatzDto lagerplatzDto)
-			throws EJBExceptionLP {
+	public void removeLagerplatz(LagerplatzDto lagerplatzDto) throws EJBExceptionLP {
 		if (lagerplatzDto != null) {
 			Integer iId = lagerplatzDto.getIId();
 			removeLagerplatz(iId);
 		}
 	}
 
-	public void updateLagerplatz(LagerplatzDto lagerplatzDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateLagerplatz(LagerplatzDto lagerplatzDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (lagerplatzDto != null) {
 			Integer iId = lagerplatzDto.getIId();
 			Lagerplatz lagerplatz = em.find(Lagerplatz.class, iId);
 			if (lagerplatz == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						"Fehler bei updateLagerplatz. Es gibt keine iid " + iId
-								+ "\ndto.toString(): "
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						"Fehler bei updateLagerplatz. Es gibt keine iid " + iId + "\ndto.toString(): "
 								+ lagerplatzDto.toString());
 			}
 
 			try {
-				Query query = em
-						.createNamedQuery("LagerplatzfindByLagerIIdCLagerplatz");
+				Query query = em.createNamedQuery("LagerplatzfindByLagerIIdCLagerplatz");
 				query.setParameter(1, lagerplatzDto.getLagerIId());
 				query.setParameter(2, lagerplatzDto.getCLagerplatz());
 				// @todo getSingleResult oder getResultList ?
-				Integer iIdVorhanden = ((Lagerplatz) query.getSingleResult())
-						.getIId();
+				Integer iIdVorhanden = ((Lagerplatz) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-							new Exception("WW_LAGERPLATZ.UK"));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_LAGERPLATZ.UK"));
 
 				}
 			} catch (NoResultException ex) {
 
 			}
 			lagerplatzDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
-			lagerplatzDto.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
+			lagerplatzDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 			setLagerplatzFromLagerplatzDto(lagerplatz, lagerplatzDto);
 			// }
 			// catch (FinderException ex) {
@@ -1590,25 +1456,20 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	public LagerplatzDto lagerplatzFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public LagerplatzDto lagerplatzFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		myLogger.entry();
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		Lagerplatz lagerplatz = em.find(Lagerplatz.class, iId);
 		if (lagerplatz == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei lagerplatzFindByPrimaryKey. Es gibt keine iid "
-							+ iId);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei lagerplatzFindByPrimaryKey. Es gibt keine iid " + iId);
 		}
 		return assembleLagerplatzDto(lagerplatz);
 	}
 
-	private void setLagerplatzFromLagerplatzDto(Lagerplatz lagerplatz,
-			LagerplatzDto lagerplatzDto) {
+	private void setLagerplatzFromLagerplatzDto(Lagerplatz lagerplatz, LagerplatzDto lagerplatzDto) {
 		lagerplatz.setCLagerplatz(lagerplatzDto.getCLagerplatz());
 		lagerplatz.setIMaxmenge(lagerplatzDto.getIMaxmenge());
 		lagerplatz.setLagerIId(lagerplatzDto.getLagerIId());
@@ -1643,29 +1504,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return lagerplatzDto;
 	}
 
-	public Integer createArtikellagerplaetze(
-			ArtikellagerplaetzeDto artikellagerplaetzeDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createArtikellagerplaetze(ArtikellagerplaetzeDto artikellagerplaetzeDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		myLogger.entry();
 		if (artikellagerplaetzeDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("artikellagerplaetzeDto == null"));
 		}
-		if (artikellagerplaetzeDto.getArtikelIId() == null
-				&& artikellagerplaetzeDto.getLagerplatzIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"artikellagerplaetzeDto.getArtikelIId() == null && artikellagerplaetzeDto.getLagerplatzIId() == null"));
+		if (artikellagerplaetzeDto.getArtikelIId() == null && artikellagerplaetzeDto.getLagerplatzIId() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"artikellagerplaetzeDto.getArtikelIId() == null && artikellagerplaetzeDto.getLagerplatzIId() == null"));
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdLagerplatzIId");
+			Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdLagerplatzIId");
 			query.setParameter(1, artikellagerplaetzeDto.getArtikelIId());
 			query.setParameter(2, artikellagerplaetzeDto.getLagerplatzIId());
-			Artikellagerplaetze doppelt = (Artikellagerplaetze) query
-					.getSingleResult();
+			Artikellagerplaetze doppelt = (Artikellagerplaetze) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("WW_ARTIKELLAGERPLAETZE.UK"));
 		} catch (NoResultException ex) {
@@ -1677,40 +1532,32 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// PJ 14831
 
 		if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-				MandantFac.ZUSATZFUNKTION_MEHRFACH_LAGERPLATZ_JE_LAGER,
-				theClientDto)) {
+				MandantFac.ZUSATZFUNKTION_MEHRFACH_LAGERPLATZ_JE_LAGER, theClientDto)) {
 
-			Lagerplatz lagerplatzHinzuzufuegen = em.find(Lagerplatz.class,
-					artikellagerplaetzeDto.getLagerplatzIId());
+			Lagerplatz lagerplatzHinzuzufuegen = em.find(Lagerplatz.class, artikellagerplaetzeDto.getLagerplatzIId());
 			if (lagerplatzHinzuzufuegen.getPaternosterIId() != null) {
 				paternosterIId = lagerplatzHinzuzufuegen.getPaternosterIId();
 			}
 
-			Query query = em
-					.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
+			Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
 			query.setParameter(1, artikellagerplaetzeDto.getArtikelIId());
 			Collection vorhandeneLagerplaetze = query.getResultList();
 
 			Iterator<?> iterator = vorhandeneLagerplaetze.iterator();
 			while (iterator.hasNext()) {
-				Artikellagerplaetze temp = (Artikellagerplaetze) iterator
-						.next();
+				Artikellagerplaetze temp = (Artikellagerplaetze) iterator.next();
 
-				Lagerplatz lagerplatz = em.find(Lagerplatz.class,
-						temp.getLagerplatzIId());
+				Lagerplatz lagerplatz = em.find(Lagerplatz.class, temp.getLagerplatzIId());
 
-				if (lagerplatz.getLagerIId().equals(
-						lagerplatzHinzuzufuegen.getLagerIId())) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_MEHRERE_LAGERPLAETZE_PRO_LAGER_NICHT_MOEGLICH,
+				if (lagerplatz.getLagerIId().equals(lagerplatzHinzuzufuegen.getLagerIId())) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_MEHRERE_LAGERPLAETZE_PRO_LAGER_NICHT_MOEGLICH,
 							"FEHLER_MEHRERE_LAGERPLAETZE_PRO_LAGER_NICHT_MOEGLICH");
 				}
 
 			}
 		}
 
-		Query queryNext = em
-				.createNamedQuery("ArtikellagerplaetzeejbSelectNextReihung");
+		Query queryNext = em.createNamedQuery("ArtikellagerplaetzeejbSelectNextReihung");
 		queryNext.setParameter(1, artikellagerplaetzeDto.getArtikelIId());
 
 		Integer i = (Integer) queryNext.getSingleResult();
@@ -1724,31 +1571,24 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		try {
 			// generieren von primary key
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
-			Integer pk = pkGen
-					.getNextPrimaryKey(PKConst.PK_ARTIKELLAGERPLAETZE);
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ARTIKELLAGERPLAETZE);
 			artikellagerplaetzeDto.setIId(pk);
 
-			Artikellagerplaetze artikellagerplaetze = new Artikellagerplaetze(
-					artikellagerplaetzeDto.getIId(),
-					artikellagerplaetzeDto.getArtikelIId(),
-					artikellagerplaetzeDto.getLagerplatzIId(),
+			Artikellagerplaetze artikellagerplaetze = new Artikellagerplaetze(artikellagerplaetzeDto.getIId(),
+					artikellagerplaetzeDto.getArtikelIId(), artikellagerplaetzeDto.getLagerplatzIId(),
 					artikellagerplaetzeDto.getiSort());
 			em.persist(artikellagerplaetze);
 			em.flush();
-			setArtikellagerplaetzeFromArtikellagerplaetzeDto(
-					artikellagerplaetze, artikellagerplaetzeDto);
+			setArtikellagerplaetzeFromArtikellagerplaetzeDto(artikellagerplaetze, artikellagerplaetzeDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 		if (paternosterIId != null) {
 			try {
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKey(
-								artikellagerplaetzeDto.getArtikelIId(),
-								theClientDto);
+				ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(artikellagerplaetzeDto.getArtikelIId(),
+						theClientDto);
 
-				getAutoPaternosterFac().paternosterAddArtikel(paternosterIId,
-						artikelDto);
+				getAutoPaternosterFac().paternosterAddArtikel(paternosterIId, artikelDto);
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
@@ -1757,11 +1597,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return artikellagerplaetzeDto.getIId();
 	}
 
-	public LagerDto getLagerDesErstenArtikellagerplatzes(Integer artikelIId,
-			TheClientDto theClientDto) {
+	public LagerDto getLagerDesErstenArtikellagerplatzes(Integer artikelIId, TheClientDto theClientDto) {
 
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdOrderByISort");
+		Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdOrderByISort");
 		query.setParameter(1, artikelIId);
 
 		List l = query.getResultList();
@@ -1776,28 +1614,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return null;
 	}
 
-	public void removeArtikellagerplaetze(Integer iId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removeArtikellagerplaetze(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
 		Artikellagerplaetze toRemove = em.find(Artikellagerplaetze.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei removeArtikellagerplaetze. Es gibt keine iid "
-							+ iId);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei removeArtikellagerplaetze. Es gibt keine iid " + iId);
 		}
-		Lagerplatz lagerplatz = em.find(Lagerplatz.class,
-				toRemove.getLagerplatzIId());
+		Lagerplatz lagerplatz = em.find(Lagerplatz.class, toRemove.getLagerplatzIId());
 
 		Integer artikelIId = toRemove.getArtikelIId();
 
 		if (lagerplatz.getPaternosterIId() != null) {
 			try {
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKey(toRemove.getArtikelIId(),
-								theClientDto);
+				ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(toRemove.getArtikelIId(), theClientDto);
 
-				getAutoPaternosterFac().paternosterDelArtikel(
-						lagerplatz.getPaternosterIId(), artikelDto);
+				getAutoPaternosterFac().paternosterDelArtikel(lagerplatz.getPaternosterIId(), artikelDto);
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
@@ -1813,8 +1644,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// Es muss immer einen Kunden mit der I_SORT=1 geben, daher nach dem
 		// loeschen unbedingt neu re.indizieren
 
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdOrderByISort");
+		Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdOrderByISort");
 		query.setParameter(1, artikelIId);
 
 		List l = query.getResultList();
@@ -1829,39 +1659,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void removeArtikellagerplaetze(
-			ArtikellagerplaetzeDto artikellagerplaetzeDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeArtikellagerplaetze(ArtikellagerplaetzeDto artikellagerplaetzeDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (artikellagerplaetzeDto != null) {
 			Integer iId = artikellagerplaetzeDto.getIId();
 			removeArtikellagerplaetze(iId, theClientDto);
 		}
 	}
 
-	public void updateArtikellagerplaetze(
-			ArtikellagerplaetzeDto artikellagerplaetzeDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateArtikellagerplaetze(ArtikellagerplaetzeDto artikellagerplaetzeDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (artikellagerplaetzeDto != null) {
 			Integer iId = artikellagerplaetzeDto.getIId();
-			Artikellagerplaetze artikellagerplaetze = em.find(
-					Artikellagerplaetze.class, iId);
+			Artikellagerplaetze artikellagerplaetze = em.find(Artikellagerplaetze.class, iId);
 			if (artikellagerplaetze == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						"Fehler bei updateArtikellagerplaetze. Es gibt keine iid "
-								+ iId + "\ndto.toString() "
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						"Fehler bei updateArtikellagerplaetze. Es gibt keine iid " + iId + "\ndto.toString() "
 								+ artikellagerplaetzeDto.toString());
 			}
 			try {
-				Query query = em
-						.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdLagerplatzIId");
+				Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdLagerplatzIId");
 				query.setParameter(1, artikellagerplaetzeDto.getArtikelIId());
 				query.setParameter(2, artikellagerplaetzeDto.getLagerplatzIId());
-				Integer iIdVorhanden = ((Artikellagerplaetze) query
-						.getSingleResult()).getIId();
+				Integer iIdVorhanden = ((Artikellagerplaetze) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 							new Exception("WW_ARTIKELLAGERPLAETZE.UK"));
 				}
 
@@ -1872,29 +1694,24 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			// PJ 14831
 
 			if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-					MandantFac.ZUSATZFUNKTION_MEHRFACH_LAGERPLATZ_JE_LAGER,
-					theClientDto)) {
+					MandantFac.ZUSATZFUNKTION_MEHRFACH_LAGERPLATZ_JE_LAGER, theClientDto)) {
 
 				Lagerplatz lagerplatzHinzuzufuegen = em.find(Lagerplatz.class,
 						artikellagerplaetzeDto.getLagerplatzIId());
 
-				Query query = em
-						.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
+				Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
 				query.setParameter(1, artikellagerplaetzeDto.getArtikelIId());
 				Collection vorhandeneLagerplaetze = query.getResultList();
 
 				Iterator<?> iterator = vorhandeneLagerplaetze.iterator();
 				while (iterator.hasNext()) {
-					Artikellagerplaetze temp = (Artikellagerplaetze) iterator
-							.next();
+					Artikellagerplaetze temp = (Artikellagerplaetze) iterator.next();
 
-					Lagerplatz lagerplatz = em.find(Lagerplatz.class,
-							temp.getLagerplatzIId());
+					Lagerplatz lagerplatz = em.find(Lagerplatz.class, temp.getLagerplatzIId());
 
 					if (!temp.getIId().equals(artikellagerplaetzeDto.getIId())) {
 
-						if (lagerplatz.getLagerIId().equals(
-								lagerplatzHinzuzufuegen.getLagerIId())) {
+						if (lagerplatz.getLagerIId().equals(lagerplatzHinzuzufuegen.getLagerIId())) {
 							throw new EJBExceptionLP(
 									EJBExceptionLP.FEHLER_MEHRERE_LAGERPLAETZE_PRO_LAGER_NICHT_MOEGLICH,
 									"FEHLER_MEHRERE_LAGERPLAETZE_PRO_LAGER_NICHT_MOEGLICH");
@@ -1904,34 +1721,28 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				}
 			}
 
-			setArtikellagerplaetzeFromArtikellagerplaetzeDto(
-					artikellagerplaetze, artikellagerplaetzeDto);
+			setArtikellagerplaetzeFromArtikellagerplaetzeDto(artikellagerplaetze, artikellagerplaetzeDto);
 		}
 	}
 
 	public Integer getAnzahlVerwendungenEinesLagerplatzes(Integer lagerplatzIId) {
 
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzeAnzahlVerwendungEinesLagerplatz");
+		Query query = em.createNamedQuery("ArtikellagerplaetzeAnzahlVerwendungEinesLagerplatz");
 		query.setParameter(1, lagerplatzIId);
 		long i = (Long) query.getSingleResult();
 		return (int) i;
 	}
 
-	public ArtikellagerplaetzeDto artikellagerplaetzeFindByPrimaryKey(
-			Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
+	public ArtikellagerplaetzeDto artikellagerplaetzeFindByPrimaryKey(Integer iId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 
-		Artikellagerplaetze artikellagerplaetze = em.find(
-				Artikellagerplaetze.class, iId);
+		Artikellagerplaetze artikellagerplaetze = em.find(Artikellagerplaetze.class, iId);
 		if (artikellagerplaetze == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei artikellagerplaetzeFindByPrimaryKey. Es gibt keine iid "
-							+ iId);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei artikellagerplaetzeFindByPrimaryKey. Es gibt keine iid " + iId);
 		}
 		ArtikellagerplaetzeDto dto = assembleArtikellagerplaetzeDto(artikellagerplaetze);
 
@@ -1940,41 +1751,43 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public String getLagerplaezteEinesArtikels(Integer artikelIId,
-			Integer lagerIId) {
+	public String getLagerplaezteEinesArtikels(Integer artikelIId, Integer lagerIId) {
 		if (artikelIId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("artikelIId == null || lagerIId == null"));
 		}
 
 		String s = "";
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
-		query.setParameter(1, artikelIId);
+		Session session = FLRSessionFactory.getFactory().openSession();
 
-		Collection<?> cl = query.getResultList();
-		ArtikellagerplaetzeDto[] artikellagerplaetzeDto = assembleArtikellagerplaetzeDtos(cl);
+		String sQuery = "SELECT l FROM FLRArtikellagerplaetze l WHERE l.artikel_i_id=" + artikelIId
+				+ " ORDER BY l.flrlagerplatz.c_lagerplatz ASC";
 
-		for (int i = 0; i < artikellagerplaetzeDto.length; i++) {
+		org.hibernate.Query query = session.createQuery(sQuery);
 
-			Lagerplatz lagerplatz = em.find(Lagerplatz.class,
-					artikellagerplaetzeDto[i].getLagerplatzIId());
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
 
-			LagerplatzDto lagerplatzDto = assembleLagerplatzDto(lagerplatz);
+		while (resultListIterator.hasNext()) {
+			FLRArtikellagerplaetze flrArtikellagerplaetze = (FLRArtikellagerplaetze) resultListIterator.next();
 
 			if (lagerIId != null
-					&& !lagerIId.equals(lagerplatzDto.getLagerIId())) {
+					&& !lagerIId.equals(flrArtikellagerplaetze.getFlrlagerplatz().getFlrlager().getI_id())) {
 				continue;
 			}
-			s += lagerplatzDto.getCLagerplatz() + ", ";
+
+			s += flrArtikellagerplaetze.getFlrlagerplatz().getC_lagerplatz() + ", ";
+
 		}
+
+		session.close();
+
 		return s;
 	}
 
-	public String istLagerplatzBereitsDurchAnderenArtikelBelegt(
-			Integer artikelIId, Integer lagerplatzIId, TheClientDto theClientDto) {
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByLagerplatzIId");
+	public String istLagerplatzBereitsDurchAnderenArtikelBelegt(Integer artikelIId, Integer lagerplatzIId,
+			TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("ArtikellagerplaetzefindByLagerplatzIId");
 		query.setParameter(1, lagerplatzIId);
 
 		String artikel = null;
@@ -1986,9 +1799,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			if (!artikellagerplaetzeDto[i].getArtikelIId().equals(artikelIId)) {
 
 				artikel = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(
-								artikellagerplaetzeDto[i].getArtikelIId(),
-								theClientDto).formatArtikelbezeichnung();
+						.artikelFindByPrimaryKeySmall(artikellagerplaetzeDto[i].getArtikelIId(), theClientDto)
+						.formatArtikelbezeichnung();
 
 				break;
 			}
@@ -1997,39 +1809,54 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return artikel;
 	}
 
-	public ArtikellagerplaetzeDto artikellagerplaetzeFindByArtikelIIdLagerIId(
-			Integer artikelIId, Integer lagerIId) {
-		if (artikelIId == null || lagerIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikelIId == null || lagerIId == null"));
-		}
+	public ArtikellagerplaetzeDto artikellagerplaetzeFindByArtikelIIdLagerIId(Integer artikelIId, Integer lagerIId) {
+		// if (artikelIId == null || lagerIId == null) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+		// new Exception("artikelIId == null || lagerIId == null"));
+		// }
+		//
+		// Query query = em
+		// .createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
+		// query.setParameter(1, artikelIId);
+		//
+		// Collection<?> cl = query.getResultList();
+		// ArtikellagerplaetzeDto[] artikellagerplaetzeDto =
+		// assembleArtikellagerplaetzeDtos(cl);
+		//
+		// for (int i = 0; i < artikellagerplaetzeDto.length; i++) {
+		// Lagerplatz lagerplatz = em.find(Lagerplatz.class,
+		// artikellagerplaetzeDto[i].getLagerplatzIId());
+		// LagerplatzDto lagerplatzDto = assembleLagerplatzDto(lagerplatz);
+		// artikellagerplaetzeDto[i].setLagerplatzDto(lagerplatzDto);
+		//
+		// if (lagerIId.equals(lagerplatzDto.getLagerIId())) {
+		// return artikellagerplaetzeDto[i];
+		// }
+		// }
+		//
+		// return null;
+		Validator.notNull(artikelIId, "artikelIId");
+		Validator.notNull(lagerIId, "lagerIId");
 
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
-		query.setParameter(1, artikelIId);
+		ArtikellagerplaetzeDto[] artikellagerplaetzeDtos = artikellagerplaetzeFindByArtikellIIdOhneExcImpl(artikelIId);
+		if (artikellagerplaetzeDtos == null)
+			return null;
 
-		Collection<?> cl = query.getResultList();
-		ArtikellagerplaetzeDto[] artikellagerplaetzeDto = assembleArtikellagerplaetzeDtos(cl);
-
-		for (int i = 0; i < artikellagerplaetzeDto.length; i++) {
-			Lagerplatz lagerplatz = em.find(Lagerplatz.class,
-					artikellagerplaetzeDto[i].getLagerplatzIId());
-			LagerplatzDto lagerplatzDto = assembleLagerplatzDto(lagerplatz);
-			artikellagerplaetzeDto[i].setLagerplatzDto(lagerplatzDto);
-
-			if (lagerIId.equals(lagerplatzDto.getLagerIId())) {
-				return artikellagerplaetzeDto[i];
+		for (ArtikellagerplaetzeDto dto : artikellagerplaetzeDtos) {
+			Lagerplatz lagerplatz = em.find(Lagerplatz.class, dto.getLagerplatzIId());
+			if (lagerIId.equals(lagerplatz.getLagerIId())) {
+				LagerplatzDto lagerplatzDto = assembleLagerplatzDto(lagerplatz);
+				dto.setLagerplatzDto(lagerplatzDto);
+				return dto;
 			}
 		}
 
 		return null;
 	}
 
-	public ArtikellagerplaetzeDto getErstenArtikellagerplatz(
-			Integer artikelIId, TheClientDto theClientDto) {
+	public ArtikellagerplaetzeDto getErstenArtikellagerplatz(Integer artikelIId, TheClientDto theClientDto) {
 
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdOrderByISort");
+		Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdOrderByISort");
 		query.setParameter(1, artikelIId);
 
 		List l = query.getResultList();
@@ -2054,75 +1881,92 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return null;
 	}
 
-	public ArtikellagerplaetzeDto artikellagerplaetzeFindByArtikelIIdLagerplatzIId(
-			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		if (artikelIId == null || lagerIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikelIId == null || lagerIId == null"));
-		}
-
-		try {
-			Query query = em
-					.createNamedQuery("ArtikellagerplaetzefindByArtikelIIdLagerplatzIId");
-			query.setParameter(1, artikelIId);
-			query.setParameter(2, lagerIId);
-			Artikellagerplaetze artikellagerplaetze = (Artikellagerplaetze) query
-					.getSingleResult();
-			ArtikellagerplaetzeDto dto = assembleArtikellagerplaetzeDto(artikellagerplaetze);
-			dto.setLagerplatzDto(lagerplatzFindByPrimaryKey(dto
-					.getLagerplatzIId()));
+	public ArtikellagerplaetzeDto artikellagerplaetzeFindByArtikelIIdLagerplatzIId(Integer artikelIId,
+			Integer lagerplatzIId) throws EJBExceptionLP {
+		ArtikellagerplaetzeDto dto = artikellagerplaetzeFindByArtikelIIdLagerplatzIIdOhneExc(artikelIId, lagerplatzIId);
+		if (dto != null)
 			return dto;
-		} catch (NoResultException e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
-		}
+
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
+				"artikelIId = " + artikelIId + ", lagerplatzIId = " + lagerplatzIId);
+
+		// if (artikelIId == null || lagerIId == null) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+		// new Exception("artikelIId == null || lagerIId == null"));
+		// }
+		//
+		// try {
+		// Query query = em
+		// .createNamedQuery("ArtikellagerplaetzefindByArtikelIIdLagerplatzIId");
+		// query.setParameter(1, artikelIId);
+		// query.setParameter(2, lagerIId);
+		// Artikellagerplaetze artikellagerplaetze = (Artikellagerplaetze) query
+		// .getSingleResult();
+		// ArtikellagerplaetzeDto dto =
+		// assembleArtikellagerplaetzeDto(artikellagerplaetze);
+		// dto.setLagerplatzDto(lagerplatzFindByPrimaryKey(dto
+		// .getLagerplatzIId()));
+		// return dto;
+		// } catch (NoResultException e) {
+		// throw new EJBExceptionLP(
+		// EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
+		// }
 	}
 
-	public ArtikellagerplaetzeDto artikellagerplaetzeFindByArtikelIIdLagerplatzIIdOhneExc(
-			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto) {
-		ArtikellagerplaetzeDto oArtikellagerplaetzeDtoO = null;
+	public ArtikellagerplaetzeDto artikellagerplaetzeFindByArtikelIIdLagerplatzIIdOhneExc(Integer artikelIId,
+			Integer lagerplatzIId) {
+		Validator.notNull(artikelIId, "artikelIId");
+		Validator.notNull(lagerplatzIId, "lagerplatzIId");
 
-		try {
-			oArtikellagerplaetzeDtoO = artikellagerplaetzeFindByArtikelIIdLagerplatzIId(
-					artikelIId, lagerIId, theClientDto);
-		} catch (Throwable t) {
-			myLogger.error("artikellagerplaetzeFindByArtikelIIdLagerIIdOhneExc");
-		}
+		Artikellagerplaetze artikellagerplaetze = ArtikellagerplaetzeQuery.resultByArtikelIIdLagerplatzIIdNoExc(em,
+				artikelIId, lagerplatzIId);
+		if (artikellagerplaetze == null)
+			return null;
 
-		return oArtikellagerplaetzeDtoO;
+		LagerplatzDto lagerplatzDto = lagerplatzFindByPrimaryKeyOhneExc(lagerplatzIId);
+		if (lagerplatzDto == null)
+			return null;
+
+		ArtikellagerplaetzeDto dto = assembleArtikellagerplaetzeDto(artikellagerplaetze);
+		dto.setLagerplatzDto(lagerplatzDto);
+		return dto;
+		//
+		// ArtikellagerplaetzeDto oArtikellagerplaetzeDtoO = null;
+		//
+		// try {
+		// oArtikellagerplaetzeDtoO =
+		// artikellagerplaetzeFindByArtikelIIdLagerplatzIId(
+		// artikelIId, lagerIId, theClientDto);
+		// } catch (Throwable t) {
+		// myLogger.error("artikellagerplaetzeFindByArtikelIIdLagerIIdOhneExc");
+		// }
+		//
+		// return oArtikellagerplaetzeDtoO;
 	}
 
-	private void setArtikellagerplaetzeFromArtikellagerplaetzeDto(
-			Artikellagerplaetze artikellagerplaetze,
+	private void setArtikellagerplaetzeFromArtikellagerplaetzeDto(Artikellagerplaetze artikellagerplaetze,
 			ArtikellagerplaetzeDto artikellagerplaetzeDto) {
-		artikellagerplaetze.setArtikelIId(artikellagerplaetzeDto
-				.getArtikelIId());
-		artikellagerplaetze.setLagerplatzIId(artikellagerplaetzeDto
-				.getLagerplatzIId());
+		artikellagerplaetze.setArtikelIId(artikellagerplaetzeDto.getArtikelIId());
+		artikellagerplaetze.setLagerplatzIId(artikellagerplaetzeDto.getLagerplatzIId());
 
 		em.merge(artikellagerplaetze);
 		em.flush();
 	}
 
-	private ArtikellagerplaetzeDto assembleArtikellagerplaetzeDto(
-			Artikellagerplaetze artikellagerplaetze) {
+	private ArtikellagerplaetzeDto assembleArtikellagerplaetzeDto(Artikellagerplaetze artikellagerplaetze) {
 		return ArtikellagerplaetzeDtoAssembler.createDto(artikellagerplaetze);
 	}
 
-	private ArtikellagerplaetzeDto[] assembleArtikellagerplaetzeDtos(
-			Collection<?> artikellagerplaetzes) {
+	private ArtikellagerplaetzeDto[] assembleArtikellagerplaetzeDtos(Collection<?> artikellagerplaetzes) {
 		List<ArtikellagerplaetzeDto> list = new ArrayList<ArtikellagerplaetzeDto>();
 		if (artikellagerplaetzes != null) {
 			Iterator<?> iterator = artikellagerplaetzes.iterator();
 			while (iterator.hasNext()) {
-				Artikellagerplaetze artikellagerplaetze = (Artikellagerplaetze) iterator
-						.next();
+				Artikellagerplaetze artikellagerplaetze = (Artikellagerplaetze) iterator.next();
 				list.add(assembleArtikellagerplaetzeDto(artikellagerplaetze));
 			}
 		}
-		ArtikellagerplaetzeDto[] returnArray = new ArtikellagerplaetzeDto[list
-				.size()];
+		ArtikellagerplaetzeDto[] returnArray = new ArtikellagerplaetzeDto[list.size()];
 		return (ArtikellagerplaetzeDto[]) list.toArray(returnArray);
 	}
 
@@ -2130,41 +1974,33 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Loescht ein in der Datenbank vorhandenes Lager, wenn darauf nicht mehr
 	 * referenziert wird.
 	 * 
-	 * @param lagerDto
-	 *            Lager
+	 * @param lagerDto Lager
 	 * @throws EJBExceptionLP
 	 */
 	public void removeLager(LagerDto lagerDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (lagerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("lagerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("lagerDto == null"));
 		}
 		if (lagerDto.getIId() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("lagerDto.getIId()"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("lagerDto.getIId()"));
 		}
 		Integer iId = lagerDto.getIId();
 
 		Lager lager = em.find(Lager.class, iId);
 		if (lager == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei removeLager. Es gibt keine iid "
-							+ lagerDto.getIId() + "\ndto.toString(): "
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei removeLager. Es gibt keine iid " + lagerDto.getIId() + "\ndto.toString(): "
 							+ lagerDto.toString());
 		}
 		if (lager.getCNr().equals(LagerFac.LAGER_KEINLAGER)) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-					new Exception("DARF_NICHT_GELOESCHT_WERDEN"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, new Exception("DARF_NICHT_GELOESCHT_WERDEN"));
 		}
 
 		Lager toRemove = em.find(Lager.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei removeLager. Es gibt keine iid "
-							+ lagerDto.getIId() + "\ndto.toString(): "
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei removeLager. Es gibt keine iid " + lagerDto.getIId() + "\ndto.toString(): "
 							+ lagerDto.toString());
 		}
 
@@ -2188,43 +2024,40 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Schreibt die &Auml;nderungen eines Lager- Datensatzes in der Datenbank
-	 * fest.
+	 * Schreibt die &Auml;nderungen eines Lager- Datensatzes in der Datenbank fest.
 	 * 
-	 * @param lagerDto
-	 *            LagerDto
-	 * @throws EJBExceptionLP
-	 *             lagerDto == null
+	 * @param lagerDto LagerDto
+	 * @throws EJBExceptionLP lagerDto == null
 	 */
 	public void updateLager(LagerDto lagerDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (lagerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lagerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lagerDto == null"));
 		}
 		Integer iId = lagerDto.getIId();
 
 		Lager lager = null;
 		lager = em.find(Lager.class, iId);
 		if (lager == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei updateLager. Es gibt kein Lager mit iid " + iId
-							+ "\ndto.tostring: " + lagerDto.toString());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei updateLager. Es gibt kein Lager mit iid " + iId + "\ndto.tostring: "
+							+ lagerDto.toString());
 		}
+
+		if (Helper.short2boolean(lagerDto.getBVersteckt()) == true) {
+			lagerDto.setBInternebestellung(Helper.boolean2Short(false));
+			lagerDto.setBBestellvorschlag(Helper.boolean2Short(false));
+		}
+
 		try {
 			if (lagerDto.getLagerartCNr().equals(LagerFac.LAGERART_HAUPTLAGER)) {
-				Query query = em
-						.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
+				Query query = em.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
 				query.setParameter(1, lagerDto.getMandantCNr());
 				query.setParameter(2, LagerFac.LAGERART_HAUPTLAGER);
-				Integer iIdVorhanden = ((Lager) query.getSingleResult())
-						.getIId();
+				Integer iIdVorhanden = ((Lager) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
-							new Exception(
-									"FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
+							new Exception("FEHLER_HAUPTLAGER_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
 				}
 			}
 		} catch (NoResultException ex) {
@@ -2232,38 +2065,30 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 
 		try {
-			if (lagerDto.getLagerartCNr().equals(
-					LagerFac.LAGERART_WERTGUTSCHRIFT)) {
-				Query query = em
-						.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
+			if (lagerDto.getLagerartCNr().equals(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
+				Query query = em.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
 				query.setParameter(1, lagerDto.getMandantCNr());
 				query.setParameter(2, LagerFac.LAGERART_WERTGUTSCHRIFT);
-				Integer iIdVorhanden = ((Lager) query.getSingleResult())
-						.getIId();
+				Integer iIdVorhanden = ((Lager) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
 					throw new EJBExceptionLP(
 							EJBExceptionLP.FEHLER_LAGER_WERTGUTSCHRIFT_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
-							new Exception(
-									"FEHLER_LAGER_WERTGUTSCHRIFT_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
+							new Exception("FEHLER_LAGER_WERTGUTSCHRIFT_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
 				}
 			}
 		} catch (NoResultException ex) {
 
 		}
 		try {
-			if (lagerDto.getLagerartCNr()
-					.equals(LagerFac.LAGERART_WARENEINGANG)) {
-				Query query = em
-						.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
+			if (lagerDto.getLagerartCNr().equals(LagerFac.LAGERART_WARENEINGANG)) {
+				Query query = em.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
 				query.setParameter(1, lagerDto.getMandantCNr());
 				query.setParameter(2, LagerFac.LAGERART_WARENEINGANG);
-				Integer iIdVorhanden = ((Lager) query.getSingleResult())
-						.getIId();
+				Integer iIdVorhanden = ((Lager) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
 					throw new EJBExceptionLP(
 							EJBExceptionLP.FEHLER_LAGER_WARENEINGANG_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN,
-							new Exception(
-									"FEHLER_LAGER_WARENEINGANG_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
+							new Exception("FEHLER_LAGER_WARENEINGANG_BEI_DIESEM_MANDANTEN_SCHON_VORHANDEN"));
 				}
 			}
 		} catch (NoResultException ex) {
@@ -2275,9 +2100,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			query.setParameter(2, lagerDto.getMandantCNr());
 			Integer iIdVorhanden = ((Lager) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"WW_LAGER.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_LAGER.UK"));
 			}
 
 		} catch (NoResultException ex) {
@@ -2289,20 +2112,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Holt einen Lager-Datensatz anhand des Primaerschluessels.
 	 * 
-	 * @param iId
-	 *            7
-	 * @throws EJBExceptionLP
-	 *             iId == null
+	 * @param iId 7
+	 * @throws EJBExceptionLP iId == null
 	 * @return LagerDto
 	 */
 	public LagerDto lagerFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		Validator.pkFieldNotNull(iId, "iId");
 		LagerDto lagerDto = lagerFindByPrimaryKeyOhneExc(iId);
 		if (lagerDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei lagerFindByPrimaryKey. Es gibt keine iid "
-							+ iId);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei lagerFindByPrimaryKey. Es gibt keine iid " + iId);
 		}
 		return lagerDto;
 	}
@@ -2310,43 +2129,54 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Holt einen Lager-Datensatz anhand der Lagerkennung und des Mandanten.
 	 * 
-	 * @param cNr
-	 *            Keller
-	 * @param mandantCNr
-	 *            001
-	 * @throws EJBExceptionLP
-	 *             iId == null
+	 * @param cNr        Keller
+	 * @param mandantCNr 001
+	 * @throws EJBExceptionLP iId == null
 	 * @return LagerDto
 	 */
-	public LagerDto lagerFindByCNrByMandantCNr(String cNr, String mandantCNr)
-			throws EJBExceptionLP {
+	public LagerDto lagerFindByCNrByMandantCNr(String cNr, String mandantCNr) throws EJBExceptionLP {
 		LagerDto lagerDto = lagerFindByCNrByMandantCNrImpl(cNr, mandantCNr);
 		if (lagerDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
-					"Fehler bei lagerFindByCNrByMandantCNr. Es gibt kein Lager mit cnr "
-							+ cNr + " f\u00FCr den Mandant " + mandantCNr);
+					"Fehler bei lagerFindByCNrByMandantCNr. Es gibt kein Lager mit cnr " + cNr
+							+ " f\u00FCr den Mandant " + mandantCNr);
 		}
 		return lagerDto;
 	}
 
-	public LagerDto lagerFindByCNrByMandantCNrOhneExc(String cnr,
-			String mandantCnr) {
+	public LagerDto lagerFindByCNrByMandantCNrOhneExc(String cnr, String mandantCnr) {
 		return lagerFindByCNrByMandantCNrImpl(cnr, mandantCnr);
 	}
 
-	private LagerDto lagerFindByCNrByMandantCNrImpl(String cnr,
-			String mandantCnr) {
-		Validator.notEmpty(cnr, "cnr");
-		Validator.notEmpty(mandantCnr, "mandantCnr");
+	private LagerDto lagerFindByCNrByMandantCNrImpl(String cnr, String mandantCnr) {
 
-		Query query = em.createNamedQuery("LagerfindByCNrByMandantCNr");
-		query.setParameter(1, cnr);
-		query.setParameter(2, mandantCnr);
-		Lager lager = (Lager) query.getSingleResult();
-		if (lager == null)
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT l.i_id FROM FLRLager l WHERE l.c_nr='" + cnr + "' AND l.mandant_c_nr='" + mandantCnr
+				+ "'";
+
+		org.hibernate.Query query = session.createQuery(sQuery);
+		query.setMaxResults(1);
+
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		if (resultListIterator.hasNext()) {
+			Integer lagerIId = (Integer) resultListIterator.next();
+			return assembleLagerDto(em.find(Lager.class, lagerIId));
+
+		} else {
 			return null;
+		}
 
-		return assembleLagerDto(lager);
+		/*
+		 * Query query = em.createNamedQuery("LagerfindByCNrByMandantCNr");
+		 * query.setParameter(1, cnr); query.setParameter(2, mandantCnr); Lager lager =
+		 * null; try { lager = (Lager) query.getSingleResult(); } catch
+		 * (NoResultException e) { return null; } if (lager == null) return null; return
+		 * assembleLagerDto(lager);
+		 */
+
 	}
 
 	private void setLagerFromLagerDto(Lager lager, LagerDto lagerDto) {
@@ -2358,6 +2188,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		lager.setBVersteckt(lagerDto.getBVersteckt());
 		lager.setBKonsignationslager(lagerDto.getBKonsignationslager());
 		lager.setILoslagersort(lagerDto.getILoslagersort());
+		lager.setPartnerIIdStandort(lagerDto.getPartnerIIdStandort());
+		lager.setPartnerIId(lagerDto.getPartnerIId());
+		lager.setISort(lagerDto.getISort());
+		lager.setBLagerstandBei0Anzeigen(lagerDto.getBLagerstandBei0Anzeigen());
 		em.merge(lager);
 		em.flush();
 	}
@@ -2373,8 +2207,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			while (iterator.hasNext()) {
 				Lager lager = (Lager) iterator.next();
 				if (!lager.getCNr().equals(LagerFac.LAGER_KEINLAGER)) {
-					if (!lager.getLagerartCNr().equals(
-							LagerFac.LAGERART_WERTGUTSCHRIFT)) {
+					if (!lager.getLagerartCNr().equals(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
 						list.add(assembleLagerDto(lager));
 					}
 				}
@@ -2385,68 +2218,53 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Liefert aktuellen Gestehungspreis eines Artikels im Hauptlager des
-	 * Mandanten zurueck.
+	 * Liefert aktuellen Gestehungspreis eines Artikels im Hauptlager des Mandanten
+	 * zurueck.
 	 * 
-	 * @param iIdArtikelI
-	 *            4711
-	 * @param theClientDto
-	 *            String
+	 * @param iIdArtikelI  4711
+	 * @param theClientDto String
 	 * @return BigDecimal Gestehungspreis
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null || lagerIId == null
+	 * @throws EJBExceptionLP artikelIId == null || lagerIId == null
 	 */
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public BigDecimal getGemittelterGestehungspreisDesHauptlagers(
-			Integer iIdArtikelI, TheClientDto theClientDto)
+	public BigDecimal getGemittelterGestehungspreisDesHauptlagers(Integer iIdArtikelI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		BigDecimal nGestehungspreis = null;
 		// das Hauptlager des Mandanten bestimmen
 		LagerDto hauptlager = getHauptlagerDesMandanten(theClientDto);
-		nGestehungspreis = getGemittelterGestehungspreisEinesLagers(
-				iIdArtikelI, hauptlager.getIId(), theClientDto);
+		nGestehungspreis = getGemittelterGestehungspreisEinesLagers(iIdArtikelI, hauptlager.getIId(), theClientDto);
 		return nGestehungspreis == null ? new BigDecimal(0) : nGestehungspreis;
 	}
 
 	/**
-	 * Ordnet einem Lager einen bestimmen Artikel zu. Lagerstand und
-	 * Gestehungspreis sind beim Anlegen automatisch 0.
+	 * Ordnet einem Lager einen bestimmen Artikel zu. Lagerstand und Gestehungspreis
+	 * sind beim Anlegen automatisch 0.
 	 * 
-	 * @param artikellagerDto
-	 *            ArtikellagerDto
-	 * @throws EJBExceptionLP
-	 *             artikellagerDto == null oder artikellagerDto.getArtikelIId()
-	 *             == null || artikellagerDto.getLagerIId()==null
+	 * @param artikellagerDto ArtikellagerDto
+	 * @throws EJBExceptionLP artikellagerDto == null oder
+	 *                        artikellagerDto.getArtikelIId() == null ||
+	 *                        artikellagerDto.getLagerIId()==null
 	 */
-	public void createArtikellager(ArtikellagerDto artikellagerDto)
-			throws EJBExceptionLP {
+	public void createArtikellager(ArtikellagerDto artikellagerDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (artikellagerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikellagerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("artikellagerDto == null"));
 		}
-		if (artikellagerDto.getArtikelIId() == null
-				|| artikellagerDto.getLagerIId() == null
+		if (artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId() == null
 				|| artikellagerDto.getMandantCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId()==null || artikellagerDto.getMandantCNr() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId()==null || artikellagerDto.getMandantCNr() == null"));
 		}
 		try {
 			Artikellager artikellager = null;
 			try {
-				artikellager = new Artikellager(
-						artikellagerDto.getArtikelIId(),
-						artikellagerDto.getLagerIId(),
+				artikellager = new Artikellager(artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId(),
 						artikellagerDto.getMandantCNr());
 				em.persist(artikellager);
 				em.flush();
 
 			} catch (EntityExistsException ex1) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY,
-						new Exception(ex1));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY, new Exception(ex1));
 			}
 			setArtikellagerFromArtikellagerDto(artikellager, artikellagerDto);
 		} catch (EntityExistsException ex) {
@@ -2454,11 +2272,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	public GeraetesnrDto[] getGeraeteseriennummerEinerLagerbewegung(
-			String belegartCnr, Integer belegartpositionIId, String cSnr) {
+	public GeraetesnrDto[] getGeraeteseriennummerEinerLagerbewegung(String belegartCnr, Integer belegartpositionIId,
+			String cSnr) {
 		GeraetesnrDto[] snrs = new GeraetesnrDto[0];
-		LagerbewegungDto lBewDto = getLetzteintrag(belegartCnr,
-				belegartpositionIId, cSnr);
+		LagerbewegungDto lBewDto = getLetzteintrag(belegartCnr, belegartpositionIId, cSnr);
 
 		if (lBewDto != null) {
 			Query query = em.createNamedQuery("GeraetesnrfindByIIdBuchung");
@@ -2478,29 +2295,22 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void removeArtikellager(ArtikellagerDto artikellagerDto)
-			throws EJBExceptionLP {
+	public void removeArtikellager(ArtikellagerDto artikellagerDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (artikellagerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("artikellagerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("artikellagerDto == null"));
 		}
-		if (artikellagerDto.getArtikelIId() == null
-				|| artikellagerDto.getLagerIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId() == null"));
+		if (artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId() == null"));
 		}
 
 		Artikellager artikellager = null;
 		try {
 			artikellager = em.find(Artikellager.class,
-					new ArtikellagerPK(artikellagerDto.getArtikelIId(),
-							artikellagerDto.getLagerIId()));
+					new ArtikellagerPK(artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId()));
 			if (artikellager == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 						"Fehler bei removeArtikellager. Es gibt kein artikellager.\ndto.toString: "
 								+ artikellagerDto.toString());
 			}
@@ -2515,50 +2325,62 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Schreibt Aenderungen wie den Lagerstand und den Gestehungspreis eines
 	 * Artikels in einem bestimmen Lager fest.
 	 * 
-	 * @param artikellagerDto
-	 *            ArtikellagerDto
-	 * @throws EJBExceptionLP
-	 *             artikellagerDto == null oder artikellagerDto.getArtikelIId()
-	 *             == null || artikellagerDto.getLagerIId()==null ||
-	 *             artikellagerDto.getNGestehungspreis() == null ||
-	 *             artikellagerDto.getFLagerstand() == null
+	 * @param artikellagerDto ArtikellagerDto
+	 * @throws EJBExceptionLP artikellagerDto == null oder
+	 *                        artikellagerDto.getArtikelIId() == null ||
+	 *                        artikellagerDto.getLagerIId()==null ||
+	 *                        artikellagerDto.getNGestehungspreis() == null ||
+	 *                        artikellagerDto.getFLagerstand() == null
 	 */
-	public void updateArtikellager(ArtikellagerDto artikellagerDto)
-			throws EJBExceptionLP {
-		myLogger.entry();
+	public void updateArtikellager(ArtikellagerDto artikellagerDto, TheClientDto theClientDto) throws EJBExceptionLP {
+
 		if (artikellagerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikellagerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("artikellagerDto == null"));
 		}
-		if (artikellagerDto.getArtikelIId() == null
-				|| artikellagerDto.getLagerIId() == null
-				|| artikellagerDto.getNGestehungspreis() == null
-				|| artikellagerDto.getNLagerstand() == null
+		if (artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId() == null
+				|| artikellagerDto.getNGestehungspreis() == null || artikellagerDto.getNLagerstand() == null
 				|| artikellagerDto.getMandantCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId()==null || artikellagerDto.getNGestehungspreis() == null || artikellagerDto.getFLagerstand() == null || artikellagerDto.getMandantCNr() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId()==null || artikellagerDto.getNGestehungspreis() == null || artikellagerDto.getFLagerstand() == null || artikellagerDto.getMandantCNr() == null"));
 		}
+
+		ArtikellagerDto artikellagerDto_Vorher = artikellagerFindByPrimaryKey(artikellagerDto.getArtikelIId(),
+				artikellagerDto.getLagerIId());
+
+		String lagersollVorher = artikellagerDto_Vorher.getFLagersoll() + "";
+		String lagersollAktuell = artikellagerDto.getFLagersoll() + "";
+
+		String lager = lagerFindByPrimaryKey(artikellagerDto.getLagerIId()).getCNr();
+
+		if (!lagersollVorher.equals(lagersollAktuell)) {
+			getArtikelFac().artikelAenderungLoggen(artikellagerDto.getArtikelIId(), ArtikelFac.ARTIKEL_LOG_LAGERSOLL,
+					lager + " " + lagersollVorher, lager + " " + lagersollAktuell, theClientDto);
+		}
+
+		String lagermindestVorher = artikellagerDto_Vorher.getFLagermindest() + "";
+		String lagermindestAktuell = artikellagerDto.getFLagermindest() + "";
+
+		if (!lagermindestVorher.equals(lagermindestAktuell)) {
+			getArtikelFac().artikelAenderungLoggen(artikellagerDto.getArtikelIId(), ArtikelFac.ARTIKEL_LOG_LAGERMINDEST,
+					lager + " " + lagermindestVorher, lager + " " + lagermindestAktuell, theClientDto);
+		}
+
 		ArtikellagerPK artikellagerPK = new ArtikellagerPK();
 		artikellagerPK.setArtikelIId(artikellagerDto.getArtikelIId());
 		artikellagerPK.setLagerIId(artikellagerDto.getLagerIId());
 		Artikellager artikellager = null;
 		artikellager = em.find(Artikellager.class, artikellagerPK);
 		if (artikellager == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei updateArtikellager. Es gibt kein Artikellager mit pk "
-							+ artikellagerPK.toString());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei updateArtikellager. Es gibt kein Artikellager mit pk " + artikellagerPK.toString());
 		}
 		setArtikellagerFromArtikellagerDto(artikellager, artikellagerDto);
 	}
 
-	public void artikellagerplatzCRUD(Integer artikelIId, Integer lagerIId,
-			Integer lagerplatzIId, TheClientDto theClientDto) {
+	public void artikellagerplatzCRUD(Integer artikelIId, Integer lagerIId, Integer lagerplatzIId,
+			TheClientDto theClientDto) {
 
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
+		Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
 		query.setParameter(1, artikelIId);
 
 		Collection<?> cl = query.getResultList();
@@ -2567,24 +2389,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		if (artikellagerplaetzeDto.length > 0) {
 
 			for (int i = 0; i < artikellagerplaetzeDto.length; i++) {
-				LagerplatzDto lagerplatzDto = lagerplatzFindByPrimaryKey(artikellagerplaetzeDto[i]
-						.getLagerplatzIId());
+				LagerplatzDto lagerplatzDto = lagerplatzFindByPrimaryKey(artikellagerplaetzeDto[i].getLagerplatzIId());
 
 				if (lagerplatzDto.getLagerIId().equals(lagerIId)) {
 
 					if (lagerplatzIId == null) {
 						// Eintrag loeschen
-						removeArtikellagerplaetze(
-								artikellagerplaetzeDto[i].getIId(),
-								theClientDto);
+						removeArtikellagerplaetze(artikellagerplaetzeDto[i].getIId(), theClientDto);
 					} else {
-						if (lagerplatzIId.equals(artikellagerplaetzeDto[i]
-								.getLagerplatzIId())) {
+						if (lagerplatzIId.equals(artikellagerplaetzeDto[i].getLagerplatzIId())) {
 							// nix machen
 						} else {
 							// Eintrag aendern
-							artikellagerplaetzeDto[i]
-									.setLagerplatzIId(lagerplatzIId);
+							artikellagerplaetzeDto[i].setLagerplatzIId(lagerplatzIId);
 
 							// Nachsehen obs den nicht schon gibt
 							try {
@@ -2595,8 +2412,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 								queryVorhanden.getSingleResult();
 							} catch (NoResultException ex) {
 								// Wenn nicht, dann anlegen
-								updateArtikellagerplaetze(
-										artikellagerplaetzeDto[i], theClientDto);
+								updateArtikellagerplaetze(artikellagerplaetzeDto[i], theClientDto);
 							}
 						}
 					}
@@ -2611,130 +2427,146 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				ArtikellagerplaetzeDto artikellagerplaetzeDtoNeu = new ArtikellagerplaetzeDto();
 				artikellagerplaetzeDtoNeu.setArtikelIId(artikelIId);
 				artikellagerplaetzeDtoNeu.setLagerplatzIId(lagerplatzIId);
-				createArtikellagerplaetze(artikellagerplaetzeDtoNeu,
-						theClientDto);
+				createArtikellagerplaetze(artikellagerplaetzeDtoNeu, theClientDto);
 			}
 		}
 
 	}
 
-	public void updateGestpreisArtikellager(ArtikellagerDto artikellagerDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateGestpreisArtikellager(ArtikellagerDto artikellagerDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (artikellagerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikellagerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("artikellagerDto == null"));
 		}
-		if (artikellagerDto.getArtikelIId() == null
-				|| artikellagerDto.getLagerIId() == null
-				|| artikellagerDto.getNGestehungspreis() == null
-				|| artikellagerDto.getMandantCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId()==null || artikellagerDto.getNGestehungspreis() == null || artikellagerDto.getMandantCNr() == null"));
+		if (artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId() == null
+				|| artikellagerDto.getNGestehungspreis() == null || artikellagerDto.getMandantCNr() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"artikellagerDto.getArtikelIId() == null || artikellagerDto.getLagerIId()==null || artikellagerDto.getNGestehungspreis() == null || artikellagerDto.getMandantCNr() == null"));
 		}
+
 		ArtikellagerPK artikellagerPK = new ArtikellagerPK();
 		artikellagerPK.setArtikelIId(artikellagerDto.getArtikelIId());
 		artikellagerPK.setLagerIId(artikellagerDto.getLagerIId());
 		Artikellager artikellager = null;
 
-		myLogger.logKritisch("Gestehungspreis geaendert:"
-				+ artikellagerDto.toString());
-		String logEintrag = "artikelIId=" + artikellagerDto.getArtikelIId()
-				+ ",lagerIId=" + artikellagerDto.getLagerIId();
+		myLogger.logKritisch("Gestehungspreis geaendert:" + artikellagerDto.toString());
+		String logEintrag = "artikelIId=" + artikellagerDto.getArtikelIId() + ",lagerIId="
+				+ artikellagerDto.getLagerIId();
 
 		artikellager = em.find(Artikellager.class, artikellagerPK);
 		if (artikellager == null) {
 			try {
-				artikellager = new Artikellager(
-						artikellagerDto.getArtikelIId(),
-						artikellagerDto.getLagerIId(),
+				artikellager = new Artikellager(artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId(),
 						artikellagerDto.getMandantCNr());
 				em.persist(artikellager);
 				em.flush();
-				artikellager.setNGestehungspreis(artikellagerDto
-						.getNGestehungspreis());
+				artikellager.setNGestehungspreis(artikellagerDto.getNGestehungspreis());
 			} catch (EntityExistsException ex1) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
 						"Fehler bei updateGestpreisArtikellager. Es gibt bereits einen Eintrag. \ndto.toString: "
 								+ artikellagerDto.toString());
 			}
 
+		} else {
+			// PJ19513
+			ArtikellagerDto artikellagerDto_Vorher = artikellagerFindByPrimaryKey(artikellagerDto.getArtikelIId(),
+					artikellagerDto.getLagerIId());
+
+			String lagersollVorher = artikellagerDto_Vorher.getFLagersoll() + "";
+			String lagersollAktuell = artikellagerDto.getFLagersoll() + "";
+
+			String lager = lagerFindByPrimaryKey(artikellagerDto.getLagerIId()).getCNr();
+
+			if (!lagersollVorher.equals(lagersollAktuell)) {
+				getArtikelFac().artikelAenderungLoggen(artikellagerDto.getArtikelIId(),
+						ArtikelFac.ARTIKEL_LOG_LAGERSOLL, lager + " " + lagersollVorher, lager + " " + lagersollAktuell,
+						theClientDto);
+			}
+
+			String lagermindestVorher = artikellagerDto_Vorher.getFLagermindest() + "";
+			String lagermindestAktuell = artikellagerDto.getFLagermindest() + "";
+
+			if (!lagermindestVorher.equals(lagermindestAktuell)) {
+				getArtikelFac().artikelAenderungLoggen(artikellagerDto.getArtikelIId(),
+						ArtikelFac.ARTIKEL_LOG_LAGERMINDEST, lager + " " + lagermindestVorher,
+						lager + " " + lagermindestAktuell, theClientDto);
+			}
+
+			String gestpreisVorher = Helper.formatZahl(artikellagerDto_Vorher.getNGestehungspreis(), 4,
+					theClientDto.getLocUi());
+			String gestpreisAktuell = Helper.formatZahl(artikellagerDto.getNGestehungspreis(), 4,
+					theClientDto.getLocUi());
+			if (!gestpreisVorher.equals(gestpreisAktuell)) {
+				getArtikelFac().artikelAenderungLoggen(artikellagerDto.getArtikelIId(),
+						ArtikelFac.ARTIKEL_LOG_GESTPREIS, lager + " " + gestpreisVorher, lager + " " + gestpreisAktuell,
+						theClientDto);
+			}
+
 		}
+
+		// PJ18849
+		artikellager.setFLagermindest(artikellagerDto.getFLagermindest());
+		artikellager.setFLagersoll(artikellagerDto.getFLagersoll());
 
 		BigDecimal preisVorher = artikellager.getNGestehungspreis();
 
-		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-				artikellagerDto.getArtikelIId(), theClientDto);
+		if (preisVorher.doubleValue() != artikellagerDto.getNGestehungspreis().doubleValue()) {
 
-		if (Helper.short2boolean(artikelDto.getBLagerbewirtschaftet()) == true
-				&& artikellager.getNLagerstand().doubleValue() > 0) {
+			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(artikellagerDto.getArtikelIId(),
+					theClientDto);
 
-			if (Helper.short2boolean(artikelDto.getBChargennrtragend())
-					|| Helper.short2boolean(artikelDto.getBSeriennrtragend())) {
-				SeriennrChargennrAufLagerDto[] snrs = getAllSerienChargennrAufLagerInfoDtos(
-						artikellagerDto.getArtikelIId(),
-						artikellagerDto.getLagerIId(), false, null,
-						theClientDto);
+			if (Helper.short2boolean(artikelDto.getBLagerbewirtschaftet()) == true
+					&& artikellager.getNLagerstand().doubleValue() > 0) {
 
-				ArrayList alSnrs = new ArrayList();
+				if (Helper.short2boolean(artikelDto.getBChargennrtragend())
+						|| Helper.short2boolean(artikelDto.getBSeriennrtragend())) {
+					SeriennrChargennrAufLagerDto[] snrs = getAllSerienChargennrAufLagerInfoDtos(
+							artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId(), false, null, theClientDto);
 
-				BigDecimal menge = new BigDecimal(0);
+					ArrayList alSnrs = new ArrayList();
 
-				for (int i = 0; i < snrs.length; i++) {
-					SeriennrChargennrMitMengeDto.add2SnrChnrDtos(alSnrs,
-							snrs[i]);
-					menge = menge.add(snrs[i].getNMenge());
+					BigDecimal menge = new BigDecimal(0);
+
+					for (int i = 0; i < snrs.length; i++) {
+						SeriennrChargennrMitMengeDto.add2SnrChnrDtos(alSnrs, snrs[i]);
+						menge = menge.add(snrs[i].getNMenge());
+					}
+
+					bucheUm(artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId(),
+							artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId(), menge, alSnrs,
+							"Gestpreis\u00E4nderung: Preis vorher: " + preisVorher,
+							artikellagerDto.getNGestehungspreis(), theClientDto);
+
+				} else {
+					BigDecimal lagerstand = getLagerstand(artikellagerDto.getArtikelIId(),
+							artikellagerDto.getLagerIId(), theClientDto);
+					if (lagerstand.doubleValue() > 0) {
+						bucheUm(artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId(),
+								artikellagerDto.getArtikelIId(), artikellagerDto.getLagerIId(), lagerstand, null,
+								"Gestpreis\u00E4nderung: Preis vorher: " + preisVorher,
+								artikellagerDto.getNGestehungspreis(), theClientDto);
+					}
 				}
-
-				bucheUm(artikellagerDto.getArtikelIId(),
-						artikellagerDto.getLagerIId(),
-						artikellagerDto.getArtikelIId(),
-						artikellagerDto.getLagerIId(), menge, alSnrs,
-						"Gestpreis\u00E4nderung: Preis vorher: " + preisVorher,
-						artikellagerDto.getNGestehungspreis(), theClientDto);
 
 			} else {
-				BigDecimal lagerstand = getLagerstand(
-						artikellagerDto.getArtikelIId(),
-						artikellagerDto.getLagerIId(), theClientDto);
-				if (lagerstand.doubleValue() > 0) {
-					bucheUm(artikellagerDto.getArtikelIId(),
-							artikellagerDto.getLagerIId(),
-							artikellagerDto.getArtikelIId(),
-							artikellagerDto.getLagerIId(), lagerstand, null,
-							"Gestpreis\u00E4nderung: Preis vorher: "
-									+ preisVorher,
-							artikellagerDto.getNGestehungspreis(), theClientDto);
-				}
+				artikellager.setNGestehungspreis(artikellagerDto.getNGestehungspreis());
+				em.merge(artikellager);
+				em.flush();
 			}
-
-		} else {
-			artikellager.setNGestehungspreis(artikellagerDto
-					.getNGestehungspreis());
-			em.merge(artikellager);
-			em.flush();
 		}
-
 		// Lagerstand + Gestpreis hier abrufen
 		if (bLagerLogging == null) {
 			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ARTIKEL,
-								ParameterFac.PARAMETER_LAGER_LOGGING);
-				bLagerLogging = Helper.short2boolean(new Short(parameter
-						.getCWert()));
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAGER_LOGGING);
+				bLagerLogging = Helper.short2boolean(new Short(parameter.getCWert()));
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
 		}
 
 		if (bLagerLogging) {
-			logEintrag += ";GestpreisVorher="
-					+ artikellager.getNGestehungspreis() + ","
-					+ theClientDto.toString();
+			logEintrag += ";GestpreisVorher=" + artikellager.getNGestehungspreis() + "," + theClientDto.toString();
 
 			ProtokollDto protokollDto = new ProtokollDto();
 
@@ -2748,9 +2580,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	public void updateLagerabgangursprung(
-			LagerabgangursprungDto lagerabgangursprungDto)
-			throws EJBExceptionLP {
+	public void updateLagerabgangursprung(LagerabgangursprungDto lagerabgangursprungDto) throws EJBExceptionLP {
 		if (lagerabgangursprungDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("lagerabgangursprungDto == null"));
@@ -2759,58 +2589,44 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				|| lagerabgangursprungDto.getILagerbewegungidursprung() == null
 				|| lagerabgangursprungDto.getNVerbrauchtemenge() == null
 				|| lagerabgangursprungDto.getNGestehungspreis() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null ||  lagerabgangursprungDto.getFVerbrauchtemenge() == null || lagerabgangursprungDto.getNGestehungspreis() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null ||  lagerabgangursprungDto.getFVerbrauchtemenge() == null || lagerabgangursprungDto.getNGestehungspreis() == null"));
 		}
 		LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
-		lagerabgangursprungPK.setILagerbewegungid(lagerabgangursprungDto
-				.getILagerbewegungid());
-		lagerabgangursprungPK
-				.setILagerbewegungidursprung(lagerabgangursprungDto
-						.getILagerbewegungidursprung());
+		lagerabgangursprungPK.setILagerbewegungid(lagerabgangursprungDto.getILagerbewegungid());
+		lagerabgangursprungPK.setILagerbewegungidursprung(lagerabgangursprungDto.getILagerbewegungidursprung());
 		Lagerabgangursprung lagerabgangursprung = null;
 		// myLogger.info("ims487" + lagerabgangursprungDto.toString());
-		lagerabgangursprung = em.find(Lagerabgangursprung.class,
-				lagerabgangursprungPK);
+		lagerabgangursprung = em.find(Lagerabgangursprung.class, lagerabgangursprungPK);
 		if (lagerabgangursprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei updateLagerabgangursprung. Es gibt keinen pk "
-							+ lagerabgangursprungPK.toString());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei updateLagerabgangursprung. Es gibt keinen pk " + lagerabgangursprungPK.toString());
 		}
 
 		try {
 			// Gestehungspreis in in Los updaten
-			LagerbewegungDto[] dtos = lagerbewegungFindByIIdBuchung(lagerabgangursprungDto
-					.getILagerbewegungid());
+			LagerbewegungDto[] dtos = lagerbewegungFindByIIdBuchung(lagerabgangursprungDto.getILagerbewegungid());
 
 			if (dtos[0].getCBelegartnr().equals(LocaleFac.BELEGART_LOS)) {
-				getFertigungFac().updateLosistmaterialGestehungspreis(
-						dtos[0].getIBelegartpositionid(),
+				getFertigungFac().updateLosistmaterialGestehungspreis(dtos[0].getIBelegartpositionid(),
 						lagerabgangursprungDto.getNGestehungspreis(), null);
 			}
 		} catch (RemoteException ex1) {
 			throwEJBExceptionLPRespectOld(ex1);
 		}
 
-		setLagerabgangursprungFromLagerabgangursprungDto(lagerabgangursprung,
-				lagerabgangursprungDto);
+		setLagerabgangursprungFromLagerabgangursprungDto(lagerabgangursprung, lagerabgangursprungDto);
 	}
 
 	/**
 	 * Findet, ob ein bestimmter Artikel einem bestimmten Lager zugeordnet ist.
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param lagerIId
-	 *            7
+	 * @param artikelIId 4711
+	 * @param lagerIId   7
 	 * @throws EJBExceptionLP
 	 * @return ArtikellagerDto
 	 */
-	public ArtikellagerDto artikellagerFindByPrimaryKey(Integer artikelIId,
-			Integer lagerIId) throws EJBExceptionLP {
+	public ArtikellagerDto artikellagerFindByPrimaryKey(Integer artikelIId, Integer lagerIId) throws EJBExceptionLP {
 		if (artikelIId == null || lagerIId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("artikelIId == null || lagerIId == null"));
@@ -2820,23 +2636,22 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		artikellagerPK.setLagerIId(lagerIId);
 		Artikellager artikellager = em.find(Artikellager.class, artikellagerPK);
 		if (artikellager == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleArtikellagerDto(artikellager);
 	}
 
-	private void setArtikellagerFromArtikellagerDto(Artikellager artikellager,
-			ArtikellagerDto artikellagerDto) {
+	private void setArtikellagerFromArtikellagerDto(Artikellager artikellager, ArtikellagerDto artikellagerDto) {
 		artikellager.setNGestehungspreis(artikellagerDto.getNGestehungspreis());
 		artikellager.setNLagerstand(artikellagerDto.getNLagerstand());
 		artikellager.setMandantCNr(artikellagerDto.getMandantCNr());
+		artikellager.setFLagermindest(artikellagerDto.getFLagermindest());
+		artikellager.setFLagersoll(artikellagerDto.getFLagersoll());
 		em.merge(artikellager);
 		em.flush();
 	}
 
-	public ArtikellagerDto[] getAllArtikellager(Integer artikelIId)
-			throws EJBExceptionLP {
+	public ArtikellagerDto[] getAllArtikellager(Integer artikelIId) throws EJBExceptionLP {
 		Query query = em.createNamedQuery("ArtikellagerfindByArtikelIId");
 		query.setParameter(1, artikelIId);
 		Collection<?> cl = query.getResultList();
@@ -2847,8 +2662,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return ArtikellagerDtoAssembler.createDto(artikellager);
 	}
 
-	private ArtikellagerDto[] assembleArtikellagerDtos(
-			Collection<?> artikellagers) {
+	private ArtikellagerDto[] assembleArtikellagerDtos(Collection<?> artikellagers) {
 		List<ArtikellagerDto> list = new ArrayList<ArtikellagerDto>();
 		if (artikellagers != null) {
 			Iterator<?> iterator = artikellagers.iterator();
@@ -2861,11 +2675,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return (ArtikellagerDto[]) list.toArray(returnArray);
 	}
 
-	public String getAllSerienChargennrAufLagerInfo(Integer artikelIId,
-			Integer lagerIId, TheClientDto theClientDto) throws EJBExceptionLP {
+	public String getAllSerienChargennrAufLagerInfo(Integer artikelIId, Integer lagerIId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
-		SeriennrChargennrAufLagerDto[] dtos = getAllSerienChargennrAufLagerInfoDtos(
-				artikelIId, lagerIId, true, null, theClientDto);
+		SeriennrChargennrAufLagerDto[] dtos = getAllSerienChargennrAufLagerInfoDtos(artikelIId, lagerIId, true, null,
+				theClientDto);
 
 		String s = "";
 
@@ -2881,8 +2695,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLagerInfoDtosMitBereitsVerbrauchten(
-			Integer artikelIId, Integer lagerIId,
-			boolean bSortiertNachSerienChargennummer,
+			Integer artikelIId, Integer lagerIId, boolean bSortiertNachSerienChargennummer,
 			java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
@@ -2894,8 +2707,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			s += " AND LAGER_I_ID=" + lagerIId;
 		}
 		if (tStichtag != null) {
-			s += " AND T_BELEGDATUM <'"
-					+ Helper.formatTimestampWithSlashes(tStichtag) + "' ";
+			s += " AND T_BELEGDATUM <'" + Helper.formatTimestampWithSlashes(tStichtag) + "' ";
 		}
 
 		s += " ORDER BY C_SERIENNRCHARGENNR ";
@@ -2915,38 +2727,32 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			alDtos.add(dto);
 		}
 
-		Collections.sort(alDtos, new ComparatorSnrChnrNumerisch(
-				bSortiertNachSerienChargennummer));
+		Collections.sort(alDtos, new ComparatorSnrChnrNumerisch(bSortiertNachSerienChargennummer));
 
-		SeriennrChargennrAufLagerDto[] temp = new SeriennrChargennrAufLagerDto[cl
-				.size()];
+		SeriennrChargennrAufLagerDto[] temp = new SeriennrChargennrAufLagerDto[cl.size()];
 
 		return (SeriennrChargennrAufLagerDto[]) alDtos.toArray(temp);
 
 	}
 
-	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLagerInfoDtos(
-			Integer artikelIId, Integer lagerIId,
-			boolean bSortiertNachSerienChargennummer,
-			java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
-		return getAllSerienChargennrAufLagerInfoDtos(artikelIId, lagerIId,
-				null, bSortiertNachSerienChargennummer, tStichtag, theClientDto);
+	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLagerInfoDtos(Integer artikelIId, Integer lagerIId,
+			boolean bSortiertNachSerienChargennummer, java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
+		return getAllSerienChargennrAufLagerInfoDtos(artikelIId, lagerIId, null, bSortiertNachSerienChargennummer,
+				tStichtag, theClientDto);
 	}
 
-	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLagerInfoDtos(
-			Integer artikelIId, Integer lagerIId, String cSeriennrChargennr,
-			boolean bSortiertNachSerienChargennummer,
-			java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
+	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLagerInfoDtos(Integer artikelIId, Integer lagerIId,
+			String cSeriennrChargennr, boolean bSortiertNachSerienChargennummer, java.sql.Timestamp tStichtag,
+			TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String s = "SELECT COALESCE(C_SERIENNRCHARGENNR,'') AS C_SERIENNUMMERCHARGENNR, "
 				+ " SUM(CASE WHEN B_ABGANG=1 THEN -N_MENGE ELSE N_MENGE END) AS N_MENGE, "
 				+ " MIN(T_BELEGDATUM) AS T_BELEGDATUMMIN, (SELECT B_SERIENNRTRAGEND FROM WW_ARTIKEL WHERE I_ID="
-				+ artikelIId
-				+ ") AS B_SERIENNRTRAGEND,  COALESCE(C_VERSION,'') AS C_VERSION "
-				+ " FROM WW_LAGERBEWEGUNG WHERE B_HISTORIE=0 AND ARTIKEL_I_ID="
-				+ artikelIId;
+				+ artikelIId + ") AS B_SERIENNRTRAGEND,  COALESCE(C_VERSION,'') AS C_VERSION "
+				+ " FROM WW_LAGERBEWEGUNG WHERE B_HISTORIE=0 AND LAGER_I_ID NOT IN (SELECT LA.I_ID FROM WW_LAGER LA WHERE LA.LAGERART_C_NR='"
+				+ LagerFac.LAGERART_WERTGUTSCHRIFT + "') AND ARTIKEL_I_ID=" + artikelIId;
 
 		if (lagerIId != null) {
 			s += " AND LAGER_I_ID=" + lagerIId;
@@ -2955,19 +2761,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			s += " AND C_SERIENNRCHARGENNR='" + cSeriennrChargennr + "'";
 		}
 		if (tStichtag != null) {
-			s += " AND T_BELEGDATUM <'"
-					+ Helper.formatTimestampWithSlashes(tStichtag) + "' ";
+			s += " AND T_BELEGDATUM <'" + Helper.formatTimestampWithSlashes(tStichtag) + "' ";
 		}
 
-		s += " GROUP BY C_SERIENNRCHARGENNR, C_VERSION "
+		s += " GROUP BY C_SERIENNRCHARGENNR, COALESCE(C_VERSION,'') "
 				+ " HAVING SUM(CASE WHEN B_ABGANG=1 THEN -N_MENGE ELSE N_MENGE END) <> 0 ";
 
-		org.hibernate.Query query = session.createSQLQuery(s)
-				.addScalar("C_SERIENNUMMERCHARGENNR", Hibernate.STRING)
-				.addScalar("N_MENGE", Hibernate.BIG_DECIMAL)
-				.addScalar("T_BELEGDATUMMIN", Hibernate.TIMESTAMP)
-				.addScalar("B_SERIENNRTRAGEND", Hibernate.SHORT)
-				.addScalar("C_VERSION", Hibernate.STRING);
+		org.hibernate.Query query = session.createSQLQuery(s);
 
 		Collection<?> cl = query.list();
 		Iterator it = cl.iterator();
@@ -2980,18 +2780,52 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			dto.setCSeriennrChargennr((String) o[0]);
 			dto.setNMenge((BigDecimal) o[1]);
 			dto.setTBuchungszeit((Timestamp) o[2]);
+
+			boolean bSnrTragend = Helper.short2boolean((Short) o[3]);
+
 			dto.setBSeriennr((Short) o[3]);
 			dto.setCVersion((String) o[4]);
+
+			// Gebinde hinzufuegen
+
+			if (bSnrTragend == false) {
+
+				Session session2 = FLRSessionFactory.getFactory().openSession();
+
+				String sQuery = " SELECT l FROM FLRLagerbewegung l WHERE l.b_historie=0 AND l.n_menge >0 AND l.b_abgang=0 AND l.artikel_i_id="
+						+ artikelIId;
+				if (lagerIId != null) {
+					sQuery += " AND l.flrlager.i_id=" + lagerIId;
+				}
+
+				s += " AND l.c_seriennrchargennr='" + (String) o[0] + "'";
+
+				org.hibernate.Query queryGebinde = session.createQuery(sQuery);
+				queryGebinde.setMaxResults(1);
+
+				List l = queryGebinde.list();
+
+				if (l.iterator().hasNext()) {
+
+					FLRLagerbewegung lbew = (FLRLagerbewegung) l.iterator().next();
+
+					if (lbew.getFlrgebinde() != null) {
+						dto.setSGebinde(lbew.getFlrgebinde().getC_bez());
+						dto.setBdGebindemenge(lbew.getN_gebindemenge());
+					}
+
+				}
+
+				session2.close();
+			}
 
 			alDtos.add(dto);
 
 		}
 
-		Collections.sort(alDtos, new ComparatorSnrChnrNumerisch(
-				bSortiertNachSerienChargennummer));
+		Collections.sort(alDtos, new ComparatorSnrChnrNumerisch(bSortiertNachSerienChargennummer));
 
-		SeriennrChargennrAufLagerDto[] temp = new SeriennrChargennrAufLagerDto[cl
-				.size()];
+		SeriennrChargennrAufLagerDto[] temp = new SeriennrChargennrAufLagerDto[cl.size()];
 
 		return (SeriennrChargennrAufLagerDto[]) alDtos.toArray(temp);
 
@@ -3001,20 +2835,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * @deprecated use getAllSerienChargennrAufLagerInfoDtos() instead
 	 */
 
-	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLager(
-			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto,
-			Boolean bNurChargennummern,
-			boolean bSortiertNachSerienChargennummer,
+	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLager(Integer artikelIId, Integer lagerIId,
+			TheClientDto theClientDto, Boolean bNurChargennummern, boolean bSortiertNachSerienChargennummer,
 			java.sql.Timestamp tStichtag) throws EJBExceptionLP {
 		if (artikelIId == null || bNurChargennummern == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikelIId == null || bNurChargennummern == null"));
+					new Exception("artikelIId == null || bNurChargennummern == null"));
 		}
 		java.util.TreeMap list = new java.util.TreeMap();
 		FLRLagerbewegung lagerbewegungen = new FLRLagerbewegung();
-		lagerbewegungen
-				.setB_vollstaendigverbraucht(Helper.boolean2Short(false));
+		lagerbewegungen.setB_vollstaendigverbraucht(Helper.boolean2Short(false));
 		lagerbewegungen.setB_abgang(Helper.boolean2Short(false));
 
 		FLRArtikel artikel = new FLRArtikel();
@@ -3026,30 +2856,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		Session session = null;
 		session = FLRSessionFactory.getFactory().openSession();
-		Criteria snrs = session
-				.createCriteria(FLRLagerbewegung.class)
-				.add(Expression.eq("this."
-						+ LagerFac.FLR_LAGERBEWEGUNG_B_VOLLSTAENDIGVERBRAUCHT,
+		Criteria snrs = session.createCriteria(FLRLagerbewegung.class)
+				.add(Expression.eq("this." + LagerFac.FLR_LAGERBEWEGUNG_B_VOLLSTAENDIGVERBRAUCHT,
 						Helper.boolean2Short(false)))
-				.add(Expression.eq("this."
-						+ LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
-						Helper.boolean2Short(false)))
-				.add(Expression.isNotNull("this."
-						+ LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR));
+				.add(Expression.eq("this." + LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG, Helper.boolean2Short(false)))
+				.add(Expression.isNotNull("this." + LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR));
 
 		snrs.add(Example.create(lagerbewegungen));
 		snrs.createAlias("flrlager", "l");
 
-		if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
-			snrs.add(Restrictions.eq("l.mandant_c_nr",
-					theClientDto.getMandant()));
+		if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+				theClientDto)) {
+			snrs.add(Restrictions.eq("l.mandant_c_nr", theClientDto.getMandant()));
 		} else {
 
-			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-					MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER, theClientDto)) {
-				snrs.add(Restrictions.eq("l.mandant_c_nr",
-						theClientDto.getMandant()));
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
+					theClientDto)) {
+				snrs.add(Restrictions.eq("l.mandant_c_nr", theClientDto.getMandant()));
 			}
 		}
 
@@ -3057,12 +2880,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			snrs.add(Restrictions.eq("l.i_id", lagerIId));
 		}
 
-		snrs.createCriteria(LagerFac.FLR_LAGERBEWEGUNG_FLRARTIKEL).add(
-				Expression.eq("i_id", artikelIId));
+		snrs.createCriteria(LagerFac.FLR_LAGERBEWEGUNG_FLRARTIKEL).add(Expression.eq("i_id", artikelIId));
 
 		if (tStichtag != null) {
-			snrs.add(Expression.lt(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT,
-					tStichtag));
+			snrs.add(Expression.lt(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT, tStichtag));
 		}
 
 		snrs.addOrder(Order.asc(LagerFac.FLR_LAGERBEWEGUNG_I_ID_BUCHUNG));
@@ -3072,48 +2893,37 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		Iterator<?> listSnrIterator = listSnr.iterator();
 
-		Integer lagerIIdKeinlager = lagerFindByCNrByMandantCNr(
-				LagerFac.LAGER_KEINLAGER, theClientDto.getMandant()).getIId();
+		Integer lagerIIdKeinlager = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant())
+				.getIId();
 		int lastColumn = -1;
 		String letzteChargennummer = null;
 		while (listSnrIterator.hasNext()) {
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) listSnrIterator
-					.next();
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) listSnrIterator.next();
 			if (lastColumn == lagerbewegung.getI_id_buchung().intValue()
-					|| lagerbewegung.getC_seriennrchargennr().equals(
-							letzteChargennummer)) {
+					|| lagerbewegung.getC_seriennrchargennr().equals(letzteChargennummer)) {
 			} else {
-				if (!lagerbewegung.getFlrlager().getI_id()
-						.equals(lagerIIdKeinlager)) {
+				if (!lagerbewegung.getFlrlager().getI_id().equals(lagerIIdKeinlager)) {
 					SeriennrChargennrAufLagerDto dto = new SeriennrChargennrAufLagerDto();
 
-					BigDecimal menge = getMengeAufLager(lagerbewegung
-							.getFlrartikel().getI_id(), lagerbewegung
-							.getFlrlager().getI_id(),
-							lagerbewegung.getC_seriennrchargennr(),
+					BigDecimal menge = getMengeAufLager(lagerbewegung.getFlrartikel().getI_id(),
+							lagerbewegung.getFlrlager().getI_id(), lagerbewegung.getC_seriennrchargennr(),
 							theClientDto);
 
 					if (menge.doubleValue() != 0) {
 
-						if (Helper.short2boolean(lagerbewegung.getFlrartikel()
-								.getB_chargennrtragend()) == true) {
+						if (Helper.short2boolean(lagerbewegung.getFlrartikel().getB_chargennrtragend()) == true) {
 							dto.setBSeriennr(Helper.boolean2Short(false));
 							dto.setNMenge(Helper.rundeKaufmaennisch(menge, 2));
-							dto.setCSeriennrChargennr(lagerbewegung
-									.getC_seriennrchargennr());
-						} else if (Helper.short2boolean(lagerbewegung
-								.getFlrartikel().getB_seriennrtragend()) == true) {
+							dto.setCSeriennrChargennr(lagerbewegung.getC_seriennrchargennr());
+						} else if (Helper.short2boolean(lagerbewegung.getFlrartikel().getB_seriennrtragend()) == true) {
 
 							dto.setBSeriennr(Helper.boolean2Short(true));
 							dto.setNMenge(new BigDecimal(1));
-							dto.setCSeriennrChargennr(lagerbewegung
-									.getC_seriennrchargennr());
+							dto.setCSeriennrChargennr(lagerbewegung.getC_seriennrchargennr());
 						}
-						dto.setTBuchungszeit(new java.sql.Timestamp(
-								lagerbewegung.getT_buchungszeit().getTime()));
+						dto.setTBuchungszeit(new java.sql.Timestamp(lagerbewegung.getT_buchungszeit().getTime()));
 						if (bSortiertNachSerienChargennummer) {
-							list.put(lagerbewegung.getC_seriennrchargennr(),
-									dto);
+							list.put(lagerbewegung.getC_seriennrchargennr(), dto);
 						} else {
 							list.put(dto.getTBuchungszeit(), dto);
 						}
@@ -3124,8 +2934,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			}
 		}
 		session.close();
-		SeriennrChargennrAufLagerDto[] returnArray = new SeriennrChargennrAufLagerDto[list
-				.size()];
+		SeriennrChargennrAufLagerDto[] returnArray = new SeriennrChargennrAufLagerDto[list.size()];
 
 		Iterator<?> it = list.keySet().iterator();
 		int i = 0;
@@ -3133,14 +2942,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			if (bSortiertNachSerienChargennummer) {
 				String s = (String) it.next();
-				SeriennrChargennrAufLagerDto dto = (SeriennrChargennrAufLagerDto) list
-						.get(s);
+				SeriennrChargennrAufLagerDto dto = (SeriennrChargennrAufLagerDto) list.get(s);
 				returnArray[i] = dto;
 
 			} else {
 				Timestamp ts = (Timestamp) it.next();
-				SeriennrChargennrAufLagerDto dto = (SeriennrChargennrAufLagerDto) list
-						.get(ts);
+				SeriennrChargennrAufLagerDto dto = (SeriennrChargennrAufLagerDto) list.get(ts);
 				returnArray[i] = dto;
 
 			}
@@ -3151,20 +2958,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void updateTBelegdatumEinesBelegesImLager(String belegartCNr,
-			Integer belegartIId, java.sql.Timestamp tBelegdatumNeu,
-			TheClientDto theClientDto) {
+	public void updateTBelegdatumEinesBelegesImLager(String belegartCNr, Integer belegartIId,
+			java.sql.Timestamp tBelegdatumNeu, TheClientDto theClientDto) {
 
-		if (belegartCNr == null || belegartIId == null
-				|| tBelegdatumNeu == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartIId == null || tBelegdatumNeu == null"));
+		if (belegartCNr == null || belegartIId == null || tBelegdatumNeu == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartIId == null || tBelegdatumNeu == null"));
 		}
 
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByBelegartCNrIBelegartid");
+		Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrIBelegartid");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartIId);
 		Collection<?> cl = query.getResultList();
@@ -3176,8 +2978,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		updateLagerbewegungs(lagerbewegungDtos, theClientDto);
 	}
 
-	public BigDecimal getGemittelterEinstandspreisAllerLagerndenArtikel(
-			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto) {
+	public BigDecimal getGemittelterEinstandspreisAllerLagerndenArtikel(Integer artikelIId, Integer lagerIId,
+			TheClientDto theClientDto) {
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT l.i_id_buchung,l.n_einstandspreis, l.n_menge,(SELECT SUM(u.n_verbrauchtemenge) FROM FLRLagerabgangursprung as u WHERE u.compId.i_lagerbewegungidursprung=l.i_id_buchung) as verbrauchtemenge  FROM FLRLagerbewegung as l"
@@ -3201,8 +3003,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			if (lastColumn == ((Integer) o[0]).intValue()) {
 			} else {
 				bdMenge = bdMenge.add((BigDecimal) o[2]);
-				bdWert = bdWert.add(((BigDecimal) o[1])
-						.multiply((BigDecimal) o[2]));
+				bdWert = bdWert.add(((BigDecimal) o[1]).multiply((BigDecimal) o[2]));
 			}
 			lastColumn = ((Integer) o[0]).intValue();
 		}
@@ -3218,29 +3019,39 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * @deprecated use getAllSerienChargennrAufLagerInfoDtos() instead
 	 */
 
-	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLager(
-			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto,
-			Boolean bNurChargennummern, boolean bSortiertNachSerienChargennummer)
+	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLager(Integer artikelIId, Integer lagerIId,
+			TheClientDto theClientDto, Boolean bNurChargennummern, boolean bSortiertNachSerienChargennummer)
 			throws EJBExceptionLP {
-		return getAllSerienChargennrAufLager(artikelIId, lagerIId,
-				theClientDto, bNurChargennummern,
+		return getAllSerienChargennrAufLager(artikelIId, lagerIId, theClientDto, bNurChargennummern,
 				bSortiertNachSerienChargennummer, null);
 	}
 
 	public List<SeriennrChargennrMitMengeDto> getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 			String belegartCNr, Integer belegartpositionIId) {
 
+		return getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(belegartCNr, belegartpositionIId, true);
+	}
+
+	public List<SeriennrChargennrMitMengeDto> getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+			String belegartCNr, Integer belegartpositionIId, boolean bMitChargeneingenschaften) {
+
 		Session session = FLRSessionFactory.getFactory().openSession();
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class);
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR,
-				belegartCNr));
-		crit.add(Restrictions.eq(
-				LagerFac.FLR_LAGERBEWEGUNG_I_BELEGARTPOSITIONID,
-				belegartpositionIId));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-				Helper.boolean2Short(false)));
-		crit.addOrder(Order.asc(LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR));
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class);
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, belegartCNr));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_I_BELEGARTPOSITIONID, belegartpositionIId));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)));
+
+		ParameteranwenderDto parameteranwenderDto = getParameterFac().getAnwenderparameter(
+				ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.ANWENDERPARAMETER_SNR_CHNR_ALPHABETISCH_SORTIERT);
+
+		boolean bAlphabetischSortiert = (Boolean) parameteranwenderDto.getCWertAsObject();
+
+		if (bAlphabetischSortiert) {
+			crit.addOrder(Order.asc(LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR));
+		} else {
+			// SP6376 Erfassungszeitpunkt anstatt c_serienchagennummer
+			crit.addOrder(Order.asc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
+		}
 
 		List<?> resultList = crit.list();
 
@@ -3249,32 +3060,45 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		Iterator<?> iteratorLB = resultList.iterator();
 		if (resultList.size() > 0) {
 			while (iteratorLB.hasNext()) {
-				FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) iteratorLB
-						.next();
+				FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) iteratorLB.next();
 
-				SeriennrChargennrMitMengeDto dto = new SeriennrChargennrMitMengeDto();
-				dto.setCSeriennrChargennr(lagerbewegung
-						.getC_seriennrchargennr());
-				dto.setNMenge(lagerbewegung.getN_menge());
-				dto.setCVersion(lagerbewegung.getC_version());
+				// SP4243
+				if (lagerbewegung.getN_menge().doubleValue() != 0) {
 
-				// 18452
-				if (Helper.short2boolean(lagerbewegung.getFlrartikel()
-						.getB_chargennrtragend())
-						&& Helper.short2boolean(lagerbewegung.getB_abgang()) == false) {
+					SeriennrChargennrMitMengeDto dto = new SeriennrChargennrMitMengeDto();
+					dto.setCSeriennrChargennr(lagerbewegung.getC_seriennrchargennr());
+					dto.setNMenge(lagerbewegung.getN_menge());
+					dto.setCVersion(lagerbewegung.getC_version());
 
-					try {
-						dto.setPaneldatenDtos(getPanelFac()
-								.paneldatenFindByPanelCNrCKey(
-										PanelFac.PANEL_CHARGENEIGENSCHAFTEN,
-										lagerbewegung.getI_id_buchung() + ""));
-					} catch (RemoteException e) {
-						throwEJBExceptionLPRespectOld(e);
+					dto.setNGebindemenge(lagerbewegung.getN_gebindemenge());
+					dto.setTBuchungszeit(new Timestamp(lagerbewegung.getT_buchungszeit().getTime()));
+
+					dto.setLagerbewegungIIdLetzteintrag(lagerbewegung.getI_id());
+
+					if (lagerbewegung.getFlrgebinde() != null) {
+						dto.setGebindeIId(lagerbewegung.getFlrgebinde().getI_id());
 					}
 
-				}
+					// 18452
+					if (bMitChargeneingenschaften == true
+							&& Helper.short2boolean(lagerbewegung.getFlrartikel().getB_chargennrtragend())) {
 
-				list.add(dto);
+						try {
+							Integer artikelsnrchnrIId = artikelsnrchnrIIdFindByArtikelIIdCSeriennrchargennr(
+									lagerbewegung.getArtikel_i_id(), lagerbewegung.getC_seriennrchargennr());
+
+							if (artikelsnrchnrIId != null) {
+								dto.setPaneldatenDtos(getPanelFac().paneldatenFindByPanelCNrCKey(
+										PanelFac.PANEL_CHARGENEIGENSCHAFTEN, artikelsnrchnrIId + ""));
+							}
+						} catch (RemoteException e) {
+							throwEJBExceptionLPRespectOld(e);
+						}
+
+					}
+
+					list.add(dto);
+				}
 			}
 		}
 
@@ -3284,8 +3108,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Lesen aller in der DB vorhandenen ArtikelArten.
 	 * 
-	 * @param spracheCNr
-	 *            Sprache
+	 * @param spracheCNr Sprache
 	 * @return Map Inhalt
 	 * @throws EJBExceptionLP
 	 */
@@ -3305,8 +3128,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			if (!lagerartTemp.getCNr().equals(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
 
 				Object value = null;
-				Lagerartspr lagerartspr = (em.find(Lagerartspr.class,
-						new LagerartsprPK((String) key, spracheCNr)));
+				Lagerartspr lagerartspr = (em.find(Lagerartspr.class, new LagerartsprPK((String) key, spracheCNr)));
 
 				if (lagerartspr != null) {
 					value = lagerartspr.getCBez();
@@ -3323,8 +3145,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Lesen aller Lager eines Mandanten.
 	 * 
-	 * @param theClientDto
-	 *            User-ID
+	 * @param theClientDto User-ID
 	 * @return Map Inhalt
 	 * @throws EJBExceptionLP
 	 */
@@ -3342,8 +3163,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			Lager lagerTemp = (Lager) iter.next();
 			if (!lagerTemp.getCNr().equals(LagerFac.LAGER_KEINLAGER)) {
 
-				if (!lagerTemp.getLagerartCNr().equals(
-						LagerFac.LAGER_WERTGUTSCHRIFT)) {
+				if (!lagerTemp.getLagerartCNr().equals(LagerFac.LAGER_WERTGUTSCHRIFT)) {
 
 					treemap.put(lagerTemp.getIId(), lagerTemp.getCNr());
 				}
@@ -3355,51 +3175,39 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Liefert aktuellen Gestehungspreis eines Artikels in einem Lager zurueck.
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param lagerIId
-	 *            7
-	 * @param theClientDto
-	 *            String
+	 * @param artikelIId   4711
+	 * @param lagerIId     7
+	 * @param theClientDto String
 	 * @return BigDecimal Gestehungspreis
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null || lagerIId == null
+	 * @throws EJBExceptionLP artikelIId == null || lagerIId == null
 	 */
-	public BigDecimal getGemittelterGestehungspreisEinesLagers(
-			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public BigDecimal getGemittelterGestehungspreisEinesLagers(Integer artikelIId, Integer lagerIId,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (artikelIId == null || lagerIId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("artikelIId == null || lagerIId == null"));
 		}
 
-		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-				artikelIId, theClientDto);
+		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
 
-		return getGemittelterGestehungspreisEinesLagers(artikelIId,
-				artikelDto.getBLagerbewirtschaftet(),
+		return getGemittelterGestehungspreisEinesLagers(artikelIId, artikelDto.getBLagerbewirtschaftet(),
 				artikelDto.getArtikelartCNr(), lagerIId, theClientDto);
 	}
 
-	public BigDecimal getGemittelterGestehungspreisEinesLagers(
-			Integer artikelIId, Short bLagerbewirtschaftet,
-			String artikelartCNr, Integer lagerIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public BigDecimal getGemittelterGestehungspreisEinesLagers(Integer artikelIId, Short bLagerbewirtschaftet,
+			String artikelartCNr, Integer lagerIId, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// Wenn Arbeitszeitartikel, dann wird der Einkaufspreis des
 		// 1.Lieferanten verwendet
 		try {
 			// Wenn nicht lagerbewirtschaftet, dann auf KEIN_LAGER umstellen.
 			if (!Helper.short2boolean(bLagerbewirtschaftet)) {
-				lagerIId = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER,
-						theClientDto.getMandant()).getIId();
+				lagerIId = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant()).getIId();
 			}
 
 			if (artikelartCNr.equals(ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
-				ArtikellieferantDto dto = getArtikelFac()
-						.getArtikelEinkaufspreis(artikelIId, new BigDecimal(1),
-								theClientDto.getSMandantenwaehrung(),
-								theClientDto);
+				ArtikellieferantDto dto = getArtikelFac().getArtikelEinkaufspreisDesBevorzugtenLieferanten(artikelIId,
+						new BigDecimal(1), theClientDto.getSMandantenwaehrung(), theClientDto);
 				if (dto != null) {
 					if (dto.getNNettopreis() != null) {
 						return dto.getNNettopreis();
@@ -3428,32 +3236,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Liefert aktuellen Gestehungspreis eines Artikels (gemittelt ueber alle
 	 * Laeger).
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param theClientDto
-	 *            User-ID
+	 * @param artikelIId   4711
+	 * @param theClientDto User-ID
 	 * @return BigDecimal Gestehungspreis
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null
+	 * @throws EJBExceptionLP artikelIId == null
 	 */
-	public BigDecimal getGemittelterGestehungspreisAllerLaegerEinesMandanten(
-			Integer artikelIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public BigDecimal getGemittelterGestehungspreisAllerLaegerEinesMandanten(Integer artikelIId,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("artikelIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("artikelIId == null"));
 		}
 		// Wenn Arbeitszeitartikel, dann wird der Einkaufspreis des
 		// 1.Lieferanten verwendet
 		try {
-			ArtikelDto artikelDto = getArtikelFac()
-					.artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
-			if (artikelDto.getArtikelartCNr().equals(
-					ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
-				ArtikellieferantDto dto = getArtikelFac()
-						.getArtikelEinkaufspreis(artikelIId, new BigDecimal(1),
-								theClientDto.getSMandantenwaehrung(),
-								theClientDto);
+			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
+			if (artikelDto.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
+				ArtikellieferantDto dto = getArtikelFac().getArtikelEinkaufspreisDesBevorzugtenLieferanten(artikelIId,
+						new BigDecimal(1), theClientDto.getSMandantenwaehrung(), theClientDto);
 				if (dto != null) {
 					if (dto.getLief1Preis() != null) {
 						return dto.getLief1Preis();
@@ -3480,37 +3279,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			ArtikellagerDto dto = dtos[i];
 			Lager lager = em.find(Lager.class, dto.getLagerIId());
 			if (lager == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
-			if (!lager.getLagerartCNr()
-					.equals(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
+			if (!lager.getLagerartCNr().equals(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
 				if (lager.getMandantCNr().equals(theClientDto.getMandant())) {
 					// Gestehungspreise berechnen
-					bdGesamtLagerstand = bdGesamtLagerstand.add(dto
-							.getNLagerstand());
-					bdGesamtGestehungspreis = bdGesamtGestehungspreis.add(dto
-							.getNLagerstand().multiply(
-									dto.getNGestehungspreis()));
+					bdGesamtLagerstand = bdGesamtLagerstand.add(dto.getNLagerstand());
+					bdGesamtGestehungspreis = bdGesamtGestehungspreis
+							.add(dto.getNLagerstand().multiply(dto.getNGestehungspreis()));
 				}
 			}
 
 		}
 		if (bdGesamtLagerstand.doubleValue() != 0) {
-			bdErgebnis = bdGesamtGestehungspreis.divide(bdGesamtLagerstand,
-					BigDecimal.ROUND_HALF_EVEN);
+			bdErgebnis = bdGesamtGestehungspreis.divide(bdGesamtLagerstand, BigDecimal.ROUND_HALF_EVEN);
 		}
 		return bdErgebnis;
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public BigDecimal getLagerstandAllerLagerAllerMandanten(Integer artikelIId,
-			boolean bMitKonsignationslager, TheClientDto theClientDto) {
+	public BigDecimal getLagerstandAllerLagerAllerMandanten(Integer artikelIId, boolean bMitKonsignationslager,
+			TheClientDto theClientDto) {
 
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("artikelIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("artikelIId == null"));
 		}
 
 		LagerDto[] lagerDtos = lagerFindAll();
@@ -3519,8 +3312,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		for (int i = 0; i < lagerDtos.length; i++) {
 			LagerDto lagerDto = lagerDtos[i];
 
-			if (bMitKonsignationslager == false
-					&& Helper.short2boolean(lagerDto.getBKonsignationslager()) == true) {
+			if (bMitKonsignationslager == false && Helper.short2boolean(lagerDto.getBKonsignationslager()) == true) {
 			} else {
 				Artikellager artikellager = em.find(Artikellager.class,
 						new ArtikellagerPK(artikelIId, lagerDto.getIId()));
@@ -3535,24 +3327,20 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public BigDecimal getLagerstandAllerLagerEinesMandanten(Integer artikelIId,
-			TheClientDto theClientDto) {
-		return getLagerstandAllerLagerEinesMandanten(artikelIId, true,
-				theClientDto);
+	public BigDecimal getLagerstandAllerLagerEinesMandanten(Integer artikelIId, TheClientDto theClientDto) {
+		return getLagerstandAllerLagerEinesMandanten(artikelIId, true, theClientDto);
 
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public HashMap<String, BigDecimal> getLagerstaendeAllerLagerartenOhneKeinLager(
-			Integer artikelIId, TheClientDto theClientDto) {
+	public HashMap<String, BigDecimal> getLagerstaendeAllerLagerartenOhneKeinLager(Integer artikelIId,
+			TheClientDto theClientDto) {
 		HashMap<String, BigDecimal> hmLagerstaende = new HashMap<String, BigDecimal>();
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT al.flrlager.lagerart_c_nr,sum(al.n_lagerstand) FROM FLRArtikellager as al WHERE al.flrlager.c_nr <>'"
-				+ LagerFac.LAGER_KEINLAGER
-				+ "'  AND al.flrartikel.i_id ="
-				+ artikelIId + "";
+				+ LagerFac.LAGER_KEINLAGER + "'  AND al.flrartikel.i_id =" + artikelIId + "";
 
 		queryString += " GROUP BY al.flrlager.lagerart_c_nr ORDER BY al.flrlager.lagerart_c_nr ASC ";
 
@@ -3572,8 +3360,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		session.close();
 
 		if (!hmLagerstaende.containsKey(LagerFac.LAGERART_KUNDENLAGER)) {
-			hmLagerstaende
-					.put(LagerFac.LAGERART_KUNDENLAGER, new BigDecimal(0));
+			hmLagerstaende.put(LagerFac.LAGERART_KUNDENLAGER, new BigDecimal(0));
 		}
 
 		if (!hmLagerstaende.containsKey(LagerFac.LAGERART_HAUPTLAGER)) {
@@ -3583,8 +3370,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			hmLagerstaende.put(LagerFac.LAGERART_NORMAL, new BigDecimal(0));
 		}
 		if (!hmLagerstaende.containsKey(LagerFac.LAGERART_PERSOENLICH)) {
-			hmLagerstaende
-					.put(LagerFac.LAGERART_PERSOENLICH, new BigDecimal(0));
+			hmLagerstaende.put(LagerFac.LAGERART_PERSOENLICH, new BigDecimal(0));
 		}
 		if (!hmLagerstaende.containsKey(LagerFac.LAGERART_SCHROTT)) {
 			hmLagerstaende.put(LagerFac.LAGERART_SCHROTT, new BigDecimal(0));
@@ -3593,8 +3379,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			hmLagerstaende.put(LagerFac.LAGERART_SPERRLAGER, new BigDecimal(0));
 		}
 		if (!hmLagerstaende.containsKey(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
-			hmLagerstaende.put(LagerFac.LAGERART_WERTGUTSCHRIFT,
-					new BigDecimal(0));
+			hmLagerstaende.put(LagerFac.LAGERART_WERTGUTSCHRIFT, new BigDecimal(0));
 		}
 		if (!hmLagerstaende.containsKey(LagerFac.LAGERART_ZOLLLAGER)) {
 			hmLagerstaende.put(LagerFac.LAGERART_ZOLLLAGER, new BigDecimal(0));
@@ -3606,29 +3391,34 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			hmLagerstaende.put(LagerFac.LAGERART_HALBFERTIG, new BigDecimal(0));
 		}
 		if (!hmLagerstaende.containsKey(LagerFac.LAGERART_WARENEINGANG)) {
-			hmLagerstaende.put(LagerFac.LAGERART_WARENEINGANG,
-					new BigDecimal(0));
+			hmLagerstaende.put(LagerFac.LAGERART_WARENEINGANG, new BigDecimal(0));
 		}
 
 		return hmLagerstaende;
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public BigDecimal getLagerstandAllerLagerEinesMandanten(Integer artikelIId,
-			boolean bMitKonsignationslager, TheClientDto theClientDto) {
+	public BigDecimal getLagerstandAllerLagerEinesMandanten(Integer artikelIId, boolean bMitKonsignationslager,
+			TheClientDto theClientDto) {
+
+		return getLagerstandAllerLagerEinesMandanten(artikelIId, bMitKonsignationslager, theClientDto.getMandant());
+
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public BigDecimal getLagerstandAllerLagerEinesMandanten(Integer artikelIId, boolean bMitKonsignationslager,
+			String mandantCNr) {
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("artikelIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("artikelIId == null"));
 		}
 
-		LagerDto[] lagerDtos = lagerFindByMandantCNr(theClientDto.getMandant());
+		LagerDto[] lagerDtos = lagerFindByMandantCNr(mandantCNr);
 		BigDecimal lagerstand = new BigDecimal(0);
 
 		for (int i = 0; i < lagerDtos.length; i++) {
 			LagerDto lagerDto = lagerDtos[i];
 
-			if (bMitKonsignationslager == false
-					&& Helper.short2boolean(lagerDto.getBKonsignationslager()) == true) {
+			if (bMitKonsignationslager == false && Helper.short2boolean(lagerDto.getBKonsignationslager()) == true) {
 			} else {
 				Artikellager artikellager = em.find(Artikellager.class,
 						new ArtikellagerPK(artikelIId, lagerDto.getIId()));
@@ -3642,11 +3432,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public BigDecimal getLagerstandAllerSperrlaegerEinesMandanten(
-			Integer artikelIId, TheClientDto theClientDto) {
+	public BigDecimal getLagerstandAllerSperrlaegerEinesMandanten(Integer artikelIId, TheClientDto theClientDto) {
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("artikelIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("artikelIId == null"));
 		}
 
 		LagerDto[] lagerDtos = lagerFindByMandantCNr(theClientDto.getMandant());
@@ -3668,29 +3456,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public BigDecimal getGestehungspreisZumZeitpunkt(Integer artikelIId,
-			Integer lagerIId, java.sql.Timestamp tsZeitpunkt,
-			TheClientDto theClientDto) {
+	public BigDecimal getGestehungspreisZumZeitpunkt(Integer artikelIId, Integer lagerIId,
+			java.sql.Timestamp tsZeitpunkt, TheClientDto theClientDto) {
 		if (artikelIId == null || tsZeitpunkt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null || tsZeitpunkt == null"));
 		}
 
-		ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-				artikelIId, theClientDto);
+		ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
 
 		// Wenn nicht lagerbewirtschaftet, dann auf KEIN_LAGER umstellen.
 		if (!Helper.short2boolean(aDto.getBLagerbewirtschaftet())) {
-			lagerIId = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER,
-					theClientDto.getMandant()).getIId();
+			lagerIId = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant()).getIId();
 		}
 
 		if (aDto.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
-			ArtikellieferantDto dto = getArtikelFac().getArtikelEinkaufspreis(
-					artikelIId, null, new BigDecimal(1),
-					theClientDto.getSMandantenwaehrung(),
-					new java.sql.Date(tsZeitpunkt.getTime()), theClientDto);
+			ArtikellieferantDto dto = getArtikelFac().getArtikelEinkaufspreis(artikelIId, null, new BigDecimal(1),
+					theClientDto.getSMandantenwaehrung(), new java.sql.Date(tsZeitpunkt.getTime()), theClientDto);
 			if (dto != null) {
 				if (dto.getNNettopreis() != null) {
 					return dto.getNNettopreis();
@@ -3721,27 +3503,20 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			session = factory.openSession();
 
-			org.hibernate.Criteria crit = session
-					.createCriteria(FLRLagerbewegung.class);
+			org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class);
 			crit.setMaxResults(1);
 
-			crit.add(
-					Expression.le(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM,
-							tsZeitpunkt))
-					.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRARTIKEL, "a")
-					.add(Expression.eq("a.i_id", artikelIId))
-					.add(Expression.eq("b_historie",
-							Helper.boolean2Short(false)));
+			crit.add(Expression.le(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tsZeitpunkt))
+					.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRARTIKEL, "a").add(Expression.eq("a.i_id", artikelIId))
+					.add(Expression.eq("b_historie", Helper.boolean2Short(false)));
 			crit.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRLAGER, "l");
 
-			crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
-					Helper.boolean2Short(false)));
+			crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG, Helper.boolean2Short(false)));
 
 			crit.add(Expression.eq("l.i_id", lagerDtos[i].getIId()));
 
 			crit.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM))
-					.addOrder(
-							Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
+					.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
 			List<?> resultList = crit.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 
@@ -3749,8 +3524,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				if (gesamtwert == null) {
 					gesamtwert = new BigDecimal(0.0000);
 				}
-				FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-						.next();
+				FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 
 				// Wenns der Gestehungspreis eines bestimmten Lagers ist, dann
 				// kann diesel sofort zurueckgegeben werden
@@ -3758,19 +3532,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					return lagerbewegung.getN_gestehungspreis();
 				}
 
-				BigDecimal lpZp = getLagerstandZumZeitpunkt(artikelIId,
-						lagerDtos[i].getIId(), tsZeitpunkt, theClientDto);
+				BigDecimal lpZp = getLagerstandZumZeitpunkt(artikelIId, lagerDtos[i].getIId(), tsZeitpunkt,
+						theClientDto);
 
 				gesamtlagerstand = gesamtlagerstand.add(lpZp);
-				gesamtwert = gesamtwert.add(lpZp.multiply(lagerbewegung
-						.getN_gestehungspreis()));
+				gesamtwert = gesamtwert.add(lpZp.multiply(lagerbewegung.getN_gestehungspreis()));
 			}
 
 			session.close();
 		}
 		if (gesamtlagerstand.doubleValue() != 0) {
-			return gesamtwert.divide(gesamtlagerstand, 4,
-					BigDecimal.ROUND_HALF_EVEN);
+			return gesamtwert.divide(gesamtlagerstand, 4, BigDecimal.ROUND_HALF_EVEN);
 		} else {
 			if (gesamtwert == null) {
 				return null;
@@ -3783,23 +3555,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Liefert den Lagerstand zu einem best. Datum
 	 * 
-	 * @param artikelIId
-	 *            Integer
-	 * @param lagerIId
-	 *            Integer
-	 * @param tsZeitpunkt
-	 *            Timestamp
-	 * @param theClientDto
-	 *            String
+	 * @param artikelIId   Integer
+	 * @param lagerIId     Integer
+	 * @param tsZeitpunkt  Timestamp
+	 * @param theClientDto String
 	 * @return BigDecimal
 	 */
-	public BigDecimal getLagerstandZumZeitpunkt(Integer artikelIId,
-			Integer lagerIId, java.sql.Timestamp tsZeitpunkt,
+	public BigDecimal getLagerstandZumZeitpunkt(Integer artikelIId, Integer lagerIId, java.sql.Timestamp tsZeitpunkt,
 			TheClientDto theClientDto) {
 
 		if (artikelIId == null || tsZeitpunkt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null ||tsZeitpunkt == null"));
 		}
 
@@ -3807,20 +3573,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		Session session = factory.openSession();
 
 		String sQuery = "SELECT sum(l.n_menge) FROM FLRLagerbewegung l WHERE l.b_historie=0 AND l.flrlager.c_nr NOT IN('"
-				+ LagerFac.LAGER_KEINLAGER
-				+ "') AND l.flrlager.lagerart_c_nr NOT IN ('"
-				+ LagerFac.LAGERART_WERTGUTSCHRIFT
-				+ "')  AND l.artikel_i_id="
-				+ artikelIId
-				+ " AND l.t_belegdatum <'"
+				+ LagerFac.LAGER_KEINLAGER + "') AND l.flrlager.lagerart_c_nr NOT IN ('"
+				+ LagerFac.LAGERART_WERTGUTSCHRIFT + "')  AND l.artikel_i_id=" + artikelIId + " AND l.t_belegdatum <'"
 				+ Helper.formatTimestampWithSlashes(tsZeitpunkt) + "'";
 
 		if (lagerIId != null) {
 			sQuery += " AND l.lager_i_id=" + lagerIId;
 		}
 
-		org.hibernate.Query querylagerbewegungen = session.createQuery(sQuery
-				+ "AND l.b_abgang=0");
+		org.hibernate.Query querylagerbewegungen = session.createQuery(sQuery + "AND l.b_abgang=0");
 		List<?> result = querylagerbewegungen.list();
 		BigDecimal zugaenge = new BigDecimal(0);
 
@@ -3848,15 +3609,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return zugaenge.subtract(abgaenge);
 	}
 
-	public HashMap<Integer, BigDecimal> getLagerstandAllerArtikelZumZeitpunkt(
-			Integer lagerIId, java.sql.Timestamp tsZeitpunkt,
-			TheClientDto theClientDto) {
+	public HashMap<Integer, BigDecimal> getLagerstandAllerArtikelZumZeitpunkt(Integer lagerIId,
+			java.sql.Timestamp tsZeitpunkt, TheClientDto theClientDto) {
 
 		HashMap<Integer, BigDecimal> hmLagerstaendeZumZeitpunkt = new HashMap<Integer, BigDecimal>();
 
 		if (tsZeitpunkt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("tsZeitpunkt == null"));
 		}
 
@@ -3864,21 +3623,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		Session session = factory.openSession();
 
 		String sQuery = "SELECT sum(l.n_menge),l.artikel_i_id FROM FLRLagerbewegung l WHERE l.b_historie=0 AND l.flrlager.c_nr NOT IN('"
-				+ LagerFac.LAGER_KEINLAGER
-				+ "') AND l.flrlager.lagerart_c_nr NOT IN ('"
-				+ LagerFac.LAGERART_WERTGUTSCHRIFT
-				+ "')  AND l.t_belegdatum <'"
-				+ Helper.formatTimestampWithSlashes(tsZeitpunkt)
-				+ "' AND l.flrlager.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' ";
+				+ LagerFac.LAGER_KEINLAGER + "') AND l.flrlager.lagerart_c_nr NOT IN ('"
+				+ LagerFac.LAGERART_WERTGUTSCHRIFT + "')  AND l.t_belegdatum <'"
+				+ Helper.formatTimestampWithSlashes(tsZeitpunkt) + "' AND l.flrlager.mandant_c_nr='"
+				+ theClientDto.getMandant() + "' ";
 
 		if (lagerIId != null) {
 			sQuery += " AND l.lager_i_id=" + lagerIId;
 		}
 
-		org.hibernate.Query querylagerbewegungen = session.createQuery(sQuery
-				+ "AND l.b_abgang=0 GROUP BY l.artikel_i_id");
+		org.hibernate.Query querylagerbewegungen = session
+				.createQuery(sQuery + "AND l.b_abgang=0 GROUP BY l.artikel_i_id");
 		List<?> result = querylagerbewegungen.list();
 
 		Object[] o = result.toArray();
@@ -3893,8 +3648,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		session.close();
 		session = factory.openSession();
-		querylagerbewegungen = session.createQuery(sQuery
-				+ "AND l.b_abgang=1 GROUP BY l.artikel_i_id");
+		querylagerbewegungen = session.createQuery(sQuery + "AND l.b_abgang=1 GROUP BY l.artikel_i_id");
 		result = querylagerbewegungen.list();
 		o = result.toArray();
 
@@ -3907,10 +3661,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			BigDecimal lagerstand = new BigDecimal(0);
 
 			if (hmLagerstaendeZumZeitpunkt.containsKey(artikelIId)) {
-				BigDecimal zugaenge = hmLagerstaendeZumZeitpunkt
-						.get(artikelIId);
+				BigDecimal zugaenge = hmLagerstaendeZumZeitpunkt.get(artikelIId);
 				lagerstand = zugaenge.subtract(bdAbgaenge);
 			}
+
 			hmLagerstaendeZumZeitpunkt.put(artikelIId, lagerstand);
 
 		}
@@ -3930,13 +3684,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * @return der Lagerstand
 	 */
 
-	private BigDecimal getLagerstandVorZeitpunktBelegdatum(Integer artikelIId,
-			Integer lagerIId, java.sql.Timestamp tsZeitpunkt,
-			TheClientDto theClientDto) {
+	private BigDecimal getLagerstandVorZeitpunktBelegdatum(Integer artikelIId, Integer lagerIId,
+			java.sql.Timestamp tsZeitpunkt, TheClientDto theClientDto) {
 
 		if (artikelIId == null || tsZeitpunkt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null ||tsZeitpunkt == null"));
 		}
 
@@ -3944,11 +3696,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		Session session = null;
 
 		session = factory.openSession();
-		String sql = "select sum(N_MENGE) from ( "
-				+ "select SUM(N_MENGE) as N_MENGE from WW_LAGERBEWEGUNG "
+		String sql = "select sum(N_MENGE) from ( " + "select SUM(N_MENGE) as N_MENGE from WW_LAGERBEWEGUNG "
 				+ "where LAGER_I_ID=? and ARTIKEL_I_ID=? and B_ABGANG=0 and B_HISTORIE=0 and T_BELEGDATUM < ? "
-				+ "union "
-				+ "select -SUM(U.N_VERBRAUCHTEMENGE) as N_MENGE from WW_LAGERBEWEGUNG B "
+				+ "union " + "select -SUM(U.N_VERBRAUCHTEMENGE) as N_MENGE from WW_LAGERBEWEGUNG B "
 				+ "inner join WW_LAGERABGANGURSPRUNG U on U.I_LAGERBEWEGUNGID = B.I_ID_BUCHUNG "
 				+ "where LAGER_I_ID=? and ARTIKEL_I_ID=? and B_ABGANG=1 and B_HISTORIE=0 and B.T_BELEGDATUM < ?) as FOO;";
 		org.hibernate.Query query = session.createSQLQuery(sql);
@@ -3966,17 +3716,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return lagerstand;
 	}
 
-	private BigDecimal getGestehungspreisVorZeitpunktBelegdatum(
-			Integer artikelIId, Integer lagerIId,
+	private BigDecimal getGestehungspreisVorZeitpunktBelegdatum(Integer artikelIId, Integer lagerIId,
 			java.sql.Timestamp tsZeitpunkt, TheClientDto theClientDto) {
 		if (artikelIId == null || tsZeitpunkt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null || tsZeitpunkt == null"));
 		}
 
-		String sql = "select N_GESTEHUNGSPREIS "
-				+ "from WW_LAGERBEWEGUNG "
+		String sql = "select N_GESTEHUNGSPREIS " + "from WW_LAGERBEWEGUNG "
 				+ "where LAGER_I_ID=? and ARTIKEL_I_ID=? and B_ABGANG=0 and B_HISTORIE=0 and T_BELEGDATUM < ? "
 				+ "order by T_BELEGDATUM desc, T_BUCHUNGSZEIT desc";
 
@@ -3999,22 +3746,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return gestpreis;
 	}
 
-	public LagerDto getLagerDtoWennNurAufEinemTypLagerstandVorhandenIst(
-			Integer artikelIId) {
+	public LagerDto getLagerDtoWennNurAufEinemTypLagerstandVorhandenIst(Integer artikelIId) {
 
 		// fuer PJ 17921
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT distinct(al.flrlager.i_id) FROM FLRArtikellager as al WHERE al.flrlager.c_nr <>'"
-				+ LagerFac.LAGER_KEINLAGER
-				+ "' AND  al.flrlager.lagerart_c_nr IN ('"
-				+ LagerFac.LAGERART_HAUPTLAGER
-				+ "','"
-				+ LagerFac.LAGERART_NORMAL
-				+ "','"
-				+ LagerFac.LAGERART_HALBFERTIG
-				+ "') AND al.n_lagerstand > 0 AND al.flrartikel.i_id="
-				+ artikelIId;
+				+ LagerFac.LAGER_KEINLAGER + "' AND  al.flrlager.lagerart_c_nr IN ('" + LagerFac.LAGERART_HAUPTLAGER
+				+ "','" + LagerFac.LAGERART_NORMAL + "','" + LagerFac.LAGERART_HALBFERTIG
+				+ "') AND al.n_lagerstand > 0 AND al.flrartikel.i_id=" + artikelIId;
 
 		org.hibernate.Query query = session.createQuery(queryString);
 		List<?> results = query.list();
@@ -4032,28 +3772,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Liefert die Mengenmaessige Lagerstandsveraenderung in einem Zeitraum
 	 * 
-	 * @param artikelIId
-	 *            Integer
-	 * @param lagerIId
-	 *            Integer
-	 * @param tVon
-	 *            Timestamp
-	 * @param tBis
-	 *            Timestamp
-	 * @param theClientDto
-	 *            String
+	 * @param artikelIId   Integer
+	 * @param lagerIId     Integer
+	 * @param tVon         Timestamp
+	 * @param tBis         Timestamp
+	 * @param theClientDto String
 	 * @return BigDecimal
 	 */
-	public BigDecimal getLagerstandsVeraenderungOhneInventurbuchungen(
-			Integer artikelIId, Integer lagerIId, java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, String cSnrChnr, TheClientDto theClientDto) {
+	public BigDecimal getLagerstandsVeraenderungOhneInventurbuchungen(Integer artikelIId, Integer lagerIId,
+			java.sql.Timestamp tVon, java.sql.Timestamp tBis, String cSnrChnr, TheClientDto theClientDto) {
 
-		if (artikelIId == null || lagerIId == null || tVon == null
-				|| tBis == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"artikelIId == null || lagerIId  ==  null || tsZeitpunkt == null || tBis == null"));
+		if (artikelIId == null || lagerIId == null || tVon == null || tBis == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("artikelIId == null || lagerIId  ==  null || tsZeitpunkt == null || tBis == null"));
 		}
 
 		boolean bVonNachBis = false;
@@ -4066,6 +3797,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		}
 
+		
+		//SP9702
+		//Ist eigentlich immmer zum ENDE des Tages
+		tVon=Helper.cutTimestamp(Helper.addiereTageZuTimestamp(tVon, 1));
+		
+		
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 
@@ -4074,26 +3811,18 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		String[] s = new String[1];
 		s[0] = LocaleFac.BELEGART_INVENTUR;
 
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class)
-				.add(Expression.gt(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM,
-						tVon))
-				.add(Expression.lt(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM,
-						tBis))
-				.add(Restrictions.not(Expression.in(
-						LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, s)))
-				.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRARTIKEL, "a")
-				.add(Expression.eq("a.i_id", artikelIId))
-				.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRLAGER, "l")
-				.add(Expression.eq("l.i_id", lagerIId))
-				.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-						Helper.boolean2Short(false)))
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class)
+				.add(Expression.ge(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tVon))
+				.add(Expression.lt(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tBis))
+				.add(Restrictions.not(Expression.in(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, s)))
+				.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRARTIKEL, "a").add(Expression.eq("a.i_id", artikelIId))
+				.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRLAGER, "l").add(Expression.eq("l.i_id", lagerIId))
+				.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)))
 				.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_I_ID_BUCHUNG))
 				.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
 
 		if (cSnrChnr != null) {
-			crit.add(Expression.eq(
-					LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR, cSnrChnr));
+			crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR, cSnrChnr));
 		}
 
 		List<?> resultList = crit.list();
@@ -4101,8 +3830,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		BigDecimal lagerstandsVeraenderung = new BigDecimal(0);
 
 		while (resultListIterator.hasNext()) {
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-					.next();
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 
 			if (lagerbewegung.getN_menge().doubleValue() > 0) {
 
@@ -4112,11 +3840,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				}
 				// Wenn Lagerabgang, dann abziehen Menge
 				if (Helper.short2boolean(lagerbewegung.getB_abgang())) {
-					lagerstandsVeraenderung = lagerstandsVeraenderung
-							.subtract(menge);
+					lagerstandsVeraenderung = lagerstandsVeraenderung.subtract(menge);
 				} else {
-					lagerstandsVeraenderung = lagerstandsVeraenderung
-							.add(menge);
+					lagerstandsVeraenderung = lagerstandsVeraenderung.add(menge);
 				}
 			}
 
@@ -4129,21 +3855,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	/**
 	 * Gibt den Lagerstand eines Artikels in einem bestimmten Lager zurueck
-	 * (Quick-Lagerstand). Hier kann keine Seriennummer/Chargennummer
-	 * mitangegeben werden -> Ist immer ein Gesamtlagerstand eines Artikels und
-	 * Lagers
+	 * (Quick-Lagerstand). Hier kann keine Seriennummer/Chargennummer mitangegeben
+	 * werden -> Ist immer ein Gesamtlagerstand eines Artikels und Lagers
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param lagerIId
-	 *            7
-	 * @param theClientDto
-	 *            User-ID
+	 * @param artikelIId   4711
+	 * @param lagerIId     7
+	 * @param theClientDto User-ID
 	 * @return BigDecimal Lagerstand
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal getLagerstand(Integer artikelIId, Integer lagerIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BigDecimal getLagerstand(Integer artikelIId, Integer lagerIId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		// check(idUser);
 		if (artikelIId == null || lagerIId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -4153,26 +3875,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		artikel = em.find(Artikel.class, artikelIId);
 		if (artikel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		if (Helper.short2boolean(artikel.getBLagerbewirtschaftet()) == false) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_ARTIKEL_IST_NICHT_LAGERBEWIRTSCHAFTET,
-					new Exception(
-							"FEHLER_ARTIKEL_IST_NICHT_LAGERBEWIRTSCHAFTET"));
+			ArrayList al = new ArrayList();
+			al.add(artikel.getCNr());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_IST_NICHT_LAGERBEWIRTSCHAFTET, al,
+					new Exception("FEHLER_ARTIKEL_IST_NICHT_LAGERBEWIRTSCHAFTET" + " ARTIKEL:" + artikel.getCNr()));
 		}
 		try {
-			return artikellagerFindByPrimaryKey(artikelIId, lagerIId)
-					.getNLagerstand();
+			return artikellagerFindByPrimaryKey(artikelIId, lagerIId).getNLagerstand();
 		} catch (Exception e) {
 			return new BigDecimal(0);
 		}
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public String fehlendeAbbuchungenNachtragen(Timestamp tAb,
-			TheClientDto theClientDto) {
+	public String fehlendeAbbuchungenNachtragen(Timestamp tAb, TheClientDto theClientDto) {
 
 		byte[] CRLFAscii = { 13, 10 };
 		String rueckgabe = "";
@@ -4190,22 +3909,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			if (Helper.short2boolean(hand.getB_abgang())) {
 
-				getLagerFac()
-						.pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(
-								hand.getFlrartikel().getI_id(), theClientDto);
+				getLagerFac().pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(hand.getFlrartikel().getI_id(),
+						theClientDto);
 
 				try {
-					getLagerFac().bucheAb(LocaleFac.BELEGART_HAND,
-							hand.getI_id(), hand.getI_id(),
-							hand.getFlrartikel().getI_id(), hand.getN_menge(),
-							hand.getN_verkaufspreis(),
+					getLagerFac().bucheAb(LocaleFac.BELEGART_HAND, hand.getI_id(), hand.getI_id(),
+							hand.getFlrartikel().getI_id(), hand.getN_menge(), hand.getN_verkaufspreis(),
 							hand.getFlrlager().getI_id(), (String) null,
-							new Timestamp(hand.getT_buchungszeit().getTime()),
-							theClientDto);
+							new Timestamp(hand.getT_buchungszeit().getTime()), theClientDto);
 				} catch (EJBExceptionLP e) {
 					iFehler++;
-					String zeile = "FEHLER:" + iFehler + ",HANDBUCHUNGS_ID:"
-							+ hand.getI_id() + ",ARTIKEL:"
+					String zeile = "FEHLER:" + iFehler + ",HANDBUCHUNGS_ID:" + hand.getI_id() + ",ARTIKEL:"
 							+ hand.getFlrartikel().getC_nr();
 					rueckgabe += zeile + new String(CRLFAscii);
 					System.out.println(zeile);
@@ -4227,18 +3941,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		while (it.hasNext()) {
 			FLRRechnungPosition rp = (FLRRechnungPosition) it.next();
 			try {
-				RechnungDto rDto = getRechnungFac().rechnungFindByPrimaryKey(
-						rp.getFlrrechnung().getI_id());
-				RechnungPositionDto rePosDto = getRechnungFac()
-						.rechnungPositionFindByPrimaryKey(rp.getI_id());
+				RechnungDto rDto = getRechnungFac().rechnungFindByPrimaryKey(rp.getFlrrechnung().getI_id());
+				RechnungPositionDto rePosDto = getRechnungFac().rechnungPositionFindByPrimaryKey(rp.getI_id());
 
-				if (rePosDto.getRechnungpositionartCNr().equals(
-						LocaleFac.POSITIONSART_IDENT)) {
-					getLagerFac()
-							.pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(
-									rePosDto.getArtikelIId(), theClientDto);
-					getRechnungFac().bucheRechnungPositionAmLager(rePosDto,
-							rDto.getLagerIId(), false, theClientDto);
+				if (rePosDto.getRechnungpositionartCNr().equals(LocaleFac.POSITIONSART_IDENT)) {
+					getLagerFac().pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(rePosDto.getArtikelIId(),
+							theClientDto);
+					getRechnungFac().bucheRechnungPositionAmLager(rePosDto, rDto.getLagerIId(), false, theClientDto);
 
 				}
 
@@ -4251,8 +3960,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		// Lieferschein
 
-		queryString = "SELECT ls FROM FLRLieferschein ls WHERE ls.t_aendern>='"
-				+ Helper.formatTimestampWithSlashes(tAb) + "'";
+		queryString = "SELECT ls FROM FLRLieferschein ls WHERE ls.t_aendern>='" + Helper.formatTimestampWithSlashes(tAb)
+				+ "'";
 		session = FLRSessionFactory.getFactory().openSession();
 		query = session.createQuery(queryString);
 		resultList = query.list();
@@ -4264,36 +3973,27 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						.lieferscheinpositionFindByLieferscheinIId(ls.getI_id());
 				for (int i = 0; i < dtos.length; i++) {
 
-					if (dtos[i]
-							.getPositionsartCNr()
-							.equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
-						getLagerFac()
-								.pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(
-										dtos[i].getArtikelIId(), theClientDto);
+					if (dtos[i].getPositionsartCNr().equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
+						getLagerFac().pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(dtos[i].getArtikelIId(),
+								theClientDto);
 						if (dtos[i].getNMenge().doubleValue() != 0) {
 							if (dtos[i].getNMenge().doubleValue() > 0) {
 
 								try {
-									getLieferscheinpositionFac().bucheAbLager(
-											dtos[i], theClientDto);
+									getLieferscheinpositionFac().bucheAbLager(dtos[i], theClientDto);
 								} catch (EJBExceptionLP e) {
 									iFehler++;
 
 									ArtikelDto artikelDto = getArtikelFac()
-											.artikelFindByPrimaryKeySmall(
-													dtos[i].getArtikelIId(),
-													theClientDto);
+											.artikelFindByPrimaryKeySmall(dtos[i].getArtikelIId(), theClientDto);
 
-									String zeile = "FEHLER:" + iFehler + ",LS:"
-											+ ls.getC_nr() + ",ARTIKEL:"
-											+ artikelDto.getCNr() + ",I_SORT:"
-											+ dtos[i].getISort();
+									String zeile = "FEHLER:" + iFehler + ",LS:" + ls.getC_nr() + ",ARTIKEL:"
+											+ artikelDto.getCNr() + ",I_SORT:" + dtos[i].getISort();
 									rueckgabe += zeile + new String(CRLFAscii);
 									System.out.println(zeile);
 								}
 							} else {
-								getLieferscheinpositionFac().bucheZuLager(
-										dtos[i], theClientDto);
+								getLieferscheinpositionFac().bucheZuLager(dtos[i], theClientDto);
 							}
 						}
 
@@ -4311,8 +4011,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	/*
 	 * @TransactionAttribute(TransactionAttributeType.NEVER) public void
-	 * versucheFehlerLagerbewegungOhneUrsprungseintragZuKorrigieren(
-	 * TheClientDto theClientDto) { Session session =
+	 * versucheFehlerLagerbewegungOhneUrsprungseintragZuKorrigieren( TheClientDto
+	 * theClientDto) { Session session =
 	 * FLRSessionFactory.getFactory().openSession(); String queryString =
 	 * "SELECT distinct bew.artikel_i_id FROM FLRLagerbewegung AS bew WHERE bew.b_historie=0 AND bew.flrartikel.b_lagerbewirtschaftet=1 AND bew.flrartikel.b_seriennrtragend=0 AND bew.flrartikel.b_chargennrtragend=0 "
 	 * +
@@ -4321,9 +4021,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * 
 	 * org.hibernate.Query query = session.createQuery(queryString); List<?>
 	 * resultList = query.list(); Iterator<?> resultListIteratorFTGruppe =
-	 * resultList.iterator(); int i=0; while
-	 * (resultListIteratorFTGruppe.hasNext()) { i++; Integer artikelIId =
-	 * (Integer) resultListIteratorFTGruppe.next();
+	 * resultList.iterator(); int i=0; while (resultListIteratorFTGruppe.hasNext())
+	 * { i++; Integer artikelIId = (Integer) resultListIteratorFTGruppe.next();
 	 * 
 	 * getLagerFac().ueberzaehligeLagerbewegungenZusammenfuehren( artikelIId);
 	 * System.out.println(i+" von "+resultList.size());
@@ -4333,16 +4032,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * }
 	 */
 
-	public int aendereEigenschaftChargengefuehrt(Integer artikelIId,
-			boolean bSnrChargennrtragend, TheClientDto theClientDto) {
+	public int aendereEigenschaftChargengefuehrt(Integer artikelIId, boolean bSnrChargennrtragend,
+			TheClientDto theClientDto) {
 		// Alle Lagerbewegungen eines Artikels mit der SNR-Chargennummer holen
 		int iAnzahl = 0;
 
-		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-				artikelIId, theClientDto);
-		myLogger.entry("Eigenschaft 'Chargennummernbehaftet' des Artikels "
-				+ artikelDto.getCNr() + " ge\u00E4ndert durch Personal-ID"
-				+ theClientDto.getIDPersonal());
+		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(artikelIId, theClientDto);
+		myLogger.entry("Eigenschaft 'Chargennummernbehaftet' des Artikels " + artikelDto.getCNr()
+				+ " ge\u00E4ndert durch Personal-ID" + theClientDto.getIDPersonal());
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
@@ -4351,8 +4048,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			chNR = "'" + CHARGENNUMMER_KEINE_CHARGE + "'";
 		}
 
-		String hqlUpdate = "update FLRLagerbewegung l set l.c_seriennrchargennr="
-				+ chNR + " WHERE l.artikel_i_id= " + artikelIId;
+		String hqlUpdate = "update FLRLagerbewegung l set l.c_seriennrchargennr=" + chNR + " WHERE l.artikel_i_id= "
+				+ artikelIId;
 		session.createQuery(hqlUpdate).executeUpdate();
 
 		session.close();
@@ -4376,16 +4073,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	private void ueberzaehligeLagerbewegungenZusammenfuehren(Integer artikelIId) {
-		Session sessionLagerbewegung = FLRSessionFactory.getFactory()
-				.openSession();
+		Session sessionLagerbewegung = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT bew.c_belegartnr, bew.i_belegartpositionid, bew.lager_i_id FROM FLRLagerbewegung AS bew"
-				+ " WHERE bew.artikel_i_id= "
-				+ artikelIId
+				+ " WHERE bew.artikel_i_id= " + artikelIId
 				+ " AND bew.b_abgang=0 AND bew.b_historie=0 AND bew.n_menge>0 GROUP BY bew.c_belegartnr, bew.i_belegartpositionid, bew.lager_i_id HAVING count(bew.i_belegartpositionid)>1";
 
-		org.hibernate.Query query = sessionLagerbewegung
-				.createQuery(queryString);
+		org.hibernate.Query query = sessionLagerbewegung.createQuery(queryString);
 		List<?> resultList = query.list();
 		Iterator<?> resultListIteratorFTGruppe = resultList.iterator();
 		while (resultListIteratorFTGruppe.hasNext()) {
@@ -4394,8 +4088,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			String cBelegartNr = (String) zeile[0];
 			Integer iBelegartpositionId = (Integer) zeile[1];
 
-			Query queryLager = em
-					.createNamedQuery("LagerbewegungfindLetzteintrag");
+			Query queryLager = em.createNamedQuery("LagerbewegungfindLetzteintrag");
 			queryLager.setParameter(1, cBelegartNr);
 			queryLager.setParameter(2, iBelegartpositionId);
 			queryLager.setParameter(3, null);
@@ -4411,59 +4104,43 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			BigDecimal bdGesamtmenge = lagerbewegung.getNMenge();
 			while (it.hasNext()) {
 
-				Lagerbewegung lagerbewegungZusammenzufueren = (Lagerbewegung) it
-						.next();
+				Lagerbewegung lagerbewegungZusammenzufueren = (Lagerbewegung) it.next();
 
-				bdGesamtmenge = bdGesamtmenge.add(lagerbewegungZusammenzufueren
-						.getNMenge());
+				bdGesamtmenge = bdGesamtmenge.add(lagerbewegungZusammenzufueren.getNMenge());
 
-				Query queryUrsprung = em
-						.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
-				queryUrsprung.setParameter(1,
-						lagerbewegungZusammenzufueren.getIIdBuchung());
+				Query queryUrsprung = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
+				queryUrsprung.setParameter(1, lagerbewegungZusammenzufueren.getIIdBuchung());
 				Collection<?> clUrsprung = queryUrsprung.getResultList();
 
 				Iterator itUrsprung = clUrsprung.iterator();
 				while (itUrsprung.hasNext()) {
-					Lagerabgangursprung lagerabgangursprung = (Lagerabgangursprung) itUrsprung
-							.next();
+					Lagerabgangursprung lagerabgangursprung = (Lagerabgangursprung) itUrsprung.next();
 
 					// Zuerst nachsehen, obs nicht schon einen
 					// Ursprungseintrag
 					// gibt
 					LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
-					lagerabgangursprungPK
-							.setILagerbewegungid(lagerabgangursprung.getPk()
-									.getILagerbewegungid());
-					lagerabgangursprungPK
-							.setILagerbewegungidursprung(lagerbewegung
-									.getIIdBuchung());
-					Lagerabgangursprung lagerabgangursprungVorhanden = em.find(
-							Lagerabgangursprung.class, lagerabgangursprungPK);
+					lagerabgangursprungPK.setILagerbewegungid(lagerabgangursprung.getPk().getILagerbewegungid());
+					lagerabgangursprungPK.setILagerbewegungidursprung(lagerbewegung.getIIdBuchung());
+					Lagerabgangursprung lagerabgangursprungVorhanden = em.find(Lagerabgangursprung.class,
+							lagerabgangursprungPK);
 
 					if (lagerabgangursprungVorhanden == null) {
 
-						BigDecimal nMenge = lagerabgangursprung
-								.getNVerbrauchtemenge();
-						BigDecimal nPreis = lagerabgangursprung
-								.getNGestehungspreis();
+						BigDecimal nMenge = lagerabgangursprung.getNVerbrauchtemenge();
+						BigDecimal nPreis = lagerabgangursprung.getNGestehungspreis();
 
 						em.remove(lagerabgangursprung);
 						em.flush();
 						Lagerabgangursprung lagerabgangursprungNeuAnlegen = new Lagerabgangursprung(
 								lagerabgangursprungPK.getILagerbewegungid(),
-								lagerabgangursprungPK
-										.getILagerbewegungidursprung(), nMenge,
-								nPreis);
+								lagerabgangursprungPK.getILagerbewegungidursprung(), nMenge, nPreis);
 						em.merge(lagerabgangursprungNeuAnlegen);
 						em.flush();
 					} else {
 						// Wenn vorhanden, dann Menge aktualisieren
-						lagerabgangursprungVorhanden
-								.setNVerbrauchtemenge(lagerabgangursprungVorhanden
-										.getNVerbrauchtemenge()
-										.add(lagerabgangursprung
-												.getNVerbrauchtemenge()));
+						lagerabgangursprungVorhanden.setNVerbrauchtemenge(lagerabgangursprungVorhanden
+								.getNVerbrauchtemenge().add(lagerabgangursprung.getNVerbrauchtemenge()));
 						em.remove(lagerabgangursprung);
 						em.flush();
 					}
@@ -4472,15 +4149,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				em.flush();
 			}
 
-			Double verbrauchteMenge = getVerbrauchteMenge(lagerbewegung
-					.getIId());
+			Double verbrauchteMenge = getVerbrauchteMenge(lagerbewegung.getIId());
 
 			if (verbrauchteMenge.doubleValue() < bdGesamtmenge.doubleValue()) {
-				lagerbewegung.setBVollstaendigverbraucht(Helper
-						.boolean2Short(false));
+				lagerbewegung.setBVollstaendigverbraucht(Helper.boolean2Short(false));
 			} else {
-				lagerbewegung.setBVollstaendigverbraucht(Helper
-						.boolean2Short(true));
+				lagerbewegung.setBVollstaendigverbraucht(Helper.boolean2Short(true));
 			}
 
 			lagerbewegung.setNMenge(bdGesamtmenge);
@@ -4496,8 +4170,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		sessionLagerbewegung = FLRSessionFactory.getFactory().openSession();
 
 		queryString = "SELECT bew.c_belegartnr, bew.i_belegartpositionid FROM FLRLagerbewegung AS bew"
-				+ " WHERE bew.artikel_i_id= "
-				+ artikelIId
+				+ " WHERE bew.artikel_i_id= " + artikelIId
 				+ " AND bew.b_abgang=1 AND bew.b_historie=0 AND bew.n_menge>0 GROUP BY bew.c_belegartnr, bew.i_belegartpositionid HAVING count(bew.i_belegartpositionid)>1";
 
 		query = sessionLagerbewegung.createQuery(queryString);
@@ -4509,8 +4182,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			String cBelegartNr = (String) zeile[0];
 			Integer iBelegartpositionId = (Integer) zeile[1];
 
-			Query queryLager = em
-					.createNamedQuery("LagerbewegungfindLetzteintrag");
+			Query queryLager = em.createNamedQuery("LagerbewegungfindLetzteintrag");
 			queryLager.setParameter(1, cBelegartNr);
 			queryLager.setParameter(2, iBelegartpositionId);
 			queryLager.setParameter(3, null);
@@ -4526,58 +4198,44 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			BigDecimal bdGesamtmenge = lagerbewegung.getNMenge();
 			while (it.hasNext()) {
 
-				Lagerbewegung lagerbewegungZusammenzufueren = (Lagerbewegung) it
-						.next();
+				Lagerbewegung lagerbewegungZusammenzufueren = (Lagerbewegung) it.next();
 
-				bdGesamtmenge = bdGesamtmenge.add(lagerbewegungZusammenzufueren
-						.getNMenge());
+				bdGesamtmenge = bdGesamtmenge.add(lagerbewegungZusammenzufueren.getNMenge());
 
-				Query queryUrsprung = em
-						.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
-				queryUrsprung.setParameter(1,
-						lagerbewegungZusammenzufueren.getIIdBuchung());
+				Query queryUrsprung = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
+				queryUrsprung.setParameter(1, lagerbewegungZusammenzufueren.getIIdBuchung());
 				Collection<?> clUrsprung = queryUrsprung.getResultList();
 
 				Iterator itUrsprung = clUrsprung.iterator();
 				while (itUrsprung.hasNext()) {
-					Lagerabgangursprung lagerabgangursprung = (Lagerabgangursprung) itUrsprung
-							.next();
+					Lagerabgangursprung lagerabgangursprung = (Lagerabgangursprung) itUrsprung.next();
 
 					// Zuerst nachsehen, obs nicht schon einen
 					// Ursprungseintrag
 					// gibt
 					LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
-					lagerabgangursprungPK.setILagerbewegungid(lagerbewegung
-							.getIIdBuchung());
+					lagerabgangursprungPK.setILagerbewegungid(lagerbewegung.getIIdBuchung());
 					lagerabgangursprungPK
-							.setILagerbewegungidursprung(lagerabgangursprung
-									.getPk().getILagerbewegungidursprung());
-					Lagerabgangursprung lagerabgangursprungVorhanden = em.find(
-							Lagerabgangursprung.class, lagerabgangursprungPK);
+							.setILagerbewegungidursprung(lagerabgangursprung.getPk().getILagerbewegungidursprung());
+					Lagerabgangursprung lagerabgangursprungVorhanden = em.find(Lagerabgangursprung.class,
+							lagerabgangursprungPK);
 
 					if (lagerabgangursprungVorhanden == null) {
 
-						BigDecimal nMenge = lagerabgangursprung
-								.getNVerbrauchtemenge();
-						BigDecimal nPreis = lagerabgangursprung
-								.getNGestehungspreis();
+						BigDecimal nMenge = lagerabgangursprung.getNVerbrauchtemenge();
+						BigDecimal nPreis = lagerabgangursprung.getNGestehungspreis();
 
 						em.remove(lagerabgangursprung);
 						em.flush();
 						Lagerabgangursprung lagerabgangursprungNeuAnlegen = new Lagerabgangursprung(
 								lagerabgangursprungPK.getILagerbewegungid(),
-								lagerabgangursprungPK
-										.getILagerbewegungidursprung(), nMenge,
-								nPreis);
+								lagerabgangursprungPK.getILagerbewegungidursprung(), nMenge, nPreis);
 						em.merge(lagerabgangursprungNeuAnlegen);
 						em.flush();
 					} else {
 						// Wenn vorhanden, dann Menge aktualisieren
-						lagerabgangursprungVorhanden
-								.setNVerbrauchtemenge(lagerabgangursprungVorhanden
-										.getNVerbrauchtemenge()
-										.add(lagerabgangursprung
-												.getNVerbrauchtemenge()));
+						lagerabgangursprungVorhanden.setNVerbrauchtemenge(lagerabgangursprungVorhanden
+								.getNVerbrauchtemenge().add(lagerabgangursprung.getNVerbrauchtemenge()));
 						em.remove(lagerabgangursprung);
 						em.flush();
 					}
@@ -4593,16 +4251,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	public int aendereEinzelneSerienChargennummerEinesArtikel(
-			Integer artikelIId, String snrChnr_Alt, String snrChnr_Neu,
-			String version_Alt, String version_Neu, TheClientDto theClientDto) {
+	public int aendereEinzelneSerienChargennummerEinesArtikel(Integer artikelIId, String snrChnr_Alt,
+			String snrChnr_Neu, String version_Alt, String version_Neu, TheClientDto theClientDto) {
 		// Alle Lagerbewegungen eines Artikels mit der SNR-Chargennummer holen
 		int iAnzahl = 0;
 
 		if (artikelIId != null && snrChnr_Alt != null && snrChnr_Neu != null) {
 
-			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-					artikelIId, theClientDto);
+			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(artikelIId, theClientDto);
 
 			if (Helper.short2boolean(artikelDto.getBChargennrtragend()) == true
 					|| Helper.short2boolean(artikelDto.getBSeriennrtragend()) == true) {
@@ -4610,64 +4266,56 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				if (Helper.short2boolean(artikelDto.getBChargennrtragend())) {
 
 					try {
-						ParametermandantDto parameter = getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ARTIKEL,
-										ParameterFac.PARAMETER_CHARGENNUMMER_MINDESTLAENGE);
-						Integer ichnrlaenge = (Integer) parameter
-								.getCWertAsObject();
+						ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_CHARGENNUMMER_MINDESTLAENGE);
+						Integer ichnrlaenge = (Integer) parameter.getCWertAsObject();
 
 						ArrayList al = new ArrayList();
 						al.add(ichnrlaenge);
 
 						if (snrChnr_Neu.length() < ichnrlaenge) {
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_CHARGENNUMMER_ZU_KURZ,
-									al, new Exception(
-											"FEHLER_CHARGENNUMMER_ZU_KURZ"));
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_CHARGENNUMMER_ZU_KURZ, al,
+									new Exception("FEHLER_CHARGENNUMMER_ZU_KURZ"));
 
 						}
 
 					} catch (RemoteException e) {
 						throwEJBExceptionLPRespectOld(e);
 					}
-				} else if (Helper.short2boolean(artikelDto
-						.getBSeriennrtragend())) {
+				} else if (Helper.short2boolean(artikelDto.getBSeriennrtragend())) {
 					try {
-						ParametermandantDto parameter = getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ARTIKEL,
-										ParameterFac.PARAMETER_ARTIKEL_MINDESTLAENGE_SERIENNUMMER);
-						Integer isnrlaenge = (Integer) parameter
-								.getCWertAsObject();
+						ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL,
+								ParameterFac.PARAMETER_ARTIKEL_MINDESTLAENGE_SERIENNUMMER);
+						Integer isnrlaenge = (Integer) parameter.getCWertAsObject();
+
+						if (artikelDto.getILaengeminSnrchnr() != null) {
+							isnrlaenge = artikelDto.getILaengeminSnrchnr();
+						}
 
 						ArrayList al = new ArrayList();
 						al.add(isnrlaenge);
 
 						if (snrChnr_Neu.length() < isnrlaenge) {
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_KURZ,
-									al, new Exception(
-											"FEHLER_SERIENNUMMER_ZU_KURZ"));
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_KURZ, al,
+									new Exception("FEHLER_SERIENNUMMER_ZU_KURZ"));
 
 						}
-						parameter = getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ARTIKEL,
-										ParameterFac.PARAMETER_ARTIKEL_MAXIMALELAENGE_SERIENNUMMER);
+						parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL,
+								ParameterFac.PARAMETER_ARTIKEL_MAXIMALELAENGE_SERIENNUMMER);
 						isnrlaenge = (Integer) parameter.getCWertAsObject();
+
+						if (artikelDto.getILaengemaxSnrchnr() != null) {
+							isnrlaenge = artikelDto.getILaengemaxSnrchnr();
+						}
 
 						al = new ArrayList();
 						al.add(isnrlaenge);
 
 						if (snrChnr_Neu.length() > isnrlaenge) {
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_LANG,
-									al, new Exception(
-											"FEHLER_SERIENNUMMER_ZU_LANG"));
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_LANG, al,
+									new Exception("FEHLER_SERIENNUMMER_ZU_LANG"));
 
 						}
 
@@ -4678,28 +4326,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				// Zuerst Lagerbewegungen updaten
 
-				Query query = em
-						.createNamedQuery("LagerbewegungfindAllSnrChnrEinesArtikels");
+				Query query = em.createNamedQuery("LagerbewegungfindAllSnrChnrEinesArtikels");
 				query.setParameter(1, artikelIId);
 				query.setParameter(2, snrChnr_Alt);
 				Collection<?> cl = query.getResultList();
 
 				Iterator<?> iterator = cl.iterator();
 				while (iterator.hasNext()) {
-					Lagerbewegung lagerbewegung = (Lagerbewegung) iterator
-							.next();
+					Lagerbewegung lagerbewegung = (Lagerbewegung) iterator.next();
 
-					if (Helper.short2boolean(artikelDto.getBSeriennrtragend()) == true) {
-						if (version_Alt != null) {
-							if (!version_Alt
-									.equals(lagerbewegung.getCVersion())) {
-								// Wenn Version nicht gleich, dann auslassen
-								continue;
-							}
-
+					if (version_Alt != null) {
+						if (!version_Alt.equals(lagerbewegung.getCVersion())) {
+							// Wenn Version nicht gleich, dann auslassen
+							continue;
 						}
-						lagerbewegung.setCVersion(version_Neu);
+
 					}
+					lagerbewegung.setCVersion(version_Neu);
 
 					lagerbewegung.setCSeriennrchargennr(snrChnr_Neu);
 
@@ -4709,36 +4352,107 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				}
 
+				try {
+					// Danach Artikelsnrchnr wg. Chargeneigenschaften mitaendern
+					Query querychnr = em.createNamedQuery("ArtikelsnrchnrfindByArtikelIIdCSeriennrchargennr");
+					querychnr.setParameter(1, artikelIId);
+					querychnr.setParameter(2, snrChnr_Alt);
+					Artikelsnrchnr vorhanden;
+					vorhanden = (Artikelsnrchnr) querychnr.getSingleResult();
+					// Wenn es bereits einen vorhandenen Eintrag gibt, dann
+					// auslassen
+					Query querychnrvorhanden = em.createNamedQuery("ArtikelsnrchnrfindByArtikelIIdCSeriennrchargennr");
+					querychnrvorhanden.setParameter(1, artikelIId);
+					querychnrvorhanden.setParameter(2, snrChnr_Neu);
+					Collection<?> clchnrvorhanden = querychnrvorhanden.getResultList();
+
+					if (clchnrvorhanden.size() == 0) {
+						vorhanden.setcSeriennrchargennr(snrChnr_Neu);
+
+						em.merge(vorhanden);
+						em.flush();
+					}
+
+				} catch (NoResultException e) {
+					//
+				}
+
+				// SP4382 Auch noch Geraetesnrs mitaendern
+				try {
+
+					Query querychnr = em.createNamedQuery("GeraetesnrfindByArtikelIIdCSnr");
+					querychnr.setParameter(1, artikelIId);
+					querychnr.setParameter(2, snrChnr_Alt);
+
+					Collection c = querychnr.getResultList();
+
+					Iterator it = c.iterator();
+
+					while (it.hasNext()) {
+						Geraetesnr vorhanden = (Geraetesnr) it.next();
+						vorhanden.setCSnr(snrChnr_Neu);
+						em.merge(vorhanden);
+						em.flush();
+
+					}
+				} catch (NoResultException e) {
+					//
+				}
+
 			}
 
 		}
 		return iAnzahl;
 	}
 
+	public String getZugeordneteGeraetesnr(Integer artikelIId, String snrChnr) {
+		try {
+
+			Query querychnr = em.createNamedQuery("GeraetesnrfindByArtikelIIdCSnr");
+			querychnr.setParameter(1, artikelIId);
+			querychnr.setParameter(2, snrChnr);
+
+			Collection c = querychnr.getResultList();
+
+			Iterator it = c.iterator();
+
+			while (it.hasNext()) {
+				Geraetesnr vorhanden = (Geraetesnr) it.next();
+				vorhanden.setCSnr(snrChnr);
+				em.merge(vorhanden);
+				em.flush();
+
+				LagerbewegungDto[] bewDtos = lagerbewegungFindByIIdBuchung(vorhanden.getIIdBuchung());
+
+				if (bewDtos != null && bewDtos.length > 0) {
+					return bewDtos[0].getCSeriennrchargennr();
+				}
+			}
+		} catch (NoResultException e) {
+			//
+		}
+
+		return null;
+	}
+
 	/**
 	 * Gibt den Lagerstand eines Artikels in einem bestimmten Lager zurueck
-	 * (Quick-Lagerstand). Hier kann keine Seriennummer/Chargennummer
-	 * mitangegeben werden -> Ist immer ein Gesamtlagerstand eines Artikels und
-	 * Lagers. <br>
+	 * (Quick-Lagerstand). Hier kann keine Seriennummer/Chargennummer mitangegeben
+	 * werden -> Ist immer ein Gesamtlagerstand eines Artikels und Lagers. <br>
 	 * Diese Methode wirft keine Exceptions.
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param lagerIId
-	 *            7
-	 * @param theClientDto
-	 *            User-ID
+	 * @param artikelIId   4711
+	 * @param lagerIId     7
+	 * @param theClientDto User-ID
 	 * @return BigDecimal Lagerstand, wenn nichts auf Lager 0
 	 */
-	public BigDecimal getLagerstandOhneExc(Integer artikelIId,
-			Integer lagerIId, TheClientDto theClientDto) {
+	public BigDecimal getLagerstandOhneExc(Integer artikelIId, Integer lagerIId, TheClientDto theClientDto) {
 		// check(idUser);
 
 		BigDecimal bdLagerstandO = new BigDecimal(0);
 
 		try {
-			bdLagerstandO = artikellagerFindByPrimaryKey(artikelIId, lagerIId)
-					.getNLagerstand();
+			bdLagerstandO = artikellagerFindByPrimaryKey(artikelIId, lagerIId).getNLagerstand();
 		} catch (Throwable t) {
 			//
 		}
@@ -4749,15 +4463,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		BigDecimal bdLagerstandO = new BigDecimal(0);
 
-		Query query = em
-				.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
+		Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
 		query.setParameter(1, artikelIId);
 		Collection cl = query.getResultList();
 		ArtikellagerplaetzeDto[] dtos = assembleArtikellagerplaetzeDtos(cl);
 		for (int i = 0; i < dtos.length; i++) {
 			if (dtos[i].getNLagerstandPaternoster() != null) {
-				bdLagerstandO = bdLagerstandO.add(dtos[i]
-						.getNLagerstandPaternoster());
+				bdLagerstandO = bdLagerstandO.add(dtos[i].getNLagerstandPaternoster());
 			}
 		}
 
@@ -4765,19 +4477,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Liefert Mindest-Verkaufspreis zurueck:= WW_ARTIKELLAGER.N_GESTEHUNGSPREIS
-	 * * WW_ARTIKEL.F_MINDESTDECKUNGSBEITRAG.
+	 * Liefert Mindest-Verkaufspreis zurueck:= WW_ARTIKELLAGER.N_GESTEHUNGSPREIS *
+	 * WW_ARTIKEL.F_MINDESTDECKUNGSBEITRAG.
 	 * 
-	 * @param artikelIId
-	 *            Integer
-	 * @param lagerIId
-	 *            Integer
-	 * @param theClientDto
-	 *            User-ID
+	 * @param artikelIId   Integer
+	 * @param lagerIId     Integer
+	 * @param theClientDto User-ID
 	 * @return BigDecimal Mindestverkaufspreis
 	 */
-	public BigDecimal getMindestverkaufspreis(Integer artikelIId,
-			Integer lagerIId, BigDecimal nMenge, TheClientDto theClientDto) {
+	public BigDecimal getMindestverkaufspreis(Integer artikelIId, Integer lagerIId, BigDecimal nMenge,
+			TheClientDto theClientDto) {
 		if (artikelIId == null || lagerIId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("artikelIId == null || lagerIId == null"));
@@ -4787,8 +4496,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// Mindestdeckungsbeitrag holen
 		artikel = em.find(Artikel.class, artikelIId);
 		if (artikel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 		}
 
@@ -4797,8 +4505,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		ParametermandantDto p = null;
 		try {
-			p = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+			p = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_VKPREISBASIS_IST_LIEF1PREIS);
 		} catch (RemoteException e) {
 			//
@@ -4808,21 +4515,18 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// PJ 15314 minVK Preis aus Lieferant1 ermitteln wenn dies die Basis
 		if (p.getCWert().equals("1")) {
 			try {
-				minVerkaufspreis = getVkPreisfindungFac().ermittlePreisbasis(
-						artikelIId,
-						new java.sql.Date(System.currentTimeMillis()), nMenge,
-						null, theClientDto.getSMandantenwaehrung(),
-						theClientDto);
+				minVerkaufspreis = getVkPreisfindungFac().ermittlePreisbasis(artikelIId,
+						new java.sql.Date(System.currentTimeMillis()), nMenge, null,
+						theClientDto.getSMandantenwaehrung(), theClientDto);
 			} catch (RemoteException e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 			} catch (EJBExceptionLP e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 			}
 			if (minVerkaufspreis != null) {
-				minVerkaufspreis = minVerkaufspreis.multiply(new BigDecimal(1)
-						.add(new BigDecimal(mindestdeckungsbeitrag
-								.doubleValue()).divide(new BigDecimal(100), 4,
-								BigDecimal.ROUND_HALF_EVEN)));
+				minVerkaufspreis = minVerkaufspreis
+						.multiply(new BigDecimal(1).add(new BigDecimal(mindestdeckungsbeitrag.doubleValue())
+								.divide(new BigDecimal(100), 4, BigDecimal.ROUND_HALF_EVEN)));
 				return Helper.rundeKaufmaennisch(minVerkaufspreis, 4);
 			}
 		}
@@ -4835,10 +4539,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		Artikellager artikellager = em.find(Artikellager.class, artikellagerPK);
 		if (artikellager != null) {
-			minVerkaufspreis = artikellager.getNGestehungspreis().multiply(
-					new BigDecimal(1).add(new BigDecimal(mindestdeckungsbeitrag
-							.doubleValue()).divide(new BigDecimal(100), 4,
-							BigDecimal.ROUND_HALF_EVEN)));
+			minVerkaufspreis = artikellager.getNGestehungspreis()
+					.multiply(new BigDecimal(1).add(new BigDecimal(mindestdeckungsbeitrag.doubleValue())
+							.divide(new BigDecimal(100), 4, BigDecimal.ROUND_HALF_EVEN)));
 			return Helper.rundeKaufmaennisch(minVerkaufspreis, 4);
 		}
 
@@ -4855,27 +4558,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		artikellager = em.find(Artikellager.class, artikellagerPK);
 		if (artikellager != null) {
 			minVerkaufspreis = artikellager.getNGestehungspreis()
-					.multiply(
-							(new BigDecimal(1).add(new BigDecimal(
-									mindestdeckungsbeitrag)).divide(
-									new BigDecimal(100), 4,
-									BigDecimal.ROUND_HALF_EVEN)));
+					.multiply((new BigDecimal(1).add(new BigDecimal(mindestdeckungsbeitrag)).divide(new BigDecimal(100),
+							4, BigDecimal.ROUND_HALF_EVEN)));
 			return Helper.rundeKaufmaennisch(minVerkaufspreis, 4);
 		}
 
 		// 3. Den Einkaufspreis (Nettopreis) des bevorzugten Lieferanten (= der
 		// erste Lieferant)
 		try {
-			ArtikellieferantDto dtos = getArtikelFac().getArtikelEinkaufspreis(
-					artikelIId, nMenge, theClientDto.getSMandantenwaehrung(),
-					theClientDto);
+			ArtikellieferantDto dtos = getArtikelFac().getArtikelEinkaufspreisDesBevorzugtenLieferanten(artikelIId,
+					nMenge, theClientDto.getSMandantenwaehrung(), theClientDto);
 			if (dtos != null) {
 				if (dtos.getLief1Preis() != null) {
-					minVerkaufspreis = dtos.getLief1Preis().multiply(
-							(new BigDecimal(1).add((new BigDecimal(
-									mindestdeckungsbeitrag).divide(
-									new BigDecimal(100), 4,
-									BigDecimal.ROUND_HALF_EVEN)))));
+					minVerkaufspreis = dtos.getLief1Preis()
+							.multiply((new BigDecimal(1).add((new BigDecimal(mindestdeckungsbeitrag)
+									.divide(new BigDecimal(100), 4, BigDecimal.ROUND_HALF_EVEN)))));
 
 				} else {
 					// lt. Doku von UW
@@ -4891,16 +4588,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return Helper.rundeKaufmaennisch(minVerkaufspreis, 4);
 	}
 
-	public LagerartDto lagerartFindByPrimaryKey(String cNr)
-			throws EJBExceptionLP {
+	public LagerartDto lagerartFindByPrimaryKey(String cNr) throws EJBExceptionLP {
 		if (cNr == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("cNr == null"));
 		}
 		Lagerart lagerart = em.find(Lagerart.class, cNr);
 		if (lagerart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLagerartDto(lagerart);
 	}
@@ -4912,10 +4606,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return assembleLagerartDtos(cl);
 	}
 
-	private void setLagerartFromLagerartDto(Lagerart lagerart,
-			LagerartDto lagerartDto) {
+	private void setLagerartFromLagerartDto(Lagerart lagerart, LagerartDto lagerartDto) {
 		em.merge(lagerart);
 		em.flush();
+	}
+
+	public Integer getPartnerIIdStandortEinesLagers(Integer lagerIId) {
+		return em.find(Lager.class, lagerIId).getPartnerIIdStandort();
 	}
 
 	private LagerartDto assembleLagerartDto(Lagerart lagerart) {
@@ -4935,21 +4632,18 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return (LagerartDto[]) list.toArray(returnArray);
 	}
 
-	public LagerartsprDto lagerartsprFindByPrimaryKey(String lagerartCNr,
-			String spracheCNr) throws EJBExceptionLP {
+	public LagerartsprDto lagerartsprFindByPrimaryKey(String lagerartCNr, String spracheCNr) throws EJBExceptionLP {
 		LagerartsprPK lagerartsprPK = new LagerartsprPK();
 		lagerartsprPK.setLagerartCNr(lagerartCNr);
 		lagerartsprPK.setLocaleCNr(spracheCNr);
 		Lagerartspr lagerartspr = em.find(Lagerartspr.class, lagerartsprPK);
 		if (lagerartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLagerartsprDto(lagerartspr);
 	}
 
-	private void setLagerartsprFromLagerartsprDto(Lagerartspr lagerartspr,
-			LagerartsprDto lagerartsprDto) {
+	private void setLagerartsprFromLagerartsprDto(Lagerartspr lagerartspr, LagerartsprDto lagerartsprDto) {
 		lagerartspr.setCBez(lagerartsprDto.getCBez());
 		em.merge(lagerartspr);
 		em.flush();
@@ -4975,56 +4669,41 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Legt einen neuen Bewegungsdatensatz an.
 	 * 
-	 * @param lagerbewegungDto
-	 *            LagerbewegungDto
-	 * @param theClientDto
-	 *            User-ID
+	 * @param lagerbewegungDto LagerbewegungDto
+	 * @param theClientDto     User-ID
 	 * @throws EJBExceptionLP
 	 */
-	private void createLagerbewegung(LagerbewegungDto lagerbewegungDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	private void createLagerbewegung(LagerbewegungDto lagerbewegungDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (lagerbewegungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lagerbewegungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lagerbewegungDto == null"));
 
 		}
-		if (lagerbewegungDto.getCBelegartnr() == null
-				|| lagerbewegungDto.getIBelegartpositionid() == null
-				|| lagerbewegungDto.getTBelegdatum() == null
-				|| lagerbewegungDto.getIIdBuchung() == null
+		if (lagerbewegungDto.getCBelegartnr() == null || lagerbewegungDto.getIBelegartpositionid() == null
+				|| lagerbewegungDto.getTBelegdatum() == null || lagerbewegungDto.getIIdBuchung() == null
 				|| lagerbewegungDto.getLagerIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerbewegungDto.getBelegartCNr() == null || lagerbewegungDto.getTBelegdatum() == null || lagerbewegungDto.getBelegartpositionIId() == null || lagerbewegungDto.getIIdBuchung() == null || lagerbewegungDto.getLagerIId() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"lagerbewegungDto.getBelegartCNr() == null || lagerbewegungDto.getTBelegdatum() == null || lagerbewegungDto.getBelegartpositionIId() == null || lagerbewegungDto.getIIdBuchung() == null || lagerbewegungDto.getLagerIId() == null"));
 
 		}
-		if (lagerbewegungDto.getArtikelIId() == null
-				|| lagerbewegungDto.getBAbgang() == null
-				|| lagerbewegungDto.getBVollstaendigverbraucht() == null
-				|| lagerbewegungDto.getIBelegartid() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerbewegungDto.getArtikelIId() == null || lagerbewegungDto.getBAbgang() == null || lagerbewegungDto.getBVollstaendigverbraucht() == null || lagerbewegungDto.getBelegartIId() == null"));
+		if (lagerbewegungDto.getArtikelIId() == null || lagerbewegungDto.getBAbgang() == null
+				|| lagerbewegungDto.getBVollstaendigverbraucht() == null || lagerbewegungDto.getIBelegartid() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"lagerbewegungDto.getArtikelIId() == null || lagerbewegungDto.getBAbgang() == null || lagerbewegungDto.getBVollstaendigverbraucht() == null || lagerbewegungDto.getBelegartIId() == null"));
 
 		}
 		if (Helper.short2boolean(lagerbewegungDto.getBAbgang()) == true
 				&& lagerbewegungDto.getNGestehungspreis() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"Helper.short2boolean(lagerbewegungDto.getBAbgang()) == true && lagerbewegungDto.getNGestehungspreis() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"Helper.short2boolean(lagerbewegungDto.getBAbgang()) == true && lagerbewegungDto.getNGestehungspreis() == null"));
 
 		}
-		ArtikellagerPK artikellagerPK = new ArtikellagerPK(
-				lagerbewegungDto.getArtikelIId(),
+		ArtikellagerPK artikellagerPK = new ArtikellagerPK(lagerbewegungDto.getArtikelIId(),
 				lagerbewegungDto.getLagerIId());
 		Artikellager artikellager = em.find(Artikellager.class, artikellagerPK);
 		if (artikellager == null) {
 			try {
-				artikellager = new Artikellager(artikellagerPK,
-						theClientDto.getMandant());
+				artikellager = new Artikellager(artikellagerPK, theClientDto.getMandant());
 				em.merge(artikellager);
 				em.flush();
 			} catch (Exception ex) {
@@ -5038,58 +4717,44 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_LAGERBEWEGUNG);
 			lagerbewegungDto.setIId(pk);
 
-			lagerbewegungDto.setPersonalIIdMengegeaendert(theClientDto
-					.getIDPersonal());
+			lagerbewegungDto.setPersonalIIdMengegeaendert(theClientDto.getIDPersonal());
 
-			Lagerbewegung lagerbewegung = new Lagerbewegung(
-					lagerbewegungDto.getIId(),
-					lagerbewegungDto.getCBelegartnr(),
-					lagerbewegungDto.getIBelegartid(),
-					lagerbewegungDto.getIBelegartpositionid(),
-					lagerbewegungDto.getIIdBuchung(),
-					lagerbewegungDto.getLagerIId(),
-					lagerbewegungDto.getArtikelIId(),
-					lagerbewegungDto.getNMenge(),
-					lagerbewegungDto.getPersonalIIdMengegeaendert(),
-					lagerbewegungDto.getBAbgang(),
-					lagerbewegungDto.getBVollstaendigverbraucht(),
-					lagerbewegungDto.getTBelegdatum());
+			Lagerbewegung lagerbewegung = new Lagerbewegung(lagerbewegungDto.getIId(),
+					lagerbewegungDto.getCBelegartnr(), lagerbewegungDto.getIBelegartid(),
+					lagerbewegungDto.getIBelegartpositionid(), lagerbewegungDto.getIIdBuchung(),
+					lagerbewegungDto.getLagerIId(), lagerbewegungDto.getArtikelIId(), lagerbewegungDto.getNMenge(),
+					lagerbewegungDto.getPersonalIIdMengegeaendert(), lagerbewegungDto.getBAbgang(),
+					lagerbewegungDto.getBVollstaendigverbraucht(), lagerbewegungDto.getTBelegdatum());
 			if (lagerbewegungDto.getTBuchungszeit() != null)
 				// Buchungszeit muss bei Korrrekturbuchungen uebernommen werden
-				lagerbewegung.setTBuchungszeit(lagerbewegungDto
-						.getTBuchungszeit());
+				lagerbewegung.setTBuchungszeit(lagerbewegungDto.getTBuchungszeit());
 			em.persist(lagerbewegung);
 			em.flush();
-			setLagerbewegungFromLagerbewegungDto(lagerbewegung,
-					lagerbewegungDto);
+			setLagerbewegungFromLagerbewegungDto(lagerbewegung, lagerbewegungDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
 	/**
-	 * Schreibt Preisaenderungen im Lagerbewegungsdatensatz fest.
-	 * Mengenaenderungen sind nicht moeglich, dazu muss ein Korrekturdatensatz
-	 * angelegt werden.
+	 * Schreibt Preisaenderungen im Lagerbewegungsdatensatz fest. Mengenaenderungen
+	 * sind nicht moeglich, dazu muss ein Korrekturdatensatz angelegt werden.
 	 * 
 	 * Zus&auml;tzlich wird jetzt auch das Historie Flag upgedatet
 	 * 
-	 * @param lagerbewegungDto
-	 *            LagerbewegungDto
-	 * @param theClientDto
-	 *            String
-	 * @throws EJBExceptionLP
-	 *             lagerbewegungDto == null oder "lagerbewegungDto.getIId() ==
-	 *             null oder lagerbewegungDto.getBelegartCNr() == null ||
-	 *             lagerbewegungDto.getBelegartpositionIId() == null ||
-	 *             lagerbewegungDto.getIIdBuchung() == null ||
-	 *             lagerbewegungDto.getLagerIId() == null
+	 * @param lagerbewegungDto LagerbewegungDto
+	 * @param theClientDto     String
+	 * @throws EJBExceptionLP lagerbewegungDto == null oder
+	 *                        "lagerbewegungDto.getIId() == null oder
+	 *                        lagerbewegungDto.getBelegartCNr() == null ||
+	 *                        lagerbewegungDto.getBelegartpositionIId() == null ||
+	 *                        lagerbewegungDto.getIIdBuchung() == null ||
+	 *                        lagerbewegungDto.getLagerIId() == null
 	 */
-	public void updateLagerbewegung(LagerbewegungDto lagerbewegungDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateLagerbewegung(LagerbewegungDto lagerbewegungDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (lagerbewegungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lagerbewegungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lagerbewegungDto == null"));
 
 		}
 		if (lagerbewegungDto.getIId() == null) {
@@ -5097,55 +4762,38 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					new Exception("lagerbewegungDto.getIId() == null"));
 
 		}
-		if (lagerbewegungDto.getCBelegartnr() == null
-				|| lagerbewegungDto.getIBelegartpositionid() == null
-				|| lagerbewegungDto.getTBelegdatum() == null
-				|| lagerbewegungDto.getIIdBuchung() == null
-				|| lagerbewegungDto.getLagerIId() == null
-				|| lagerbewegungDto.getBHistorie() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerbewegungDto.getBelegartCNr() == null || lagerbewegungDto.getTBelegdatum() == null || lagerbewegungDto.getBelegartpositionIId() == null || lagerbewegungDto.getIIdBuchung() == null || lagerbewegungDto.getLagerIId() == null"));
+		if (lagerbewegungDto.getCBelegartnr() == null || lagerbewegungDto.getIBelegartpositionid() == null
+				|| lagerbewegungDto.getTBelegdatum() == null || lagerbewegungDto.getIIdBuchung() == null
+				|| lagerbewegungDto.getLagerIId() == null || lagerbewegungDto.getBHistorie() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"lagerbewegungDto.getBelegartCNr() == null || lagerbewegungDto.getTBelegdatum() == null || lagerbewegungDto.getBelegartpositionIId() == null || lagerbewegungDto.getIIdBuchung() == null || lagerbewegungDto.getLagerIId() == null"));
 
 		}
-		if (lagerbewegungDto.getArtikelIId() == null
-				|| lagerbewegungDto.getPersonalIIdMengegeaendert() == null
-				|| lagerbewegungDto.getBAbgang() == null
-				|| lagerbewegungDto.getBVollstaendigverbraucht() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerbewegungDto.getArtikelIId() == null || lagerbewegungDto.getIPersonMengegeaendert() == null || lagerbewegungDto.getBAbgang() == null || lagerbewegungDto.getBVollstaendigverbraucht() == null"));
+		if (lagerbewegungDto.getArtikelIId() == null || lagerbewegungDto.getPersonalIIdMengegeaendert() == null
+				|| lagerbewegungDto.getBAbgang() == null || lagerbewegungDto.getBVollstaendigverbraucht() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"lagerbewegungDto.getArtikelIId() == null || lagerbewegungDto.getIPersonMengegeaendert() == null || lagerbewegungDto.getBAbgang() == null || lagerbewegungDto.getBVollstaendigverbraucht() == null"));
 
 		}
 		Integer iId = lagerbewegungDto.getIId();
 		Lagerbewegung lagerbewegung = null;
 		lagerbewegung = em.find(Lagerbewegung.class, iId);
 		if (lagerbewegung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		// Nur Preisaenderungen festhalten und ob Artikel schon vollstaendig
 		// verbraucht worden ist
 		if (lagerbewegungDto.getBAbgang().intValue() == 0) {
-			lagerbewegung.setPersonalIIdEinstandspreisgeaendert(theClientDto
-					.getIDPersonal());
-			lagerbewegung.setNEinstandspreis(lagerbewegungDto
-					.getNEinstandspreis());
-			lagerbewegung.setNGestehungspreis(lagerbewegungDto
-					.getNGestehungspreis());
+			lagerbewegung.setPersonalIIdEinstandspreisgeaendert(theClientDto.getIDPersonal());
+			lagerbewegung.setNEinstandspreis(lagerbewegungDto.getNEinstandspreis());
+			lagerbewegung.setNGestehungspreis(lagerbewegungDto.getNGestehungspreis());
 		} else {
-			lagerbewegung.setPersonalIIdVerkaufspreisgeaendert(theClientDto
-					.getIDPersonal());
-			lagerbewegung.setNVerkaufspreis(lagerbewegungDto
-					.getNVerkaufspreis());
-			lagerbewegung.setNGestehungspreis(lagerbewegungDto
-					.getNGestehungspreis());
+			lagerbewegung.setPersonalIIdVerkaufspreisgeaendert(theClientDto.getIDPersonal());
+			lagerbewegung.setNVerkaufspreis(lagerbewegungDto.getNVerkaufspreis());
+			lagerbewegung.setNGestehungspreis(lagerbewegungDto.getNGestehungspreis());
 		}
-		lagerbewegung.setBVollstaendigverbraucht(lagerbewegungDto
-				.getBVollstaendigverbraucht());
+		lagerbewegung.setBVollstaendigverbraucht(lagerbewegungDto.getBVollstaendigverbraucht());
 		lagerbewegung.setTBelegdatum(lagerbewegungDto.getTBelegdatum());
 		if (lagerbewegungDto.getTBuchungszeit() != null) {
 			lagerbewegung.setTBuchungszeit(lagerbewegungDto.getTBuchungszeit());
@@ -5156,8 +4804,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		em.flush();
 	}
 
-	public void updateLagerbewegungs(LagerbewegungDto[] lagerbewegungDtos,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateLagerbewegungs(LagerbewegungDto[] lagerbewegungDtos, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (lagerbewegungDtos != null) {
 			for (int i = 0; i < lagerbewegungDtos.length; i++) {
 				updateLagerbewegung(lagerbewegungDtos[i], theClientDto);
@@ -5168,22 +4816,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Holt einen Lagerbewegungsdatensatz anhand des Primaerschluessels
 	 * 
-	 * @param iId
-	 *            8
-	 * @throws EJBExceptionLP
-	 *             iId == null
+	 * @param iId 8
+	 * @throws EJBExceptionLP iId == null
 	 * @return LagerbewegungDto
 	 */
-	public LagerbewegungDto lagerbewegungFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public LagerbewegungDto lagerbewegungFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		Lagerbewegung lagerbewegung = em.find(Lagerbewegung.class, iId);
 		if (lagerbewegung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLagerbewegungDto(lagerbewegung);
 	}
@@ -5191,17 +4834,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Gibt Alle Lagerbewegunsdatensaetzte einer Buchungsnummer zurueck.
 	 * 
-	 * @param iIdBuchung
-	 *            78
-	 * @throws EJBExceptionLP
-	 *             iIdBuchung == null
+	 * @param iIdBuchung 78
+	 * @throws EJBExceptionLP iIdBuchung == null
 	 * @return LagerbewegungDto[]
 	 */
-	public LagerbewegungDto[] lagerbewegungFindByIIdBuchung(Integer iIdBuchung)
-			throws EJBExceptionLP {
+	public LagerbewegungDto[] lagerbewegungFindByIIdBuchung(Integer iIdBuchung) throws EJBExceptionLP {
 		if (iIdBuchung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("iIdBuchung == null"));
 		}
 		Query query = em.createNamedQuery("LagerbewegungfindByIIdBuchung");
@@ -5211,34 +4850,27 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Holt Alle Lagerbuchungen eines Artikels eines Lagers einer
-	 * Buchungsrichtung (ZU-/ABGANG) ausser diejenigen, die schon vollstaendig
-	 * verbraucht sind, wenn nicht seriennummerntragen Wenn eine Seriennummer
-	 * angegeben wird, dann wird diese mitberuecksichtigt.
+	 * Holt Alle Lagerbuchungen eines Artikels eines Lagers einer Buchungsrichtung
+	 * (ZU-/ABGANG) ausser diejenigen, die schon vollstaendig verbraucht sind, wenn
+	 * nicht seriennummerntragen Wenn eine Seriennummer angegeben wird, dann wird
+	 * diese mitberuecksichtigt.
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param lagerIId
-	 *            7
-	 * @param bAbgang
-	 *            0
-	 * @param cSeriennrchargennr
-	 *            f546
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null || lagerIId == null || bAbgang == null
+	 * @param artikelIId         4711
+	 * @param lagerIId           7
+	 * @param bAbgang            0
+	 * @param cSeriennrchargennr f546
+	 * @throws EJBExceptionLP artikelIId == null || lagerIId == null || bAbgang ==
+	 *                        null
 	 * @return LagerbewegungDto[]
 	 */
-	public LagerbewegungDto[] lagerbewegungFindByArtikelIIdLagerIIdBAbgangCSeriennrchargennr(
-			Integer artikelIId, Integer lagerIId, Short bAbgang,
-			String cSeriennrchargennr) throws EJBExceptionLP {
+	public LagerbewegungDto[] lagerbewegungFindByArtikelIIdLagerIIdBAbgangCSeriennrchargennr(Integer artikelIId,
+			Integer lagerIId, Short bAbgang, String cSeriennrchargennr) throws EJBExceptionLP {
 		if (artikelIId == null || lagerIId == null || bAbgang == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"artikelIId == null || lagerIId == null || bAbgang == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("artikelIId == null || lagerIId == null || bAbgang == null"));
 		}
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByArtikelIIdLagerIIdBAbgangCSeriennrchargennrBVollstaendigverbraucht");
+		Query query = em.createNamedQuery(
+				"LagerbewegungfindByArtikelIIdLagerIIdBAbgangCSeriennrchargennrBVollstaendigverbraucht");
 		query.setParameter(1, artikelIId);
 		query.setParameter(2, lagerIId);
 		query.setParameter(3, bAbgang);
@@ -5249,38 +4881,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Holt Alle Lagerbuchungen eines Artikels einer Buchungsrichtung
-	 * (ZU-/ABGANG) ausser diejenigen, die schon vollstaendig verbraucht sind
+	 * Holt Alle Lagerbuchungen eines Artikels einer Buchungsrichtung (ZU-/ABGANG)
+	 * ausser diejenigen, die schon vollstaendig verbraucht sind
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param bAbgang
-	 *            0
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null || bAbgang == null
+	 * @param artikelIId 4711
+	 * @param bAbgang    0
+	 * @throws EJBExceptionLP artikelIId == null || bAbgang == null
 	 * @return LagerbewegungDto[]
 	 */
-	public LagerbewegungDto[] lagerbewegungFindByArtikelIIdBAbgang(
-			Integer artikelIId, Short bAbgang) throws EJBExceptionLP {
+	public LagerbewegungDto[] lagerbewegungFindByArtikelIIdBAbgang(Integer artikelIId, Short bAbgang)
+			throws EJBExceptionLP {
 		myLogger.entry();
 		if (artikelIId == null || bAbgang == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null || bAbgang == null"));
 		}
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByArtikelIIdBAbgang");
+		Query query = em.createNamedQuery("LagerbewegungfindByArtikelIIdBAbgang");
 		query.setParameter(1, artikelIId);
 		query.setParameter(2, bAbgang);
 		Collection<?> cl = query.getResultList();
 		return assembleLagerbewegungDtos(cl);
 	}
 
-	public LagerbewegungDto[] lagerbewegungFindByArtikelIId(Integer artikelIId)
-			throws EJBExceptionLP {
+	public LagerbewegungDto[] lagerbewegungFindByArtikelIId(Integer artikelIId) throws EJBExceptionLP {
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null"));
 		}
 		Query query = em.createNamedQuery("LagerbewegungfindArtikelIId");
@@ -5289,16 +4914,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return assembleLagerbewegungDtos(cl);
 	}
 
-	public LagerbewegungDto[] lagerbewegungFindByArtikelIIdCSeriennrChargennr(
-			Integer artikelIId, String cSnrChnr) {
+	public LagerbewegungDto[] lagerbewegungFindByArtikelIIdCSeriennrChargennr(Integer artikelIId, String cSnrChnr) {
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null"));
 		}
 
-		Query query = em
-				.createNamedQuery("LagerbewegungfindAllSnrChnrEinesArtikels");
+		Query query = em.createNamedQuery("LagerbewegungfindAllSnrChnrEinesArtikels");
 		query.setParameter(1, artikelIId);
 		query.setParameter(2, cSnrChnr);
 		Collection<?> cl = query.getResultList();
@@ -5309,39 +4931,30 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	/**
 	 * Holt alle Lagerbewegungsdatensaetzte einer Belegart und einer
-	 * Belegartposition, ausser vollstaendig verbrauchten Lagerbewegungen. Wenn
-	 * eine Seriennummer angegeben wird, dann wird diese mitberuecksichtigt.
+	 * Belegartposition, ausser vollstaendig verbrauchten Lagerbewegungen. Wenn eine
+	 * Seriennummer angegeben wird, dann wird diese mitberuecksichtigt.
 	 * 
-	 * @param belegartCNr
-	 *            Rechnung
-	 * @param belegartIId
-	 *            6785
-	 * @param artikelIId
-	 *            Id des Artikels
-	 * @param cSnrChnr
-	 *            f54653
-	 * @throws EJBExceptionLP
-	 *             belegartCNr == null || belegartpositionIId == null
+	 * @param belegartCNr Rechnung
+	 * @param belegartIId 6785
+	 * @param artikelIId  Id des Artikels
+	 * @param cSnrChnr    f54653
+	 * @throws EJBExceptionLP belegartCNr == null || belegartpositionIId == null
 	 * @return LagerbewegungDto[]
 	 */
 
-	public boolean pruefeObSnrChnrAufBelegGebuchtWurde(String belegartCNr,
-			Integer belegartIId, Integer artikelIId, String cSnrChnr) {
+	public boolean pruefeObSnrChnrAufBelegGebuchtWurde(String belegartCNr, Integer belegartIId, Integer artikelIId,
+			String cSnrChnr) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		org.hibernate.Criteria crit = session.createCriteria(
-				FLRLagerbewegung.class).createAlias(
-				LagerFac.FLR_LAGERBEWEGUNG_FLRARTIKEL, "a");
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class)
+				.createAlias(LagerFac.FLR_LAGERBEWEGUNG_FLRARTIKEL, "a");
 		crit.add(Restrictions.eq("a.i_id", artikelIId));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-				Helper.boolean2Short(false)));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
-				Helper.boolean2Short(false)));
-		crit.add(Restrictions.eq(
-				LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR, cSnrChnr));
-		crit.add(Restrictions.gt(LagerFac.FLR_LAGERBEWEGUNG_N_MENGE,
-				new BigDecimal(0)));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, belegartCNr));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_I_BELEGARTID, belegartIId));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR, cSnrChnr));
+		crit.add(Restrictions.gt(LagerFac.FLR_LAGERBEWEGUNG_N_MENGE, new BigDecimal(0)));
 		List<?> resultList = crit.list();
 
 		if (resultList.size() > 0) {
@@ -5356,54 +4969,45 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public HandlagerbewegungDto getZugehoerigeUmbuchung(
-			Integer handlagerbewegungIId, TheClientDto theClientDto) {
-		HandlagerbewegungDto handlagerbewegungDto = handlagerbewegungFindByPrimaryKey(
-				handlagerbewegungIId, theClientDto);
+	public HandlagerbewegungDto getZugehoerigeUmbuchung(Integer handlagerbewegungIId, TheClientDto theClientDto) {
+		HandlagerbewegungDto handlagerbewegungDto = handlagerbewegungFindByPrimaryKey(handlagerbewegungIId,
+				theClientDto);
 
 		String cSnrChnr = null;
 
 		if (handlagerbewegungDto.getSeriennrChargennrMitMenge() != null
 				&& handlagerbewegungDto.getSeriennrChargennrMitMenge().size() > 0) {
-			cSnrChnr = handlagerbewegungDto.getSeriennrChargennrMitMenge()
-					.get(0).getCSeriennrChargennr();
+			cSnrChnr = handlagerbewegungDto.getSeriennrChargennrMitMenge().get(0).getCSeriennrChargennr();
 		}
 
-		LagerbewegungDto lbewDto = getLetzteintrag(LocaleFac.BELEGART_HAND,
-				handlagerbewegungIId, cSnrChnr);
+		LagerbewegungDto lbewDto = getLetzteintrag(LocaleFac.BELEGART_HAND, handlagerbewegungIId, cSnrChnr);
 		if (Helper.short2boolean(handlagerbewegungDto.getBAbgang())) {
-			LagerumbuchungDto[] luDtos = lagerumbuchungFindByIdAbbuchung(lbewDto
-					.getIIdBuchung());
+			LagerumbuchungDto[] luDtos = lagerumbuchungFindByIdAbbuchung(lbewDto.getIIdBuchung());
 			if (luDtos.length > 0) {
-				LagerbewegungDto tempDto = getJuengsteBuchungEinerBuchungsNummer(luDtos[0]
-						.getILagerbewegungidzubuchung());
-				Handlagerbewegung handlagerbewegung = em.find(
-						Handlagerbewegung.class,
+				LagerbewegungDto tempDto = getJuengsteBuchungEinerBuchungsNummer(
+						luDtos[0].getILagerbewegungidzubuchung());
+				Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class,
 						tempDto.getIBelegartpositionid());
 				if (handlagerbewegung == null) {
 					return null;
 				} else {
-					return handlagerbewegungFindByPrimaryKey(
-							tempDto.getIBelegartpositionid(), theClientDto);
+					return handlagerbewegungFindByPrimaryKey(tempDto.getIBelegartpositionid(), theClientDto);
 				}
 
 			} else {
 				return null;
 			}
 		} else {
-			LagerumbuchungDto[] luDtos = lagerumbuchungFindByIdZubuchung(lbewDto
-					.getIIdBuchung());
+			LagerumbuchungDto[] luDtos = lagerumbuchungFindByIdZubuchung(lbewDto.getIIdBuchung());
 			if (luDtos.length > 0) {
-				LagerbewegungDto tempDto = getJuengsteBuchungEinerBuchungsNummer(luDtos[0]
-						.getILagerbewegungidabbuchung());
-				Handlagerbewegung handlagerbewegung = em.find(
-						Handlagerbewegung.class,
+				LagerbewegungDto tempDto = getJuengsteBuchungEinerBuchungsNummer(
+						luDtos[0].getILagerbewegungidabbuchung());
+				Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class,
 						tempDto.getIBelegartpositionid());
 				if (handlagerbewegung == null) {
 					return null;
 				} else {
-					return handlagerbewegungFindByPrimaryKey(
-							tempDto.getIBelegartpositionid(), theClientDto);
+					return handlagerbewegungFindByPrimaryKey(tempDto.getIBelegartpositionid(), theClientDto);
 				}
 			} else {
 				return null;
@@ -5412,56 +5016,68 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public LagerbewegungDto getLetzteintrag(String belegartCNr,
-			Integer belegartpositionIId, String cSeriennrchargennr) {
+	public LagerbewegungDto getLetzteintrag(String belegartCNr, Integer belegartpositionIId,
+			String cSeriennrchargennr) {
 
-		Query query = em.createNamedQuery("LagerbewegungfindLetzteintrag");
-		query.setParameter(1, belegartCNr);
-		query.setParameter(2, belegartpositionIId);
-		query.setParameter(3, cSeriennrchargennr);
+		Session session = FLRSessionFactory.getFactory().openSession();
 
-		try {
-			Collection cl = query.getResultList();
+		String sQuery = "SELECT l.i_id FROM FLRLagerbewegung l WHERE b_historie=0 AND l.c_belegartnr='" + belegartCNr
+				+ "' AND l.i_belegartpositionid=" + belegartpositionIId;
 
-			if (cl.size() == 1) {
-				return assembleLagerbewegungDto((Lagerbewegung) cl.iterator()
-						.next());
-			} else if (cl.size() == 0) {
-				System.out.println("Keine Daten gefunden: " + belegartCNr
-						+ " Pos:" + belegartpositionIId + " SNR:"
-						+ cSeriennrchargennr);
-				return null;
-			} else {
-				Iterator it = cl.iterator();
-				LagerbewegungDto lBew = assembleLagerbewegungDto((Lagerbewegung) it
-						.next());
-				while (it.hasNext()) {
-					lBew.setNMenge(lBew.getNMenge().add(
-							((Lagerbewegung) it.next()).getNMenge()));
-				}
-				System.out.println("Zuviele Buchungen: " + belegartCNr
-						+ " Pos:" + belegartpositionIId + " SNR:"
-						+ cSeriennrchargennr);
-				return lBew;
-			}
+		if (cSeriennrchargennr != null) {
+			sQuery += " AND l.c_seriennrchargennr='" + cSeriennrchargennr + "'";
+		} else {
+			sQuery += " AND l.c_seriennrchargennr IS NULL";
+		}
 
-		} catch (NoResultException ex) {
+		org.hibernate.Query query = session.createQuery(sQuery);
+		query.setMaxResults(1);
+
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		if (resultListIterator.hasNext()) {
+			Integer lagerbewegungIId = (Integer) resultListIterator.next();
+			return assembleLagerbewegungDto(em.find(Lagerbewegung.class, lagerbewegungIId));
+
+		} else {
 			return null;
 		}
 
+		// SELECT OBJECT(C) FROM Lagerbewegung c WHERE c.cBelegartnr = ?1 AND
+		// c.iBelegartpositionid = ?2 AND( c.cSeriennrchargennr = ?3 OR
+		// c.cSeriennrchargennr is null ) AND c.bHistorie = 0
+
+		/*
+		 * Query query = em.createNamedQuery("LagerbewegungfindLetzteintrag");
+		 * query.setParameter(1, belegartCNr); query.setParameter(2,
+		 * belegartpositionIId); query.setParameter(3, cSeriennrchargennr);
+		 * 
+		 * try { Collection cl = query.getResultList();
+		 * 
+		 * if (cl.size() == 1) { return assembleLagerbewegungDto((Lagerbewegung)
+		 * cl.iterator() .next()); } else if (cl.size() == 0) {
+		 * System.out.println("Keine Daten gefunden: " + belegartCNr + " Pos:" +
+		 * belegartpositionIId + " SNR:" + cSeriennrchargennr); return null; } else {
+		 * Iterator it = cl.iterator(); LagerbewegungDto lBew =
+		 * assembleLagerbewegungDto((Lagerbewegung) it .next()); while (it.hasNext()) {
+		 * lBew.setNMenge(lBew.getNMenge().add( ((Lagerbewegung)
+		 * it.next()).getNMenge())); } System.out.println("Zuviele Buchungen: " +
+		 * belegartCNr + " Pos:" + belegartpositionIId + " SNR:" + cSeriennrchargennr);
+		 * return lBew; }
+		 * 
+		 * } catch (NoResultException ex) { return null; }
+		 */
+
 	}
 
-	public LagerbewegungDto[] lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
-			String belegartCNr, Integer belegartpositionIId,
-			String cSeriennrchargennr) throws EJBExceptionLP {
+	public LagerbewegungDto[] lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(String belegartCNr,
+			Integer belegartpositionIId, String cSeriennrchargennr) throws EJBExceptionLP {
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId == null"));
 		}
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIIdCSeriennrchargennr");
+		Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIIdCSeriennrchargennr");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartpositionIId);
 		query.setParameter(3, cSeriennrchargennr);
@@ -5469,16 +5085,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return assembleLagerbewegungDtos(cl);
 	}
 
-	public LagerbewegungDto[] lagerbewegungFindByBelegartCNrBelegartPositionIId(
-			String belegartCNr, Integer belegartpositionIId) {
+	public LagerbewegungDto[] lagerbewegungFindByBelegartCNrBelegartPositionIId(String belegartCNr,
+			Integer belegartpositionIId) {
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId == null"));
 		}
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIId");
+		Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIId");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartpositionIId);
 		Collection<?> cl = query.getResultList();
@@ -5490,18 +5103,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Gibt die Buchungsnummer einer Lagerbewegung anhand der eindeutigen ID
 	 * zurueck.
 	 * 
-	 * @param iId
-	 *            6
-	 * @throws EJBExceptionLP
-	 *             iId == null
+	 * @param iId 6
+	 * @throws EJBExceptionLP iId == null
 	 * @return Integer
 	 */
-	public Integer lagerbewegungFindIIdBuchungByIId(Integer iId)
-			throws EJBExceptionLP {
+	public Integer lagerbewegungFindIIdBuchungByIId(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception("iId == null"));
 		}
 		Query query = em.createNamedQuery("LagerbewegungfindIIdBuchungByIId");
 		query.setParameter(1, iId);
@@ -5512,41 +5120,34 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return lagerbewegung.getIIdBuchung();
 	}
 
-	private void setLagerbewegungFromLagerbewegungDto(
-			Lagerbewegung lagerbewegung, LagerbewegungDto lagerbewegungDto) {
+	private void setLagerbewegungFromLagerbewegungDto(Lagerbewegung lagerbewegung, LagerbewegungDto lagerbewegungDto) {
 		lagerbewegung.setCBelegartnr(lagerbewegungDto.getCBelegartnr());
-		lagerbewegung.setIBelegartpositionid(lagerbewegungDto
-				.getIBelegartpositionid());
+		lagerbewegung.setIBelegartpositionid(lagerbewegungDto.getIBelegartpositionid());
 		lagerbewegung.setIBelegartid(lagerbewegungDto.getIBelegartid());
 		lagerbewegung.setIIdBuchung(lagerbewegungDto.getIIdBuchung());
 		lagerbewegung.setLagerIId(lagerbewegungDto.getLagerIId());
 		lagerbewegung.setArtikelIId(lagerbewegungDto.getArtikelIId());
 		lagerbewegung.setNMenge(lagerbewegungDto.getNMenge());
-		lagerbewegung.setPersonalIIdMengegeaendert(lagerbewegungDto
-				.getPersonalIIdMengegeaendert());
-		lagerbewegung.setCSeriennrchargennr(lagerbewegungDto
-				.getCSeriennrchargennr());
+		lagerbewegung.setPersonalIIdMengegeaendert(lagerbewegungDto.getPersonalIIdMengegeaendert());
+		lagerbewegung.setCSeriennrchargennr(lagerbewegungDto.getCSeriennrchargennr());
 		lagerbewegung.setNVerkaufspreis(lagerbewegungDto.getNVerkaufspreis());
-		lagerbewegung.setPersonalIIdVerkaufspreisgeaendert(lagerbewegungDto
-				.getPersonalIIdVerkaufspreisgeaendert());
+		lagerbewegung.setPersonalIIdVerkaufspreisgeaendert(lagerbewegungDto.getPersonalIIdVerkaufspreisgeaendert());
 		lagerbewegung.setNEinstandspreis(lagerbewegungDto.getNEinstandspreis());
-		lagerbewegung.setPersonalIIdEinstandspreisgeaendert(lagerbewegungDto
-				.getPersonalIIdEinstandspreisgeaendert());
-		lagerbewegung.setNGestehungspreis(lagerbewegungDto
-				.getNGestehungspreis());
+		lagerbewegung.setPersonalIIdEinstandspreisgeaendert(lagerbewegungDto.getPersonalIIdEinstandspreisgeaendert());
+		lagerbewegung.setNGestehungspreis(lagerbewegungDto.getNGestehungspreis());
 		lagerbewegung.setTBelegdatum(lagerbewegungDto.getTBelegdatum());
 		lagerbewegung.setBAbgang(lagerbewegungDto.getBAbgang());
-		lagerbewegung.setBVollstaendigverbraucht(lagerbewegungDto
-				.getBVollstaendigverbraucht());
+		lagerbewegung.setBVollstaendigverbraucht(lagerbewegungDto.getBVollstaendigverbraucht());
 		lagerbewegung.setLandIId(lagerbewegungDto.getLandIId());
 		lagerbewegung.setHerstellerIId(lagerbewegungDto.getHerstellerIId());
 		lagerbewegung.setCVersion(lagerbewegungDto.getCVersion());
+		lagerbewegung.setGebindeIId(lagerbewegungDto.getGebindeIId());
+		lagerbewegung.setNGebindemenge(lagerbewegungDto.getNGebindemenge());
 		em.merge(lagerbewegung);
 		em.flush();
 	}
 
-	private LagerbewegungDto assembleLagerbewegungDto(
-			Lagerbewegung lagerbewegung) {
+	private LagerbewegungDto assembleLagerbewegungDto(Lagerbewegung lagerbewegung) {
 		return LagerbewegungDtoAssembler.createDto(lagerbewegung);
 	}
 
@@ -5554,8 +5155,262 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return GeraetesnrDtoAssembler.createDto(geraetesnr);
 	}
 
-	private LagerbewegungDto[] assembleLagerbewegungDtos(
-			Collection<?> lagerbewegungs) {
+	// public ArrayList<LosistmaterialDto>
+	// getAlleBetroffenenLosistmaterialIIdsEinerArtikelIIdUndCharge(
+	// Integer artikelIId, String chargennummer,
+	// boolean bErledigteLoseZuruecknehmen, TheClientDto theClientDto) {
+	//
+	// ArrayList<LosistmaterialDto> losistmaterialDtos = new
+	// ArrayList<LosistmaterialDto>();
+	//
+	// Session session = FLRSessionFactory.getFactory().openSession();
+	//
+	// String queryString =
+	// "SELECT lagerbewegung FROM FLRLagerbewegung lagerbewegung WHERE
+	// lagerbewegung.b_historie=0 AND lagerbewegung.n_menge>0 AND
+	// lagerbewegung.c_belegartnr='"
+	// + LocaleFac.BELEGART_LOS
+	// + "' AND lagerbewegung.c_seriennrchargennr='"
+	// + chargennummer
+	// + "' AND lagerbewegung.artikel_i_id="
+	// + artikelIId
+	// + " ORDER BY lagerbewegung.n_menge ASC";
+	// org.hibernate.Query query = session.createQuery(queryString);
+	// List<?> resultList = query.list();
+	// Iterator<?> resultListIterator = resultList.iterator();
+	//
+	// while (resultListIterator.hasNext()) {
+	//
+	// FLRLagerbewegung flrLagerbewegung = (FLRLagerbewegung) resultListIterator
+	// .next();
+	//
+	// try {
+	// LosistmaterialDto istmatDto = getFertigungFac()
+	// .losistmaterialFindByPrimaryKeyOhneExc(
+	// flrLagerbewegung.getI_belegartpositionid());
+	//
+	// if (istmatDto != null) {
+	//
+	// LossollmaterialDto lossollmaterialDto = getFertigungFac()
+	// .lossollmaterialFindByPrimaryKey(
+	// istmatDto.getLossollmaterialIId());
+	//
+	// LosDto losDto = getFertigungFac().losFindByPrimaryKey(
+	// lossollmaterialDto.getLosIId());
+	// if (losDto.getStatusCNr().equals(
+	// FertigungFac.STATUS_AUSGEGEBEN)
+	// || losDto.getStatusCNr().equals(
+	// FertigungFac.STATUS_IN_PRODUKTION)
+	// || losDto.getStatusCNr().equals(
+	// FertigungFac.STATUS_TEILERLEDIGT)
+	// || losDto.getStatusCNr().equals(
+	// FertigungFac.STATUS_ERLEDIGT)) {
+	//
+	// if (bErledigteLoseZuruecknehmen == true) {
+	// if (losDto.getStatusCNr().equals(
+	// FertigungFac.STATUS_ERLEDIGT)) {
+	// getFertigungFac().manuellErledigenRueckgaengig(
+	// losDto.getIId(), theClientDto);
+	// }
+	// }
+	//
+	// losistmaterialDtos.add(istmatDto);
+	// }
+	//
+	// }
+	//
+	// } catch (RemoteException e) {
+	// throwEJBExceptionLPRespectOld(e);
+	// }
+	//
+	// }
+	// return losistmaterialDtos;
+	//
+	// }
+
+	@Override
+	public List<LosDto> getAlleBetroffenenLoseEinerArtikelIIdUndCharge(Integer artikelIId, String chargennummer)
+			throws RemoteException {
+		List<Lagerbewegung> lagerbewegungen = LagerbewegungQuery.listByBelegartCNrArtikelIIdCSeriennrchargennr(em,
+				LocaleFac.BELEGART_LOS, artikelIId, chargennummer);
+		Map<Integer, LosDto> betroffeneLose = new HashMap<Integer, LosDto>();
+
+		for (Lagerbewegung lagerbewegung : lagerbewegungen) {
+			if (betroffeneLose.containsKey(lagerbewegung.getIBelegartid()))
+				continue;
+
+			LosDto losDto = getFertigungFac().losFindByPrimaryKey(lagerbewegung.getIBelegartid());
+			if (FertigungFac.STATUS_AUSGEGEBEN.equals(losDto.getStatusCNr())
+					|| FertigungFac.STATUS_IN_PRODUKTION.equals(losDto.getStatusCNr())
+					|| FertigungFac.STATUS_TEILERLEDIGT.equals(losDto.getStatusCNr())
+					|| FertigungFac.STATUS_ERLEDIGT.equals(losDto.getStatusCNr())) {
+				betroffeneLose.put(losDto.getIId(), losDto);
+			}
+		}
+
+		return new ArrayList<LosDto>(betroffeneLose.values());
+	}
+
+	private List<LosistmaterialDto> findLosistmaterialBySerienChargennummerLosDtos(Integer artikelIId,
+			String serienChargennummer, List<LosDto> losDtos) throws RemoteException {
+		List<Integer> losIIds = new ArrayList<Integer>();
+		for (LosDto losDto : losDtos) {
+			losIIds.add(losDto.getIId());
+		}
+		List<Lagerbewegung> lagerbewegungen = LagerbewegungQuery
+				.listByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge(em, LocaleFac.BELEGART_LOS,
+						artikelIId, serienChargennummer, losIIds);
+
+		List<LosistmaterialDto> dtos = new ArrayList<LosistmaterialDto>();
+		for (Lagerbewegung lagerbewegung : lagerbewegungen) {
+			LosistmaterialDto losistmaterialDto = getFertigungFac()
+					.losistmaterialFindByPrimaryKeyOhneExc(lagerbewegung.getIBelegartpositionid());
+			if (losistmaterialDto != null)
+				dtos.add(losistmaterialDto);
+		}
+
+		return dtos;
+	}
+
+	@Override
+	@org.jboss.ejb3.annotation.TransactionTimeout(3000)
+	public List<LosDto> chargennummerWegwerfen(Integer artikelIId, String chargennummer, List<LosDto> losDtos,
+			boolean erledigteLoseZuruecknehmen, TheClientDto theClientDto) throws RemoteException {
+		Validator.notNull(artikelIId, "artikelIId");
+		Validator.notNull(chargennummer, "chargennummer");
+
+		List<LosistmaterialDto> losistmaterialDtos = losDtos == null || losDtos.isEmpty()
+				? new ArrayList<LosistmaterialDto>()
+				: findLosistmaterialBySerienChargennummerLosDtos(artikelIId, chargennummer, losDtos);
+
+		if (erledigteLoseZuruecknehmen && losDtos != null) {
+			for (LosDto losDto : losDtos) {
+				if (FertigungFac.STATUS_ERLEDIGT.equals(losDto.getStatusCNr())) {
+					getFertigungFac().manuellErledigenRueckgaengig(losDto.getIId(), true, false, theClientDto);
+				}
+			}
+		}
+
+		losistmaterialDtos = chargennummerWegwerfenImpl(artikelIId, chargennummer, losistmaterialDtos, theClientDto);
+		Map<Integer, LosDto> verwendeteLose = new HashMap<Integer, LosDto>();
+		for (LosistmaterialDto losist : losistmaterialDtos) {
+			Lossollmaterial lossoll = em.find(Lossollmaterial.class, losist.getLossollmaterialIId());
+			if (!verwendeteLose.containsKey(lossoll.getLosIId())) {
+				verwendeteLose.put(lossoll.getLosIId(), getFertigungFac().losFindByPrimaryKey(lossoll.getLosIId()));
+			}
+		}
+
+		return new ArrayList<LosDto>(verwendeteLose.values());
+	}
+
+	// PJ19872
+	private List<LosistmaterialDto> chargennummerWegwerfenImpl(Integer artikelIId, String chargennummer,
+			List<LosistmaterialDto> losistmaterialDtos, TheClientDto theClientDto) {
+		Set<LosistmaterialDto> losistSet = new HashSet<LosistmaterialDto>();
+		LagerDto[] lagerDtos = lagerFindAll();
+
+		for (int z = 0; z < lagerDtos.length; z++) {
+
+			SeriennrChargennrAufLagerDto[] chaergenAufLagerDtos = getAllSerienChargennrAufLagerInfoDtos(artikelIId,
+					lagerDtos[z].getIId(), chargennummer, true, null, theClientDto);
+
+			for (int i = 0; i < chaergenAufLagerDtos.length; i++) {
+				try {
+					// Losistmaterial des Artikels und der Chargennummer suchen
+
+					System.out.println("Lagerstand vorher:"
+							+ Helper.formatZahl(chaergenAufLagerDtos[0].getNMenge(), 4, theClientDto.getLocUi()));
+
+					if (losistmaterialDtos == null || losistmaterialDtos.size() == 0) {
+						// Handlagerabbuchung
+
+						HandlagerbewegungDto handlagerbewegung2Dto = new HandlagerbewegungDto();
+						handlagerbewegung2Dto.setArtikelIId(artikelIId);
+						handlagerbewegung2Dto
+
+								.setLagerIId(lagerDtos[z].getIId());
+						handlagerbewegung2Dto.setBAbgang(new Short((short) 1));
+						handlagerbewegung2Dto.setCKommentar("Wegwerf-Funktion");
+						handlagerbewegung2Dto.setSeriennrChargennrMitMenge(SeriennrChargennrMitMengeDto
+								.erstelleDtoAusEinerChargennummer(chaergenAufLagerDtos[i].getCSeriennrChargennr(),
+										chaergenAufLagerDtos[i].getNMenge()));
+						handlagerbewegung2Dto.setNMenge(chaergenAufLagerDtos[i].getNMenge());
+						handlagerbewegung2Dto.setNVerkaufspreis(getGemittelterGestehungspreisEinesLagers(artikelIId,
+								lagerDtos[z].getIId(), theClientDto));
+
+						getLagerFac().createHandlagerbewegung(handlagerbewegung2Dto, theClientDto);
+
+					} else {
+
+						BigDecimal bdInLosenVerbraucht = BigDecimal.ZERO;
+						for (int j = 0; j < losistmaterialDtos.size(); j++) {
+							bdInLosenVerbraucht = bdInLosenVerbraucht.add(losistmaterialDtos.get(j).getNMenge());
+
+						}
+
+						int iNachkommastellenMenge = getMandantFac()
+								.getNachkommastellenMenge(theClientDto.getMandant());
+
+						BigDecimal bdGesamtMitRest = bdInLosenVerbraucht.add(chaergenAufLagerDtos[i].getNMenge());
+
+						BigDecimal bdFaktor = bdGesamtMitRest.divide(bdInLosenVerbraucht, 4,
+								BigDecimal.ROUND_HALF_EVEN);
+
+						BigDecimal bdNeuVerbraucht = BigDecimal.ZERO;
+						for (int j = 0; j < losistmaterialDtos.size(); j++) {
+
+							LosistmaterialDto losistmaterialDto = losistmaterialDtos.get(j);
+
+							BigDecimal bdMengeNeu = null;
+
+							if (j == losistmaterialDtos.size() - 1) {
+
+								bdMengeNeu = losistmaterialDto.getNMenge()
+										.add(chaergenAufLagerDtos[i].getNMenge().subtract(bdNeuVerbraucht));
+							} else {
+
+								bdMengeNeu = Helper.rundeKaufmaennisch(losistmaterialDto.getNMenge().multiply(bdFaktor),
+										iNachkommastellenMenge);
+
+							}
+
+							// SP5642
+							BigDecimal bdZusaetzlich = bdMengeNeu.subtract(losistmaterialDto.getNMenge());
+
+							if (bdZusaetzlich.doubleValue() != 0) {
+
+								if (lagerDtos[z].getIId().equals(losistmaterialDto.getLagerIId())) {
+
+									getFertigungFac().updateLosistmaterialMenge(losistmaterialDto.getIId(), bdMengeNeu,
+											theClientDto);
+
+									bdNeuVerbraucht = bdNeuVerbraucht.add(bdZusaetzlich);
+								} else {
+
+									losistmaterialDto.setIId(null);
+									losistmaterialDto.setLagerIId(lagerDtos[z].getIId());
+									losistmaterialDto.setNMenge(bdZusaetzlich);
+
+									losistmaterialDto = getFertigungFac().createLosistmaterial(losistmaterialDto,
+											chaergenAufLagerDtos[i].getCSeriennrChargennr(), theClientDto);
+									bdNeuVerbraucht = bdNeuVerbraucht.add(bdZusaetzlich);
+								}
+
+								losistSet.add(losistmaterialDto);
+							}
+						}
+
+					}
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+			}
+
+		}
+		return new ArrayList<LosistmaterialDto>(losistSet);
+	}
+
+	private LagerbewegungDto[] assembleLagerbewegungDtos(Collection<?> lagerbewegungs) {
 		List<LagerbewegungDto> list = new ArrayList<LagerbewegungDto>();
 		if (lagerbewegungs != null) {
 			Iterator<?> iterator = lagerbewegungs.iterator();
@@ -5570,58 +5425,46 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	/**
 	 * Ordnet einem Lagerabgang einen Lagerzugang zu, um zu einem beliebigen
-	 * Zeitpunkt festellen zu koennen, welcher Lagerabgang aus welchem
-	 * Lagerzugang zustande kam.
+	 * Zeitpunkt festellen zu koennen, welcher Lagerabgang aus welchem Lagerzugang
+	 * zustande kam.
 	 * 
-	 * @param lagerabgangursprungDto
-	 *            LagerabgangursprungDto
+	 * @param lagerabgangursprungDto LagerabgangursprungDto
 	 * @throws EJBExceptionLP
 	 */
-	public void createLagerabgangursprung(
-			LagerabgangursprungDto lagerabgangursprungDto)
-			throws EJBExceptionLP {
+	public void createLagerabgangursprung(LagerabgangursprungDto lagerabgangursprungDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (lagerabgangursprungDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("lagerabgangursprungDto == null"));
 		}
 		if (lagerabgangursprungDto.getILagerbewegungid() == null
 				|| lagerabgangursprungDto.getILagerbewegungidursprung() == null
 				|| lagerabgangursprungDto.getNVerbrauchtemenge() == null
 				|| lagerabgangursprungDto.getNGestehungspreis() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null || lagerabgangursprungDto.getFVerbrauchtemenge() == null || lagerabgangursprungDto.getNGestehungspreis() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null || lagerabgangursprungDto.getFVerbrauchtemenge() == null || lagerabgangursprungDto.getNGestehungspreis() == null"));
 		}
 		if (lagerabgangursprungDto.getILagerbewegungid().intValue() == lagerabgangursprungDto
 				.getILagerbewegungidursprung().intValue()) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null"));
 		}
 
 		try {
 			Lagerabgangursprung lagerabgangursprung = null;
 			try {
 				// myLogger.info("ims487" + lagerabgangursprungDto.toString());
-				lagerabgangursprung = new Lagerabgangursprung(
-						lagerabgangursprungDto.getILagerbewegungid(),
+				lagerabgangursprung = new Lagerabgangursprung(lagerabgangursprungDto.getILagerbewegungid(),
 						lagerabgangursprungDto.getILagerbewegungidursprung(),
-						lagerabgangursprungDto.getNVerbrauchtemenge(),
-						lagerabgangursprungDto.getNGestehungspreis());
+						lagerabgangursprungDto.getNVerbrauchtemenge(), lagerabgangursprungDto.getNGestehungspreis());
 				em.persist(lagerabgangursprung);
 				em.flush();
 
 			} catch (EntityExistsException ex) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY, ex);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY, ex);
 			}
 
-			setLagerabgangursprungFromLagerabgangursprungDto(
-					lagerabgangursprung, lagerabgangursprungDto);
+			setLagerabgangursprungFromLagerabgangursprungDto(lagerabgangursprung, lagerabgangursprungDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -5630,39 +5473,28 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Hebt die Zuordnung eines Lagerabgang mit seinem Ursprung auf
 	 * 
-	 * @param lagerabgangursprungDto
-	 *            lagerabgangursprungDto
+	 * @param lagerabgangursprungDto lagerabgangursprungDto
 	 * @throws EJBExceptionLP
 	 */
-	public void removeLagerabgangursprung(
-			LagerabgangursprungDto lagerabgangursprungDto)
-			throws EJBExceptionLP {
+	public void removeLagerabgangursprung(LagerabgangursprungDto lagerabgangursprungDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (lagerabgangursprungDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("lagerabgangursprungDto == null"));
 		}
 		if (lagerabgangursprungDto.getILagerbewegungid() == null
 				|| lagerabgangursprungDto.getILagerbewegungidursprung() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"lagerabgangursprungDto.getLagerbewegungIIdBuchung() == null || lagerabgangursprungDto.getLagerbewegungIIdBuchungsursprung() == null"));
 		}
 		LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
-		lagerabgangursprungPK.setILagerbewegungid(lagerabgangursprungDto
-				.getILagerbewegungid());
-		lagerabgangursprungPK
-				.setILagerbewegungidursprung(lagerabgangursprungDto
-						.getILagerbewegungidursprung());
+		lagerabgangursprungPK.setILagerbewegungid(lagerabgangursprungDto.getILagerbewegungid());
+		lagerabgangursprungPK.setILagerbewegungidursprung(lagerabgangursprungDto.getILagerbewegungidursprung());
 		Lagerabgangursprung lagerabgangursprung = null;
 		try {
-			lagerabgangursprung = em.find(Lagerabgangursprung.class,
-					lagerabgangursprungPK);
+			lagerabgangursprung = em.find(Lagerabgangursprung.class, lagerabgangursprungPK);
 			if (lagerabgangursprung == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(lagerabgangursprung);
 			em.flush();
@@ -5674,53 +5506,42 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Findet eine Zuordnung eines Lagerabganges zu seinem Ursprung.
 	 * 
-	 * @param iIdBuchung
-	 *            7
-	 * @param iIdBuchungsursprung
-	 *            2
+	 * @param iIdBuchung          7
+	 * @param iIdBuchungsursprung 2
 	 * @throws EJBExceptionLP
 	 * @return LagerabgangursprungDto
 	 */
-	public LagerabgangursprungDto lagerabgangursprungFindByPrimaryKey(
-			Integer iIdBuchung, Integer iIdBuchungsursprung)
+	public LagerabgangursprungDto lagerabgangursprungFindByPrimaryKey(Integer iIdBuchung, Integer iIdBuchungsursprung)
 			throws EJBExceptionLP {
 		if (iIdBuchung == null || iIdBuchungsursprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"iIdBuchung == null || iIdBuchungsursprung == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("iIdBuchung == null || iIdBuchungsursprung == null"));
 		}
 		LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
 		lagerabgangursprungPK.setILagerbewegungid(iIdBuchung);
 		lagerabgangursprungPK.setILagerbewegungidursprung(iIdBuchungsursprung);
-		Lagerabgangursprung lagerabgangursprung = em.find(
-				Lagerabgangursprung.class, lagerabgangursprungPK);
+		Lagerabgangursprung lagerabgangursprung = em.find(Lagerabgangursprung.class, lagerabgangursprungPK);
 		if (lagerabgangursprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLagerabgangursprungDto(lagerabgangursprung);
 	}
 
 	/**
-	 * Findet alle Lagerabgaenge die einem bestimmten Lagerzugang benoetigt
-	 * haben
+	 * Findet alle Lagerabgaenge die einem bestimmten Lagerzugang benoetigt haben
 	 * 
-	 * @param iIdBuchungsursprung
-	 *            7
+	 * @param iIdBuchungsursprung 7
 	 * @throws EJBExceptionLP
 	 * @return LagerabgangursprungDto[]
 	 */
 	public LagerabgangursprungDto[] lagerabgangursprungFindByLagerbewegungIIdBuchungsursprung(
 			Integer iIdBuchungsursprung) throws EJBExceptionLP {
 		if (iIdBuchungsursprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("iIdBuchungsursprung == null"));
 		}
 
-		Query query = em
-				.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
+		Query query = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
 		query.setParameter(1, iIdBuchungsursprung);
 		Collection<?> cl = query.getResultList();
 		return assembleLagerabgangursprungDtos(cl);
@@ -5729,20 +5550,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Findet alle Lagerzugaenge die ein bestimmter Lagerabgang benoetigt hat
 	 * 
-	 * @param iIdBuchung
-	 *            7
+	 * @param iIdBuchung 7
 	 * @throws EJBExceptionLP
 	 * @return LagerabgangursprungDto[]
 	 */
-	public LagerabgangursprungDto[] lagerabgangursprungFindByLagerbewegungIIdBuchung(
-			Integer iIdBuchung) throws EJBExceptionLP {
+	public LagerabgangursprungDto[] lagerabgangursprungFindByLagerbewegungIIdBuchung(Integer iIdBuchung)
+			throws EJBExceptionLP {
 		if (iIdBuchung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("iIdBuchung == null"));
 		}
-		Query query = em
-				.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
+		Query query = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
 		query.setParameter(1, iIdBuchung);
 		Collection<?> cl = query.getResultList();
 		return assembleLagerabgangursprungDtos(cl);
@@ -5751,60 +5569,49 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Findet den Urpsrung eines bestimmten Lagerzuganges
 	 * 
-	 * @param iIdBuchung
-	 *            36
+	 * @param iIdBuchung 36
 	 * @throws EJBExceptionLP
 	 * @return LagerzugangursprungDto
 	 */
 	public LagerzugangursprungDto lagerzugangursprungFindIIdBuchungsursprungByLagerbewegungIIdBuchung(
 			Integer iIdBuchung) throws EJBExceptionLP {
 		if (iIdBuchung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("iIdBuchung == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("LagerzugangursprungfindIIdBuchungsursprungByILagerbewegungid");
+			Query query = em.createNamedQuery("LagerzugangursprungfindIIdBuchungsursprungByILagerbewegungid");
 			query.setParameter(1, iIdBuchung);
-			Lagerzugangursprung lagerzugangursprung = (Lagerzugangursprung) query
-					.getSingleResult();
+			Lagerzugangursprung lagerzugangursprung = (Lagerzugangursprung) query.getSingleResult();
 			return assembleLagerzugangursprungDto(lagerzugangursprung);
 		} catch (NoResultException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
+			return null;
 		}
 	}
 
-	private void setLagerabgangursprungFromLagerabgangursprungDto(
-			Lagerabgangursprung lagerabgangursprung,
+	private void setLagerabgangursprungFromLagerabgangursprungDto(Lagerabgangursprung lagerabgangursprung,
 			LagerabgangursprungDto lagerabgangursprungDto) {
-		lagerabgangursprung.setNVerbrauchtemenge(lagerabgangursprungDto
-				.getNVerbrauchtemenge());
-		lagerabgangursprung.setNGestehungspreis(lagerabgangursprungDto
-				.getNGestehungspreis());
+		lagerabgangursprung.setNVerbrauchtemenge(lagerabgangursprungDto.getNVerbrauchtemenge());
+		lagerabgangursprung.setNGestehungspreis(lagerabgangursprungDto.getNGestehungspreis());
 
 		em.merge(lagerabgangursprung);
 		em.flush();
 	}
 
-	private LagerabgangursprungDto assembleLagerabgangursprungDto(
-			Lagerabgangursprung lagerabgangursprung) {
+	private LagerabgangursprungDto assembleLagerabgangursprungDto(Lagerabgangursprung lagerabgangursprung) {
 		return LagerabgangursprungDtoAssembler.createDto(lagerabgangursprung);
 	}
 
-	private LagerabgangursprungDto[] assembleLagerabgangursprungDtos(
-			Collection<?> lagerabgangursprungs) {
+	private LagerabgangursprungDto[] assembleLagerabgangursprungDtos(Collection<?> lagerabgangursprungs) {
 		List<LagerabgangursprungDto> list = new ArrayList<LagerabgangursprungDto>();
 		if (lagerabgangursprungs != null) {
 			Iterator<?> iterator = lagerabgangursprungs.iterator();
 			while (iterator.hasNext()) {
-				Lagerabgangursprung lagerabgangursprung = (Lagerabgangursprung) iterator
-						.next();
+				Lagerabgangursprung lagerabgangursprung = (Lagerabgangursprung) iterator.next();
 				list.add(assembleLagerabgangursprungDto(lagerabgangursprung));
 			}
 		}
-		LagerabgangursprungDto[] returnArray = new LagerabgangursprungDto[list
-				.size()];
+		LagerabgangursprungDto[] returnArray = new LagerabgangursprungDto[list.size()];
 		return (LagerabgangursprungDto[]) list.toArray(returnArray);
 	}
 
@@ -5812,42 +5619,33 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Ordnet einem Lagerzugang einen Lagerabgang zu (Rueckschein 56 kommt
 	 * urspruenglich auf Lieferschein 38).
 	 * 
-	 * @param lagerzugangursprungDto
-	 *            LagerzugangursprungDto
+	 * @param lagerzugangursprungDto LagerzugangursprungDto
 	 * @throws EJBExceptionLP
 	 */
-	public void createLagerzugangursprung(
-			LagerzugangursprungDto lagerzugangursprungDto)
-			throws EJBExceptionLP {
+	public void createLagerzugangursprung(LagerzugangursprungDto lagerzugangursprungDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (lagerzugangursprungDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("iIdBuchung == null"));
 		}
 		if (lagerzugangursprungDto.getILagerbewegungid() == null
 				|| lagerzugangursprungDto.getILagerbewegungidursprung() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"lagerzugangursprungDto.getLagerbewegungIIdBuchung() == null || lagerzugangursprungDto.getLagerbewegungIIdBuchungsursprung() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"lagerzugangursprungDto.getLagerbewegungIIdBuchung() == null || lagerzugangursprungDto.getLagerbewegungIIdBuchungsursprung() == null"));
 		}
 		try {
 			Lagerzugangursprung lagerzugangursprung = null;
 			try {
-				lagerzugangursprung = new Lagerzugangursprung(
-						lagerzugangursprungDto.getILagerbewegungid(),
+				lagerzugangursprung = new Lagerzugangursprung(lagerzugangursprungDto.getILagerbewegungid(),
 						lagerzugangursprungDto.getILagerbewegungidursprung());
 				em.persist(lagerzugangursprung);
 				em.flush();
 
 			} catch (EntityExistsException ex) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY, ex);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY, ex);
 			}
 
-			setLagerzugangursprungFromLagerzugangursprungDto(
-					lagerzugangursprung, lagerzugangursprungDto);
+			setLagerzugangursprungFromLagerzugangursprungDto(lagerzugangursprung, lagerzugangursprungDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -5856,72 +5654,61 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Findet eine Zuordnung eines Lagerzuganges zu seinem Ursprung.
 	 * 
-	 * @param iIdBuchung
-	 *            Integer
-	 * @param iIdBuchungsursprung
-	 *            Integer
+	 * @param iIdBuchung          Integer
+	 * @param iIdBuchungsursprung Integer
 	 * @throws EJBExceptionLP
 	 * @return LagerzugangursprungDto
 	 */
-	public LagerzugangursprungDto lagerzugangursprungFindByPrimaryKey(
-			Integer iIdBuchung, Integer iIdBuchungsursprung)
+	public LagerzugangursprungDto lagerzugangursprungFindByPrimaryKey(Integer iIdBuchung, Integer iIdBuchungsursprung)
 			throws EJBExceptionLP {
 		myLogger.entry();
 		if (iIdBuchung == null || iIdBuchungsursprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"iIdBuchung == null || iIdBuchungsursprung == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("iIdBuchung == null || iIdBuchungsursprung == null"));
 		}
 		LagerzugangursprungPK lagerzugangursprungPK = new LagerzugangursprungPK();
 		lagerzugangursprungPK.setILagerbewegungid(iIdBuchung);
 		lagerzugangursprungPK.setILagerbewegungidursprung(iIdBuchungsursprung);
-		Lagerzugangursprung lagerzugangursprung = em.find(
-				Lagerzugangursprung.class, lagerzugangursprungPK);
+		Lagerzugangursprung lagerzugangursprung = em.find(Lagerzugangursprung.class, lagerzugangursprungPK);
 		if (lagerzugangursprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLagerzugangursprungDto(lagerzugangursprung);
 	}
 
-	private void setLagerzugangursprungFromLagerzugangursprungDto(
-			Lagerzugangursprung lagerzugangursprung,
+	private void setLagerzugangursprungFromLagerzugangursprungDto(Lagerzugangursprung lagerzugangursprung,
 			LagerzugangursprungDto lagerzugangursprungDto) {
 		em.merge(lagerzugangursprung);
 		em.flush();
 	}
 
-	private LagerzugangursprungDto assembleLagerzugangursprungDto(
-			Lagerzugangursprung lagerzugangursprung) {
+	private LagerzugangursprungDto assembleLagerzugangursprungDto(Lagerzugangursprung lagerzugangursprung) {
 		return LagerzugangursprungDtoAssembler.createDto(lagerzugangursprung);
 	}
 
-	private LagerzugangursprungDto[] assembleLagerzugangursprungDtos(
-			Collection<?> lagerzugangursprungs) {
+	private LagerzugangursprungDto[] assembleLagerzugangursprungDtos(Collection<?> lagerzugangursprungs) {
 		List<LagerzugangursprungDto> list = new ArrayList<LagerzugangursprungDto>();
 		if (lagerzugangursprungs != null) {
 			Iterator<?> iterator = lagerzugangursprungs.iterator();
 			while (iterator.hasNext()) {
-				Lagerzugangursprung lagerzugangursprung = (Lagerzugangursprung) iterator
-						.next();
+				Lagerzugangursprung lagerzugangursprung = (Lagerzugangursprung) iterator.next();
 				list.add(assembleLagerzugangursprungDto(lagerzugangursprung));
 			}
 		}
-		LagerzugangursprungDto[] returnArray = new LagerzugangursprungDto[list
-				.size()];
+		LagerzugangursprungDto[] returnArray = new LagerzugangursprungDto[list.size()];
 		return (LagerzugangursprungDto[]) list.toArray(returnArray);
 	}
 
 	/**
 	 * Liefert die verbrauchte Menge eines Lagerzuganges zurueck
 	 * 
-	 * @param lagerbewegungIId
-	 *            Integer
+	 * @param lagerbewegungIId Integer
 	 * @return Double verbrauchte Menge
 	 */
 	public Double getVerbrauchteMenge(Integer lagerbewegungIId) {
-		Integer iIdBuchung = getBuchungsNrUeberId(lagerbewegungIId);
+		Lagerbewegung l = em.find(Lagerbewegung.class, lagerbewegungIId);
+
+		Integer iIdBuchung = l.getIIdBuchung();
 		// Hole alle Buchungen, die diesen Lagerzugang benoetigen
 		LagerabgangursprungDto[] dto = lagerabgangursprungFindByLagerbewegungIIdBuchungsursprung(iIdBuchung);
 
@@ -5929,16 +5716,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		for (int i = 0; i < dto.length; i++) {
 			fMengeVerbraucht = fMengeVerbraucht
-					+ Helper.rundeKaufmaennisch(dto[i].getNVerbrauchtemenge(),
-							4).doubleValue();
+					+ Helper.rundeKaufmaennisch(dto[i].getNVerbrauchtemenge(), 4).doubleValue();
 		}
 
 		return new Double(fMengeVerbraucht);
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public String pruefeQuickLagerstandGegenEchtenLagerstand(
-			Integer artikelIIdInput, TheClientDto theClientDto) {
+	public String pruefeQuickLagerstandGegenEchtenLagerstand(String artikelnummerInput, boolean bFehlerKorrigieren,
+			TheClientDto theClientDto) {
 
 		LagerDto[] lagerDtos = lagerFindByMandantCNr(theClientDto.getMandant());
 
@@ -5947,15 +5733,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 		org.hibernate.Criteria crit = session.createCriteria(FLRArtikel.class);
-		crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
-		// crit.add(Restrictions.eq("i_id", 6901));
-		crit.add(Restrictions.not(Restrictions.in(
-				ArtikelFac.FLR_ARTIKEL_ARTIKELART_C_NR, handartikel)));
-		crit.add(Expression.eq(ArtikelFac.FLR_ARTIKEL_B_LAGERBEWIRTSCHAFTET,
-				new Short((short) 1)));
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+				theClientDto)) {
+			crit.add(Restrictions.eq("mandant_c_nr", getSystemFac().getHauptmandant()));
+		} else {
+			crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
+		}
 
-		if (artikelIIdInput != null) {
-			crit.add(Restrictions.eq("i_id", artikelIIdInput));
+		// crit.add(Restrictions.eq("i_id", 6901));
+		crit.add(Restrictions.not(Restrictions.in(ArtikelFac.FLR_ARTIKEL_ARTIKELART_C_NR, handartikel)));
+		crit.add(Expression.eq(ArtikelFac.FLR_ARTIKEL_B_LAGERBEWIRTSCHAFTET, new Short((short) 1)));
+
+		if (artikelnummerInput != null && artikelnummerInput.length() > 0) {
+			crit.add(Restrictions.eq("c_nr", artikelnummerInput));
 		}
 
 		crit.addOrder(Order.asc("c_nr"));
@@ -5963,8 +5753,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		int zaehler = 1;
 		byte[] CRLFAscii = { 13, 10 };
-		String rueckgabe = "ZAEHLER;ARTIKEL_I_ID;ARTIKEL_C_NR;LAGER;QUICK;LAGERSTAND"
-				+ new String(CRLFAscii);
+		String rueckgabe = "ZAEHLER;ARTIKEL_I_ID;ARTIKEL_C_NR;LAGER;QUICK;LAGERSTAND" + new String(CRLFAscii);
 		String sql = "";
 		Iterator<?> resultListIterator = resultList.iterator();
 
@@ -5973,53 +5762,59 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			for (int i = 0; i < lagerDtos.length; i++) {
 				LagerDto lagerDto = lagerDtos[i];
 
-				String ausgabe = flrArtikel.getI_id() + ";"
-						+ flrArtikel.getC_nr() + ";";
+				String ausgabe = flrArtikel.getI_id() + ";" + flrArtikel.getC_nr() + ";";
 
 				ausgabe += lagerDto.getCNr() + ";";
 				BigDecimal quicklagerstand = new BigDecimal(0);
-				Artikellager artikellager = em.find(
-						Artikellager.class,
-						new ArtikellagerPK(flrArtikel.getI_id(), lagerDto
-								.getIId()));
+				Artikellager artikellager = em.find(Artikellager.class,
+						new ArtikellagerPK(flrArtikel.getI_id(), lagerDto.getIId()));
 				if (artikellager == null) {
 					ausgabe += "0;";
 				} else {
 					quicklagerstand = artikellager.getNLagerstand();
 				}
 				ausgabe += quicklagerstand.toString() + ";";
-				BigDecimal echterlagerstand = getLagerstandZumZeitpunkt(
-						flrArtikel.getI_id(), lagerDto.getIId(),
-						new java.sql.Timestamp(
-								System.currentTimeMillis() + 3600000 * 24),
-						theClientDto);
+				BigDecimal echterlagerstand = getLagerstandZumZeitpunkt(flrArtikel.getI_id(), lagerDto.getIId(),
+						new java.sql.Timestamp(System.currentTimeMillis() + 3600000 * 24), theClientDto);
 				ausgabe += echterlagerstand.toString() + ";";
 
-				if (quicklagerstand.doubleValue() != echterlagerstand
-						.doubleValue()) {
-					rueckgabe += zaehler + ";" + ausgabe
-							+ new String(CRLFAscii);
+				if (quicklagerstand.doubleValue() != echterlagerstand.doubleValue()) {
+					rueckgabe += zaehler + ";" + ausgabe + new String(CRLFAscii);
 
 					System.out.println(zaehler + ";" + ausgabe);
 
-					String update = "UPDATE WW_ARTIKELLAGER SET N_LAGERSTAND="
-							+ echterlagerstand.doubleValue()
-							+ " WHERE ARTIKEL_I_ID=" + flrArtikel.getI_id()
-							+ " AND LAGER_I_ID=" + lagerDto.getIId();
+					String update = "UPDATE WW_ARTIKELLAGER SET N_LAGERSTAND=" + echterlagerstand.doubleValue()
+							+ " WHERE ARTIKEL_I_ID=" + flrArtikel.getI_id() + " AND LAGER_I_ID=" + lagerDto.getIId();
 					System.out.println(update + ";" + new String(CRLFAscii));
+
+					if (bFehlerKorrigieren) {
+
+						Log.info(update + ";--BEREITS_AUSGEFUEHRT" + new String(CRLFAscii));
+
+						try {
+							ArtikellagerDto alDto = getLagerFac().artikellagerFindByPrimaryKey(flrArtikel.getI_id(),
+									lagerDto.getIId());
+							alDto.setNLagerstand(echterlagerstand);
+							getLagerFac().updateArtikellager(alDto, theClientDto);
+						} catch (RemoteException e) {
+							throwEJBExceptionLPRespectOld(e);
+						}
+
+					}
 
 					sql += update + ";" + new String(CRLFAscii);
 
 					zaehler++;
 				}
+
 			}
 		}
 		session.close();
 		return rueckgabe + sql;
 	}
 
-	public void pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(
-			Integer artikelIIdInput, TheClientDto theClientDto) {
+	public void pruefeQuickLagerstandGegenEchtenLagerstandUndFuehreAus(Integer artikelIIdInput,
+			TheClientDto theClientDto) {
 
 		LagerDto[] lagerDtos = lagerFindByMandantCNr(theClientDto.getMandant());
 
@@ -6030,10 +5825,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		org.hibernate.Criteria crit = session.createCriteria(FLRArtikel.class);
 		crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
 		// crit.add(Restrictions.eq("i_id", 6901));
-		crit.add(Restrictions.not(Restrictions.in(
-				ArtikelFac.FLR_ARTIKEL_ARTIKELART_C_NR, handartikel)));
-		crit.add(Expression.eq(ArtikelFac.FLR_ARTIKEL_B_LAGERBEWIRTSCHAFTET,
-				new Short((short) 1)));
+		crit.add(Restrictions.not(Restrictions.in(ArtikelFac.FLR_ARTIKEL_ARTIKELART_C_NR, handartikel)));
+		crit.add(Expression.eq(ArtikelFac.FLR_ARTIKEL_B_LAGERBEWIRTSCHAFTET, new Short((short) 1)));
 
 		if (artikelIIdInput != null) {
 			crit.add(Restrictions.eq("i_id", artikelIIdInput));
@@ -6052,39 +5845,29 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			for (int i = 0; i < lagerDtos.length; i++) {
 				LagerDto lagerDto = lagerDtos[i];
 
-				String ausgabe = flrArtikel.getI_id() + ";"
-						+ flrArtikel.getC_nr() + ";";
+				String ausgabe = flrArtikel.getI_id() + ";" + flrArtikel.getC_nr() + ";";
 
 				ausgabe += lagerDto.getCNr() + ";";
 				BigDecimal quicklagerstand = new BigDecimal(0);
-				Artikellager artikellager = em.find(
-						Artikellager.class,
-						new ArtikellagerPK(flrArtikel.getI_id(), lagerDto
-								.getIId()));
+				Artikellager artikellager = em.find(Artikellager.class,
+						new ArtikellagerPK(flrArtikel.getI_id(), lagerDto.getIId()));
 				if (artikellager == null) {
 					ausgabe += "0;";
 				} else {
 					quicklagerstand = artikellager.getNLagerstand();
 				}
 				ausgabe += quicklagerstand.toString() + ";";
-				BigDecimal echterlagerstand = getLagerstandZumZeitpunkt(
-						flrArtikel.getI_id(), lagerDto.getIId(),
-						new java.sql.Timestamp(
-								System.currentTimeMillis() + 3600000 * 24),
-						theClientDto);
+				BigDecimal echterlagerstand = getLagerstandZumZeitpunkt(flrArtikel.getI_id(), lagerDto.getIId(),
+						new java.sql.Timestamp(System.currentTimeMillis() + 3600000 * 24), theClientDto);
 				ausgabe += echterlagerstand.toString() + ";";
 
-				if (quicklagerstand.doubleValue() != echterlagerstand
-						.doubleValue()) {
+				if (quicklagerstand.doubleValue() != echterlagerstand.doubleValue()) {
 
 					// System.out.println(zaehler + ";" + ausgabe);
 
-					String update = "UPDATE WW_ARTIKELLAGER SET N_LAGERSTAND="
-							+ echterlagerstand.doubleValue()
-							+ " WHERE ARTIKEL_I_ID=" + flrArtikel.getI_id()
-							+ " AND LAGER_I_ID=" + lagerDto.getIId();
-					System.out.println(update + ";--BEREITS_AUSGEFUEHRT"
-							+ new String(CRLFAscii));
+					String update = "UPDATE WW_ARTIKELLAGER SET N_LAGERSTAND=" + echterlagerstand.doubleValue()
+							+ " WHERE ARTIKEL_I_ID=" + flrArtikel.getI_id() + " AND LAGER_I_ID=" + lagerDto.getIId();
+					System.out.println(update + ";--BEREITS_AUSGEFUEHRT" + new String(CRLFAscii));
 
 					artikellager.setNLagerstand(echterlagerstand);
 					em.flush();
@@ -6099,16 +5882,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public String pruefeBelegeMitLagerbewegungen(TheClientDto theClientDto) {
-		// Belege: "Inventur       "Losablieferung "
-		// "Gutschrift     "
+		// Belege: "Inventur "Losablieferung "
+		// "Gutschrift "
 
 		byte[] CRLFAscii = { 13, 10 };
 		int zaehler = 1;
 		String rueckgabe = "ZAEHLER;BELEGART;POSITION" + new String(CRLFAscii);
 		Session session = FLRSessionFactory.getFactory().openSession();
 		// ----------------------HAND-------------------
-		String queryString = "SELECT position.i_id"
-				+ " FROM FLRHandlagerbewegung AS position"
+		String queryString = "SELECT position.i_id" + " FROM FLRHandlagerbewegung AS position"
 				+ " ORDER BY position.i_id ASC";
 		org.hibernate.Query query = session.createQuery(queryString);
 		List<?> resultList = query.list();
@@ -6117,15 +5899,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		while (resultListIterator.hasNext()) {
 			Integer positionIId = (Integer) resultListIterator.next();
 			Session sessionSub = FLRSessionFactory.getFactory().openSession();
-			if (sessionSub
-					.createQuery(
-							"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
-									+ LocaleFac.BELEGART_HAND
-									+ "'"
-									+ " AND lagerbewegung.i_belegartpositionid="
-									+ positionIId).list().size() == 0) {
-				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_HAND + ";"
-						+ positionIId + new String(CRLFAscii);
+			if (sessionSub.createQuery(
+					"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
+							+ LocaleFac.BELEGART_HAND + "'" + " AND lagerbewegung.i_belegartpositionid=" + positionIId)
+					.list().size() == 0) {
+				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_HAND + ";" + positionIId + new String(CRLFAscii);
 				zaehler++;
 			}
 
@@ -6134,9 +5912,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 
 		// ------------------LOS---------------
-		queryString = "SELECT position.i_id"
-				+ " FROM FLRLosistmaterial AS position"
-				+ " ORDER BY position.i_id ASC";
+		queryString = "SELECT position.i_id" + " FROM FLRLosistmaterial AS position" + " ORDER BY position.i_id ASC";
 		query = session.createQuery(queryString);
 		resultList = query.list();
 		resultListIterator = resultList.iterator();
@@ -6144,15 +5920,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		while (resultListIterator.hasNext()) {
 			Integer positionIId = (Integer) resultListIterator.next();
 			Session sessionSub = FLRSessionFactory.getFactory().openSession();
-			if (sessionSub
-					.createQuery(
-							"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
-									+ LocaleFac.BELEGART_LOS
-									+ "'"
-									+ " AND lagerbewegung.i_belegartpositionid="
-									+ positionIId).list().size() == 0) {
-				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LOS + ";"
-						+ positionIId + new String(CRLFAscii);
+			if (sessionSub.createQuery(
+					"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
+							+ LocaleFac.BELEGART_LOS + "'" + " AND lagerbewegung.i_belegartpositionid=" + positionIId)
+					.list().size() == 0) {
+				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LOS + ";" + positionIId + new String(CRLFAscii);
 				zaehler++;
 			}
 
@@ -6162,8 +5934,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// ------------------LIEFERSCHEIN---------------
 		queryString = "SELECT position.i_id"
 				+ " FROM FLRLieferscheinposition AS position WHERE position.positionsart_c_nr='"
-				+ com.lp.server.lieferschein.service.LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT
-				+ "'" + " ORDER BY position.i_id ASC";
+				+ com.lp.server.lieferschein.service.LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT + "'"
+				+ " ORDER BY position.i_id ASC";
 		query = session.createQuery(queryString);
 		resultList = query.list();
 		resultListIterator = resultList.iterator();
@@ -6171,27 +5943,24 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		while (resultListIterator.hasNext()) {
 			Integer positionIId = (Integer) resultListIterator.next();
 			Session sessionSub = FLRSessionFactory.getFactory().openSession();
-			if (sessionSub
-					.createQuery(
-							"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
-									+ LocaleFac.BELEGART_LIEFERSCHEIN
-									+ "'"
-									+ " AND lagerbewegung.i_belegartpositionid="
-									+ positionIId).list().size() == 0) {
-				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LIEFERSCHEIN
-						+ ";" + positionIId + new String(CRLFAscii);
+			if (sessionSub.createQuery(
+					"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
+							+ LocaleFac.BELEGART_LIEFERSCHEIN + "'" + " AND lagerbewegung.i_belegartpositionid="
+							+ positionIId)
+					.list().size() == 0) {
+				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LIEFERSCHEIN + ";" + positionIId
+						+ new String(CRLFAscii);
 				zaehler++;
 			}
 
-			System.out.println(LocaleFac.BELEGART_LIEFERSCHEIN + " "
-					+ positionIId);
+			System.out.println(LocaleFac.BELEGART_LIEFERSCHEIN + " " + positionIId);
 			sessionSub.close();
 		}
 		// ------------------RECHNUNG---------------
 		queryString = "SELECT position.i_id"
 				+ " FROM FLRRechnungPosition AS position WHERE position.positionsart_c_nr='"
-				+ com.lp.server.rechnung.service.RechnungFac.POSITIONSART_RECHNUNG_IDENT
-				+ "'" + " ORDER BY position.i_id ASC";
+				+ com.lp.server.rechnung.service.RechnungFac.POSITIONSART_RECHNUNG_IDENT + "'"
+				+ " ORDER BY position.i_id ASC";
 		query = session.createQuery(queryString);
 		resultList = query.list();
 		resultListIterator = resultList.iterator();
@@ -6199,15 +5968,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		while (resultListIterator.hasNext()) {
 			Integer positionIId = (Integer) resultListIterator.next();
 			Session sessionSub = FLRSessionFactory.getFactory().openSession();
-			if (sessionSub
-					.createQuery(
-							"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
-									+ LocaleFac.BELEGART_RECHNUNG
-									+ "'"
-									+ " AND lagerbewegung.i_belegartpositionid="
-									+ positionIId).list().size() == 0) {
-				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_RECHNUNG + ";"
-						+ positionIId + new String(CRLFAscii);
+			if (sessionSub.createQuery(
+					"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
+							+ LocaleFac.BELEGART_RECHNUNG + "'" + " AND lagerbewegung.i_belegartpositionid="
+							+ positionIId)
+					.list().size() == 0) {
+				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_RECHNUNG + ";" + positionIId + new String(CRLFAscii);
 				zaehler++;
 			}
 
@@ -6217,8 +5983,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// ------------------BESTELLUNG---------------
 		queryString = "SELECT position.i_id"
 				+ " FROM FLRBestellposition AS position WHERE position.bestellpositionart_c_nr='"
-				+ com.lp.server.bestellung.service.BestellpositionFac.BESTELLPOSITIONART_IDENT
-				+ "'" + " ORDER BY position.i_id ASC";
+				+ com.lp.server.bestellung.service.BestellpositionFac.BESTELLPOSITIONART_IDENT + "'"
+				+ " ORDER BY position.i_id ASC";
 		query = session.createQuery(queryString);
 		resultList = query.list();
 		resultListIterator = resultList.iterator();
@@ -6226,20 +5992,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		while (resultListIterator.hasNext()) {
 			Integer positionIId = (Integer) resultListIterator.next();
 			Session sessionSub = FLRSessionFactory.getFactory().openSession();
-			if (sessionSub
-					.createQuery(
-							"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
-									+ LocaleFac.BELEGART_BESTELLUNG
-									+ "'"
-									+ " AND lagerbewegung.i_belegartpositionid="
-									+ positionIId).list().size() == 0) {
-				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_BESTELLUNG
-						+ ";" + positionIId + new String(CRLFAscii);
+			if (sessionSub.createQuery(
+					"SELECT lagerbewegung.i_id FROM FLRLagerbewegung as lagerbewegung WHERE lagerbewegung.c_belegartnr='"
+							+ LocaleFac.BELEGART_BESTELLUNG + "'" + " AND lagerbewegung.i_belegartpositionid="
+							+ positionIId)
+					.list().size() == 0) {
+				rueckgabe += zaehler + ";" + LocaleFac.BELEGART_BESTELLUNG + ";" + positionIId + new String(CRLFAscii);
 				zaehler++;
 			}
 
-			System.out.println(LocaleFac.BELEGART_BESTELLUNG + " "
-					+ positionIId);
+			System.out.println(LocaleFac.BELEGART_BESTELLUNG + " " + positionIId);
 			sessionSub.close();
 		}
 		session.close();
@@ -6249,16 +6011,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Prueft, ob die Lagerbewegungen mit den Belegartpositionen konsistent sind
 	 * 
-	 * @param theClientDto
-	 *            String
+	 * @param theClientDto String
 	 * @return String
 	 */
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public String pruefeLagerbewegungenMitBelege(TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class);
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class);
 		crit.addOrder(Order.asc(LagerFac.FLR_LAGERBEWEGUNG_I_ID_BUCHUNG));
 		crit.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
 
@@ -6266,261 +6026,147 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		int lastColumn = -1;
 		int zaehler = 1;
 		byte[] CRLFAscii = { 13, 10 };
-		String rueckgabe = "ZAEHLER;BELEGART;BELEGARTPOSITIOND;"
-				+ new String(CRLFAscii);
+		String rueckgabe = "ZAEHLER;BELEGART;BELEGARTPOSITIOND;" + new String(CRLFAscii);
 		Iterator<?> resultListIterator = resultList.iterator();
 
 		while (resultListIterator.hasNext()) {
-			FLRLagerbewegung flrLagerbewegung = (FLRLagerbewegung) resultListIterator
-					.next();
+			FLRLagerbewegung flrLagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 
 			if (lastColumn == flrLagerbewegung.getI_id_buchung().intValue()) {
 			} else {
 				double nMenge = flrLagerbewegung.getN_menge().doubleValue();
 				if (nMenge != 0) {
 					// ------------------HAND---------------
-					if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_HAND)) {
+					if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_HAND)) {
 						Handlagerbewegung hb = em.find(Handlagerbewegung.class,
 								flrLagerbewegung.getI_belegartpositionid());
 						if (hb != null) {
 							if (hb.getNMenge().doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_HAND
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_HAND + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 						} else {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_HAND
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_HAND + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
 					// ------------------LIEFERSCHEIN---------------
-					else if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_LIEFERSCHEIN)) {
+					else if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_LIEFERSCHEIN)) {
 						try {
-							BigDecimal nPosMenge = getLieferscheinpositionFac()
-									.lieferscheinpositionFindByPrimaryKey(
-											flrLagerbewegung
-													.getI_belegartpositionid(),
-											theClientDto).getNMenge();
+							BigDecimal nPosMenge = getLieferscheinpositionFac().lieferscheinpositionFindByPrimaryKey(
+									flrLagerbewegung.getI_belegartpositionid(), theClientDto).getNMenge();
 
-							if (nPosMenge != null
-									&& nPosMenge.doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_LIEFERSCHEIN
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+							if (nPosMenge != null && nPosMenge.doubleValue() != nMenge) {
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LIEFERSCHEIN + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 						} catch (Throwable ex1) {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_LIEFERSCHEIN
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LIEFERSCHEIN + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
 					// ------------------RECHNUNG---------------
-					else if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_RECHNUNG)) {
+					else if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_RECHNUNG)) {
 						try {
 							BigDecimal nPosMenge = getRechnungFac()
-									.rechnungPositionFindByPrimaryKey(
-											flrLagerbewegung
-													.getI_belegartpositionid())
+									.rechnungPositionFindByPrimaryKey(flrLagerbewegung.getI_belegartpositionid())
 									.getNMenge();
-							if (nPosMenge != null
-									&& nPosMenge.doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_RECHNUNG
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+							if (nPosMenge != null && nPosMenge.doubleValue() != nMenge) {
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_RECHNUNG + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 
 						} catch (Throwable ex1) {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_RECHNUNG
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_RECHNUNG + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
 					// ------------------BESTELLUNG---------------
-					else if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_BESTELLUNG)) {
+					else if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_BESTELLUNG)) {
 						try {
 							BigDecimal nPosMenge = getBestellpositionFac()
-									.bestellpositionFindByPrimaryKey(
-											flrLagerbewegung
-													.getI_belegartpositionid())
+									.bestellpositionFindByPrimaryKey(flrLagerbewegung.getI_belegartpositionid())
 									.getNMenge();
-							if (nPosMenge != null
-									&& nPosMenge.doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_BESTELLUNG
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+							if (nPosMenge != null && nPosMenge.doubleValue() != nMenge) {
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_BESTELLUNG + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 						} catch (Throwable ex1) {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_BESTELLUNG
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_BESTELLUNG + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
 					// ------------------INVENTUR---------------
-					else if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_INVENTUR)) {
+					else if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_INVENTUR)) {
 						try {
-							BigDecimal nPosMenge = getInventurFac()
-									.inventurlisteFindByPrimaryKey(
-											flrLagerbewegung
-													.getI_belegartpositionid(),
-											theClientDto).getNInventurmenge();
-							if (nPosMenge != null
-									&& nPosMenge.doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_INVENTUR
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+							BigDecimal nPosMenge = getInventurFac().inventurlisteFindByPrimaryKey(
+									flrLagerbewegung.getI_belegartpositionid(), theClientDto).getNInventurmenge();
+							if (nPosMenge != null && nPosMenge.doubleValue() != nMenge) {
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_INVENTUR + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 						} catch (Throwable ex1) {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_INVENTUR
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_INVENTUR + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
 					// ------------------GUTSCHRIFT---------------
-					else if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_GUTSCHRIFT)) {
+					else if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_GUTSCHRIFT)) {
 						try {
 							BigDecimal nPosMenge = getRechnungFac()
-									.rechnungPositionFindByPrimaryKey(
-											flrLagerbewegung
-													.getI_belegartpositionid())
+									.rechnungPositionFindByPrimaryKey(flrLagerbewegung.getI_belegartpositionid())
 									.getNMenge();
-							if (nPosMenge != null
-									&& nPosMenge.doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_GUTSCHRIFT
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+							if (nPosMenge != null && nPosMenge.doubleValue() != nMenge) {
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_GUTSCHRIFT + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 						} catch (Throwable ex1) {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_GUTSCHRIFT
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_GUTSCHRIFT + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
 					// ------------------LOSABLIEFERUNG---------------
-					else if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+					else if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
 						try {
-							BigDecimal nPosMenge = getFertigungFac()
-									.losablieferungFindByPrimaryKey(
-											flrLagerbewegung
-													.getI_belegartpositionid(),
-											false, theClientDto).getNMenge();
-							if (nPosMenge != null
-									&& nPosMenge.doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_LOSABLIEFERUNG
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+							BigDecimal nPosMenge = getFertigungFac().losablieferungFindByPrimaryKey(
+									flrLagerbewegung.getI_belegartpositionid(), false, theClientDto).getNMenge();
+							if (nPosMenge != null && nPosMenge.doubleValue() != nMenge) {
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LOSABLIEFERUNG + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 						} catch (Throwable ex1) {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_LOSABLIEFERUNG
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LOSABLIEFERUNG + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
 					// ------------------LOS---------------
-					else if (flrLagerbewegung.getC_belegartnr().equals(
-							LocaleFac.BELEGART_LOS)) {
+					else if (flrLagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_LOS)) {
 						try {
 							BigDecimal nPosMenge = getFertigungFac()
-									.lossollmaterialFindByPrimaryKey(
-											flrLagerbewegung
-													.getI_belegartpositionid())
+									.lossollmaterialFindByPrimaryKey(flrLagerbewegung.getI_belegartpositionid())
 									.getNMenge();
-							if (nPosMenge != null
-									&& nPosMenge.doubleValue() != nMenge) {
-								rueckgabe += zaehler
-										+ ";"
-										+ LocaleFac.BELEGART_LOS
-										+ ";"
-										+ flrLagerbewegung
-												.getI_belegartpositionid()
-										+ new String(CRLFAscii);
+							if (nPosMenge != null && nPosMenge.doubleValue() != nMenge) {
+								rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LOS + ";"
+										+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 								zaehler++;
 							}
 						} catch (Throwable ex1) {
-							rueckgabe += zaehler
-									+ ";"
-									+ LocaleFac.BELEGART_LOS
-									+ ";"
-									+ flrLagerbewegung
-											.getI_belegartpositionid()
-									+ new String(CRLFAscii);
+							rueckgabe += zaehler + ";" + LocaleFac.BELEGART_LOS + ";"
+									+ flrLagerbewegung.getI_belegartpositionid() + new String(CRLFAscii);
 							zaehler++;
 						}
 					}
@@ -6534,13 +6180,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public String pruefeIIdBuchungen(Integer artikelIId,
-			TheClientDto theClientDto) {
+	public String pruefeIIdBuchungen(Integer artikelIId, TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		String queryString = "SELECT distinct(lagerbewegung.i_id_buchung)"
-				+ " FROM FLRLagerbewegung AS lagerbewegung ";
+		String queryString = "SELECT distinct(lagerbewegung.i_id_buchung)" + " FROM FLRLagerbewegung AS lagerbewegung ";
 
 		if (artikelIId != null) {
 			queryString += " WHERE lagerbewegung.artikel_i_id= " + artikelIId;
@@ -6570,15 +6214,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				if (it.hasNext()) {
 					Lagerbewegung l = (Lagerbewegung) it.next();
-					String s = l.getCBelegartnr() + ";"
-							+ l.getIBelegartpositionid();
+					String s = l.getCBelegartnr() + ";" + l.getIBelegartpositionid();
 					hmZeile.put(s, s);
 				}
 
 				while (it.hasNext()) {
 					Lagerbewegung l = (Lagerbewegung) it.next();
-					String s = l.getCBelegartnr() + ";"
-							+ l.getIBelegartpositionid();
+					String s = l.getCBelegartnr() + ";" + l.getIBelegartpositionid();
 
 					if (!hmZeile.containsKey(s)) {
 						rueckgabe += i_idBuchung + new String(CRLFAscii);
@@ -6602,8 +6244,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		String queryString = "SELECT distinct(lagerbewegung.i_id_buchung)"
-				+ " FROM FLRLagerbewegung AS lagerbewegung "
+		String queryString = "SELECT distinct(lagerbewegung.i_id_buchung)" + " FROM FLRLagerbewegung AS lagerbewegung "
 				+ " ORDER BY lagerbewegung.i_id_buchung ASC ";
 		org.hibernate.Query hqlquery = session.createQuery(queryString);
 		List<?> resultList = hqlquery.list();
@@ -6622,11 +6263,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			BigDecimal mengeAusLagerbewegung = lagerbewegungDto.getNMenge();
 			if (Helper.short2boolean(lagerbewegungDto.getBAbgang()) == true) {
 
-				BigDecimal abgangsmengeAusLagerabgangUrsprung = new BigDecimal(
-						0);
+				BigDecimal abgangsmengeAusLagerabgangUrsprung = new BigDecimal(0);
 				String ausgabe = "";
-				Query query = em
-						.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
+				Query query = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
 				query.setParameter(1, i_idBuchung);
 				Collection<?> cl = query.getResultList();
 				// if (! cl.isEmpty()) {
@@ -6636,23 +6275,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					abgangsmengeAusLagerabgangUrsprung = abgangsmengeAusLagerabgangUrsprung
 							.add(dto.getNVerbrauchtemenge());
 
-					Query query2 = em
-							.createNamedQuery("LagerbewegungfindByIIdBuchung");
+					Query query2 = em.createNamedQuery("LagerbewegungfindByIIdBuchung");
 					query2.setParameter(1, dto.getILagerbewegungidursprung());
 					Collection<?> c = query2.getResultList();
 					if (c.size() == 0) {
-						ausgabe += "URSPRUNGNICHTGEFUNDEN: " + zaehler + ";"
-								+ dto.getILagerbewegungidursprung();
+						ausgabe += "URSPRUNGNICHTGEFUNDEN: " + zaehler + ";" + dto.getILagerbewegungidursprung();
 						rueckgabe += ausgabe + new String(CRLFAscii);
 						System.out.println(ausgabe);
 						zaehler++;
 
 					}
 				}
-				if (abgangsmengeAusLagerabgangUrsprung.doubleValue() > mengeAusLagerbewegung
-						.doubleValue()) {
-					ausgabe += "ABGANGURSPRUNG: " + zaehler + ";" + i_idBuchung
-							+ ";" + mengeAusLagerbewegung + ";"
+				if (abgangsmengeAusLagerabgangUrsprung.doubleValue() > mengeAusLagerbewegung.doubleValue()) {
+					ausgabe += "ABGANGURSPRUNG: " + zaehler + ";" + i_idBuchung + ";" + mengeAusLagerbewegung + ";"
 							+ abgangsmengeAusLagerabgangUrsprung;
 					rueckgabe += ausgabe + new String(CRLFAscii);
 					System.out.println(ausgabe);
@@ -6664,8 +6299,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				BigDecimal verbrauchteAusLagerabgangUrsprung = new BigDecimal(0);
 				String ausgabe = "";
-				Query query2 = em
-						.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
+				Query query2 = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
 				query2.setParameter(1, i_idBuchung);
 				Collection<?> cl = query2.getResultList();
 				// if (! cl.isEmpty()) {
@@ -6675,11 +6309,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					verbrauchteAusLagerabgangUrsprung = verbrauchteAusLagerabgangUrsprung
 							.add(dto.getNVerbrauchtemenge());
 				}
-				if (verbrauchteAusLagerabgangUrsprung.doubleValue() > mengeAusLagerbewegung
-						.doubleValue()) {
-					ausgabe += "VERBRAUCHTEMENGEDESZUGANGS: " + zaehler + ";"
-							+ i_idBuchung + ";" + mengeAusLagerbewegung + ";"
-							+ verbrauchteAusLagerabgangUrsprung;
+				if (verbrauchteAusLagerabgangUrsprung.doubleValue() > mengeAusLagerbewegung.doubleValue()) {
+					ausgabe += "VERBRAUCHTEMENGEDESZUGANGS: " + zaehler + ";" + i_idBuchung + ";"
+							+ mengeAusLagerbewegung + ";" + verbrauchteAusLagerabgangUrsprung;
 					rueckgabe += ausgabe + new String(CRLFAscii);
 					System.out.println(ausgabe);
 					zaehler++;
@@ -6695,8 +6327,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public String pruefeVerbrauchteMenge(TheClientDto theClientDto) {
 
-		System.out
-				.println("ZAEHLER;I_ID_BUCHUNG;ARTIKEL_I_ID;ARTIKEL_C_NR;POSITIONSMENGE;VERBRAUCHTEMENGE");
+		System.out.println("ZAEHLER;I_ID_BUCHUNG;ARTIKEL_I_ID;ARTIKEL_C_NR;POSITIONSMENGE;VERBRAUCHTEMENGE");
 		byte[] CRLFAscii = { 13, 10 };
 		String rueckgabe = "ZAEHLER;I_ID_BUCHUNG;ARTIKEL_I_ID;ARTIKEL_C_NR;POSITIONSMENGE;VERBRAUCHTEMENGE"
 				+ new String(CRLFAscii);
@@ -6704,16 +6335,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		handartikel[0] = ArtikelFac.ARTIKELART_HANDARTIKEL;
 
 		Session sessionArtikel = FLRSessionFactory.getFactory().openSession();
-		org.hibernate.Criteria critArtikel = sessionArtikel
-				.createCriteria(FLRArtikel.class);
-		critArtikel.add(Restrictions.eq("mandant_c_nr",
-				theClientDto.getMandant()));
+		org.hibernate.Criteria critArtikel = sessionArtikel.createCriteria(FLRArtikel.class);
+		critArtikel.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
 		// crit.add(Restrictions.eq("i_id", 13995));
-		critArtikel.add(Restrictions.not(Restrictions.in(
-				ArtikelFac.FLR_ARTIKEL_ARTIKELART_C_NR, handartikel)));
-		critArtikel.add(Expression.eq(
-				ArtikelFac.FLR_ARTIKEL_B_LAGERBEWIRTSCHAFTET, new Short(
-						(short) 1)));
+		critArtikel.add(Restrictions.not(Restrictions.in(ArtikelFac.FLR_ARTIKEL_ARTIKELART_C_NR, handartikel)));
+		critArtikel.add(Expression.eq(ArtikelFac.FLR_ARTIKEL_B_LAGERBEWIRTSCHAFTET, new Short((short) 1)));
 
 		critArtikel.addOrder(Order.asc("c_nr"));
 		List<?> resultListArtikel = critArtikel.list();
@@ -6721,27 +6347,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		int row = 0;
 
 		while (resultListIteratorArtikel.hasNext()) {
-			FLRArtikel flrArtikel = (FLRArtikel) resultListIteratorArtikel
-					.next();
+			FLRArtikel flrArtikel = (FLRArtikel) resultListIteratorArtikel.next();
 
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			Session session = null;
 
 			session = factory.openSession();
 
-			org.hibernate.Criteria crit = session.createCriteria(
-					FLRLagerbewegung.class).createAlias(
-					LagerFac.FLR_LAGERPLAETZE_FLRLAGER, "l");
-			crit.add(Expression.not(Expression.in("l.c_nr",
-					new String[] { LagerFac.LAGER_KEINLAGER })));
-			crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
-					Helper.boolean2Short(true)));
-			crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID,
-					flrArtikel.getI_id()));
+			org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class)
+					.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRLAGER, "l");
+			crit.add(Expression.not(Expression.in("l.c_nr", new String[] { LagerFac.LAGER_KEINLAGER })));
+			crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG, Helper.boolean2Short(true)));
+			crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID, flrArtikel.getI_id()));
 
 			crit.addOrder(Order.asc(LagerFac.FLR_LAGERBEWEGUNG_I_ID_BUCHUNG))
-					.addOrder(
-							Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
+					.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
 
 			List<?> resultList = crit.list();
 			Iterator<?> resultListIterator = resultList.iterator();
@@ -6749,16 +6369,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			int lastColumn = -1;
 
 			while (resultListIterator.hasNext()) {
-				FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-						.next();
+				FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 
 				if (lastColumn == lagerbewegung.getI_id_buchung().intValue()) {
 				} else {
 
 					BigDecimal verbrauchteMenge = new BigDecimal(0);
 
-					Query query = em
-							.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
+					Query query = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungid");
 					query.setParameter(1, lagerbewegung.getI_id_buchung());
 					Collection<?> cl = query.getResultList();
 					// if (cl.isEmpty()) {
@@ -6768,19 +6386,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					LagerabgangursprungDto[] dtos = assembleLagerabgangursprungDtos(cl);
 
 					for (int i = 0; i < dtos.length; i++) {
-						verbrauchteMenge = verbrauchteMenge.add(dtos[i]
-								.getNVerbrauchtemenge());
+						verbrauchteMenge = verbrauchteMenge.add(dtos[i].getNVerbrauchtemenge());
 					}
 
 					if (lagerbewegung.getN_menge().compareTo(verbrauchteMenge) != 0) {
 						row++;
 
-						String zeile = row + ";"
-								+ lagerbewegung.getI_id_buchung() + ";"
-								+ lagerbewegung.getArtikel_i_id() + ";"
-								+ lagerbewegung.getFlrartikel().getC_nr() + ";"
-								+ lagerbewegung.getN_menge() + ";"
-								+ verbrauchteMenge;
+						String zeile = row + ";" + lagerbewegung.getI_id_buchung() + ";"
+								+ lagerbewegung.getArtikel_i_id() + ";" + lagerbewegung.getFlrartikel().getC_nr() + ";"
+								+ lagerbewegung.getN_menge() + ";" + verbrauchteMenge;
 						System.out.println(zeile);
 
 						rueckgabe += zeile + new String(CRLFAscii);
@@ -6797,18 +6411,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public void konstruiereLagergewegungenLSREAusBelegen(
-			TheClientDto theClientDto) {
+	public void konstruiereLagergewegungenLSREAusBelegen(TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		// ----------------------RECHNUNG-------------------
 		String queryString = " FROM FLRRechnungPosition AS position WHERE position.positionsart_c_nr='"
-				+ LocaleFac.POSITIONSART_IDENT
-				+ "' AND position.flrartikel.artikelart_c_nr='"
-				+ ArtikelFac.ARTIKELART_ARTIKEL
-				+ "'"
-				+ " ORDER BY position.flrrechnung.d_belegdatum ASC";
+				+ LocaleFac.POSITIONSART_IDENT + "' AND position.flrartikel.artikelart_c_nr='"
+				+ ArtikelFac.ARTIKELART_ARTIKEL + "'" + " ORDER BY position.flrrechnung.d_belegdatum ASC";
 		org.hibernate.Query query = session.createQuery(queryString);
 		List resultList = query.list();
 		Iterator resultListIterator = resultList.iterator();
@@ -6822,17 +6432,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			RechnungDto rechnungDto = null;
 			try {
-				rechnungDto = getRechnungFac().rechnungFindByPrimaryKey(
-						position.getFlrrechnung().getI_id());
+				rechnungDto = getRechnungFac().rechnungFindByPrimaryKey(position.getFlrrechnung().getI_id());
 
-				RechnungPositionDto rpDto = getRechnungFac()
-						.rechnungPositionFindByPrimaryKey(position.getI_id());
+				RechnungPositionDto rpDto = getRechnungFac().rechnungPositionFindByPrimaryKey(position.getI_id());
 
 				boolean bSnrChnrTragend = false;
-				if (Helper.short2boolean(position.getFlrartikel()
-						.getB_seriennrtragend()) == true
-						|| Helper.short2boolean(position.getFlrartikel()
-								.getB_chargennrtragend()) == true) {
+				if (Helper.short2boolean(position.getFlrartikel().getB_seriennrtragend()) == true
+						|| Helper.short2boolean(position.getFlrartikel().getB_chargennrtragend()) == true) {
 					bSnrChnrTragend = true;
 
 				}
@@ -6845,12 +6451,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						alSeriennrChargennrMitMenge = new ArrayList<SeriennrChargennrMitMengeDto>();
 						for (int i = 0; i < sTeile.length; i++) {
 							String[] sSnrVersion = sTeile[i].split(":");
-							SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-									sSnrVersion[0], new BigDecimal(1));
+							SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(sSnrVersion[0],
+									new BigDecimal(1));
 							alSeriennrChargennrMitMenge.add(sDto);
 							if (sSnrVersion.length > 1) {
-								hmSNRMitVersion.put(sSnrVersion[0],
-										sSnrVersion[1]);
+								hmSNRMitVersion.put(sSnrVersion[0], sSnrVersion[1]);
 							}
 
 						}
@@ -6861,8 +6466,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						for (int i = 0; i < position.getN_menge().intValue(); i++) {
 
 							SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-									"RE" + position.getFlrrechnung().getC_nr()
-											+ "#" + ilfdNrSnrChnr,
+									"RE" + position.getFlrrechnung().getC_nr() + "#" + ilfdNrSnrChnr,
 									new BigDecimal(1));
 							alSeriennrChargennrMitMenge.add(sDto);
 
@@ -6874,41 +6478,33 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				rpDto.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
 
-				if (position.getN_menge().doubleValue() > 0
-						&& !position.getFlrrechnung().getFlrrechnungart()
-								.getRechnungtyp_c_nr()
-								.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
+				if (position.getN_menge().doubleValue() > 0 && !position.getFlrrechnung().getFlrrechnungart()
+						.getRechnungtyp_c_nr().equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
 					// Material zuerst per Hand zubuchen
 
 					HandlagerbewegungDto handlagerbewegung2Dto = new HandlagerbewegungDto();
-					handlagerbewegung2Dto.setArtikelIId(position
-							.getArtikel_i_id());
+					handlagerbewegung2Dto.setArtikelIId(position.getArtikel_i_id());
 					handlagerbewegung2Dto
 
-					.setLagerIId(rechnungDto.getLagerIId());
+							.setLagerIId(rechnungDto.getLagerIId());
 					handlagerbewegung2Dto.setBAbgang(new Short((short) 0));
 					handlagerbewegung2Dto.setCKommentar("Zubuchung");
-					handlagerbewegung2Dto
-							.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
+					handlagerbewegung2Dto.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
 					handlagerbewegung2Dto.setNMenge(position.getN_menge());
 					handlagerbewegung2Dto
-							.setNEinstandspreis(position
-									.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt());
-					getLagerFac().createHandlagerbewegung(
-							handlagerbewegung2Dto, theClientDto);
+							.setNEinstandspreis(position.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt());
+					getLagerFac().createHandlagerbewegung(handlagerbewegung2Dto, theClientDto);
 				}
 
-				getRechnungFac().bucheRechnungPositionAmLager(rpDto,
-						rechnungDto.getLagerIId(), false, theClientDto);
+				getRechnungFac().bucheRechnungPositionAmLager(rpDto, rechnungDto.getLagerIId(), false, theClientDto);
 
 				if (bSnrChnrTragend == true) {
 					Iterator it = hmSNRMitVersion.keySet().iterator();
 					while (it.hasNext()) {
 						String key = (String) it.next();
 						String version = (String) hmSNRMitVersion.get(key);
-						getLagerFac().versionInLagerbewegungUpdaten(
-								LocaleFac.BELEGART_RECHNUNG,
-								position.getI_id(), key, version);
+						getLagerFac().versionInLagerbewegungUpdaten(LocaleFac.BELEGART_RECHNUNG, position.getI_id(),
+								key, version);
 					}
 				}
 
@@ -6924,16 +6520,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// ----------------------LIEFERSCHEIN-------------------
 
 		queryString = " FROM FLRLieferscheinposition AS position WHERE position.positionsart_c_nr='"
-				+ LocaleFac.POSITIONSART_IDENT
-				+ "' AND position.flrartikel.artikelart_c_nr='"
-				+ ArtikelFac.ARTIKELART_ARTIKEL
-				+ "'"
-				+ " ORDER BY position.flrlieferschein.t_liefertermin ASC";
+				+ LocaleFac.POSITIONSART_IDENT + "' AND position.flrartikel.artikelart_c_nr='"
+				+ ArtikelFac.ARTIKELART_ARTIKEL + "'" + " ORDER BY position.flrlieferschein.t_liefertermin ASC";
 		query = session.createQuery(queryString);
 		resultList = query.list();
 		resultListIterator = resultList.iterator();
-		System.out.println("LIEFERSCHEIN: Gesamt-Positionen "
-				+ resultList.size());
+		System.out.println("LIEFERSCHEIN: Gesamt-Positionen " + resultList.size());
 
 		while (resultListIterator.hasNext()) {
 			com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition position = (com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition) resultListIterator
@@ -6942,10 +6534,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			String snr = position.getC_snrchnr_mig();
 
 			boolean bSnrChnrTragend = false;
-			if (Helper.short2boolean(position.getFlrartikel()
-					.getB_seriennrtragend()) == true
-					|| Helper.short2boolean(position.getFlrartikel()
-							.getB_chargennrtragend()) == true) {
+			if (Helper.short2boolean(position.getFlrartikel().getB_seriennrtragend()) == true
+					|| Helper.short2boolean(position.getFlrartikel().getB_chargennrtragend()) == true) {
 				bSnrChnrTragend = true;
 
 			}
@@ -6961,8 +6551,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 						String[] sSnrVersion = sTeile[i].split(":");
 
-						SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-								sSnrVersion[0], new BigDecimal(1));
+						SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(sSnrVersion[0],
+								new BigDecimal(1));
 						alSeriennrChargennrMitMenge.add(sDto);
 						if (sSnrVersion.length > 1) {
 							hmSNRMitVersion.put(sSnrVersion[0], sSnrVersion[1]);
@@ -6976,8 +6566,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					for (int i = 0; i < position.getN_menge().intValue(); i++) {
 
 						SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-								"LS" + position.getFlrlieferschein().getC_nr()
-										+ "#" + ilfdNrSnrChnr,
+								"LS" + position.getFlrlieferschein().getC_nr() + "#" + ilfdNrSnrChnr,
 								new BigDecimal(1));
 						alSeriennrChargennrMitMenge.add(sDto);
 
@@ -6988,25 +6577,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			LieferscheinpositionDto lsposDto = null;
 			try {
-				lsposDto = getLieferscheinpositionFac()
-						.lieferscheinpositionFindByPrimaryKey(
-								position.getI_id(), theClientDto);
+				lsposDto = getLieferscheinpositionFac().lieferscheinpositionFindByPrimaryKey(position.getI_id(),
+						theClientDto);
 				lsposDto.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
 
 				if (alSeriennrChargennrMitMenge != null) {
-					if ((double) alSeriennrChargennrMitMenge.size() != position
-							.getN_menge().doubleValue()) {
+					if ((double) alSeriennrChargennrMitMenge.size() != position.getN_menge().doubleValue()) {
 
 						// mit Wh besprochen: Pos-Menge aendern:
-						lsposDto.setNMenge(new BigDecimal(
-								alSeriennrChargennrMitMenge.size()));
+						lsposDto.setNMenge(new BigDecimal(alSeriennrChargennrMitMenge.size()));
 
 						String s = "Positionsmenge stimmt mit SNR-Menge nicht zusammen: LSPOS_I_ID:"
-								+ position.getI_id()
-								+ " POS-MENGE:"
-								+ position.getN_menge().doubleValue()
-								+ " SNR-ANZAHL:"
-								+ alSeriennrChargennrMitMenge.size();
+								+ position.getI_id() + " POS-MENGE:" + position.getN_menge().doubleValue()
+								+ " SNR-ANZAHL:" + alSeriennrChargennrMitMenge.size();
 						System.out.println(s);
 						myLogger.logKritisch(s);
 					}
@@ -7021,33 +6604,26 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					// Material zuerst per Hand zubuchen
 
 					HandlagerbewegungDto handlagerbewegung2Dto = new HandlagerbewegungDto();
-					handlagerbewegung2Dto.setArtikelIId(position
-							.getFlrartikel().getI_id());
-					handlagerbewegung2Dto.setLagerIId(position
-							.getFlrlieferschein().getLager_i_id());
+					handlagerbewegung2Dto.setArtikelIId(position.getFlrartikel().getI_id());
+					handlagerbewegung2Dto.setLagerIId(position.getFlrlieferschein().getLager_i_id());
 					handlagerbewegung2Dto.setBAbgang(new Short((short) 0));
 					handlagerbewegung2Dto.setCKommentar("Zubuchung");
-					handlagerbewegung2Dto
-							.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
+					handlagerbewegung2Dto.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
 					handlagerbewegung2Dto.setNMenge(lsposDto.getNMenge());
 					handlagerbewegung2Dto
-							.setNEinstandspreis(position
-									.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
+							.setNEinstandspreis(position.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
 
-					getLagerFac().createHandlagerbewegung(
-							handlagerbewegung2Dto, theClientDto);
+					getLagerFac().createHandlagerbewegung(handlagerbewegung2Dto, theClientDto);
 
 				}
 
 				if (lsposDto.getNMenge().doubleValue() != 0) {
 					if (lsposDto.getNMenge().doubleValue() > 0) {
 
-						getLieferscheinpositionFac().bucheAbLager(lsposDto,
-								theClientDto);
+						getLieferscheinpositionFac().bucheAbLager(lsposDto, theClientDto);
 
 					} else {
-						getLieferscheinpositionFac().bucheZuLager(lsposDto,
-								theClientDto);
+						getLieferscheinpositionFac().bucheZuLager(lsposDto, theClientDto);
 					}
 				}
 
@@ -7056,9 +6632,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					while (it.hasNext()) {
 						String key = (String) it.next();
 						String version = (String) hmSNRMitVersion.get(key);
-						getLagerFac().versionInLagerbewegungUpdaten(
-								LocaleFac.BELEGART_LIEFERSCHEIN,
-								position.getI_id(), key, version);
+						getLagerFac().versionInLagerbewegungUpdaten(LocaleFac.BELEGART_LIEFERSCHEIN, position.getI_id(),
+								key, version);
 					}
 				}
 
@@ -7074,8 +6649,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public void konstruiereLagergewegungenBESTAusBelegen(
-			TheClientDto theClientDto) {
+	public void konstruiereLagergewegungenBESTAusBelegen(TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
@@ -7084,16 +6658,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		org.hibernate.Query query = session.createQuery(queryString);
 		List resultList = query.list();
 		Iterator resultListIterator = resultList.iterator();
-		System.out.println("WARENEINGANG: Gesamt-Positionen "
-				+ resultList.size());
+		System.out.println("WARENEINGANG: Gesamt-Positionen " + resultList.size());
 		while (resultListIterator.hasNext()) {
-			FLRWareneingangspositionen position = (FLRWareneingangspositionen) resultListIterator
-					.next();
+			FLRWareneingangspositionen position = (FLRWareneingangspositionen) resultListIterator.next();
 			try {
 				getWareneingangFac().bucheWareneingangspositionAmLager(
-						getWareneingangFac()
-								.wareneingangspositionFindByPrimaryKey(
-										position.getI_id()), false,
+						getWareneingangFac().wareneingangspositionFindByPrimaryKey(position.getI_id()), false,
 						theClientDto);
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
@@ -7119,26 +6689,20 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		System.out.println("HAND: Gesamt-Positionen " + resultList.size());
 		int ilfdNrSnrChnr = 99;
 		while (resultListIterator.hasNext()) {
-			FLRHandlagerbewegung position = (FLRHandlagerbewegung) resultListIterator
-					.next();
+			FLRHandlagerbewegung position = (FLRHandlagerbewegung) resultListIterator.next();
 			try {
 				HandlagerbewegungDto handlagerbewegung = getLagerFac()
-						.handlagerbewegungFindByPrimaryKey(position.getI_id(),
-								theClientDto);
+						.handlagerbewegungFindByPrimaryKey(position.getI_id(), theClientDto);
 				// Lagerbewegung durchfuehren
 
-				LagerbewegungDto lDto = getLagerFac().getLetzteintrag(
-						LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-						null);
+				LagerbewegungDto lDto = getLagerFac().getLetzteintrag(LocaleFac.BELEGART_HAND,
+						handlagerbewegung.getIId(), null);
 
-				if (handlagerbewegung.getNMenge().doubleValue() > 0
-						&& lDto == null) {
+				if (handlagerbewegung.getNMenge().doubleValue() > 0 && lDto == null) {
 
 					boolean bSnrChnrTragend = false;
-					if (Helper.short2boolean(position.getFlrartikel()
-							.getB_seriennrtragend()) == true
-							|| Helper.short2boolean(position.getFlrartikel()
-									.getB_chargennrtragend()) == true) {
+					if (Helper.short2boolean(position.getFlrartikel().getB_seriennrtragend()) == true
+							|| Helper.short2boolean(position.getFlrartikel().getB_chargennrtragend()) == true) {
 						bSnrChnrTragend = true;
 
 					}
@@ -7154,12 +6718,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 							alSeriennrChargennrMitMenge = new ArrayList<SeriennrChargennrMitMengeDto>();
 							for (int i = 0; i < sTeile.length; i++) {
 								String[] sSnrVersion = sTeile[i].split(":");
-								SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-										sSnrVersion[0], new BigDecimal(1));
+								SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(sSnrVersion[0],
+										new BigDecimal(1));
 								alSeriennrChargennrMitMenge.add(sDto);
 								if (sSnrVersion.length > 1) {
-									hmSNRMitVersion.put(sSnrVersion[0],
-											sSnrVersion[1]);
+									hmSNRMitVersion.put(sSnrVersion[0], sSnrVersion[1]);
 								}
 
 							}
@@ -7167,51 +6730,33 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						} else {
 							// Nun SNR generieren
 							alSeriennrChargennrMitMenge = new ArrayList<SeriennrChargennrMitMengeDto>();
-							for (int i = 0; i < position.getN_menge()
-									.intValue(); i++) {
+							for (int i = 0; i < position.getN_menge().intValue(); i++) {
 
 								SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-										"HAND" + position.getI_id() + "#"
-												+ ilfdNrSnrChnr,
-										new BigDecimal(1));
+										"HAND" + position.getI_id() + "#" + ilfdNrSnrChnr, new BigDecimal(1));
 								alSeriennrChargennrMitMenge.add(sDto);
 
 								ilfdNrSnrChnr++;
 							}
 
 						}
-						handlagerbewegung
-								.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
+						handlagerbewegung.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
 					}
 
 					if (Helper.short2boolean(handlagerbewegung.getBAbgang())) {
 
-						getLagerFac().bucheAb(
-								LocaleFac.BELEGART_HAND,
-								handlagerbewegung.getIId(),
-								handlagerbewegung.getIId(),
-								handlagerbewegung.getArtikelIId(),
-								handlagerbewegung.getNMenge(),
-								handlagerbewegung.getNVerkaufspreis(),
-								handlagerbewegung.getLagerIId(),
-								handlagerbewegung
-										.getSeriennrChargennrMitMenge(),
-								new java.sql.Timestamp(System
-										.currentTimeMillis()), theClientDto);
+						getLagerFac().bucheAb(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
+								handlagerbewegung.getIId(), handlagerbewegung.getArtikelIId(),
+								handlagerbewegung.getNMenge(), handlagerbewegung.getNVerkaufspreis(),
+								handlagerbewegung.getLagerIId(), handlagerbewegung.getSeriennrChargennrMitMenge(),
+								new java.sql.Timestamp(System.currentTimeMillis()), theClientDto);
 					} else {
 
-						getLagerFac().bucheZu(
-								LocaleFac.BELEGART_HAND,
-								handlagerbewegung.getIId(),
-								handlagerbewegung.getIId(),
-								handlagerbewegung.getArtikelIId(),
-								handlagerbewegung.getNMenge(),
-								handlagerbewegung.getNEinstandspreis(),
-								handlagerbewegung.getLagerIId(),
-								handlagerbewegung
-										.getSeriennrChargennrMitMenge(),
-								new java.sql.Timestamp(System
-										.currentTimeMillis()), theClientDto);
+						getLagerFac().bucheZu(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
+								handlagerbewegung.getIId(), handlagerbewegung.getArtikelIId(),
+								handlagerbewegung.getNMenge(), handlagerbewegung.getNEinstandspreis(),
+								handlagerbewegung.getLagerIId(), handlagerbewegung.getSeriennrChargennrMitMenge(),
+								new java.sql.Timestamp(System.currentTimeMillis()), theClientDto);
 
 					}
 				}
@@ -7227,8 +6772,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public void konstruiereLagergewegungenLOSAusBelegen(
-			TheClientDto theClientDto) {
+	public void konstruiereLagergewegungenLOSAusBelegen(TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
@@ -7238,45 +6782,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		List resultList = query.list();
 		Iterator resultListIterator = resultList.iterator();
 
-		System.out.println("LOSISTMATERIAL: Gesamt-Positionen "
-				+ resultList.size());
+		System.out.println("LOSISTMATERIAL: Gesamt-Positionen " + resultList.size());
 		while (resultListIterator.hasNext()) {
-			FLRLosistmaterial li = (FLRLosistmaterial) resultListIterator
-					.next();
+			FLRLosistmaterial li = (FLRLosistmaterial) resultListIterator.next();
 
 			if (Helper.short2boolean(li.getB_abgang()) == true) {
 				if (li.getN_menge().doubleValue() > 0) { // Material zuerst per
 															// Hand zubuchen
 
 					HandlagerbewegungDto handlagerbewegung2Dto = new HandlagerbewegungDto();
-					handlagerbewegung2Dto.setArtikelIId(li
-							.getFlrlossollmaterial().getFlrartikel().getI_id());
+					handlagerbewegung2Dto.setArtikelIId(li.getFlrlossollmaterial().getFlrartikel().getI_id());
 					handlagerbewegung2Dto
 
-					.setLagerIId(li.getLager_i_id());
+							.setLagerIId(li.getLager_i_id());
 					handlagerbewegung2Dto.setBAbgang(new Short((short) 0));
-					handlagerbewegung2Dto
-							.setCKommentar("Los-MaterialZubuchung");
+					handlagerbewegung2Dto.setCKommentar("Los-MaterialZubuchung");
 					handlagerbewegung2Dto.setSeriennrChargennrMitMenge(null);
 					handlagerbewegung2Dto.setNMenge(li.getN_menge());
-					handlagerbewegung2Dto.setNEinstandspreis(li
-							.getFlrlossollmaterial().getN_sollpreis());
+					handlagerbewegung2Dto.setNEinstandspreis(li.getFlrlossollmaterial().getN_sollpreis());
 					try {
-						getLagerFac().createHandlagerbewegung(
-								handlagerbewegung2Dto, theClientDto);
+						getLagerFac().createHandlagerbewegung(handlagerbewegung2Dto, theClientDto);
 
-						getLagerFac().bucheAb(
-								LocaleFac.BELEGART_LOS,
-								li.getFlrlossollmaterial().getLos_i_id(),
-								li.getI_id(),
-								li.getFlrlossollmaterial().getFlrartikel()
-										.getI_id(),
-								li.getN_menge(),
-								li.getFlrlossollmaterial().getN_sollpreis(),
-								li.getLager_i_id(),
-								(String) null,
-								new java.sql.Timestamp(System
-										.currentTimeMillis()), theClientDto);
+						getLagerFac().bucheAb(LocaleFac.BELEGART_LOS, li.getFlrlossollmaterial().getLos_i_id(),
+								li.getI_id(), li.getFlrlossollmaterial().getFlrartikel().getI_id(), li.getN_menge(),
+								li.getFlrlossollmaterial().getN_sollpreis(), li.getLager_i_id(), (String) null,
+								new java.sql.Timestamp(System.currentTimeMillis()), theClientDto);
 
 					} catch (RemoteException e) {
 						throwEJBExceptionLPRespectOld(e);
@@ -7285,16 +6815,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			} else {
 				try {
-					getLagerFac().bucheZu(
-							LocaleFac.BELEGART_LOS,
-							li.getFlrlossollmaterial().getLos_i_id(),
-							li.getI_id(),
-							li.getFlrlossollmaterial().getFlrartikel()
-									.getI_id(), new BigDecimal(1),
-							li.getFlrlossollmaterial().getN_sollpreis(),
-							li.getLager_i_id(), (String) null,
-							new java.sql.Timestamp(System.currentTimeMillis()),
-							theClientDto, null, null, true);
+					getLagerFac().bucheZu(LocaleFac.BELEGART_LOS, li.getFlrlossollmaterial().getLos_i_id(),
+							li.getI_id(), li.getFlrlossollmaterial().getFlrartikel().getI_id(), new BigDecimal(1),
+							li.getFlrlossollmaterial().getN_sollpreis(), li.getLager_i_id(), (String) null,
+							new java.sql.Timestamp(System.currentTimeMillis()), theClientDto, null, null, true);
 
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
@@ -7310,24 +6834,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		query = session.createQuery(queryString);
 		resultList = query.list();
 		resultListIterator = resultList.iterator();
-		System.out.println("LOSABLIEFERUNG: Gesamt-Positionen "
-				+ resultList.size());
+		System.out.println("LOSABLIEFERUNG: Gesamt-Positionen " + resultList.size());
 
 		int ilfdNrSnrChnr = 99;
 
 		while (resultListIterator.hasNext()) {
-			FLRLosablieferung la = (FLRLosablieferung) resultListIterator
-					.next();
+			FLRLosablieferung la = (FLRLosablieferung) resultListIterator.next();
 			try {
 
 				if (la.getFlrlos().getFlrstueckliste() != null) {
 					String snr = la.getC_snrchnr_mig();
 
 					boolean bSnrChnrTragend = false;
-					if (Helper.short2boolean(la.getFlrlos().getFlrstueckliste()
-							.getFlrartikel().getB_seriennrtragend()) == true
-							|| Helper.short2boolean(la.getFlrlos()
-									.getFlrstueckliste().getFlrartikel()
+					if (Helper.short2boolean(
+							la.getFlrlos().getFlrstueckliste().getFlrartikel().getB_seriennrtragend()) == true
+							|| Helper.short2boolean(la.getFlrlos().getFlrstueckliste().getFlrartikel()
 									.getB_chargennrtragend()) == true) {
 						bSnrChnrTragend = true;
 
@@ -7345,13 +6866,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 								String[] sSnrVersion = sTeile[i].split(":");
 
-								SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-										sSnrVersion[0], new BigDecimal(1));
+								SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(sSnrVersion[0],
+										new BigDecimal(1));
 								alSeriennrChargennrMitMenge.add(sDto);
 
 								if (sSnrVersion.length > 1) {
-									hmSNRMitVersion.put(sSnrVersion[0],
-											sSnrVersion[1]);
+									hmSNRMitVersion.put(sSnrVersion[0], sSnrVersion[1]);
 								}
 
 							}
@@ -7362,9 +6882,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 							for (int i = 0; i < la.getN_menge().intValue(); i++) {
 
 								SeriennrChargennrMitMengeDto sDto = new SeriennrChargennrMitMengeDto(
-										"LO" + la.getFlrlos().getC_nr() + "#"
-												+ ilfdNrSnrChnr,
-										new BigDecimal(1));
+										"LO" + la.getFlrlos().getC_nr() + "#" + ilfdNrSnrChnr, new BigDecimal(1));
 								alSeriennrChargennrMitMenge.add(sDto);
 
 								ilfdNrSnrChnr++;
@@ -7373,29 +6891,24 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						}
 					}
 
-					LosablieferungDto laDto = getFertigungFac()
-							.losablieferungFindByPrimaryKey(la.getI_id(),
-									false, theClientDto);
+					LosablieferungDto laDto = getFertigungFac().losablieferungFindByPrimaryKey(la.getI_id(), false,
+							theClientDto);
 					laDto.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
 
 					if (bSnrChnrTragend == true) {
-						laDto.setNMenge(new BigDecimal(
-								alSeriennrChargennrMitMenge.size()));
+						laDto.setNMenge(new BigDecimal(alSeriennrChargennrMitMenge.size()));
 					}
 
-					getFertigungFac().bucheLosAblieferungAufLager(
-							laDto,
-							getFertigungFac().losFindByPrimaryKey(
-									la.getLos_i_id()), theClientDto);
+					getFertigungFac().bucheLosAblieferungAufLager(laDto,
+							getFertigungFac().losFindByPrimaryKey(la.getLos_i_id()), theClientDto);
 
 					if (bSnrChnrTragend == true) {
 						Iterator it = hmSNRMitVersion.keySet().iterator();
 						while (it.hasNext()) {
 							String key = (String) it.next();
 							String version = (String) hmSNRMitVersion.get(key);
-							getLagerFac().versionInLagerbewegungUpdaten(
-									LocaleFac.BELEGART_LOSABLIEFERUNG,
-									la.getI_id(), key, version);
+							getLagerFac().versionInLagerbewegungUpdaten(LocaleFac.BELEGART_LOSABLIEFERUNG, la.getI_id(),
+									key, version);
 						}
 					}
 
@@ -7410,8 +6923,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void versionPerEntityManagerUpdaten(Integer lagerbewegungIId,
-			String cSnr, String cVersion) {
+	public void versionPerEntityManagerUpdaten(Integer lagerbewegungIId, String cSnr, String cVersion) {
 
 		Lagerbewegung zugang = em.find(Lagerbewegung.class, lagerbewegungIId);
 
@@ -7442,18 +6954,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			try {
 				LagerabgangursprungDto[] abgaenge = getLagerFac()
-						.lagerabgangursprungFindByLagerbewegungIIdBuchungsursprung(
-								o.getI_id_buchung());
+						.lagerabgangursprungFindByLagerbewegungIIdBuchungsursprung(o.getI_id_buchung());
 
 				for (int i = 0; i < abgaenge.length; i++) {
 
 					LagerbewegungDto[] bewAbgaenge = getLagerFac()
-							.lagerbewegungFindByIIdBuchung(
-									abgaenge[i].getILagerbewegungid());
+							.lagerbewegungFindByIIdBuchung(abgaenge[i].getILagerbewegungid());
 
 					for (int j = 0; j < bewAbgaenge.length; j++) {
-						getLagerFac().versionPerEntityManagerUpdaten(
-								bewAbgaenge[j].getIId(),
+						getLagerFac().versionPerEntityManagerUpdaten(bewAbgaenge[j].getIId(),
 								o.getC_seriennrchargennr(), o.getC_version());
 
 					}
@@ -7481,22 +6990,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * 
 	 * //----------------- //--ZUAGEANGE------ //-----------------
 	 * 
-	 * // ----------------------BESTELLUNG-------------------
-	 * org.hibernate.Criteria crit =
-	 * session.createCriteria(FLRWareneingangspositionen.class); List resultList
-	 * = crit.list(); Iterator<?> resultListIterator = resultList.iterator();
-	 * while (resultListIterator.hasNext()) { FLRWareneingangspositionen
-	 * position = (FLRWareneingangspositionen) resultListIterator.next(); try {
+	 * // ----------------------BESTELLUNG------------------- org.hibernate.Criteria
+	 * crit = session.createCriteria(FLRWareneingangspositionen.class); List
+	 * resultList = crit.list(); Iterator<?> resultListIterator =
+	 * resultList.iterator(); while (resultListIterator.hasNext()) {
+	 * FLRWareneingangspositionen position = (FLRWareneingangspositionen)
+	 * resultListIterator.next(); try {
 	 * 
 	 * String[] snrs =
 	 * Helper.erzeugeSeriennummernArray(position.getC_seriennrchargennr(),
 	 * position.getN_geliefertemenge(), false);
 	 * 
-	 * if (snrs != null && snrs.length > 0) { for (int i = 0; i < snrs.length;
-	 * i++) {
+	 * if (snrs != null && snrs.length > 0) { for (int i = 0; i < snrs.length; i++)
+	 * {
 	 * 
-	 * if
-	 * (Helper.short2boolean(position.getFlrbestellposition().getFlrartikel().
+	 * if (Helper.short2boolean(position.getFlrbestellposition().getFlrartikel().
 	 * getB_chargennrtragend())) {
 	 * 
 	 * bucheZu(LocaleFac.BELEGART_BESTELLUNG,
@@ -7522,8 +7030,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * position.getN_geliefertemenge(),
 	 * position.getFlrbestellposition().getN_nettogesamtpreis(),
 	 * position.getFlrwareneingang().getLager_i_id(),
-	 * position.getC_seriennrchargennr(), idUser); } } catch (EJBExceptionLP
-	 * ex3) { ex3.printStackTrace(); } } //session.close();
+	 * position.getC_seriennrchargennr(), idUser); } } catch (EJBExceptionLP ex3) {
+	 * ex3.printStackTrace(); } } //session.close();
 	 * 
 	 * // ----------------------HAND------------------- String queryString =
 	 * " FROM FLRHandlagerbewegung AS position WHERE position.n_menge >0 AND position.b_abgang=0 AND position.flrlager.i_id <>11 AND position.flrartikel.artikelart_c_nr='"
@@ -7537,8 +7045,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * bucheZu(LocaleFac.BELEGART_HAND, position.getI_id() , position.getI_id(),
 	 * position.getFlrartikel().getI_id(), position.getN_menge(),
 	 * position.getN_einstandspreis(), position.getFlrlager().getI_id(),
-	 * position.getC_seriennrchargennr(), idUser); } catch (EJBExceptionLP ex3)
-	 * { ex3.printStackTrace(); }
+	 * position.getC_seriennrchargennr(), idUser); } catch (EJBExceptionLP ex3) {
+	 * ex3.printStackTrace(); }
 	 * 
 	 * System.out.println("HAND-ID: " + position.getI_id()); }
 	 * 
@@ -7547,13 +7055,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * + " ORDER BY position.t_zeitpunkt ASC"; query =
 	 * session.createQuery(queryString); resultList = query.list();
 	 * resultListIterator = resultList.iterator();
-	 * System.out.println("INVENUTR: Gesamt-Positionen " + resultList.size());
-	 * while (resultListIterator.hasNext()) { FLRInventurprotokoll position =
+	 * System.out.println("INVENUTR: Gesamt-Positionen " + resultList.size()); while
+	 * (resultListIterator.hasNext()) { FLRInventurprotokoll position =
 	 * (FLRInventurprotokoll) resultListIterator.next();
 	 * bucheZu(LocaleFac.BELEGART_INVENTUR,
 	 * position.getFlrinventurliste().getFlrinventur().getI_id() ,
-	 * position.getI_id(),
-	 * position.getFlrinventurliste().getFlrartikel().getI_id(),
+	 * position.getI_id(), position.getFlrinventurliste().getFlrartikel().getI_id(),
 	 * position.getN_korrekturmenge(), position.getN_inventurpreis(),
 	 * position.getFlrinventurliste().getFlrlager().getI_id(),
 	 * position.getFlrinventurliste().getC_seriennrchargennr(), idUser);
@@ -7563,12 +7070,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * " FROM FLRLosablieferung AS position WHERE position.flrlos.stueckliste_i_id is not null AND position.n_menge>0 ORDER BY position.flrlos.t_erledigt ASC"
 	 * ; query = session.createQuery(queryString); resultList = query.list();
 	 * resultListIterator = resultList.iterator();
-	 * System.out.println("LOSABLIEFERUNG: Gesamt-Positionen " +
-	 * resultList.size()); while (resultListIterator.hasNext()) {
-	 * FLRLosablieferung position = (FLRLosablieferung)
-	 * resultListIterator.next(); if (position.getFlrlos().getFlrstueckliste()
-	 * != null) { LosDto losDto = null; LosablieferungDto losablieferungDto =
-	 * null; try { losDto =
+	 * System.out.println("LOSABLIEFERUNG: Gesamt-Positionen " + resultList.size());
+	 * while (resultListIterator.hasNext()) { FLRLosablieferung position =
+	 * (FLRLosablieferung) resultListIterator.next(); if
+	 * (position.getFlrlos().getFlrstueckliste() != null) { LosDto losDto = null;
+	 * LosablieferungDto losablieferungDto = null; try { losDto =
 	 * getFertigungFac().losFindByPrimaryKey(position.getFlrlos().getI_id());
 	 * losablieferungDto =
 	 * getFertigungFac().losablieferungFindByPrimaryKey(position. getI_id()); }
@@ -7578,31 +7084,27 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * position.getFlrlos().getFlrstueckliste().getFlrartikel().getI_id(),
 	 * position.getN_menge(), position.getN_gestehungspreis(),
 	 * losDto.getLagerIIdZiel(), losablieferungDto.getCSerienchargennummer(),
-	 * idUser); } System.out.println("LOSABLIEFERUNG-ID: " +
-	 * position.getI_id()); }
+	 * idUser); } System.out.println("LOSABLIEFERUNG-ID: " + position.getI_id()); }
 	 * 
 	 * // ----------------------RECHNUNG------------------- queryString =
 	 * " FROM FLRRechnungPosition AS position WHERE position.n_menge <0 AND position.positionsart_c_nr='"
 	 * + LocaleFac.POSITIONSART_IDENT +
-	 * "' AND position.flrartikel.artikelart_c_nr='" +
-	 * ArtikelFac.ARTIKELART_ARTIKEL + "'" +
-	 * " ORDER BY position.flrrechnung.d_belegdatum ASC"; query =
+	 * "' AND position.flrartikel.artikelart_c_nr='" + ArtikelFac.ARTIKELART_ARTIKEL
+	 * + "'" + " ORDER BY position.flrrechnung.d_belegdatum ASC"; query =
 	 * session.createQuery(queryString); resultList = query.list();
 	 * resultListIterator = resultList.iterator();
-	 * System.out.println("RECHNUNG: Gesamt-Positionen " + resultList.size());
-	 * while (resultListIterator.hasNext()) {
-	 * com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition
-	 * position =
-	 * (com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition)
+	 * System.out.println("RECHNUNG: Gesamt-Positionen " + resultList.size()); while
+	 * (resultListIterator.hasNext()) {
+	 * com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition position
+	 * = (com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition)
 	 * resultListIterator.next();
 	 * 
 	 * RechnungDto rechnungDto = null; try { rechnungDto =
 	 * getRechnungFac().rechnungFindByPrimaryKey(position.
 	 * getFlrrechnung().getI_id()); } catch (RemoteException ex1) {
-	 * throwEJBExceptionLPRespectOld(ex1); }
-	 * bucheZu(LocaleFac.BELEGART_RECHNUNG, position.getFlrrechnung().getI_id()
-	 * , position.getI_id(), position.getFlrartikel().getI_id(),
-	 * position.getN_menge().abs(),
+	 * throwEJBExceptionLPRespectOld(ex1); } bucheZu(LocaleFac.BELEGART_RECHNUNG,
+	 * position.getFlrrechnung().getI_id() , position.getI_id(),
+	 * position.getFlrartikel().getI_id(), position.getN_menge().abs(),
 	 * position.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt(),
 	 * rechnungDto.getLagerIId(), position.getC_serienchargennummer(), idUser);
 	 * 
@@ -7614,33 +7116,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * // ----------------------RECHNUNG------------------- queryString =
 	 * " FROM FLRRechnungPosition AS position WHERE position.n_menge >0 AND position.positionsart_c_nr='"
 	 * + LocaleFac.POSITIONSART_IDENT +
-	 * "' AND position.flrartikel.artikelart_c_nr='" +
-	 * ArtikelFac.ARTIKELART_ARTIKEL + "'" +
-	 * " ORDER BY position.flrrechnung.d_belegdatum ASC"; query =
+	 * "' AND position.flrartikel.artikelart_c_nr='" + ArtikelFac.ARTIKELART_ARTIKEL
+	 * + "'" + " ORDER BY position.flrrechnung.d_belegdatum ASC"; query =
 	 * session.createQuery(queryString); resultList = query.list();
 	 * resultListIterator = resultList.iterator();
-	 * System.out.println("RECHNUNG: Gesamt-Positionen " + resultList.size());
-	 * while (resultListIterator.hasNext()) {
-	 * com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition
-	 * position =
-	 * (com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition)
-	 * resultListIterator.next(); RechnungDto rechnungDto = null; try {
-	 * rechnungDto = getRechnungFac().rechnungFindByPrimaryKey(position.
+	 * System.out.println("RECHNUNG: Gesamt-Positionen " + resultList.size()); while
+	 * (resultListIterator.hasNext()) {
+	 * com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition position
+	 * = (com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition)
+	 * resultListIterator.next(); RechnungDto rechnungDto = null; try { rechnungDto
+	 * = getRechnungFac().rechnungFindByPrimaryKey(position.
 	 * getFlrrechnung().getI_id()); } catch (RemoteException ex1) {
 	 * throwEJBExceptionLPRespectOld(ex1); } try {
-	 * bucheAb(LocaleFac.BELEGART_RECHNUNG, position.getFlrrechnung().getI_id()
-	 * , position.getI_id(), position.getFlrartikel().getI_id(),
+	 * bucheAb(LocaleFac.BELEGART_RECHNUNG, position.getFlrrechnung().getI_id() ,
+	 * position.getI_id(), position.getFlrartikel().getI_id(),
 	 * position.getN_menge(), position.getN_einzelpreis(),
-	 * rechnungDto.getLagerIId(), position.getC_serienchargennummer(), idUser);
-	 * } catch (EJBExceptionLP ex3) { ex3.printStackTrace(); }
+	 * rechnungDto.getLagerIId(), position.getC_serienchargennummer(), idUser); }
+	 * catch (EJBExceptionLP ex3) { ex3.printStackTrace(); }
 	 * 
-	 * System.out.println("RECHNUNG-ID: " + position.getI_id()); }
-	 * //ZUSAETZLICHE HANDLAGERBUCHUNGEN:
+	 * System.out.println("RECHNUNG-ID: " + position.getI_id()); } //ZUSAETZLICHE
+	 * HANDLAGERBUCHUNGEN:
 	 * 
 	 * 
 	 * try { HandlagerbewegungDto handlagerbewegung2Dto = new
-	 * HandlagerbewegungDto(); handlagerbewegung2Dto.setArtikelIId(new
-	 * Integer(11)); handlagerbewegung2Dto.setLagerIId(new Integer(12));
+	 * HandlagerbewegungDto(); handlagerbewegung2Dto.setArtikelIId(new Integer(11));
+	 * handlagerbewegung2Dto.setLagerIId(new Integer(12));
 	 * handlagerbewegung2Dto.setBAbgang(new Short( (short) 0));
 	 * handlagerbewegung2Dto.setCKommentar("Korr");
 	 * handlagerbewegung2Dto.setCSeriennrchargennr(null);
@@ -7712,14 +7212,12 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * // ----------------------LIEFERSCHEIN------------------- queryString =
 	 * " FROM FLRLieferscheinposition AS position WHERE position.n_menge >0 AND position.positionart_c_nr='"
 	 * + LocaleFac.POSITIONSART_IDENT +
-	 * "' AND position.flrartikel.artikelart_c_nr='" +
-	 * ArtikelFac.ARTIKELART_ARTIKEL + "'" +
-	 * " ORDER BY position.flrlieferschein.t_liefertermin ASC"; query =
+	 * "' AND position.flrartikel.artikelart_c_nr='" + ArtikelFac.ARTIKELART_ARTIKEL
+	 * + "'" + " ORDER BY position.flrlieferschein.t_liefertermin ASC"; query =
 	 * session.createQuery(queryString); resultList = query.list();
 	 * resultListIterator = resultList.iterator();
-	 * System.out.println("LIEFERSCHEIN: Gesamt-Positionen " +
-	 * resultList.size()); while (resultListIterator.hasNext()) {
-	 * com.lp.server.lieferschein
+	 * System.out.println("LIEFERSCHEIN: Gesamt-Positionen " + resultList.size());
+	 * while (resultListIterator.hasNext()) { com.lp.server.lieferschein
 	 * .fastlanereader.generated.FLRLieferscheinposition position =
 	 * (com.lp.server.lieferschein.fastlanereader.generated.
 	 * FLRLieferscheinposition) resultListIterator.next();
@@ -7759,40 +7257,38 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * bucheAb(LocaleFac.BELEGART_HAND, position.getI_id() , position.getI_id(),
 	 * position.getFlrartikel().getI_id(), position.getN_menge(),
 	 * position.getN_verkaufspreis(), position.getFlrlager().getI_id(),
-	 * position.getC_seriennrchargennr(), idUser);
-	 * System.out.println("HAND-ID: " + position.getI_id()); }
+	 * position.getC_seriennrchargennr(), idUser); System.out.println("HAND-ID: " +
+	 * position.getI_id()); }
 	 * 
 	 * // ----------------------INVENTUR------------------- queryString =
 	 * " FROM FLRInventurprotokoll AS position WHERE position.n_korrekturmenge <0 "
 	 * + " ORDER BY position.t_zeitpunkt ASC"; query =
 	 * session.createQuery(queryString); resultList = query.list();
 	 * resultListIterator = resultList.iterator();
-	 * System.out.println("INVENTUR: Gesamt-Positionen " + resultList.size());
-	 * while (resultListIterator.hasNext()) { FLRInventurprotokoll position =
+	 * System.out.println("INVENTUR: Gesamt-Positionen " + resultList.size()); while
+	 * (resultListIterator.hasNext()) { FLRInventurprotokoll position =
 	 * (FLRInventurprotokoll) resultListIterator.next();
 	 * 
 	 * BigDecimal lagerstand =
-	 * getLagerstand(position.getFlrinventurliste().getFlrartikel(). getI_id(),
-	 * new Integer(12), idUser);
+	 * getLagerstand(position.getFlrinventurliste().getFlrartikel(). getI_id(), new
+	 * Integer(12), idUser);
 	 * 
 	 * if (position.getN_korrekturmenge().abs().doubleValue() >
 	 * lagerstand.doubleValue()) { BigDecimal diff = new
 	 * BigDecimal(position.getN_korrekturmenge().abs().doubleValue() -
 	 * lagerstand.doubleValue()); HandlagerbewegungDto dto = new
 	 * HandlagerbewegungDto();
-	 * dto.setArtikelIId(position.getFlrinventurliste().getFlrartikel
-	 * ().getI_id()); dto.setBAbgang(Helper.boolean2Short(false));
+	 * dto.setArtikelIId(position.getFlrinventurliste().getFlrartikel ().getI_id());
+	 * dto.setBAbgang(Helper.boolean2Short(false));
 	 * dto.setLagerIId(position.getFlrinventurliste().getFlrlager().getI_id());
-	 * dto.setCKommentar("Korrekturbuchung");
-	 * dto.setCSeriennrchargennr(position.
+	 * dto.setCKommentar("Korrekturbuchung"); dto.setCSeriennrchargennr(position.
 	 * getFlrinventurliste().getC_seriennrchargennr()); dto.setNMenge(diff);
 	 * dto.setNEinstandspreis(position.getN_inventurpreis());
 	 * createHandlagerbewegung(dto, idUser); }
 	 * 
 	 * bucheAb(LocaleFac.BELEGART_INVENTUR,
 	 * position.getFlrinventurliste().getFlrinventur().getI_id() ,
-	 * position.getI_id(),
-	 * position.getFlrinventurliste().getFlrartikel().getI_id(),
+	 * position.getI_id(), position.getFlrinventurliste().getFlrartikel().getI_id(),
 	 * position.getN_korrekturmenge().abs(), position.getN_inventurpreis(), new
 	 * Integer(12), null, idUser); System.out.println("INVENTUR-ID: " +
 	 * position.getI_id()); }
@@ -7804,12 +7300,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * resultListIterator = resultList.iterator();
 	 * System.out.println("LOS: Gesamt-Positionen " + resultList.size()); while
 	 * (resultListIterator.hasNext()) {
-	 * com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial
-	 * position =
+	 * com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial position =
 	 * (com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial)
 	 * resultListIterator.next(); bucheAb(LocaleFac.BELEGART_LOS,
-	 * position.getFlrlossollmaterial().getFlrlos().getI_id() ,
-	 * position.getI_id(),
+	 * position.getFlrlossollmaterial().getFlrlos().getI_id() , position.getI_id(),
 	 * position.getFlrlossollmaterial().getFlrartikel().getI_id(),
 	 * position.getN_menge(), position.getFlrlossollmaterial().getN_sollpreis(),
 	 * position.getFlrlager().getI_id(), null, idUser);
@@ -7820,8 +7314,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * }
 	 */
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public String pruefeVollstaendigVerbraucht(Integer artikelIIdInput,
-			boolean bKorrigieren, TheClientDto theClientDto) {
+	public String pruefeVollstaendigVerbraucht(Integer artikelIIdInput, boolean bKorrigieren,
+			TheClientDto theClientDto) {
 
 		String sUpdateStatement = "";
 
@@ -7853,10 +7347,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			Short vollstverbraucht = (Short) o[3];
 			iZaehlerArtikel++;
 
-			if (iZaehlerArtikel % 100 == 0
-					|| iZaehlerArtikel == resultList.size()) {
-				System.out.println("Lagerbewegung " + iZaehlerArtikel + " von "
-						+ resultList.size());
+			if (iZaehlerArtikel % 100 == 0 || iZaehlerArtikel == resultList.size()) {
+				System.out.println("Lagerbewegung " + iZaehlerArtikel + " von " + resultList.size());
 			}
 
 			BigDecimal verbrauchteAusLagerabgangUrsprung = new BigDecimal(0);
@@ -7867,57 +7359,45 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			if (Helper.short2boolean(vollstverbraucht) == true) {
 
-				if (verbrauchteAusLagerabgangUrsprung.doubleValue() > mengeAusLagerbewegung
-						.doubleValue()) {
-					ausgabe += zaehler + ";" + artikel_i_id + ";"
-							+ i_id_buchung + ";" + mengeAusLagerbewegung + ";"
+				if (verbrauchteAusLagerabgangUrsprung.doubleValue() > mengeAusLagerbewegung.doubleValue()) {
+					ausgabe += zaehler + ";" + artikel_i_id + ";" + i_id_buchung + ";" + mengeAusLagerbewegung + ";"
 							+ verbrauchteAusLagerabgangUrsprung + "--FATAL";
 					rueckgabe += ausgabe + new String(CRLFAscii);
 					System.out.println(ausgabe);
 					zaehler++;
 					if (bKorrigieren == true) {
-						getLagerFac().setzteZugangsBuchungAlsVerbraucht(
-								i_id_buchung, true, theClientDto);
+						getLagerFac().setzteZugangsBuchungAlsVerbraucht(i_id_buchung, true, theClientDto);
 					}
 					sUpdateStatement += "UPDATE WW_LAGERBEWEGUNG SET B_VOLLSTAENDIGVERBRAUCHT=1 WHERE I_ID_BUCHUNG="
-							+ i_id_buchung
-							+ "; --FATAL_ZUVIEL_VERBRAUCHT"
-							+ new String(CRLFAscii);
+							+ i_id_buchung + "; --FATAL_ZUVIEL_VERBRAUCHT" + new String(CRLFAscii);
 
 					if (!hmIIdBuchungZumKorrigieren.containsKey(i_id_buchung)) {
-						BigDecimal differenz = verbrauchteAusLagerabgangUrsprung
-								.subtract(mengeAusLagerbewegung);
+						BigDecimal differenz = verbrauchteAusLagerabgangUrsprung.subtract(mengeAusLagerbewegung);
 
 						hmIIdBuchungZumKorrigieren.put(i_id_buchung, differenz);
 					}
 
-				} else if (verbrauchteAusLagerabgangUrsprung.doubleValue() < mengeAusLagerbewegung
-						.doubleValue()) {
-					ausgabe += zaehler + ";" + artikel_i_id + ";"
-							+ i_id_buchung + ";" + mengeAusLagerbewegung + ";"
+				} else if (verbrauchteAusLagerabgangUrsprung.doubleValue() < mengeAusLagerbewegung.doubleValue()) {
+					ausgabe += zaehler + ";" + artikel_i_id + ";" + i_id_buchung + ";" + mengeAusLagerbewegung + ";"
 							+ verbrauchteAusLagerabgangUrsprung;
 					rueckgabe += ausgabe + new String(CRLFAscii);
 					System.out.println(ausgabe);
 					zaehler++;
 					if (bKorrigieren == true) {
-						getLagerFac().setzteZugangsBuchungAlsVerbraucht(
-								i_id_buchung, false, theClientDto);
+						getLagerFac().setzteZugangsBuchungAlsVerbraucht(i_id_buchung, false, theClientDto);
 					}
 
 				}
 
 			} else {
-				if (verbrauchteAusLagerabgangUrsprung.doubleValue() >= mengeAusLagerbewegung
-						.doubleValue()) {
-					ausgabe += zaehler + ";" + artikel_i_id + ";"
-							+ i_id_buchung + ";" + mengeAusLagerbewegung + ";"
+				if (verbrauchteAusLagerabgangUrsprung.doubleValue() >= mengeAusLagerbewegung.doubleValue()) {
+					ausgabe += zaehler + ";" + artikel_i_id + ";" + i_id_buchung + ";" + mengeAusLagerbewegung + ";"
 							+ verbrauchteAusLagerabgangUrsprung;
 
 					rueckgabe += ausgabe + new String(CRLFAscii);
 					System.out.println(ausgabe);
 					if (bKorrigieren == true) {
-						getLagerFac().setzteZugangsBuchungAlsVerbraucht(
-								i_id_buchung, true, theClientDto);
+						getLagerFac().setzteZugangsBuchungAlsVerbraucht(i_id_buchung, true, theClientDto);
 					}
 					zaehler++;
 					sUpdateStatement += "UPDATE WW_LAGERBEWEGUNG SET B_VOLLSTAENDIGVERBRAUCHT=1 WHERE I_ID_BUCHUNG="
@@ -7934,25 +7414,18 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		System.out.println("ARTIKEL_I_IDS:");
 		if (bKorrigieren == true) {
-			Iterator iTeratoriIdBuchung = hmIIdBuchungZumKorrigieren.keySet()
-					.iterator();
+			Iterator iTeratoriIdBuchung = hmIIdBuchungZumKorrigieren.keySet().iterator();
 			int izeile = 0;
 			while (iTeratoriIdBuchung.hasNext()) {
 				izeile++;
-				System.out.println("Zeile " + izeile + " von "
-						+ hmIIdBuchungZumKorrigieren.size());
+				System.out.println("Zeile " + izeile + " von " + hmIIdBuchungZumKorrigieren.size());
 				Integer iIdBuchungTemp = (Integer) iTeratoriIdBuchung.next();
 				LagerbewegungDto[] lBew = lagerbewegungFindByIIdBuchung(iIdBuchungTemp);
 
 				if (lBew.length > 0) {
-					getLagerFac().korrigiereVollstaendigVerbraucht(
-							theClientDto,
-							lBew[0].getIIdBuchung(),
-							lBew[0].getArtikelIId(),
-							lBew[0].getLagerIId(),
-							lBew[0].getCSeriennrchargennr(),
-							(BigDecimal) hmIIdBuchungZumKorrigieren
-									.get(iIdBuchungTemp));
+					getLagerFac().korrigiereVollstaendigVerbraucht(theClientDto, lBew[0].getIIdBuchung(),
+							lBew[0].getArtikelIId(), lBew[0].getLagerIId(), lBew[0].getCSeriennrchargennr(),
+							(BigDecimal) hmIIdBuchungZumKorrigieren.get(iIdBuchungTemp));
 				}
 
 			}
@@ -7963,13 +7436,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return rueckgabe;
 	}
 
-	public void korrigiereVollstaendigVerbraucht(TheClientDto theClientDto,
-			Integer i_id_buchung, Integer artikel_i_id, Integer lager_i_id,
-			String snrchnr, BigDecimal differenz) {
+	public void korrigiereVollstaendigVerbraucht(TheClientDto theClientDto, Integer i_id_buchung, Integer artikel_i_id,
+			Integer lager_i_id, String snrchnr, BigDecimal differenz) {
 		// Korrektur:
 
-		Query queryursprung = em
-				.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
+		Query queryursprung = em.createNamedQuery("LagerabgangursprungfindByILagerbewegungIIdursprung");
 		queryursprung.setParameter(1, i_id_buchung);
 		Collection<?> cl = queryursprung.getResultList();
 
@@ -7977,38 +7448,27 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		while (itUrsprung.hasNext()) {
 			Lagerabgangursprung ursp = (Lagerabgangursprung) itUrsprung.next();
 			if (ursp.getNVerbrauchtemenge().doubleValue() > 0) {
-				if (differenz.doubleValue() <= ursp.getNVerbrauchtemenge()
-						.doubleValue()) {
-					ursp.setNVerbrauchtemenge(ursp.getNVerbrauchtemenge()
-							.subtract(differenz));
-					LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(
-							artikel_i_id, lager_i_id, snrchnr, differenz,
-							theClientDto);
+				if (differenz.doubleValue() <= ursp.getNVerbrauchtemenge().doubleValue()) {
+					ursp.setNVerbrauchtemenge(ursp.getNVerbrauchtemenge().subtract(differenz));
+					LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(artikel_i_id, lager_i_id, snrchnr,
+							differenz, theClientDto);
 
 					for (int j = 0; j < urspruenge.length; j++) {
-						urspruenge[j].setILagerbewegungid(ursp.getPk()
-								.getILagerbewegungid());
+						urspruenge[j].setILagerbewegungid(ursp.getPk().getILagerbewegungid());
 
 						// Zuerst nachsehen, ob es diesen
 						// Urspung scon gibt,
 						// dann Updaten
 						LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
-						lagerabgangursprungPK.setILagerbewegungid(ursp.getPk()
-								.getILagerbewegungid());
-						lagerabgangursprungPK
-								.setILagerbewegungidursprung(urspruenge[j]
-										.getILagerbewegungidursprung());
-						Lagerabgangursprung lagerabgangursprung = em.find(
-								Lagerabgangursprung.class,
+						lagerabgangursprungPK.setILagerbewegungid(ursp.getPk().getILagerbewegungid());
+						lagerabgangursprungPK.setILagerbewegungidursprung(urspruenge[j].getILagerbewegungidursprung());
+						Lagerabgangursprung lagerabgangursprung = em.find(Lagerabgangursprung.class,
 								lagerabgangursprungPK);
 						if (lagerabgangursprung == null) {
 							createLagerabgangursprung(urspruenge[j]);
 						} else {
-							lagerabgangursprung
-									.setNVerbrauchtemenge(lagerabgangursprung
-											.getNVerbrauchtemenge()
-											.add(urspruenge[j]
-													.getNVerbrauchtemenge()));
+							lagerabgangursprung.setNVerbrauchtemenge(lagerabgangursprung.getNVerbrauchtemenge()
+									.add(urspruenge[j].getNVerbrauchtemenge()));
 							em.merge(lagerabgangursprung);
 							em.flush();
 						}
@@ -8018,34 +7478,25 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				} else {
 					BigDecimal bdVerbr = ursp.getNVerbrauchtemenge();
 					ursp.setNVerbrauchtemenge(new BigDecimal(0));
-					LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(
-							artikel_i_id, lager_i_id, snrchnr, bdVerbr,
-							theClientDto);
+					LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(artikel_i_id, lager_i_id, snrchnr,
+							bdVerbr, theClientDto);
 
 					for (int j = 0; j < urspruenge.length; j++) {
-						urspruenge[j].setILagerbewegungid(ursp.getPk()
-								.getILagerbewegungid());
+						urspruenge[j].setILagerbewegungid(ursp.getPk().getILagerbewegungid());
 
 						// Zuerst nachsehen, ob es diesen
 						// Urspung scon gibt,
 						// dann Updaten
 						LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
-						lagerabgangursprungPK.setILagerbewegungid(ursp.getPk()
-								.getILagerbewegungid());
-						lagerabgangursprungPK
-								.setILagerbewegungidursprung(urspruenge[j]
-										.getILagerbewegungidursprung());
-						Lagerabgangursprung lagerabgangursprung = em.find(
-								Lagerabgangursprung.class,
+						lagerabgangursprungPK.setILagerbewegungid(ursp.getPk().getILagerbewegungid());
+						lagerabgangursprungPK.setILagerbewegungidursprung(urspruenge[j].getILagerbewegungidursprung());
+						Lagerabgangursprung lagerabgangursprung = em.find(Lagerabgangursprung.class,
 								lagerabgangursprungPK);
 						if (lagerabgangursprung == null) {
 							createLagerabgangursprung(urspruenge[j]);
 						} else {
-							lagerabgangursprung
-									.setNVerbrauchtemenge(lagerabgangursprung
-											.getNVerbrauchtemenge()
-											.add(urspruenge[j]
-													.getNVerbrauchtemenge()));
+							lagerabgangursprung.setNVerbrauchtemenge(lagerabgangursprung.getNVerbrauchtemenge()
+									.add(urspruenge[j].getNVerbrauchtemenge()));
 							em.merge(lagerabgangursprung);
 							em.flush();
 						}
@@ -8058,26 +7509,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Sortiert Lagerbewegungen nach Buchungsdatum, wobei die juengste
-	 * Lagerbewegung an 1. Stelle steht.
+	 * Sortiert Lagerbewegungen nach Buchungsdatum, wobei die juengste Lagerbewegung
+	 * an 1. Stelle steht.
 	 * 
-	 * @param lagerbewegungDto
-	 *            LagerbewegungDto[]
+	 * @param lagerbewegungDto LagerbewegungDto[]
 	 * @return LagerbewegungDto[] sortierte Lagerbewegungen
 	 */
-	private LagerbewegungDto[] sortiereNachDatumJuensterZuerst(
-			LagerbewegungDto[] lagerbewegungDto) {
+	private LagerbewegungDto[] sortiereNachDatumJuensterZuerst(LagerbewegungDto[] lagerbewegungDto) {
 		if (lagerbewegungDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("lagerbewegungDto == null"));
 		}
 
 		for (int i = lagerbewegungDto.length - 1; i > 0; --i) {
 			for (int j = 0; j < i; ++j) {
 				// Wenn z.B: 15.8.2004 < als 19.8.2004, dann wird getauscht
-				if (lagerbewegungDto[j].getTBuchungszeit().getTime() < lagerbewegungDto[j + 1]
-						.getTBuchungszeit().getTime()) {
+				if (lagerbewegungDto[j].getTBuchungszeit().getTime() < lagerbewegungDto[j + 1].getTBuchungszeit()
+						.getTime()) {
 					LagerbewegungDto lagerbewegungDtoTemp = lagerbewegungDto[j];
 					lagerbewegungDto[j] = lagerbewegungDto[j + 1];
 					lagerbewegungDto[j + 1] = lagerbewegungDtoTemp;
@@ -8088,26 +7536,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Sortiert Lagerbewegungen nach Buchungsdatum, wobei die aelteste
-	 * Lagerbewegung an 1. Stelle steht.
+	 * Sortiert Lagerbewegungen nach Buchungsdatum, wobei die aelteste Lagerbewegung
+	 * an 1. Stelle steht.
 	 * 
-	 * @param lagerbewegungDto
-	 *            LagerbewegungDto[]
+	 * @param lagerbewegungDto LagerbewegungDto[]
 	 * @return LagerbewegungDto[] sortierte Lagerbewegungen
 	 */
-	private LagerbewegungDto[] sortiereNachDatumAeltesterZuerst(
-			LagerbewegungDto[] lagerbewegungDto) {
+	private LagerbewegungDto[] sortiereNachDatumAeltesterZuerst(LagerbewegungDto[] lagerbewegungDto) {
 		if (lagerbewegungDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("lagerbewegungDto == null"));
 		}
 
 		for (int i = lagerbewegungDto.length - 1; i > 0; --i) {
 			for (int j = 0; j < i; ++j) {
 				// Wenn z.B: 15.8.2004 < als 19.8.2004, dann wird getauscht
-				if (lagerbewegungDto[j].getTBuchungszeit().getTime() > lagerbewegungDto[j + 1]
-						.getTBuchungszeit().getTime()) {
+				if (lagerbewegungDto[j].getTBuchungszeit().getTime() > lagerbewegungDto[j + 1].getTBuchungszeit()
+						.getTime()) {
 					LagerbewegungDto lagerbewegungDtoTemp = lagerbewegungDto[j];
 					lagerbewegungDto[j] = lagerbewegungDto[j + 1];
 					lagerbewegungDto[j + 1] = lagerbewegungDtoTemp;
@@ -8120,24 +7565,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Sortiert Lagerbewegungen nach Buchungsnummer
 	 * 
-	 * @param lagerbewegungDto
-	 *            LagerbewegungDto[]
-	 * @throws EJBExceptionLP
-	 *             lagerbewegungDto == null
+	 * @param lagerbewegungDto LagerbewegungDto[]
+	 * @throws EJBExceptionLP lagerbewegungDto == null
 	 * @return LagerbewegungDto[]
 	 */
-	private LagerbewegungDto[] sortiereNachBuchungsnummerKleinsteZuerst(
-			LagerbewegungDto[] lagerbewegungDto) throws EJBExceptionLP {
+	private LagerbewegungDto[] sortiereNachBuchungsnummerKleinsteZuerst(LagerbewegungDto[] lagerbewegungDto)
+			throws EJBExceptionLP {
 		if (lagerbewegungDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("lagerbewegungDto == null"));
 		}
 
 		for (int i = lagerbewegungDto.length - 1; i > 0; --i) {
 			for (int j = 0; j < i; ++j) {
-				if (lagerbewegungDto[j].getIIdBuchung().intValue() < lagerbewegungDto[j + 1]
-						.getIIdBuchung().intValue()) {
+				if (lagerbewegungDto[j].getIIdBuchung().intValue() < lagerbewegungDto[j + 1].getIIdBuchung()
+						.intValue()) {
 					LagerbewegungDto lagerbewegungDtoTemp = lagerbewegungDto[j];
 					lagerbewegungDto[j] = lagerbewegungDto[j + 1];
 					lagerbewegungDto[j + 1] = lagerbewegungDtoTemp;
@@ -8150,108 +7592,95 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Gibt die juengste Lagerbewegung einer Buchungsnummer zurueck
 	 * 
-	 * @param iIdBuchung
-	 *            Integer 32
-	 * @throws EJBExceptionLP
-	 *             Wenn iIdBuchung==null
+	 * @param iIdBuchung Integer 32
+	 * @throws EJBExceptionLP Wenn iIdBuchung==null
 	 * @return LagerbewegungDto Juengste Lagerbewegung einer Buchungsnummer
 	 */
-	public LagerbewegungDto getJuengsteBuchungEinerBuchungsNummer(
-			Integer iIdBuchung) throws EJBExceptionLP {
-		if (iIdBuchung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("iIdBuchung == null"));
-		}
+	public LagerbewegungDto getJuengsteBuchungEinerBuchungsNummer(Integer iIdBuchung) throws EJBExceptionLP {
 
-		LagerbewegungDto[] lagerbewegungDto = lagerbewegungFindByIIdBuchung(iIdBuchung);
-		lagerbewegungDto = sortiereNachDatumJuensterZuerst(lagerbewegungDto);
+		Session session = FLRSessionFactory.getFactory().openSession();
 
-		if (lagerbewegungDto == null || lagerbewegungDto.length == 0) {
-			myLogger.logKritisch("KEINE_LAGERBEWEGUNG_FUER_I_ID_BUCHUNG="
-					+ iIdBuchung);
+		String sQuery = "SELECT l.i_id FROM FLRLagerbewegung l WHERE l.b_historie=0 AND l.i_id_buchung=" + iIdBuchung
+				+ " ORDER BY l.t_buchungszeit DESC";
+
+		org.hibernate.Query query = session.createQuery(sQuery);
+		query.setMaxResults(1);
+
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		if (resultListIterator.hasNext()) {
+			Integer lagerbewegungIId = (Integer) resultListIterator.next();
+			return assembleLagerbewegungDto(em.find(Lagerbewegung.class, lagerbewegungIId));
+
+		} else {
+			myLogger.logKritisch("KEINE_LAGERBEWEGUNG_FUER_I_ID_BUCHUNG=" + iIdBuchung);
 			return null;
 		}
-		return lagerbewegungDto[0];
+
 	}
 
 	/**
-	 * Gibt alle "juengsten" Buchungen eines Artikels und eines Lagers zurueck,
-	 * die von der Art Lager ZU- oder AB-Buchung sind. Wenn Serien-/
-	 * Charegnnummer mit angegeben wird, dann wird diese mitberuecksichtigt. Bei
-	 * jeder Abgangsbuchung wird das Datum der Aeltesten Buchung verwendet,
-	 * falls fuer diese Buchung Korrekturen existieren.
+	 * Gibt alle "juengsten" Buchungen eines Artikels und eines Lagers zurueck, die
+	 * von der Art Lager ZU- oder AB-Buchung sind. Wenn Serien-/ Charegnnummer mit
+	 * angegeben wird, dann wird diese mitberuecksichtigt. Bei jeder Abgangsbuchung
+	 * wird das Datum der Aeltesten Buchung verwendet, falls fuer diese Buchung
+	 * Korrekturen existieren.
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param lagerIId
-	 *            7
-	 * @param sAbgang
-	 *            0
-	 * @param cSeriennrchargennr
-	 *            gjh67i6
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null || lagerIId == null || sAbgang == null
-	 *             oder sAbgang.intValue() < 0 && sAbgang.intValue() > 1
+	 * @param artikelIId         4711
+	 * @param lagerIId           7
+	 * @param sAbgang            0
+	 * @param cSeriennrchargennr gjh67i6
+	 * @throws EJBExceptionLP artikelIId == null || lagerIId == null || sAbgang ==
+	 *                        null oder sAbgang.intValue() < 0 && sAbgang.intValue()
+	 *                        > 1
 	 * @return LagerbewegungDto[] alle "juengsten" Buchungen eines Artikels und
 	 *         eines Lagers
 	 */
-	private LagerbewegungDto[] getAlleBuchungenEinesArtikelUndEinesLagers(
-			Integer artikelIId, Integer lagerIId, Short sAbgang,
-			String cSeriennrchargennr) throws EJBExceptionLP {
+	private LagerbewegungDto[] getAlleBuchungenEinesArtikelUndEinesLagers(Integer artikelIId, Integer lagerIId,
+			Short sAbgang, String cSeriennrchargennr) throws EJBExceptionLP {
 		if (artikelIId == null || lagerIId == null || sAbgang == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"artikelIId == null || lagerIId == null || sAbgang == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("artikelIId == null || lagerIId == null || sAbgang == null"));
 		}
 		if (sAbgang.intValue() < 0 && sAbgang.intValue() > 1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"sAbgang.intValue() < 0 && sAbgang.intValue() > 1"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+					new Exception("sAbgang.intValue() < 0 && sAbgang.intValue() > 1"));
 		}
 
-		LagerbewegungDto[] dtos = lagerbewegungFindByArtikelIIdLagerIIdBAbgangCSeriennrchargennr(
-				artikelIId, lagerIId, sAbgang, cSeriennrchargennr);
+		LagerbewegungDto[] dtos = lagerbewegungFindByArtikelIIdLagerIIdBAbgangCSeriennrchargennr(artikelIId, lagerIId,
+				sAbgang, cSeriennrchargennr);
 		return sortiereNachBuchungsnummerKleinsteZuerst(dtos);
 	}
 
 	/**
 	 * Gibt das Datum der Letzten Zugangsbuchung zurueck
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param bAbgang
-	 *            Zu/Abgang
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null
+	 * @param artikelIId 4711
+	 * @param bAbgang    Zu/Abgang
+	 * @throws EJBExceptionLP artikelIId == null
 	 * @return java.sql.Timestamp Timestamp der Letzten Buchung
 	 */
-	public java.sql.Timestamp getDatumLetzterZugangsOderAbgangsbuchung(
-			Integer artikelIId, boolean bAbgang) throws EJBExceptionLP {
+	public java.sql.Timestamp getDatumLetzterZugangsOderAbgangsbuchung(Integer artikelIId, boolean bAbgang)
+			throws EJBExceptionLP {
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null"));
 		}
 		java.sql.Timestamp tsZeit = null;
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class);
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID,
-				artikelIId));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
-				Helper.boolean2Short(bAbgang)));
-		crit.add(Restrictions.gt(LagerFac.FLR_LAGERBEWEGUNG_N_MENGE,
-				new BigDecimal(0)));
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class);
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID, artikelIId));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG, Helper.boolean2Short(bAbgang)));
+		crit.add(Restrictions.gt(LagerFac.FLR_LAGERBEWEGUNG_N_MENGE, new BigDecimal(0)));
 		crit.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
 		crit.setMaxResults(1);
 		List<?> resultList = crit.list();
 
 		if (resultList.size() > 0) {
 			Iterator<?> resultListIterator = resultList.iterator();
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-					.next();
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 			tsZeit = new Timestamp(lagerbewegung.getT_buchungszeit().getTime());
 		}
 		session.close();
@@ -8261,8 +7690,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	public Integer getLetzteWEP_IID(Integer artikelIId) {
 		if (artikelIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null"));
 		}
 
@@ -8270,26 +7698,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class);
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID,
-				artikelIId));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR,
-				LocaleFac.BELEGART_BESTELLUNG));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
-				Helper.boolean2Short(false)));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-				Helper.boolean2Short(false)));
-		crit.add(Restrictions.gt(LagerFac.FLR_LAGERBEWEGUNG_N_MENGE,
-				new BigDecimal(0)));
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class);
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID, artikelIId));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, LocaleFac.BELEGART_BESTELLUNG));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG, Helper.boolean2Short(false)));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)));
+		crit.add(Restrictions.gt(LagerFac.FLR_LAGERBEWEGUNG_N_MENGE, new BigDecimal(0)));
 		crit.addOrder(Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
 		crit.setMaxResults(1);
 		List<?> resultList = crit.list();
 
 		if (resultList.size() > 0) {
 			Iterator<?> resultListIterator = resultList.iterator();
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-					.next();
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 			wepIId = lagerbewegung.getI_belegartpositionid();
 		}
 		session.close();
@@ -8299,37 +7720,29 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	/**
 	 * Gibt die Menge eines bestimmten Artikels (Charegen oder
-	 * Seriennummernbehaftet) auf einem bestimmten Lager zu zurueckgeliefert.
-	 * Wenn ein Artikel nicht Lagerbewirtschaftet ist, dann wird 2086712345
+	 * Seriennummernbehaftet) auf einem bestimmten Lager zu zurueckgeliefert. Wenn
+	 * ein Artikel nicht Lagerbewirtschaftet ist, dann wird 2086712345
 	 * zurueckgegeben
 	 * 
-	 * @param artikelIId
-	 *            Integer 78
-	 * @param lagerIId
-	 *            Integer 63
-	 * @param cSeriennrchargennr
-	 *            String 435KN68
-	 * @param theClientDto
-	 *            User-ID
+	 * @param artikelIId         Integer 78
+	 * @param lagerIId           Integer 63
+	 * @param cSeriennrchargennr String 435KN68
+	 * @param theClientDto       User-ID
 	 * @return Double Menge
-	 * @throws EJBExceptionLP
-	 *             artikelIId==null oder lagerIId==null oder (serienNr != null
-	 *             && chargenNr != null)
+	 * @throws EJBExceptionLP artikelIId==null oder lagerIId==null oder (serienNr !=
+	 *                        null && chargenNr != null)
 	 */
-	public BigDecimal getMengeAufLager(Integer artikelIId, Integer lagerIId,
-			String cSeriennrchargennr, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public BigDecimal getMengeAufLager(Integer artikelIId, Integer lagerIId, String cSeriennrchargennr,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (artikelIId == null || lagerIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("artikelIId == null || lagerIId == null"));
 		}
 		boolean lagerbewirtschaftet = true;
 		Artikel artikel = em.find(Artikel.class, artikelIId);
 		if (artikel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		if (Helper.short2boolean(artikel.getBLagerbewirtschaftet()) == false) {
@@ -8338,32 +7751,26 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		// Wenn Artikel Snr/Chargennummerbehaftet ist, dann muss Seriennummer
 		// angegeben werden
-		if (artikel.getBChargennrtragend().intValue() == 1
-				|| artikel.getBSeriennrtragend().intValue() == 1) {
+		if (artikel.getBChargennrtragend().intValue() == 1 || artikel.getBSeriennrtragend().intValue() == 1) {
 			if (cSeriennrchargennr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-						new Exception("cSeriennrchargennr == null"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+						new Exception("cSeriennrchargennr == null (ArtikelNr " + artikel.getCNr() + ")"));
 			}
 		}
 
 		// Wenn Artikel nicht Snr/Chargennummerbehaftet ist, dann darf keine
 		// Seriennummer angegeben werden
-		if (artikel.getBChargennrtragend().intValue() != 1
-				&& artikel.getBSeriennrtragend().intValue() != 1) {
+		if (artikel.getBChargennrtragend().intValue() != 1 && artikel.getBSeriennrtragend().intValue() != 1) {
 			if (cSeriennrchargennr != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER,
-						new Exception(
-								"SERIENNUMMER_CHARGENNUMMER_DARF_NICHT_ANGEGEBEN_WERDEN"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+						"SERIENNUMMER_CHARGENNUMMER_DARF_NICHT_ANGEGEBEN_WERDEN: ArtikelNr " + artikel.getCNr()));
 			}
 		}
 
 		if (lagerbewirtschaftet == true) {
 			BigDecimal mengeAufLager = null;
 			if (cSeriennrchargennr == null) {
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager == null) {
 					mengeAufLager = new BigDecimal(0);
 				} else {
@@ -8371,14 +7778,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				}
 			} else {
 				mengeAufLager = new BigDecimal(0);
-				SeriennrChargennrAufLagerDto[] snrDtos = getAllSerienChargennrAufLagerInfoDtos(
-						artikelIId, lagerIId, cSeriennrchargennr, true, null,
-						theClientDto);
+				SeriennrChargennrAufLagerDto[] snrDtos = getAllSerienChargennrAufLagerInfoDtos(artikelIId, lagerIId,
+						cSeriennrchargennr, true, null, theClientDto);
 				for (int i = 0; i < snrDtos.length; i++) {
-					if (cSeriennrchargennr.equals(snrDtos[i]
-							.getCSeriennrChargennr())) {
-						mengeAufLager = snrDtos[i].getNMenge();
-						break;
+					if (cSeriennrchargennr.equals(snrDtos[i].getCSeriennrChargennr())) {
+						mengeAufLager = mengeAufLager.add(snrDtos[i].getNMenge());
+						// Aufgrund SP9509 auskommentiert
+						//break;
 					}
 				}
 
@@ -8391,71 +7797,41 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Liefert die Buchungsnummer einer Lagerbewegung zurueck
+	 * Gibt den Deckungsbeitrag einer Belegartposition zurueck (Pro Mengeneinheit)
+	 * Errechnet sich aus VK-Preis - EK- Preis.
 	 * 
-	 * @param lagerbewegungIId
-	 *            Integer 83
-	 * @throws EJBExceptionLP
-	 *             lagerbewegungIId==null
-	 * @return Integer Buchungsnummer
-	 */
-	private Integer getBuchungsNrUeberId(Integer lagerbewegungIId)
-			throws EJBExceptionLP {
-		if (lagerbewegungIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("lagerbewegungIId == null"));
-		}
-		return lagerbewegungFindIIdBuchungByIId(lagerbewegungIId);
-	}
-
-	/**
-	 * Gibt den Deckungsbeitrag einer Belegartposition zurueck (Pro
-	 * Mengeneinheit) Errechnet sich aus VK-Preis - EK- Preis.
-	 * 
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartpositionIId
-	 *            Integer
-	 * @param cSeriennrChargennr
-	 *            SNR/CHARGENNUMMER
+	 * @param belegartCNr         String
+	 * @param belegartpositionIId Integer
+	 * @param cSeriennrChargennr  SNR/CHARGENNUMMER
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal getDeckungsbeitrag(String belegartCNr,
-			Integer belegartpositionIId, String cSeriennrChargennr)
+	public BigDecimal getDeckungsbeitrag(String belegartCNr, Integer belegartpositionIId, String cSeriennrChargennr)
 			throws EJBExceptionLP {
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId ==null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId ==null"));
 		}
 		/** @todo Testen und reparieren PJ 4369 */
 
-		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr,
-				belegartpositionIId, cSeriennrChargennr);
+		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId, cSeriennrChargennr);
 		// Hole alle Urspruenge
-		LagerabgangursprungDto[] alleUrspruenge = lagerabgangursprungFindByLagerbewegungIIdBuchung(lagerbewegungDto
-				.getIIdBuchung());
+		LagerabgangursprungDto[] alleUrspruenge = lagerabgangursprungFindByLagerbewegungIIdBuchung(
+				lagerbewegungDto.getIIdBuchung());
 		BigDecimal deckungsbeitrag = new BigDecimal(0);
 		for (int i = 0; i < alleUrspruenge.length; i++) {
-			LagerbewegungDto ursprung = getJuengsteBuchungEinerBuchungsNummer(alleUrspruenge[i]
-					.getILagerbewegungidursprung());
+			LagerbewegungDto ursprung = getJuengsteBuchungEinerBuchungsNummer(
+					alleUrspruenge[i].getILagerbewegungidursprung());
 
 			BigDecimal vkpreis = null;
-			vkpreis = lagerbewegungDto.getNVerkaufspreis().multiply(
-					alleUrspruenge[i].getNVerbrauchtemenge());
+			vkpreis = lagerbewegungDto.getNVerkaufspreis().multiply(alleUrspruenge[i].getNVerbrauchtemenge());
 			BigDecimal ekpreis = null;
-			ekpreis = ursprung.getNEinstandspreis().multiply(
-					alleUrspruenge[i].getNVerbrauchtemenge());
+			ekpreis = ursprung.getNEinstandspreis().multiply(alleUrspruenge[i].getNVerbrauchtemenge());
 			deckungsbeitrag = deckungsbeitrag.add(vkpreis.subtract(ekpreis));
 
 		}
 		if (lagerbewegungDto.getNMenge().doubleValue() != 0) {
-			deckungsbeitrag = deckungsbeitrag
-					.divide(lagerbewegungDto.getNMenge(), 4,
-							BigDecimal.ROUND_HALF_EVEN);
+			deckungsbeitrag = deckungsbeitrag.divide(lagerbewegungDto.getNMenge(), 4, BigDecimal.ROUND_HALF_EVEN);
 		} else {
 			deckungsbeitrag = new BigDecimal(0);
 		}
@@ -8466,8 +7842,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			String belegartCNr, Integer belegartpositionIId) {
 
 		List<SeriennrChargennrMitMengeDto> list = new ArrayList<SeriennrChargennrMitMengeDto>();
-		Query query = em
-				.createNamedQuery("LagerbewegungejbSelectAllSeriennrchargennr");
+		Query query = em.createNamedQuery("LagerbewegungejbSelectAllSeriennrchargennr");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartpositionIId);
 
@@ -8485,7 +7860,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				} else {
 					dto.setCVersion("");
 				}
-
+				dto.setGebindeIId(lagerbewegung.getGebindeIId());
+				dto.setNGebindemenge(lagerbewegung.getNGebindemenge());
+				dto.setTBuchungszeit(lagerbewegung.getTBuchungszeit());
 				list.add(dto);
 			}
 		}
@@ -8494,18 +7871,51 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Bringt den Gemittelten Gestehungspreis einer Abgangsposition zurueck,
-	 * wenn diese mehrere Seriennummernpositionen enthaelt
+	 * Bringt den Gemittelten Gestehungspreis einer Abgangsposition zurueck, wenn
+	 * diese mehrere Seriennummernpositionen enthaelt
 	 * 
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartpositionIId
-	 *            Integer
+	 * @param belegartCNr         String
+	 * @param belegartpositionIId Integer
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal getGemittelterGestehungspreisEinerAbgangsposition(
-			String belegartCNr, Integer belegartpositionIId)
+	public BigDecimal getGemittelterGestehungspreisEinerAbgangsposition(String belegartCNr, Integer belegartpositionIId)
+			throws EJBExceptionLP {
+
+		BigDecimal gemittelterGestPreis = new BigDecimal(0);
+
+		List<SeriennrChargennrMitMengeDto> snrs = getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+				belegartCNr, belegartpositionIId, false);
+		if (snrs == null) {
+			snrs = new ArrayList<SeriennrChargennrMitMengeDto>();
+			SeriennrChargennrMitMengeDto s = new SeriennrChargennrMitMengeDto();
+			snrs.add(s);
+		}
+
+		for (int i = 0; i < snrs.size(); i++) {
+
+			gemittelterGestPreis = gemittelterGestPreis
+					.add(getGestehungspreisEinerAbgangsposition(belegartCNr, belegartpositionIId,
+							snrs.get(i).getCSeriennrChargennr(), snrs.get(i).getLagerbewegungIIdLetzteintrag()));
+		}
+		if (snrs.size() != 0) {
+			gemittelterGestPreis = gemittelterGestPreis.divide(new BigDecimal((double) snrs.size()),
+					BigDecimal.ROUND_HALF_EVEN);
+		}
+
+		return Helper.rundeKaufmaennisch(gemittelterGestPreis, 4);
+	}
+
+	/**
+	 * Bringt den Gemittelten Gestehungspreis einer Abgangsposition zurueck, wenn
+	 * diese mehrere Seriennummernpositionen enthaelt
+	 * 
+	 * @param belegartCNr         String
+	 * @param belegartpositionIId Integer
+	 * @return BigDecimal
+	 * @throws EJBExceptionLP
+	 */
+	public BigDecimal getGemittelterEinstandspreisEinerZugangsposition(String belegartCNr, Integer belegartpositionIId)
 			throws EJBExceptionLP {
 
 		BigDecimal gemittelterGestPreis = new BigDecimal(0);
@@ -8521,175 +7931,146 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		for (int i = 0; i < snrs.size(); i++) {
 
 			gemittelterGestPreis = gemittelterGestPreis
-					.add(getGestehungspreisEinerAbgangsposition(belegartCNr,
-							belegartpositionIId, snrs.get(i)
-									.getCSeriennrChargennr()));
+					.add(getEinstandspreis(belegartCNr, belegartpositionIId, snrs.get(i).getCSeriennrChargennr()));
 		}
 		if (snrs.size() != 0) {
-			gemittelterGestPreis = gemittelterGestPreis.divide(new BigDecimal(
-					(double) snrs.size()), BigDecimal.ROUND_HALF_EVEN);
+			gemittelterGestPreis = gemittelterGestPreis.divide(new BigDecimal((double) snrs.size()),
+					BigDecimal.ROUND_HALF_EVEN);
 		}
 
 		return Helper.rundeKaufmaennisch(gemittelterGestPreis, 4);
 	}
 
 	/**
-	 * Bringt den Gemittelten Gestehungspreis einer Abgangsposition zurueck,
-	 * wenn diese mehrere Seriennummernpositionen enthaelt
+	 * Gibt den Gestehungspreis einer Belegartposition zurueck (Pro Mengeneinheit)
+	 * Gestehungspreisabfrage kann nur fuer Ausgangbelege abgefragt werden.
 	 * 
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartpositionIId
-	 *            Integer
-	 * @return BigDecimal
-	 * @throws EJBExceptionLP
-	 */
-	public BigDecimal getGemittelterEinstandspreisEinerZugangsposition(
-			String belegartCNr, Integer belegartpositionIId)
-			throws EJBExceptionLP {
-
-		BigDecimal gemittelterGestPreis = new BigDecimal(0);
-
-		List<SeriennrChargennrMitMengeDto> snrs = getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
-				belegartCNr, belegartpositionIId);
-		if (snrs == null) {
-			snrs = new ArrayList<SeriennrChargennrMitMengeDto>();
-			SeriennrChargennrMitMengeDto s = new SeriennrChargennrMitMengeDto();
-			snrs.add(s);
-		}
-
-		for (int i = 0; i < snrs.size(); i++) {
-
-			gemittelterGestPreis = gemittelterGestPreis.add(getEinstandspreis(
-					belegartCNr, belegartpositionIId, snrs.get(i)
-							.getCSeriennrChargennr()));
-		}
-		if (snrs.size() != 0) {
-			gemittelterGestPreis = gemittelterGestPreis.divide(new BigDecimal(
-					(double) snrs.size()), BigDecimal.ROUND_HALF_EVEN);
-		}
-
-		return Helper.rundeKaufmaennisch(gemittelterGestPreis, 4);
-	}
-
-	/**
-	 * Gibt den Gestehungspreis einer Belegartposition zurueck (Pro
-	 * Mengeneinheit) Gestehungspreisabfrage kann nur fuer Ausgangbelege
-	 * abgefragt werden.
-	 * 
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartpositionIId
-	 *            Integer
-	 * @param cSeriennrChargennr
-	 *            SNR/CHARGENNUMMER
+	 * @param belegartCNr         String
+	 * @param belegartpositionIId Integer
+	 * @param cSeriennrChargennr  SNR/CHARGENNUMMER
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public BigDecimal getGestehungspreisEinerAbgangsposition(
-			String belegartCNr, Integer belegartpositionIId,
+	public BigDecimal getGestehungspreisEinerAbgangsposition(String belegartCNr, Integer belegartpositionIId,
 			String cSeriennrChargennr) throws EJBExceptionLP {
-		return getGestehungspreisEinerAbgangsposition(belegartCNr,
-				belegartpositionIId, cSeriennrChargennr, 0);
+		return getGestehungspreisEinerAbgangsposition(belegartCNr, belegartpositionIId, cSeriennrChargennr, 0, null);
 	}
 
-	public BigDecimal getGestehungspreisEinerAbgangspositionMitTransaktion(
-			String belegartCNr, Integer belegartpositionIId,
-			String cSeriennrChargennr) throws EJBExceptionLP {
-		return getGestehungspreisEinerAbgangsposition(belegartCNr,
-				belegartpositionIId, cSeriennrChargennr, 0);
+	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public BigDecimal getGestehungspreisEinerAbgangsposition(String belegartCNr, Integer belegartpositionIId,
+			String cSeriennrChargennr, Integer lagerbewegungIIdLetzteintrag) throws EJBExceptionLP {
+		return getGestehungspreisEinerAbgangsposition(belegartCNr, belegartpositionIId, cSeriennrChargennr, 0,
+				lagerbewegungIIdLetzteintrag);
 	}
 
-	private BigDecimal getGestehungspreisEinerAbgangsposition(
-			String belegartCNr, Integer belegartpositionIId,
-			String cSeriennrChargennr, int durchlauf) throws EJBExceptionLP {
+	public BigDecimal getGestehungspreisEinerAbgangspositionMitTransaktion(String belegartCNr,
+			Integer belegartpositionIId, String cSeriennrChargennr) throws EJBExceptionLP {
+		return getGestehungspreisEinerAbgangsposition(belegartCNr, belegartpositionIId, cSeriennrChargennr, 0, null);
+	}
+
+	private BigDecimal getGestehungspreisEinerAbgangsposition(String belegartCNr, Integer belegartpositionIId,
+			String cSeriennrChargennr, int durchlauf, Integer lagerbewegungIIdLetzteintrag) throws EJBExceptionLP {
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId == null"));
 		}
-		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr,
-				belegartpositionIId, cSeriennrChargennr);
+
+		LagerbewegungDto lagerbewegungDto = null;
+
+		if (lagerbewegungIIdLetzteintrag != null) {
+			lagerbewegungDto = assembleLagerbewegungDto(em.find(Lagerbewegung.class, lagerbewegungIIdLetzteintrag));
+		} else {
+			lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId, cSeriennrChargennr);
+		}
 
 		if (lagerbewegungDto == null) {
 
-			System.out.println("Belegart=" + belegartCNr + " Position="
-					+ belegartpositionIId + " /SnrChnr=" + cSeriennrChargennr);
+			System.out.println(
+					"Belegart=" + belegartCNr + " Position=" + belegartpositionIId + " /SnrChnr=" + cSeriennrChargennr);
 			return new BigDecimal(0);
 		}
 
 		if (Helper.short2boolean(lagerbewegungDto.getBAbgang()) == false) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.ARTIKEL_GESTEHUNGSPREISABFRAGE_NUR_FUER_WARENABGAENGE_MOEGLICH,
-					new Exception(
-							"Helper.short2boolean(lagerbewegungDto.getBAbgang())==false && belegartCNr="
-									+ belegartCNr + ", belegartpositionIId="
-									+ belegartpositionIId));
+			throw new EJBExceptionLP(EJBExceptionLP.ARTIKEL_GESTEHUNGSPREISABFRAGE_NUR_FUER_WARENABGAENGE_MOEGLICH,
+					new Exception("Helper.short2boolean(lagerbewegungDto.getBAbgang())==false && belegartCNr="
+							+ belegartCNr + ", belegartpositionIId=" + belegartpositionIId));
 		}
 
 		// Hole alle Urspruenge
-		LagerabgangursprungDto[] alleUrspruenge = lagerabgangursprungFindByLagerbewegungIIdBuchung(lagerbewegungDto
-				.getIIdBuchung());
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT l FROM FLRLagerabgangursprung l WHERE l.compId.i_lagerbewegungid="
+				+ lagerbewegungDto.getIIdBuchung();
+
+		org.hibernate.Query hQuery = session.createQuery(sQuery);
+
+		List<?> results = hQuery.list();
+		Iterator<?> resultListIterator = results.iterator();
+
 		BigDecimal gestehungspreis = new BigDecimal(0);
 
-		// Wenn kein Ursprung vorhanden, dann kommt der Gestehungspreis aus der
-		// Buchung selbst
-		if (alleUrspruenge.length == 0) {
+		Artikel artikel = em.find(Artikel.class, lagerbewegungDto.getArtikelIId());
 
-			gestehungspreis = lagerbewegungDto.getNGestehungspreis().multiply(
-					lagerbewegungDto.getNMenge());
+		// Wenn kein Ursprung vorhanden, dann kommt der Gestehungspreis aus der
+		// Buchung selbst //SP5566 oder nicht Lagerbewirtschaftet
+		if (results.size() == 0 || !Helper.short2boolean(artikel.getBLagerbewirtschaftet())) {
+
+			gestehungspreis = lagerbewegungDto.getNGestehungspreis().multiply(lagerbewegungDto.getNMenge());
 
 		} else {
 			// Wenn Urspruenge vorhanden, dann kommt der Gestehungspreis aus
 			// diesen
-			for (int i = 0; i < alleUrspruenge.length; i++) {
+			while (resultListIterator.hasNext()) {
+				FLRLagerabgangursprung flrLagerabgangursprung = (FLRLagerabgangursprung) resultListIterator.next();
 
-				LagerbewegungDto ursprung = getJuengsteBuchungEinerBuchungsNummer(alleUrspruenge[i]
-						.getILagerbewegungidursprung());
+				LagerbewegungDto ursprung = getJuengsteBuchungEinerBuchungsNummer(
+						flrLagerabgangursprung.getCompId().getI_lagerbewegungidursprung());
 
-				try {
-					Query query = em
-							.createNamedQuery("LagerzugangursprungfindIIdBuchungsursprungByILagerbewegungid");
-					query.setParameter(1,
-							alleUrspruenge[i].getILagerbewegungidursprung());
-					Lagerzugangursprung lagerzugangursprung = (Lagerzugangursprung) query
-							.getSingleResult();
-					ursprung = getJuengsteBuchungEinerBuchungsNummer(lagerzugangursprung
-							.getPk().getILagerbewegungidursprung());
+				//PJ22523
+				LagerDto lagerDto=lagerFindByPrimaryKey(ursprung.getLagerIId());
+				if(Helper.short2boolean(lagerDto.getBKonsignationslager())) {
+					continue;
+				}
+				
+				Session sessionZugang = FLRSessionFactory.getFactory().openSession();
+				String sQueryZugang = "SELECT l FROM FLRLagerzugangursprung l WHERE l.compId.i_lagerbewegungid="
+						+ flrLagerabgangursprung.getCompId().getI_lagerbewegungidursprung();
+
+				org.hibernate.Query hQueryZugang = sessionZugang.createQuery(sQueryZugang);
+				List<?> resultsZugang = hQueryZugang.list();
+				Iterator<?> resultListIteratorZugang = resultsZugang.iterator();
+
+				
+				
+				
+				if (resultsZugang.size() == 0) {
+					gestehungspreis = gestehungspreis.add(flrLagerabgangursprung.getN_gestehungspreis()
+							.multiply(flrLagerabgangursprung.getN_verbrauchtemenge()));
+				} else {
+
+					FLRLagerzugangursprung zugangsursprung = (FLRLagerzugangursprung) resultListIteratorZugang.next();
+
+					ursprung = getJuengsteBuchungEinerBuchungsNummer(
+							zugangsursprung.getCompId().getI_lagerbewegungidursprung());
 					if (durchlauf < 10) {
 						durchlauf++;
 						gestehungspreis = gestehungspreis
-								.add(getGestehungspreisEinerAbgangsposition(
-										ursprung.getCBelegartnr(),
-										ursprung.getIBelegartpositionid(),
-										cSeriennrChargennr, durchlauf)
-										.multiply(
-												alleUrspruenge[i]
-														.getNVerbrauchtemenge()));
+								.add(getGestehungspreisEinerAbgangsposition(ursprung.getCBelegartnr(),
+										ursprung.getIBelegartpositionid(), cSeriennrChargennr, durchlauf, null)
+												.multiply(flrLagerabgangursprung.getN_verbrauchtemenge()));
 
 					} else {
-						gestehungspreis = gestehungspreis.add(alleUrspruenge[i]
-								.getNGestehungspreis().multiply(
-										alleUrspruenge[i]
-												.getNVerbrauchtemenge()));
+						gestehungspreis = gestehungspreis.add(flrLagerabgangursprung.getN_gestehungspreis()
+								.multiply(flrLagerabgangursprung.getN_verbrauchtemenge()));
 					}
-
-				} catch (NoResultException ex) {
-					gestehungspreis = gestehungspreis.add(alleUrspruenge[i]
-							.getNGestehungspreis().multiply(
-									alleUrspruenge[i].getNVerbrauchtemenge()));
-
 				}
 
 			}
 		}
 
 		if (lagerbewegungDto.getNMenge().doubleValue() != 0) {
-			gestehungspreis = gestehungspreis
-					.divide(lagerbewegungDto.getNMenge(), 4,
-							BigDecimal.ROUND_HALF_EVEN);
+			gestehungspreis = gestehungspreis.divide(lagerbewegungDto.getNMenge(), 4, BigDecimal.ROUND_HALF_EVEN);
 		} else {
 			gestehungspreis = new BigDecimal(0);
 		}
@@ -8702,33 +8083,26 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Belegartposition gebucht worden ist Wenn Seriennummern/Chargennummern
 	 * behaftet, dann die Summe aller Snrs/Chargennummern
 	 * 
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartpositionIId
-	 *            Integer
+	 * @param belegartCNr         String
+	 * @param belegartpositionIId Integer
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal getMengeEinerBelegposition(String belegartCNr,
-			Integer belegartpositionIId, java.sql.Timestamp tStichtag)
-			throws EJBExceptionLP {
+	public BigDecimal getMengeEinerBelegposition(String belegartCNr, Integer belegartpositionIId,
+			java.sql.Timestamp tStichtag) throws EJBExceptionLP {
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId == null"));
 		}
 
 		BigDecimal mengeGesamt = new BigDecimal(0);
 		String queryString = "SELECT sum(l.n_menge) FROM FLRLagerbewegung l WHERE l.b_historie=0 AND l.c_belegartnr='"
-				+ belegartCNr
-				+ "' AND l.i_belegartpositionid="
-				+ belegartpositionIId;
+				+ belegartCNr + "' AND l.i_belegartpositionid=" + belegartpositionIId;
 
 		if (tStichtag != null) {
-			queryString += " AND l.t_buchungszeit<='"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(Helper
-							.cutTimestamp(tStichtag).getTime())) + "'";
+			// Aufgrund von PJ19811 wird nun das Belegdatum anstatt der
+			// Buchungszeit verwendet (SP5317 -> Uhrzeitgenau)
+			queryString += " AND l.t_belegdatum<='" + Helper.formatTimestampWithSlashes(tStichtag) + "'";
 		}
 
 		Session session = FLRSessionFactory.getFactory().openSession();
@@ -8749,27 +8123,24 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		 * List<SeriennrChargennrMitMengeDto> allSnrs =
 		 * getAllSeriennrchargennrEinerBelegartposition( belegartCNr,
 		 * belegartpositionIId); if (allSnrs == null) { allSnrs = new
-		 * ArrayList<SeriennrChargennrMitMengeDto>();
-		 * SeriennrChargennrMitMengeDto s = new SeriennrChargennrMitMengeDto();
-		 * allSnrs.add(s); } BigDecimal mengeGesamt = new BigDecimal(0); for
-		 * (int i = 0; i < allSnrs.size(); i++) { LagerbewegungDto
-		 * lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId,
-		 * allSnrs.get(i).getCSeriennrChargennr());
+		 * ArrayList<SeriennrChargennrMitMengeDto>(); SeriennrChargennrMitMengeDto s =
+		 * new SeriennrChargennrMitMengeDto(); allSnrs.add(s); } BigDecimal mengeGesamt
+		 * = new BigDecimal(0); for (int i = 0; i < allSnrs.size(); i++) {
+		 * LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr,
+		 * belegartpositionIId, allSnrs.get(i).getCSeriennrChargennr());
 		 * 
 		 * if (tStichtag == null ||
 		 * tStichtag.after(lagerbewegungDto.getTBuchungszeit())) { mengeGesamt =
-		 * mengeGesamt.add(lagerbewegungDto.getNMenge()); } } return
-		 * mengeGesamt;
+		 * mengeGesamt.add(lagerbewegungDto.getNMenge()); } } return mengeGesamt;
 		 */
 	}
 
-	public BigDecimal getEinstandsWertEinesBeleges(String belegartCNr,
-			Integer belegartIId, String sArtikelartI, TheClientDto theClientDto) {
+	public BigDecimal getEinstandsWertEinesBeleges(String belegartCNr, Integer belegartIId, String sArtikelartI,
+			TheClientDto theClientDto) {
 
 		BigDecimal bdEinstandswert = BigDecimal.ZERO;
 		if (belegartCNr == null || belegartIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("belegartCNr == null || belegartIId ==null"));
 		}
 
@@ -8798,18 +8169,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					// Einstandspreis ist Lief1Preis
 					LagerbewegungDto bew = getJuengsteBuchungEinerBuchungsNummer(i_id_buchung);
 					if (bew != null) {
-						ArtikellieferantDto alDto = getArtikelFac()
-								.getArtikelEinkaufspreis(
-										bew.getArtikelIId(),
-										null,
-										bew.getNMenge(),
-										theClientDto.getSMandantenwaehrung(),
-										new java.sql.Date(bew.getTBelegdatum()
-												.getTime()), theClientDto);
+						ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(bew.getArtikelIId(), null,
+								bew.getNMenge(), theClientDto.getSMandantenwaehrung(),
+								new java.sql.Date(bew.getTBelegdatum().getTime()), theClientDto);
 						if (alDto != null && alDto.getNNettopreis() != null) {
-							bdEinstandswert = bdEinstandswert
-									.add(alDto.getNNettopreis().multiply(
-											bew.getNMenge()));
+							bdEinstandswert = bdEinstandswert.add(alDto.getNNettopreis().multiply(bew.getNMenge()));
 						}
 
 					}
@@ -8817,11 +8181,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			} else {
 				if (!artikelart.equals(ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
 
-					BigDecimal einstandswertPosition = getEinstandspreis(
-							belegartCNr, belegpositionIId, snrChnr);
+					BigDecimal einstandswertPosition = getEinstandspreis(belegartCNr, belegpositionIId, snrChnr);
 					if (einstandswertPosition != null) {
-						bdEinstandswert = bdEinstandswert
-								.add(einstandswertPosition);
+						bdEinstandswert = bdEinstandswert.add(einstandswertPosition);
 
 					}
 				}
@@ -8834,33 +8196,25 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Gibt den Einstandspreis einer Belegartposition zurueck (Pro
-	 * Mengeneinheit)
+	 * Gibt den Einstandspreis einer Belegartposition zurueck (Pro Mengeneinheit)
 	 * 
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartpositionIId
-	 *            Integer
-	 * @param cSeriennrChargennr
-	 *            SNR/CHARGENNUMMER
+	 * @param belegartCNr         String
+	 * @param belegartpositionIId Integer
+	 * @param cSeriennrChargennr  SNR/CHARGENNUMMER
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal getEinstandspreis(String belegartCNr,
-			Integer belegartpositionIId, String cSeriennrChargennr)
+	public BigDecimal getEinstandspreis(String belegartCNr, Integer belegartpositionIId, String cSeriennrChargennr)
 			throws EJBExceptionLP {
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId ==null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId ==null"));
 		}
 		// Hole Menge
-		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr,
-				belegartpositionIId, cSeriennrChargennr);
+		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId, cSeriennrChargennr);
 		// Hole alle Urspruenge
-		LagerabgangursprungDto[] alleUrspruenge = lagerabgangursprungFindByLagerbewegungIIdBuchung(lagerbewegungDto
-				.getIIdBuchung());
+		LagerabgangursprungDto[] alleUrspruenge = lagerabgangursprungFindByLagerbewegungIIdBuchung(
+				lagerbewegungDto.getIIdBuchung());
 		BigDecimal einstandspreis = new BigDecimal(0);
 
 		if (alleUrspruenge.length == 0) {
@@ -8869,12 +8223,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			for (int i = 0; i < alleUrspruenge.length; i++) {
 
-				LagerbewegungDto ursprung = getJuengsteBuchungEinerBuchungsNummer(alleUrspruenge[i]
-						.getILagerbewegungidursprung());
+				LagerbewegungDto ursprung = getJuengsteBuchungEinerBuchungsNummer(
+						alleUrspruenge[i].getILagerbewegungidursprung());
 
-				einstandspreis = einstandspreis.add(ursprung
-						.getNEinstandspreis().multiply(
-								alleUrspruenge[i].getNVerbrauchtemenge()));
+				einstandspreis = einstandspreis
+						.add(ursprung.getNEinstandspreis().multiply(alleUrspruenge[i].getNVerbrauchtemenge()));
 			}
 		}
 
@@ -8882,38 +8235,28 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Liefert die Lagerzugangs- Buchungsnummer(n) zurueck, von denen Material
-	 * fuer den gewuenschten Lagerabgang verwendet word. Derzeit wird nach dem
-	 * FIFO- Prinzip Ware ausgeliefert.
+	 * Liefert die Lagerzugangs- Buchungsnummer(n) zurueck, von denen Material fuer
+	 * den gewuenschten Lagerabgang verwendet word. Derzeit wird nach dem FIFO-
+	 * Prinzip Ware ausgeliefert.
 	 * 
-	 * @param artikelIId
-	 *            4711
-	 * @param lagerIId
-	 *            7
-	 * @param cSeriennrchargennr
-	 *            g64b7435v
-	 * @param fMenge
-	 *            18
-	 * @param theClientDto
-	 *            User
-	 * @throws EJBExceptionLP
-	 *             artikelIId == null || lagerIId == null || fMenge == null ||
-	 *             idUser == null
+	 * @param artikelIId         4711
+	 * @param lagerIId           7
+	 * @param cSeriennrchargennr g64b7435v
+	 * @param fMenge             18
+	 * @param theClientDto       User
+	 * @throws EJBExceptionLP artikelIId == null || lagerIId == null || fMenge ==
+	 *                        null || idUser == null
 	 * @return int[]
 	 */
-	private LagerabgangursprungDto[] getVonLagerNachRegel(Integer artikelIId,
-			Integer lagerIId, String cSeriennrchargennr, BigDecimal fMenge,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		if (artikelIId == null || lagerIId == null || fMenge == null
-				|| theClientDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"artikelIId == null || lagerIId == null || fMenge == null || theClientDto == null"));
+	private LagerabgangursprungDto[] getVonLagerNachRegel(Integer artikelIId, Integer lagerIId,
+			String cSeriennrchargennr, BigDecimal fMenge, TheClientDto theClientDto) throws EJBExceptionLP {
+		if (artikelIId == null || lagerIId == null || fMenge == null || theClientDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("artikelIId == null || lagerIId == null || fMenge == null || theClientDto == null"));
 		}
 
-		LagerbewegungDto[] alleZugaenge = getAlleBuchungenEinesArtikelUndEinesLagers(
-				artikelIId, lagerIId, new Short((short) 0), cSeriennrchargennr);
+		LagerbewegungDto[] alleZugaenge = getAlleBuchungenEinesArtikelUndEinesLagers(artikelIId, lagerIId,
+				new Short((short) 0), cSeriennrchargennr);
 
 		LagerbewegungDto[] alleZugaengeMitUrsprungsdatum = ursprungsDatumEintragen(alleZugaenge);
 
@@ -8922,20 +8265,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		LagerbewegungDto[] alleAbgaengeMitVerbrauchtenMengen = new LagerbewegungDto[alleAbgaenge.length];
 		for (int i = 0; i < alleAbgaenge.length; i++) {
-			double fMengeVorhanden = alleZugaengeMitUrsprungsdatum[i]
-					.getNMenge().doubleValue();
-			fMengeVorhanden = fMengeVorhanden
-					- getVerbrauchteMenge(alleAbgaenge[i].getIId())
-							.doubleValue();
+			double fMengeVorhanden = alleZugaengeMitUrsprungsdatum[i].getNMenge().doubleValue();
+			fMengeVorhanden = fMengeVorhanden - getVerbrauchteMenge(alleAbgaenge[i].getIId()).doubleValue();
 			alleAbgaengeMitVerbrauchtenMengen[i] = alleAbgaenge[i];
 			if (fMengeVorhanden < 0) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-						"FATAL_ZUVIEL_VERBRAUCHT, ARTIKEL_I_ID=" + artikelIId));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+						new Exception("FATAL_ZUVIEL_VERBRAUCHT, ARTIKEL_I_ID=" + artikelIId));
 			}
-			alleAbgaengeMitVerbrauchtenMengen[i].setNMenge(new BigDecimal(
-					fMengeVorhanden));
-			alleAbgaengeMitVerbrauchtenMengen[i].setCVersion(alleAbgaenge[i]
-					.getCVersion());
+			alleAbgaengeMitVerbrauchtenMengen[i].setNMenge(new BigDecimal(fMengeVorhanden));
+			alleAbgaengeMitVerbrauchtenMengen[i].setCVersion(alleAbgaenge[i].getCVersion());
 		}
 		LagerabgangursprungDto[] urspruenge = new LagerabgangursprungDto[alleAbgaengeMitVerbrauchtenMengen.length];
 		int zaehler = -1;
@@ -8946,37 +8284,25 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		for (int i = 0; i < alleAbgaengeMitVerbrauchtenMengen.length; i++) {
 			if (fMengeabzubuchen > 0) {
-				if (alleAbgaengeMitVerbrauchtenMengen[i].getNMenge()
-						.doubleValue() > 0) {
+				if (alleAbgaengeMitVerbrauchtenMengen[i].getNMenge().doubleValue() > 0) {
 					zaehler++;
 					urspruenge[zaehler] = new LagerabgangursprungDto();
 					urspruenge[zaehler]
-							.setILagerbewegungidursprung(alleAbgaengeMitVerbrauchtenMengen[i]
-									.getIIdBuchung());
-					urspruenge[zaehler]
-							.setVersionAusUrsprung(alleAbgaengeMitVerbrauchtenMengen[i]
-									.getCVersion());
+							.setILagerbewegungidursprung(alleAbgaengeMitVerbrauchtenMengen[i].getIIdBuchung());
+					urspruenge[zaehler].setVersionAusUrsprung(alleAbgaengeMitVerbrauchtenMengen[i].getCVersion());
 					fMengeabzubuchen = fMengeabzubuchen
-							- alleAbgaengeMitVerbrauchtenMengen[i].getNMenge()
-									.doubleValue();
+							- alleAbgaengeMitVerbrauchtenMengen[i].getNMenge().doubleValue();
 					if (fMengeabzubuchen >= 0) {
-						urspruenge[zaehler]
-								.setNVerbrauchtemenge(alleAbgaengeMitVerbrauchtenMengen[i]
-										.getNMenge());
-						LagerbewegungDto dtoTemp = lagerbewegungFindByPrimaryKey(alleAbgaengeMitVerbrauchtenMengen[i]
-								.getIId());
+						urspruenge[zaehler].setNVerbrauchtemenge(alleAbgaengeMitVerbrauchtenMengen[i].getNMenge());
+						LagerbewegungDto dtoTemp = lagerbewegungFindByPrimaryKey(
+								alleAbgaengeMitVerbrauchtenMengen[i].getIId());
 						// Lagerzugang auf "Verbraucht" setzen
-						setzteZugangsBuchungAlsVerbraucht(
-								dtoTemp.getCBelegartnr(),
-								dtoTemp.getIBelegartpositionid(),
-								dtoTemp.getCSeriennrchargennr(), theClientDto,
-								true);
+						setzteZugangsBuchungAlsVerbraucht(dtoTemp.getCBelegartnr(), dtoTemp.getIBelegartpositionid(),
+								dtoTemp.getCSeriennrchargennr(), theClientDto, true);
 
 					} else {
-						urspruenge[zaehler]
-								.setNVerbrauchtemenge(alleAbgaengeMitVerbrauchtenMengen[i]
-										.getNMenge()
-										.add(new BigDecimal(fMengeabzubuchen)));
+						urspruenge[zaehler].setNVerbrauchtemenge(
+								alleAbgaengeMitVerbrauchtenMengen[i].getNMenge().add(new BigDecimal(fMengeabzubuchen)));
 					}
 				}
 			}
@@ -8986,15 +8312,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		for (int i = 0; i < zaehler; i++) {
 			urspuengeReturn[i] = new LagerabgangursprungDto();
-			urspuengeReturn[i].setNVerbrauchtemenge(urspruenge[i]
-					.getNVerbrauchtemenge());
-			urspuengeReturn[i].setILagerbewegungidursprung(urspruenge[i]
-					.getILagerbewegungidursprung());
+			urspuengeReturn[i].setNVerbrauchtemenge(urspruenge[i].getNVerbrauchtemenge());
+			urspuengeReturn[i].setILagerbewegungidursprung(urspruenge[i].getILagerbewegungidursprung());
 			urspuengeReturn[i]
-					.setNGestehungspreis(artikellagerFindByPrimaryKey(
-							artikelIId, lagerIId).getNGestehungspreis());
-			urspuengeReturn[i].setVersionAusUrsprung(urspruenge[i]
-					.getVersionAusUrsprung());
+					.setNGestehungspreis(artikellagerFindByPrimaryKey(artikelIId, lagerIId).getNGestehungspreis());
+			urspuengeReturn[i].setVersionAusUrsprung(urspruenge[i].getVersionAusUrsprung());
 		}
 		return urspuengeReturn;
 	}
@@ -9002,24 +8324,26 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Wenn ein Lagerzugang urspruenglich aus einem Lagerabgang kam (z.B.:
 	 * Rueckschein kan aus Lieferschein), dann muss dieses urspruengliche
-	 * Lagerzugangsdatum verwendet werden, da es bei der zurueckgegebenen Ware
-	 * noch immer um diese Urspruechliche Ware handelt.
+	 * Lagerzugangsdatum verwendet werden, da es bei der zurueckgegebenen Ware noch
+	 * immer um diese Urspruechliche Ware handelt.
 	 * 
-	 * @param lagerbewegungDto
-	 *            LagerbewegungDto[]
+	 * @param lagerbewegungDto LagerbewegungDto[]
 	 * @throws EJBExceptionLP
 	 * @return LagerbewegungDto[]
 	 */
-	private LagerbewegungDto[] ursprungsDatumEintragen(
-			LagerbewegungDto[] lagerbewegungDto) throws EJBExceptionLP {
+	private LagerbewegungDto[] ursprungsDatumEintragen(LagerbewegungDto[] lagerbewegungDto) throws EJBExceptionLP {
+
+		if (lagerbewegungDto.length > 2 && isLagerzugangursprungEmpty()) {
+			return lagerbewegungDto;
+		}
 
 		for (int i = 0; i < lagerbewegungDto.length; i++) {
 			Integer idBuchung = lagerbewegungDto[i].getIIdBuchung();
 			Integer idBuchungUrsprung = null;
 
 			try {
-				idBuchungUrsprung = lagerzugangursprungFindIIdBuchungsursprungByLagerbewegungIIdBuchung(
-						idBuchung).getILagerbewegungidursprung();
+				idBuchungUrsprung = lagerzugangursprungFindIIdBuchungsursprungByLagerbewegungIIdBuchung(idBuchung)
+						.getILagerbewegungidursprung();
 			} catch (Exception e) {
 				// wir sind an der Wurzel
 			}
@@ -9027,12 +8351,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				LagerabgangursprungDto dto[] = lagerabgangursprungFindByLagerbewegungIIdBuchung(idBuchungUrsprung);
 				if (dto != null) {
 					for (int j = 0; j < dto.length; j++) {
-						LagerbewegungDto lagerbewegungDtoUrsprung = getJuengsteBuchungEinerBuchungsNummer(dto[j]
-								.getILagerbewegungid());
+						LagerbewegungDto lagerbewegungDtoUrsprung = getJuengsteBuchungEinerBuchungsNummer(
+								dto[j].getILagerbewegungid());
 						lagerbewegungDtoUrsprung.getTBuchungszeit();
-						lagerbewegungDto[i]
-								.setTBuchungszeit(lagerbewegungDtoUrsprung
-										.getTBuchungszeit());
+						lagerbewegungDto[i].setTBuchungszeit(lagerbewegungDtoUrsprung.getTBuchungszeit());
 					}
 				}
 			}
@@ -9040,50 +8362,78 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return lagerbewegungDto;
 	}
 
-	public void bucheZu(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId,
-			BigDecimal fMengeAbsolut, BigDecimal nEinstansdpreis,
-			Integer lagerIId, String cSeriennrchargennr,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto,
-			ArrayList<GeraetesnrDto> alGeraetesnr,
-			PaneldatenDto[] paneldatenDtos,
-			boolean gestehungspreisNeuKalkulieren) {
-		bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId,
-				fMengeAbsolut, nEinstansdpreis, lagerIId, cSeriennrchargennr,
-				null, tBelegdatum, theClientDto, null, null, null,
-				alGeraetesnr, paneldatenDtos, gestehungspreisNeuKalkulieren);
+	private boolean isLagerzugangursprungEmpty() {
+		Long count = LagerzugangursprungQuery.count(em);
+		if (count == null || count <= 0) {
+			return true;
+		}
+
+		return false;
 	}
 
-	public void bucheZu(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId,
-			BigDecimal fMengeAbsolut, BigDecimal nEinstansdpreis,
-			Integer lagerIId,
-			List<SeriennrChargennrMitMengeDto> alSeriennrchargennr,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto) {
-		bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId,
-				fMengeAbsolut, nEinstansdpreis, lagerIId, alSeriennrchargennr,
-				tBelegdatum, theClientDto, null, null);
+	public Map getAlleStandorte(TheClientDto theClientDto) {
+
+		LagerDto[] lagerDtos = lagerFindByMandantCNr(theClientDto.getMandant());
+
+		HashSet hsBereitsVerwendet = new HashSet();
+
+		TreeMap tm = new TreeMap();
+
+		for (int i = 0; i < lagerDtos.length; i++) {
+
+			if (lagerDtos[i].getPartnerIIdStandort() != null) {
+
+				if (!Helper.short2boolean(lagerDtos[i].getBVersteckt())) {
+
+					if (!hsBereitsVerwendet.contains(lagerDtos[i].getPartnerIIdStandort())) {
+						hsBereitsVerwendet.add((lagerDtos[i].getPartnerIIdStandort()));
+
+						PartnerDto pDto = getPartnerFac().partnerFindByPrimaryKey(lagerDtos[i].getPartnerIIdStandort(),
+								theClientDto);
+
+						tm.put(lagerDtos[i].getPartnerIIdStandort(), pDto.getCKbez());
+
+					}
+				}
+			}
+
+		}
+
+		return tm;
+
 	}
 
-	private void pruefeLagerbewegungsMengeMitSnrChnrMenge(
-			BigDecimal fMengeAbsolut,
+	public void bucheZu(String belegartCNr, Integer belegartIId, Integer belegartpositionIId, Integer artikelIId,
+			BigDecimal fMengeAbsolut, BigDecimal nEinstansdpreis, Integer lagerIId, String cSeriennrchargennr,
+			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto, ArrayList<GeraetesnrDto> alGeraetesnr,
+			PaneldatenDto[] paneldatenDtos, boolean gestehungspreisNeuKalkulieren) {
+		bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nEinstansdpreis, lagerIId,
+				cSeriennrchargennr, null, null, null, tBelegdatum, theClientDto, null, null, null, alGeraetesnr,
+				paneldatenDtos, gestehungspreisNeuKalkulieren, null);
+	}
+
+	public void bucheZu(String belegartCNr, Integer belegartIId, Integer belegartpositionIId, Integer artikelIId,
+			BigDecimal fMengeAbsolut, BigDecimal nEinstansdpreis, Integer lagerIId,
+			List<SeriennrChargennrMitMengeDto> alSeriennrchargennr, java.sql.Timestamp tBelegdatum,
+			TheClientDto theClientDto) {
+		bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nEinstansdpreis, lagerIId,
+				alSeriennrchargennr, tBelegdatum, theClientDto, null, null);
+	}
+
+	private void pruefeLagerbewegungsMengeMitSnrChnrMenge(BigDecimal fMengeAbsolut,
 			List<SeriennrChargennrMitMengeDto> alSeriennrchargennr) {
 
 		BigDecimal bdMengeSnrChnr = new BigDecimal(0);
 		if (alSeriennrchargennr != null && alSeriennrchargennr.size() > 0) {
-			if (alSeriennrchargennr.size() == 1
-					&& alSeriennrchargennr.get(0).getCSeriennrChargennr() == null) {
+			if (alSeriennrchargennr.size() == 1 && alSeriennrchargennr.get(0).getCSeriennrChargennr() == null) {
 				return;
 			}
 			for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-				bdMengeSnrChnr = bdMengeSnrChnr.add(alSeriennrchargennr.get(i)
-						.getNMenge());
+				bdMengeSnrChnr = bdMengeSnrChnr.add(alSeriennrchargennr.get(i).getNMenge());
 			}
 			if (fMengeAbsolut.doubleValue() != bdMengeSnrChnr.doubleValue()) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_MENGE_UNGLEICH,
-						new Exception(
-								"fMengeAbsolut.doubleValue()!=bdMengeSnrChnr.doubleValue()"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_MENGE_UNGLEICH,
+						new Exception("fMengeAbsolut.doubleValue()!=bdMengeSnrChnr.doubleValue()"));
 
 			}
 		}
@@ -9094,28 +8444,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		if (alSeriennrchargennr != null && alSeriennrchargennr.size() > 0) {
 
-			HashMap<String, SeriennrChargennrMitMengeDto> hmArtikel = new HashMap<String, SeriennrChargennrMitMengeDto>();
+			LinkedHashMap<String, SeriennrChargennrMitMengeDto> hmArtikel = new LinkedHashMap<String, SeriennrChargennrMitMengeDto>();
 
 			for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-				if (hmArtikel.containsKey(alSeriennrchargennr.get(i)
-						.getCSeriennrChargennr())) {
+				if (hmArtikel.containsKey(alSeriennrchargennr.get(i).getCSeriennrChargennr())) {
 					SeriennrChargennrMitMengeDto dtoTemp = hmArtikel
-							.get(alSeriennrchargennr.get(i)
-									.getCSeriennrChargennr());
-					dtoTemp.setNMenge(alSeriennrchargennr.get(i).getNMenge()
-							.add(dtoTemp.getNMenge()));
-					hmArtikel.put(alSeriennrchargennr.get(i)
-							.getCSeriennrChargennr(), dtoTemp);
+							.get(alSeriennrchargennr.get(i).getCSeriennrChargennr());
+					dtoTemp.setNMenge(alSeriennrchargennr.get(i).getNMenge().add(dtoTemp.getNMenge()));
+					hmArtikel.put(alSeriennrchargennr.get(i).getCSeriennrChargennr(), dtoTemp);
 
 				} else {
-					hmArtikel.put(alSeriennrchargennr.get(i)
-							.getCSeriennrChargennr(), alSeriennrchargennr
-							.get(i));
+					hmArtikel.put(alSeriennrchargennr.get(i).getCSeriennrChargennr(), alSeriennrchargennr.get(i));
 				}
 			}
 
-			return new ArrayList<SeriennrChargennrMitMengeDto>(
-					hmArtikel.values());
+			return new ArrayList<SeriennrChargennrMitMengeDto>(hmArtikel.values());
 
 		} else {
 			return alSeriennrchargennr;
@@ -9123,36 +8466,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void bucheZu(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId,
-			BigDecimal fMengeAbsolut, BigDecimal nEinstansdpreis,
-			Integer lagerIId,
-			List<SeriennrChargennrMitMengeDto> alSeriennrchargennr,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto,
-			String belegartCNrUrsprung, Integer belegartpositionIIdUrsprung) {
+	public void bucheZu(String belegartCNr, Integer belegartIId, Integer belegartpositionIId, Integer artikelIId,
+			BigDecimal fMengeAbsolut, BigDecimal nEinstansdpreis, Integer lagerIId,
+			List<SeriennrChargennrMitMengeDto> alSeriennrchargennr, java.sql.Timestamp tBelegdatum,
+			TheClientDto theClientDto, String belegartCNrUrsprung, Integer belegartpositionIIdUrsprung) {
 
 		Artikel artikel = em.find(Artikel.class, artikelIId);
 		// Wenn Menge >0
 		if (fMengeAbsolut.doubleValue() > 0) {
-			if (alSeriennrchargennr == null
-					|| alSeriennrchargennr.size() == 0
-					|| (alSeriennrchargennr != null
-							&& alSeriennrchargennr.size() == 1 && alSeriennrchargennr
-							.get(0).getCSeriennrChargennr() == null)) {
+			if (alSeriennrchargennr == null || alSeriennrchargennr.size() == 0 || (alSeriennrchargennr != null
+					&& alSeriennrchargennr.size() == 1 && alSeriennrchargennr.get(0).getCSeriennrChargennr() == null)) {
 				// Kein SeriennummernChargenbehafteter Artikel
-				bucheZu(belegartCNr, belegartIId, belegartpositionIId,
-						artikelIId, fMengeAbsolut, nEinstansdpreis, lagerIId,
-						null, null, tBelegdatum, theClientDto, null, null,
-						null, null, null, true);
+				bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nEinstansdpreis,
+						lagerIId, null, null, null, null, tBelegdatum, theClientDto, null, null, null, null, null, true,
+						null);
 			} else {
 
 				// SNR/CHNR verdichten, da sonst bei 2 gleichen Charge ein
 				// Update durchgefuehrt wird
 
-				pruefeLagerbewegungsMengeMitSnrChnrMenge(fMengeAbsolut,
-						alSeriennrchargennr);
+				pruefeLagerbewegungsMengeMitSnrChnrMenge(fMengeAbsolut, alSeriennrchargennr);
 
 				alSeriennrchargennr = verdichteSerienChargennummern(alSeriennrchargennr);
+
+				HashMap<String, Integer> hmLetzteintraege = getLetzteintraegeEinerBelegposition(belegartCNr,
+						belegartpositionIId);
 
 				List<SeriennrChargennrMitMengeDto> snrVorher = getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 						belegartCNr, belegartpositionIId);
@@ -9160,57 +8498,44 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 					HashMap<String, String> hmZuLoeschendeSNR = new HashMap<String, String>();
 					for (int i = 0; i < snrVorher.size(); i++) {
-						hmZuLoeschendeSNR.put(snrVorher.get(i)
-								.getCSeriennrChargennr(), snrVorher.get(i)
-								.getCSeriennrChargennr());
+						hmZuLoeschendeSNR.put(snrVorher.get(i).getCSeriennrChargennr(),
+								snrVorher.get(i).getCSeriennrChargennr());
 					}
 
 					for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-						hmZuLoeschendeSNR.remove(alSeriennrchargennr.get(i)
-								.getCSeriennrChargennr());
+						hmZuLoeschendeSNR.remove(alSeriennrchargennr.get(i).getCSeriennrChargennr());
 					}
 
 					// Alle nicht mehr eingegebenen loeschen
-					for (Iterator<?> iter = hmZuLoeschendeSNR.keySet()
-							.iterator(); iter.hasNext();) {
+					for (Iterator<?> iter = hmZuLoeschendeSNR.keySet().iterator(); iter.hasNext();) {
 						String snr2Delete = (String) iter.next();
-						bucheZu(belegartCNr, belegartIId, belegartpositionIId,
-								artikelIId,
-								new BigDecimal(0), // Menge
-								nEinstansdpreis, lagerIId, snr2Delete,
-								tBelegdatum, theClientDto, null, null, false);
+						bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, new BigDecimal(0), // Menge
+								nEinstansdpreis, lagerIId, snr2Delete, tBelegdatum, theClientDto, null, null, false);
 					}
 					for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr
-								.get(i);
+						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr.get(i);
 
 						boolean bGestpreisUpdaten = false;
 						if (alZeile.getCSeriennrChargennr() == null) {
 							bGestpreisUpdaten = true;
 						}
 
-						bucheZu(belegartCNr, belegartIId, belegartpositionIId,
-								artikelIId, alZeile.getNMenge(),
-								nEinstansdpreis, lagerIId,
-								alZeile.getCSeriennrChargennr(),
-								alZeile.getCVersion(), tBelegdatum,
-								theClientDto, null, null, null,
-								alZeile.getAlGeraetesnr(),
-								alZeile.getPaneldatenDtos(), bGestpreisUpdaten);
+						bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, alZeile.getNMenge(),
+								nEinstansdpreis, lagerIId, alZeile.getCSeriennrChargennr(), alZeile.getCVersion(),
+								alZeile.getGebindeIId(), alZeile.getNGebindemenge(), tBelegdatum, theClientDto, null,
+								null, null, alZeile.getAlGeraetesnr(), alZeile.getPaneldatenDtos(), bGestpreisUpdaten,
+								hmLetzteintraege.get(alZeile.getCSeriennrChargennr()));
 					}
 
 				} else {
+
 					for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr
-								.get(i);
-						bucheZu(belegartCNr, belegartIId, belegartpositionIId,
-								artikelIId, alZeile.getNMenge(),
-								nEinstansdpreis, lagerIId,
-								alZeile.getCSeriennrChargennr(),
-								alZeile.getCVersion(), tBelegdatum,
-								theClientDto, null, null, null,
-								alZeile.getAlGeraetesnr(),
-								alZeile.getPaneldatenDtos(), false);
+						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr.get(i);
+						bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, alZeile.getNMenge(),
+								nEinstansdpreis, lagerIId, alZeile.getCSeriennrChargennr(), alZeile.getCVersion(),
+								alZeile.getGebindeIId(), alZeile.getNGebindemenge(), tBelegdatum, theClientDto, null,
+								null, null, alZeile.getAlGeraetesnr(), alZeile.getPaneldatenDtos(), false,
+								hmLetzteintraege.get(alZeile.getCSeriennrChargennr()));
 
 					}
 				}
@@ -9222,36 +8547,33 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					|| Helper.short2boolean(artikel.getBSeriennrtragend())) {
 				List<SeriennrChargennrMitMengeDto> alSeriennrchargennrVorhanden = getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 						belegartCNr, belegartpositionIId);
+
+				HashMap<String, Integer> hmLetzteintraege = getLetzteintraegeEinerBelegposition(belegartCNr,
+						belegartpositionIId);
+
 				for (int i = 0; i < alSeriennrchargennrVorhanden.size(); i++) {
-					bucheZu(belegartCNr, belegartIId, belegartpositionIId,
-							artikelIId, fMengeAbsolut, nEinstansdpreis,
-							lagerIId, alSeriennrchargennrVorhanden.get(i)
-									.getCSeriennrChargennr(), null,
-							tBelegdatum, theClientDto, null, null, null, null,
-							null, false);
+					bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nEinstansdpreis,
+							lagerIId, alSeriennrchargennrVorhanden.get(i).getCSeriennrChargennr(), null, null, null,
+							tBelegdatum, theClientDto, null, null, null, null, null, false,
+							hmLetzteintraege.get(alSeriennrchargennrVorhanden.get(i).getCSeriennrChargennr()));
 				}
 			} else {
-				bucheZu(belegartCNr, belegartIId, belegartpositionIId,
-						artikelIId, fMengeAbsolut, nEinstansdpreis, lagerIId,
-						null, null, tBelegdatum, theClientDto, null, null,
-						null, null, null, false);
+				bucheZu(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nEinstansdpreis,
+						lagerIId, null, null, null, null, tBelegdatum, theClientDto, null, null, null, null, null,
+						false, null);
 			}
 
 		}
 
 		if (alSeriennrchargennr != null && alSeriennrchargennr.size() > 0) {
-			LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr,
-					belegartpositionIId, alSeriennrchargennr.get(0)
-							.getCSeriennrChargennr());
+			LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId,
+					alSeriennrchargennr.get(0).getCSeriennrChargennr());
 
 			if (lagerbewegungDto != null) {
-				BigDecimal preis = recalcGestehungspreisAbTermin(
-						lagerbewegungDto.getIId(), artikelIId,
-						lagerbewegungDto.getLagerIId(), tBelegdatum,
-						theClientDto);
+				BigDecimal preis = recalcGestehungspreisAbTermin(lagerbewegungDto.getIId(), artikelIId,
+						lagerbewegungDto.getLagerIId(), tBelegdatum, theClientDto);
 				if (preis != null) {
-					Artikellager artikellager = em.find(Artikellager.class,
-							new ArtikellagerPK(artikelIId, lagerIId));
+					Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 					if (artikellager != null) {
 						artikellager.setNGestehungspreis(preis);
 					}
@@ -9261,37 +8583,51 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
+	private HashMap<String, Integer> getLetzteintraegeEinerBelegposition(String belegartCNr,
+			Integer belegartpositionIId) {
+		// LetzteintraegeHolen
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT lw FROM FLRLagerwert lw WHERE lw.c_seriennrchargennr IS NOT NULL AND lw.c_belegartnr='"
+				+ belegartCNr + "' AND lw.i_belegartpositionid=" + belegartpositionIId;
+
+		org.hibernate.Query lagerwerte = session.createQuery(sQuery);
+
+		List<?> resultList = lagerwerte.list();
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		HashMap<String, Integer> hmLetzteintraege = new HashMap<String, Integer>();
+		while (resultListIterator.hasNext()) {
+
+			FLRLagerwert flrLagerwert = (FLRLagerwert) resultListIterator.next();
+			hmLetzteintraege.put(flrLagerwert.getC_seriennrchargennr(), flrLagerwert.getI_id());
+		}
+		return hmLetzteintraege;
+	}
+
 	/**
 	 * Bucht eine gewisse Menge eines Artikel von einem Quell-Lager in ein
-	 * Ziel-Lager. Wird wir Handlagerbewegung behandelt und ist dort auch
-	 * sichtbar Es ist auch m&ouml;glich, einen Quell-Artikel auf einen anderen
-	 * Ziel-Artikel zu buchen. unter WW_LAGERUMBUCHUNG ist sichtbar, welche
-	 * Handlagerabbuchung mit welcher Handlagerzubuchung zusammengehoert
+	 * Ziel-Lager. Wird wir Handlagerbewegung behandelt und ist dort auch sichtbar
+	 * Es ist auch m&ouml;glich, einen Quell-Artikel auf einen anderen Ziel-Artikel
+	 * zu buchen. unter WW_LAGERUMBUCHUNG ist sichtbar, welche Handlagerabbuchung
+	 * mit welcher Handlagerzubuchung zusammengehoert
 	 * 
-	 * @param artikelIId_Quelle
-	 *            Integer
-	 * @param lagerIId_Quelle
-	 *            Integer
-	 * @param artikelIId_Ziel
-	 *            Integer
-	 * @param lagerIId_Ziel
-	 *            Integer
+	 * @param artikelIId_Quelle           Integer
+	 * @param lagerIId_Quelle             Integer
+	 * @param artikelIId_Ziel             Integer
+	 * @param lagerIId_Ziel               Integer
 	 * @param fMengeUmzubuchen
-	 * @param alSeriennrChargennrMitMenge
-	 *            Liste der Seriennr/Chargeninfo
-	 * @param sKommentar
-	 *            Kommentar
+	 * @param alSeriennrChargennrMitMenge Liste der Seriennr/Chargeninfo
+	 * @param sKommentar                  Kommentar
 	 * @param vkpreis
-	 * @param theClientDto
-	 *            User-ID
+	 * @param theClientDto                User-ID
 	 * @throws EJBExceptionLP
 	 */
-	public void bucheUm(Integer artikelIId_Quelle, Integer lagerIId_Quelle,
-			Integer artikelIId_Ziel, Integer lagerIId_Ziel,
-			BigDecimal fMengeUmzubuchen,
-			List<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge,
-			String sKommentar, BigDecimal vkpreis, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Integer bucheUm(Integer artikelIId_Quelle, Integer lagerIId_Quelle, Integer artikelIId_Ziel,
+			Integer lagerIId_Ziel, BigDecimal fMengeUmzubuchen,
+			List<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge, String sKommentar, BigDecimal vkpreis,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		// Zuerst von Quell-Lager abbuchen
 		HandlagerbewegungDto handlagerbewegungDto_Quelle = new HandlagerbewegungDto();
 		handlagerbewegungDto_Quelle.setArtikelIId(artikelIId_Quelle);
@@ -9312,16 +8648,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 
 		if (alSeriennrChargennrMitMenge == null) {
-			alSeriennrChargennrMitMenge = SeriennrChargennrMitMengeDto
-					.erstelleDtoAusEinerChargennummer(null, fMengeUmzubuchen);
+			alSeriennrChargennrMitMenge = SeriennrChargennrMitMengeDto.erstelleDtoAusEinerChargennummer(null,
+					fMengeUmzubuchen);
 		}
 
 		handlagerbewegungDto_Quelle.setNMenge(fMengeUmzubuchen);
 		handlagerbewegungDto_Quelle.setNVerkaufspreis(vkpreis);
-		handlagerbewegungDto_Quelle
-				.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
-		Integer belegartpositionIId_Quelle = createHandlagerbewegung(
-				handlagerbewegungDto_Quelle, theClientDto);
+		handlagerbewegungDto_Quelle.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
+		Integer belegartpositionIId_Quelle = createHandlagerbewegung(handlagerbewegungDto_Quelle, theClientDto);
 
 		LagerbewegungDto[] dtosQuelle = lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
 				LocaleFac.BELEGART_HAND, belegartpositionIId_Quelle,
@@ -9333,8 +8667,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		handlagerbewegungDto_Ziel.setLagerIId(lagerIId_Ziel);
 		handlagerbewegungDto_Ziel.setBAbgang(new Short((short) 0));
 		handlagerbewegungDto_Ziel.setCKommentar(sKommentar);
-		handlagerbewegungDto_Ziel
-				.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
+		handlagerbewegungDto_Ziel.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
 		/*
 		 * handlagerbewegungDto_Ziel
 		 * .setCSeriennummerchargennummerUrsprung(alSeriennrChargennrMitMenge
@@ -9343,12 +8676,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		handlagerbewegungDto_Ziel.setNMenge(fMengeUmzubuchen);
 		handlagerbewegungDto_Ziel.setNEinstandspreis(vkpreis);
 		// Ursprung eintragen:
-		handlagerbewegungDto_Ziel
-				.setBelegartCNrUrsprung(LocaleFac.BELEGART_HAND);
-		handlagerbewegungDto_Ziel
-				.setBelegartpositionIIdUrsprung(belegartpositionIId_Quelle);
-		Integer belegartpositionIId_Ziel = createHandlagerbewegung(
-				handlagerbewegungDto_Ziel, theClientDto);
+		handlagerbewegungDto_Ziel.setBelegartCNrUrsprung(LocaleFac.BELEGART_HAND);
+		handlagerbewegungDto_Ziel.setBelegartpositionIIdUrsprung(belegartpositionIId_Quelle);
+		Integer belegartpositionIId_Ziel = createHandlagerbewegung(handlagerbewegungDto_Ziel, theClientDto);
 		LagerbewegungDto[] dtosZiel = lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
 				LocaleFac.BELEGART_HAND, belegartpositionIId_Ziel,
 				alSeriennrChargennrMitMenge.get(0).getCSeriennrChargennr());
@@ -9356,25 +8686,22 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// Buchungen zusammenhaengen, damit Zusammengehoerigkeit
 		// wiederherstellbar ist
 		LagerumbuchungDto umBuchungDto = new LagerumbuchungDto();
-		umBuchungDto
-				.setILagerbewegungidabbuchung(dtosQuelle[0].getIIdBuchung());
+		umBuchungDto.setILagerbewegungidabbuchung(dtosQuelle[0].getIIdBuchung());
 		umBuchungDto.setILagerbewegungidzubuchung(dtosZiel[0].getIIdBuchung());
 		createLagerumbuchung(umBuchungDto);
 
+		return belegartpositionIId_Ziel;
+
 	}
 
-	public void bucheUmMitAngabeDerQuelle(Integer artikelIId,
-			String belegartCNr_Quelle, Integer belegartIId_Quelle,
-			Integer belegartpositionIId_Quelle, Integer lagerIId_Quelle,
-			Integer lagerIId_Ziel, BigDecimal fMengeUmzubuchen,
-			String cSeriennrchargennr, String sKommentar,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void bucheUmMitAngabeDerQuelle(Integer artikelIId, String belegartCNr_Quelle, Integer belegartIId_Quelle,
+			Integer belegartpositionIId_Quelle, Integer lagerIId_Quelle, Integer lagerIId_Ziel,
+			BigDecimal fMengeUmzubuchen, String cSeriennrchargennr, String sKommentar, java.sql.Timestamp tBelegdatum,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// VKPreis kommt aus Artikellager
 		BigDecimal vkpreis = null;
-		Artikellager artikellager = em.find(Artikellager.class,
-				new ArtikellagerPK(artikelIId, lagerIId_Quelle));
+		Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId_Quelle));
 		if (artikellager == null) {
 			vkpreis = new BigDecimal(0);
 		} else {
@@ -9382,14 +8709,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 
 		// Zuerst von der Quelle abbuchen
-		bucheAb(belegartCNr_Quelle, belegartIId_Quelle,
-				belegartpositionIId_Quelle, artikelIId, fMengeUmzubuchen,
-				vkpreis, lagerIId_Quelle, cSeriennrchargennr, tBelegdatum,
-				theClientDto);
+		bucheAb(belegartCNr_Quelle, belegartIId_Quelle, belegartpositionIId_Quelle, artikelIId, fMengeUmzubuchen,
+				vkpreis, lagerIId_Quelle, cSeriennrchargennr, tBelegdatum, theClientDto);
 
 		LagerbewegungDto[] dtosQuelle = lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
-				LocaleFac.BELEGART_HAND, belegartpositionIId_Quelle,
-				cSeriennrchargennr);
+				LocaleFac.BELEGART_HAND, belegartpositionIId_Quelle, cSeriennrchargennr);
 
 		// Handlagerbuchung einfuegen
 		HandlagerbewegungDto handlagerbewegungDto_Ziel = new HandlagerbewegungDto();
@@ -9397,46 +8721,55 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		handlagerbewegungDto_Ziel.setLagerIId(lagerIId_Ziel);
 		handlagerbewegungDto_Ziel.setBAbgang(new Short((short) 0));
 		handlagerbewegungDto_Ziel.setCKommentar(sKommentar);
-		handlagerbewegungDto_Ziel
-				.setCSeriennummerchargennummerUrsprung(cSeriennrchargennr);
+		handlagerbewegungDto_Ziel.setCSeriennummerchargennummerUrsprung(cSeriennrchargennr);
 		handlagerbewegungDto_Ziel.setNMenge(fMengeUmzubuchen);
 		handlagerbewegungDto_Ziel.setNEinstandspreis(vkpreis);
 		// Ursprung eintragen:
-		handlagerbewegungDto_Ziel
-				.setBelegartCNrUrsprung(LocaleFac.BELEGART_HAND);
-		handlagerbewegungDto_Ziel
-				.setBelegartpositionIIdUrsprung(belegartpositionIId_Quelle);
-		Integer belegartpositionIId_Ziel = createHandlagerbewegung(
-				handlagerbewegungDto_Ziel, theClientDto);
+		handlagerbewegungDto_Ziel.setBelegartCNrUrsprung(LocaleFac.BELEGART_HAND);
+		handlagerbewegungDto_Ziel.setBelegartpositionIIdUrsprung(belegartpositionIId_Quelle);
+		Integer belegartpositionIId_Ziel = createHandlagerbewegung(handlagerbewegungDto_Ziel, theClientDto);
 		LagerbewegungDto[] dtosZiel = lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
-				LocaleFac.BELEGART_HAND, belegartpositionIId_Ziel,
-				cSeriennrchargennr);
+				LocaleFac.BELEGART_HAND, belegartpositionIId_Ziel, cSeriennrchargennr);
 		// Buchungen zusammenhaengen, damit Zusammengehoerigkeit
 		// wiederherstellbar ist
 		LagerumbuchungDto umBuchungDto = new LagerumbuchungDto();
-		umBuchungDto
-				.setILagerbewegungidabbuchung(dtosQuelle[0].getIIdBuchung());
+		umBuchungDto.setILagerbewegungidabbuchung(dtosQuelle[0].getIIdBuchung());
 		umBuchungDto.setILagerbewegungidzubuchung(dtosZiel[0].getIIdBuchung());
 		createLagerumbuchung(umBuchungDto);
 	}
 
-	public Integer getArtikelIIdUeberSeriennummer(String snr,
-			TheClientDto theClientDto) {
+	public Integer getArtikelIIdUeberSeriennummer(String snr, TheClientDto theClientDto) {
 
 		Query query = em.createNamedQuery("LagerbewegungfindSnr");
 		query.setParameter(1, snr);
 		Collection<?> cl = query.getResultList();
 
 		if (cl.size() > 0) {
-			return ((Lagerbewegung) cl.iterator().next()).getArtikelIId();
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				return ((Lagerbewegung) cl.iterator().next()).getArtikelIId();
+			} else {
+
+				Iterator it = cl.iterator();
+				while (it.hasNext()) {
+					Lagerbewegung l = (Lagerbewegung) it.next();
+					ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(l.getArtikelIId(), theClientDto);
+
+					if (aDto.getMandantCNr().equals(theClientDto.getMandant())) {
+						return aDto.getIId();
+					}
+				}
+			}
+
+			return null;
 		} else {
 			return null;
 		}
 
 	}
 
-	public Integer getArtikelIIdUeberSeriennummerAbgang(String snr,
-			TheClientDto theClientDto) {
+	public Integer getArtikelIIdUeberSeriennummerAbgang(String snr, TheClientDto theClientDto) {
 
 		Query query = em.createNamedQuery(Lagerbewegung.QueryFindSnrAbgang);
 		query.setParameter(1, snr);
@@ -9449,12 +8782,101 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	private void pruefeObSeriennummerNumerisch(String cNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BelegInfos wurdeSeriennummerSchonEinmalVerwendet(Integer artikelIId, String snr, TheClientDto theClientDto) {
+
+		BelegInfos bi = null;
+
+		Session session2 = FLRSessionFactory.getFactory().openSession();
+
+		boolean bSnrEindeutig = false;
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_SERIENNUMMER_EINEINDEUTIG);
+			bSnrEindeutig = Helper.short2boolean(new Short(parameter.getCWert()));
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		String sQuery = " SELECT l FROM FLRLagerbewegung l WHERE l.b_historie=0 AND l.n_menge >0 AND l.b_abgang=1 AND l.c_seriennrchargennr='"
+				+ snr + "'";
+		if (bSnrEindeutig == false) {
+			sQuery += " AND l.artikel_i_id=" + artikelIId;
+		}
+
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
+				theClientDto)) {
+			sQuery += " AND l.flrlager.mandant_c_nr='" + theClientDto.getMandant() + "' ";
+		}
+
+		sQuery += " ORDER BY l.t_buchungszeit  DESC";
+
+		org.hibernate.Query query = session2.createQuery(sQuery);
+		query.setMaxResults(1);
+
+		List l = query.list();
+
+		if (l.iterator().hasNext()) {
+
+			FLRLagerbewegung lbew = (FLRLagerbewegung) l.iterator().next();
+
+			bi = getBelegInfos(lbew.getC_belegartnr(), lbew.getI_belegartid(), lbew.getI_belegartpositionid(),
+					theClientDto);
+
+		}
+
+		session2.close();
+
+		return bi;
+
+	}
+
+	// PJ19367
+	public BelegInfos wurdeChargennummerSchonEinmalVerwendet(Integer artikelIId, String chargennummer,
+			TheClientDto theClientDto) {
+
+		BelegInfos bi = null;
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		int iLaengeEinEindeutig = 0;
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAENGE_CHARGENNUMMER_EINEINDEUTIG);
+			iLaengeEinEindeutig = (Integer) parameter.getCWertAsObject();
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		if (iLaengeEinEindeutig <= 0) {
+			return null;
+		}
+
+		String queryString = "SELECT CAST(L.C_BELEGARTNR AS VARCHAR) ,L.I_BELEGARTID,L.I_BELEGARTPOSITIONID FROM STK_STUECKLISTE STKL "
+				+ "LEFT OUTER JOIN WW_LAGERBEWEGUNG L ON STKL.ARTIKEL_I_ID=L.ARTIKEL_I_ID "
+				+ "LEFT OUTER JOIN WW_ARTIKEL A ON STKL.ARTIKEL_I_ID= A.I_ID "
+				+ "WHERE STKL.B_FREMDFERTIGUNG=0 AND A.B_CHARGENNRTRAGEND=1 AND L.N_MENGE>0 AND L.B_HISTORIE=0 AND L.B_ABGANG=0 AND L.C_SERIENNRCHARGENNR ='"
+				+ chargennummer + "' ORDER BY L.T_BELEGDATUM DESC";
+
+		org.hibernate.Query query = session.createSQLQuery(queryString);
+		query.setMaxResults(1);
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		if (resultListIterator.hasNext()) {
+			Object[] zeile = (Object[]) resultListIterator.next();
+
+			bi = getBelegInfos((String) zeile[0], (Integer) zeile[1], (Integer) zeile[2], theClientDto);
+
+		}
+
+		return bi;
+
+	}
+
+	private void pruefeObSeriennummerNumerisch(String cNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (cNr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception("cNr == null"));
 		}
 
 		String gueltigeZeichen = "";
@@ -9476,11 +8898,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				ArrayList<Object> l = new ArrayList<Object>();
 				l.add(new Character(c));
 				l.add(cNr);
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_SERIENNUMMER_ENTHAELT_NICHT_NUMERISCHE_ZEICHEN,
-						l,
-						new Exception(
-								"FEHLER_SERIENNUMMER_ENTHAELT_NICHT_NUMERISCHE_ZEICHEN"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMER_ENTHAELT_NICHT_NUMERISCHE_ZEICHEN, l,
+						new Exception("FEHLER_SERIENNUMMER_ENTHAELT_NICHT_NUMERISCHE_ZEICHEN"));
 			}
 
 		}
@@ -9489,158 +8908,168 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	/**
 	 * Bucht eine gewisse Anzahl von Artikel, wenn angegeben auch mit Serien/
-	 * Chargennummer, in ein Lager ein. Wenn Ursprung mitangegeben ist, wird
-	 * eine Verbindung mit diesem hergestellt.
+	 * Chargennummer, in ein Lager ein. Wenn Ursprung mitangegeben ist, wird eine
+	 * Verbindung mit diesem hergestellt.
 	 * 
-	 * @param belegartCNr
-	 *            Bestellung
-	 * @param belegartIId
-	 *            ID der Bestellung
-	 * @param belegartpositionIId
-	 *            563
-	 * @param artikelIId
-	 *            4711
-	 * @param fMengeAbsolut
-	 *            16
-	 * @param nEinstandspreis
-	 *            56,8
-	 * @param lagerIId
-	 *            7
-	 * @param cSeriennrchargennr
-	 *            DF4365FGH
-	 * @param theClientDto
-	 *            User-ID
-	 * @param belegartCNrUrsprung
-	 *            Hand
-	 * @param belegartpositionIIdUrsprung
-	 *            546
-	 * @param cSeriennrchargennrUrsprung
-	 *            DCFZ654
-	 * @throws EJBExceptionLP
-	 *             belegartCNr == null || belegartpositionIId == null ||
-	 *             artikelIId == null oder fMengeAbsolut == null ||
-	 *             nEinstansdpreis == null || lagerIId == null
+	 * @param belegartCNr                 Bestellung
+	 * @param belegartIId                 ID der Bestellung
+	 * @param belegartpositionIId         563
+	 * @param artikelIId                  4711
+	 * @param fMengeAbsolut               16
+	 * @param nEinstandspreis             56,8
+	 * @param lagerIId                    7
+	 * @param cSeriennrchargennr          DF4365FGH
+	 * @param theClientDto                User-ID
+	 * @param belegartCNrUrsprung         Hand
+	 * @param belegartpositionIIdUrsprung 546
+	 * @param cSeriennrchargennrUrsprung  DCFZ654
+	 * @throws EJBExceptionLP belegartCNr == null || belegartpositionIId == null ||
+	 *                        artikelIId == null oder fMengeAbsolut == null ||
+	 *                        nEinstansdpreis == null || lagerIId == null
 	 */
 
-	public void bucheZu(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId,
-			BigDecimal fMengeAbsolut, BigDecimal nEinstandspreis,
-			Integer lagerIId, String cSeriennrchargennr, String cVersion,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto,
-			String belegartCNrUrsprung, Integer belegartpositionIIdUrsprung,
-			String cSeriennrchargennrUrsprung,
-			ArrayList<GeraetesnrDto> alGeraetesnr,
-			PaneldatenDto[] paneldatenDtos,
-			boolean gestehungspreisNeuKalkulieren) {
+	public void bucheZu(String belegartCNr, Integer belegartIId, Integer belegartpositionIId, Integer artikelIId,
+			BigDecimal fMengeAbsolut, BigDecimal nEinstandspreis, Integer lagerIId, String cSeriennrchargennr,
+			String cVersion, Integer gebindeIId, BigDecimal bdGebindemenge, java.sql.Timestamp tBelegdatum,
+			TheClientDto theClientDto, String belegartCNrUrsprung, Integer belegartpositionIIdUrsprung,
+			String cSeriennrchargennrUrsprung, ArrayList<GeraetesnrDto> alGeraetesnr, PaneldatenDto[] paneldatenDtos,
+			boolean gestehungspreisNeuKalkulieren, Integer lagerbewegungIIdLetzteintrag) {
 
-		if (belegartCNr == null || belegartIId == null
-				|| belegartpositionIId == null || artikelIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartIId == null || belegartpositionIId == null || artikelIId == null"));
+		if (belegartCNr == null || belegartIId == null || belegartpositionIId == null || artikelIId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"belegartCNr == null || belegartIId == null || belegartpositionIId == null || artikelIId == null"));
 		}
 		if (tBelegdatum == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("tBelegdatum == null"));
 		}
-		if (fMengeAbsolut == null || nEinstandspreis == null
-				|| lagerIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"fMengeAbsolut == null || nEinstansdpreis == null || lagerIId == null"));
+		if (fMengeAbsolut == null || nEinstandspreis == null || lagerIId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("fMengeAbsolut == null || nEinstansdpreis == null || lagerIId == null"));
 		}
 		if (fMengeAbsolut.doubleValue() < 0) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ZAHL_ZU_KLEIN,
 					new Exception("fMengeAbsolut.doubleValue() < 0"));
 		}
 		if (belegartCNrUrsprung != null && belegartpositionIIdUrsprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNrUrsprung != null && belegartpositionIIdUrsprung==null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNrUrsprung != null && belegartpositionIIdUrsprung==null"));
 		}
 		if (belegartpositionIIdUrsprung != null && belegartCNrUrsprung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartpositionIIdUrsprung != null && belegartCNrUrsprung==null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartpositionIIdUrsprung != null && belegartCNrUrsprung==null"));
 		}
 
 		Artikel artikel = em.find(Artikel.class, artikelIId);
 		if (artikel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		if (Helper.short2boolean(artikel.getBChargennrtragend())
 				|| Helper.short2boolean(artikel.getBSeriennrtragend())) {
 			if (cSeriennrchargennr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-						new Exception("cSeriennrchargennr == null ArtikelNr:"
-								+ artikel.getCNr()));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+						new Exception("cSeriennrchargennr == null ArtikelNr:" + artikel.getCNr()));
 			} else {
 
 				if (Helper.short2boolean(artikel.getBChargennrtragend())) {
 
 					try {
-						ParametermandantDto parameter = getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ARTIKEL,
-										ParameterFac.PARAMETER_CHARGENNUMMER_MINDESTLAENGE);
-						Integer ichnrlaenge = (Integer) parameter
-								.getCWertAsObject();
+						ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_CHARGENNUMMER_MINDESTLAENGE);
+						Integer ichnrlaenge = (Integer) parameter.getCWertAsObject();
 
 						if (cSeriennrchargennr.length() < ichnrlaenge) {
 							ArrayList al = new ArrayList();
 							al.add(ichnrlaenge);
 
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_CHARGENNUMMER_ZU_KURZ,
-									al, new Exception(
-											"FEHLER_CHARGENNUMMER_ZU_KURZ"));
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_CHARGENNUMMER_ZU_KURZ, al,
+									new Exception("FEHLER_CHARGENNUMMER_ZU_KURZ"));
 
+						}
+
+						// PJ20352
+						if (cSeriennrchargennr.length() > 50) {
+							ArrayList al = new ArrayList();
+							al.add(cSeriennrchargennr);
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_CHARGENNUMMER_ZU_LANG, al,
+									new Exception("FEHLER_CHARGENNUMMER_ZU_LANG"));
 						}
 
 						int iLaengeEinEindeutig = 0;
 						try {
-							parameter = getParameterFac()
-									.getMandantparameter(
-											theClientDto.getMandant(),
-											ParameterFac.KATEGORIE_ARTIKEL,
-											ParameterFac.PARAMETER_LAENGE_CHARGENNUMMER_EINEINDEUTIG);
-							iLaengeEinEindeutig = (Integer) parameter
-									.getCWertAsObject();
+							parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+									ParameterFac.KATEGORIE_ARTIKEL,
+									ParameterFac.PARAMETER_LAENGE_CHARGENNUMMER_EINEINDEUTIG);
+							iLaengeEinEindeutig = (Integer) parameter.getCWertAsObject();
 
 						} catch (RemoteException e) {
 							throwEJBExceptionLPRespectOld(e);
 						}
 						// PJ18589
-						if (iLaengeEinEindeutig > 0
-								&& !cSeriennrchargennr
-										.equals(CHARGENNUMMER_KEINE_CHARGE)) {
+						if (iLaengeEinEindeutig > 0 && !cSeriennrchargennr.equals(CHARGENNUMMER_KEINE_CHARGE)) {
 							// Pruefen, ob Chargnenummer numerisch ist
 
 							// SP2790 nur wenn Stkl und eigengefertigt
 							StuecklisteDto stklDto = getStuecklisteFac()
-									.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
-											artikel.getIId(), theClientDto);
+									.stuecklisteFindByMandantCNrArtikelIIdOhneExc(artikel.getIId(), theClientDto);
 
-							if (stklDto != null
-									&& Helper.short2boolean(stklDto
-											.getBFremdfertigung()) == false) {
+							if (stklDto != null && Helper.short2boolean(stklDto.getBFremdfertigung()) == false) {
 								try {
-									Long snr = new Long(cSeriennrchargennr);
+
+									// PJ19940 Wenn die Chargennummer noch nicht
+									// vorhanden ist, dann zubuchen, auch wenn
+									// nicht numerisch
+
+									/*
+									 * BelegInfos bi = wurdeChargennummerSchonEinmalVerwendet( artikel.getIId(),
+									 * cSeriennrchargennr, theClientDto); if (bi == null) {
+									 * 
+									 * } else {
+									 * 
+									 * if (bi.getBelegart() .equals(belegartCNr) && bi.getBelegartpositionIId()
+									 * .equals(belegartpositionIId)) { // bin ich selbst beim Update } else {
+									 */
+
+									// PJ19940 Folgende Zeichen duerfen
+									// enthalten sein, da diese bei der
+									// generierung einer neuen Chargennummer
+									// nicht beruecksichtigt werden
+									parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+											ParameterFac.KATEGORIE_ARTIKEL,
+											ParameterFac.PARAMETER_CHARGEN_BEI_GENERIERUNG_NICHT_BERUECKSICHTIGEN);
+									String zeichenNichtBeruecksichtigen = (String) parameter.getCWertAsObject();
+
+									boolean bEnthaeltZeichenWelcheBeiDerGenerierungAusgelassenWerden = false;
+									if (zeichenNichtBeruecksichtigen != null
+											&& zeichenNichtBeruecksichtigen.trim().length() > 0) {
+										zeichenNichtBeruecksichtigen = zeichenNichtBeruecksichtigen.trim();
+
+										for (int i = 0; i < zeichenNichtBeruecksichtigen.length(); i++) {
+
+											CharSequence cs1 = zeichenNichtBeruecksichtigen.charAt(i) + "";
+											boolean b = cSeriennrchargennr.contains(cs1);
+
+											if (b == true) {
+												bEnthaeltZeichenWelcheBeiDerGenerierungAusgelassenWerden = true;
+												break;
+											}
+										}
+									}
+
+									if (bEnthaeltZeichenWelcheBeiDerGenerierungAusgelassenWerden == false) {
+										Helper.naechsteSeriennr(cSeriennrchargennr);
+									}
+									/*
+									 * }
+									 * 
+									 * }
+									 */
+
 								} catch (NumberFormatException e) {
 									ArrayList al = new ArrayList();
 									al.add(cSeriennrchargennr);
-									throw new EJBExceptionLP(
-											EJBExceptionLP.FEHLER_CHARGENNUMMER_NICHT_NUMERISCH,
-											al, new Exception(
-													cSeriennrchargennr));
+									throw new EJBExceptionLP(EJBExceptionLP.FEHLER_CHARGENNUMMER_NICHT_NUMERISCH, al,
+											new Exception(cSeriennrchargennr));
 
 								}
 
@@ -9653,66 +9082,57 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					}
 				} else if (Helper.short2boolean(artikel.getBSeriennrtragend())) {
 					try {
-						ParametermandantDto parameter = getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ARTIKEL,
-										ParameterFac.PARAMETER_ARTIKEL_MINDESTLAENGE_SERIENNUMMER);
-						Integer isnrlaenge = (Integer) parameter
-								.getCWertAsObject();
+						ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL,
+								ParameterFac.PARAMETER_ARTIKEL_MINDESTLAENGE_SERIENNUMMER);
+						Integer isnrlaenge = (Integer) parameter.getCWertAsObject();
+
+						if (artikel.getILaengeminSnrchnr() != null) {
+							isnrlaenge = artikel.getILaengeminSnrchnr();
+						}
 
 						ArrayList al = new ArrayList();
 						al.add(isnrlaenge);
 
 						if (cSeriennrchargennr.length() < isnrlaenge) {
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_KURZ,
-									al, new Exception(
-											"FEHLER_SERIENNUMMER_ZU_KURZ"));
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_KURZ, al,
+									new Exception("FEHLER_SERIENNUMMER_ZU_KURZ"));
 
 						}
-						parameter = getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ARTIKEL,
-										ParameterFac.PARAMETER_ARTIKEL_MAXIMALELAENGE_SERIENNUMMER);
+						parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL,
+								ParameterFac.PARAMETER_ARTIKEL_MAXIMALELAENGE_SERIENNUMMER);
 						isnrlaenge = (Integer) parameter.getCWertAsObject();
+
+						if (artikel.getILaengemaxSnrchnr() != null) {
+							isnrlaenge = artikel.getILaengemaxSnrchnr();
+						}
 
 						al = new ArrayList();
 						al.add(isnrlaenge);
 
 						if (cSeriennrchargennr.length() > isnrlaenge) {
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_LANG,
-									al, new Exception(
-											"FEHLER_SERIENNUMMER_ZU_LANG"));
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMER_ZU_LANG, al,
+									new Exception("FEHLER_SERIENNUMMER_ZU_LANG"));
 
 						}
 
 						// PJ 17392
-						parameter = getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ARTIKEL,
-										ParameterFac.PARAMETER_SERIENNUMMERN_FUEHRENDE_NULLEN_ENTFERNEN);
-						boolean bFuehrendeEntfernen = (Boolean) parameter
-								.getCWertAsObject();
+						parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL,
+								ParameterFac.PARAMETER_SERIENNUMMERN_FUEHRENDE_NULLEN_ENTFERNEN);
+						boolean bFuehrendeEntfernen = (Boolean) parameter.getCWertAsObject();
 						if (bFuehrendeEntfernen) {
-							cSeriennrchargennr = cSeriennrchargennr
-									.replaceFirst("0*", "");
+							cSeriennrchargennr = cSeriennrchargennr.replaceFirst("0*", "");
 						}
 
 						// PJ18555
 
-						parameter = getParameterFac().getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ARTIKEL,
-								ParameterFac.PARAMETER_SERIENNUMMER_NUMERISCH);
-						boolean bSnrNumerisch = (Boolean) parameter
-								.getCWertAsObject();
+						parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_SERIENNUMMER_NUMERISCH);
+						boolean bSnrNumerisch = (Boolean) parameter.getCWertAsObject();
 						if (bSnrNumerisch) {
-							pruefeObSeriennummerNumerisch(cSeriennrchargennr,
-									theClientDto);
+							pruefeObSeriennummerNumerisch(cSeriennrchargennr, theClientDto);
 						}
 
 					} catch (RemoteException e) {
@@ -9722,22 +9142,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			}
 
 		}
-		if (artikel.getBChargennrtragend().intValue() != 1
-				&& artikel.getBSeriennrtragend().intValue() != 1) {
+		if (artikel.getBChargennrtragend().intValue() != 1 && artikel.getBSeriennrtragend().intValue() != 1) {
 			if (cSeriennrchargennr != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER,
-						new Exception(
-								"SERIENNUMMER_CHARGENNUMMER_DARF_NICHT_ANGEGEBEN_WERDEN"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+						"SERIENNUMMER_CHARGENNUMMER_DARF_NICHT_ANGEGEBEN_WERDEN: ArtikelNr " + artikel.getCNr()));
 			}
 		}
-		if (artikel.getBSeriennrtragend().intValue() == 1
-				&& fMengeAbsolut.doubleValue() != 1
+		if (artikel.getBSeriennrtragend().intValue() == 1 && fMengeAbsolut.doubleValue() != 1
 				&& fMengeAbsolut.doubleValue() != 0) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_MENGE_FUER_SERIENNUMMERNBUCHUNG_MUSS_EINS_SEIN,
-					new Exception(
-							"artikel.getBSeriennrtragend().intValue() == 1 && fMengeAbsolut.doubleValue()!=1"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_MENGE_FUER_SERIENNUMMERNBUCHUNG_MUSS_EINS_SEIN,
+					new Exception("artikel.getBSeriennrtragend().intValue() == 1 && fMengeAbsolut.doubleValue()!=1"));
 		}
 
 		boolean bLagerbewirtschaftet = false;
@@ -9745,32 +9159,36 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		if (artikel.getBLagerbewirtschaftet().shortValue() == 1) {
 			bLagerbewirtschaftet = true;
 		}
+
+		// PJ19999
+		if (Helper.short2boolean(artikel.getBKeineLagerzubuchung())) {
+			ArrayList al = new ArrayList();
+			al.add(artikel.getCNr());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_DARF_NICHT_ZUGEBUCHT_WERDEN, al,
+					new Exception("FEHLER_ARTIKEL_DARF_NICHT_ZUGEBUCHT_WERDEN Artikel:" + artikel.getCNr()));
+		}
+
 		// Wenn Artikel nicht Lagerbewirtschaftet ist, dann wirds automatisch
 		// auf "KEIN LAGER" gebucht sonst
 		// DARF NICHT auf KEIN_LAGER gebucht werden
 		if (bLagerbewirtschaftet == false) {
-			LagerDto tempLager = lagerFindByCNrByMandantCNr(
-					LagerFac.LAGER_KEINLAGER, theClientDto.getMandant());
+			LagerDto tempLager = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant());
 			if (tempLager != null) {
 				lagerIId = tempLager.getIId();
 			} else {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.LAGER_KEIN_LAGER_NICHT_ANGELEGT,
+				throw new EJBExceptionLP(EJBExceptionLP.LAGER_KEIN_LAGER_NICHT_ANGELEGT,
 						new Exception("LAGER_KEIN_LAGER_NICHT_ANGELEGT"));
 			}
 		} else {
-			if (lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER,
-					theClientDto.getMandant()).getIId().equals(lagerIId)) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DARF_NICHT_AUF_KEIN_LAGER_BUCHEN,
+			if (lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant()).getIId()
+					.equals(lagerIId)) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DARF_NICHT_AUF_KEIN_LAGER_BUCHEN,
 						new Exception("FEHLER_DARF_NICHT_AUF_KEIN_LAGER_BUCHEN"));
 
 			}
 			if (!hatRolleBerechtigungAufLager(lagerIId, theClientDto)) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER,
-						new Exception(
-								"FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER,
+						new Exception("FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER"));
 			}
 		}
 		// Pruefen, ob Lager bei dem Mandanten erlaubt ist
@@ -9778,18 +9196,14 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		if (!lagerDto_Erlaubt.getMandantCNr().equals(theClientDto.getMandant())) {
 
 			if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
-					theClientDto)
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)
 					|| (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-							MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
-							theClientDto) && getMandantFac()
-							.darfAnwenderAufZusatzfunktionZugreifen(
-									MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
-									theClientDto))) {
+							MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)
+							&& getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+									MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER, theClientDto))) {
 				// PJ18610
 				if (!belegartCNr.equals(LocaleFac.BELEGART_LSZIELLAGER)) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_FALSCHER_MANDANT,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FALSCHER_MANDANT,
 							new Exception("FEHLER_FALSCHER_MANDANT"));
 				}
 
@@ -9799,25 +9213,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		if (bLagerLogging == null) {
 			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ARTIKEL,
-								ParameterFac.PARAMETER_LAGER_LOGGING);
-				bLagerLogging = Helper.short2boolean(new Short(parameter
-						.getCWert()));
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAGER_LOGGING);
+				bLagerLogging = Helper.short2boolean(new Short(parameter.getCWert()));
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
 		}
 
 		if (bLagerLogging) {
-			String logEintrag = "VOR ZUBUCHUNG:belegartCNr=" + belegartCNr
-					+ ",belegartIId=" + belegartIId + ",belegartpositionIId="
-					+ belegartpositionIId + ",artikelIId=" + artikelIId
-					+ ",fMengeAbsolut=" + fMengeAbsolut + ",nEinstandspreis="
-					+ nEinstandspreis + ",lagerIId=" + lagerIId
-					+ ",cSeriennrchargennr=" + cSeriennrchargennr
-					+ ",tBelegdatum=" + tBelegdatum + ",theClientDto="
+			String logEintrag = "VOR ZUBUCHUNG:belegartCNr=" + belegartCNr + ",belegartIId=" + belegartIId
+					+ ",belegartpositionIId=" + belegartpositionIId + ",artikelIId=" + artikelIId + ",fMengeAbsolut="
+					+ fMengeAbsolut + ",nEinstandspreis=" + nEinstandspreis + ",lagerIId=" + lagerIId
+					+ ",cSeriennrchargennr=" + cSeriennrchargennr + ",tBelegdatum=" + tBelegdatum + ",theClientDto="
 					+ theClientDto.toString();
 
 			// Lagerstand + Gestpreis hier abrufen
@@ -9826,13 +9234,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			double gestpreis = 0;
 
 			try {
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager != null) {
-					lagerstandVorher = artikellager.getNLagerstand()
-							.doubleValue();
-					gestpreis = artikellager.getNGestehungspreis()
-							.doubleValue();
+					lagerstandVorher = artikellager.getNLagerstand().doubleValue();
+					gestpreis = artikellager.getNGestehungspreis().doubleValue();
 				}
 
 			} catch (Exception e) {
@@ -9840,39 +9245,37 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				e.printStackTrace();
 			}
 
-			logEintrag += ";Lagerstand=" + lagerstandVorher + ",Gestpreis="
-					+ gestpreis;
+			logEintrag += ";Lagerstand=" + lagerstandVorher + ",Gestpreis=" + gestpreis;
 
 			erstelleProtokollEintragZubuchung(theClientDto, logEintrag, true);
 		}
 
 		// Ist Buchung eine Korrekturbuchung oder nicht
-		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr,
-				belegartpositionIId, cSeriennrchargennr);
+		LagerbewegungDto lagerbewegungDto = null;
+		if (lagerbewegungIIdLetzteintrag != null) {
+			lagerbewegungDto = lagerbewegungFindByPrimaryKey(lagerbewegungIIdLetzteintrag);
+		} else {
+			lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId, cSeriennrchargennr);
+		}
 
 		if (lagerbewegungDto != null) {
 			// es ist eine Korrektur
 			lagerbewegungDto.setTBelegdatum(tBelegdatum);
 			if (!artikelIId.equals(lagerbewegungDto.getArtikelIId())) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
+				throw new EJBExceptionLP(EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
 						new Exception("LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT"));
 
 			}
 
 			if (cSeriennrchargennr != null) {
-				if (!cSeriennrchargennr.equals(lagerbewegungDto
-						.getCSeriennrchargennr())) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
-							new Exception(
-									"LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT"));
+				if (!cSeriennrchargennr.equals(lagerbewegungDto.getCSeriennrchargennr())) {
+					throw new EJBExceptionLP(EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
+							new Exception("LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT"));
 				}
 			}
 			if (!lagerIId.equals(lagerbewegungDto.getLagerIId())
 					&& Helper.short2boolean(artikel.getBLagerbewirtschaftet()) == true) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.LAGER_UPDATE_AUF_LAGER_NICHT_ERLAUBT,
+				throw new EJBExceptionLP(EJBExceptionLP.LAGER_UPDATE_AUF_LAGER_NICHT_ERLAUBT,
 						new Exception("LAGER_UPDATE_AUF_LAGER_NICHT_ERLAUBT"));
 
 			}
@@ -9883,11 +9286,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				// .getNEinstandspreis());
 
 				// Gemittelter Einstandspreispreis in WW_ARTIKELLAGER updaten
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager == null) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
 							new Exception("ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET"));
 				}
 				// double lagerstand =
@@ -9897,8 +9298,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				if (gestehungspreisNeuKalkulieren == true) {
 
-					BigDecimal preis = recalcGestehungspreisAbTermin(
-							lagerbewegungDto.getIId(), artikelIId, lagerIId,
+					BigDecimal preis = recalcGestehungspreisAbTermin(lagerbewegungDto.getIId(), artikelIId, lagerIId,
 							lagerbewegungDto.getTBelegdatum(), theClientDto);
 
 					if (preis != null) {
@@ -9908,21 +9308,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					}
 				}
 				// PJ18452
-				if (Helper.short2boolean(artikel.getBChargennrtragend())
-						&& paneldatenDtos != null) {
-					chargenEingenschaftenEinerBuchungUpdaten(paneldatenDtos,
-							lagerbewegungDto.getIIdBuchung());
+				if (Helper.short2boolean(artikel.getBChargennrtragend()) && paneldatenDtos != null) {
+					chargenEingenschaftenEinerBuchungUpdaten(paneldatenDtos, artikel.getIId(),
+							lagerbewegungDto.getCSeriennrchargennr(), theClientDto);
 				}
 
 			} else {
 				// es ist Mengen und ev. Preisaenderung
 				Double m = getVerbrauchteMenge(lagerbewegungDto.getIId());
-				if (fMengeAbsolut.doubleValue() < m.doubleValue()
-						&& bLagerbewirtschaftet == true) {
-					EJBExceptionLP ex = new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_MENGENREDUZIERUNG_NICHT_MOEGLICH,
-							new Exception(
-									"FEHLER_MENGENREDUZIERUNG_NICHT_MOEGLICH"));
+				if (fMengeAbsolut.doubleValue() < m.doubleValue() && bLagerbewirtschaftet == true) {
+					EJBExceptionLP ex = new EJBExceptionLP(EJBExceptionLP.FEHLER_MENGENREDUZIERUNG_NICHT_MOEGLICH,
+							new Exception("FEHLER_MENGENREDUZIERUNG_NICHT_MOEGLICH"));
 					ArrayList<Object> alInfo = new ArrayList<Object>();
 					alInfo.add(artikel.getCNr());
 					alInfo.add(m.doubleValue());
@@ -9931,36 +9327,31 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				} else {
 					// Alter Eintrag wird Historie und bekommt die
 					// Aenderungszeit
-					Timestamp tBuchungszeitOriginal = lagerbewegungDto
-							.getTBuchungszeit();
-					lagerbewegungDto.setTBuchungszeit(new Timestamp(System
-							.currentTimeMillis()));
+					Timestamp tBuchungszeitOriginal = lagerbewegungDto.getTBuchungszeit();
+					lagerbewegungDto.setTBuchungszeit(new Timestamp(System.currentTimeMillis()));
 					lagerbewegungDto.setBHistorie(Helper.boolean2Short(true));
 					updateLagerbewegung(lagerbewegungDto, theClientDto);
 
 					// Korrektureintrag anlegen, bekommt die original
 					// Buchungszeit
 					LagerbewegungDto lagerbewegungDtoKorrektur = new LagerbewegungDto();
-					lagerbewegungDtoKorrektur
-							.setTBuchungszeit(tBuchungszeitOriginal);
-					lagerbewegungDtoKorrektur
-							.setBHistorie(new Short((short) 0));
+					lagerbewegungDtoKorrektur.setTBuchungszeit(tBuchungszeitOriginal);
+					lagerbewegungDtoKorrektur.setBHistorie(new Short((short) 0));
 					lagerbewegungDtoKorrektur.setArtikelIId(artikelIId);
 					lagerbewegungDtoKorrektur.setTBelegdatum(tBelegdatum);
 					lagerbewegungDtoKorrektur.setBAbgang(new Short((short) 0));
 					lagerbewegungDtoKorrektur.setCBelegartnr(belegartCNr);
 					lagerbewegungDtoKorrektur.setIBelegartid(belegartIId);
-					lagerbewegungDtoKorrektur
-							.setIBelegartpositionid(belegartpositionIId);
-					lagerbewegungDtoKorrektur
-							.setCSeriennrchargennr(cSeriennrchargennr);
+					lagerbewegungDtoKorrektur.setIBelegartpositionid(belegartpositionIId);
+					lagerbewegungDtoKorrektur.setCSeriennrchargennr(cSeriennrchargennr);
 					lagerbewegungDtoKorrektur.setCVersion(cVersion);
+					lagerbewegungDtoKorrektur.setGebindeIId(gebindeIId);
+					lagerbewegungDtoKorrektur.setNGebindemenge(bdGebindemenge);
 					lagerbewegungDtoKorrektur.setNMenge(fMengeAbsolut);
 
 					// Geraetesnrs loeschen
 					if (lagerbewegungDtoKorrektur.getNMenge().doubleValue() == 0) {
-						Query query = em
-								.createNamedQuery("GeraetesnrfindByIIdBuchung");
+						Query query = em.createNamedQuery("GeraetesnrfindByIIdBuchung");
 						query.setParameter(1, lagerbewegungDto.getIIdBuchung());
 						Collection c = query.getResultList();
 						Iterator<?> iterator = c.iterator();
@@ -9973,69 +9364,55 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					}
 
 					if (fMengeAbsolut.doubleValue() == m.doubleValue()) {
-						lagerbewegungDtoKorrektur
-								.setBVollstaendigverbraucht(new Short((short) 1));
+						lagerbewegungDtoKorrektur.setBVollstaendigverbraucht(new Short((short) 1));
 					} else {
 						if (bLagerbewirtschaftet == true) {
-							lagerbewegungDtoKorrektur
-									.setBVollstaendigverbraucht(new Short(
-											(short) 0));
+							lagerbewegungDtoKorrektur.setBVollstaendigverbraucht(new Short((short) 0));
 						} else {
-							lagerbewegungDtoKorrektur
-									.setBVollstaendigverbraucht(new Short(
-											(short) 1));
+							lagerbewegungDtoKorrektur.setBVollstaendigverbraucht(new Short((short) 1));
 						}
 					}
 					lagerbewegungDtoKorrektur.setLagerIId(lagerIId);
-					lagerbewegungDtoKorrektur.setIIdBuchung(lagerbewegungDto
-							.getIIdBuchung());
-					lagerbewegungDtoKorrektur
-							.setNGestehungspreis(lagerbewegungDto
-									.getNGestehungspreis());
+					lagerbewegungDtoKorrektur.setIIdBuchung(lagerbewegungDto.getIIdBuchung());
+					lagerbewegungDtoKorrektur.setNGestehungspreis(lagerbewegungDto.getNGestehungspreis());
 					// BigDecimal diffEinstandspreis =
 					// nEinstandspreis.subtract(lagerbewegungDto
 					// .getNEinstandspreis());
-					lagerbewegungDtoKorrektur
-							.setNEinstandspreis(nEinstandspreis);
+					lagerbewegungDtoKorrektur.setNEinstandspreis(nEinstandspreis);
 					createLagerbewegung(lagerbewegungDtoKorrektur, theClientDto);
 
 					// 2481
 					if (cSeriennrchargennr != null) {
-						versionInLagerbewegungUpdaten(belegartCNr,
-								belegartpositionIId, cSeriennrchargennr,
-								cVersion);
+						versionUndGebindeInLagerbewegungUpdaten(belegartCNr, belegartpositionIId, cSeriennrchargennr,
+								cVersion, gebindeIId, bdGebindemenge);
 					}
 
 					// PJ18452
-					if (Helper.short2boolean(artikel.getBChargennrtragend())
-							&& paneldatenDtos != null) {
-						chargenEingenschaftenEinerBuchungUpdaten(
-								paneldatenDtos,
-								lagerbewegungDtoKorrektur.getIIdBuchung());
+					if (Helper.short2boolean(artikel.getBChargennrtragend()) && paneldatenDtos != null) {
+						chargenEingenschaftenEinerBuchungUpdaten(paneldatenDtos,
+								lagerbewegungDtoKorrektur.getArtikelIId(),
+								lagerbewegungDtoKorrektur.getCSeriennrchargennr(), theClientDto);
 					}
 
-					if (fMengeAbsolut.doubleValue() == m.doubleValue()) {
-						setzteZugangsBuchungAlsVerbraucht(belegartCNr,
-								belegartpositionIId, cSeriennrchargennr,
+					if (fMengeAbsolut.doubleValue() == m.doubleValue()
+							|| Helper.short2boolean(artikel.getBLagerbewirtschaftet()) == false) {
+						setzteZugangsBuchungAlsVerbraucht(belegartCNr, belegartpositionIId, cSeriennrchargennr,
 								theClientDto, true);
 					} else {
-						setzteZugangsBuchungAlsVerbraucht(belegartCNr,
-								belegartpositionIId, cSeriennrchargennr,
+
+						setzteZugangsBuchungAlsVerbraucht(belegartCNr, belegartpositionIId, cSeriennrchargennr,
 								theClientDto, false);
+
 					}
 					// Lagerstand in WW_ARTIKELLAGER updaten
-					Artikellager artikellager = em.find(Artikellager.class,
-							new ArtikellagerPK(artikelIId, lagerIId));
+					Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 					if (artikellager == null) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
-								new Exception(
-										"ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET"));
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
+								new Exception("ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET"));
 					}
 					BigDecimal lagerstandBisher = artikellager.getNLagerstand();
 					BigDecimal lagerstandNeu = lagerstandBisher
-							.add(fMengeAbsolut.subtract(lagerbewegungDto
-									.getNMenge()));
+							.add(fMengeAbsolut.subtract(lagerbewegungDto.getNMenge()));
 
 					if (bLagerbewirtschaftet == true) {
 						artikellager.setNLagerstand(lagerstandNeu);
@@ -10043,11 +9420,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						artikellager.setNLagerstand(new BigDecimal(0));
 					}
 					if (gestehungspreisNeuKalkulieren == true) {
-						BigDecimal preis = recalcGestehungspreisAbTermin(
-								lagerbewegungDtoKorrektur.getIId(), artikelIId,
-								lagerIId,
-								lagerbewegungDtoKorrektur.getTBelegdatum(),
-								theClientDto);
+						BigDecimal preis = recalcGestehungspreisAbTermin(lagerbewegungDtoKorrektur.getIId(), artikelIId,
+								lagerIId, lagerbewegungDtoKorrektur.getTBelegdatum(), theClientDto);
 						if (preis != null && lagerstandNeu.doubleValue() != 0) {
 							artikellager.setNGestehungspreis(preis);
 						}
@@ -10064,20 +9438,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			}
 
 			// PJ 16623
-			if (cSeriennrchargennr != null) {
+			if (cSeriennrchargennr != null && Helper.short2boolean(artikel.getBSeriennrtragend())) {
 				try {
-					ParametermandantDto parameter = getParameterFac()
-							.getMandantparameter(
-									theClientDto.getMandant(),
-									ParameterFac.KATEGORIE_ARTIKEL,
-									ParameterFac.PARAMETER_SERIENNUMMER_EINEINDEUTIG);
-					boolean bSnrEindeutig = Helper.short2boolean(new Short(
-							parameter.getCWert()));
+					ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_SERIENNUMMER_EINEINDEUTIG);
+					boolean bSnrEindeutig = Helper.short2boolean(new Short(parameter.getCWert()));
 
 					if (bSnrEindeutig == true) {
 
-						Query query = em
-								.createNamedQuery("LagerbewegungfindSnr");
+						Query query = em.createNamedQuery("LagerbewegungfindSnr");
 						query.setParameter(1, cSeriennrchargennr);
 						Collection<?> cl = query.getResultList();
 						if (cl.size() > 0) {
@@ -10085,10 +9454,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 							al.add(cSeriennrchargennr);
 
 							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_SERIENNUMMER_MUSS_UEBER_ALLE_ARTIKEL_EINDEUTIG_SEIN,
-									al, new Exception(
-											"FEHLER_SERIENNUMMER_MUSS_UEBER_ALLE_ARTIKEL_EINDEUTIG_SEIN: "
-													+ cSeriennrchargennr));
+									EJBExceptionLP.FEHLER_SERIENNUMMER_MUSS_UEBER_ALLE_ARTIKEL_EINDEUTIG_SEIN, al,
+									new Exception("FEHLER_SERIENNUMMER_MUSS_UEBER_ALLE_ARTIKEL_EINDEUTIG_SEIN: "
+											+ cSeriennrchargennr));
 						}
 
 					}
@@ -10099,17 +9467,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			// Wenn Artikel SNR-Tragend und die Seriennummer schon einmal
 			// gebucht worden ist, dann Fehler
-			if (cSeriennrchargennr != null
-					&& Helper.short2boolean(artikel.getBSeriennrtragend()) == true) {
-				BigDecimal d = getMengeAufLager(artikelIId, lagerIId,
-						cSeriennrchargennr, theClientDto);
+			if (cSeriennrchargennr != null && Helper.short2boolean(artikel.getBSeriennrtragend()) == true) {
+				BigDecimal d = getMengeAufLager(artikelIId, lagerIId, cSeriennrchargennr, theClientDto);
 				if (d.doubleValue() > 0) {
 					ArrayList al = new ArrayList();
 					al.add(cSeriennrchargennr);
-					throw new EJBExceptionLP(
-							EJBExceptionLP.LAGER_SERIENNUMMER_SCHON_VORHANDEN,
-							al, new Exception(
-									"LAGER_SERIENNUMMER_SCHON_VORHANDEN"));
+					throw new EJBExceptionLP(EJBExceptionLP.LAGER_SERIENNUMMER_SCHON_VORHANDEN, al,
+							new Exception("LAGER_SERIENNUMMER_SCHON_VORHANDEN"));
 				}
 
 			}
@@ -10117,24 +9481,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			LagerbewegungDto lagerbewegungDtoNeueintrag = new LagerbewegungDto();
 			lagerbewegungDtoNeueintrag.setArtikelIId(artikelIId);
 			lagerbewegungDtoNeueintrag.setBAbgang(new Short((short) 0));
-			lagerbewegungDtoNeueintrag
-					.setBHistorie(Helper.boolean2Short(false));
+			lagerbewegungDtoNeueintrag.setBHistorie(Helper.boolean2Short(false));
 			lagerbewegungDtoNeueintrag.setTBelegdatum(tBelegdatum);
 			if (bLagerbewirtschaftet == true) {
-				lagerbewegungDtoNeueintrag
-						.setBVollstaendigverbraucht(new Short((short) 0));
+				lagerbewegungDtoNeueintrag.setBVollstaendigverbraucht(new Short((short) 0));
 			} else {
-				lagerbewegungDtoNeueintrag
-						.setBVollstaendigverbraucht(new Short((short) 1));
+				lagerbewegungDtoNeueintrag.setBVollstaendigverbraucht(new Short((short) 1));
 
 			}
 			lagerbewegungDtoNeueintrag.setCBelegartnr(belegartCNr);
 			lagerbewegungDtoNeueintrag.setIBelegartid(belegartIId);
-			lagerbewegungDtoNeueintrag
-					.setIBelegartpositionid(belegartpositionIId);
-			lagerbewegungDtoNeueintrag
-					.setCSeriennrchargennr(cSeriennrchargennr);
+			lagerbewegungDtoNeueintrag.setIBelegartpositionid(belegartpositionIId);
+			lagerbewegungDtoNeueintrag.setCSeriennrchargennr(cSeriennrchargennr);
 			lagerbewegungDtoNeueintrag.setCVersion(cVersion);
+			lagerbewegungDtoNeueintrag.setGebindeIId(gebindeIId);
+			lagerbewegungDtoNeueintrag.setNGebindemenge(bdGebindemenge);
 			lagerbewegungDtoNeueintrag.setNMenge(fMengeAbsolut);
 			lagerbewegungDtoNeueintrag.setLagerIId(lagerIId);
 			lagerbewegungDtoNeueintrag.setNEinstandspreis(nEinstandspreis);
@@ -10142,8 +9503,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			// Neue Nuchungsnummer erzeugen
 			PKGeneratorObj pkGen = new PKGeneratorObj();
-			Integer pk = pkGen
-					.getNextPrimaryKey(PKConst.PK_LAGERBEWEGUNG_I_ID_BUCHUNG);
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_LAGERBEWEGUNG_I_ID_BUCHUNG);
 			lagerbewegungDtoNeueintrag.setIIdBuchung(pk);
 			createLagerbewegung(lagerbewegungDtoNeueintrag, theClientDto);
 
@@ -10165,23 +9525,18 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					// Lager gebucht werden und anschliessend wieder auf das
 					// selbe Los zugebucht werden.
 					/*
-					 * // Zuerst nachsehen, ob die Geraetesnr nicht schon mal //
-					 * zugebucht worden ist. Query query = em
-					 * .createNamedQuery("GeraetesnrfindByArtikelIIdCSnr");
-					 * query.setParameter(1,
-					 * alGeraetesnr.get(i).getArtikelIId());
-					 * query.setParameter(2, alGeraetesnr.get(i).getCSnr());
-					 * Collection c = query.getResultList(); if (c.size() > 0) {
-					 * throw new EJBExceptionLP(
-					 * EJBExceptionLP.FEHLER_GERAETESNR_BEREITS_ZUGEBUCHT, new
-					 * Exception( "FEHLER_GERAETESNR_BEREITS_ZUGEBUCHT")); }
+					 * // Zuerst nachsehen, ob die Geraetesnr nicht schon mal // zugebucht worden
+					 * ist. Query query = em .createNamedQuery("GeraetesnrfindByArtikelIIdCSnr");
+					 * query.setParameter(1, alGeraetesnr.get(i).getArtikelIId());
+					 * query.setParameter(2, alGeraetesnr.get(i).getCSnr()); Collection c =
+					 * query.getResultList(); if (c.size() > 0) { throw new EJBExceptionLP(
+					 * EJBExceptionLP.FEHLER_GERAETESNR_BEREITS_ZUGEBUCHT, new Exception(
+					 * "FEHLER_GERAETESNR_BEREITS_ZUGEBUCHT")); }
 					 */
 
-					Integer pkGsnr = pkGen
-							.getNextPrimaryKey(PKConst.PK_LAGERBEWEGUNG_I_ID_BUCHUNG);
-					Geraetesnr gsnr = new Geraetesnr(pkGsnr, alGeraetesnr
-							.get(i).getCSnr(), pk, alGeraetesnr.get(i)
-							.getArtikelIId());
+					Integer pkGsnr = pkGen.getNextPrimaryKey(PKConst.PK_LAGERBEWEGUNG_I_ID_BUCHUNG);
+					Geraetesnr gsnr = new Geraetesnr(pkGsnr, alGeraetesnr.get(i).getCSnr(), pk,
+							alGeraetesnr.get(i).getArtikelIId());
 					em.merge(gsnr);
 					em.flush();
 				}
@@ -10189,18 +9544,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			}
 
 			// PJ18452
-			if (Helper.short2boolean(artikel.getBChargennrtragend())
-					&& paneldatenDtos != null) {
-				chargenEingenschaftenEinerBuchungUpdaten(paneldatenDtos,
-						lagerbewegungDtoNeueintrag.getIIdBuchung());
+			if (Helper.short2boolean(artikel.getBChargennrtragend()) && paneldatenDtos != null) {
+				chargenEingenschaftenEinerBuchungUpdaten(paneldatenDtos, lagerbewegungDtoNeueintrag.getArtikelIId(),
+						lagerbewegungDtoNeueintrag.getCSeriennrchargennr(), theClientDto);
 			}
 
 			// Lagerstand in WW_ARTIKELLAGER updaten
-			Artikellager artikellager = em.find(Artikellager.class,
-					new ArtikellagerPK(artikelIId, lagerIId));
+			Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 			if (artikellager == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
 						new Exception("ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET"));
 			}
 			BigDecimal lagerstandNeu = artikellager.getNLagerstand();
@@ -10208,60 +9560,48 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			lagerstandNeu = lagerstandBisher.add(fMengeAbsolut);
 
 			if (bLagerbewirtschaftet == true) {
-				artikellager.setNLagerstand(Helper.rundeKaufmaennisch(
-						lagerstandNeu, 4));
+				artikellager.setNLagerstand(Helper.rundeKaufmaennisch(lagerstandNeu, 4));
 			} else {
 				artikellager.setNLagerstand(new BigDecimal(0));
 			}
 
 			BigDecimal gestpreisBisher = artikellager.getNGestehungspreis();
 			if (lagerstandNeu.doubleValue() != 0) {
-				BigDecimal gestpreisNeu = (gestpreisBisher
-						.multiply(lagerstandBisher).add(fMengeAbsolut
-						.multiply(nEinstandspreis))).divide(lagerstandNeu, 4,
-						BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal gestpreisNeu = (gestpreisBisher.multiply(lagerstandBisher)
+						.add(fMengeAbsolut.multiply(nEinstandspreis))).divide(lagerstandNeu, 4,
+								BigDecimal.ROUND_HALF_EVEN);
 
 				artikellager.setNGestehungspreis(gestpreisNeu);
 				lagerbewegungDtoNeueintrag.setNGestehungspreis(gestpreisNeu);
 			} else {
 				artikellager.setNGestehungspreis(new BigDecimal((double) 0));
-				lagerbewegungDtoNeueintrag.setNGestehungspreis(new BigDecimal(
-						(double) 0));
+				lagerbewegungDtoNeueintrag.setNGestehungspreis(new BigDecimal((double) 0));
 			}
 
 			updateLagerbewegung(lagerbewegungDtoNeueintrag, theClientDto);
 
-			if (belegartCNrUrsprung != null
-					&& belegartpositionIIdUrsprung != null) {
+			if (belegartCNrUrsprung != null && belegartpositionIIdUrsprung != null) {
 				// Wenn Ursprung angegeben wurde, dann Buchungsnummer des
 				// Ursprungen herausfunden
 				LagerbewegungDto[] dtos = lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
-						belegartCNrUrsprung, belegartpositionIIdUrsprung,
-						cSeriennrchargennrUrsprung);
+						belegartCNrUrsprung, belegartpositionIIdUrsprung, cSeriennrchargennrUrsprung);
 				if (dtos.length < 1) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_LAGERBEWEGUNGSURSPRUNG_NICHT_AUFFINDBAR,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LAGERBEWEGUNGSURSPRUNG_NICHT_AUFFINDBAR,
 							new Exception("dtos.length<1"));
 				}
 				// Mit Ursprung verketten
 				LagerzugangursprungDto zugangursprungDto = new LagerzugangursprungDto();
 				zugangursprungDto.setILagerbewegungid(pk);
-				zugangursprungDto
-						.setILagerbewegungidursprung(sortiereNachDatumJuensterZuerst(dtos)[0]
-								.getIIdBuchung());
+				zugangursprungDto.setILagerbewegungidursprung(sortiereNachDatumJuensterZuerst(dtos)[0].getIIdBuchung());
 				createLagerzugangursprung(zugangursprungDto);
 			}
 
 			// Wenn nach dem Belegdatum noch Buchungen vorhanden sind, dann neu
 			// aufrollen
 
-			String queryString = "SELECT l FROM FLRLagerbewegung l WHERE l.artikel_i_id="
-					+ artikelIId
-					+ " AND l.lager_i_id="
-					+ lagerIId
-					+ " AND l.t_belegdatum>'"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(
-							tBelegdatum.getTime())) + "'";
+			String queryString = "SELECT l FROM FLRLagerbewegung l WHERE l.artikel_i_id=" + artikelIId
+					+ " AND l.lager_i_id=" + lagerIId + " AND l.t_belegdatum>'"
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tBelegdatum.getTime())) + "'";
 			Session session = FLRSessionFactory.getFactory().openSession();
 			org.hibernate.Query query = session.createQuery(queryString);
 			query.setMaxResults(1);
@@ -10270,10 +9610,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			if (resultList.size() > 0 && gestehungspreisNeuKalkulieren == true) {
 				// Gestehungspreis neu aufrollen
-				BigDecimal preis = recalcGestehungspreisAbTermin(
-						lagerbewegungDtoNeueintrag.getIId(), artikelIId,
-						lagerIId, Helper.cutTimestamp(tBelegdatum),
-						theClientDto);
+				BigDecimal preis = recalcGestehungspreisAbTermin(lagerbewegungDtoNeueintrag.getIId(), artikelIId,
+						lagerIId, Helper.cutTimestamp(tBelegdatum), theClientDto);
 				if (preis != null && lagerstandNeu.doubleValue() != 0) {
 					artikellager.setNGestehungspreis(preis);
 				}
@@ -10287,68 +9625,78 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			double gestpreisNachher = 0;
 
 			try {
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager != null) {
-					lagerstandNachher = artikellager.getNLagerstand()
-							.doubleValue();
-					gestpreisNachher = artikellager.getNGestehungspreis()
-							.doubleValue();
+					lagerstandNachher = artikellager.getNLagerstand().doubleValue();
+					gestpreisNachher = artikellager.getNGestehungspreis().doubleValue();
 				}
 
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 
-			String logEintrag = "LagerstandNachBuchung=" + lagerstandNachher
-					+ ",GestpreisNachBuchung=" + gestpreisNachher;
+			String logEintrag = "LagerstandNachBuchung=" + lagerstandNachher + ",GestpreisNachBuchung="
+					+ gestpreisNachher;
 			erstelleProtokollEintragZubuchung(theClientDto, logEintrag, false);
 		}
 
 	}
 
-	private void chargenEingenschaftenEinerBuchungUpdaten(PaneldatenDto[] dtos,
-			Integer iId_Buchung) {
+	private void chargenEingenschaftenEinerBuchungUpdaten(PaneldatenDto[] dtos, Integer artikelIId, String cSnrchnr,
+			TheClientDto theClientDto) {
 
-		if (dtos != null) {
+		if (dtos != null && cSnrchnr != null) {
 
+			Integer artikelsnrchnrIId = updateArtikelsnrchnr(artikelIId, cSnrchnr, null);
 			for (int i = 0; i < dtos.length; i++) {
-				dtos[i].setCKey(iId_Buchung + "");
+				dtos[i].setCKey(artikelsnrchnrIId + "");
 				dtos[i].setCDatentypkey("java.lang.String");
 			}
 
-			getPanelFac().createPaneldaten(dtos);
+			getPanelFac().createPaneldaten(dtos, theClientDto);
 
 		}
 
 	}
 
-	public boolean hatRolleBerechtigungAufLager(Integer lagerIId,
-			TheClientDto theClientDto) {
+	public boolean hatRolleBerechtigungAufLager(Integer lagerIId, TheClientDto theClientDto) {
 		// PJ 15712
-		try {
-			Integer systemrolleIId = theClientDto.getSystemrolleIId();
-			if (systemrolleIId == null) {
-				systemrolleIId = getTheJudgeFac().getSystemrolleIId(
-						theClientDto);
-			}
-			Query query = em
-					.createNamedQuery("LagerrollefindBySystemrolleIIdLagerIId");
-			query.setParameter(1, systemrolleIId);
-			query.setParameter(2, lagerIId);
-			Lagerrolle temp = (Lagerrolle) query.getSingleResult();
+
+		Integer systemrolleIId = theClientDto.getSystemrolleIId();
+		if (systemrolleIId == null) {
+			systemrolleIId = getTheJudgeFac().getSystemrolleIId(theClientDto);
+		}
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT l.i_id FROM FLRLagerrolle l WHERE l.flrlager.i_id=" + lagerIId
+				+ " AND l.flrsystemrolle.i_id=" + systemrolleIId + "";
+
+		org.hibernate.Query query = session.createQuery(sQuery);
+		query.setMaxResults(1);
+
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		if (resultListIterator.hasNext()) {
 			return true;
-		} catch (NoResultException ex1) {
-			// keine Lagerberechtigung
-			return false;
-		} catch (EJBExceptionLP ex2) {
-			// Systemrolle nicht vorhanden
+		} else {
 			return false;
 		}
+
+		/*
+		 * SELECT OBJECT(C) FROM Lagerrolle c WHERE c.systemrolleIId = ?1 AND c.lagerIId
+		 * = ?2
+		 * 
+		 * Query query = em .createNamedQuery("LagerrollefindBySystemrolleIIdLagerIId");
+		 * query.setParameter(1, systemrolleIId); query.setParameter(2, lagerIId);
+		 * Lagerrolle temp = (Lagerrolle) query.getSingleResult(); return true; } catch
+		 * (NoResultException ex1) { // keine Lagerberechtigung return false; } catch
+		 * (EJBExceptionLP ex2) { // Systemrolle nicht vorhanden return false; }
+		 */
 	}
 
-	private void erstelleProtokollEintragZubuchung(TheClientDto theClientDto,
-			String logEintrag, boolean bStacktrace) {
+	private void erstelleProtokollEintragZubuchung(TheClientDto theClientDto, String logEintrag, boolean bStacktrace) {
 		ProtokollDto protokollDto = new ProtokollDto();
 
 		protokollDto.setCTyp(SystemFac.PROTOKOLL_TYP_LAGER_ZU);
@@ -10356,30 +9704,52 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		protokollDto.setCText(logEintrag);
 		if (bStacktrace)
-			protokollDto.setCLangtext(getLPStackTrace(new Throwable()
-					.getStackTrace()));
+			protokollDto.setCLangtext(getLPStackTrace(new Throwable().getStackTrace()));
 		erstelleProtokollEintrag(protokollDto, theClientDto);
 	}
 
-	private BigDecimal recalcGestehungspreisAbTermin(Integer bewegungIId,
-			Integer artikelIId, Integer lagerIId, Timestamp startTermin,
-			TheClientDto theClientDto) {
+	public void gestehungspreisEinesArtikelNeuBerechnen(Integer artikelIId, TheClientDto theClientDto) {
+		LagerDto[] lagerDtos = lagerFindAll();
+		for (int i = 0; i < lagerDtos.length; i++) {
+			BigDecimal preis = recalcGestehungspreisAbTermin(-1, artikelIId, lagerDtos[i].getIId(), new Timestamp(0),
+					theClientDto);
+			if (preis != null) {
+				Artikellager artikellager = em.find(Artikellager.class,
+						new ArtikellagerPK(artikelIId, lagerDtos[i].getIId()));
+				if (artikellager != null) {
+					artikellager.setNGestehungspreis(preis);
+				}
+			}
+
+		}
+	}
+
+	private BigDecimal recalcGestehungspreisAbTermin(Integer bewegungIId, Integer artikelIId, Integer lagerIId,
+			Timestamp startTermin, TheClientDto theClientDto) {
+
+		// auf PJ18998 siehe
+		// FertigungFacBean.aktualisiereNachtraeglichPreiseAllerLosablieferungen()
+		// Hier wird verhindert, das fuer jede Losablieferung die Aufrollung
+		// durchgefuehrt wird, obwohl die
+		// Aufrollung der aeltesten Buchung reichen wuerde
+		if (theClientDto.getIStatus() != null) {
+			theClientDto.setIStatus(null);
+			return null;
+		}
 
 		// Ohne Uhrzeit, da Lagerabgaenge keine Uhrzeit im Belegdatum haben.
 		startTermin = Helper.cutTimestamp(startTermin);
 
 		// wegen vordatierter Abbuchungen pruefen
-		Timestamp tVordatiert = getAbbuchungenVordatiert(bewegungIId,
-				startTermin);
+		Timestamp tVordatiert = getAbbuchungenVordatiert(bewegungIId, startTermin);
 		if (tVordatiert.getTime() < startTermin.getTime()) {
 			startTermin = tVordatiert;
 			startTermin = Helper.cutTimestamp(startTermin);
 		}
 		Session session = FLRSessionFactory.getFactory().openSession();
-		Dialect dialect = ((SessionFactoryImplementor) session
-				.getSessionFactory()).getDialect();
+
 		String sQuery = null;
-		if (dialect instanceof org.hibernate.dialect.SQLServerDialect) {
+		if (FLRSessionFactory.isMSSQL()) {
 			sQuery = "select  I_ID, B_ABGANG, SUM(N_MENGE) as N_MENGE, N_EINSTANDSPREIS, N_GESTEHUNGSPREIS, LAGER_I_ID, CONVERT(CHAR(10), T_BELEGDATUM, 102) AS T_BELEGDATUM, T_BUCHUNGSZEIT "
 					+ "from WW_LAGERBEWEGUNG "
 					+ "where LAGER_I_ID=? and ARTIKEL_I_ID=? and B_ABGANG=0 and B_HISTORIE=0 and T_BELEGDATUM >= ? "
@@ -10415,16 +9785,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		ArtikelGestehungspreisCalc agc = new ArtikelGestehungspreisCalc(list);
 		session.close();
 
-		BigDecimal bdLsZeitpunkt = getLagerstandVorZeitpunktBelegdatum(
-				artikelIId, lagerIId, startTermin, theClientDto);
-		BigDecimal bdGestpreisZeitpunkt = getGestehungspreisVorZeitpunktBelegdatum(
-				artikelIId, lagerIId, startTermin, theClientDto);
+		BigDecimal bdLsZeitpunkt = getLagerstandVorZeitpunktBelegdatum(artikelIId, lagerIId, startTermin, theClientDto);
+		BigDecimal bdGestpreisZeitpunkt = getGestehungspreisVorZeitpunktBelegdatum(artikelIId, lagerIId, startTermin,
+				theClientDto);
 
 		// agc.save2Csv("c:/temp/" + artikelIId.toString() + "_v_" + new
 		// Long(System.currentTimeMillis()).toString() + ".csv");
-		agc.doRecalc(lagerIId, bdLsZeitpunkt,
-				bdGestpreisZeitpunkt.multiply(bdLsZeitpunkt),
-				bdGestpreisZeitpunkt);
+		agc.doRecalc(lagerIId, bdLsZeitpunkt, bdGestpreisZeitpunkt.multiply(bdLsZeitpunkt), bdGestpreisZeitpunkt);
 
 		// agc.save2Csv("c:/temp/" + artikelIId.toString() + ".csv");
 		// agc.saveUpdateSQL("c:/temp/" + artikelIId.toString() + ".sql");
@@ -10432,8 +9799,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// Long(System.currentTimeMillis()).toString() + ".csv");
 		/*
 		 * if (agc.hasDataError()) { //
-		 * ERSTE_BUCHUNG_ZUM_ZEITPUNKT_MUSS_ZUGANGSBUCHUNG_SEIN // TODO:
-		 * Aufrufer sollte Fehler fangen throw new
+		 * ERSTE_BUCHUNG_ZUM_ZEITPUNKT_MUSS_ZUGANGSBUCHUNG_SEIN // TODO: Aufrufer sollte
+		 * Fehler fangen throw new
 		 * EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
 		 * "Erste Buchung muss eine Zugangsbuchung sein"); }
 		 */
@@ -10476,8 +9843,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return ts;
 	}
 
-	private Timestamp getAbbuchungenVordatiert(Integer bewegungIId,
-			Timestamp startTermin) {
+	private Timestamp getAbbuchungenVordatiert(Integer bewegungIId, Timestamp startTermin) {
 		String sQuery = "select MIN(T_BELEGDATUM) from WW_LAGERBEWEGUNG "
 				+ "WHERE B_HISTORIE = 0 AND B_ABGANG = 1 AND N_MENGE <> 0 AND T_BELEGDATUM < ? AND I_ID_BUCHUNG IN "
 				+ "(select I_LAGERBEWEGUNGID from WW_LAGERABGANGURSPRUNG where I_LAGERBEWEGUNGIDURSPRUNG  = "
@@ -10500,59 +9866,44 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return ts;
 	}
 
-	public void setzteZugangsBuchungAlsVerbraucht(String belegartCNr,
-			Integer belegartpositionIId, String cSeriennrchargennr,
-			TheClientDto theClientDto, boolean bVerbraucht)
-			throws EJBExceptionLP {
+	public void setzteZugangsBuchungAlsVerbraucht(String belegartCNr, Integer belegartpositionIId,
+			String cSeriennrchargennr, TheClientDto theClientDto, boolean bVerbraucht) throws EJBExceptionLP {
 		LagerbewegungDto[] lagerbewegungDto = lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
 				belegartCNr, belegartpositionIId, cSeriennrchargennr);
 		if (belegartCNr == null || belegartpositionIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId == null"));
 		}
 		for (int i = 0; i < lagerbewegungDto.length; i++) {
 			if (lagerbewegungDto[i].getBAbgang().intValue() > 0) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-						new Exception(
-								"BUCHUNG_IST_KEINE_ZUGANGSBUCHUNG BELEGART_C_NR="
-										+ belegartCNr + " BELEGARTPOSITIONID="
-										+ belegartpositionIId));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+						new Exception("BUCHUNG_IST_KEINE_ZUGANGSBUCHUNG BELEGART_C_NR=" + belegartCNr
+								+ " BELEGARTPOSITIONID=" + belegartpositionIId));
 
 			}
 			if (bVerbraucht == true) {
-				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short(
-						(short) 1));
+				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short((short) 1));
 			} else {
-				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short(
-						(short) 0));
+				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short((short) 0));
 			}
 			updateLagerbewegung(lagerbewegungDto[i], theClientDto);
 		}
 
 	}
 
-	public void setzteZugangsBuchungAlsVerbraucht(Integer iIdBuchung,
-			boolean bVerbraucht, TheClientDto theClientDto) {
+	public void setzteZugangsBuchungAlsVerbraucht(Integer iIdBuchung, boolean bVerbraucht, TheClientDto theClientDto) {
 		LagerbewegungDto[] lagerbewegungDto = lagerbewegungFindByIIdBuchung(iIdBuchung);
 
 		for (int i = 0; i < lagerbewegungDto.length; i++) {
 			if (lagerbewegungDto[i].getBAbgang().intValue() > 0) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-						new Exception(
-								"BUCHUNG_IST_KEINE_ZUGANGSBUCHUNG I_ID_BUCHUNG="
-										+ iIdBuchung));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+						new Exception("BUCHUNG_IST_KEINE_ZUGANGSBUCHUNG I_ID_BUCHUNG=" + iIdBuchung));
 
 			}
 			if (bVerbraucht == true) {
-				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short(
-						(short) 1));
+				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short((short) 1));
 			} else {
-				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short(
-						(short) 0));
+				lagerbewegungDto[i].setBVollstaendigverbraucht(new Short((short) 0));
 			}
 			updateLagerbewegung(lagerbewegungDto[i], theClientDto);
 		}
@@ -10560,107 +9911,84 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Bucht mehrere Seriennummern ab. Derzeit nur Komma als Trenner
-	 * m&ouml;glich
+	 * Bucht mehrere Seriennummern ab. Derzeit nur Komma als Trenner m&ouml;glich
 	 * 
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartIId
-	 *            Integer
-	 * @param belegartpositionIId
-	 *            Integer
-	 * @param artikelIId
-	 *            Integer
-	 * @param iMenge
-	 *            Integer
-	 * @param nVerkaufspreis
-	 *            BigDecimal
-	 * @param lagerIId
-	 *            Integer
-	 * @param sSeriennummern
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param belegartCNr         String
+	 * @param belegartIId         Integer
+	 * @param belegartpositionIId Integer
+	 * @param artikelIId          Integer
+	 * @param iMenge              Integer
+	 * @param nVerkaufspreis      BigDecimal
+	 * @param lagerIId            Integer
+	 * @param sSeriennummern      String
+	 * @param theClientDto        String
 	 * @throws EJBExceptionLP
 	 */
-	public void bucheSeriennummernAb(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId, Integer iMenge,
-			BigDecimal nVerkaufspreis, Integer lagerIId, String sSeriennummern,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void bucheSeriennummernAb(String belegartCNr, Integer belegartIId, Integer belegartpositionIId,
+			Integer artikelIId, Integer iMenge, BigDecimal nVerkaufspreis, Integer lagerIId, String sSeriennummern,
+			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto) throws EJBExceptionLP {
 
-		String[] sSeriennummernZerlegt = Helper
-				.erzeugeStringArrayAusString(sSeriennummern);
+		String[] sSeriennummernZerlegt = Helper.erzeugeStringArrayAusString(sSeriennummern);
 
 		for (int i = 0; i < iMenge.intValue(); i++) {
-			bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId,
-					new BigDecimal(1), nVerkaufspreis, lagerIId,
-					sSeriennummernZerlegt[i], tBelegdatum, theClientDto);
+			bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, new BigDecimal(1), nVerkaufspreis,
+					lagerIId, sSeriennummernZerlegt[i], tBelegdatum, theClientDto);
 		}
 
 	}
 
-	public String wirdLagermindeststandUnterschritten(
-			java.sql.Date tPositionsdatum, BigDecimal bdPositionsmenge,
-			Integer artikelIId, TheClientDto theClientDto) {
+	public String wirdLagermindeststandUnterschritten(java.sql.Date tPositionsdatum, BigDecimal bdPositionsmenge,
+			Integer artikelIId, TheClientDto theClientDto, Integer partnerIIdStandort) {
 		try {
 
-			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-					artikelIId, theClientDto);
-			double dLagermindeststand = 0;
-			if (artikelDto.getFLagermindest() != null) {
-				dLagermindeststand = artikelDto.getFLagermindest();
-			}
-			ArrayList<BewegungsvorschauDto> al = getInternebestellungFac()
-					.getBewegungsvorschauSortiert(artikelIId, false,
-							theClientDto);
+			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(artikelIId, theClientDto);
 
-			BigDecimal anfangslagerstand = new BigDecimal(0);
-			LagerDto[] allelaegerDtos = getLagerFac().lagerFindByMandantCNr(
-					theClientDto.getMandant());
+			if (artikelDto.isLagerbewirtschaftet()) {
 
-			for (int i = 0; i < allelaegerDtos.length; i++) {
-				if (Helper.short2boolean(allelaegerDtos[i]
-						.getBInternebestellung())) {
-					anfangslagerstand = anfangslagerstand.add(getLagerFac()
-							.getLagerstand(artikelIId,
-									allelaegerDtos[i].getIId(), theClientDto));
+				double dLagermindeststand = 0;
+				if (artikelDto.getFLagermindest() != null) {
+					dLagermindeststand = artikelDto.getFLagermindest();
 				}
-			}
+				ArrayList<BewegungsvorschauDto> al = getInternebestellungFac().getBewegungsvorschauSortiert(artikelIId,
+						false, false, theClientDto, partnerIIdStandort, false, false, false, null);
 
-			BewegungsvorschauDto[] returnArray = new BewegungsvorschauDto[al
-					.size()];
-			BewegungsvorschauDto[] dtos = (com.lp.server.bestellung.service.BewegungsvorschauDto[]) al
-					.toArray(returnArray);
+				BigDecimal anfangslagerstand = new BigDecimal(0);
+				LagerDto[] allelaegerDtos = getLagerFac().lagerFindByMandantCNr(theClientDto.getMandant());
 
-			for (int i = 0; i < dtos.length; i++) {
-				BewegungsvorschauDto dto = dtos[i];
-
-				if (tPositionsdatum.getTime() <= dto.getTLiefertermin()
-						.getTime()) {
-					anfangslagerstand = anfangslagerstand.add(dto.getNMenge());
-
-					if (anfangslagerstand.doubleValue() < dLagermindeststand) {
-
-						BigDecimal diff = new BigDecimal(dLagermindeststand)
-								.subtract(anfangslagerstand);
-						MessageFormat mf = new MessageFormat(
-								getTextRespectUISpr(
-										"lp.error.position.lagermindeststandunterschritten",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()));
-						mf.setLocale(theClientDto.getLocUi());
-						Object pattern[] = {
-								Helper.formatDatum(dto.getTLiefertermin(),
-										theClientDto.getLocUi()),
-								Helper.formatZahl(diff, 2,
-										theClientDto.getLocUi())
-										+ " "
-										+ artikelDto.getEinheitCNr().trim() };
-						return mf.format(pattern);
+				for (int i = 0; i < allelaegerDtos.length; i++) {
+					if (Helper.short2boolean(allelaegerDtos[i].getBInternebestellung())) {
+						anfangslagerstand = anfangslagerstand
+								.add(getLagerFac().getLagerstand(artikelIId, allelaegerDtos[i].getIId(), theClientDto));
 					}
-
 				}
+
+				BewegungsvorschauDto[] returnArray = new BewegungsvorschauDto[al.size()];
+				BewegungsvorschauDto[] dtos = (com.lp.server.bestellung.service.BewegungsvorschauDto[]) al
+						.toArray(returnArray);
+
+				for (int i = 0; i < dtos.length; i++) {
+					BewegungsvorschauDto dto = dtos[i];
+
+					if (tPositionsdatum.getTime() <= dto.getTLiefertermin().getTime()) {
+						anfangslagerstand = anfangslagerstand.add(dto.getNMenge());
+
+						if (anfangslagerstand.doubleValue() < dLagermindeststand) {
+
+							BigDecimal diff = new BigDecimal(dLagermindeststand).subtract(anfangslagerstand);
+							MessageFormat mf = new MessageFormat(
+									getTextRespectUISpr("lp.error.position.lagermindeststandunterschritten",
+											theClientDto.getMandant(), theClientDto.getLocUi()));
+							mf.setLocale(theClientDto.getLocUi());
+							Object pattern[] = { Helper.formatDatum(dto.getTLiefertermin(), theClientDto.getLocUi()),
+									Helper.formatZahl(diff, 2, theClientDto.getLocUi()) + " "
+											+ artikelDto.getEinheitCNr().trim() };
+							return mf.format(pattern);
+						}
+
+					}
+				}
+			} else {
+				return null;
 			}
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
@@ -10671,44 +9999,42 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	/**
-	 * Gibt die Anzahl der gewuenschten Seriennummern/Chargennummern auf Lager
-	 * an.
+	 * Gibt die Anzahl der gewuenschten Seriennummern/Chargennummern auf Lager an.
 	 * 
-	 * @param artikelIId
-	 *            Integer
-	 * @param lagerIId
-	 *            Integer
-	 * @param cMehrereSeriennrchargennr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param artikelIId                Integer
+	 * @param lagerIId                  Integer
+	 * @param cMehrereSeriennrchargennr String
+	 * @param theClientDto              String
 	 * @return Double
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal getMengeMehrererSeriennummernChargennummernAufLager(
-			Integer artikelIId, Integer lagerIId,
-			List<SeriennrChargennrMitMengeDto> cMehrereSeriennrchargennr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Object[] getMengeMehrererSeriennummernChargennummernAufLager(Integer artikelIId, Integer lagerIId,
+			List<SeriennrChargennrMitMengeDto> cMehrereSeriennrchargennr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (cMehrereSeriennrchargennr != null) {
 
 			BigDecimal menge = new BigDecimal(0);
-
+			String fehlende = "";
 			for (int i = 0; i < cMehrereSeriennrchargennr.size(); i++) {
-				menge = menge.add(getMengeAufLager(artikelIId, lagerIId,
-						cMehrereSeriennrchargennr.get(i)
-								.getCSeriennrChargennr(), theClientDto));
+
+				BigDecimal bdMenge = getMengeAufLager(artikelIId, lagerIId,
+						cMehrereSeriennrchargennr.get(i).getCSeriennrChargennr(), theClientDto);
+
+				menge = menge.add(bdMenge);
+				if (bdMenge.doubleValue() <= 0) {
+					fehlende += cMehrereSeriennrchargennr.get(i).getCSeriennrChargennr() + ", ";
+				}
+
 			}
-			return menge;
+			return new Object[] { menge, fehlende };
 		} else {
-			return getMengeAufLager(artikelIId, lagerIId, null, theClientDto);
+			return new Object[] { getMengeAufLager(artikelIId, lagerIId, null, theClientDto), null };
 		}
 	}
 
-	public void versionInLagerbewegungUpdaten(String belegartCNr,
-			Integer belegartpositionIId, String cVersion) {
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIId");
+	public void versionInLagerbewegungUpdaten(String belegartCNr, Integer belegartpositionIId, String cVersion) {
+		Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIId");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartpositionIId);
 		Collection cl = query.getResultList();
@@ -10735,10 +10061,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void versionInLagerbewegungUpdaten(String belegartCNr,
-			Integer belegartpositionIId, String snrChnr, String cVersion) {
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIIdCSeriennrchargennr");
+	public void versionInLagerbewegungUpdaten(String belegartCNr, Integer belegartpositionIId, String snrChnr,
+			String cVersion) {
+		Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIIdCSeriennrchargennr");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartpositionIId);
 		query.setParameter(3, snrChnr);
@@ -10766,34 +10091,58 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
+	public void versionUndGebindeInLagerbewegungUpdaten(String belegartCNr, Integer belegartpositionIId, String snrChnr,
+			String cVersion, Integer gebindeIId, BigDecimal nGebindemenge) {
+		Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIIdCSeriennrchargennr");
+		query.setParameter(1, belegartCNr);
+		query.setParameter(2, belegartpositionIId);
+		query.setParameter(3, snrChnr);
+		Collection cl = query.getResultList();
+
+		Iterator it = cl.iterator();
+
+		while (it.hasNext()) {
+			Lagerbewegung l = (Lagerbewegung) it.next();
+
+			Query query2 = em.createNamedQuery("LagerbewegungfindByIIdBuchung");
+			query2.setParameter(1, l.getIIdBuchung());
+			Collection cl2 = query2.getResultList();
+
+			Iterator it2 = cl2.iterator();
+
+			while (it2.hasNext()) {
+				Lagerbewegung l2 = (Lagerbewegung) it2.next();
+				l2.setCVersion(cVersion);
+				l2.setGebindeIId(gebindeIId);
+				l2.setNGebindemenge(nGebindemenge);
+				em.merge(l2);
+				em.flush();
+			}
+
+		}
+
+	}
+
 	// 14317
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public BigDecimal sofortverbrauchAllerArtikelAbbuchen(
-			TheClientDto theClientDto) {
+	public BigDecimal sofortverbrauchAllerArtikelAbbuchen(TheClientDto theClientDto) {
 
 		int iStandarddurchlaufzeit = 0;
 		MontageartDto montageartDto = null;
 		try {
-			ParametermandantDto parameter = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_FERTIGUNG,
-							ParameterFac.INTERNEBESTELLUNG_DEFAULTDURCHLAUFZEIT);
-			iStandarddurchlaufzeit = ((Integer) parameter.getCWertAsObject())
-					.intValue();
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG, ParameterFac.INTERNEBESTELLUNG_DEFAULTDURCHLAUFZEIT);
+			iStandarddurchlaufzeit = ((Integer) parameter.getCWertAsObject()).intValue();
 
-			montageartDto = getStuecklisteFac().montageartFindByMandantCNr(
-					theClientDto)[0];
+			montageartDto = getStuecklisteFac().montageartFindByMandantCNr(theClientDto)[0];
 
 		} catch (RemoteException ex2) {
 			throwEJBExceptionLPRespectOld(ex2);
 		}
 
 		Session session = FLRSessionFactory.getFactory().openSession();
-		Criteria snrs = session
-				.createCriteria(FLRArtikel.class)
-				.add(Expression.isNotNull("i_sofortverbrauch"))
-				.add(Expression.eq("b_lagerbewirtschaftet",
-						Helper.boolean2Short(true)));
+		Criteria snrs = session.createCriteria(FLRArtikel.class).add(Expression.isNotNull("i_sofortverbrauch"))
+				.add(Expression.eq("b_lagerbewirtschaftet", Helper.boolean2Short(true)));
 
 		snrs.addOrder(Order.asc("c_nr"));
 
@@ -10803,84 +10152,55 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		while (listSnrIterator.hasNext()) {
 			FLRArtikel artikel = (FLRArtikel) listSnrIterator.next();
-
-			if (artikel.getI_id() == 2509) {
-				int u = 0;
-			}
-
 			if (artikel.getI_sofortverbrauch() > 0) {
 				Calendar c = Calendar.getInstance();
-				c.set(Calendar.DAY_OF_YEAR, c.get(Calendar.DAY_OF_YEAR)
-						- artikel.getI_sofortverbrauch());
+				c.set(Calendar.DAY_OF_YEAR, c.get(Calendar.DAY_OF_YEAR) - artikel.getI_sofortverbrauch());
 
 				Session session2 = FLRSessionFactory.getFactory().openSession();
 
-				String sQuery = "SELECT l FROM FLRLagerbewegung AS l WHERE l.artikel_i_id="
-						+ artikel.getI_id()
+				String sQuery = "SELECT l FROM FLRLagerbewegung AS l WHERE l.artikel_i_id=" + artikel.getI_id()
 						+ " AND l.b_vollstaendigverbraucht=0 AND l.b_abgang=0 AND l.b_historie=0 AND l.n_menge>0 AND l.t_belegdatum<'"
-						+ Helper.formatDateWithSlashes(new java.sql.Date(c
-								.getTimeInMillis())) + "'";
+						+ Helper.formatDateWithSlashes(new java.sql.Date(c.getTimeInMillis())) + "'";
 
 				org.hibernate.Query hquery = session.createQuery(sQuery);
 				List<?> resultList = hquery.list();
 				Iterator<?> resultListIterator = resultList.iterator();
 
 				while (resultListIterator.hasNext()) {
-					FLRLagerbewegung lbew = (FLRLagerbewegung) resultListIterator
-							.next();
+					FLRLagerbewegung lbew = (FLRLagerbewegung) resultListIterator.next();
 
 					try {
 
 						// Buche verbleibende Menge aufs Tageslos
 
-						Integer losIId = getFertigungFac().holeTageslos(
-								lbew.getLager_i_id(),
-								artikel.getMandant_c_nr(),
+						Integer losIId = getFertigungFac().holeTageslos(lbew.getLager_i_id(), artikel.getMandant_c_nr(),
 								iStandarddurchlaufzeit, true, theClientDto);
 
 						if (losIId != null) {
 
 							LossollmaterialDto lossollmaterialDto = new LossollmaterialDto();
 							lossollmaterialDto.setLosIId(losIId);
-							lossollmaterialDto.setNSollpreis(lbew
-									.getN_einstandspreis());
+							lossollmaterialDto.setNSollpreis(lbew.getN_einstandspreis());
 							lossollmaterialDto.setNMenge(new BigDecimal(0));
-							lossollmaterialDto.setMontageartIId(montageartDto
-									.getIId());
-							lossollmaterialDto.setEinheitCNr(artikel
-									.getEinheit_c_nr());
+							lossollmaterialDto.setMontageartIId(montageartDto.getIId());
+							lossollmaterialDto.setEinheitCNr(artikel.getEinheit_c_nr());
 							lossollmaterialDto.setArtikelIId(artikel.getI_id());
 
 							LosistmaterialDto losistmaterialDto = new LosistmaterialDto();
 							losistmaterialDto.setLagerIId(lbew.getLager_i_id());
-							losistmaterialDto.setBAbgang(Helper
-									.boolean2Short(true));
+							losistmaterialDto.setBAbgang(Helper.boolean2Short(true));
 
-							Double bdVerbraucht = getLagerFac()
-									.getVerbrauchteMenge(lbew.getI_id());
+							Double bdVerbraucht = getLagerFac().getVerbrauchteMenge(lbew.getI_id());
 
-							losistmaterialDto
-									.setNMenge(Helper
-											.rundeKaufmaennisch(
-													lbew.getN_menge()
-															.subtract(
-																	new BigDecimal(
-																			bdVerbraucht
-																					.doubleValue())),
-													4));
+							losistmaterialDto.setNMenge(Helper.rundeKaufmaennisch(
+									lbew.getN_menge().subtract(new BigDecimal(bdVerbraucht.doubleValue())), 4));
 
 							if (losistmaterialDto.getNMenge().doubleValue() > 0) {
 
-								getFertigungFac()
-										.gebeMaterialNachtraeglichAus(
-												lossollmaterialDto,
-												losistmaterialDto,
-												SeriennrChargennrMitMengeDto
-														.erstelleDtoAusEinerChargennummer(
-																lbew.getC_seriennrchargennr(),
-																losistmaterialDto
-																		.getNMenge()),
-												true, theClientDto);
+								getFertigungFac().gebeMaterialNachtraeglichAus(lossollmaterialDto, losistmaterialDto,
+										SeriennrChargennrMitMengeDto.erstelleDtoAusEinerChargennummer(
+												lbew.getC_seriennrchargennr(), losistmaterialDto.getNMenge()),
+										true, theClientDto);
 							}
 						}
 					} catch (RemoteException e) {
@@ -10905,39 +10225,25 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Wie bucheAb(...) nur dass auf die ArtikelIID ein Update erlaubt ist, wenn
 	 * belegartpositionIId mitangegeben wird
 	 * 
-	 * @param belegartpositionIId_Alt
-	 *            Integer
-	 * @param belegartCNr
-	 *            String
-	 * @param belegartIId
-	 *            Integer
-	 * @param belegartpositionIId
-	 *            Integer
-	 * @param artikelIId
-	 *            Integer
-	 * @param fMengeAbsolut
-	 *            BigDecimal
-	 * @param nVerkaufspreis
-	 *            BigDecimal
-	 * @param lagerIId
-	 *            Integer
-	 * @param cSeriennrchargennr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param belegartpositionIId_Alt Integer
+	 * @param belegartCNr             String
+	 * @param belegartIId             Integer
+	 * @param belegartpositionIId     Integer
+	 * @param artikelIId              Integer
+	 * @param fMengeAbsolut           BigDecimal
+	 * @param nVerkaufspreis          BigDecimal
+	 * @param lagerIId                Integer
+	 * @param cSeriennrchargennr      String
+	 * @param theClientDto            String
 	 * @throws EJBExceptionLP
 	 */
-	public void bucheAbArtikelUpdate(Integer belegartpositionIId_Alt,
-			String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId,
-			BigDecimal fMengeAbsolut, BigDecimal nVerkaufspreis,
-			Integer lagerIId, String cSeriennrchargennr,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto)
+	public void bucheAbArtikelUpdate(Integer belegartpositionIId_Alt, String belegartCNr, Integer belegartIId,
+			Integer belegartpositionIId, Integer artikelIId, BigDecimal fMengeAbsolut, BigDecimal nVerkaufspreis,
+			Integer lagerIId, String cSeriennrchargennr, java.sql.Timestamp tBelegdatum, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		if (belegartpositionIId_Alt != null) {
-			Query query = em
-					.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIIdCSeriennrchargennr");
+			Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIIdCSeriennrchargennr");
 			query.setParameter(1, belegartCNr);
 			query.setParameter(2, belegartpositionIId_Alt);
 			query.setParameter(3, null);
@@ -10946,16 +10252,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			LagerbewegungDto[] lagerbewegungDtos = assembleLagerbewegungDtos(cl);
 			for (int i = 0; i < lagerbewegungDtos.length; i++) {
 				LagerbewegungDto dto = lagerbewegungDtos[i];
-				bucheAb(belegartCNr, dto.getIBelegartid(),
-						dto.getIBelegartpositionid(), dto.getArtikelIId(),
-						new BigDecimal(0), dto.getNVerkaufspreis(),
-						dto.getLagerIId(), cSeriennrchargennr, tBelegdatum,
+				bucheAb(belegartCNr, dto.getIBelegartid(), dto.getIBelegartpositionid(), dto.getArtikelIId(),
+						new BigDecimal(0), dto.getNVerkaufspreis(), dto.getLagerIId(), cSeriennrchargennr, tBelegdatum,
 						theClientDto);
 			}
 		}
-		bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId,
-				fMengeAbsolut, nVerkaufspreis, lagerIId, cSeriennrchargennr,
-				tBelegdatum, theClientDto);
+		bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nVerkaufspreis, lagerIId,
+				cSeriennrchargennr, tBelegdatum, theClientDto);
 
 	}
 
@@ -10963,29 +10266,21 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	 * Bucht eine gewisse Anzahl von Artikel, wenn angegeben auch mit Serien/
 	 * Chargennummer, aus einem Lager ab.
 	 * 
-	 * @param landIId
-	 *            IId des Ursprungslands
-	 * @param herstellerIId
-	 *            IId des Herstellers
-	 * @param belegartCNr
-	 *            Lieferschein
-	 * @param belegartpositionIId
-	 *            5463
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param landIId             IId des Ursprungslands
+	 * @param herstellerIId       IId des Herstellers
+	 * @param belegartCNr         Lieferschein
+	 * @param belegartpositionIId 5463
+	 * @param theClientDto        der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
 
-	public void setzeHerstellerUrsprungsland(Integer landIId,
-			Integer herstellerIId, String belegartCNr,
-			Integer belegartpositionIId, String cSeriennrchargennr,
-			TheClientDto theClientDto) {
+	public void setzeHerstellerUrsprungsland(Integer landIId, Integer herstellerIId, String belegartCNr,
+			Integer belegartpositionIId, String cSeriennrchargennr, TheClientDto theClientDto) {
 		LagerbewegungDto[] lagerbewegungDto = lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
 				belegartCNr, belegartpositionIId, cSeriennrchargennr);
 
 		for (int i = 0; i < lagerbewegungDto.length; i++) {
-			Lagerbewegung lagerbewegung = em.find(Lagerbewegung.class,
-					lagerbewegungDto[i].getIId());
+			Lagerbewegung lagerbewegung = em.find(Lagerbewegung.class, lagerbewegungDto[i].getIId());
 			lagerbewegung.setLandIId(landIId);
 			lagerbewegung.setHerstellerIId(herstellerIId);
 			em.merge(lagerbewegung);
@@ -11010,12 +10305,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return true;
 	}
 
-	public void loescheKompletteLagerbewegungEinerBelgposition(
-			String belegartCNr, Integer belegartpositionIId,
+	public void loescheKompletteLagerbewegungEinerBelgposition(String belegartCNr, Integer belegartpositionIId,
 			TheClientDto theClientDto) {
 
-		Query query = em
-				.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIId");
+		Query query = em.createNamedQuery("LagerbewegungfindByBelegartCNrBelegartPositionIId");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, belegartpositionIId);
 		Collection cl = query.getResultList();
@@ -11027,17 +10320,13 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			if (Helper.short2boolean(l.getBAbgang())) {
 
-				bucheAb(belegartCNr, l.getIBelegartid(), belegartpositionIId,
-						l.getArtikelIId(), new BigDecimal(0),
-						l.getNVerkaufspreis(), l.getLagerIId(),
-						l.getCSeriennrchargennr(), l.getTBelegdatum(),
+				bucheAb(belegartCNr, l.getIBelegartid(), belegartpositionIId, l.getArtikelIId(), new BigDecimal(0),
+						l.getNVerkaufspreis(), l.getLagerIId(), l.getCSeriennrchargennr(), l.getTBelegdatum(),
 						theClientDto);
 			} else {
-				bucheZu(belegartCNr, l.getIBelegartid(), belegartpositionIId,
-						l.getArtikelIId(), new BigDecimal(0),
-						l.getNEinstandspreis(), l.getLagerIId(),
-						l.getCSeriennrchargennr(), null, l.getTBelegdatum(),
-						theClientDto, null, null, null, null, null, false);
+				bucheZu(belegartCNr, l.getIBelegartid(), belegartpositionIId, l.getArtikelIId(), new BigDecimal(0),
+						l.getNEinstandspreis(), l.getLagerIId(), l.getCSeriennrchargennr(), null, null, null,
+						l.getTBelegdatum(), theClientDto, null, null, null, null, null, false, null);
 
 			}
 		}
@@ -11046,9 +10335,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			Lagerbewegung l = (Lagerbewegung) it.next();
 			if (!Helper.short2boolean(l.getBAbgang())) {
 
-				BigDecimal preis = recalcGestehungspreisAbTermin(l.getIId(),
-						l.getArtikelIId(), l.getLagerIId(), l.getTBelegdatum(),
-						theClientDto);
+				BigDecimal preis = recalcGestehungspreisAbTermin(l.getIId(), l.getArtikelIId(), l.getLagerIId(),
+						l.getTBelegdatum(), theClientDto);
 
 				Artikellager artikellager = em.find(Artikellager.class,
 						new ArtikellagerPK(l.getArtikelIId(), l.getLagerIId()));
@@ -11061,71 +10349,56 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void bucheAb(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId,
-			BigDecimal fMengeAbsolut, BigDecimal nVerkaufspreis,
-			Integer lagerIId,
-			List<SeriennrChargennrMitMengeDto> alSeriennrchargennr,
-			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto) {
+	public void bucheAb(String belegartCNr, Integer belegartIId, Integer belegartpositionIId, Integer artikelIId,
+			BigDecimal fMengeAbsolut, BigDecimal nVerkaufspreis, Integer lagerIId,
+			List<SeriennrChargennrMitMengeDto> alSeriennrchargennr, java.sql.Timestamp tBelegdatum,
+			TheClientDto theClientDto) {
 		Artikel artikel = em.find(Artikel.class, artikelIId);
 		// Wenn Menge >0
 		if (fMengeAbsolut.doubleValue() > 0) {
-			if (alSeriennrchargennr == null || alSeriennrchargennr.size() == 0) {
+			if (alSeriennrchargennr == null || alSeriennrchargennr.size() == 0 || (alSeriennrchargennr != null
+					&& alSeriennrchargennr.size() == 1 && alSeriennrchargennr.get(0).getCSeriennrChargennr() == null)) {
 				// Kein SeriennummernChargenbehafteter Artikel
 
-				bucheAb(belegartCNr, belegartIId, belegartpositionIId,
-						artikelIId, fMengeAbsolut, nVerkaufspreis, lagerIId,
-						(String) null, tBelegdatum, theClientDto);
+				bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nVerkaufspreis,
+						lagerIId, (String) null, tBelegdatum, theClientDto, true);
 			} else {
 				alSeriennrchargennr = verdichteSerienChargennummern(alSeriennrchargennr);
-				pruefeLagerbewegungsMengeMitSnrChnrMenge(fMengeAbsolut,
-						alSeriennrchargennr);
+				pruefeLagerbewegungsMengeMitSnrChnrMenge(fMengeAbsolut, alSeriennrchargennr);
 				List<SeriennrChargennrMitMengeDto> snrVorher = getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 						belegartCNr, belegartpositionIId);
 				if (snrVorher != null && snrVorher.size() > 0) {
 
 					HashMap<String, String> hmZuLoeschendeSNR = new HashMap<String, String>();
 					for (int i = 0; i < snrVorher.size(); i++) {
-						hmZuLoeschendeSNR.put(snrVorher.get(i)
-								.getCSeriennrChargennr(), snrVorher.get(i)
-								.getCSeriennrChargennr());
+						hmZuLoeschendeSNR.put(snrVorher.get(i).getCSeriennrChargennr(),
+								snrVorher.get(i).getCSeriennrChargennr());
 					}
 
 					for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-						hmZuLoeschendeSNR.remove(alSeriennrchargennr.get(i)
-								.getCSeriennrChargennr());
+						hmZuLoeschendeSNR.remove(alSeriennrchargennr.get(i).getCSeriennrChargennr());
 					}
 
 					// Alle nicht mehr eingegebenen loeschen
-					for (Iterator<?> iter = hmZuLoeschendeSNR.keySet()
-							.iterator(); iter.hasNext();) {
+					for (Iterator<?> iter = hmZuLoeschendeSNR.keySet().iterator(); iter.hasNext();) {
 						String snr2Delete = (String) iter.next();
-						bucheAb(belegartCNr, belegartIId, belegartpositionIId,
-								artikelIId,
-								new BigDecimal(0), // Menge
-								nVerkaufspreis, lagerIId, snr2Delete,
-								tBelegdatum, theClientDto);
+						bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, new BigDecimal(0), // Menge
+								nVerkaufspreis, lagerIId, snr2Delete, tBelegdatum, theClientDto, false);
 					}
 					for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr
-								.get(i);
-						bucheAb(belegartCNr, belegartIId, belegartpositionIId,
-								artikelIId, alZeile.getNMenge(),
-								nVerkaufspreis, lagerIId,
-								alZeile.getCSeriennrChargennr(), tBelegdatum,
-								theClientDto);
+						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr.get(i);
+						bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, alZeile.getNMenge(),
+								nVerkaufspreis, lagerIId, alZeile.getCSeriennrChargennr(), tBelegdatum, theClientDto,
+								false);
 					}
 
 				} else {
 
 					for (int i = 0; i < alSeriennrchargennr.size(); i++) {
-						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr
-								.get(i);
-						bucheAb(belegartCNr, belegartIId, belegartpositionIId,
-								artikelIId, alZeile.getNMenge(),
-								nVerkaufspreis, lagerIId,
-								alZeile.getCSeriennrChargennr(), tBelegdatum,
-								theClientDto);
+						SeriennrChargennrMitMengeDto alZeile = alSeriennrchargennr.get(i);
+						bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, alZeile.getNMenge(),
+								nVerkaufspreis, lagerIId, alZeile.getCSeriennrChargennr(), tBelegdatum, theClientDto,
+								false);
 
 					}
 				}
@@ -11137,45 +10410,57 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				List<SeriennrChargennrMitMengeDto> alSeriennrchargennrVorhanden = getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 						belegartCNr, belegartpositionIId);
 				for (int i = 0; i < alSeriennrchargennrVorhanden.size(); i++) {
-					bucheAb(belegartCNr, belegartIId, belegartpositionIId,
-							artikelIId, new BigDecimal(0), nVerkaufspreis,
-							lagerIId, alSeriennrchargennrVorhanden.get(i)
-									.getCSeriennrChargennr(), tBelegdatum,
-							theClientDto);
+					bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, new BigDecimal(0),
+							nVerkaufspreis, lagerIId, alSeriennrchargennrVorhanden.get(i).getCSeriennrChargennr(),
+							tBelegdatum, theClientDto, false);
 				}
 			} else {
-				bucheAb(belegartCNr, belegartIId, belegartpositionIId,
-						artikelIId, new BigDecimal(0), nVerkaufspreis,
-						lagerIId, (String) null, tBelegdatum, theClientDto);
+				bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, new BigDecimal(0), nVerkaufspreis,
+						lagerIId, (String) null, tBelegdatum, theClientDto, true);
 			}
 
 		}
 
+		if (alSeriennrchargennr != null && alSeriennrchargennr.size() > 0) {
+			LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId,
+					alSeriennrchargennr.get(0).getCSeriennrChargennr());
+
+			if (lagerbewegungDto != null) {
+				BigDecimal preis = recalcGestehungspreisAbTermin(lagerbewegungDto.getIId(), artikelIId,
+						lagerbewegungDto.getLagerIId(), tBelegdatum, theClientDto);
+				if (preis != null) {
+					Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
+					if (artikellager != null) {
+						artikellager.setNGestehungspreis(preis);
+					}
+				}
+			}
+		}
+
 	}
 
-	public void bucheAb(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, Integer artikelIId,
-			BigDecimal fMengeAbsolut, BigDecimal nVerkaufspreis,
-			Integer lagerIId, String cSeriennrchargennr,
+	public void bucheAb(String belegartCNr, Integer belegartIId, Integer belegartpositionIId, Integer artikelIId,
+			BigDecimal fMengeAbsolut, BigDecimal nVerkaufspreis, Integer lagerIId, String cSeriennrchargennr,
 			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto) {
+		bucheAb(belegartCNr, belegartIId, belegartpositionIId, artikelIId, fMengeAbsolut, nVerkaufspreis, lagerIId,
+				cSeriennrchargennr, tBelegdatum, theClientDto, true);
+	}
+
+	public void bucheAb(String belegartCNr, Integer belegartIId, Integer belegartpositionIId, Integer artikelIId,
+			BigDecimal fMengeAbsolut, BigDecimal nVerkaufspreis, Integer lagerIId, String cSeriennrchargennr,
+			java.sql.Timestamp tBelegdatum, TheClientDto theClientDto, boolean gestehungspreisNeuKalkulieren) {
 		// check(idUser);
 
-		if (belegartCNr == null || belegartpositionIId == null
-				|| artikelIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"belegartCNr == null || belegartpositionIId == null || artikelIId == null"));
+		if (belegartCNr == null || belegartpositionIId == null || artikelIId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("belegartCNr == null || belegartpositionIId == null || artikelIId == null"));
 		}
 		if (fMengeAbsolut == null || nVerkaufspreis == null || lagerIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"fMengeAbsolut == null || nVerkaufspreis == null || lagerIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("fMengeAbsolut == null || nVerkaufspreis == null || lagerIId == null"));
 		}
 		if (tBelegdatum == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("tBelegdatum == null"));
 		}
 		if (fMengeAbsolut.doubleValue() < 0) {
@@ -11187,35 +10472,25 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		Artikel artikel = em.find(Artikel.class, artikelIId);
 		if (artikel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		if (artikel.getBChargennrtragend().intValue() == 1
-				|| artikel.getBSeriennrtragend().intValue() == 1) {
+		if (artikel.getBChargennrtragend().intValue() == 1 || artikel.getBSeriennrtragend().intValue() == 1) {
 			if (cSeriennrchargennr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-						new Exception("cSeriennrchargennr == null ArtikelNr:"
-								+ artikel.getCNr()));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+						new Exception("cSeriennrchargennr == null ArtikelNr:" + artikel.getCNr()));
 			}
 		}
-		if (artikel.getBChargennrtragend().intValue() != 1
-				&& artikel.getBSeriennrtragend().intValue() != 1) {
+		if (artikel.getBChargennrtragend().intValue() != 1 && artikel.getBSeriennrtragend().intValue() != 1) {
 			if (cSeriennrchargennr != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER,
-						new Exception(
-								"SERIENNUMMER_CHARGENNUMMER_DARF_NICHT_ANGEGEBEN_WERDEN"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+						"SERIENNUMMER_CHARGENNUMMER_DARF_NICHT_ANGEGEBEN_WERDEN: ArtikelNr " + artikel.getCNr()));
 			}
 		}
 
-		if (artikel.getBSeriennrtragend().intValue() == 1
-				&& fMengeAbsolut.doubleValue() != 1
+		if (artikel.getBSeriennrtragend().intValue() == 1 && fMengeAbsolut.doubleValue() != 1
 				&& fMengeAbsolut.doubleValue() != 0) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_MENGE_FUER_SERIENNUMMERNBUCHUNG_MUSS_EINS_SEIN,
-					new Exception(
-							"artikel.getBSeriennrtragend().intValue() == 1 && fMengeAbsolut.doubleValue()!=1"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_MENGE_FUER_SERIENNUMMERNBUCHUNG_MUSS_EINS_SEIN,
+					new Exception("artikel.getBSeriennrtragend().intValue() == 1 && fMengeAbsolut.doubleValue()!=1"));
 		}
 
 		// es wird davon ausgegangen, dass ein Artikel nicht lagerbewirtschaftet
@@ -11230,8 +10505,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// Wenns ein Verleihartikel ist und in die Rechnung eingefuegt wird,
 		// dann
 		// ist er wie ein 'nicht lagerbewirtschafteter'
-		if (Helper.short2boolean(artikel.getBVerleih()) == true
-				&& belegartCNr.equals(LocaleFac.BELEGART_RECHNUNG)) {
+		if (Helper.short2boolean(artikel.getBVerleih()) == true && belegartCNr.equals(LocaleFac.BELEGART_RECHNUNG)) {
 			bLagerbewirtschaftet = false;
 		}
 
@@ -11239,29 +10513,24 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// auf "KEIN LAGER" gebucht sonst
 		// DARF NICHT auf KEIN_LAGER gebucht werden
 		if (bLagerbewirtschaftet == false) {
-			LagerDto tempLager = lagerFindByCNrByMandantCNr(
-					LagerFac.LAGER_KEINLAGER, theClientDto.getMandant());
+			LagerDto tempLager = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant());
 			if (tempLager != null) {
 				lagerIId = tempLager.getIId();
 			} else {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.LAGER_KEIN_LAGER_NICHT_ANGELEGT,
+				throw new EJBExceptionLP(EJBExceptionLP.LAGER_KEIN_LAGER_NICHT_ANGELEGT,
 						new Exception("LAGER_KEIN_LAGER_NICHT_ANGELEGT"));
 			}
 		} else {
-			if (lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER,
-					theClientDto.getMandant()).getIId().equals(lagerIId)) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DARF_NICHT_AUF_KEIN_LAGER_BUCHEN,
+			if (lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant()).getIId()
+					.equals(lagerIId)) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DARF_NICHT_AUF_KEIN_LAGER_BUCHEN,
 						new Exception("FEHLER_DARF_NICHT_AUF_KEIN_LAGER_BUCHEN"));
 
 			}
 
 			if (!hatRolleBerechtigungAufLager(lagerIId, theClientDto)) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER,
-						new Exception(
-								"FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER,
+						new Exception("FEHLER_KEINE_BERECHTIUNG_ZUM_BUCHEN_AUF_DIESEM_LAGER"));
 			}
 		}
 
@@ -11270,29 +10539,27 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		if (!lagerDto_Erlaubt.getMandantCNr().equals(theClientDto.getMandant())) {
 
 			if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
-					theClientDto)
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)
 					|| (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-							MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
-							theClientDto) && getMandantFac()
-							.darfAnwenderAufZusatzfunktionZugreifen(
-									MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
-									theClientDto))) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FALSCHER_MANDANT, new Exception(
-								"FEHLER_FALSCHER_MANDANT"));
+							MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)
+							&& getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+									MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER, theClientDto))) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FALSCHER_MANDANT,
+						new Exception("FEHLER_FALSCHER_MANDANT"));
 			}
 
 		}
 
+		int iNachkommastellenMenge = 3;
+
 		if (bLagerLogging == null) {
 			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ARTIKEL,
-								ParameterFac.PARAMETER_LAGER_LOGGING);
-				bLagerLogging = Helper.short2boolean(new Short(parameter
-						.getCWert()));
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAGER_LOGGING);
+				bLagerLogging = Helper.short2boolean(new Short(parameter.getCWert()));
+
+				iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(theClientDto.getMandant());
+
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
@@ -11300,13 +10567,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		if (bLagerLogging) {
 
-			String logEintrag = "VOR ABBUCHUNG:belegartCNr=" + belegartCNr
-					+ ",belegartIId=" + belegartIId + ",belegartpositionIId="
-					+ belegartpositionIId + ",artikelIId=" + artikelIId
-					+ ",fMengeAbsolut=" + fMengeAbsolut + ",nEinstandspreis="
-					+ nVerkaufspreis + ",lagerIId=" + lagerIId
-					+ ",cSeriennrchargennr=" + cSeriennrchargennr
-					+ ",tBelegdatum=" + tBelegdatum + ",theClientDto="
+			String logEintrag = "VOR ABBUCHUNG:belegartCNr=" + belegartCNr + ",belegartIId=" + belegartIId
+					+ ",belegartpositionIId=" + belegartpositionIId + ",artikelIId=" + artikelIId + ",fMengeAbsolut="
+					+ fMengeAbsolut + ",nEinstandspreis=" + nVerkaufspreis + ",lagerIId=" + lagerIId
+					+ ",cSeriennrchargennr=" + cSeriennrchargennr + ",tBelegdatum=" + tBelegdatum + ",theClientDto="
 					+ theClientDto.toString();
 
 			// Lagerstand + Gestpreis hier abrufen
@@ -11315,13 +10579,10 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			double gestpreis = 0;
 
 			try {
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager != null) {
-					lagerstandVorher = artikellager.getNLagerstand()
-							.doubleValue();
-					gestpreis = artikellager.getNGestehungspreis()
-							.doubleValue();
+					lagerstandVorher = artikellager.getNLagerstand().doubleValue();
+					gestpreis = artikellager.getNGestehungspreis().doubleValue();
 				}
 
 			} catch (Exception e) {
@@ -11329,174 +10590,145 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				e.printStackTrace();
 			}
 
-			logEintrag += ";Lagerstand=" + lagerstandVorher + ",Gestpreis="
-					+ gestpreis;
+			logEintrag += ";Lagerstand=" + lagerstandVorher + ",Gestpreis=" + gestpreis;
 
 			erstelleProtokollEintragAbbuchung(theClientDto, logEintrag, true);
 		}
 
-		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr,
-				belegartpositionIId, cSeriennrchargennr);
+		LagerbewegungDto lagerbewegungDto = getLetzteintrag(belegartCNr, belegartpositionIId, cSeriennrchargennr);
 		if (lagerbewegungDto != null) {
 			// es ist eine Aenderungsbuchung
 			lagerbewegungDto.setTBelegdatum(tBelegdatum);
 			if (!artikelIId.equals(lagerbewegungDto.getArtikelIId())) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
-						new Exception(
-								"LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT artikelIId_Neu="
-										+ artikelIId));
+				throw new EJBExceptionLP(EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
+						new Exception("LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT artikelIId_Neu=" + artikelIId));
 
 			}
 
 			if (cSeriennrchargennr != null) {
-				if (!cSeriennrchargennr.equals(lagerbewegungDto
-						.getCSeriennrchargennr())) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
-							new Exception(
-									"LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT"));
+				if (!cSeriennrchargennr.equals(lagerbewegungDto.getCSeriennrchargennr())) {
+					throw new EJBExceptionLP(EJBExceptionLP.LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT,
+							new Exception("LAGER_UPDATE_AUF_ARTIKEL_NICHT_ERLAUBT"));
 				}
 			}
 			if (!lagerIId.equals(lagerbewegungDto.getLagerIId())
 					&& Helper.short2boolean(artikel.getBLagerbewirtschaftet()) == true) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.LAGER_UPDATE_AUF_LAGER_NICHT_ERLAUBT,
+				throw new EJBExceptionLP(EJBExceptionLP.LAGER_UPDATE_AUF_LAGER_NICHT_ERLAUBT,
 						new Exception("LAGER_UPDATE_AUF_LAGER_NICHT_ERLAUBT"));
 
 			}
 
-			if (lagerbewegungDto.getNMenge().doubleValue() == fMengeAbsolut
-					.doubleValue()) {
+			if (lagerbewegungDto.getNMenge().doubleValue() == fMengeAbsolut.doubleValue()) {
 				// Es ist nur eine Preisaenderung
+				evLog.warn(LogEventProducer.create(lagerbewegungDto, nVerkaufspreis, theClientDto.getIDPersonal()));
+
 				lagerbewegungDto.setNVerkaufspreis(nVerkaufspreis);
 				updateLagerbewegung(lagerbewegungDto, theClientDto);
-				myLogger.logKritisch("Preisaenderung von User mit ID "
-						+ theClientDto.getIDPersonal()
-						+ "Eingetragener Preis: "
-						+ lagerbewegungDto.getNVerkaufspreis());
+				// myLogger.logKritisch("Preisaenderung von User mit ID "
+				// + theClientDto.getIDPersonal()
+				// + "Eingetragener Preis: "
+				// + lagerbewegungDto.getNVerkaufspreis());
 			} else {
 				// Mengenaenderung und ev. Preisaenderung
 
 				// Wenn Menge erhoeht wird, dann pruefen, ob dies moeglich ist
-				if (fMengeAbsolut.doubleValue() > lagerbewegungDto.getNMenge()
-						.doubleValue()) {
-					BigDecimal m = getMengeAufLager(artikelIId, lagerIId,
-							cSeriennrchargennr, theClientDto);
+				if (fMengeAbsolut.doubleValue() > lagerbewegungDto.getNMenge().doubleValue()) {
+					BigDecimal m = getMengeAufLager(artikelIId, lagerIId, cSeriennrchargennr, theClientDto);
 
 					m = Helper.rundeKaufmaennisch(m, 4);
 
-					if (fMengeAbsolut.doubleValue() > m.doubleValue()
-							+ lagerbewegungDto.getNMenge().doubleValue()
+					if (fMengeAbsolut.doubleValue() > m.add(lagerbewegungDto.getNMenge()).doubleValue()
 							&& bLagerbewirtschaftet == true) {
 
-						double zuwenig = fMengeAbsolut.doubleValue()
-								- lagerbewegungDto.getNMenge().doubleValue()
+						double zuwenig = fMengeAbsolut.doubleValue() - lagerbewegungDto.getNMenge().doubleValue()
 								- m.doubleValue();
 
 						// PJ18290
 						try {
-							ParametermandantDto parameter = getParameterFac()
-									.getMandantparameter(
-											theClientDto.getMandant(),
-											ParameterFac.KATEGORIE_ARTIKEL,
-											ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
-							boolean bLagerImmerAusreichendVerfuegbar = Helper
-									.short2boolean(new Short(parameter
-											.getCWert()));
+							ParametermandantDto parameter = getParameterFac().getMandantparameter(
+									theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+									ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
+							int bLagerImmerAusreichendVerfuegbar = (Integer) parameter.getCWertAsObject();
 
-							if (bLagerImmerAusreichendVerfuegbar) {
+							if (bLagerImmerAusreichendVerfuegbar > 0) {
 
 								HandlagerbewegungDto handlagerbewegungDto = new HandlagerbewegungDto();
 								handlagerbewegungDto.setArtikelIId(artikelIId);
 								handlagerbewegungDto
 
-								.setLagerIId(lagerIId);
-								handlagerbewegungDto.setBAbgang(new Short(
-										(short) 0));
-								handlagerbewegungDto
-										.setCKommentar("Zubuchungsautomatik");
+										.setLagerIId(lagerIId);
+								handlagerbewegungDto.setBAbgang(new Short((short) 0));
+								handlagerbewegungDto.setCKommentar("Zubuchungsautomatik");
 
-								handlagerbewegungDto
-										.setSeriennrChargennrMitMenge(SeriennrChargennrMitMengeDto
-												.erstelleDtoAusEinerChargennummer(
-														cSeriennrchargennr,
-														Helper.rundeKaufmaennisch(
-																new BigDecimal(
-																		zuwenig),
-																4)));
-								handlagerbewegungDto.setNMenge(Helper
-										.rundeKaufmaennisch(new BigDecimal(
-												zuwenig), 4));
-								// SP3254
-								// Zuerst nachsehen, obs einen Gestpreis gibt
-								BigDecimal gestpreis = getGestehungspreisZumZeitpunkt(
-										artikelIId, lagerIId, tBelegdatum,
-										theClientDto);
-								// SP3410 Wenn keinen zum Zeitpunkt gibt, dann
-								// den aktuellen aus Artikellager verwenden
-								if (gestpreis == null
-										|| gestpreis.doubleValue() == 0) {
+								handlagerbewegungDto.setSeriennrChargennrMitMenge(SeriennrChargennrMitMengeDto
+										.erstelleDtoAusEinerChargennummer(cSeriennrchargennr,
+												Helper.rundeKaufmaennisch(new BigDecimal(zuwenig), 4)));
+								handlagerbewegungDto.setNMenge(Helper.rundeKaufmaennisch(new BigDecimal(zuwenig), 4));
 
-									ArtikellagerPK artikellagerPK = new ArtikellagerPK();
-									artikellagerPK.setArtikelIId(artikelIId);
-									artikellagerPK.setLagerIId(lagerIId);
-									Artikellager artikellager = em.find(
-											Artikellager.class, artikellagerPK);
-									if (artikellager != null) {
-										gestpreis = artikellager
-												.getNGestehungspreis();
+								// SP4291 Wenn 2, dann kommt der Einstandspreis
+								// zuerst aus dem Lief1Preis und dann aus den
+								// VK-Preis
+								BigDecimal gestpreis = null;
+
+								if (bLagerImmerAusreichendVerfuegbar == 1) {
+									// SP3254
+									// Zuerst nachsehen, obs einen Gestpreis
+									// gibt
+									gestpreis = getGestehungspreisZumZeitpunkt(artikelIId, lagerIId, tBelegdatum,
+											theClientDto);
+									// SP3410 Wenn keinen zum Zeitpunkt gibt,
+									// dann
+									// den aktuellen aus Artikellager verwenden
+									if (gestpreis == null || gestpreis.doubleValue() == 0) {
+
+										ArtikellagerPK artikellagerPK = new ArtikellagerPK();
+										artikellagerPK.setArtikelIId(artikelIId);
+										artikellagerPK.setLagerIId(lagerIId);
+										Artikellager artikellager = em.find(Artikellager.class, artikellagerPK);
+										if (artikellager != null) {
+											gestpreis = artikellager.getNGestehungspreis();
+										}
+
 									}
-
 								}
 
-								if (gestpreis == null
-										|| gestpreis.doubleValue() == 0) {
+								if (gestpreis == null || gestpreis.doubleValue() == 0) {
 									// Wenn Gestpreis null oder 0, dann
 									// Lief1Preis verwenden:
 									ArtikellieferantDto alDto = getArtikelFac()
-											.getArtikelEinkaufspreis(
-													artikelIId,
-													fMengeAbsolut,
-													theClientDto
-															.getSMandantenwaehrung(),
-													theClientDto);
+											.getArtikelEinkaufspreisDesBevorzugtenLieferanten(artikelIId, fMengeAbsolut,
+													theClientDto.getSMandantenwaehrung(), theClientDto);
 
-									if (alDto == null
-											|| alDto.getNNettopreis() == null) {
+									if (alDto == null || alDto.getNNettopreis() == null) {
 										// wenn auch kein Lief1Preis, dann
 										// VKPreis verwenden
-										handlagerbewegungDto
-												.setNEinstandspreis(nVerkaufspreis);
+										handlagerbewegungDto.setNEinstandspreis(nVerkaufspreis);
 									} else {
-										handlagerbewegungDto
-												.setNEinstandspreis(alDto
-														.getNNettopreis());
+										handlagerbewegungDto.setNEinstandspreis(alDto.getNNettopreis());
 									}
 
 								} else {
-									handlagerbewegungDto
-											.setNEinstandspreis(gestpreis);
+									handlagerbewegungDto.setNEinstandspreis(gestpreis);
 								}
 
-								createHandlagerbewegung(handlagerbewegungDto,
-										theClientDto);
+								createHandlagerbewegung(handlagerbewegungDto, theClientDto);
 
 							} else {
 
 								ArrayList al = new ArrayList();
 								al.add(artikel.getCNr());
+								al.add(Helper.formatZahl(m, iNachkommastellenMenge, theClientDto.getLocUi()) + " "
+										+ artikel.getEinheitCNr().trim());
+								al.add(Helper.formatZahl(
+										new BigDecimal(fMengeAbsolut.doubleValue()
+												- lagerbewegungDto.getNMenge().doubleValue()),
+										iNachkommastellenMenge, theClientDto.getLocUi()) + " "
+										+ artikel.getEinheitCNr().trim());
 
-								throw new EJBExceptionLP(
-										EJBExceptionLP.FEHLER_ZUWENIG_AUF_LAGER,
-										al, new Exception(
-												"FEHLER_ZUWENIG_AUF_LAGER snrchnr="
-														+ cSeriennrchargennr
-														+ " menge_abzubuchen="
-														+ fMengeAbsolut
-																.doubleValue()
-														+ ", artikelIId="
-														+ artikelIId));
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ZUWENIG_AUF_LAGER, al,
+										new Exception("FEHLER_ZUWENIG_AUF_LAGER snrchnr=" + cSeriennrchargennr
+												+ " menge_abzubuchen=" + fMengeAbsolut.doubleValue() + ", artikelIId="
+												+ artikelIId));
 							}
 						} catch (RemoteException e) {
 							throwEJBExceptionLPRespectOld(e);
@@ -11505,12 +10737,37 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					}
 				}
 
+				// SP3993
+				if (cSeriennrchargennr != null && fMengeAbsolut.doubleValue() == 0
+						&& /* SP5345-> */belegartCNr.equals(LocaleFac.BELEGART_LOS)) {
+					// Pruefen ob al Geraeteseriennummer verwendet wurde
+
+					Query queryGsnr = em.createNamedQuery("GeraetesnrfindByArtikelIIdCSnr");
+					queryGsnr.setParameter(1, artikelIId);
+					queryGsnr.setParameter(2, cSeriennrchargennr);
+					Collection c = queryGsnr.getResultList();
+
+					if (c.size() > 0) {
+						Iterator it = c.iterator();
+						while (it.hasNext()) {
+							Geraetesnr gsnr = (Geraetesnr) it.next();
+							LagerbewegungDto lbewDto = getJuengsteBuchungEinerBuchungsNummer(gsnr.getIIdBuchung());
+							if (lbewDto.getIBelegartid().equals(belegartIId)) {
+								// SP8852 Nur wenn dasselbe Los
+								ArrayList al = new ArrayList();
+								al.add(cSeriennrchargennr);
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SNR_ALS_GERAETESERIENNUMMER_VERWENDET,
+										al, new Exception(
+												"FEHLER_SNR_ALS_GERAETESERIENNUMMER_VERWENDET:" + cSeriennrchargennr));
+							}
+						}
+					}
+				}
+
 				// original Buchungszeit merken
-				Timestamp tBuchungszeitOrig = lagerbewegungDto
-						.getTBuchungszeit();
+				Timestamp tBuchungszeitOrig = lagerbewegungDto.getTBuchungszeit();
 				// alter Eintrag wird Historie mit Aenderungszeit
-				lagerbewegungDto.setTBuchungszeit(new Timestamp(System
-						.currentTimeMillis()));
+				lagerbewegungDto.setTBuchungszeit(new Timestamp(System.currentTimeMillis()));
 				lagerbewegungDto.setBHistorie(new Short((short) 1));
 				updateLagerbewegung(lagerbewegungDto, theClientDto);
 
@@ -11521,44 +10778,32 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				lagerbewegungDtoKorrektur.setTBelegdatum(tBelegdatum);
 				lagerbewegungDtoKorrektur.setBAbgang(new Short((short) 1));
 				if (bLagerbewirtschaftet == true) {
-					lagerbewegungDtoKorrektur
-							.setBVollstaendigverbraucht(new Short((short) 0));
+					lagerbewegungDtoKorrektur.setBVollstaendigverbraucht(new Short((short) 0));
 				} else {
-					lagerbewegungDtoKorrektur
-							.setBVollstaendigverbraucht(new Short((short) 1));
+					lagerbewegungDtoKorrektur.setBVollstaendigverbraucht(new Short((short) 1));
 				}
 				lagerbewegungDtoKorrektur.setCBelegartnr(belegartCNr);
 				lagerbewegungDtoKorrektur.setIBelegartid(belegartIId);
-				lagerbewegungDtoKorrektur
-						.setIBelegartpositionid(belegartpositionIId);
-				lagerbewegungDtoKorrektur
-						.setCSeriennrchargennr(cSeriennrchargennr);
+				lagerbewegungDtoKorrektur.setIBelegartpositionid(belegartpositionIId);
+				lagerbewegungDtoKorrektur.setCSeriennrchargennr(cSeriennrchargennr);
 				lagerbewegungDtoKorrektur.setNMenge(fMengeAbsolut);
 				lagerbewegungDtoKorrektur.setLagerIId(lagerIId);
-				lagerbewegungDtoKorrektur.setNGestehungspreis(lagerbewegungDto
-						.getNGestehungspreis());
-				lagerbewegungDtoKorrektur.setIIdBuchung(lagerbewegungDto
-						.getIIdBuchung());
-				lagerbewegungDtoKorrektur.setNVerkaufspreis(Helper
-						.rundeKaufmaennisch(nVerkaufspreis, 4));
+				lagerbewegungDtoKorrektur.setNGestehungspreis(lagerbewegungDto.getNGestehungspreis());
+				lagerbewegungDtoKorrektur.setIIdBuchung(lagerbewegungDto.getIIdBuchung());
+				lagerbewegungDtoKorrektur.setNVerkaufspreis(Helper.rundeKaufmaennisch(nVerkaufspreis, 4));
 				createLagerbewegung(lagerbewegungDtoKorrektur, theClientDto);
 
-				BigDecimal fMengeWeniger = lagerbewegungDto.getNMenge()
-						.subtract(fMengeAbsolut);
+				BigDecimal fMengeWeniger = lagerbewegungDto.getNMenge().subtract(fMengeAbsolut);
 				// Lagerstand in WW_ARTIKELLAGER updaten
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager == null) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
-							"");
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET, "");
 				}
 				BigDecimal lagerstand = artikellager.getNLagerstand();
 				lagerstand = lagerstand.add(fMengeWeniger);
 
 				if (bLagerbewirtschaftet == true) {
-					artikellager.setNLagerstand(Helper.rundeKaufmaennisch(
-							lagerstand, 4));
+					artikellager.setNLagerstand(Helper.rundeKaufmaennisch(lagerstand, 4));
 				} else {
 					artikellager.setNLagerstand(new BigDecimal(0));
 				}
@@ -11567,65 +10812,46 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				// Lager abgebucht werden
 				if (fMengeWeniger.doubleValue() < 0) {
 					BigDecimal bdZusaetzlichZuVerbrauchen = fMengeWeniger.abs();
-					LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(
-							artikelIId, lagerIId, cSeriennrchargennr,
+					LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(artikelIId, lagerIId, cSeriennrchargennr,
 							bdZusaetzlichZuVerbrauchen, theClientDto);
 					if (bLagerbewirtschaftet == true) {
 						BigDecimal fUrspruenge = new BigDecimal(0);
 
 						for (int j = 0; j < urspruenge.length; j++) {
-							fUrspruenge = fUrspruenge.add(urspruenge[j]
-									.getNVerbrauchtemenge());
+							fUrspruenge = fUrspruenge.add(urspruenge[j].getNVerbrauchtemenge());
 						}
 
 						if (cSeriennrchargennr != null && urspruenge.length > 0) {
-							versionInLagerbewegungUpdaten(belegartCNr,
-									belegartpositionIId, cSeriennrchargennr,
+							versionInLagerbewegungUpdaten(belegartCNr, belegartpositionIId, cSeriennrchargennr,
 									urspruenge[0].getVersionAusUrsprung());
 						}
 
 						if (bdZusaetzlichZuVerbrauchen.compareTo(fUrspruenge) == 1
-								|| bdZusaetzlichZuVerbrauchen
-										.compareTo(fUrspruenge) == -1) {
+								|| bdZusaetzlichZuVerbrauchen.compareTo(fUrspruenge) == -1) {
 							myLogger.logKritisch("FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH, ARTIKEL_I_ID="
-									+ artikelIId
-									+ " ABZUBUCHENDEMENGE="
-									+ fMengeAbsolut.doubleValue()
-									+ " SNR_CHNR: "
-									+ cSeriennrchargennr
-									+ " MENGE_AUS_URSPRUENGEN=" + fUrspruenge);
+									+ artikelIId + " ABZUBUCHENDEMENGE=" + fMengeAbsolut.doubleValue() + " SNR_CHNR: "
+									+ cSeriennrchargennr + " MENGE_AUS_URSPRUENGEN=" + fUrspruenge);
 							throw new EJBExceptionLP(
 									EJBExceptionLP.FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH,
-									new Exception(
-											"FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH"));
+									new Exception("FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH"));
 						}
 
 					}
 					for (int j = 0; j < urspruenge.length; j++) {
-						urspruenge[j]
-								.setILagerbewegungid(lagerbewegungDtoKorrektur
-										.getIIdBuchung());
+						urspruenge[j].setILagerbewegungid(lagerbewegungDtoKorrektur.getIIdBuchung());
 
 						// Zuerst nachsehen, ob es diesen Urspung scon gibt,
 						// dann Updaten
 						LagerabgangursprungPK lagerabgangursprungPK = new LagerabgangursprungPK();
-						lagerabgangursprungPK
-								.setILagerbewegungid(lagerbewegungDtoKorrektur
-										.getIIdBuchung());
-						lagerabgangursprungPK
-								.setILagerbewegungidursprung(urspruenge[j]
-										.getILagerbewegungidursprung());
-						Lagerabgangursprung lagerabgangursprung = em.find(
-								Lagerabgangursprung.class,
+						lagerabgangursprungPK.setILagerbewegungid(lagerbewegungDtoKorrektur.getIIdBuchung());
+						lagerabgangursprungPK.setILagerbewegungidursprung(urspruenge[j].getILagerbewegungidursprung());
+						Lagerabgangursprung lagerabgangursprung = em.find(Lagerabgangursprung.class,
 								lagerabgangursprungPK);
 						if (lagerabgangursprung == null) {
 							createLagerabgangursprung(urspruenge[j]);
 						} else {
-							lagerabgangursprung
-									.setNVerbrauchtemenge(lagerabgangursprung
-											.getNVerbrauchtemenge()
-											.add(urspruenge[j]
-													.getNVerbrauchtemenge()));
+							lagerabgangursprung.setNVerbrauchtemenge(lagerabgangursprung.getNVerbrauchtemenge()
+									.add(urspruenge[j].getNVerbrauchtemenge()));
 							em.merge(lagerabgangursprung);
 							em.flush();
 						}
@@ -11633,52 +10859,52 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				} else {
 					// Verbrauchte Mengen in WW_LAGERABGANGURSPRUNG updaten
-					LagerabgangursprungDto[] lagerabgangurspruenge = lagerabgangursprungFindByLagerbewegungIIdBuchung(lagerbewegungDto
-							.getIIdBuchung());
+					LagerabgangursprungDto[] lagerabgangurspruenge = lagerabgangursprungFindByLagerbewegungIIdBuchung(
+							lagerbewegungDto.getIIdBuchung());
 					BigDecimal fMengezuVerringern = fMengeWeniger;
 
 					for (int i = 0; i < lagerabgangurspruenge.length; i++) {
-						BigDecimal verbrauchteMenge = lagerabgangurspruenge[i]
-								.getNVerbrauchtemenge();
+						BigDecimal verbrauchteMenge = lagerabgangurspruenge[i].getNVerbrauchtemenge();
 						if (verbrauchteMenge.doubleValue() > 0) {
 							// Wenn die Menge verringert wurde,
 							// bVollstaendigVerbraucht des Ursprungs
 							// zuruecksetzen
 							if (fMengeWeniger.doubleValue() > 0) {
-								LagerbewegungDto[] buchungen = lagerbewegungFindByIIdBuchung(lagerabgangurspruenge[i]
-										.getILagerbewegungidursprung());
+								LagerbewegungDto[] buchungen = lagerbewegungFindByIIdBuchung(
+										lagerabgangurspruenge[i].getILagerbewegungidursprung());
 
 								for (int u = 0; u < buchungen.length; u++) {
-									buchungen[u]
-											.setBVollstaendigverbraucht(new Short(
-													(short) 0));
-									updateLagerbewegung(buchungen[u],
-											theClientDto);
+									buchungen[u].setBVollstaendigverbraucht(new Short((short) 0));
+									updateLagerbewegung(buchungen[u], theClientDto);
 
 								}
-								fMengeWeniger = fMengeWeniger
-										.subtract(lagerabgangurspruenge[i]
-												.getNVerbrauchtemenge());
+								fMengeWeniger = fMengeWeniger.subtract(lagerabgangurspruenge[i].getNVerbrauchtemenge());
+								// Wenn verringert wird, dann muessen die
+								// Ursprungen
+								// ebenfalls verringert werden
+								if (fMengezuVerringern.subtract(verbrauchteMenge).doubleValue() > 0) {
+									fMengezuVerringern = fMengezuVerringern
+											.subtract(lagerabgangurspruenge[i].getNVerbrauchtemenge());
+									lagerabgangurspruenge[i].setNVerbrauchtemenge(new BigDecimal(0));
+									updateLagerabgangursprung(lagerabgangurspruenge[i]);
+								} else {
+									lagerabgangurspruenge[i]
+											.setNVerbrauchtemenge(verbrauchteMenge.subtract(fMengezuVerringern));
+									updateLagerabgangursprung(lagerabgangurspruenge[i]);
+								}
+
 							}
 
-							// Wenn verringert wird, dann muessen die
-							// Ursprungen
-							// ebenfalls verringert werden
-							if (fMengezuVerringern.subtract(verbrauchteMenge)
-									.doubleValue() > 0) {
-								fMengezuVerringern = fMengezuVerringern
-										.subtract(lagerabgangurspruenge[i]
-												.getNVerbrauchtemenge());
-								lagerabgangurspruenge[i]
-										.setNVerbrauchtemenge(new BigDecimal(0));
-								updateLagerabgangursprung(lagerabgangurspruenge[i]);
-							} else {
-								lagerabgangurspruenge[i]
-										.setNVerbrauchtemenge(verbrauchteMenge
-												.subtract(fMengezuVerringern));
-								updateLagerabgangursprung(lagerabgangurspruenge[i]);
-							}
 						}
+					}
+				}
+
+				// SP7908
+				if (gestehungspreisNeuKalkulieren == true && bLagerbewirtschaftet == true) {
+					BigDecimal preis = recalcGestehungspreisAbTermin(lagerbewegungDtoKorrektur.getIId(), artikelIId,
+							lagerIId, lagerbewegungDtoKorrektur.getTBelegdatum(), theClientDto);
+					if (preis != null && lagerstand.doubleValue() != 0) {
+						artikellager.setNGestehungspreis(preis);
 					}
 				}
 
@@ -11689,110 +10915,97 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						new Exception("fMengeAbsolut.doubleValue() == 0"));
 			}
 
-			BigDecimal m = getMengeAufLager(artikelIId, lagerIId,
-					cSeriennrchargennr, theClientDto);
+			BigDecimal m = getMengeAufLager(artikelIId, lagerIId, cSeriennrchargennr, theClientDto);
 
 			m = Helper.rundeKaufmaennisch(m, 4);
 
-			if (fMengeAbsolut.doubleValue() > m.doubleValue()
-					&& bLagerbewirtschaftet == true) {
+			if (fMengeAbsolut.doubleValue() > m.doubleValue() && bLagerbewirtschaftet == true) {
 
 				double zuwenig = fMengeAbsolut.doubleValue() - m.doubleValue();
 
 				// PJ18290
 				try {
-					ParametermandantDto parameter = getParameterFac()
-							.getMandantparameter(
-									theClientDto.getMandant(),
-									ParameterFac.KATEGORIE_ARTIKEL,
-									ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
-					boolean bLagerImmerAusreichendVerfuegbar = Helper
-							.short2boolean(new Short(parameter.getCWert()));
+					ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
+					int bLagerImmerAusreichendVerfuegbar = (Integer) parameter.getCWertAsObject();
 
-					if (bLagerImmerAusreichendVerfuegbar) {
+					if (bLagerImmerAusreichendVerfuegbar > 0) {
 
 						HandlagerbewegungDto handlagerbewegungDto = new HandlagerbewegungDto();
 						handlagerbewegungDto.setArtikelIId(artikelIId);
 						handlagerbewegungDto
 
-						.setLagerIId(lagerIId);
+								.setLagerIId(lagerIId);
 						handlagerbewegungDto.setBAbgang(new Short((short) 0));
-						handlagerbewegungDto
-								.setCKommentar("Zubuchungsautomatik");
+						handlagerbewegungDto.setCKommentar("Zubuchungsautomatik");
 
-						handlagerbewegungDto
-								.setSeriennrChargennrMitMenge(SeriennrChargennrMitMengeDto.erstelleDtoAusEinerChargennummer(
-										cSeriennrchargennr,
-										Helper.rundeKaufmaennisch(
-												new BigDecimal(zuwenig), 4)));
-						handlagerbewegungDto
-								.setNMenge(Helper.rundeKaufmaennisch(
-										new BigDecimal(zuwenig), 4));
+						handlagerbewegungDto.setSeriennrChargennrMitMenge(
+								SeriennrChargennrMitMengeDto.erstelleDtoAusEinerChargennummer(cSeriennrchargennr,
+										Helper.rundeKaufmaennisch(new BigDecimal(zuwenig), 4)));
+						handlagerbewegungDto.setNMenge(Helper.rundeKaufmaennisch(new BigDecimal(zuwenig), 4));
 
-						// 3254
-						// Zuerst nachsehen, obs einen Gestpreis gibt
-						BigDecimal gestpreis = getGestehungspreisZumZeitpunkt(
-								artikelIId, lagerIId, tBelegdatum, theClientDto);
+						// SP4291 Wenn 2, dann kommt der Einstandspreis zuerst
+						// aus dem Lief1Preis und dann aus dem VK-Preis
+						BigDecimal gestpreis = null;
 
-						// SP3410 Wenn keinen zum Zeitpunkt gibt, dann
-						// den aktuellen aus Artikellager verwenden
-						if (gestpreis == null || gestpreis.doubleValue() == 0) {
+						if (bLagerImmerAusreichendVerfuegbar == 1) {
 
-							ArtikellagerPK artikellagerPK = new ArtikellagerPK();
-							artikellagerPK.setArtikelIId(artikelIId);
-							artikellagerPK.setLagerIId(lagerIId);
-							Artikellager artikellager = em.find(
-									Artikellager.class, artikellagerPK);
-							if (artikellager != null) {
-								gestpreis = artikellager.getNGestehungspreis();
+							// 3254
+							// Zuerst nachsehen, obs einen Gestpreis gibt
+							gestpreis = getGestehungspreisZumZeitpunkt(artikelIId, lagerIId, tBelegdatum, theClientDto);
+
+							// SP3410 Wenn keinen zum Zeitpunkt gibt, dann
+							// den aktuellen aus Artikellager verwenden
+							if (gestpreis == null || gestpreis.doubleValue() == 0) {
+
+								ArtikellagerPK artikellagerPK = new ArtikellagerPK();
+								artikellagerPK.setArtikelIId(artikelIId);
+								artikellagerPK.setLagerIId(lagerIId);
+								Artikellager artikellager = em.find(Artikellager.class, artikellagerPK);
+								if (artikellager != null) {
+									gestpreis = artikellager.getNGestehungspreis();
+								}
+
 							}
-
 						}
 
 						if (gestpreis == null || gestpreis.doubleValue() == 0) {
 							// Wenn Gestpreis null oder 0, dann
 							// Lief1Preis verwenden:
 							ArtikellieferantDto alDto = getArtikelFac()
-									.getArtikelEinkaufspreis(
-											artikelIId,
-											fMengeAbsolut,
-											theClientDto
-													.getSMandantenwaehrung(),
-											theClientDto);
+									.getArtikelEinkaufspreisDesBevorzugtenLieferanten(artikelIId, fMengeAbsolut,
+											theClientDto.getSMandantenwaehrung(), theClientDto);
 
 							if (alDto == null || alDto.getNNettopreis() == null) {
 								// wenn auch kein Lief1Preis, dann
 								// VKPreis verwenden
-								handlagerbewegungDto
-										.setNEinstandspreis(nVerkaufspreis);
+								handlagerbewegungDto.setNEinstandspreis(nVerkaufspreis);
 							} else {
-								handlagerbewegungDto.setNEinstandspreis(alDto
-										.getNNettopreis());
+								handlagerbewegungDto.setNEinstandspreis(alDto.getNNettopreis());
 							}
 
 						} else {
 							handlagerbewegungDto.setNEinstandspreis(gestpreis);
 						}
 
-						createHandlagerbewegung(handlagerbewegungDto,
-								theClientDto);
+						createHandlagerbewegung(handlagerbewegungDto, theClientDto);
 					} else {
 
 						ArrayList al = new ArrayList();
 						al.add(artikel.getCNr());
+						al.add(Helper.formatZahl(m, iNachkommastellenMenge, theClientDto.getLocUi()) + " "
+								+ artikel.getEinheitCNr().trim());
+						al.add(Helper.formatZahl(fMengeAbsolut, iNachkommastellenMenge, theClientDto.getLocUi()) + " "
+								+ artikel.getEinheitCNr().trim());
 
 						if (cSeriennrchargennr != null) {
 							al.add(cSeriennrchargennr);
 						}
 
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_ZUWENIG_AUF_LAGER, al,
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ZUWENIG_AUF_LAGER, al,
 								new Exception(
-										"FEHLER_ZUWENIG_AUF_LAGER snrchnr="
-												+ cSeriennrchargennr
-												+ " menge_abzubuchen="
-												+ fMengeAbsolut.doubleValue()
-												+ ", artikelIId=" + artikelIId));
+										"FEHLER_ZUWENIG_AUF_LAGER snrchnr=" + cSeriennrchargennr + " menge_abzubuchen="
+												+ fMengeAbsolut.doubleValue() + ", artikelIId=" + artikelIId));
 					}
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
@@ -11805,114 +11018,111 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			lagerbewegungDtoNeueintrag.setBAbgang(new Short((short) 1));
 			lagerbewegungDtoNeueintrag.setTBelegdatum(tBelegdatum);
 			if (bLagerbewirtschaftet == true) {
-				lagerbewegungDtoNeueintrag
-						.setBVollstaendigverbraucht(new Short((short) 0));
+				lagerbewegungDtoNeueintrag.setBVollstaendigverbraucht(new Short((short) 0));
 			} else {
-				lagerbewegungDtoNeueintrag
-						.setBVollstaendigverbraucht(new Short((short) 1));
+				lagerbewegungDtoNeueintrag.setBVollstaendigverbraucht(new Short((short) 1));
 			}
 
 			lagerbewegungDtoNeueintrag.setCBelegartnr(belegartCNr);
 			lagerbewegungDtoNeueintrag.setIBelegartid(belegartIId);
-			lagerbewegungDtoNeueintrag
-					.setIBelegartpositionid(belegartpositionIId);
-			lagerbewegungDtoNeueintrag
-					.setCSeriennrchargennr(cSeriennrchargennr);
+			lagerbewegungDtoNeueintrag.setIBelegartpositionid(belegartpositionIId);
+			lagerbewegungDtoNeueintrag.setCSeriennrchargennr(cSeriennrchargennr);
 			lagerbewegungDtoNeueintrag.setNMenge(fMengeAbsolut);
 			lagerbewegungDtoNeueintrag.setLagerIId(lagerIId);
-			lagerbewegungDtoNeueintrag.setNVerkaufspreis(Helper
-					.rundeKaufmaennisch(nVerkaufspreis, 4));
-			lagerbewegungDtoNeueintrag.setTBuchungszeit(new Timestamp(System
-					.currentTimeMillis()));
+			lagerbewegungDtoNeueintrag.setNVerkaufspreis(Helper.rundeKaufmaennisch(nVerkaufspreis, 4));
+			lagerbewegungDtoNeueintrag.setTBuchungszeit(new Timestamp(System.currentTimeMillis()));
 			lagerbewegungDtoNeueintrag.setBHistorie(new Short((short) 0));
 			// Neue Nuchungsnummer erzeugen
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
-			Integer pk = pkGen
-					.getNextPrimaryKey(PKConst.PK_LAGERBEWEGUNG_I_ID_BUCHUNG);
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_LAGERBEWEGUNG_I_ID_BUCHUNG);
 			lagerbewegungDtoNeueintrag.setIIdBuchung(pk);
 
 			// wenn nicht lagerbewirtschaftet artikel uaf Lager KEIN_LAGER
 			// in artikelager anlegen
 			if (bLagerbewirtschaftet == false) {
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager == null) {
 					try {
-						artikellager = new Artikellager(artikelIId, lagerIId,
-								theClientDto.getMandant());
+						artikellager = new Artikellager(artikelIId, lagerIId, theClientDto.getMandant());
 						em.persist(artikellager);
 						em.flush();
 					} catch (EntityExistsException ex) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 					}
 				}
 			}
 
 			// Lagerstand in WW_ARTIKELLAGER updaten und Gestehungspreis zum
 			// Abbuchungszeitpunkt niederschreiben niederschreiben
-			Artikellager artikellager = em.find(Artikellager.class,
-					new ArtikellagerPK(artikelIId, lagerIId));
+			Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 			if (artikellager == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET,
 						new Exception("ARTIKEL_IST_KEINEM_LAGER_ZUGEORDNET"));
 			}
 			BigDecimal lagerstand = artikellager.getNLagerstand();
 			lagerstand = lagerstand.subtract(fMengeAbsolut);
 
 			if (bLagerbewirtschaftet == true) {
-				artikellager.setNLagerstand(Helper.rundeKaufmaennisch(
-						lagerstand, 4));
+				artikellager.setNLagerstand(Helper.rundeKaufmaennisch(lagerstand, 4));
 			} else {
 				artikellager.setNLagerstand(new BigDecimal(0));
 			}
 			// TODO: sollte hier nicht der Gestehungspreis zum Zeitpunkt
 			// verwendet werden?
-			lagerbewegungDtoNeueintrag.setNGestehungspreis(artikellager
-					.getNGestehungspreis());
+			lagerbewegungDtoNeueintrag.setNGestehungspreis(artikellager.getNGestehungspreis());
 			createLagerbewegung(lagerbewegungDtoNeueintrag, theClientDto);
 
 			// Urspruenge eintragen
-			LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(
-					artikelIId, lagerIId, cSeriennrchargennr, fMengeAbsolut,
-					theClientDto);
+			LagerabgangursprungDto[] urspruenge = getVonLagerNachRegel(artikelIId, lagerIId, cSeriennrchargennr,
+					fMengeAbsolut, theClientDto);
 
 			if (bLagerbewirtschaftet == true) {
 				BigDecimal fUrspruenge = new BigDecimal(0);
 
 				if (cSeriennrchargennr != null && urspruenge.length > 0) {
-					versionInLagerbewegungUpdaten(belegartCNr,
-							belegartpositionIId, cSeriennrchargennr,
+					versionInLagerbewegungUpdaten(belegartCNr, belegartpositionIId, cSeriennrchargennr,
 							urspruenge[0].getVersionAusUrsprung());
 				}
 
 				for (int i = 0; i < urspruenge.length; i++) {
-					fUrspruenge = fUrspruenge.add(urspruenge[i]
-							.getNVerbrauchtemenge());
+
+					// SP8045 Urpsrung darf nicht von sich selbst kommen
+					if (belegartCNr.equals(LocaleFac.BELEGART_LOS)
+							&& urspruenge[i].getNVerbrauchtemenge().doubleValue() > 0) {
+
+						LagerbewegungDto[] ursprungDtos = lagerbewegungFindByIIdBuchung(
+								urspruenge[i].getILagerbewegungidursprung());
+						if (ursprungDtos != null && ursprungDtos.length > 0) {
+							if (ursprungDtos[0].getCBelegartnr().equals(LocaleFac.BELEGART_LOSABLIEFERUNG)
+									&& ursprungDtos[0].getIBelegartid().equals(belegartIId)) {
+								LosDto losDto = getFertigungFac().losFindByPrimaryKeyOhneExc(belegartIId);
+								ArrayList al = new ArrayList();
+								if (losDto != null) {
+									al.add(artikel.getCNr());
+									al.add(losDto.getCNr());
+								}
+
+								throw new EJBExceptionLP(
+										EJBExceptionLP.FEHLER_MATERIALBUCHUNG_AUF_LOS_KOMMT_VON_SICH_SELBST, al,
+										new Exception("FEHLER_MATERIALBUCHUNG_AUF_LOS_KOMMT_VON_SICH_SELBST"));
+							}
+						}
+
+					}
+
+					fUrspruenge = fUrspruenge.add(urspruenge[i].getNVerbrauchtemenge());
 
 				}
 
-				if (fMengeAbsolut.compareTo(fUrspruenge) == 1
-						|| fMengeAbsolut.compareTo(fUrspruenge) == -1) {
+				if (fMengeAbsolut.compareTo(fUrspruenge) == 1 || fMengeAbsolut.compareTo(fUrspruenge) == -1) {
 					myLogger.logKritisch("FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH, ARTIKEL_I_ID="
-							+ artikelIId
-							+ " SNR_CHNR: "
-							+ cSeriennrchargennr
-							+ " ABZUBUCHENDEMENGE="
-							+ fMengeAbsolut.doubleValue()
-							+ " MENGE_AUS_URSPRUENGEN=" + fUrspruenge);
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH,
-							new Exception(
-									"FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH"
-											+ "FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH, ARTIKEL_I_ID="
-											+ artikelIId + " SNR_CHNR: "
-											+ cSeriennrchargennr
-											+ " ABZUBUCHENDEMENGE="
-											+ fMengeAbsolut.doubleValue()
-											+ " MENGE_AUS_URSPRUENGEN="
-											+ fUrspruenge));
+							+ artikelIId + " SNR_CHNR: " + cSeriennrchargennr + " ABZUBUCHENDEMENGE="
+							+ fMengeAbsolut.doubleValue() + " MENGE_AUS_URSPRUENGEN=" + fUrspruenge);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH,
+							new Exception("FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH"
+									+ "FEHLER_ABBUCHUNG_OHNE_URSPRUNGSEINTRAG_NICHT_MOEGLICH, ARTIKEL_I_ID="
+									+ artikelIId + " SNR_CHNR: " + cSeriennrchargennr + " ABZUBUCHENDEMENGE="
+									+ fMengeAbsolut.doubleValue() + " MENGE_AUS_URSPRUENGEN=" + fUrspruenge));
 				}
 
 			}
@@ -11921,33 +11131,82 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				createLagerabgangursprung(urspruenge[i]);
 			}
 
+			// SP7908
+			if (gestehungspreisNeuKalkulieren == true && bLagerbewirtschaftet == true) {
+				BigDecimal preis = recalcGestehungspreisAbTermin(lagerbewegungDtoNeueintrag.getIId(), artikelIId,
+						lagerIId, lagerbewegungDtoNeueintrag.getTBelegdatum(), theClientDto);
+				if (preis != null && lagerstand.doubleValue() != 0) {
+					artikellager.setNGestehungspreis(preis);
+				}
+			}
+
 		}
+
+		// 20533
+		if (bLagerbewirtschaftet == true && fMengeAbsolut.doubleValue() > 0) {
+			try {
+
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL,
+						ParameterFac.PARAMETER_LAGERPLAETZE_BEI_LIEFERUNG_UND_LAGER_NULL_LOESCHEN);
+				boolean bLagerplaetzeLoeschen = (Boolean) parameter.getCWertAsObject();
+
+				if (bLagerplaetzeLoeschen == true) {
+
+					Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
+					if (artikellager != null) {
+
+						if (artikellager.getNLagerstand().doubleValue() == 0) {
+
+							Query query = em.createNamedQuery("ArtikellagerplaetzefindByArtikelIId");
+							query.setParameter(1, artikelIId);
+							Collection vorhandeneLagerplaetze = query.getResultList();
+
+							Iterator<?> iterator = vorhandeneLagerplaetze.iterator();
+							while (iterator.hasNext()) {
+								Artikellagerplaetze temp = (Artikellagerplaetze) iterator.next();
+
+								Lagerplatz lagerplatz = em.find(Lagerplatz.class, temp.getLagerplatzIId());
+
+								if (lagerplatz.getLagerIId().equals(lagerIId)) {
+									em.remove(temp);
+									em.flush();
+								}
+							}
+						}
+
+					}
+
+				}
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+
 		if (bLagerLogging) {
 			double lagerstandNachher = 0;
 			double gestpreisNachher = 0;
 
 			try {
-				Artikellager artikellager = em.find(Artikellager.class,
-						new ArtikellagerPK(artikelIId, lagerIId));
+				Artikellager artikellager = em.find(Artikellager.class, new ArtikellagerPK(artikelIId, lagerIId));
 				if (artikellager != null) {
-					lagerstandNachher = artikellager.getNLagerstand()
-							.doubleValue();
-					gestpreisNachher = artikellager.getNGestehungspreis()
-							.doubleValue();
+					lagerstandNachher = artikellager.getNLagerstand().doubleValue();
+					gestpreisNachher = artikellager.getNGestehungspreis().doubleValue();
 				}
 
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 
-			String logEintrag = "LagerstandNachBuchung=" + lagerstandNachher
-					+ ",GestpreisNachBuchung=" + gestpreisNachher;
+			String logEintrag = "LagerstandNachBuchung=" + lagerstandNachher + ",GestpreisNachBuchung="
+					+ gestpreisNachher;
 			erstelleProtokollEintragAbbuchung(theClientDto, logEintrag, false);
 		}
 	}
 
-	private void erstelleProtokollEintragAbbuchung(TheClientDto theClientDto,
-			String logEintrag, boolean bStacktrace) {
+	private void erstelleProtokollEintragAbbuchung(TheClientDto theClientDto, String logEintrag, boolean bStacktrace) {
 		ProtokollDto protokollDto = new ProtokollDto();
 
 		protokollDto.setCTyp(SystemFac.PROTOKOLL_TYP_LAGER_AB);
@@ -11955,8 +11214,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		protokollDto.setCText(logEintrag);
 		if (bStacktrace) {
-			protokollDto.setCLangtext(getLPStackTrace(new Throwable()
-					.getStackTrace()));
+			protokollDto.setCLangtext(getLPStackTrace(new Throwable().getStackTrace()));
 		}
 
 		erstelleProtokollEintrag(protokollDto, theClientDto);
@@ -11965,24 +11223,19 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Ein Lager ueber seine Lagerart bestimmen.
 	 * 
-	 * @param sMandantI
-	 *            Mandtant
-	 * @param sLagerartI
-	 *            Lagerart
+	 * @param sMandantI  Mandtant
+	 * @param sLagerartI Lagerart
 	 * @throws EJBExceptionLP
 	 * @return LagerDto
 	 */
-	public LagerDto lagerFindByMandantCNrLagerartCNr(String sMandantI,
-			String sLagerartI) throws EJBExceptionLP {
+	public LagerDto lagerFindByMandantCNrLagerartCNr(String sMandantI, String sLagerartI) throws EJBExceptionLP {
 		myLogger.entry();
 
 		if (sLagerartI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception());
 		}
 		try {
-			Query query = em
-					.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
+			Query query = em.createNamedQuery("LagerfindByMandantCNrLagerartCNr");
 			query.setParameter(1, sMandantI);
 			query.setParameter(2, sLagerartI);
 			Lager lager = (Lager) query.getSingleResult();
@@ -11992,22 +11245,209 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
+	public ArrayList<String[]> getAlleWarenzugaengeFuerProFirst(TheClientDto theClientDto) {
+
+		ArrayList<String[]> al = new ArrayList<String[]>();
+
+		Timestamp tLetzterExport = null;
+		try {
+			KeyvalueDto[] dtos = getSystemServicesFac()
+					.keyvalueFindyByCGruppe(SystemServicesFac.KEYVALUE_WEP_EXPORT_PRO_FIRST_LETZTER_ZEITPUNKT);
+
+			if (dtos != null && dtos.length > 0 && dtos[0].getCKey().equals("ZeitpunktWEPExport")) {
+				tLetzterExport = new Timestamp(new Long(dtos[0].getCValue()));
+			}
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		// QUERY
+		String sQuery = " SELECT l FROM FLRLagerbewegung l WHERE l.b_historie=0 AND l.n_menge>0 AND l.b_abgang=0 AND l.c_version IS NOT NULL AND l.flrartikel.b_chargennrtragend=1 ";
+		if (tLetzterExport != null) {
+			sQuery += " AND l.t_buchungszeit >='" + Helper.formatTimestampWithSlashes(tLetzterExport) + "'";
+		}
+
+		sQuery += "ORDER BY  l.c_version ASC";
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Query query = session.createQuery(sQuery);
+
+		List<?> resultList = query.list();
+		Iterator<?> iteratorLB = resultList.iterator();
+
+		// Ueberschriften
+		String[] zeileU = new String[12];
+		zeileU[0] = "Tafelnummer";
+		zeileU[1] = "Material";
+		zeileU[2] = "ArtikelnummerMaterial";
+		zeileU[3] = "Staerke";
+		zeileU[4] = "Breite";
+		zeileU[5] = "Tiefe";
+		zeileU[6] = "Chargennummer";
+		zeileU[7] = "AnzahlTafeln";
+		zeileU[8] = "Lieferant";
+		zeileU[9] = "Dokument";
+		zeileU[10] = "Preis/Kilo";
+		zeileU[11] = "Werkstoff";
+
+		al.add(zeileU);
+
+		while (iteratorLB.hasNext()) {
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) iteratorLB.next();
+
+			String[] zeile = new String[12];
+			// Tafelnummer
+			zeile[0] = lagerbewegung.getC_version();
+
+			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKey(lagerbewegung.getFlrartikel().getI_id(),
+					theClientDto);
+
+			// Werkstofftyp
+			if (lagerbewegung.getFlrartikel().getFlrmaterial() != null) {
+				zeile[1] = lagerbewegung.getFlrartikel().getFlrmaterial().getC_nr();
+			}
+
+			// Werkstoff
+			zeile[2] = aDto.getCNr();
+			// Dicke in mm
+
+			// SP7444
+			zeile[6] = lagerbewegung.getC_seriennrchargennr();
+
+			if (aDto.getGeometrieDto().getFHoehe() != null) {
+				zeile[3] = Helper.formatZahl(aDto.getGeometrieDto().getFHoehe(), 0, theClientDto.getLocUi());
+			}
+
+			zeile[11] = "Stahl";
+
+			// PJ20035 Breite/Tiefe aus WEPOS
+
+			BigDecimal nBreiteInMm = null;
+			BigDecimal nTiefeInMm = null;
+
+			if (lagerbewegung.getC_belegartnr().equals(LocaleFac.BELEGART_BESTELLUNG)) {
+				WareneingangspositionDto weposDtos = getWareneingangFac()
+						.wareneingangspositionFindByPrimaryKeyOhneExc(lagerbewegung.getI_belegartpositionid());
+				if (weposDtos != null) {
+					if (weposDtos.getNBreiteInMm() != null) {
+						zeile[4] = Helper.formatZahl(weposDtos.getNBreiteInMm(), 0, theClientDto.getLocUi());
+						nBreiteInMm = weposDtos.getNBreiteInMm();
+					}
+
+					if (weposDtos.getNTiefeInMm() != null) {
+						zeile[5] = Helper.formatZahl(weposDtos.getNTiefeInMm(), 0, theClientDto.getLocUi());
+						nTiefeInMm = weposDtos.getNTiefeInMm();
+					}
+
+					try {
+						BestellpositionDto bsPosDto = getBestellpositionFac()
+								.bestellpositionFindByPrimaryKey(weposDtos.getBestellpositionIId());
+
+						BestellungDto bsDto = getBestellungFac()
+								.bestellungFindByPrimaryKey(bsPosDto.getBestellungIId());
+						LieferantDto lfDto = getLieferantFac()
+								.lieferantFindByPrimaryKey(bsDto.getLieferantIIdBestelladresse(), theClientDto);
+
+						zeile[8] = lfDto.getPartnerDto().getCKbez();
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+					if (weposDtos.getXInternerKommentar() != null) {
+						zeile[9] = HelperReport.entferneStyleInformation(weposDtos.getXInternerKommentar());
+					}
+
+				}
+
+				// PreisProKilo
+
+				if (aDto.getEinheitCNrBestellung() != null && aDto.getNUmrechnungsfaktor() != null) {
+
+					BigDecimal umrechnung = new BigDecimal(0);
+					BigDecimal preis = weposDtos.getNEinstandspreis();
+					BigDecimal faktor = aDto.getNUmrechnungsfaktor();
+					if (preis != null && faktor != null) {
+						umrechnung = preis.divide(faktor, 4, BigDecimal.ROUND_HALF_EVEN);
+						zeile[10] = Helper.formatZahl(umrechnung, 4, theClientDto.getLocUi());
+					}
+				}
+
+			} else {
+
+				if (aDto.getGeometrieDto().getFBreite() != null) {
+					zeile[4] = Helper.formatZahl(aDto.getGeometrieDto().getFBreite(), 0, theClientDto.getLocUi());
+				}
+
+				if (aDto.getGeometrieDto().getFTiefe() != null) {
+					zeile[5] = Helper.formatZahl(aDto.getGeometrieDto().getFTiefe(), 0, theClientDto.getLocUi());
+				}
+			}
+
+			// Menge
+
+			if (nBreiteInMm != null && nTiefeInMm != null) {
+
+				BigDecimal quadratmeter = nBreiteInMm.divide(new BigDecimal(1000))
+						.multiply(nTiefeInMm.divide(new BigDecimal(1000)));
+
+				zeile[7] = new BigDecimal(lagerbewegung.getN_menge().doubleValue() / quadratmeter.doubleValue())
+						.intValue() + "";
+
+			} else if (aDto.getFVerpackungsmenge() != null && aDto.getFVerpackungsmenge().doubleValue() != 0) {
+
+				zeile[7] = new BigDecimal(lagerbewegung.getN_menge().doubleValue() / aDto.getFVerpackungsmenge())
+						.intValue() + "";
+
+			} else {
+
+				zeile[7] = Helper.formatZahl(lagerbewegung.getN_menge(), 3, theClientDto.getLocUi());
+			}
+
+			al.add(zeile);
+		}
+
+		ArrayList<KeyvalueDto> alDtos = new ArrayList<KeyvalueDto>();
+		alDtos.add(new KeyvalueDto("ZeitpunktWEPExport", System.currentTimeMillis() + ""));
+
+		getSystemServicesFac()
+				.replaceKeyvaluesEinerGruppe(SystemServicesFac.KEYVALUE_WEP_EXPORT_PRO_FIRST_LETZTER_ZEITPUNKT, alDtos);
+
+		return al;
+
+	}
+
 	/**
 	 * Alle Lager eines Mandanten holen (ohne Kein_Lager)
 	 * 
-	 * @param sMandantI
-	 *            Mandtant
+	 * @param sMandantI Mandtant
 	 * @throws EJBExceptionLP
 	 * @return LagerDto
 	 */
-	public LagerDto[] lagerFindByMandantCNr(String sMandantI)
-			throws EJBExceptionLP {
+	public LagerDto[] lagerFindByMandantCNr(String sMandantI) throws EJBExceptionLP {
 		if (sMandantI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("sMandantI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("sMandantI == null"));
 		}
 		Query query = em.createNamedQuery("LagerfindByMandantCNr");
 		query.setParameter(1, sMandantI);
+		Collection<?> cl = query.getResultList();
+		return assembleLagerDtos(cl);
+	}
+
+	public LagerDto[] lagerFindByPartnerIIdStandortMandantCNr(Integer partnerIIdStandort, String sMandantI,
+			boolean bMitVersteckten) {
+		if (sMandantI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("sMandantI == null"));
+		}
+		Query query = null;
+
+		if (bMitVersteckten) {
+			query = em.createNamedQuery("LagerfindByPartnerIIdStandortMandantCNr");
+		} else {
+			query = em.createNamedQuery("LagerfindByPartnerIIdStandortMandantCNrOhneVersteckte");
+		}
+		query.setParameter(1, partnerIIdStandort);
+		query.setParameter(2, sMandantI);
+
 		Collection<?> cl = query.getResultList();
 		return assembleLagerDtos(cl);
 	}
@@ -12018,92 +11458,286 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return assembleLagerDtos(cl);
 	}
 
-	public String getNaechsteSeriennummer(Integer artikelIId,
-			String uebersteuerteSeriennummer, TheClientDto theClientDto) {
+	private String getFehlerhafteSNRFromSQLException(SQLException ex) {
+		String letzteFehlerhafteSNR = "UNBEKANNT";
+		String[] teile = ex.getMessage().split("\"");
+		if (teile.length > 1) {
+			letzteFehlerhafteSNR = teile[1];
+		}
 
-		String neueSnrChnr = null;
-		Session session = FLRSessionFactory.getFactory().openSession();
+		return letzteFehlerhafteSNR;
+	}
 
-		String queryString = "SELECT l FROM FLRLagerbewegung l WHERE l.flrartikel.b_seriennrtragend = 1 AND l.n_menge > 0 AND l.b_historie=0 AND l.b_abgang=0 AND l.c_seriennrchargennr IS NOT NULL";
-		int iMaxLaengeSnr = 15;
+	public String getNaechsteSeriennummer(Integer artikelIId, String uebersteuerteSeriennummer, String beginntMit,
+			TheClientDto theClientDto) {
 		try {
-			ParametermandantDto parameter = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ARTIKEL,
-							ParameterFac.PARAMETER_SERIENNUMMER_EINEINDEUTIG);
-			boolean bSnrEindeutig = Helper.short2boolean(new Short(parameter
-					.getCWert()));
+			String neueSnrChnr = null;
+			Session session = FLRSessionFactory.getFactory().openSession();
 
-			if (bSnrEindeutig == false) {
-				queryString += " AND l.artikel_i_id=" + artikelIId + " ";
+			String queryString = "SELECT l FROM FLRLagerbewegung l WHERE l.flrartikel.b_seriennrtragend = 1 AND l.n_menge > 0 AND l.b_historie=0 AND l.b_abgang=0 AND l.c_seriennrchargennr IS NOT NULL";
+			int iMaxLaengeSnr = 15;
 
-			}
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_SERIENNUMMER_EINEINDEUTIG);
+			boolean bSnrEindeutig = Helper.short2boolean(new Short(parameter.getCWert()));
 
-			parameter = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_ARTIKEL_MAXIMALELAENGE_SERIENNUMMER);
 			iMaxLaengeSnr = (Integer) parameter.getCWertAsObject();
+
+			if (beginntMit != null && beginntMit.length() > 0) {
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
+				if (aDto.getILaengemaxSnrchnr() != null) {
+					iMaxLaengeSnr = aDto.getILaengemaxSnrchnr();
+				}
+
+				iMaxLaengeSnr = iMaxLaengeSnr - beginntMit.length();
+
+				if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+						MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+					queryString += " AND l.flrlager.mandant_c_nr='" + theClientDto.getMandant() + "' ";
+				}
+
+				queryString += " AND l.c_seriennrchargennr LIKE '" + beginntMit + "%' ";
+
+				String orderBYMitCastdouble = " ORDER BY cast(l.c_seriennrchargennr as double) DESC";
+
+				org.hibernate.Query query = session.createQuery(queryString + orderBYMitCastdouble);
+				query.setMaxResults(1);
+
+				Iterator<?> resultListIterator = null;
+				try {
+
+					List<?> results = query.list();
+					resultListIterator = results.iterator();
+
+				} catch (org.hibernate.exception.DataException ex) {
+					if (ex.getCause() instanceof SQLException) {
+						SQLException sqlex = (SQLException) ex.getCause();
+						ArrayList al = new ArrayList();
+						String snr = getFehlerhafteSNRFromSQLException(sqlex);
+						al.add(snr);
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN, al,
+								new Exception(snr));
+					} else {
+
+						throw ex;
+
+					}
+
+				} catch (SQLGrammarException ex) {
+
+					int iBisStelle = 0;
+					while (iBisStelle < iMaxLaengeSnr) {
+						iBisStelle = iBisStelle + 8;
+						String orderBYMitCastLong = "ORDER BY cast(substring(l.c_seriennrchargennr," + (iBisStelle - 8)
+								+ "," + iBisStelle + ") as int) DESC";
+						query = session.createQuery(queryString + orderBYMitCastLong);
+						query.setMaxResults(1);
+
+						try {
+
+							List<?> results = query.list();
+							resultListIterator = results.iterator();
+						} catch (org.hibernate.exception.DataException exSub) {
+							if (exSub.getCause() instanceof SQLException) {
+								if (exSub.getCause() instanceof SQLException) {
+									SQLException sqlex = (SQLException) exSub.getCause();
+									ArrayList al = new ArrayList();
+									String snr = getFehlerhafteSNRFromSQLException(sqlex);
+									al.add(snr);
+									throw new EJBExceptionLP(
+											EJBExceptionLP.FEHLER_SERIENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN, al,
+											new Exception(snr));
+								} else {
+
+									throw ex;
+
+								}
+							}
+						}
+
+					}
+
+				}
+				String artikelnummerLetzteVersion = null;
+
+				if (resultListIterator.hasNext() || uebersteuerteSeriennummer != null) {
+
+					String letzteSeriennummer = null;
+					// SP8415
+					boolean bBestehendeSeriennummerAusDB = false;
+					if (uebersteuerteSeriennummer != null) {
+						letzteSeriennummer = uebersteuerteSeriennummer;
+					} else {
+						FLRLagerbewegung flrLagerbewegung = (FLRLagerbewegung) resultListIterator.next();
+						letzteSeriennummer = flrLagerbewegung.getC_seriennrchargennr();
+						bBestehendeSeriennummerAusDB = true;
+					}
+
+					letzteSeriennummer = letzteSeriennummer.substring(beginntMit.length());
+
+					try {
+						String snr = Helper.naechsteSeriennr(letzteSeriennummer);
+
+						if (bBestehendeSeriennummerAusDB) {
+							return beginntMit
+									+ Helper.fitString2LengthAlignRight(snr, letzteSeriennummer.length(), '0');
+						} else {
+							return beginntMit + Helper.fitString2LengthAlignRight(snr, iMaxLaengeSnr, '0');
+						}
+
+					} catch (NumberFormatException e) {
+						ArrayList al = new ArrayList();
+						al.add(beginntMit + letzteSeriennummer);
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN, al,
+								new Exception(beginntMit + letzteSeriennummer));
+
+					}
+
+				} else {
+					return beginntMit + Helper.fitString2LengthAlignRight("1", iMaxLaengeSnr, '0');
+				}
+			} else {
+
+				if (bSnrEindeutig == false) {
+					queryString += " AND l.artikel_i_id=" + artikelIId + " ";
+
+				}
+
+				parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_ARTIKEL_MAXIMALELAENGE_SERIENNUMMER);
+				iMaxLaengeSnr = (Integer) parameter.getCWertAsObject();
+
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto);
+				if (aDto.getILaengemaxSnrchnr() != null) {
+					iMaxLaengeSnr = aDto.getILaengemaxSnrchnr();
+				}
+
+				queryString += " ORDER BY l.c_seriennrchargennr DESC";
+
+				org.hibernate.Query query = session.createQuery(queryString);
+				query.setMaxResults(1);
+				List<?> results = query.list();
+				Iterator<?> resultListIterator = results.iterator();
+
+				String artikelnummerLetzteVersion = null;
+
+				if (resultListIterator.hasNext() || uebersteuerteSeriennummer != null) {
+
+					String letzteSeriennummer = null;
+					if (uebersteuerteSeriennummer != null) {
+						letzteSeriennummer = uebersteuerteSeriennummer;
+					} else {
+
+						FLRLagerbewegung flrLagerbewegung = (FLRLagerbewegung) resultListIterator.next();
+
+						letzteSeriennummer = flrLagerbewegung.getC_seriennrchargennr();
+					}
+
+					try {
+						String snr = Helper.naechsteSeriennr(letzteSeriennummer);
+						return Helper.fitString2LengthAlignRight(snr, iMaxLaengeSnr, '0');
+						// Long snr = new Long(letzteSeriennummer);
+						// snr = snr + 1;
+						// return Helper.fitString2LengthAlignRight(snr + "",
+						// iMaxLaengeSnr, '0');
+
+					} catch (NumberFormatException e) {
+						ArrayList al = new ArrayList();
+						al.add(letzteSeriennummer);
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN, al,
+								new Exception(letzteSeriennummer));
+
+					}
+
+				} else {
+					return Helper.fitString2LengthAlignRight("1", iMaxLaengeSnr, '0');
+				}
+			}
 
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}
-		queryString += " ORDER BY l.c_seriennrchargennr DESC";
+		return null;
+
+	}
+
+	public PaneldatenDto[] getLetzteChargeninfosEinesArtikels(Integer artikelIId, String belegartCNr,
+			Integer belegartIId, Integer belegartpositionIId, String cSerienchargennummer, TheClientDto theClientDto) {
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String queryString = "SELECT l FROM FLRLagerbewegung as l  "
+				+ " WHERE l.n_menge > 0 AND l.b_historie=0 AND l.b_abgang=0  AND l.c_seriennrchargennr IS NOT NULL AND l.artikel_i_id="
+				+ artikelIId;
+
+		if (belegartCNr != null) {
+			queryString += " AND l.c_belegartnr ='" + belegartCNr + "' ";
+		}
+
+		if (belegartIId != null) {
+
+			queryString += " AND l.i_belegartid=" + belegartIId + " ";
+
+		}
+
+		if (belegartpositionIId != null) {
+
+			queryString += " AND l.i_belegartpositionid=" + belegartpositionIId + " ";
+
+		}
+
+		if (cSerienchargennummer != null) {
+
+			queryString += " AND l.c_seriennrchargennr='" + cSerienchargennummer + "' ";
+
+		}
+		queryString += " ORDER BY l.t_buchungszeit DESC";
 
 		org.hibernate.Query query = session.createQuery(queryString);
 		query.setMaxResults(1);
+
 		List<?> results = query.list();
 		Iterator<?> resultListIterator = results.iterator();
 
-		String artikelnummerLetzteVersion = null;
+		if (resultListIterator.hasNext()) {
 
-		if (resultListIterator.hasNext() || uebersteuerteSeriennummer != null) {
+			FLRLagerbewegung l = (FLRLagerbewegung) resultListIterator.next();
 
-			String letzteSeriennummer = null;
-			if (uebersteuerteSeriennummer != null) {
-				letzteSeriennummer = uebersteuerteSeriennummer;
-			} else {
-
-				FLRLagerbewegung flrLagerbewegung = (FLRLagerbewegung) resultListIterator
-						.next();
-
-				letzteSeriennummer = flrLagerbewegung.getC_seriennrchargennr();
-			}
+			Integer artikelsnrchnrIId = artikelsnrchnrIIdFindByArtikelIIdCSeriennrchargennr(l.getArtikel_i_id(),
+					l.getC_seriennrchargennr());
 
 			try {
-				Long snr = new Long(letzteSeriennummer);
-				snr = snr + 1;
-				return Helper.fitString2LengthAlignRight(snr + "",
-						iMaxLaengeSnr, '0');
-
-			} catch (NumberFormatException e) {
-				ArrayList al = new ArrayList();
-				al.add(letzteSeriennummer);
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_SERIENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN,
-						al, new Exception(letzteSeriennummer));
-
+				return getPanelFac().paneldatenFindByPanelCNrCKey(PanelFac.PANEL_CHARGENEIGENSCHAFTEN,
+						artikelsnrchnrIId + "");
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+				return null;
 			}
 
 		} else {
-			return Helper.fitString2LengthAlignRight("1", iMaxLaengeSnr, '0');
+			return null;
 		}
 
 	}
 
-	public String getNaechsteChargennummer(Integer artikelIId,
+	public String getNaechsteChargennummer(Integer artikelIId, String letzteChargennummerVomClient,
 			TheClientDto theClientDto) {
 
-		String neueSnrChnr = null;
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		int iLaengeEinEindeutig = 0;
+
+		String zeichenNichtBeruecksichtigen = "";
 		try {
-			ParametermandantDto parameter = getParameterFac()
-					.getMandantparameter(
-							theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ARTIKEL,
-							ParameterFac.PARAMETER_LAENGE_CHARGENNUMMER_EINEINDEUTIG);
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAENGE_CHARGENNUMMER_EINEINDEUTIG);
 			iLaengeEinEindeutig = (Integer) parameter.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_CHARGEN_BEI_GENERIERUNG_NICHT_BERUECKSICHTIGEN);
+			zeichenNichtBeruecksichtigen = (String) parameter.getCWertAsObject();
 
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
@@ -12116,56 +11750,104 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		String queryString = "SELECT L.C_SERIENNRCHARGENNR FROM STK_STUECKLISTE STKL "
 				+ "LEFT OUTER JOIN WW_LAGERBEWEGUNG L ON STKL.ARTIKEL_I_ID=L.ARTIKEL_I_ID "
 				+ "LEFT OUTER JOIN WW_ARTIKEL A ON STKL.ARTIKEL_I_ID= A.I_ID "
-				+ "WHERE STKL.B_FREMDFERTIGUNG=0 AND A.B_CHARGENNRTRAGEND=1 AND L.N_MENGE>0 AND L.B_HISTORIE=0 AND L.B_ABGANG=0 AND L.C_SERIENNRCHARGENNR IS NOT NULL AND L.C_SERIENNRCHARGENNR NOT IN ('KEINE_CHARGE') ORDER BY L.C_SERIENNRCHARGENNR DESC";
+				+ "WHERE STKL.B_FREMDFERTIGUNG=0 AND A.B_CHARGENNRTRAGEND=1 AND L.N_MENGE>0 AND L.B_HISTORIE=0 AND L.B_ABGANG=0 AND L.C_SERIENNRCHARGENNR IS NOT NULL AND L.C_SERIENNRCHARGENNR NOT IN ('KEINE_CHARGE')";
+
+		if (zeichenNichtBeruecksichtigen != null && zeichenNichtBeruecksichtigen.trim().length() > 0) {
+			zeichenNichtBeruecksichtigen = zeichenNichtBeruecksichtigen.trim();
+			String in = "";
+			for (int i = 0; i < zeichenNichtBeruecksichtigen.length(); i++) {
+				queryString += " AND L.C_SERIENNRCHARGENNR NOT LIKE '%" + zeichenNichtBeruecksichtigen.charAt(i) + "%'";
+
+				if (letzteChargennummerVomClient != null) {
+					CharSequence cs1 = zeichenNichtBeruecksichtigen.charAt(i) + "";
+					if (letzteChargennummerVomClient.contains(cs1)) {
+						letzteChargennummerVomClient = null;
+					}
+				}
+
+			}
+		}
+
+		queryString += " ORDER BY L.C_SERIENNRCHARGENNR DESC";
 
 		org.hibernate.Query query = session.createSQLQuery(queryString);
 		query.setMaxResults(1);
 		List<?> results = query.list();
 		Iterator<?> resultListIterator = results.iterator();
 
-		String artikelnummerLetzteVersion = null;
-
-		if (resultListIterator.hasNext()) {
-
-			String letzteSeriennummer = (String) resultListIterator.next();
+		if (resultListIterator.hasNext() || letzteChargennummerVomClient != null) {
+			String letzteSeriennummer = null;
+			if (letzteChargennummerVomClient != null) {
+				letzteSeriennummer = letzteChargennummerVomClient;
+			} else {
+				letzteSeriennummer = (String) resultListIterator.next();
+			}
 
 			try {
-				Long snr = new Long(letzteSeriennummer);
-				snr = snr + 1;
-				return Helper.fitString2LengthAlignRight(snr + "",
-						iLaengeEinEindeutig, '0');
-
+				String snr = Helper.naechsteSeriennr(letzteSeriennummer);
+				return Helper.fitString2LengthAlignRight(snr, iLaengeEinEindeutig, '0');
 			} catch (NumberFormatException e) {
 				ArrayList al = new ArrayList();
 				al.add(letzteSeriennummer);
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_CHARGENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN,
-						al, new Exception(letzteSeriennummer));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_CHARGENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN, al,
+						new Exception(letzteSeriennummer));
 
 			}
 
 		} else {
-			return Helper.fitString2LengthAlignRight("1", iLaengeEinEindeutig,
-					'0');
+			return Helper.fitString2LengthAlignRight("1", iLaengeEinEindeutig, '0');
 		}
 
 	}
 
-	public LagerDto[] lagerFindByMandantCNrOrderByILoslagersort(String sMandantI)
-			throws EJBExceptionLP {
-		if (sMandantI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("sMandantI == null"));
+	public String getNaechsteTafelnummer(Integer artikelIId, String letzteTafelnummerVomClient,
+			TheClientDto theClientDto) {
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String queryString = "SELECT L.C_VERSION FROM WW_LAGERBEWEGUNG L WHERE L.B_ABGANG=0 AND L.N_MENGE>0 AND L.B_HISTORIE=0 AND L.C_VERSION IS NOT NULL ORDER BY L.C_VERSION DESC";
+
+		org.hibernate.Query query = session.createSQLQuery(queryString);
+		query.setMaxResults(1);
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		if (resultListIterator.hasNext() || letzteTafelnummerVomClient != null) {
+			String letzteSeriennummer = null;
+			if (letzteTafelnummerVomClient != null) {
+				letzteSeriennummer = letzteTafelnummerVomClient;
+			} else {
+				letzteSeriennummer = (String) resultListIterator.next();
+			}
+
+			try {
+				String snr = Helper.naechsteSeriennr(letzteSeriennummer);
+				return snr;
+			} catch (NumberFormatException e) {
+				ArrayList al = new ArrayList();
+				al.add(letzteSeriennummer);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_CHARGENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN, al,
+						new Exception(letzteSeriennummer));
+
+			}
+
+		} else {
+			return "1";
 		}
-		Query query = em
-				.createNamedQuery("LagerfindByMandantCNrOrderByILoslagersort");
+
+	}
+
+	public LagerDto[] lagerFindByMandantCNrOrderByILoslagersort(String sMandantI) throws EJBExceptionLP {
+		if (sMandantI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("sMandantI == null"));
+		}
+		Query query = em.createNamedQuery("LagerfindByMandantCNrOrderByILoslagersort");
 		query.setParameter(1, sMandantI);
 		Collection<?> cl = query.getResultList();
 		return assembleLagerDtos(cl);
 	}
 
-	public LagerDto lagerFindByMandantCNrLagerartCNrOhneExc(String sMandantI,
-			String sLagerartI) {
+	public LagerDto lagerFindByMandantCNrLagerartCNrOhneExc(String sMandantI, String sLagerartI) {
 		myLogger.entry();
 
 		LagerDto oLagerDtoO = null;
@@ -12190,11 +11872,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return lagerDto;
 	}
 
-	public void createLagerart(LagerartDto lagerartDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createLagerart(LagerartDto lagerartDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (lagerartDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lagerartDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lagerartDto == null"));
 		}
 		if (lagerartDto.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -12206,25 +11886,67 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			em.flush();
 			setLagerartFromLagerartDto(partnerart, lagerartDto);
 			if (lagerartDto.getLagerartsprDto() != null) {
-				Lagerartspr artikelartspr = new Lagerartspr(
-						lagerartDto.getCNr(),
-						theClientDto.getLocMandantAsString());
+				Lagerartspr artikelartspr = new Lagerartspr(lagerartDto.getCNr(), theClientDto.getLocMandantAsString());
 				em.persist(lagerartspr);
 				em.flush();
-				setLagerartsprFromLagerartsprDto(artikelartspr,
-						lagerartDto.getLagerartsprDto());
+				setLagerartsprFromLagerartsprDto(artikelartspr, lagerartDto.getLagerartsprDto());
 			}
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
+	}
+
+	public Integer artikelsnrchnrIIdFindByArtikelIIdCSeriennrchargennr(Integer artikelIId, String cSerienchargennr) {
+
+		try {
+			Query query = em.createNamedQuery("ArtikelsnrchnrfindByArtikelIIdCSeriennrchargennr");
+			query.setParameter(1, artikelIId);
+			query.setParameter(2, cSerienchargennr);
+			Artikelsnrchnr vorhanden = (Artikelsnrchnr) query.getSingleResult();
+			if (vorhanden != null) {
+				return vorhanden.getiId();
+			}
+		} catch (NoResultException ex) {
+
+		}
+		return null;
+	}
+
+	public Integer updateArtikelsnrchnr(Integer artikelIId, String cSerienchargennr, TheClientDto theClientDto) {
+
+		Integer iId = null;
+		Artikelsnrchnr vorhanden = null;
+		try {
+			Query query = em.createNamedQuery("ArtikelsnrchnrfindByArtikelIIdCSeriennrchargennr");
+			query.setParameter(1, artikelIId);
+			query.setParameter(2, cSerienchargennr);
+			vorhanden = (Artikelsnrchnr) query.getSingleResult();
+			if (vorhanden != null) {
+				iId = vorhanden.getiId();
+			}
+		} catch (NoResultException ex) {
+			try {
+				// generieren von primary key
+				PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+				Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ARTIKELSNRCHNR);
+
+				Artikelsnrchnr lagerplatz = new Artikelsnrchnr(pk, artikelIId, cSerienchargennr);
+				em.persist(lagerplatz);
+				em.flush();
+				iId = pk;
+			} catch (EntityExistsException ex1) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex1);
+
+			}
+		}
+		return iId;
+
 	}
 
 	public void removeLagerart(String cNr) throws EJBExceptionLP {
 		Lagerart toRemove = em.find(Lagerart.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -12246,51 +11968,41 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			String cNr = lagerartDto.getCNr();
 			Lagerart lagerart = em.find(Lagerart.class, cNr);
 			if (lagerart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setLagerartFromLagerartDto(lagerart, lagerartDto);
 		}
 	}
 
-	public Integer createHandlagerbewegung(
-			HandlagerbewegungDto handlagerbewegungDto, TheClientDto theClientDto)
+	public Integer createHandlagerbewegung(HandlagerbewegungDto handlagerbewegungDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		if (handlagerbewegungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("handlagerbewegungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("handlagerbewegungDto == null"));
 		}
-		if (handlagerbewegungDto.getArtikelIId() == null
-				|| handlagerbewegungDto.getNMenge() == null
-				|| handlagerbewegungDto.getLagerIId() == null
-				|| handlagerbewegungDto.getBAbgang() == null
+		if (handlagerbewegungDto.getArtikelIId() == null || handlagerbewegungDto.getNMenge() == null
+				|| handlagerbewegungDto.getLagerIId() == null || handlagerbewegungDto.getBAbgang() == null
 				|| handlagerbewegungDto.getCKommentar() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"handlagerbewegungDto.getArtikelIId() == null || handlagerbewegungDto.getFMenge() == null || handlagerbewegungDto.getLagerIId() == null || handlagerbewegungDto.getCKommentar() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"handlagerbewegungDto.getArtikelIId() == null || handlagerbewegungDto.getFMenge() == null || handlagerbewegungDto.getLagerIId() == null || handlagerbewegungDto.getCKommentar() == null"));
 		}
 		if (handlagerbewegungDto.getNMenge().doubleValue() <= 0) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_ZAHL_ZU_KLEIN,
-					new Exception(
-							"handlagerbewegungDto.getFMenge().doubleValue() <= 0"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ZAHL_ZU_KLEIN,
+					new Exception("handlagerbewegungDto.getFMenge().doubleValue() <= 0"));
 		}
 		// Wenn Ein Lagerplatz mitangegeben wird und es sich um eine Zubuchung
 		// handelt, dann wird entweder
 		// Ein neuer Lagerplatz angelegt oder ein vorhandener upgedated oder
 		// eine Zuordnung geloescht
 		if (handlagerbewegungDto.isBAendereLagerplatz()) {
-			artikellagerplatzCRUD(handlagerbewegungDto.getArtikelIId(),
-					handlagerbewegungDto.getLagerIId(),
+			artikellagerplatzCRUD(handlagerbewegungDto.getArtikelIId(), handlagerbewegungDto.getLagerIId(),
 					handlagerbewegungDto.getLagerplatzIId(), theClientDto);
 		}
 
 		// es wird davon ausgegangen, dass ein Artikel nicht lagerbewirtschaftet
 		// ist
 		boolean bLagerbewirtschaftet = false;
-		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-				handlagerbewegungDto.getArtikelIId(), theClientDto);
+		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(handlagerbewegungDto.getArtikelIId(),
+				theClientDto);
 
 		// Nachsehen, ob Artikel lagerbewirtschaftet ist
 		if (Helper.short2boolean(artikelDto.getBLagerbewirtschaftet()) == true) {
@@ -12299,13 +12011,11 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// Wenn Artikel nicht Lagerbewirtschaftet ist, dann wirs automatisch auf
 		// "KEIN LAGER" gebucht
 		if (bLagerbewirtschaftet == false) {
-			LagerDto tempLager = lagerFindByCNrByMandantCNr(
-					LagerFac.LAGER_KEINLAGER, theClientDto.getMandant());
+			LagerDto tempLager = lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant());
 			if (tempLager != null) {
 				handlagerbewegungDto.setLagerIId(tempLager.getIId());
 			} else {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.LAGER_KEIN_LAGER_NICHT_ANGELEGT,
+				throw new EJBExceptionLP(EJBExceptionLP.LAGER_KEIN_LAGER_NICHT_ANGELEGT,
 						new Exception("LAGER_KEIN_LAGER_NICHT_ANGELEGT"));
 			}
 		}
@@ -12315,76 +12025,51 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_HANDLAGERBEWEGUNG);
 			handlagerbewegungDto.setIId(pk);
-			Handlagerbewegung handlagerbewegung = new Handlagerbewegung(
-					handlagerbewegungDto.getIId(),
-					handlagerbewegungDto.getArtikelIId(),
-					handlagerbewegungDto.getLagerIId(),
-					handlagerbewegungDto.getNMenge(),
-					handlagerbewegungDto.getCKommentar(),
-					theClientDto.getIDPersonal(),
-					handlagerbewegungDto.getBAbgang());
+			Handlagerbewegung handlagerbewegung = new Handlagerbewegung(handlagerbewegungDto.getIId(),
+					handlagerbewegungDto.getArtikelIId(), handlagerbewegungDto.getLagerIId(),
+					handlagerbewegungDto.getNMenge(), handlagerbewegungDto.getCKommentar(),
+					theClientDto.getIDPersonal(), handlagerbewegungDto.getBAbgang());
 			em.persist(handlagerbewegung);
 			em.flush();
-			setHandlagerbewegungFromHandlagerbewegungDto(handlagerbewegung,
-					handlagerbewegungDto);
+			setHandlagerbewegungFromHandlagerbewegungDto(handlagerbewegung, handlagerbewegungDto);
 
 			// Lagerbewegung durchfuehren
 			if (Helper.short2boolean(handlagerbewegungDto.getBAbgang())) {
 
-				bucheAb(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-						handlagerbewegung.getIId(),
-						handlagerbewegung.getArtikelIId(),
-						handlagerbewegungDto.getNMenge(),
-						handlagerbewegungDto.getNVerkaufspreis(),
-						handlagerbewegung.getLagerIId(),
+				bucheAb(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), handlagerbewegung.getIId(),
+						handlagerbewegung.getArtikelIId(), handlagerbewegungDto.getNMenge(),
+						handlagerbewegungDto.getNVerkaufspreis(), handlagerbewegung.getLagerIId(),
 						handlagerbewegungDto.getSeriennrChargennrMitMenge(),
-						new java.sql.Timestamp(System.currentTimeMillis()),
-						theClientDto);
+						new java.sql.Timestamp(System.currentTimeMillis()), theClientDto);
 			} else {
 
-				if (handlagerbewegungDto.getBelegartCNrUrsprung() == null
-						&& handlagerbewegungDto.getBelegartCNrUrsprung() == null) {
-					bucheZu(LocaleFac.BELEGART_HAND,
-							handlagerbewegung.getIId(),
-							handlagerbewegung.getIId(),
-							handlagerbewegung.getArtikelIId(),
-							handlagerbewegung.getNMenge(),
-							handlagerbewegungDto.getNEinstandspreis(),
-							handlagerbewegung.getLagerIId(),
+				if (handlagerbewegungDto.getBelegartCNrUrsprung() == null) {
+					bucheZu(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), handlagerbewegung.getIId(),
+							handlagerbewegung.getArtikelIId(), handlagerbewegung.getNMenge(),
+							handlagerbewegungDto.getNEinstandspreis(), handlagerbewegung.getLagerIId(),
 							handlagerbewegungDto.getSeriennrChargennrMitMenge(),
-							new java.sql.Timestamp(System.currentTimeMillis()),
-							theClientDto);
+							new java.sql.Timestamp(System.currentTimeMillis()), theClientDto);
 				} else {
-					bucheZu(LocaleFac.BELEGART_HAND,
-							handlagerbewegung.getIId(), handlagerbewegung
-									.getIId(), handlagerbewegung
-									.getArtikelIId(), handlagerbewegung
-									.getNMenge(), handlagerbewegungDto
-									.getNEinstandspreis(), handlagerbewegung
-									.getLagerIId(), handlagerbewegungDto
-									.getSeriennrChargennrMitMenge(),
-							new java.sql.Timestamp(System.currentTimeMillis()),
-							theClientDto, handlagerbewegungDto
-									.getBelegartCNrUrsprung(),
-							handlagerbewegungDto
-									.getBelegartpositionIIdUrsprung());
+					bucheZu(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), handlagerbewegung.getIId(),
+							handlagerbewegung.getArtikelIId(), handlagerbewegung.getNMenge(),
+							handlagerbewegungDto.getNEinstandspreis(), handlagerbewegung.getLagerIId(),
+							handlagerbewegungDto.getSeriennrChargennrMitMenge(),
+							new java.sql.Timestamp(System.currentTimeMillis()), theClientDto,
+							handlagerbewegungDto.getBelegartCNrUrsprung(),
+							handlagerbewegungDto.getBelegartpositionIIdUrsprung());
 				}
 
 			}
 
 			if (handlagerbewegungDto.getSeriennrChargennrMitMenge() != null
-					&& handlagerbewegungDto.getSeriennrChargennrMitMenge()
-							.size() > 0) {
-				setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(),
-						handlagerbewegungDto.getHerstellerIId(),
+					&& handlagerbewegungDto.getSeriennrChargennrMitMenge().size() > 0) {
+				setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(), handlagerbewegungDto.getHerstellerIId(),
 						LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-						handlagerbewegungDto.getSeriennrChargennrMitMenge()
-								.get(0).getCSeriennrChargennr(), theClientDto);
+						handlagerbewegungDto.getSeriennrChargennrMitMenge().get(0).getCSeriennrChargennr(),
+						theClientDto);
 			} else {
-				setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(),
-						handlagerbewegungDto.getHerstellerIId(),
-						LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-						null, theClientDto);
+				setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(), handlagerbewegungDto.getHerstellerIId(),
+						LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), null, theClientDto);
 
 			}
 
@@ -12395,22 +12080,18 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void removeHandlagerbewegung(
-			HandlagerbewegungDto handlagerbewegungDto, TheClientDto theClientDto) {
+	public void removeHandlagerbewegung(HandlagerbewegungDto handlagerbewegungDto, TheClientDto theClientDto) {
 
 		if (handlagerbewegungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("handlagerbewegungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("handlagerbewegungDto == null"));
 		}
 		if (handlagerbewegungDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("handlagerbewegungDto.getIId() == null"));
 		}
-		Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class,
-				handlagerbewegungDto.getIId());
+		Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class, handlagerbewegungDto.getIId());
 		if (handlagerbewegung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		// Zuerst muss die Handlagerbewegun mit 0 ausbuchbar sein, dann erst
@@ -12418,21 +12099,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		// Lagerbewegung durchfuehren
 		if (Helper.short2boolean(handlagerbewegungDto.getBAbgang())) {
 
-			bucheAb(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-					handlagerbewegung.getIId(),
-					handlagerbewegung.getArtikelIId(), new BigDecimal(0),
-					handlagerbewegungDto.getNVerkaufspreis(),
-					handlagerbewegung.getLagerIId(), (List) null,
-					new java.sql.Timestamp(System.currentTimeMillis()),
+			bucheAb(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), handlagerbewegung.getIId(),
+					handlagerbewegung.getArtikelIId(), new BigDecimal(0), handlagerbewegungDto.getNVerkaufspreis(),
+					handlagerbewegung.getLagerIId(), (List) null, new java.sql.Timestamp(System.currentTimeMillis()),
 					theClientDto);
 		} else {
 
-			bucheZu(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-					handlagerbewegung.getIId(),
-					handlagerbewegung.getArtikelIId(), new BigDecimal(0),
-					handlagerbewegungDto.getNEinstandspreis(),
-					handlagerbewegung.getLagerIId(), null,
-					new java.sql.Timestamp(System.currentTimeMillis()),
+			bucheZu(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), handlagerbewegung.getIId(),
+					handlagerbewegung.getArtikelIId(), new BigDecimal(0), handlagerbewegungDto.getNEinstandspreis(),
+					handlagerbewegung.getLagerIId(), null, new java.sql.Timestamp(System.currentTimeMillis()),
 					theClientDto);
 
 		}
@@ -12446,198 +12121,152 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	public void updateHandlagerbewegung(
-			HandlagerbewegungDto handlagerbewegungDto, TheClientDto theClientDto) {
+	public void updateHandlagerbewegung(HandlagerbewegungDto handlagerbewegungDto, TheClientDto theClientDto) {
 
 		if (handlagerbewegungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("handlagerbewegungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("handlagerbewegungDto == null"));
 		}
-		if (handlagerbewegungDto.getIId() == null
-				|| handlagerbewegungDto.getArtikelIId() == null
-				|| handlagerbewegungDto.getNMenge() == null
-				|| handlagerbewegungDto.getLagerIId() == null
+		if (handlagerbewegungDto.getIId() == null || handlagerbewegungDto.getArtikelIId() == null
+				|| handlagerbewegungDto.getNMenge() == null || handlagerbewegungDto.getLagerIId() == null
 				|| handlagerbewegungDto.getBAbgang() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"(handlagerbewegungDto.getIId() == null || handlagerbewegungDto.getArtikelIId() == null || handlagerbewegungDto.getFMenge() == null || handlagerbewegungDto.getLagerIId() == null || handlagerbewegungDto.getBAbgang() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"(handlagerbewegungDto.getIId() == null || handlagerbewegungDto.getArtikelIId() == null || handlagerbewegungDto.getFMenge() == null || handlagerbewegungDto.getLagerIId() == null || handlagerbewegungDto.getBAbgang() == null"));
 		}
 		Integer iId = handlagerbewegungDto.getIId();
-		handlagerbewegungDto
-				.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class,
-				iId);
+		handlagerbewegungDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+		Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class, iId);
 		if (handlagerbewegung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		if (Helper.short2boolean(handlagerbewegungDto.getBAbgang())) {
 
-			bucheAb(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-					handlagerbewegung.getIId(),
-					handlagerbewegung.getArtikelIId(),
-					handlagerbewegungDto.getNMenge(),
-					handlagerbewegungDto.getNVerkaufspreis(),
-					handlagerbewegung.getLagerIId(),
+			bucheAb(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), handlagerbewegung.getIId(),
+					handlagerbewegung.getArtikelIId(), handlagerbewegungDto.getNMenge(),
+					handlagerbewegungDto.getNVerkaufspreis(), handlagerbewegung.getLagerIId(),
 					handlagerbewegungDto.getSeriennrChargennrMitMenge(),
-					new java.sql.Timestamp(System.currentTimeMillis()),
-					theClientDto);
+					new java.sql.Timestamp(System.currentTimeMillis()), theClientDto);
 		} else {
 			// PJ Gestehungspreis Belegdatum bleibt
-			bucheZu(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-					handlagerbewegung.getIId(),
-					handlagerbewegung.getArtikelIId(),
-					handlagerbewegungDto.getNMenge(),
-					handlagerbewegungDto.getNEinstandspreis(),
-					handlagerbewegung.getLagerIId(),
-					handlagerbewegungDto.getSeriennrChargennrMitMenge(),
-					handlagerbewegung.getTBuchungszeit(), theClientDto);
+			bucheZu(LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), handlagerbewegung.getIId(),
+					handlagerbewegung.getArtikelIId(), handlagerbewegungDto.getNMenge(),
+					handlagerbewegungDto.getNEinstandspreis(), handlagerbewegung.getLagerIId(),
+					handlagerbewegungDto.getSeriennrChargennrMitMenge(), handlagerbewegung.getTBuchungszeit(),
+					theClientDto);
 
 		}
 
 		if (handlagerbewegungDto.getSeriennrChargennrMitMenge() != null
 				&& handlagerbewegungDto.getSeriennrChargennrMitMenge().size() > 0) {
-			setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(),
-					handlagerbewegungDto.getHerstellerIId(),
+			setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(), handlagerbewegungDto.getHerstellerIId(),
 					LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(),
-					handlagerbewegungDto.getSeriennrChargennrMitMenge().get(0)
-							.getCSeriennrChargennr(), theClientDto);
+					handlagerbewegungDto.getSeriennrChargennrMitMenge().get(0).getCSeriennrChargennr(), theClientDto);
 		} else {
-			setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(),
-					handlagerbewegungDto.getHerstellerIId(),
-					LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), null,
-					theClientDto);
+			setzeHerstellerUrsprungsland(handlagerbewegungDto.getLandIId(), handlagerbewegungDto.getHerstellerIId(),
+					LocaleFac.BELEGART_HAND, handlagerbewegung.getIId(), null, theClientDto);
 
 		}
 
-		setHandlagerbewegungFromHandlagerbewegungDto(handlagerbewegung,
-				handlagerbewegungDto);
+		setHandlagerbewegungFromHandlagerbewegungDto(handlagerbewegung, handlagerbewegungDto);
 	}
 
-	public HandlagerbewegungDto handlagerbewegungFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public HandlagerbewegungDto handlagerbewegungFindByPrimaryKey(Integer iId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
-		Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class,
-				iId);
+		Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class, iId);
 		if (handlagerbewegung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+
+			System.out.println(iId);
+
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		HandlagerbewegungDto handlagerDto = assembleHandlagerbewegungDto(handlagerbewegung);
-		handlagerDto
-				.setSeriennrChargennrMitMenge(getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
-						LocaleFac.BELEGART_HAND, handlagerDto.getIId()));
+		handlagerDto.setSeriennrChargennrMitMenge(getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+				LocaleFac.BELEGART_HAND, handlagerDto.getIId()));
 
 		if (handlagerDto.getSeriennrChargennrMitMenge() != null
 				&& handlagerDto.getSeriennrChargennrMitMenge().size() > 0) {
-			LagerbewegungDto lagerbewegungDto = getLetzteintrag(
-					LocaleFac.BELEGART_HAND, handlagerDto.getIId(),
-					handlagerDto.getSeriennrChargennrMitMenge().get(0)
-							.getCSeriennrChargennr());
+			LagerbewegungDto lagerbewegungDto = getLetzteintrag(LocaleFac.BELEGART_HAND, handlagerDto.getIId(),
+					handlagerDto.getSeriennrChargennrMitMenge().get(0).getCSeriennrChargennr());
 
 			handlagerDto.setHerstellerIId(lagerbewegungDto.getHerstellerIId());
 			handlagerDto.setLandIId(lagerbewegungDto.getLandIId());
 		} else {
-			LagerbewegungDto lagerbewegungDto = getLetzteintrag(
-					LocaleFac.BELEGART_HAND, handlagerDto.getIId(), null);
+			LagerbewegungDto lagerbewegungDto = getLetzteintrag(LocaleFac.BELEGART_HAND, handlagerDto.getIId(), null);
 
 			if (lagerbewegungDto != null) {
-				handlagerDto.setHerstellerIId(lagerbewegungDto
-						.getHerstellerIId());
+				handlagerDto.setHerstellerIId(lagerbewegungDto.getHerstellerIId());
 				handlagerDto.setLandIId(lagerbewegungDto.getLandIId());
 			}
 		}
 
-		handlagerDto.setLagerDto(lagerFindByPrimaryKey(handlagerDto
-				.getLagerIId()));
+		handlagerDto.setLagerDto(lagerFindByPrimaryKey(handlagerDto.getLagerIId()));
 
-		handlagerDto.setArtikelDto(getArtikelFac().artikelFindByPrimaryKey(
-				handlagerDto.getArtikelIId(), theClientDto));
+		handlagerDto.setArtikelDto(getArtikelFac().artikelFindByPrimaryKey(handlagerDto.getArtikelIId(), theClientDto));
 
 		return handlagerDto;
 	}
 
-	private void setHandlagerbewegungFromHandlagerbewegungDto(
-			Handlagerbewegung handlagerbewegung,
+	private void setHandlagerbewegungFromHandlagerbewegungDto(Handlagerbewegung handlagerbewegung,
 			HandlagerbewegungDto handlagerbewegungDto) {
 		handlagerbewegung.setArtikelIId(handlagerbewegungDto.getArtikelIId());
 		handlagerbewegung.setLagerIId(handlagerbewegungDto.getLagerIId());
 		handlagerbewegung.setNMenge(handlagerbewegungDto.getNMenge());
 		handlagerbewegung.setCKommentar(handlagerbewegungDto.getCKommentar());
-		handlagerbewegung.setNEinstandspreis(handlagerbewegungDto
-				.getNEinstandspreis());
-		handlagerbewegung.setNGestehungspreis(handlagerbewegungDto
-				.getNGestehungspreis());
-		handlagerbewegung.setNVerkaufspreis(handlagerbewegungDto
-				.getNVerkaufspreis());
+		handlagerbewegung.setNEinstandspreis(handlagerbewegungDto.getNEinstandspreis());
+		handlagerbewegung.setNGestehungspreis(handlagerbewegungDto.getNGestehungspreis());
+		handlagerbewegung.setNVerkaufspreis(handlagerbewegungDto.getNVerkaufspreis());
 		em.merge(handlagerbewegung);
 		em.flush();
 	}
 
-	private HandlagerbewegungDto assembleHandlagerbewegungDto(
-			Handlagerbewegung handlagerbewegung) {
+	private HandlagerbewegungDto assembleHandlagerbewegungDto(Handlagerbewegung handlagerbewegung) {
 		return HandlagerbewegungDtoAssembler.createDto(handlagerbewegung);
 	}
 
-	private HandlagerbewegungDto[] assembleHandlagerbewegungDtos(
-			Collection<?> handlagerbewegungs) {
+	private HandlagerbewegungDto[] assembleHandlagerbewegungDtos(Collection<?> handlagerbewegungs) {
 		List<HandlagerbewegungDto> list = new ArrayList<HandlagerbewegungDto>();
 		if (handlagerbewegungs != null) {
 			Iterator<?> iterator = handlagerbewegungs.iterator();
 			while (iterator.hasNext()) {
-				Handlagerbewegung handlagerbewegung = (Handlagerbewegung) iterator
-						.next();
+				Handlagerbewegung handlagerbewegung = (Handlagerbewegung) iterator.next();
 				list.add(assembleHandlagerbewegungDto(handlagerbewegung));
 			}
 		}
-		HandlagerbewegungDto[] returnArray = new HandlagerbewegungDto[list
-				.size()];
+		HandlagerbewegungDto[] returnArray = new HandlagerbewegungDto[list.size()];
 		return (HandlagerbewegungDto[]) list.toArray(returnArray);
 	}
 
-	public void createLagerumbuchung(LagerumbuchungDto lagerumbuchungDto)
-			throws EJBExceptionLP {
+	public void createLagerumbuchung(LagerumbuchungDto lagerumbuchungDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (lagerumbuchungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lagerumbuchungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lagerumbuchungDto == null"));
 		}
 		if (lagerumbuchungDto.getILagerbewegungidabbuchung() == null
 				|| lagerumbuchungDto.getILagerbewegungidzubuchung() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"lagerumbuchungDto.getLagerbewegungIIdBuchungAbbuchung() == null || lagerumbuchungDto.getLagerbewegungIIdBuchungZubuchung() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"lagerumbuchungDto.getLagerbewegungIIdBuchungAbbuchung() == null || lagerumbuchungDto.getLagerbewegungIIdBuchungZubuchung() == null"));
 		}
 		try {
-			Lagerumbuchung lagerumbuchung = new Lagerumbuchung(
-					lagerumbuchungDto.getILagerbewegungidzubuchung(),
+			Lagerumbuchung lagerumbuchung = new Lagerumbuchung(lagerumbuchungDto.getILagerbewegungidzubuchung(),
 					lagerumbuchungDto.getILagerbewegungidabbuchung());
 			em.persist(lagerumbuchung);
 			em.flush();
-			setLagerumbuchungFromLagerumbuchungDto(lagerumbuchung,
-					lagerumbuchungDto);
+			setLagerumbuchungFromLagerumbuchungDto(lagerumbuchung, lagerumbuchungDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
-	public void removeLagerumbuchung(Integer lagerbewegungIIdBuchungZubuchung,
-			Integer lagerbewegungIIdBuchungAbbuchung) throws EJBExceptionLP {
-		LagerumbuchungPK lagerumbuchungPK = new LagerumbuchungPK(
-				lagerbewegungIIdBuchungZubuchung,
+	public void removeLagerumbuchung(Integer lagerbewegungIIdBuchungZubuchung, Integer lagerbewegungIIdBuchungAbbuchung)
+			throws EJBExceptionLP {
+		LagerumbuchungPK lagerumbuchungPK = new LagerumbuchungPK(lagerbewegungIIdBuchungZubuchung,
 				lagerbewegungIIdBuchungAbbuchung);
-		Lagerumbuchung toRemove = em.find(Lagerumbuchung.class,
-				lagerumbuchungPK);
+		Lagerumbuchung toRemove = em.find(Lagerumbuchung.class, lagerumbuchungPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -12647,85 +12276,69 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	public void removeLagerumbuchung(LagerumbuchungDto lagerumbuchungDto)
-			throws EJBExceptionLP {
+	public void removeLagerumbuchung(LagerumbuchungDto lagerumbuchungDto) throws EJBExceptionLP {
 		if (lagerumbuchungDto != null) {
-			Integer lagerbewegungIIdBuchungZubuchung = lagerumbuchungDto
-					.getILagerbewegungidzubuchung();
-			Integer lagerbewegungIIdBuchungAbbuchung = lagerumbuchungDto
-					.getILagerbewegungidabbuchung();
-			removeLagerumbuchung(lagerbewegungIIdBuchungZubuchung,
-					lagerbewegungIIdBuchungAbbuchung);
+			Integer lagerbewegungIIdBuchungZubuchung = lagerumbuchungDto.getILagerbewegungidzubuchung();
+			Integer lagerbewegungIIdBuchungAbbuchung = lagerumbuchungDto.getILagerbewegungidabbuchung();
+			removeLagerumbuchung(lagerbewegungIIdBuchungZubuchung, lagerbewegungIIdBuchungAbbuchung);
 		}
 	}
 
-	public void updateLagerumbuchung(LagerumbuchungDto lagerumbuchungDto)
-			throws EJBExceptionLP {
+	public void updateLagerumbuchung(LagerumbuchungDto lagerumbuchungDto) throws EJBExceptionLP {
 		if (lagerumbuchungDto != null) {
-			LagerumbuchungPK lagerumbuchungPK = new LagerumbuchungPK(
-					lagerumbuchungDto.getILagerbewegungidzubuchung(),
+			LagerumbuchungPK lagerumbuchungPK = new LagerumbuchungPK(lagerumbuchungDto.getILagerbewegungidzubuchung(),
 					lagerumbuchungDto.getILagerbewegungidabbuchung());
-			Lagerumbuchung lagerumbuchung = em.find(Lagerumbuchung.class,
-					lagerumbuchungPK);
+			Lagerumbuchung lagerumbuchung = em.find(Lagerumbuchung.class, lagerumbuchungPK);
 			if (lagerumbuchung == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setLagerumbuchungFromLagerumbuchungDto(lagerumbuchung,
-					lagerumbuchungDto);
+			setLagerumbuchungFromLagerumbuchungDto(lagerumbuchung, lagerumbuchungDto);
 		}
 	}
 
-	public LagerumbuchungDto lagerumbuchungFindByPrimaryKey(
-			Integer lagerbewegungIIdBuchungZubuchung,
+	public LagerumbuchungDto lagerumbuchungFindByPrimaryKey(Integer lagerbewegungIIdBuchungZubuchung,
 			Integer lagerbewegungIIdBuchungAbbuchung) throws EJBExceptionLP {
-		LagerumbuchungPK lagerumbuchungPK = new LagerumbuchungPK(
-				lagerbewegungIIdBuchungZubuchung,
+		LagerumbuchungPK lagerumbuchungPK = new LagerumbuchungPK(lagerbewegungIIdBuchungZubuchung,
 				lagerbewegungIIdBuchungAbbuchung);
-		Lagerumbuchung lagerumbuchung = em.find(Lagerumbuchung.class,
-				lagerumbuchungPK);
+		Lagerumbuchung lagerumbuchung = em.find(Lagerumbuchung.class, lagerumbuchungPK);
 		if (lagerumbuchung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLagerumbuchungDto(lagerumbuchung);
 	}
 
-	public LagerumbuchungDto[] lagerumbuchungFindByIdAbbuchung(
-			Integer lagerbewegungIIdBuchungAbbuchung) throws EJBExceptionLP {
+	public LagerumbuchungDto[] lagerumbuchungFindByIdAbbuchung(Integer lagerbewegungIIdBuchungAbbuchung)
+			throws EJBExceptionLP {
 		Query query = em.createNamedQuery("LagerumbuchungfindByIdAbbuchung");
 		query.setParameter(1, lagerbewegungIIdBuchungAbbuchung);
 		Collection<?> cl = query.getResultList();
 		return assembleLagerumbuchungDtos(cl);
 	}
 
-	public LagerumbuchungDto[] lagerumbuchungFindByIdZubuchung(
-			Integer lagerbewegungIIdBuchungZubuchung) throws EJBExceptionLP {
+	public LagerumbuchungDto[] lagerumbuchungFindByIdZubuchung(Integer lagerbewegungIIdBuchungZubuchung)
+			throws EJBExceptionLP {
 		Query query = em.createNamedQuery("LagerumbuchungfindByIdZubuchung");
 		query.setParameter(1, lagerbewegungIIdBuchungZubuchung);
 		Collection<?> cl = query.getResultList();
 		return assembleLagerumbuchungDtos(cl);
 	}
 
-	private void setLagerumbuchungFromLagerumbuchungDto(
-			Lagerumbuchung lagerumbuchung, LagerumbuchungDto lagerumbuchungDto) {
+	private void setLagerumbuchungFromLagerumbuchungDto(Lagerumbuchung lagerumbuchung,
+			LagerumbuchungDto lagerumbuchungDto) {
 		em.merge(lagerumbuchung);
 		em.flush();
 	}
 
-	private LagerumbuchungDto assembleLagerumbuchungDto(
-			Lagerumbuchung lagerumbuchung) {
+	private LagerumbuchungDto assembleLagerumbuchungDto(Lagerumbuchung lagerumbuchung) {
 		return LagerumbuchungDtoAssembler.createDto(lagerumbuchung);
 	}
 
-	private LagerumbuchungDto[] assembleLagerumbuchungDtos(
-			Collection<?> lagerumbuchungs) {
+	private LagerumbuchungDto[] assembleLagerumbuchungDtos(Collection<?> lagerumbuchungs) {
 		List<LagerumbuchungDto> list = new ArrayList<LagerumbuchungDto>();
 		if (lagerumbuchungs != null) {
 			Iterator<?> iterator = lagerumbuchungs.iterator();
 			while (iterator.hasNext()) {
-				Lagerumbuchung lagerumbuchung = (Lagerumbuchung) iterator
-						.next();
+				Lagerumbuchung lagerumbuchung = (Lagerumbuchung) iterator.next();
 				list.add(assembleLagerumbuchungDto(lagerumbuchung));
 			}
 		}
@@ -12736,44 +12349,34 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	/**
 	 * Das Hauptlager des Mandanten des aktuellen Benutzers bestimmen.
 	 * 
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return LagerDto das Hauptlager
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-	public LagerDto getHauptlagerDesMandanten(TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public LagerDto getHauptlagerDesMandanten(TheClientDto theClientDto) throws EJBExceptionLP {
 
 		LagerDto oLagerDtoO = null;
 
 		try {
 
-			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
 					theClientDto)) {
 
-				if (getMandantFac()
-						.darfAnwenderAufZusatzfunktionZugreifen(
-								MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
-								theClientDto)) {
-					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(
-							theClientDto.getMandant(),
+				if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
+						theClientDto)) {
+					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(theClientDto.getMandant(),
 							LagerFac.LAGERART_HAUPTLAGER);
 				} else {
-					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(
-							getSystemFac().getHauptmandant(),
+					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(getSystemFac().getHauptmandant(),
 							LagerFac.LAGERART_HAUPTLAGER);
 				}
 
 			} else {
-				oLagerDtoO = lagerFindByMandantCNrLagerartCNr(
-						theClientDto.getMandant(), LagerFac.LAGERART_HAUPTLAGER);
+				oLagerDtoO = lagerFindByMandantCNrLagerartCNr(theClientDto.getMandant(), LagerFac.LAGERART_HAUPTLAGER);
 			}
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_LAGER_HAUPTLAGERDESMANDANTEN_NICHT_ANGELEGT,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LAGER_HAUPTLAGERDESMANDANTEN_NICHT_ANGELEGT,
 					new Exception("Hauptlager des Mandanten == null"));
 		}
 
@@ -12784,11 +12387,9 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	public LagerDto getHauptlagerEinesMandanten(String mandantCNr) {
 		LagerDto oLagerDtoO = null;
 		try {
-			oLagerDtoO = lagerFindByMandantCNrLagerartCNr(mandantCNr,
-					LagerFac.LAGERART_HAUPTLAGER);
+			oLagerDtoO = lagerFindByMandantCNrLagerartCNr(mandantCNr, LagerFac.LAGERART_HAUPTLAGER);
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_LAGER_HAUPTLAGERDESMANDANTEN_NICHT_ANGELEGT,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LAGER_HAUPTLAGERDESMANDANTEN_NICHT_ANGELEGT,
 					new Exception("Hauptlager des Mandanten == null"));
 		}
 
@@ -12801,31 +12402,24 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		try {
 
-			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
 					theClientDto)) {
 
-				if (getMandantFac()
-						.darfAnwenderAufZusatzfunktionZugreifen(
-								MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
-								theClientDto)) {
-					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(
-							theClientDto.getMandant(),
+				if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
+						theClientDto)) {
+					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(theClientDto.getMandant(),
 							LagerFac.LAGERART_WERTGUTSCHRIFT);
 				} else {
-					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(
-							getSystemFac().getHauptmandant(),
+					oLagerDtoO = lagerFindByMandantCNrLagerartCNr(getSystemFac().getHauptmandant(),
 							LagerFac.LAGERART_WERTGUTSCHRIFT);
 				}
 
 			} else {
-				oLagerDtoO = lagerFindByMandantCNrLagerartCNr(
-						theClientDto.getMandant(),
+				oLagerDtoO = lagerFindByMandantCNrLagerartCNr(theClientDto.getMandant(),
 						LagerFac.LAGERART_WERTGUTSCHRIFT);
 			}
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_LAGER_WERTGUTSCHRIFTDESMANDANTEN_NICHT_ANGELEGT,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LAGER_WERTGUTSCHRIFTDESMANDANTEN_NICHT_ANGELEGT,
 					new Exception("Hauptlager des Mandanten == null"));
 		}
 
@@ -12844,32 +12438,32 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printSeriennummern(Integer lagerIId,
-			Integer artikelIId, String[] snrs, String snrWildcard,
-			Boolean bSortNachIdent, boolean bMitGeraeteseriennummern,
-			String versionWildcard, TheClientDto theClientDto) {
+	public JasperPrintLP printSeriennummern(Integer lagerIId, Integer artikelIId, String[] snrs, String snrWildcard,
+			Boolean bSortNachIdent, boolean bMitGeraeteseriennummern, String versionWildcard,
+			TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT l.flrartikel, l.n_menge, l.t_buchungszeit, l.c_seriennrchargennr, l.c_belegartnr, l.i_belegartid, l.i_belegartpositionid, l.b_abgang, l.c_version, (SELECT spr.c_bez FROM FLRArtikellistespr spr WHERE spr.Id.artikelliste.i_id=l.artikel_i_id AND spr.Id.locale.c_nr='"
 				+ theClientDto.getLocUiAsString()
 				+ "') as bez, (SELECT spr.c_zbez FROM FLRArtikellistespr spr WHERE spr.Id.artikelliste.i_id=l.artikel_i_id AND spr.Id.locale.c_nr='"
-				+ theClientDto.getLocUiAsString()
-				+ "') as zbez FROM FLRLagerbewegung as l "
-				+ " WHERE l.n_menge > 0 AND l.b_historie=0 AND l.n_menge>0 AND l.c_seriennrchargennr IS NOT NULL ";
+				+ theClientDto.getLocUiAsString() + "') as zbez, l.flrlager.c_nr FROM FLRLagerbewegung as l "
+				+ " WHERE l.flrlager.lagerart_c_nr NOT IN('" + LagerFac.LAGERART_WERTGUTSCHRIFT
+				+ "') AND l.n_menge > 0 AND l.b_historie=0 AND l.n_menge>0 AND l.c_seriennrchargennr IS NOT NULL ";
 
 		// SP18698
 		Boolean bZentralerArtikelstamm;
-		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
-			//Wenn zentraler Artikelstamm, dann alle Bewegungen anzeigen
-			bZentralerArtikelstamm=Boolean.TRUE;
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+				theClientDto)) {
+			// Wenn zentraler Artikelstamm, dann alle Bewegungen anzeigen
+			bZentralerArtikelstamm = Boolean.TRUE;
+
+			queryString += " AND l.flrartikel.mandant_c_nr='" + getSystemFac().getHauptmandant() + "' ";
 
 		} else {
-			bZentralerArtikelstamm=Boolean.FALSE;
-			
-			queryString += " AND l.flrlager.mandant_c_nr='"
-					+ theClientDto.getMandant() + "' ";
+			bZentralerArtikelstamm = Boolean.FALSE;
+
+			queryString += " AND l.flrlager.mandant_c_nr='" + theClientDto.getMandant() + "' ";
 		}
 
 		if (lagerIId != null) {
@@ -12887,17 +12481,16 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			String snrsIn = "";
 
 			for (int i = 0; i < snrs.length; i++) {
-				snrsIn += "'" + snrs[i] + "'";
+				snrsIn += "'" + snrs[i].toLowerCase() + "'";
 				if (i != snrs.length - 1) {
 					snrsIn += ",";
 				}
 			}
-			queryString += " AND l.c_seriennrchargennr IN(" + snrsIn + ")";
+			queryString += " AND lower(l.c_seriennrchargennr) IN(" + snrsIn + ")";
 
 		} else if (snrWildcard != null) {
 
-			queryString += " AND l.c_seriennrchargennr LIKE '%" + snrWildcard
-					+ "%'";
+			queryString += " AND lower(l.c_seriennrchargennr) LIKE '%" + snrWildcard.toLowerCase() + "%'";
 
 		}
 
@@ -12918,10 +12511,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 
 		boolean bGeraeteseriennummern = false;
-		if (getMandantFac()
-				.hatZusatzfunktionberechtigung(
-						com.lp.server.system.service.MandantFac.ZUSATZFUNKTION_GERAETESERIENNUMMERN,
-						theClientDto)) {
+		if (getMandantFac().hatZusatzfunktionberechtigung(
+				com.lp.server.system.service.MandantFac.ZUSATZFUNKTION_GERAETESERIENNUMMERN, theClientDto)) {
 			bGeraeteseriennummern = true;
 		}
 
@@ -12951,52 +12542,43 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			String cBez = (String) o[9];
 			String cZbez = (String) o[10];
+			String lager = (String) o[11];
 
-			Object[] dataHelp = new Object[9];
+			Object[] dataHelp = new Object[REPORT_SERIENNUMMERN_ANZAHL_SPALTEN];
 			dataHelp[REPORT_SERIENNUMMERN_ZEITPUNKT] = buchungszeit;
 			dataHelp[REPORT_SERIENNUMMERN_MENGE] = menge;
 			dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER] = flrartikel.getC_nr();
+			dataHelp[REPORT_SERIENNUMMERN_LAGER] = lager;
+			dataHelp[REPORT_SERIENNUMMERN_ARTIKELREFERENZNUMMER] = flrartikel.getC_referenznr();
 			dataHelp[REPORT_SERIENNUMMERN_VERSION] = cVersion;
 
-			if (bMitGeraeteseriennummern == true
-					&& bGeraeteseriennummern == true
+			if (bMitGeraeteseriennummern == true && bGeraeteseriennummern == true
 					&& Helper.short2boolean(flrartikel.getB_seriennrtragend()) == true) {
 
-				Query queryGsnr = em
-						.createNamedQuery("GeraetesnrfindByArtikelIIdCSnr");
+				Query queryGsnr = em.createNamedQuery("GeraetesnrfindByArtikelIIdCSnr");
 				queryGsnr.setParameter(1, flrartikel.getI_id());
 				queryGsnr.setParameter(2, cSnrChnr);
 				Collection c = queryGsnr.getResultList();
 				Iterator<?> iterator = c.iterator();
 				Object[][] dataSub = new Object[c.size()][3];
-				String[] fieldnames = new String[] { "F_ARTIKELNUMMER",
-						"F_BEZEICHNUNG", "F_SNR" };
+				String[] fieldnames = new String[] { "F_ARTIKELNUMMER", "F_BEZEICHNUNG", "F_SNR" };
 				int i = 0;
 				while (iterator.hasNext()) {
 					Geraetesnr g = (Geraetesnr) iterator.next();
 
-					Session session2 = FLRSessionFactory.getFactory()
-							.openSession();
+					Session session2 = FLRSessionFactory.getFactory().openSession();
 
-					org.hibernate.Criteria crit2 = session
-							.createCriteria(FLRLagerbewegung.class);
-					crit2.add(Restrictions.eq(
-							LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-							Helper.boolean2Short(false)));
-					crit2.add(Restrictions.eq(
-							LagerFac.FLR_LAGERBEWEGUNG_I_ID_BUCHUNG,
-							g.getIIdBuchung()));
+					org.hibernate.Criteria crit2 = session.createCriteria(FLRLagerbewegung.class);
+					crit2.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)));
+					crit2.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_I_ID_BUCHUNG, g.getIIdBuchung()));
 
 					List l = crit2.list();
 					if (l.size() > 0) {
-						FLRLagerbewegung flrLagerbew = (FLRLagerbewegung) l
-								.iterator().next();
+						FLRLagerbewegung flrLagerbew = (FLRLagerbewegung) l.iterator().next();
 						dataSub[i][0] = flrLagerbew.getFlrartikel().getC_nr();
 
 						ArtikelDto aDto = getArtikelFac()
-								.artikelFindByPrimaryKeySmall(
-										flrLagerbew.getFlrartikel().getI_id(),
-										theClientDto);
+								.artikelFindByPrimaryKeySmall(flrLagerbew.getFlrartikel().getI_id(), theClientDto);
 						dataSub[i][1] = aDto.formatBezeichnung();
 
 						dataSub[i][2] = flrLagerbew.getC_seriennrchargennr();
@@ -13006,8 +12588,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					i++;
 				}
 				if (dataSub.length > 0) {
-					dataHelp[REPORT_SERIENNUMMERN_SUBREPORT_GERAETESNR] = new LPDatenSubreport(
-							dataSub, fieldnames);
+					dataHelp[REPORT_SERIENNUMMERN_SUBREPORT_GERAETESNR] = new LPDatenSubreport(dataSub, fieldnames);
 				}
 			}
 
@@ -13031,75 +12612,88 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				if (belegartCNr.equals(LocaleFac.BELEGART_HAND)) {
 
-					Handlagerbewegung handlagerbewegung = em.find(
-							Handlagerbewegung.class, belegartpositionIId);
+					Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class, belegartpositionIId);
 					if (handlagerbewegung != null) {
-						cAbgang = LocaleFac.BELEGART_HAND.trim() + " "
-								+ belegartpositionIId + " "
+						cAbgang = LocaleFac.BELEGART_HAND.trim() + belegartpositionIId + " "
 								+ handlagerbewegung.getCKommentar();
 					} else {
-						cAbgang = LocaleFac.BELEGART_HAND.trim() + " "
-								+ belegartpositionIId
+						cAbgang = LocaleFac.BELEGART_HAND.trim() + belegartpositionIId
 								+ " Error - Handbuchung not found";
 					}
 
 				} else {
 
-					cAbgang = getBelegUndPartner(belegartCNr, belegartIId,
-							belegartpositionIId, theClientDto);
+					cAbgang = getBelegUndPartner(belegartCNr, belegartIId, belegartpositionIId, theClientDto);
 				}
 			} else {
 
 				if (belegartCNr.equals(LocaleFac.BELEGART_HAND)) {
 
-					Handlagerbewegung handlagerbewegung = em.find(
-							Handlagerbewegung.class, belegartpositionIId);
+					Handlagerbewegung handlagerbewegung = em.find(Handlagerbewegung.class, belegartpositionIId);
 					if (handlagerbewegung != null) {
-						cZugang = LocaleFac.BELEGART_HAND.trim() + " "
-								+ belegartpositionIId + " "
+						cZugang = LocaleFac.BELEGART_HAND.trim() + belegartpositionIId + " "
 								+ handlagerbewegung.getCKommentar();
 					} else {
-						cZugang = LocaleFac.BELEGART_HAND.trim() + " "
-								+ belegartpositionIId
+						cZugang = LocaleFac.BELEGART_HAND.trim() + belegartpositionIId
 								+ " Error - Handbuchung not found";
 					}
 
 				} else {
 
-					cZugang = getBelegUndPartner(belegartCNr, belegartIId,
-							belegartpositionIId, theClientDto);
+					cZugang = getBelegUndPartner(belegartCNr, belegartIId, belegartpositionIId, theClientDto);
 				}
 			}
 			dataHelp[REPORT_SERIENNUMMERN_ABGANG] = cAbgang;
 			dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = cZugang;
+
+			String sortierung = "";
+			if (bSortNachIdent.booleanValue() == true) {
+
+				sortierung = Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER],
+						ArtikelFac.MAX_ARTIKEL_ARTIKELNUMMER, ' ')
+						+ Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER], 50, ' ');
+
+			} else {
+				sortierung = Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER], 50, ' ')
+						+ Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER],
+								ArtikelFac.MAX_ARTIKEL_ARTIKELNUMMER, ' ');
+
+			}
+			dataHelp[REPORT_SERIENNUMMERN_SORTIERUNG] = sortierung;
+
 			alDaten.add(dataHelp);
 		}
 		session.close();
 
-		reklamationHinzufuegen(theClientDto, alDaten, artikelIId,
-				bSortNachIdent, snrs, snrWildcard);
+		reklamationHinzufuegen(theClientDto, alDaten, artikelIId, bSortNachIdent, snrs, snrWildcard);
+
+		auftragseriennummernHinzufuegen(theClientDto, alDaten, artikelIId, bSortNachIdent, snrs, snrWildcard);
 
 		for (int m = alDaten.size() - 1; m > 0; --m) {
 			for (int n = 0; n < m; ++n) {
 				Object[] o1 = (Object[]) alDaten.get(n);
 				Object[] o2 = (Object[]) alDaten.get(n + 1);
-				if (bSortNachIdent.booleanValue() == true) {
-					if (((String) o1[REPORT_SERIENNUMMERN_ARTIKELNUMMER])
-							.compareTo((String) o2[REPORT_SERIENNUMMERN_ARTIKELNUMMER]) > 0) {
+
+				String s1 = (String) o1[REPORT_SERIENNUMMERN_SORTIERUNG];
+				String s2 = (String) o2[REPORT_SERIENNUMMERN_SORTIERUNG];
+
+				if (s1.compareTo(s2) > 0) {
+					alDaten.set(n, o2);
+					alDaten.set(n + 1, o1);
+				} else if (s1.compareTo(s2) == 0) {
+
+					if (((java.util.Date) o1[REPORT_SERIENNUMMERN_ZEITPUNKT])
+							.before((java.util.Date) o2[REPORT_SERIENNUMMERN_ZEITPUNKT])) {
 						alDaten.set(n, o2);
 						alDaten.set(n + 1, o1);
 					}
-				} else {
-					if (((String) o1[REPORT_SERIENNUMMERN_SERIENNUMER])
-							.compareTo((String) o2[REPORT_SERIENNUMMERN_SERIENNUMER]) > 0) {
-						alDaten.set(n, o2);
-						alDaten.set(n + 1, o1);
-					}
+
 				}
+
 			}
 		}
 
-		data = new Object[alDaten.size()][8];
+		data = new Object[alDaten.size()][REPORT_SERIENNUMMERN_ANZAHL_SPALTEN];
 		for (int i = 0; i < alDaten.size(); i++) {
 			data[i] = (Object[]) alDaten.get(i);
 		}
@@ -13111,19 +12705,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			parameter.put("P_LAGER", "ALLE");
 
 		}
-		parameter.put("P_SERIENNUMMER",
-				Helper.erzeugeStringAusStringArray(snrs));
-		
-		parameter.put("P_ZENTRALER_ARTIKELSTAMM",bZentralerArtikelstamm);
-		
+		parameter.put("P_SERIENNUMMER", Helper.erzeugeStringAusStringArray(snrs));
 
-		parameter.put("P_MITGERAETESERIENNUMMERN", new Boolean(
-				bMitGeraeteseriennummern));
+		parameter.put("P_ZENTRALER_ARTIKELSTAMM", bZentralerArtikelstamm);
+
+		parameter.put("P_MITGERAETESERIENNUMMERN", new Boolean(bMitGeraeteseriennummern));
 
 		parameter.put("P_VERSION", versionWildcard);
 
-		initJRDS(parameter, LagerFac.REPORT_MODUL,
-				LagerFac.REPORT_SERIENNUMMERN, theClientDto.getMandant(),
+		initJRDS(parameter, LagerFac.REPORT_MODUL, LagerFac.REPORT_SERIENNUMMERN, theClientDto.getMandant(),
 				theClientDto.getLocUi(), theClientDto);
 
 		return getReportPrint();
@@ -13131,20 +12721,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public void gestehungspreiseImportieren(ArrayList<Object[]> alDaten,
-			Integer lagerIId, TheClientDto theClientDto) {
+	public void gestehungspreiseImportieren(ArrayList<Object[]> alDaten, Integer lagerIId, TheClientDto theClientDto) {
 
 		try {
 			Integer lagerIId_KeinLager = getLagerFac()
-					.lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER,
-							theClientDto.getMandant()).getIId();
+					.lagerFindByCNrByMandantCNr(LagerFac.LAGER_KEINLAGER, theClientDto.getMandant()).getIId();
 
 			for (int i = 0; i < alDaten.size(); i++) {
 				Object[] oZeile = alDaten.get(i);
 
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByCNrMandantCNrOhneExc((String) oZeile[0],
-								theClientDto.getMandant());
+				ArtikelDto artikelDto = getArtikelFac().artikelFindByCNrMandantCNrOhneExc((String) oZeile[0],
+						theClientDto.getMandant());
 				if (artikelDto != null) {
 
 					ArtikellagerDto artikellagerDto = new ArtikellagerDto();
@@ -13152,8 +12739,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 					artikellagerDto.setNGestehungspreis((BigDecimal) oZeile[1]);
 					artikellagerDto.setArtikelIId(artikelDto.getIId());
 
-					if (Helper.short2boolean(artikelDto
-							.getBLagerbewirtschaftet())) {
+					if (Helper.short2boolean(artikelDto.getBLagerbewirtschaftet())) {
 						artikellagerDto.setLagerIId(lagerIId);
 					} else {
 						artikellagerDto.setLagerIId(lagerIId_KeinLager);
@@ -13161,8 +12747,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 					artikellagerDto.setMandantCNr(theClientDto.getMandant());
 
-					getLagerFac().updateGestpreisArtikellager(artikellagerDto,
-							theClientDto);
+					getLagerFac().updateGestpreisArtikellager(artikellagerDto, theClientDto);
 				}
 			}
 		} catch (RemoteException e) {
@@ -13171,17 +12756,15 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
-	private void reklamationHinzufuegen(TheClientDto theClientDto,
-			ArrayList<Object[]> alDaten, Integer artikelIId,
+	private void reklamationHinzufuegen(TheClientDto theClientDto, ArrayList<Object[]> alDaten, Integer artikelIId,
 			Boolean bSortNachIdent, String[] snrs, String snrWildcard) {
 
 		// PJ 16364 Reklamationen hinzufuegen
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		String queryString = "SELECT r FROM FLRReklamation as r "
-				+ " WHERE r.mandant_c_nr='" + theClientDto.getMandant()
-				+ "' AND r.c_seriennrchargennr IS NOT NULL ";
+		String queryString = "SELECT r FROM FLRReklamation as r " + " WHERE r.mandant_c_nr='"
+				+ theClientDto.getMandant() + "' AND r.c_seriennrchargennr IS NOT NULL ";
 
 		if (artikelIId != null) {
 			queryString += " AND r.flrartikel.i_id=" + artikelIId;
@@ -13201,8 +12784,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 		} else if (snrWildcard != null) {
 
-			queryString += " AND r.c_seriennrchargennr LIKE '%" + snrWildcard
-					+ "%'";
+			queryString += " AND r.c_seriennrchargennr LIKE '%" + snrWildcard + "%'";
 
 		}
 
@@ -13224,62 +12806,67 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			FLRReklamation r = (FLRReklamation) resultListIterator.next();
 
 			if (r.getFlrartikel() != null) {
-				Object[] dataHelp = new Object[9];
+				Object[] dataHelp = new Object[REPORT_SERIENNUMMERN_ANZAHL_SPALTEN];
 				dataHelp[REPORT_SERIENNUMMERN_ZEITPUNKT] = r.getT_belegdatum();
 				dataHelp[REPORT_SERIENNUMMERN_MENGE] = r.getN_menge();
 
 				ArtikelDto artikelDto;
 				try {
 
-					String kurzzeichenReklamation = getLocaleFac()
-							.belegartFindByCNr(LocaleFac.BELEGART_REKLAMATION)
+					String kurzzeichenReklamation = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_REKLAMATION)
 							.getCKurzbezeichnung();
-					artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-							r.getFlrartikel().getI_id(), theClientDto);
-					dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER] = artikelDto
-							.getCNr();
-					dataHelp[REPORT_SERIENNUMMERN_ARTIKELBEZEICHNUNG] = artikelDto
-							.formatBezeichnung();
+					artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(r.getFlrartikel().getI_id(),
+							theClientDto);
+					dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER] = artikelDto.getCNr();
+					dataHelp[REPORT_SERIENNUMMERN_ARTIKELREFERENZNUMMER] = artikelDto.getCReferenznr();
+					dataHelp[REPORT_SERIENNUMMERN_ARTIKELBEZEICHNUNG] = artikelDto.formatBezeichnung();
 
-					dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER] = r
-							.getC_seriennrchargennr();
+					dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER] = r.getC_seriennrchargennr();
 
 					dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = "";
 					dataHelp[REPORT_SERIENNUMMERN_ABGANG] = "";
 
-					if (r.getReklamationart_c_nr().equals(
-							ReklamationFac.REKLAMATIONART_LIEFERANT)) {
-						dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = kurzzeichenReklamation
-								+ " " + r.getC_nr();
+					if (r.getReklamationart_c_nr().equals(ReklamationFac.REKLAMATIONART_LIEFERANT)) {
+						dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = kurzzeichenReklamation + r.getC_nr() + " ";
 
 						if (r.getFlrlieferant() != null) {
 
 							LieferantDto lfDto = getLieferantFac()
-									.lieferantFindByPrimaryKey(
-											r.getFlrlieferant().getI_id(),
-											theClientDto);
+									.lieferantFindByPrimaryKey(r.getFlrlieferant().getI_id(), theClientDto);
 
 							dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = dataHelp[REPORT_SERIENNUMMERN_ZUGANG]
-									+ lfDto.getPartnerDto()
-											.formatFixTitelName1Name2();
+									+ lfDto.getPartnerDto().formatFixTitelName1Name2();
 						}
 
 					} else {
-						dataHelp[REPORT_SERIENNUMMERN_ABGANG] = kurzzeichenReklamation
-								+ " " + r.getC_nr();
+						dataHelp[REPORT_SERIENNUMMERN_ABGANG] = kurzzeichenReklamation + r.getC_nr() + " ";
 						if (r.getFlrkunde() != null) {
 
-							KundeDto lfDto = getKundeFac()
-									.kundeFindByPrimaryKey(
-											r.getFlrkunde().getI_id(),
-											theClientDto);
+							KundeDto lfDto = getKundeFac().kundeFindByPrimaryKey(r.getFlrkunde().getI_id(),
+									theClientDto);
 
 							dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = dataHelp[REPORT_SERIENNUMMERN_ZUGANG]
-									+ lfDto.getPartnerDto()
-											.formatFixTitelName1Name2();
+									+ lfDto.getPartnerDto().formatFixTitelName1Name2();
 						}
 
 					}
+
+					String sortierung = "";
+					if (bSortNachIdent.booleanValue() == true) {
+
+						sortierung = Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER],
+								ArtikelFac.MAX_ARTIKEL_ARTIKELNUMMER, ' ')
+								+ Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER], 50, ' ');
+
+					} else {
+						sortierung = Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER], 50,
+								' ')
+								+ Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER],
+										ArtikelFac.MAX_ARTIKEL_ARTIKELNUMMER, ' ');
+
+					}
+					dataHelp[REPORT_SERIENNUMMERN_SORTIERUNG] = sortierung;
+
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -13288,31 +12875,123 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		}
 	}
 
-	public BigDecimal getAbgewertetenGestehungspreis(BigDecimal gestpreis,
-			Integer artikelIId, Integer lagerIId, Timestamp tStichtag,
-			int iMonate, double dProzent) {
+	private void auftragseriennummernHinzufuegen(TheClientDto theClientDto, ArrayList<Object[]> alDaten,
+			Integer artikelIId, Boolean bSortNachIdent, String[] snrs, String snrWildcard) {
+
+		// PJ 16364 Reklamationen hinzufuegen
+
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class);
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID,
-				artikelIId));
+		String queryString = "SELECT r FROM FLRAuftragseriennrn as r "
+				+ " WHERE r.flrauftragposition.flrauftrag.mandant_c_nr='" + theClientDto.getMandant()
+				+ "' AND r.c_seriennr IS NOT NULL ";
 
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-				Helper.boolean2Short(false)));
+		if (artikelIId != null) {
+			queryString += " AND r.artikel_i_id=" + artikelIId;
+
+		}
+
+		if (snrs != null) {
+			String snrsIn = "";
+
+			for (int i = 0; i < snrs.length; i++) {
+				snrsIn += "'" + snrs[i] + "'";
+				if (i != snrs.length - 1) {
+					snrsIn += ",";
+				}
+			}
+			queryString += " AND r.c_seriennr IN(" + snrsIn + ")";
+
+		} else if (snrWildcard != null) {
+
+			queryString += " AND r.c_seriennr LIKE '%" + snrWildcard + "%'";
+
+		}
+
+		if (bSortNachIdent.booleanValue() == true) {
+
+			queryString += " ORDER BY r.flrauftragposition.flrartikel.c_nr, r.c_seriennr";
+
+		} else {
+
+			queryString += " ORDER BY r.c_seriennr ASC, r.flrauftragposition.flrartikel.c_nr ASC";
+
+		}
+
+		org.hibernate.Query query = session.createQuery(queryString);
+
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+		while (resultListIterator.hasNext()) {
+			FLRAuftragseriennrn r = (FLRAuftragseriennrn) resultListIterator.next();
+
+			if (r.getArtikel_i_id() != null) {
+				Object[] dataHelp = new Object[REPORT_SERIENNUMMERN_ANZAHL_SPALTEN];
+				dataHelp[REPORT_SERIENNUMMERN_ZEITPUNKT] = r.getFlrauftragposition().getFlrauftrag().getT_belegdatum();
+				dataHelp[REPORT_SERIENNUMMERN_MENGE] = BigDecimal.ONE;
+
+				ArtikelDto artikelDto;
+				try {
+
+					String kurzzeichenAuftrag = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_AUFTRAG)
+							.getCKurzbezeichnung();
+					artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(r.getArtikel_i_id(), theClientDto);
+					dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER] = artikelDto.getCNr();
+					dataHelp[REPORT_SERIENNUMMERN_ARTIKELREFERENZNUMMER] = artikelDto.getCReferenznr();
+					dataHelp[REPORT_SERIENNUMMERN_ARTIKELBEZEICHNUNG] = artikelDto.formatBezeichnung();
+
+					dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER] = r.getC_seriennr();
+
+					dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = "";
+					dataHelp[REPORT_SERIENNUMMERN_ABGANG] = "";
+
+					dataHelp[REPORT_SERIENNUMMERN_ZUGANG] = kurzzeichenAuftrag
+							+ r.getFlrauftragposition().getFlrauftrag().getC_nr() + " "
+							+ HelperServer.formatNameAusFLRPartner(
+									r.getFlrauftragposition().getFlrauftrag().getFlrkunde().getFlrpartner());
+
+					String sortierung = "";
+					if (bSortNachIdent.booleanValue() == true) {
+
+						sortierung = Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER],
+								ArtikelFac.MAX_ARTIKEL_ARTIKELNUMMER, ' ')
+								+ Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER], 50, ' ');
+
+					} else {
+						sortierung = Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_SERIENNUMER], 50,
+								' ')
+								+ Helper.fitString2Length((String) dataHelp[REPORT_SERIENNUMMERN_ARTIKELNUMMER],
+										ArtikelFac.MAX_ARTIKEL_ARTIKELNUMMER, ' ');
+
+					}
+					dataHelp[REPORT_SERIENNUMMERN_SORTIERUNG] = sortierung;
+
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+				alDaten.add(dataHelp);
+			}
+		}
+	}
+
+	public BigDecimal getAbgewertetenGestehungspreis(BigDecimal gestpreis, Integer artikelIId, Integer lagerIId,
+			Timestamp tStichtag, int iMonate, double dProzent) {
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class);
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_ARTIKEL_I_ID, artikelIId));
+
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)));
 
 		if (lagerIId != null) {
-			crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_LAGER_I_ID,
-					lagerIId));
+			crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_LAGER_I_ID, lagerIId));
 		}
 
 		if (tStichtag != null) {
-			crit.add(Restrictions.le(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM,
-					tStichtag));
+			crit.add(Restrictions.le(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tStichtag));
 		} else {
 			crit.add(Restrictions.lt(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM,
-					Helper.cutTimestamp(new Timestamp(System
-							.currentTimeMillis() + 24 * 3600000))));
+					Helper.cutTimestamp(Helper.addiereTageZuTimestamp(new Timestamp(System.currentTimeMillis()), 1))));
 		}
 
 		// CK: Kundenwunsch am 2009-03-04: Handbuchungen und
@@ -13321,8 +13000,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		String[] belegarten = new String[2];
 		belegarten[0] = LocaleFac.BELEGART_INVENTUR;
 		belegarten[1] = LocaleFac.BELEGART_HAND;
-		crit.add(Restrictions.not(Restrictions.in(
-				LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, belegarten)));
+		crit.add(Restrictions.not(Restrictions.in(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, belegarten)));
 
 		// CK: Kundenwunsch am 2009-03-04: Es muessen sowohl
 		// Zubuchungen, als auch Abbuchungen
@@ -13337,8 +13015,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		ArrayList<FLRLagerbewegung> alZugaenge = new ArrayList<FLRLagerbewegung>();
 
 		while (resultListIterator.hasNext()) {
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-					.next();
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 
 			if (lagerbewegung.getN_menge().doubleValue() > 0) {
 				// Datum des letzten Zugangs
@@ -13351,8 +13028,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			for (int m = alZugaenge.size() - 1; m > 0; --m) {
 				for (int n = 0; n < m; ++n) {
 					FLRLagerbewegung o1 = (FLRLagerbewegung) alZugaenge.get(n);
-					FLRLagerbewegung o2 = (FLRLagerbewegung) alZugaenge
-							.get(n + 1);
+					FLRLagerbewegung o2 = (FLRLagerbewegung) alZugaenge.get(n + 1);
 
 					if (o1.getT_belegdatum().before(o2.getT_belegdatum())) {
 						alZugaenge.set(n, o2);
@@ -13362,31 +13038,30 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 			}
 
 			// nun zaehlt das juengste Belegdatum
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) alZugaenge
-					.get(0);
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) alZugaenge.get(0);
 
-			java.util.Calendar cAbDemWirdAbgewertet = java.util.Calendar
-					.getInstance();
+			java.util.Calendar cAbDemWirdAbgewertet = java.util.Calendar.getInstance();
 			if (tStichtag != null) {
 				cAbDemWirdAbgewertet.setTimeInMillis(tStichtag.getTime());
 			}
 
 			cAbDemWirdAbgewertet.set(java.util.Calendar.MONTH,
-					cAbDemWirdAbgewertet.get(java.util.Calendar.MONTH)
-							- iMonate);
+					cAbDemWirdAbgewertet.get(java.util.Calendar.MONTH) - iMonate);
 
 			double dAbwertung = 0;
 			while (dAbwertung < 100
-					&& lagerbewegung.getT_buchungszeit().getTime() < cAbDemWirdAbgewertet
-							.getTimeInMillis()) {
+					&& lagerbewegung.getT_buchungszeit().getTime() < cAbDemWirdAbgewertet.getTimeInMillis()) {
 				dAbwertung += dProzent;
 				cAbDemWirdAbgewertet.set(java.util.Calendar.MONTH,
 						cAbDemWirdAbgewertet.get(java.util.Calendar.MONTH) - 1);
 			}
 
-			return Helper.rundeKaufmaennisch(
-					gestpreis.multiply(new BigDecimal(1 - (dAbwertung / 100))),
-					4);
+			// SP9169
+			if (dAbwertung > 100) {
+				dAbwertung = 100;
+			}
+
+			return Helper.rundeKaufmaennisch(gestpreis.multiply(new BigDecimal(1 - (dAbwertung / 100))), 4);
 
 		}
 
@@ -13395,26 +13070,23 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return new BigDecimal(0);
 	}
 
-	private String getBelegUndPartner(String belegartCNr, Integer belegartIId,
-			Integer belegartpositionIId, TheClientDto theClientDto) {
+	public String getBelegUndPartner(String belegartCNr, Integer belegartIId, Integer belegartpositionIId,
+			TheClientDto theClientDto) {
 		String belegnummer = "";
 		String partner = "";
 		String kurzzeichen = null;
 		try {
-			kurzzeichen = getLocaleFac().belegartFindByCNr(belegartCNr)
-					.getCKurzbezeichnung();
+			kurzzeichen = getLocaleFac().belegartFindByCNr(belegartCNr).getCKurzbezeichnung();
 		} catch (RemoteException ex1) {
 			throwEJBExceptionLPRespectOld(ex1);
 		}
 
 		if (belegartCNr.equals(LocaleFac.BELEGART_HAND)) {
-			belegnummer = LocaleFac.BELEGART_HAND.trim() + " "
-					+ belegartpositionIId;
+			belegnummer = LocaleFac.BELEGART_HAND.trim() + " " + belegartpositionIId;
 			try {
 				kurzzeichen = "";
 				HandlagerbewegungDto handlagerbwewgungDto = getLagerFac()
-						.handlagerbewegungFindByPrimaryKey(belegartpositionIId,
-								theClientDto);
+						.handlagerbewegungFindByPrimaryKey(belegartpositionIId, theClientDto);
 
 				partner = handlagerbwewgungDto.getCKommentar();
 
@@ -13428,9 +13100,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						.rechnungFindByPrimaryKey(belegartIId);
 
 				belegnummer = rechnungDto.getCNr();
-				partner = getKundeFac()
-						.kundeFindByPrimaryKey(rechnungDto.getKundeIId(),
-								theClientDto).getPartnerDto().formatAnrede();
+				partner = getKundeFac().kundeFindByPrimaryKey(rechnungDto.getKundeIId(), theClientDto).getPartnerDto()
+						.formatAnrede();
 			} catch (Exception ex) {
 				partner = "Error - RE not found";
 			}
@@ -13440,9 +13111,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 						.rechnungFindByPrimaryKey(belegartIId);
 
 				belegnummer = rechnungDto.getCNr();
-				partner = getKundeFac()
-						.kundeFindByPrimaryKey(rechnungDto.getKundeIId(),
-								theClientDto).getPartnerDto().formatAnrede();
+				partner = getKundeFac().kundeFindByPrimaryKey(rechnungDto.getKundeIId(), theClientDto).getPartnerDto()
+						.formatAnrede();
 			} catch (Exception ex) {
 				belegnummer = "Error - GS not found";
 			}
@@ -13454,45 +13124,37 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 				belegnummer = bestellungDto.getCNr();
 				partner = getLieferantFac()
-						.lieferantFindByPrimaryKey(
-								bestellungDto.getLieferantIIdBestelladresse(),
-								theClientDto).getPartnerDto().formatAnrede();
+						.lieferantFindByPrimaryKey(bestellungDto.getLieferantIIdBestelladresse(), theClientDto)
+						.getPartnerDto().formatAnrede();
 			} catch (Exception ex) {
 				belegnummer = "Error - BES not found";
 			}
 		} else if (belegartCNr.equals(LocaleFac.BELEGART_LIEFERSCHEIN)
 				|| belegartCNr.equals(LocaleFac.BELEGART_LSZIELLAGER)) {
 			try {
-				LieferscheinDto lieferscheinDto = getLieferscheinFac()
-						.lieferscheinFindByPrimaryKey(belegartIId, theClientDto);
+				LieferscheinDto lieferscheinDto = getLieferscheinFac().lieferscheinFindByPrimaryKey(belegartIId,
+						theClientDto);
 				belegnummer = lieferscheinDto.getCNr();
 
-				partner = getKundeFac()
-						.kundeFindByPrimaryKey(
-								lieferscheinDto.getKundeIIdLieferadresse(),
-								theClientDto).getPartnerDto().formatAnrede();
+				partner = getKundeFac().kundeFindByPrimaryKey(lieferscheinDto.getKundeIIdLieferadresse(), theClientDto)
+						.getPartnerDto().formatAnrede();
 			} catch (Exception ex) {
 				belegnummer = "Error - LS not found";
 			}
 		} else if (belegartCNr.equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
 			try {
-				LosDto losDto = getFertigungFac().losFindByPrimaryKey(
-						belegartIId);
+				LosDto losDto = getFertigungFac().losFindByPrimaryKey(belegartIId);
 				belegnummer = losDto.getCNr();
 			} catch (Exception ex) {
 				belegnummer = "Error - LOS not found";
 			}
 		} else if (belegartCNr.equals(LocaleFac.BELEGART_LOS)) {
 			try {
-				LosistmaterialDto dto = getFertigungFac()
-						.losistmaterialFindByPrimaryKeyOhneExc(
-								belegartpositionIId);
+				LosistmaterialDto dto = getFertigungFac().losistmaterialFindByPrimaryKeyOhneExc(belegartpositionIId);
 				if (dto != null) {
 					LossollmaterialDto lossollmaterialDto = getFertigungFac()
-							.lossollmaterialFindByPrimaryKey(
-									dto.getLossollmaterialIId());
-					LosDto losDto = getFertigungFac().losFindByPrimaryKey(
-							lossollmaterialDto.getLosIId());
+							.lossollmaterialFindByPrimaryKey(dto.getLossollmaterialIId());
+					LosDto losDto = getFertigungFac().losFindByPrimaryKey(lossollmaterialDto.getLosIId());
 					belegnummer = losDto.getCNr();
 				} else {
 					belegnummer = "Error - LOS not found";
@@ -13505,8 +13167,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				// Hier koennen wir nicht auf die Positions-ID der Inventurliste
 				// zurueckgreifen
 				// da diese bei jeder Aenderung neu angelegt und geloescht wird
-				InventurDto inventurDto = getInventurFac()
-						.inventurFindByPrimaryKey(belegartIId, theClientDto);
+				InventurDto inventurDto = getInventurFac().inventurFindByPrimaryKey(belegartIId, theClientDto);
 				partner = inventurDto.getCBez();
 				belegnummer = "";
 			} catch (RemoteException ex) {
@@ -13521,42 +13182,67 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
+	public BigDecimal[] getVerfuegbarkeitUndGestehungspreis(Integer artikelIId, TheClientDto theClientDto) {
+
+		BigDecimal[] bderfuegbarkeitUndGestehungspreis = new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO };
+
+		ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKey(artikelIId, theClientDto);
+
+		try {
+			if (!aDto.isLagerbewirtschaftet()) {
+				bderfuegbarkeitUndGestehungspreis[0] = new BigDecimal(99999999);
+			} else {
+				BigDecimal bdLagerstand = getLagerstandAllerLagerEinesMandanten(artikelIId, false, theClientDto);
+
+				BigDecimal fehlmengen = getFehlmengeFac().getAnzahlFehlmengeEinesArtikels(artikelIId, theClientDto);
+				BigDecimal reservierungen = getReservierungFac().getAnzahlReservierungen(artikelIId, theClientDto);
+
+				bderfuegbarkeitUndGestehungspreis[0] = bdLagerstand.subtract(fehlmengen).subtract(reservierungen);
+
+			}
+
+			bderfuegbarkeitUndGestehungspreis[1] = getGemittelterGestehungspreisAllerLaegerEinesMandanten(artikelIId,
+					theClientDto);
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		return bderfuegbarkeitUndGestehungspreis;
+	}
+
 	@TransactionAttribute(TransactionAttributeType.SUPPORTS)
-	public BigDecimal getVerbrauchteMengeEinesArtikels(Integer artikelIId,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
-			TheClientDto theClientDto) {
+	public BigDecimal getVerbrauchteMengeEinesArtikels(Integer artikelIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tBis, TheClientDto theClientDto) {
 		Session session = FLRSessionFactory.getFactory().openSession();
 		// PJ 14006
 
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class)
-				.createAlias("flrartikel", "a")
-				.add(Restrictions.eq("a.i_id", artikelIId))
-				.createAlias("flrlager", "l")
-				.add(Restrictions.eq("l.mandant_c_nr",
-						theClientDto.getMandant()));
-		crit.add(Restrictions.ge(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tVon));
-		crit.add(Restrictions.le(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tBis));
+		String sQuery = "SELECT l FROM FLRLagerbewegung l WHERE (l.b_abgang=1 OR (l.b_abgang=0 AND l.c_belegartnr='"
+				+ LocaleFac.BELEGART_GUTSCHRIFT + "' ) ) AND l.b_historie=0 AND l.c_belegartnr NOT IN ('"
+				+ LocaleFac.BELEGART_HAND + "','" + LocaleFac.BELEGART_LOSABLIEFERUNG + "') AND l.flrartikel.i_id="
+				+ artikelIId + " AND l.flrlager.mandant_c_nr='" + theClientDto.getMandant() + "' AND l.t_belegdatum>='"
+				+ Helper.formatTimestampWithSlashes(tVon) + "' AND l.t_belegdatum<='"
+				+ Helper.formatTimestampWithSlashes(tBis) + "'";
 
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-				Helper.boolean2Short(false)));
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
-				Helper.boolean2Short(true)));
-		crit.add(Restrictions.not(Restrictions.in(
-				LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR, new String[] {
-						LocaleFac.BELEGART_HAND,
-						LocaleFac.BELEGART_LOSABLIEFERUNG })));
-
-		List<?> results = crit.list();
+		org.hibernate.Query querylagerbewegungen = session.createQuery(sQuery);
+		List<?> results = querylagerbewegungen.list();
 		Iterator<?> resultListIterator = results.iterator();
 
 		BigDecimal bdMenge = new BigDecimal(0);
 
 		while (resultListIterator.hasNext()) {
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-					.next();
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 			if (lagerbewegung.getN_menge().doubleValue() > 0) {
-				bdMenge = bdMenge.add(lagerbewegung.getN_menge());
+
+				if (Helper.short2boolean(lagerbewegung.getB_abgang())) {
+					bdMenge = bdMenge.add(lagerbewegung.getN_menge());
+				} else {
+
+					if (!lagerbewegung.getFlrlager().getLagerart_c_nr().equals(LagerFac.LAGERART_WERTGUTSCHRIFT)) {
+						bdMenge = bdMenge.subtract(lagerbewegung.getN_menge());
+					}
+				}
+
 			}
 		}
 
@@ -13564,23 +13250,17 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.SUPPORTS)
-	public BigDecimal getLosablieferungenEinesArtikels(Integer artikelIId,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
-			TheClientDto theClientDto) {
+	public BigDecimal getLosablieferungenEinesArtikels(Integer artikelIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tBis, TheClientDto theClientDto) {
 		Session session = FLRSessionFactory.getFactory().openSession();
 		// PJ 14006
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRLagerbewegung.class)
-				.createAlias("flrartikel", "a")
-				.add(Restrictions.eq("a.i_id", artikelIId))
-				.createAlias("flrlager", "l")
-				.add(Restrictions.eq("l.mandant_c_nr",
-						theClientDto.getMandant()));
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class).createAlias("flrartikel", "a")
+				.add(Restrictions.eq("a.i_id", artikelIId)).createAlias("flrlager", "l")
+				.add(Restrictions.eq("l.mandant_c_nr", theClientDto.getMandant()));
 		crit.add(Restrictions.ge(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tVon));
 		crit.add(Restrictions.le(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM, tBis));
 
-		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE,
-				Helper.boolean2Short(false)));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)));
 
 		crit.add(Restrictions.in(LagerFac.FLR_LAGERBEWEGUNG_C_BELEGARTNR,
 				new String[] { LocaleFac.BELEGART_LOSABLIEFERUNG }));
@@ -13591,8 +13271,7 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		BigDecimal bdMenge = new BigDecimal(0);
 
 		while (resultListIterator.hasNext()) {
-			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
-					.next();
+			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator.next();
 
 			bdMenge = bdMenge.add(lagerbewegung.getN_menge());
 
@@ -13610,6 +13289,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 			if ("Artikelnummer".equals(fieldName)) {
 				value = data[index][REPORT_SERIENNUMMERN_ARTIKELNUMMER];
+			} else if ("Artikelreferenznummer".equals(fieldName)) {
+				value = data[index][REPORT_SERIENNUMMERN_ARTIKELREFERENZNUMMER];
 			} else if ("Bezeichnung".equals(fieldName)) {
 				value = data[index][REPORT_SERIENNUMMERN_ARTIKELBEZEICHNUNG];
 			} else if ("Menge".equals(fieldName)) {
@@ -13626,6 +13307,8 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 				value = data[index][REPORT_SERIENNUMMERN_ZEITPUNKT];
 			} else if ("DatenSubreport".equals(fieldName)) {
 				value = data[index][REPORT_SERIENNUMMERN_SUBREPORT_GERAETESNR];
+			} else if ("Lager".equals(fieldName)) {
+				value = data[index][REPORT_SERIENNUMMERN_LAGER];
 			}
 
 		}
@@ -13634,28 +13317,77 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
+	public void kopiereChargeneigenschaften(Integer i_id_buchungVon, Integer i_id_buchungNach,
+			TheClientDto theClientDto) {
+
+		try {
+
+			LagerbewegungDto[] dtosVon = lagerbewegungFindByIIdBuchung(i_id_buchungVon);
+			LagerbewegungDto[] dtosNach = lagerbewegungFindByIIdBuchung(i_id_buchungNach);
+
+			// Artikelgruppen muessen gleich sein
+			ArtikelDto aDtoVon = getArtikelFac().artikelFindByPrimaryKey(dtosVon[0].getArtikelIId(), theClientDto);
+			ArtikelDto aDtNach = getArtikelFac().artikelFindByPrimaryKey(dtosNach[0].getArtikelIId(), theClientDto);
+
+			if (aDtoVon.istArtikelSnrOderchargentragend() && aDtNach.istArtikelSnrOderchargentragend()) {
+
+				if ((aDtoVon.getArtgruIId() == null && aDtNach.getArtgruIId() == null)
+						|| (aDtoVon.getArtgruIId() != null && aDtoVon.getArtgruIId().equals(aDtNach.getArtgruIId()))) {
+
+					Integer artikelsnrchnrIId = artikelsnrchnrIIdFindByArtikelIIdCSeriennrchargennr(
+							dtosVon[0].getArtikelIId(), dtosVon[0].getCSeriennrchargennr());
+
+					if (artikelsnrchnrIId != null) {
+						PaneldatenDto[] paneldatenDtos = getPanelFac().paneldatenFindByPanelCNrCKey(
+								PanelFac.PANEL_CHARGENEIGENSCHAFTEN, artikelsnrchnrIId + "");
+
+						Integer artikelsnrchnrIIdNach = updateArtikelsnrchnr(dtosNach[0].getArtikelIId(),
+								dtosNach[0].getCSeriennrchargennr(), theClientDto);
+
+						for (int i = 0; i < paneldatenDtos.length; i++) {
+							paneldatenDtos[i].setCKey(artikelsnrchnrIIdNach + "");
+						}
+
+						getPanelFac().createPaneldaten(paneldatenDtos, theClientDto);
+
+					}
+
+				} else {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_CHARGENEIGENSCHAFTEN_KOPIEREN_ARTIKELGRUPPEN_UNGLEICH,
+							new Exception("FEHLER_CHARGENEIGENSCHAFTEN_KOPIEREN_ARTIKELGRUPPEN_UNGLEICH"));
+
+				}
+			} else {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_CHARGENEIGENSCHAFTEN_KOPIEREN_ARTIKEL_NICHT_SNR_CHNR_BEHAFTET,
+						new Exception("FEHLER_CHARGENEIGENSCHAFTEN_KOPIEREN_ARTIKEL_NICHT_SNR_CHNR_BEHAFTET"));
+
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+	}
+
 	/**
 	 * Ermittlung des Solllagerstandes eines Artikels.
 	 * 
-	 * Soll-Lagerstand ist im Artikel definierbar. Falls dieser nicht definiert
-	 * ist, greift der Mindest-Lagerstand. Ist auch der Mindest-Lagerstand nicht
+	 * Soll-Lagerstand ist im Artikel definierbar. Falls dieser nicht definiert ist,
+	 * greift der Mindest-Lagerstand. Ist auch der Mindest-Lagerstand nicht
 	 * definiert -> 0
 	 * 
-	 * @param artikelDto
-	 *            ArtikelDto
+	 * @param artikelDto ArtikelDto
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal getArtikelSollBestand(ArtikelDto artikelDto)
-			throws EJBExceptionLP {
+	public BigDecimal getArtikelSollBestand(ArtikelDto artikelDto) throws EJBExceptionLP {
 		BigDecimal bdSollLagerstand;
 		// Solllagerstand definiert?
 		if (artikelDto.getFLagersoll() != null) {
 			// Mindestbestand > Sollbestand? -> dann zieht der Mindestbestand.
 			// sollte aber nicht vorkommen.
-			if (artikelDto.getFLagermindest() != null
-					&& artikelDto.getFLagermindest() > artikelDto
-							.getFLagersoll()) {
+			if (artikelDto.getFLagermindest() != null && artikelDto.getFLagermindest() > artikelDto.getFLagersoll()) {
 				bdSollLagerstand = new BigDecimal(artikelDto.getFLagermindest());
 			}
 			// Normalfall: der definierte Sollbestand wirkt.
@@ -13677,9 +13409,43 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 		return bdSollLagerstand;
 	}
 
-	public String getAsStringDocumentWS(Integer iIdBestellpositionI,
-			TheClientDto theClientDto) {
+	public String getAsStringDocumentWS(Integer iIdBestellpositionI, TheClientDto theClientDto) {
 		return "juhu";
+	}
+
+	public BigDecimal[] getSummeLagermindesUndLagerSollstandEinesStandorts(Integer artikelIId,
+			Integer partnerIIdStandort, TheClientDto theClientDto) {
+		BigDecimal[] bd = new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO };
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT sum(al.f_lagermindest), sum(al.f_lagersoll), sum(al.n_lagerstand) FROM FLRArtikellager al WHERE al.compId.artikel_i_id="
+				+ artikelIId;
+
+		if (partnerIIdStandort != null) {
+			sQuery += " AND al.flrlager.parnter_i_id_standort=" + partnerIIdStandort;
+		}
+
+		org.hibernate.Query query = session.createQuery(sQuery);
+		List<?> results = query.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		while (resultListIterator.hasNext()) {
+			Object[] o = (Object[]) resultListIterator.next();
+
+			if (o[0] != null) {
+				bd[0] = new BigDecimal((Double) o[0]);
+			}
+
+			if (o[1] != null) {
+				bd[1] = new BigDecimal((Double) o[1]);
+			}
+			if (o[2] != null) {
+				bd[2] = (BigDecimal) o[2];
+			}
+		}
+
+		return bd;
+
 	}
 
 	public void vertauscheArtikellagerplaetze(Integer iId1, Integer iId2) {
@@ -13695,4 +13461,224 @@ public class LagerFacBean extends LPReport implements LagerFac, JRDataSource {
 
 	}
 
+	private ArtikellagerplaetzeDto[] artikellagerplaetzeFindByArtikellIIdOhneExcImpl(Integer artikelIId) {
+		List<Artikellagerplaetze> artikellagerplaetze = ArtikellagerplaetzeQuery.listByArtikelIIdOrderByISort(em,
+				artikelIId);
+
+		ArtikellagerplaetzeDto[] artikellagerplatzDtos = assembleArtikellagerplaetzeDtos(artikellagerplaetze);
+		return artikellagerplatzDtos;
+	}
+
+	@Override
+	public List<LagerplatzDto> lagerplatzFindByArtikelIIdLagerIIdOhneExc(Integer artikelIId, Integer lagerIId) {
+		Validator.pkFieldNotNull(artikelIId, "artikelIId");
+		List<LagerplatzDto> lagerplatzDtos = new ArrayList<LagerplatzDto>();
+		ArtikellagerplaetzeDto[] artikellagerplatzDtos = artikellagerplaetzeFindByArtikellIIdOhneExcImpl(artikelIId);
+		if (artikellagerplatzDtos == null || artikellagerplatzDtos.length < 1)
+			return lagerplatzDtos;
+
+		for (ArtikellagerplaetzeDto artikellagerplatz : artikellagerplatzDtos) {
+			Lagerplatz lagerplatz = em.find(Lagerplatz.class, artikellagerplatz.getLagerplatzIId());
+			if (lagerIId == null || lagerIId.equals(lagerplatz.getLagerIId())) {
+				lagerplatzDtos.add(assembleLagerplatzDto(lagerplatz));
+			}
+		}
+		return lagerplatzDtos;
+	}
+
+	@Override
+	public LagerplatzDto lagerplatzFindByPrimaryKeyOhneExc(Integer lagerplatzIId) {
+		if (lagerplatzIId == null)
+			return null;
+
+		Lagerplatz lagerplatz = em.find(Lagerplatz.class, lagerplatzIId);
+		return lagerplatz != null ? assembleLagerplatzDto(lagerplatz) : null;
+	}
+
+	@Override
+	public LagerplatzDto lagerplatzFindByCLagerplatzLagerIIdOhneExc(String cLagerplatz, Integer lagerIId) {
+		Lagerplatz lagerplatz = LagerplatzQuery.resultByLagerIIdCLagerplatzNoExc(em, lagerIId, cLagerplatz);
+		return lagerplatz != null ? assembleLagerplatzDto(lagerplatz) : null;
+	}
+
+	@Override
+	public List<ArtikellagerplaetzeDto> artikellagerplaetzeFindByLagerplatzIId(Integer lagerplatzIId) {
+		List<Artikellagerplaetze> artikellagerplaetze = ArtikellagerplaetzeQuery.listByLagerplatzIId(em, lagerplatzIId);
+		if (artikellagerplaetze.isEmpty())
+			return new ArrayList<ArtikellagerplaetzeDto>();
+
+		ArtikellagerplaetzeDto[] artikellagerplatzDtos = assembleArtikellagerplaetzeDtos(artikellagerplaetze);
+		return Arrays.asList(artikellagerplatzDtos);
+	}
+
+	public class LagerplatzInfoMapper {
+		private Map<Integer, List<LagerplatzDto>> hmLagerLagerplatz;
+
+		private Map<Integer, List<LagerplatzDto>> getHmLagerLagerplatz() {
+			if (hmLagerLagerplatz == null)
+				hmLagerLagerplatz = new HashMap<Integer, List<LagerplatzDto>>();
+
+			return hmLagerLagerplatz;
+		}
+
+		public List<LagerplatzInfoDto> map(ArtikellagerplaetzeDto[] artikellagerplatzDtos) {
+			hmLagerLagerplatz = null;
+			for (ArtikellagerplaetzeDto artikellagerplatz : artikellagerplatzDtos) {
+				LagerplatzDto lagerplatzDto = lagerplatzFindByPrimaryKey(artikellagerplatz.getLagerplatzIId());
+				List<LagerplatzDto> lagerplaetze = getLagerplaetze(lagerplatzDto.getLagerIId());
+				lagerplaetze.add(lagerplatzDto);
+			}
+
+			return transformMap();
+		}
+
+		private List<LagerplatzInfoDto> transformMap() {
+			List<LagerplatzInfoDto> lagerplatzInfos = new ArrayList<LagerplatzInfoDto>();
+			for (Integer lagerIId : getHmLagerLagerplatz().keySet()) {
+				LagerplatzInfoDto infoDto = new LagerplatzInfoDto();
+				infoDto.setLagerDto(lagerFindByPrimaryKey(lagerIId));
+				infoDto.setLagerplaetze(getHmLagerLagerplatz().get(lagerIId));
+				lagerplatzInfos.add(infoDto);
+			}
+			return lagerplatzInfos;
+		}
+
+		private List<LagerplatzDto> getLagerplaetze(Integer lagerIId) {
+			List<LagerplatzDto> lagerplaetze = getHmLagerLagerplatz().get(lagerIId);
+			if (lagerplaetze == null) {
+				lagerplaetze = new ArrayList<LagerplatzDto>();
+				getHmLagerLagerplatz().put(lagerIId, lagerplaetze);
+			}
+			return lagerplaetze;
+		}
+	}
+
+	@Override
+	public List<LagerplatzInfoDto> lagerplatzInfoFindByArtikelIIdOhneExc(Integer artikelIId) {
+		List<LagerplatzInfoDto> lagerplatzInfos = new ArrayList<LagerplatzInfoDto>();
+		ArtikellagerplaetzeDto[] artikellagerplatzDtos = artikellagerplaetzeFindByArtikellIIdOhneExcImpl(artikelIId);
+		if (artikellagerplatzDtos == null || artikellagerplatzDtos.length < 1) {
+			return lagerplatzInfos;
+		}
+
+		LagerplatzInfoMapper lagerplatzInfoMapper = new LagerplatzInfoMapper();
+		return lagerplatzInfoMapper.map(artikellagerplatzDtos);
+	}
+
+	@Override
+	public Collection<LagerstandInfoDto> getLagerstandAllerArtikelEinesMandanten(String[] lagerartCnr,
+			TheClientDto theClientDto) {
+		Validator.notNull(lagerartCnr, "lagerartCnr");
+
+		Collection<LagerstandInfoDto> entries = new ArrayList<LagerstandInfoDto>();
+
+		for (String lagerart : lagerartCnr) {
+			Collection<Lager> lagers = LagerQuery.listByMandantCNrLagerartCNr(em, theClientDto.getMandant(), lagerart);
+
+			for (Lager lager : lagers) {
+				Collection<Artikellager> standInfos = getLagerstandEinerLagerId(lager.getIId(), theClientDto);
+				if (standInfos.isEmpty())
+					continue;
+
+				entries.add(createLagerStandInfo(lager.getIId(), standInfos));
+			}
+		}
+
+		return entries;
+	}
+
+	private LagerstandInfoDto createLagerStandInfo(Integer lagerId, Collection<Artikellager> artikellagers) {
+		LagerstandInfoDto dto = new LagerstandInfoDto(lagerId);
+
+		for (Artikellager artikellager : artikellagers) {
+			if (artikellager.getFLagermindest() == null && artikellager.getFLagersoll() == null) {
+				continue;
+			}
+
+			LagerstandInfoEntryDto infoDto = new LagerstandInfoEntryDto(
+					new ArtikelId(artikellager.getPk().getArtikelIId()), artikellager.getNLagerstand());
+			if (artikellager.getFLagermindest() != null) {
+				infoDto.setStockMinimum(new BigDecimal(artikellager.getFLagermindest().toString()));
+			}
+			if (artikellager.getFLagersoll() != null) {
+				infoDto.setStockNominal(new BigDecimal(artikellager.getFLagersoll().toString()));
+			}
+			dto.addEntry(infoDto);
+		}
+
+		return dto;
+	}
+
+	private Collection<Artikellager> getLagerstandEinerLagerId(Integer lagerId, TheClientDto theClientDto) {
+		if (!hatRolleBerechtigungAufLager(lagerId, theClientDto)) {
+			return new ArrayList<Artikellager>();
+		}
+
+		Query query = em.createNamedQuery("ArtikellagerfindByLagerIId");
+		query.setParameter(1, lagerId);
+		return query.getResultList();
+	}
+
+	@Override
+	public Collection<LagerstandInfoDto> getLagerstandAllerArtikelEinerGruppe(Integer lagerId, Integer artikelgruppeId,
+			TheClientDto theClientDto) {
+		Validator.notNull(lagerId, "lagerId");
+		Validator.notNull(artikelgruppeId, "artikelgruppeId");
+
+		Lager lager = em.find(Lager.class, lagerId);
+		Validator.entityFound(lager, lagerId);
+
+		// TODO: WIP
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		Session session = factory.openSession();
+//		String sql = "SELECT al FROM FLRArtikellager al " ls 
+//				+ "JOIN WW_ARTIKEL a ON a.I_ID = al.ARTIKEL_I_ID "
+//				+ "JOIN WW_ARTGRU ag ON ag.I_ID = a.ARTGRU_I_ID "
+//				+ "WHERE al.LAGER_I_ID = ? AND ag.I_ID = ?";
+		String sql = "SELECT al FROM FLRArtikellager al "
+				+ "WHERE al.flrLager.i_id = ? AND al.flrartikelliste.flrartikelgruppe.i_id = ?";
+
+		org.hibernate.Query query = session.createQuery(sql);
+//				.addEntity(ArtikellagerPK.class)
+//				.addEntity(Artikel.class)
+//				.addEntity(Artgru.class);
+		query.setParameter(0, lagerId);
+		query.setParameter(1, artikelgruppeId);
+		try {
+			List<FLRArtikellager> standInfos = query.list();
+
+//			Collection<LagerstandInfoDto> entries = new ArrayList<LagerstandInfoDto>();
+//			entries.add(createLagerStandInfo(
+//					lager.getIId(), standInfos));		
+//			return entries;
+		} catch (Exception e) {
+			myLogger.error("SQL-Exc", e);
+		} finally {
+			closeSession(session);
+		}
+
+		return new ArrayList<LagerstandInfoDto>();
+	}
+
+	@Override
+	public Set<String> pruefeObSeriennummernExistieren(ArtikelId artikelIId, Collection<String> snrs,
+			TheClientDto theClientDto) {
+		Set<String> existing = new HashSet<String>();
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Criteria crit = session.createCriteria(FLRLagerbewegung.class)
+				.createAlias(LagerFac.FLR_LAGERBEWEGUNG_FLRARTIKEL, "a");
+		crit.add(Restrictions.eq("a.i_id", artikelIId.id()));
+		crit.add(Restrictions.eq(LagerFac.FLR_LAGERBEWEGUNG_B_HISTORIE, Helper.boolean2Short(false)));
+		crit.add(Restrictions.in(LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR, snrs));
+		crit.add(Restrictions.gt(LagerFac.FLR_LAGERBEWEGUNG_N_MENGE, new BigDecimal(0)));
+		List<FLRLagerbewegung> resultList = crit.list();
+
+		for (FLRLagerbewegung bew : resultList) {
+			existing.add(bew.getC_seriennrchargennr());
+		}
+
+		return existing;
+	}
 }

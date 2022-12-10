@@ -34,11 +34,10 @@ package com.lp.server.angebot.bl;
 
 import java.math.BigDecimal;
 import java.text.DateFormatSymbols;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
-import java.util.TreeMap;
 
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
@@ -51,9 +50,8 @@ import com.lp.server.angebot.service.AngebotFac;
 import com.lp.server.angebot.service.AngebotServiceFac;
 import com.lp.server.angebot.service.AngebotUebersichtTabelleDto;
 import com.lp.server.angebot.service.AngebotpositionFac;
-import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
-import com.lp.server.system.service.ParameterFac;
-import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.rechnung.service.RechnungUmsatzTabelleDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.UmsatzUseCaseHandlerTabelle;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -83,7 +81,7 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private final int iAnzahlZeilen = 17;
+	private ArrayList<AngebotUebersichtTabelleDto> hmDaten = null;
 	private final int iAnzahlSpalten = 6;
 
 	// Spaltentypen der Uebersicht entscheiden ueber die Hibernate Criterias
@@ -99,245 +97,183 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 		super();
 
 		try {
-			setAnzahlZeilen(iAnzahlZeilen);
+
 			setAnzahlSpalten(iAnzahlSpalten);
 		} catch (Throwable t) {
 			// @todo was tun ??? PJ 3758
 		}
 	}
 
+	protected long getRowCountFromDataBase() {
+		try {
+
+			hmDaten = new ArrayList<AngebotUebersichtTabelleDto>();
+			getFilterKriterien();
+
+			setInhalt();
+		} catch (Throwable t) {
+			if (t.getCause() instanceof EJBExceptionLP) {
+				throw (EJBExceptionLP) t.getCause();
+			} else {
+
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(t));
+			}
+		}
+		return getAnzahlZeilen();
+	}
+
 	public TableInfo getTableInfo() {
 		if (tableInfo == null) {
-			tableInfo = new TableInfo(new Class[] { String.class,String.class,
-					BigDecimal.class, BigDecimal.class, BigDecimal.class,
-					BigDecimal.class }, new String[] {"",
-					" ",
-					getTextRespectUISpr("lp.gesamt", theClientDto.getMandant(),
-							theClientDto.getLocUi()),
-					getTextRespectUISpr("er.offene", theClientDto.getMandant(),
-							theClientDto.getLocUi()),
-					getTextRespectUISpr("angb.offenetermin", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.bestellt", theClientDto.getMandant(),
-							theClientDto.getLocUi()) }, new String[] {"", "", "", "",
-					"", "" });
+			tableInfo = new TableInfo(
+					new Class[] { String.class, String.class, BigDecimal.class, BigDecimal.class, BigDecimal.class,
+							BigDecimal.class },
+					new String[] { "", " ",
+							getTextRespectUISpr("lp.gesamt", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("er.offene", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("angb.offenetermin", theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.bestellt", theClientDto.getMandant(), theClientDto.getLocUi()) },
+					new String[] { "", "", "", "", "", "" });
 		}
 
 		return tableInfo;
 	}
 
-	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
-	 * 
-	 * @param rowIndex
-	 *            die markierte Zeile
-	 * @return QueryResult Ergebnis
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
-	 */
+	private AngebotUebersichtTabelleDto befuelleDtoAnhandDatumsgrenzen(String header, Integer iIdVertreter,
+			GregorianCalendar gcBerechnungsdatumVonI, GregorianCalendar gcBerechnungsdatumBisI) throws Throwable {
+
+		AngebotUebersichtTabelleDto zeileDto = new AngebotUebersichtTabelleDto();
+
+		// Spalte gesamt: Basis ist Belegdatum, alle Angebote mit
+		// Status != (Angelegt || Storniert)
+		BigDecimal nGesamt = getWertInMandantenwaehrung(gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, iIdVertreter,
+				IDX_GESAMT, theClientDto);
+
+		// Spalte offen: Basis ist Belegdatum, alle Angebote mit
+		// Status Offen
+		BigDecimal nOffen = getWertInMandantenwaehrung(gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, iIdVertreter,
+				IDX_OFFEN, theClientDto);
+
+		// Spalte offene Termin bewertet: Basis ist
+		// Realisierungstermin, alle Angebote mit Status offen, der
+		// Wert wird jeweils mit der Auftragswahrscheinlichkeit
+		// multipliziert
+		BigDecimal nOffenterminbewertet = getWertInMandantenwaehrung(gcBerechnungsdatumVonI, gcBerechnungsdatumBisI,
+				iIdVertreter, IDX_OFFENTERMINBEWERTET, theClientDto);
+
+		// Spalte bestellt: Basis ist Belegdatum, Erledigungsgrund
+		// == Auftrag erhalten
+		BigDecimal nBestellt = getWertInMandantenwaehrung(gcBerechnungsdatumVonI, gcBerechnungsdatumBisI, iIdVertreter,
+				IDX_BESTELLT, theClientDto);
+
+		zeileDto.setSZeilenheader(header);
+		zeileDto.setNGesamt(nGesamt);
+		zeileDto.setNOffene(nOffen);
+		zeileDto.setNOffenerterminbewertet(nOffenterminbewertet);
+		zeileDto.setNBestellt(nBestellt);
+
+		return zeileDto;
+	}
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 
 		try {
-			// die aktuellen Filter Kriterien bestimmen
-			getFilterKriterien();
-
-			FilterKriterium fkjahr = aFilterKriterium[AngebotFac.IDX_KRIT_GESCHAEFTSJAHR];
-			init(fkjahr);
-			FilterKriterium fkVertreter = aFilterKriterium[AngebotFac.IDX_KRIT_VERTRETER_I_ID];
-			Integer iIdVertreter = null;
-			if (fkVertreter.value != null) {
-				iIdVertreter = new Integer(fkVertreter.value);
-			}
-			// das Vorjahr wird summiert dargestellt
-			AngebotUebersichtTabelleDto oSummenVorjahr = null;
-			// zuerste eine HashMap mit den darzustellenden Daten zusammenbauen
-			TreeMap<Integer, AngebotUebersichtTabelleDto> hmSammelstelle = new TreeMap<Integer, AngebotUebersichtTabelleDto>();
-			for (int i = 0; i < iAnzahlZeilen; i++) {
-
-				String sZeilenHeader = null;
-
-				GregorianCalendar gcBerechnungsdatumVonI = null;
-				GregorianCalendar gcBerechnungsdatumBisI = null;
-
-				BigDecimal nGesamt = null;
-				BigDecimal nOffen = null;
-				BigDecimal nOffenterminbewertet = null;
-				BigDecimal nBestellt = null;
-
-				switch (i) {
-
-				// in Zeile 0 stehen die Summen fuer das gesamte Vorjahr
-				case 0:
-					sZeilenHeader = getTextRespectUISpr("lp.vorjahr", theClientDto
-							.getMandant(), theClientDto.getLocUi());
-					sZeilenHeader += " ";
-					sZeilenHeader += iVorjahr;
-
-					// das Zeitintervall auf das gesamte Vorjahr festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(iVorjahr,
-							iIndexBeginnMonat, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr,
-							iIndexBeginnMonat, 1);
-
-					break;
-
-				// Zeile 1 ist eine Leerzeile zur otpischen Trennung
-				case 1:
-
-					sZeilenHeader = null;
-					break;
-
-				// Zeile 14 ist eine Leerzeile zur optischen Trennung
-				case 14:
-
-					sZeilenHeader = null;
-					break;
-
-				// Zeile 15 enthaelt die Summe ueber das gesamte laufende
-				// Geschaeftsjahr
-				case 15:
-
-					sZeilenHeader = getTextRespectUISpr("lp.summe", theClientDto
-							.getMandant(), theClientDto.getLocUi());
-					sZeilenHeader += " ";
-					sZeilenHeader += fkjahr.value;
-
-					// das Zeitintervall auf das gesamte laufende Jahr festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(iJahr,
-							iIndexBeginnMonat, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr + 1,
-							iIndexBeginnMonat, 1);
-
-					break;
-
-				// Zeile 16 enthaelt die Summe aus gesamtem laufenden Jahr plus
-				// Summe des Vorjahres
-				case 16:
-					sZeilenHeader = getTextRespectUISpr("lp.gesamtsumme",
-							theClientDto.getMandant(), theClientDto.getLocUi());
-
-					// das Zeitintervall auf alle erfassten Auftraege festlegen
-					// IMS 749 Summe ueber saemtliche Auftraege
-					gcBerechnungsdatumVonI = new GregorianCalendar(1900,
-							iIndexBeginnMonat, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr + 1,
-							iIndexBeginnMonat, 1);
-
-					break;
-
-				// Zeile 2 bis 13 enthaelt die Summe fuer das jeweilige Monat
-				default:
-
-					sZeilenHeader = aMonatsnamen[iCurrentMonat];
-
-					// das Zeitintervall auf das laufende Monat festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iCurrentJahr, iCurrentMonat, 1);
-
-					// dieser Zeitpunkt liegt 1 Monat nach dem Von Datum
-					gcBerechnungsdatumBisI = berechneNaechstesZeitintervall(
-							iCurrentMonat, iCurrentJahr);
-
-					iCurrentJahr = gcBerechnungsdatumBisI
-							.get(GregorianCalendar.YEAR);
-					iCurrentMonat = gcBerechnungsdatumBisI
-							.get(GregorianCalendar.MONTH);
-
-					break;
-				}
-
-				// die Werte fuer die einzelnen Zellen bestimmen
-				if (gcBerechnungsdatumVonI != null
-						&& gcBerechnungsdatumBisI != null) {
-					// Spalte gesamt: Basis ist Belegdatum, alle Angebote mit
-					// Status != (Angelegt || Storniert)
-					nGesamt = getWertInMandantenwaehrung(
-							gcBerechnungsdatumVonI, gcBerechnungsdatumBisI,
-							iIdVertreter, IDX_GESAMT, theClientDto);
-
-					// Spalte offen: Basis ist Belegdatum, alle Angebote mit
-					// Status Offen
-					nOffen = getWertInMandantenwaehrung(gcBerechnungsdatumVonI,
-							gcBerechnungsdatumBisI, iIdVertreter, IDX_OFFEN,
-							theClientDto);
-
-					// Spalte offene Termin bewertet: Basis ist
-					// Realisierungstermin, alle Angebote mit Status offen, der
-					// Wert wird jeweils mit der Auftragswahrscheinlichkeit
-					// multipliziert
-					nOffenterminbewertet = getWertInMandantenwaehrung(
-							gcBerechnungsdatumVonI, gcBerechnungsdatumBisI,
-							iIdVertreter, IDX_OFFENTERMINBEWERTET, theClientDto);
-
-					// Spalte bestellt: Basis ist Belegdatum, Erledigungsgrund
-					// == Auftrag erhalten
-					nBestellt = getWertInMandantenwaehrung(
-							gcBerechnungsdatumVonI, gcBerechnungsdatumBisI,
-							iIdVertreter, IDX_BESTELLT, theClientDto);
-				}
-
-				// die Zeilen fuer die Anzeige zusammenbauen
-				AngebotUebersichtTabelleDto angebotUebersichtTabelleDto = new AngebotUebersichtTabelleDto();
-
-				if (sZeilenHeader != null) {
-					angebotUebersichtTabelleDto.setSZeilenheader(sZeilenHeader);
-					angebotUebersichtTabelleDto.setNGesamt(nGesamt);
-					angebotUebersichtTabelleDto.setNOffene(nOffen);
-					angebotUebersichtTabelleDto
-							.setNOffenerterminbewertet(nOffenterminbewertet);
-					angebotUebersichtTabelleDto.setNBestellt(nBestellt);
-				}
-
-				// die Summen des Vorjahrs muss man sich fuer spaeter merken
-				if (i == IDX_SUMMEN_VORJAHR) {
-					oSummenVorjahr = angebotUebersichtTabelleDto;
-				}
-
-				// die Gesamtsummen bestehen aus den Summen des laufenden Jahres
-				// und des Vorjahres
-				if (i == IDX_SUMMEN_GESAMT) {
-					// @todo IMS 749 linke Spalte Offene enthaelt die Summe
-					// ueber alle Auftraege im System PJ 3800
-				}
-
-				hmSammelstelle.put(new Integer(i), angebotUebersichtTabelleDto);
-			}
 
 			// jetzt die Darstellung in der Tabelle zusammenbauen
 			int startIndex = 0;
 			long endIndex = startIndex + getAnzahlZeilen() - 1;
 
 			Object[][] rows = new Object[(int) getAnzahlZeilen()][getAnzahlSpalten()];
-			int row = 0;
+
 			int col = 0;
 
-			Collection<AngebotUebersichtTabelleDto> clSichtLieferstatus = hmSammelstelle.values();
-			Iterator<AngebotUebersichtTabelleDto> it = clSichtLieferstatus.iterator();
-
-			while (it.hasNext()) {
-				AngebotUebersichtTabelleDto angebotUebersichtTabelleDto = (AngebotUebersichtTabelleDto) it
-						.next();
+			for (int row = 0; row < hmDaten.size(); row++) {
+				AngebotUebersichtTabelleDto angebotUebersichtTabelleDto = (AngebotUebersichtTabelleDto) hmDaten
+						.get(row);
 				rows[row][col++] = "";
-				rows[row][col++] = angebotUebersichtTabelleDto
-						.getSZeilenHeader();
+				rows[row][col++] = angebotUebersichtTabelleDto.getSZeilenHeader();
 				rows[row][col++] = angebotUebersichtTabelleDto.getNGesamt();
 				rows[row][col++] = angebotUebersichtTabelleDto.getNOffene();
-				rows[row][col++] = angebotUebersichtTabelleDto
-						.getNOffenerterminbewertet();
-				rows[row++][col++] = angebotUebersichtTabelleDto.getNBestellt();
+				rows[row][col++] = angebotUebersichtTabelleDto.getNOffenerterminbewertet();
+				rows[row][col++] = angebotUebersichtTabelleDto.getNBestellt();
 
 				col = 0;
 			}
 
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0);
+			result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(1, e);
 		}
 
 		return result;
+	}
+
+	private void setInhalt() throws Throwable {
+		mandantCNr = theClientDto.getMandant();
+		locUI = theClientDto.getLocUi();
+		hmDaten = new ArrayList<AngebotUebersichtTabelleDto>();
+		DateFormatSymbols symbols = new DateFormatSymbols(locUI);
+		aMonatsnamen = symbols.getMonths();
+
+		getFilterKriterien();
+
+		FilterKriterium fkJahr = aFilterKriterium[AngebotFac.IDX_KRIT_GESCHAEFTSJAHR];
+		FilterKriterium fkVertreter = aFilterKriterium[AngebotFac.IDX_KRIT_VERTRETER_I_ID];
+		Integer iIdVertreter = null;
+		if (fkVertreter.value != null) {
+			iIdVertreter = new Integer(fkVertreter.value);
+		}
+
+		Integer iJahr = new Integer(fkJahr.value).intValue();
+
+		boolean bGerschaeftsjahr = false;
+		if (fkJahr.kritName.equals(RechnungFac.KRIT_JAHR_GESCHAEFTSJAHR)) {
+			bGerschaeftsjahr = true;
+		}
+
+		// Zeile 1 Vorjahr
+		RechnungUmsatzTabelleDto zeileDto = new RechnungUmsatzTabelleDto();
+		zeileDto.setSZeilenheader(getTextRespectUISpr("lp.vorjahr", mandantCNr, locUI) + " " + (iJahr - 1));
+
+		GregorianCalendar[] gcVonBis = getVorjahr(iJahr, 0, bGerschaeftsjahr);
+
+		hmDaten.add(
+				befuelleDtoAnhandDatumsgrenzen(getTextRespectUISpr("lp.vorjahr", mandantCNr, locUI) + " " + (iJahr - 1),
+						iIdVertreter, gcVonBis[0], gcVonBis[1]));
+
+		// Leerzeile
+		hmDaten.add(new AngebotUebersichtTabelleDto());
+
+		// Nun Monate des aktuellen GF durchgehen
+
+		ArrayList<GregorianCalendar[]> alMonate = getMonateAktuellesJahr(iJahr, 0, bGerschaeftsjahr);
+
+		for (int i = 0; i < alMonate.size(); i++) {
+
+			GregorianCalendar[] gcVonBisMonate = alMonate.get(i);
+
+			hmDaten.add(befuelleDtoAnhandDatumsgrenzen(aMonatsnamen[gcVonBisMonate[0].get(GregorianCalendar.MONTH)],
+					iIdVertreter, gcVonBisMonate[0], gcVonBisMonate[1]));
+		}
+
+		// Leerzeile
+		hmDaten.add(new AngebotUebersichtTabelleDto());
+
+		// Summe aktuelles Jahr
+		GregorianCalendar[] gcVonBisAktuell = getAktuellesJahr(iJahr, 0, bGerschaeftsjahr);
+
+		hmDaten.add(befuelleDtoAnhandDatumsgrenzen(getTextRespectUISpr("lp.summe", mandantCNr, locUI) + " " + iJahr,
+				iIdVertreter, gcVonBisAktuell[0], gcVonBisAktuell[1]));
+
+		// Summe Gesamt
+		GregorianCalendar[] gcVonBisGesamt = getGesamtJahr(iJahr, 0, bGerschaeftsjahr);
+
+		hmDaten.add(befuelleDtoAnhandDatumsgrenzen(getTextRespectUISpr("lp.gesamtsumme", mandantCNr, locUI),
+				iIdVertreter, gcVonBisGesamt[0], gcVonBisGesamt[1]));
+
+		setAnzahlZeilen(hmDaten.size());
+
 	}
 
 	/**
@@ -346,24 +282,17 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 	 * Storniert) ist. Optional kann auch nach einem bestimmten Vertreter
 	 * ausgewertet werden.
 	 * 
-	 * @param gcBerechnungsdatumVonI
-	 *            Belegdatum von
-	 * @param gcBerechnungsdatumBisI
-	 *            Belegdatum bis
-	 * @param iIdVertreterI
-	 *            der Vertreter, null erlaubt
-	 * @param iIndexSpaltentyp
-	 *            fuer welche Spalte soll die Berechnung erfolgen
-	 * @param cNrUserI
-	 *            der aktuelle Benutzer
+	 * @param gcBerechnungsdatumVonI Belegdatum von
+	 * @param gcBerechnungsdatumBisI Belegdatum bis
+	 * @param iIdVertreterI          der Vertreter, null erlaubt
+	 * @param iIndexSpaltentyp       fuer welche Spalte soll die Berechnung erfolgen
+	 * @param cNrUserI               der aktuelle Benutzer
 	 * @return BigDecimal der Gesamtwert in Mandantenwaehrung
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private BigDecimal getWertInMandantenwaehrung(
-			GregorianCalendar gcBerechnungsdatumVonI,
-			GregorianCalendar gcBerechnungsdatumBisI, Integer iIdVertreterI,
-			int iIndexSpaltentyp, TheClientDto theClientDto) throws EJBExceptionLP {
+	private BigDecimal getWertInMandantenwaehrung(GregorianCalendar gcBerechnungsdatumVonI,
+			GregorianCalendar gcBerechnungsdatumBisI, Integer iIdVertreterI, int iIndexSpaltentyp,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		BigDecimal nGesamtwertInMandantenwaehrung = new BigDecimal(0);
 
 		Session session = null;
@@ -383,8 +312,7 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 			// Criteria duerfen keine Texts oder Blobs enthalten!
 
 			// Criteria anlegen
-			Criteria critAngebotposition = session
-					.createCriteria(FLRAngebotpositionReport.class);
+			Criteria critAngebotposition = session.createCriteria(FLRAngebotpositionReport.class);
 			Criteria critAngebot = critAngebotposition
 					.createCriteria(AngebotpositionFac.FLR_ANGEBOTPOSITION_FLRANGEBOT);
 
@@ -393,20 +321,15 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 			critAngebot.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
 
 			if (iIdVertreterI != null) {
-				critAngebot.add(Restrictions.eq(
-						AngebotFac.FLR_ANGEBOT_VERTRETER_I_ID, iIdVertreterI));
+				critAngebot.add(Restrictions.eq(AngebotFac.FLR_ANGEBOT_VERTRETER_I_ID, iIdVertreterI));
 			}
 
 			// UW 22.03.06 alle nicht alternativen Positionen mit positiver
 			// Menge
-			critAngebotposition.add(Restrictions
-					.isNotNull(AngebotpositionFac.FLR_ANGEBOTPOSITION_N_MENGE));
-			critAngebotposition.add(Restrictions.gt(
-					AngebotpositionFac.FLR_ANGEBOTPOSITION_N_MENGE,
-					new BigDecimal(0)));
-			critAngebotposition.add(Restrictions.eq(
-					AngebotpositionFac.FLR_ANGEBOTPOSITION_B_ALTERNATIVE,
-					new Short((short) 0)));
+			critAngebotposition.add(Restrictions.isNotNull(AngebotpositionFac.FLR_ANGEBOTPOSITION_N_MENGE));
+			critAngebotposition.add(Restrictions.gt(AngebotpositionFac.FLR_ANGEBOTPOSITION_N_MENGE, new BigDecimal(0)));
+			critAngebotposition
+					.add(Restrictions.eq(AngebotpositionFac.FLR_ANGEBOTPOSITION_B_ALTERNATIVE, new Short((short) 0)));
 
 			// die folgenden Einschraenkungen sind vom Spaltentyp der Ubersicht
 			// abhaengig
@@ -420,53 +343,40 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 			// IDX_BESTELLT: Basis ist Belegdatum, Erledigungsgrund == Auftrag
 			// erhalten
 			if (iIndexSpaltentyp == IDX_GESAMT) {
-				critAngebot.add(Restrictions.ne(
-						AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
+				critAngebot.add(Restrictions.ne(AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
 						AngebotServiceFac.ANGEBOTSTATUS_ANGELEGT));
-				critAngebot.add(Restrictions.ne(
-						AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
+				critAngebot.add(Restrictions.ne(AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
 						AngebotServiceFac.ANGEBOTSTATUS_STORNIERT));
-			} else if (iIndexSpaltentyp == IDX_OFFEN
-					|| iIndexSpaltentyp == IDX_OFFENTERMINBEWERTET) {
-				critAngebot.add(Restrictions.eq(
-						AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
+			} else if (iIndexSpaltentyp == IDX_OFFEN || iIndexSpaltentyp == IDX_OFFENTERMINBEWERTET) {
+				critAngebot.add(Restrictions.eq(AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
 						AngebotServiceFac.ANGEBOTSTATUS_OFFEN));
 			} else if (iIndexSpaltentyp == IDX_BESTELLT) {
-				critAngebot.add(Restrictions.eq(
-						AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
+				critAngebot.add(Restrictions.eq(AngebotFac.FLR_ANGEBOT_ANGEBOTSTATUS_C_NR,
 						AngebotServiceFac.ANGEBOTSTATUS_ERLEDIGT));
-				critAngebot
-						.add(Restrictions
-								.eq(
-										AngebotFac.FLR_ANGEBOT_ANGEBOTERLEDIGUNGSGRUND_C_NR,
-										AngebotServiceFac.ANGEBOTERLEDIGUNGSGRUND_AUFTRAGERHALTEN));
+				critAngebot.add(Restrictions.eq(AngebotFac.FLR_ANGEBOT_ANGEBOTERLEDIGUNGSGRUND_C_NR,
+						AngebotServiceFac.ANGEBOTERLEDIGUNGSGRUND_AUFTRAGERHALTEN));
 			}
 
-			if (iIndexSpaltentyp == IDX_GESAMT || iIndexSpaltentyp == IDX_OFFEN
-					|| iIndexSpaltentyp == IDX_BESTELLT) {
+			if (iIndexSpaltentyp == IDX_GESAMT || iIndexSpaltentyp == IDX_OFFEN || iIndexSpaltentyp == IDX_BESTELLT) {
 				if (gcBerechnungsdatumVonI.getTime() != null) {
-					critAngebot.add(Restrictions.ge(
-							AngebotFac.FLR_ANGEBOT_T_BELEGDATUM,
-							gcBerechnungsdatumVonI.getTime()));
+					critAngebot.add(
+							Restrictions.ge(AngebotFac.FLR_ANGEBOT_T_BELEGDATUM, gcBerechnungsdatumVonI.getTime()));
 				}
 
 				if (gcBerechnungsdatumBisI.getTime() != null) {
-					critAngebot.add(Restrictions.lt(
-							AngebotFac.FLR_ANGEBOT_T_BELEGDATUM,
-							gcBerechnungsdatumBisI.getTime()));
+					critAngebot.add(
+							Restrictions.lt(AngebotFac.FLR_ANGEBOT_T_BELEGDATUM, gcBerechnungsdatumBisI.getTime()));
 				}
 			}
 
 			if (iIndexSpaltentyp == IDX_OFFENTERMINBEWERTET) {
 				if (gcBerechnungsdatumVonI.getTime() != null) {
-					critAngebot.add(Restrictions.ge(
-							AngebotFac.FLR_ANGEBOT_T_REALISIERUNGSTERMIN,
+					critAngebot.add(Restrictions.ge(AngebotFac.FLR_ANGEBOT_T_REALISIERUNGSTERMIN,
 							gcBerechnungsdatumVonI.getTime()));
 				}
 
 				if (gcBerechnungsdatumBisI.getTime() != null) {
-					critAngebot.add(Restrictions.lt(
-							AngebotFac.FLR_ANGEBOT_T_REALISIERUNGSTERMIN,
+					critAngebot.add(Restrictions.lt(AngebotFac.FLR_ANGEBOT_T_REALISIERUNGSTERMIN,
 							gcBerechnungsdatumBisI.getTime()));
 				}
 			}
@@ -477,8 +387,7 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 			Iterator<?> it = list.iterator();
 
 			while (it.hasNext()) {
-				FLRAngebotpositionReport flrangebotposition = (FLRAngebotpositionReport) it
-						.next();
+				FLRAngebotpositionReport flrangebotposition = (FLRAngebotpositionReport) it.next();
 
 				// der Beitrag der einzelnen Position in Angebotswaehrung
 				BigDecimal nBeitragDerPositionInAngebotswaehrung = flrangebotposition
@@ -486,27 +395,19 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 						.multiply(flrangebotposition.getN_menge());
 
 				BigDecimal nBeitragDerPositionInMandantenwaehrung = nBeitragDerPositionInAngebotswaehrung
-						.multiply(Helper
-								.getKehrwert(new BigDecimal(
-										flrangebotposition
-												.getFlrangebot()
-												.getF_wechselkursmandantwaehrungzuangebotswaehrung()
-												.doubleValue())));
+						.multiply(Helper.getKehrwert(new BigDecimal(flrangebotposition.getFlrangebot()
+								.getF_wechselkursmandantwaehrungzuangebotswaehrung().doubleValue())));
 
 				if (iIndexSpaltentyp == IDX_OFFENTERMINBEWERTET) {
-					double dAuftragswahrscheinlichkeit = flrangebotposition
-							.getFlrangebot().getF_auftragswahrscheinlichkeit()
-							.doubleValue();
+					double dAuftragswahrscheinlichkeit = flrangebotposition.getFlrangebot()
+							.getF_auftragswahrscheinlichkeit().doubleValue();
 
 					nBeitragDerPositionInMandantenwaehrung = nBeitragDerPositionInMandantenwaehrung
-							.multiply(new BigDecimal(
-									dAuftragswahrscheinlichkeit)
-									.movePointLeft(2));
+							.multiply(new BigDecimal(dAuftragswahrscheinlichkeit).movePointLeft(2));
 				}
 
 				nBeitragDerPositionInMandantenwaehrung = Helper
-						.rundeKaufmaennisch(
-								nBeitragDerPositionInMandantenwaehrung, 4);
+						.rundeKaufmaennisch(nBeitragDerPositionInMandantenwaehrung, 4);
 				checkNumberFormat(nBeitragDerPositionInMandantenwaehrung);
 
 				nGesamtwertInMandantenwaehrung = nGesamtwertInMandantenwaehrung
@@ -515,8 +416,7 @@ public class AngebotUebersichtHandler extends UmsatzUseCaseHandlerTabelle {
 				iIndex++;
 			}
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(t));
 		} finally {
 			try {
 				session.close();

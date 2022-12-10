@@ -42,11 +42,13 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.util.Helper;
 
 @NamedQueries({
 		@NamedQuery(name = "PersonalfindByPartnerIIdMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.partnerIId = ?1 AND c.mandantCNr = ?2"),
 		@NamedQuery(name = "PersonalfindByCPersonalnrMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.cPersonalnr = ?1 AND c.mandantCNr = ?2"),
+		@NamedQuery(name = "PersonalfindByBWepInfoMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.bWepInfo = ?1 AND c.mandantCNr = ?2"),
 		@NamedQuery(name = "PersonalfindByMandantCNrPersonalfunktionCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = ?1 AND c.personalfunktionCNr = ?2"),
 		@NamedQuery(name = "PersonalejbSelectNextPersonalnummer", query = "SELECT MAX (o.cPersonalnr) FROM Personal o WHERE o.mandantCNr = ?1"),
 		@NamedQuery(name = "PersonalfindByMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = ?1 ORDER BY c.cPersonalnr ASC"),
@@ -63,14 +65,15 @@ import com.lp.util.Helper;
 		@NamedQuery(name = "PersonalfindByFirmaPartnerIIdMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.partnerIIdFirma = ?1 AND c.mandantCNr = ?2"),
 		@NamedQuery(name = Personal.QUERY_ALL_PERSONAL_AUSWEISMANDANTOHNEVERSTECKT, query = "SELECT OBJECT(C) FROM Personal c WHERE c.cAusweis IS NOT NULL AND c.mandantCNr = ?1 and c.bVersteckt = 0 ORDER BY c.cPersonalnr ASC"),
 		@NamedQuery(name = PersonalQuery.ByMandantCnr, query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = :mandantCnr ORDER BY c.cPersonalnr ASC"),
-		@NamedQuery(name = PersonalQuery.ByMandantCnrWithEmail, query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = :mandantCnr AND c.cEmail IS NOT NULL ORDER BY c.cPersonalnr ASC")
-})
+		@NamedQuery(name = PersonalQuery.ByMandantCnrWithEmail, query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = :mandantCnr AND c.cEmail IS NOT NULL ORDER BY c.cPersonalnr ASC"),
+		@NamedQuery(name = Personal.QUERY_ALL_PERSONAL_EMAILOHNEVERSTECKT, query = "SELECT OBJECT(C) FROM Personal c WHERE c.cEmail = ?1 and c.bVersteckt = 0 ORDER BY c.iId") })
 @Entity
-@Table(name = "PERS_PERSONAL")
+@Table(name = ITablenames.PERS_PERSONAL)
 public class Personal implements Serializable {
 
 	public static final String QUERY_ALL_PERSONAL_AUSWEISMANDANTOHNEVERSTECKT = "PersonalfindByCAusweisMandantCNrOhneVerstecktSortiertNachIPersonalnr";
-
+	public static final String QUERY_ALL_PERSONAL_EMAILOHNEVERSTECKT = "PersonalfindByCEmailOhneVersteckt";
+	
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -84,6 +87,28 @@ public class Personal implements Serializable {
 	@Column(name = "B_MAENNLICH")
 	private Short bMaennlich;
 
+	@Column(name = "B_START_MIT_MEINEN_OFFENEN_PROJEKTEN")
+	private Short bStartMitMeinenOffenenProjekten;
+
+	public Short getBStartMitMeinenOffenenProjekten() {
+		return bStartMitMeinenOffenenProjekten;
+	}
+
+	public void setBStartMitMeinenOffenenProjekten(Short bStartMitMeinenOffenenProjekten) {
+		this.bStartMitMeinenOffenenProjekten = bStartMitMeinenOffenenProjekten;
+	}
+
+	@Column(name = "B_KEINE_ANZEIGE_AM_TERMINAL")
+	private Short bKeineAnzeigeAmTerminal;
+
+	public Short getBKeineAnzeigeAmTerminal() {
+		return bKeineAnzeigeAmTerminal;
+	}
+
+	public void setBKeineAnzeigeAmTerminal(Short bKeineAnzeigeAmTerminal) {
+		this.bKeineAnzeigeAmTerminal = bKeineAnzeigeAmTerminal;
+	}
+
 	@Column(name = "B_UEBERSTUNDENAUSBEZAHLT")
 	private Short bUeberstundenausbezahlt;
 
@@ -92,6 +117,18 @@ public class Personal implements Serializable {
 
 	@Column(name = "C_SOZIALVERSNR")
 	private String cSozialversnr;
+	
+	@Column(name = "C_VERSANDKENNWORT")
+	private String cVersandkennwort;
+	
+
+	public String getCVersandkennwort() {
+		return cVersandkennwort;
+	}
+
+	public void setCVersandkennwort(String cVersandkennwort) {
+		this.cVersandkennwort = cVersandkennwort;
+	}
 
 	@Column(name = "B_ANWESENHEITSLISTE")
 	private Short bAnwesenheitsliste;
@@ -116,6 +153,17 @@ public class Personal implements Serializable {
 
 	@Column(name = "B_VERSTECKT")
 	private Short bVersteckt;
+	
+	@Column(name = "B_WEP_INFO")
+	private Short bWepInfo;
+
+	public Short getBWepInfo() {
+		return bWepInfo;
+	}
+
+	public void setBWepInfo(Short bWepInfo) {
+		this.bWepInfo = bWepInfo;
+	}
 
 	@Column(name = "KOSTENSTELLE_I_ID_STAMM")
 	private Integer kostenstelleIIdStamm;
@@ -205,6 +253,17 @@ public class Personal implements Serializable {
 	@Column(name = "KOLLEKTIV_I_ID")
 	private Integer kollektivIId;
 
+	@Column(name = "MASCHINENGRUPPE_I_ID")
+	private Integer maschinengruppeIId;
+
+	public Integer getMaschinengruppeIId() {
+		return this.maschinengruppeIId;
+	}
+
+	public void setMaschinengruppeIId(Integer maschinengruppeIId) {
+		this.maschinengruppeIId = maschinengruppeIId;
+	}
+	
 	@Column(name = "LOHNGRUPPE_I_ID")
 	private Integer lohngruppeIId;
 
@@ -234,12 +293,27 @@ public class Personal implements Serializable {
 
 	@Column(name = "B_TELEFONZEITSTARTEN")
 	private Short bTelefonzeitstarten;
+
+	@Column(name = "B_KOMMT_AM_TERMINAL")
+	private Short bKommtAmTerminal;
+
+	@Column(name = "C_BCCEMPFAENGER")
+	private String cBccempfaenger;
 	
+	@Column(name = "B_SYNCH_ALLE_KONTAKTE")
+	private Short bSynchAlleKontakte;
+
+	public Short getBKommtAmTerminal() {
+		return bKommtAmTerminal;
+	}
+
+	public void setBKommtAmTerminal(Short bKommtAmTerminal) {
+		this.bKommtAmTerminal = bKommtAmTerminal;
+	}
 
 	@Column(name = "C_IMAPINBOXFOLDER")
-	private String cImapInboxFolder ;
+	private String cImapInboxFolder;
 
-	
 	public Short getBAnwesenheitalleterminal() {
 		return bAnwesenheitalleterminal;
 	}
@@ -247,7 +321,6 @@ public class Personal implements Serializable {
 	public void setBAnwesenheitalleterminal(Short bAnwesenheitalleterminal) {
 		this.bAnwesenheitalleterminal = bAnwesenheitalleterminal;
 	}
-	
 
 	public Short getBTelefonzeitstarten() {
 		return bTelefonzeitstarten;
@@ -292,13 +365,11 @@ public class Personal implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-
 	public Personal() {
 		super();
 	}
 
-	public Personal(Integer id, Integer partnerIId2, String mandantCNr2,
-			String personalnr, String personalartCNr2,
+	public Personal(Integer id, Integer partnerIId2, String mandantCNr2, String personalnr, String personalartCNr2,
 			Integer kostenstelleIIdStamm2) {
 		setIId(id);
 		setPartnerIId(partnerIId2);
@@ -315,13 +386,17 @@ public class Personal implements Serializable {
 		setBAnwesenheitTerminal(new Short((short) 0));
 		setBAnwesenheitalleterminal(new Short((short) 0));
 		setBTelefonzeitstarten(new Short((short) 0));
+		setBStartMitMeinenOffenenProjekten(new Short((short) 0));
+		setBKommtAmTerminal(new Short((short) 1));
+		setBKeineAnzeigeAmTerminal(new Short((short) 0));
+		setBWepInfo(new Short((short) 0));
+		setbSynchAlleKontakte(Short.valueOf((short) 0));
 	}
 
-	public Personal(Integer id, Integer partnerIId, String mandantCNr,
-			String personalnr, String personalartCNr, Short maennlich,
-			Short ueberstundenausbezahlt, Integer kostenstelleIIdStamm,
-			Short anwesenheitsliste, Short versteckt,
-			Short anwesenheitTerminal, Short anwesenheitAlleTerminal) {
+	public Personal(Integer id, Integer partnerIId, String mandantCNr, String personalnr, String personalartCNr,
+			Short maennlich, Short ueberstundenausbezahlt, Integer kostenstelleIIdStamm, Short anwesenheitsliste,
+			Short versteckt, Short anwesenheitTerminal, Short anwesenheitAlleTerminal,
+			Short bStartMitMeinenOffenenProjekten, Short bKommtAmTerminal,Short bKeineAnzeigeAmTerminal,Short bWepInfo) {
 		setIId(id);
 		setPartnerIId(partnerIId);
 		setMandantCNr(mandantCNr);
@@ -337,6 +412,12 @@ public class Personal implements Serializable {
 		setBAnwesenheitTerminal(anwesenheitTerminal);
 		setBAnwesenheitalleterminal(anwesenheitAlleTerminal);
 		setBTelefonzeitstarten(new Short((short) 0));
+		setBStartMitMeinenOffenenProjekten(bStartMitMeinenOffenenProjekten);
+		setBKommtAmTerminal(bKommtAmTerminal);
+		setBKeineAnzeigeAmTerminal(bKeineAnzeigeAmTerminal);
+		setBWepInfo(bWepInfo);
+		setbSynchAlleKontakte(Short.valueOf((short) 0));
+		
 	}
 
 	public Integer getIId() {
@@ -479,8 +560,7 @@ public class Personal implements Serializable {
 		return this.landIIdStaatsangehoerigkeit;
 	}
 
-	public void setLandIIdStaatsangehoerigkeit(
-			Integer landIIdStaatsangehoerigkeit) {
+	public void setLandIIdStaatsangehoerigkeit(Integer landIIdStaatsangehoerigkeit) {
 		this.landIIdStaatsangehoerigkeit = landIIdStaatsangehoerigkeit;
 	}
 
@@ -512,8 +592,7 @@ public class Personal implements Serializable {
 		return this.partnerIIdSozialversicherer;
 	}
 
-	public void setPartnerIIdSozialversicherer(
-			Integer partnerIIdSozialversicherer) {
+	public void setPartnerIIdSozialversicherer(Integer partnerIIdSozialversicherer) {
 		this.partnerIIdSozialversicherer = partnerIIdSozialversicherer;
 	}
 
@@ -619,5 +698,21 @@ public class Personal implements Serializable {
 
 	public void setCImapInboxFolder(String cImapInboxFolder) {
 		this.cImapInboxFolder = cImapInboxFolder;
+	}
+
+	public String getCBccempfaenger() {
+		return cBccempfaenger;
+	}
+
+	public void setCBccempfaenger(String cBccempfaenger) {
+		this.cBccempfaenger = cBccempfaenger;
+	}
+
+	public Short getbSynchAlleKontakte() {
+		return bSynchAlleKontakte;
+	}
+
+	public void setbSynchAlleKontakte(Short bSynchAlleKontakte) {
+		this.bSynchAlleKontakte = bSynchAlleKontakte;
 	}
 }

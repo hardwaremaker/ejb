@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.stueckliste.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
@@ -66,7 +34,7 @@ public class FLRStueckliste implements Serializable {
     private Integer fertigungsgruppe_i_id;
 
     /** nullable persistent field */
-    private Integer i_erfassungsfaktor;
+    private BigDecimal n_erfassungsfaktor;
 
     /** nullable persistent field */
     private Integer artikel_i_id;
@@ -87,6 +55,9 @@ public class FLRStueckliste implements Serializable {
     private BigDecimal n_defaultdurchlaufzeit;
 
     /** nullable persistent field */
+    private String c_fremdsystemnr;
+
+    /** nullable persistent field */
     private Integer partner_i_id;
 
     /** nullable persistent field */
@@ -104,21 +75,24 @@ public class FLRStueckliste implements Serializable {
     /** nullable persistent field */
     private FLRPersonal flrpersonal_freigabe;
 
+    private Short bMitFormeln;
+    
     /** full constructor */
-    public FLRStueckliste(String mandant_c_nr, String stuecklisteart_c_nr, Date t_aendernposition, Date t_freigabe, Date t_aendernarbeitsplan, Integer fertigungsgruppe_i_id, Integer i_erfassungsfaktor, Integer artikel_i_id, Short b_fremdfertigung, Short b_materialbuchungbeiablieferung, Short b_ausgabeunterstueckliste, BigDecimal n_losgroesse, BigDecimal n_defaultdurchlaufzeit, Integer partner_i_id, FLRArtikelliste flrartikel, com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe flrfertigungsgruppe, com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklistetextsuche flrstuecklistetextsuche, FLRPartner flrpartner, FLRPersonal flrpersonal_freigabe) {
+    public FLRStueckliste(String mandant_c_nr, String stuecklisteart_c_nr, Date t_aendernposition, Date t_freigabe, Date t_aendernarbeitsplan, Integer fertigungsgruppe_i_id, BigDecimal n_erfassungsfaktor, Integer artikel_i_id, Short b_fremdfertigung, Short b_materialbuchungbeiablieferung, Short b_ausgabeunterstueckliste, BigDecimal n_losgroesse, BigDecimal n_defaultdurchlaufzeit, String c_fremdsystemnr, Integer partner_i_id, FLRArtikelliste flrartikel, com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe flrfertigungsgruppe, com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklistetextsuche flrstuecklistetextsuche, FLRPartner flrpartner, FLRPersonal flrpersonal_freigabe) {
         this.mandant_c_nr = mandant_c_nr;
         this.stuecklisteart_c_nr = stuecklisteart_c_nr;
         this.t_aendernposition = t_aendernposition;
         this.t_freigabe = t_freigabe;
         this.t_aendernarbeitsplan = t_aendernarbeitsplan;
         this.fertigungsgruppe_i_id = fertigungsgruppe_i_id;
-        this.i_erfassungsfaktor = i_erfassungsfaktor;
+        this.n_erfassungsfaktor = n_erfassungsfaktor;
         this.artikel_i_id = artikel_i_id;
         this.b_fremdfertigung = b_fremdfertigung;
         this.b_materialbuchungbeiablieferung = b_materialbuchungbeiablieferung;
         this.b_ausgabeunterstueckliste = b_ausgabeunterstueckliste;
         this.n_losgroesse = n_losgroesse;
         this.n_defaultdurchlaufzeit = n_defaultdurchlaufzeit;
+        this.c_fremdsystemnr = c_fremdsystemnr;
         this.partner_i_id = partner_i_id;
         this.flrartikel = flrartikel;
         this.flrfertigungsgruppe = flrfertigungsgruppe;
@@ -187,12 +161,12 @@ public class FLRStueckliste implements Serializable {
         this.fertigungsgruppe_i_id = fertigungsgruppe_i_id;
     }
 
-    public Integer getI_erfassungsfaktor() {
-        return this.i_erfassungsfaktor;
+    public BigDecimal getN_erfassungsfaktor() {
+        return this.n_erfassungsfaktor;
     }
 
-    public void setI_erfassungsfaktor(Integer i_erfassungsfaktor) {
-        this.i_erfassungsfaktor = i_erfassungsfaktor;
+    public void setN_erfassungsfaktor(BigDecimal n_erfassungsfaktor) {
+        this.n_erfassungsfaktor = n_erfassungsfaktor;
     }
 
     public Integer getArtikel_i_id() {
@@ -241,6 +215,14 @@ public class FLRStueckliste implements Serializable {
 
     public void setN_defaultdurchlaufzeit(BigDecimal n_defaultdurchlaufzeit) {
         this.n_defaultdurchlaufzeit = n_defaultdurchlaufzeit;
+    }
+
+    public String getC_fremdsystemnr() {
+        return this.c_fremdsystemnr;
+    }
+
+    public void setC_fremdsystemnr(String c_fremdsystemnr) {
+        this.c_fremdsystemnr = c_fremdsystemnr;
     }
 
     public Integer getPartner_i_id() {
@@ -296,5 +278,13 @@ public class FLRStueckliste implements Serializable {
             .append("i_id", getI_id())
             .toString();
     }
+
+	public Short getB_mitFormeln() {
+		return bMitFormeln;
+	}
+
+	public void setB_mitFormeln(Short bMitFormeln) {
+		this.bMitFormeln = bMitFormeln;
+	}
 
 }

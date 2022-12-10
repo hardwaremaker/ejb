@@ -44,19 +44,31 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.server.util.ICNr;
+import com.lp.util.Helper;
 
 @NamedQueries({
 		@NamedQuery(name = "EingangsrechnungfindByBestellungIId", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.bestellungIId=?1"),
+		@NamedQuery(name = EingangsrechnungQuery.ByMandantBelegdatumBisStatusCNr, query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=:mandant AND o.tBelegdatum<:belegdatum AND o.statusCNr IN (:stati)"),
 		@NamedQuery(name = "EingangsrechnungfindByMandantBelegdatumVonBis", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=?1 AND o.tBelegdatum>=?2 AND o.tBelegdatum<?3"),
 		@NamedQuery(name = "EingangsrechnungfindByMandantFreigabedatumVonBis", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=?1 AND o.tFreigabedatum>=?2 AND o.tFreigabedatum<?3"),
+		@NamedQuery(name = "EingangsrechnungfindByMandantLieferantBelegdatumVonBis", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=?1 AND o.tBelegdatum>=?2 AND o.tBelegdatum<?3 AND o.lieferantIId = ?4"),
+		@NamedQuery(name = "EingangsrechnungfindByMandantLieferantFreigabedatumVonBis", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=?1 AND o.tFreigabedatum>=?2 AND o.tFreigabedatum<?3 AND o.lieferantIId = ?4"),
 		@NamedQuery(name = "EingangsrechnungfindByMandantLieferantIId", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=?1 AND o.lieferantIId=?2"),
+		@NamedQuery(name = EingangsrechnungQuery.ByMandantLieferantIIdStatusCNr, query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=:mandant AND o.lieferantIId=:lieferant AND o.statusCNr IN (:stati)"),
 		@NamedQuery(name = "EingangsrechnungfindByMandantCNr", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=?1"),
 		@NamedQuery(name = "EingangsrechnungfindByLieferantIIdCLieferantenrechnungsnummer", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.lieferantIId=?1 AND o.cLieferantenrechnungsnummer=?2"),
-		@NamedQuery(name = "EingangsrechnungfindByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = "EingangsrechnungfindByLieferantIIdStatusCNrEingangsrechnungartCNr", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.lieferantIId=?1 AND o.statusCNr=?2 AND o.eingangsrechnungartCNr=?3") })
+		@NamedQuery(name = EingangsrechnungQuery.ByCNrMandantCNr, query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "EingangsrechnungfindByLieferantIIdStatusCNrEingangsrechnungartCNr", query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.lieferantIId=?1 AND o.statusCNr=?2 AND o.eingangsrechnungartCNr=?3"),
+		@NamedQuery(name = EingangsrechnungQuery.ByMandantStatusCNr, query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=:mandant AND o.statusCNr IN (:stati)"),
+		@NamedQuery(name = EingangsrechnungQuery.ByMandantKundendatenStatusCNr, query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.mandantCNr=:mandant AND o.cKundendaten=:kundendaten AND o.statusCNr IN (:stati)"),
+		@NamedQuery(name = EingangsrechnungQuery.MaxCNr, query = "SELECT MAX(o.cNr) FROM Eingangsrechnung o WHERE o.mandantCNr=:mandant"),
+		@NamedQuery(name = EingangsrechnungQuery.MaxCNrByGeschaeftsjahr, query = "SELECT MAX(o.cNr) FROM Eingangsrechnung o WHERE o.mandantCNr=?1 AND o.iGeschaeftsjahr=?2"),
+		@NamedQuery(name = EingangsrechnungQuery.ByIIds, query = "SELECT OBJECT(o) FROM Eingangsrechnung o WHERE o.iId IN (?1)")
+})
 @Entity
-@Table(name = "ER_EINGANGSRECHNUNG")
+@Table(name = ITablenames.ER_EINGANGSRECHNUNG)
 public class Eingangsrechnung implements Serializable, ICNr {
 	@Id
 	@Column(name = "I_ID")
@@ -71,6 +83,13 @@ public class Eingangsrechnung implements Serializable, ICNr {
 	@Column(name = "T_FREIGABEDATUM")
 	private Date tFreigabedatum;
 
+	
+	@Column(name = "C_KOPFTEXTUEBERSTEUERT")
+	private String cKopftextuebersteuert;
+
+	@Column(name = "C_FUSSTEXTUEBERSTEUERT")
+	private String cFusstextuebersteuert;
+	
 	@Column(name = "C_TEXT")
 	private String cText;
 
@@ -85,6 +104,30 @@ public class Eingangsrechnung implements Serializable, ICNr {
 		this.cWeartikel = cWeartikel;
 	}
 
+	@Column(name = "T_GEPRUEFT")
+	private java.sql.Timestamp tGeprueft;
+
+	public java.sql.Timestamp getTGeprueft() {
+		return tGeprueft;
+	}
+
+	public void setTGeprueft(java.sql.Timestamp tGeprueft) {
+		this.tGeprueft = tGeprueft;
+	}
+
+	public Integer getPersonalIIdGeprueft() {
+		return personalIIdGeprueft;
+	}
+
+	public void setPersonalIIdGeprueft(Integer personalIIdGeprueft) {
+		this.personalIIdGeprueft = personalIIdGeprueft;
+	}
+
+	@Column(name = "PERSONAL_I_ID_GEPRUEFT")
+	private Integer personalIIdGeprueft;
+
+	
+	
 	@Column(name = "N_BETRAG")
 	private BigDecimal nBetrag;
 
@@ -123,6 +166,17 @@ public class Eingangsrechnung implements Serializable, ICNr {
 
 	@Column(name = "BESTELLUNG_I_ID")
 	private Integer bestellungIId;
+	
+	@Column(name = "PERSONAL_I_ID_ABW_BANKVERBINDUNG")
+	private Integer personalIIdAbwBankverbindung;
+
+	public Integer getPersonalIIdAbwBankverbindung() {
+		return personalIIdAbwBankverbindung;
+	}
+
+	public void setPersonalIIdAbwBankverbindung(Integer personalIIdAbwBankverbindung) {
+		this.personalIIdAbwBankverbindung = personalIIdAbwBankverbindung;
+	}
 
 	@Column(name = "EINGANGSRECHNUNGART_C_NR")
 	private String eingangsrechnungartCNr;
@@ -175,6 +229,17 @@ public class Eingangsrechnung implements Serializable, ICNr {
 	@Column(name = "B_REVERSECHARGE")
 	private Short bReversecharge;
 
+	@Column(name = "B_MITPOSITIONEN")
+	private Short bMitpositionen;
+
+	public Short getBMitpositionen() {
+		return bMitpositionen;
+	}
+
+	public void setBMitpositionen(Short bMitpositionen) {
+		this.bMitpositionen = bMitpositionen;
+	}
+
 	@Column(name = "B_IGERWERB")
 	private Short bIgErwerb;
 
@@ -206,8 +271,27 @@ public class Eingangsrechnung implements Serializable, ICNr {
 	@Column(name = "PERSONAL_I_ID_ZOLLIMPORTPAPIER")
 	private Integer personalIIdZollimportpapier;
 
+	public String getCKopftextuebersteuert() {
+		return this.cKopftextuebersteuert;
+	}
+
+	public void setCKopftextuebersteuert(String cKopftextuebersteuert) {
+		this.cKopftextuebersteuert = cKopftextuebersteuert;
+	}
+
+	public String getCFusstextuebersteuert() {
+		return this.cFusstextuebersteuert;
+	}
+
+	public void setCFusstextuebersteuert(String cFusstextuebersteuert) {
+		this.cFusstextuebersteuert = cFusstextuebersteuert;
+	}
+	
 	@Column(name = "C_ZOLLIMPORTPAPIER")
 	private String cZollimportpapier;
+
+	@Column(name = "REVERSECHARGEART_I_ID")
+	private Integer reversechargeartId ;
 
 	public String getCZollimportpapier() {
 		return cZollimportpapier;
@@ -263,7 +347,7 @@ public class Eingangsrechnung implements Serializable, ICNr {
 			BigDecimal betragfw, BigDecimal ustBetrag, BigDecimal ustBetragfw,
 			Integer mwstsatzIId, BigDecimal kurs, String waehrungCNr,
 			String statusCNr, Integer personalIIdAnlegen,
-			Integer personalIIdAendern, Short bReversecharge, Short bIgErwerb) {
+			Integer personalIIdAendern, Short bIgErwerb, Short bMitpositionen, Integer reversechargeartId) {
 		setIId(id);
 		setCNr(nr);
 		setIGeschaeftsjahr(geschaeftsjahr);
@@ -282,15 +366,16 @@ public class Eingangsrechnung implements Serializable, ICNr {
 		setStatusCNr(statusCNr);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
-		setBReversecharge(bReversecharge);
+		setBReversecharge(Helper.getShortFalse());
 		setBIgErwerb(bIgErwerb);
-
+		setBMitpositionen(bMitpositionen);
+		setReversechargeartIId(reversechargeartId);
+		
 		// Setzen der NOT NULL Felder
 		java.sql.Timestamp timestamp = new java.sql.Timestamp(
 				System.currentTimeMillis());
 		this.setTAendern(timestamp);
 		this.setTAnlegen(timestamp);
-
 	}
 
 	public Integer getIId() {
@@ -600,4 +685,11 @@ public class Eingangsrechnung implements Serializable, ICNr {
 		return bIgErwerb;
 	}
 
+	public Integer getReversechargeartIId() {
+		return reversechargeartId ;
+	}
+	
+	public void setReversechargeartIId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId ;
+	}
 }

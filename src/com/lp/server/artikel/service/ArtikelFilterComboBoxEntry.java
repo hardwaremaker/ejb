@@ -46,6 +46,16 @@ public class ArtikelFilterComboBoxEntry implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private String filterExpression = null;
+	
+	private String filterExpressionOhneKlammern = null;
+
+	public String getFilterExpressionOhneKlammern() {
+		return filterExpressionOhneKlammern;
+	}
+
+	public void setFilterExpressionOhneKlammern(String filterExpressionOhneKlammern) {
+		this.filterExpressionOhneKlammern = filterExpressionOhneKlammern;
+	}
 
 	public String getFilterExpression() {
 		return filterExpression;

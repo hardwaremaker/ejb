@@ -45,7 +45,6 @@ public class BehandlungDtoAssembler {
 		if (beurteilung != null) {
 			beurteilungDto.setIId(beurteilung.getIId());
 			beurteilungDto.setCNr(beurteilung.getCNr());
-			beurteilungDto.setCBez(beurteilung.getCBez());
 			beurteilungDto.setIPunkte(beurteilung.getIPunkte());
 		}
 		return beurteilungDto;

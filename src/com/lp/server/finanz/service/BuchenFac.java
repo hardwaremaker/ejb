@@ -123,6 +123,11 @@ public interface BuchenFac {
 			int geschaftsjahr, int periode, boolean kummuliert,
 			String waehrungCNr, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+	
+	public BigDecimal getSaldoVonKontoByAuszugInWaehrung(Integer kontoIId, 
+			int geschaeftsjahr, Integer iAuszugBisInklusiv, boolean kummuliert,
+			boolean inklEB, String waehrungCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public void pruefeBuchung(BuchungDto buchungDto,
 			BuchungdetailDto[] buchungdetailDtos, boolean pruefeBuchungsregeln)
@@ -139,7 +144,7 @@ public interface BuchenFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public BuchungDto buchen(BuchungDto buchungDto,
-			BuchungdetailDto[] buchungdetailDtos, boolean pruefeBuchungsregeln,
+			BuchungdetailDto[] buchungdetailDtos, Integer reversechargeartId, boolean pruefeBuchungsregeln,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public Map<?, ?> getListeDerGegenkonten(Integer buchungdetailIId,
@@ -184,6 +189,9 @@ public interface BuchenFac {
 
 	public List<Integer> getOffenePosten(Integer kontoIId, String kontotypCNr,
 			int geschaeftsjahr, TheClientDto theClientDto);
+
+	public List<Integer> getAlleAzk(Integer kontoIId,
+			int geschaftsjahr, int periode, TheClientDto theClientDto);
 
 	/**
 	 * Erzeugen eines Saldovortrags/Perioden&uuml;bernahme f&uuml;r ein Personenkonto</br>
@@ -266,7 +274,7 @@ public interface BuchenFac {
 	public boolean isKontoMitEBKonsistent(Integer kontoIId, int geschaeftsjahr,
 			TheClientDto theClientDto);
 
-	public BigDecimal getSaldoUVAOhneEBVonKonto(Integer i_id,
+	public SaldoInfoDto[] getSaldoUVAOhneEBVonKonto(Integer i_id,
 			int iGeschaeftsjahr, int iPeriode, TheClientDto theClientDto);
 
 	/**
@@ -285,4 +293,70 @@ public interface BuchenFac {
 	 * @return der aktuelle Saldo des Kontos
 	 */
 	public BigDecimal getAktuellenSaldoVonKontoFuerGeschaeftsjahr(Integer kontoIId, Integer geschaftsjahrIId);
+	
+	/**
+	 * Ermittelt die naechstniedrigere bzw. naechste Auszugsnummer. Wird im aktuellen GJ keine
+	 * niedrigere gefunden, wird das vorangegangene GJ nach der naechsten durchsucht und
+	 * geliefert.
+	 * Wird kein Resultat gefunden wird null zurueckgeliefert.
+	 *  
+	 * @param kontoIId
+	 * @param auszugsNr
+	 * @param datum Datum, das in dem GJ liegt, in dem gesucht werden soll
+	 * @param theClientDto
+	 * @return naechstniedrigere Auszugsnummer
+	 */
+	public Integer getNaechstNiedrigereAuszugsNr(Integer kontoIId, Integer auszugsNr, Date datum,
+			TheClientDto theClientDto);
+	
+	/**
+	 * Ermittelt, ob die angegebene Buchung-IId eine bereits stornierte Buchung betrifft
+	 * @param buchungIId die zu pr&uuml;fende Buchung(IId)
+	 * @return true wenn die Buchung bereits storniert ist
+	 */
+	boolean istBuchungStorniert(Integer buchungIId) ;
+	
+	/**
+	 * Den Saldo aller Ust(Oder)Erwerbsteuerkonten abz&uuml;glich dem Saldo der Zahllastkonten</br>
+	 * <p>Wenn keine Konten f&uuml;r UstErwerbsteuer bzw. Zahllast definiert sind, wird null
+	 * zur&uuml;ckgeliefert</p>
+	 * 
+	 * @param geschaeftsjahr das Geschaeftsjahr
+	 * @param periode die Periode
+	 * @param finanzamtId das Finanzamt 
+	 * @param theClientDto
+	 * @return null wenn Konten nicht definiert sind, sonst der Saldo
+	 * @throws RemoteException
+	 */
+	BigDecimal getSaldoUstOhneZahllast(Integer geschaeftsjahr, int periode, 
+			Integer finanzamtId, TheClientDto theClientDto) throws RemoteException ;
+	
+	boolean existsBuchungenMitAuszugsNr(Integer kontoIId, Integer iAuszug, Date buchungsdatum, TheClientDto theClientDto);
+
+	Timestamp[] getDatumbereichPeriodeGJUva(Integer geschaeftsjahr, int periode, TheClientDto theClientDto);
+
+	BigDecimal getSaldoOhneEBVonKonto(Integer kontoId, Timestamp tBeginn, Timestamp tEnde, boolean kummuliert,
+			TheClientDto theClientDto);
+
+	BigDecimal getSummeEroeffnungKontoIId(Integer kontoIId, Timestamp tBeginn, Timestamp tEnde);
+
+	BigDecimal getSaldoVonKontoInWaehrung(Integer kontoIId, Timestamp tBeginn, Timestamp tEnde, boolean kummuliert,
+			String waehrungCNr, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	BigDecimal getSummeEroeffnungKontoIIdInWaehrung(Integer kontoIId, Timestamp tBeginn, Timestamp tEnd,
+			String waehrungCNr, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	
+	Integer getNaechstNiedrigereAuszugsNr(Integer kontoIId, Integer auszugsNr, Integer geschaeftsjahr, 
+			TheClientDto theClientDto);
+
+	void storniereGVbuchungen(int geschaeftsjahr, Date buchungsDatum, int finanzamtIId, TheClientDto theClientDto);
+
+	/**
+	 * Den Saldo des Kontos fuer das ganze Geschaeftsjahr ermitteln
+	 * 
+	 * @param kontoIId
+	 * @param geschaftsjahrIId
+	 * @return
+	 */
+	BigDecimal getAktuellenSaldoVonKontoFuerGanzesGeschaeftsjahr(Integer kontoIId, Integer geschaftsjahrIId);
 }

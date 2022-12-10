@@ -1,43 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.system.fastlanereader.generated;
 
+import com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle;
 import java.io.Serializable;
 import java.util.Date;
-
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-import com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle;
 
 /** @author Hibernate CodeGenerator */
 public class FLRTheClient implements Serializable {
@@ -66,11 +33,16 @@ public class FLRTheClient implements Serializable {
     /** persistent field */
     private Date t_loggedout;
 
+    /** persistent field */
+    private Integer i_rmiport;
+
     /** nullable persistent field */
     private FLRSystemrolle flrsystemrolle;
 
+    private Integer hvmalizenz_IId;
+    
     /** full constructor */
-    public FLRTheClient(String c_benutzername, String c_mandant, Integer i_personal, String c_uisprache, String c_konzernsprache, Date t_loggedin, Date t_loggedout, FLRSystemrolle flrsystemrolle) {
+    public FLRTheClient(String c_benutzername, String c_mandant, Integer i_personal, String c_uisprache, String c_konzernsprache, Date t_loggedin, Date t_loggedout, Integer i_rmiport, Integer hvmalizenz_i_id, FLRSystemrolle flrsystemrolle) {
         this.c_benutzername = c_benutzername;
         this.c_mandant = c_mandant;
         this.i_personal = i_personal;
@@ -78,7 +50,9 @@ public class FLRTheClient implements Serializable {
         this.c_konzernsprache = c_konzernsprache;
         this.t_loggedin = t_loggedin;
         this.t_loggedout = t_loggedout;
+        this.i_rmiport = i_rmiport;
         this.flrsystemrolle = flrsystemrolle;
+        this.hvmalizenz_IId = hvmalizenz_i_id;
     }
 
     /** default constructor */
@@ -86,7 +60,7 @@ public class FLRTheClient implements Serializable {
     }
 
     /** minimal constructor */
-    public FLRTheClient(String c_benutzername, String c_mandant, Integer i_personal, String c_uisprache, String c_konzernsprache, Date t_loggedin, Date t_loggedout) {
+    public FLRTheClient(String c_benutzername, String c_mandant, Integer i_personal, String c_uisprache, String c_konzernsprache, Date t_loggedin, Date t_loggedout, Integer i_rmiport) {
         this.c_benutzername = c_benutzername;
         this.c_mandant = c_mandant;
         this.i_personal = i_personal;
@@ -94,6 +68,7 @@ public class FLRTheClient implements Serializable {
         this.c_konzernsprache = c_konzernsprache;
         this.t_loggedin = t_loggedin;
         this.t_loggedout = t_loggedout;
+        this.i_rmiport = i_rmiport;
     }
 
     public String getCnr() {
@@ -160,6 +135,14 @@ public class FLRTheClient implements Serializable {
         this.t_loggedout = t_loggedout;
     }
 
+    public Integer getI_rmiport() {
+        return this.i_rmiport;
+    }
+
+    public void setI_rmiport(Integer i_rmiport) {
+        this.i_rmiport = i_rmiport;
+    }
+
     public FLRSystemrolle getFlrsystemrolle() {
         return this.flrsystemrolle;
     }
@@ -174,4 +157,11 @@ public class FLRTheClient implements Serializable {
             .toString();
     }
 
+	public Integer getHvmalizenz_IId() {
+		return hvmalizenz_IId;
+	}
+
+	public void setHvmalizenz_IId(Integer hvmalizenz_i_id) {
+		this.hvmalizenz_IId = hvmalizenz_i_id;
+	}
 }

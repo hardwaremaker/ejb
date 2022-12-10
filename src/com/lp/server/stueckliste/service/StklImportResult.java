@@ -50,7 +50,8 @@ public class StklImportResult implements Serializable, IStklImportResult{
 	
 	private Map<String, String> values;
 	
-	private boolean sokoUpdate = true;
+	private boolean artikelnrMappingUpdate = true;
+	private boolean uebernehmeLiefPreisInBestellung = false;
 
 	@Override
 	public List<ArtikelDto> getFoundItems() {
@@ -69,7 +70,7 @@ public class StklImportResult implements Serializable, IStklImportResult{
 
 	@Override
 	public void setTotalMatch(boolean totalMatch) {
-		sokoUpdate = !totalMatch;
+		artikelnrMappingUpdate = !totalMatch;
 		this.totalMatch = totalMatch;
 	}
 
@@ -104,13 +105,13 @@ public class StklImportResult implements Serializable, IStklImportResult{
 	}
 
 	@Override
-	public void setSokoUpdate(boolean sokoUpdate) {
-		this.sokoUpdate = sokoUpdate;
+	public void setUpdateArtikelnummerMapping(boolean updateArtikelnummerMapping) {
+		this.artikelnrMappingUpdate = updateArtikelnummerMapping;
 	}
 
 	@Override
-	public boolean getSokoUpdate() {
-		return sokoUpdate;
+	public boolean isUpdateArtikelnummerMapping() {
+		return artikelnrMappingUpdate;
 	}
 
 	@Override
@@ -122,4 +123,15 @@ public class StklImportResult implements Serializable, IStklImportResult{
 	public boolean foundTooManyArticles() {
 		return foundTooManyArticles;
 	}
+
+	@Override
+	public boolean uebernehmeLiefPreisInBestellung() {
+		return uebernehmeLiefPreisInBestellung;
+	}
+
+	@Override
+	public void setUebernehmeLiefPreisInBestellung(boolean uebernehmen) {
+		this.uebernehmeLiefPreisInBestellung = uebernehmen;		
+	}
+	
 }

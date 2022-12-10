@@ -33,6 +33,7 @@
 package com.lp.server.finanz.service;
 
 import java.io.Serializable;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -40,8 +41,9 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 /** @author Hibernate CodeGenerator */
 public class FLRKontolaenderartPK implements Serializable {
+	private static final long serialVersionUID = 2924509899063820837L;
 
-    /** identifier field */
+	/** identifier field */
     private Integer konto_i_id;
 
     /** identifier field */
@@ -53,12 +55,15 @@ public class FLRKontolaenderartPK implements Serializable {
     /** identifier field */
     private String mandant_c_nr;
 
+    private Integer reversechargeart_i_id ;
+    
     /** full constructor */
-    public FLRKontolaenderartPK(Integer konto_i_id, String laenderart_c_nr, Integer finanzamt_i_id, String mandant_c_nr) {
+    public FLRKontolaenderartPK(Integer konto_i_id, String laenderart_c_nr, Integer finanzamt_i_id, String mandant_c_nr, Integer reversechargeart_i_id) {
         this.konto_i_id = konto_i_id;
         this.laenderart_c_nr = laenderart_c_nr;
         this.finanzamt_i_id = finanzamt_i_id;
         this.mandant_c_nr = mandant_c_nr;
+        this.setReversechargeart_i_id(reversechargeart_i_id) ;
     }
 
     /** default constructor */
@@ -97,12 +102,22 @@ public class FLRKontolaenderartPK implements Serializable {
         this.mandant_c_nr = mandant_c_nr;
     }
 
-    public String toString() {
+	public Integer getReversechargeart_i_id() {
+		return reversechargeart_i_id;
+	}
+
+	public void setReversechargeart_i_id(Integer reversechargeart_i_id) {
+		this.reversechargeart_i_id = reversechargeart_i_id;
+	}
+
+
+	public String toString() {
         return new ToStringBuilder(this)
             .append("konto_i_id", getKonto_i_id())
             .append("laenderart_c_nr", getLaenderart_c_nr())
             .append("finanzamt_i_id", getFinanzamt_i_id())
             .append("mandant_c_nr", getMandant_c_nr())
+            .append("reversechargeart_i_id", getReversechargeart_i_id())
             .toString();
     }
 
@@ -115,6 +130,7 @@ public class FLRKontolaenderartPK implements Serializable {
             .append(this.getLaenderart_c_nr(), castOther.getLaenderart_c_nr())
             .append(this.getFinanzamt_i_id(), castOther.getFinanzamt_i_id())
             .append(this.getMandant_c_nr(), castOther.getMandant_c_nr())
+            .append(this.getReversechargeart_i_id(), castOther.getReversechargeart_i_id())
             .isEquals();
     }
 
@@ -124,7 +140,7 @@ public class FLRKontolaenderartPK implements Serializable {
             .append(getLaenderart_c_nr())
             .append(getFinanzamt_i_id())
             .append(getMandant_c_nr())
+            .append(getReversechargeart_i_id())
             .toHashCode();
     }
-
 }

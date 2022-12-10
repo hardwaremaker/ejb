@@ -43,7 +43,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "ZahlungsvorschlagfindByZahlungsvorschlaglaufIId", query = "SELECT OBJECT(o) FROM Zahlungsvorschlag o WHERE o.zahlungsvorschlaglaufIId=?1") })
+@NamedQueries( { 
+		@NamedQuery(name = "ZahlungsvorschlagfindByZahlungsvorschlaglaufIId", query = "SELECT OBJECT(o) FROM Zahlungsvorschlag o WHERE o.zahlungsvorschlaglaufIId=?1"),
+		@NamedQuery(name = ZahlungsvorschlagQuery.ByCAuftraggeberreferenz, query = "SELECT OBJECT(o) FROM Zahlungsvorschlag o WHERE o.cAuftraggeberreferenz=:referenz")})
 @Entity
 @Table(name = "ER_ZAHLUNGSVORSCHLAG")
 public class Zahlungsvorschlag implements Serializable {
@@ -76,6 +78,9 @@ public class Zahlungsvorschlag implements Serializable {
 
 	@Column(name = "ZAHLUNGSVORSCHLAGLAUF_I_ID")
 	private Integer zahlungsvorschlaglaufIId;
+	
+	@Column(name = "C_AUFTRAGGEBERREFERENZ")
+	private String cAuftraggeberreferenz;
 
 	private static final long serialVersionUID = 1L;
 
@@ -177,6 +182,14 @@ public class Zahlungsvorschlag implements Serializable {
 
 	public void setZahlungsvorschlaglaufIId(Integer zahlungsvorschlaglaufIId) {
 		this.zahlungsvorschlaglaufIId = zahlungsvorschlaglaufIId;
+	}
+
+	public String getCAuftraggeberreferenz() {
+		return cAuftraggeberreferenz;
+	}
+
+	public void setCAuftraggeberreferenz(String cAuftraggeberreferenz) {
+		this.cAuftraggeberreferenz = cAuftraggeberreferenz;
 	}
 
 }

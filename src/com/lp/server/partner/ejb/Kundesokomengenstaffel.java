@@ -45,7 +45,7 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "KundesokomengenstaffelfindByKundesokoIId", query = "SELECT OBJECT (o) FROM Kundesokomengenstaffel o WHERE o.kundesokoIId=?1 ORDER BY o.nMenge"),
 		@NamedQuery(name = "KundesokomengenstaffelfindByKundesokoIIdNMenge", query = "SELECT OBJECT (o) FROM Kundesokomengenstaffel o WHERE o.kundesokoIId=?1 AND o.nMenge<=?2 ORDER BY o.nMenge"),
-		@NamedQuery(name = "KundesokomengenstaffelfindByUniqueKey", query = "SELECT OBJECT (o) FROM Kundesokomengenstaffel o WHERE o.kundesokoIId=?1 AND o.nMenge=?2") })
+		@NamedQuery(name = "KundesokomengenstaffelfindByUniqueKey", query = "SELECT OBJECT (o) FROM Kundesokomengenstaffel o WHERE o.kundesokoIId=?1 AND o.nMenge=?2"), })
 @Entity
 @Table(name = "PART_KUNDESOKOMENGENSTAFFEL")
 public class Kundesokomengenstaffel implements Serializable {

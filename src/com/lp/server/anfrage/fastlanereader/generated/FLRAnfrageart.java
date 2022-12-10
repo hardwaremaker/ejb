@@ -52,10 +52,10 @@ public class FLRAnfrageart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> anfrageart_anfrageart_set;
+	private Set<FLRAnfrageartspr> anfrageart_anfrageart_set;
 
 	/** full constructor */
-	public FLRAnfrageart(Integer i_sort, Set<?> anfrageart_anfrageart_set) {
+	public FLRAnfrageart(Integer i_sort, Set<FLRAnfrageartspr> anfrageart_anfrageart_set) {
 		this.i_sort = i_sort;
 		this.anfrageart_anfrageart_set = anfrageart_anfrageart_set;
 	}
@@ -65,7 +65,7 @@ public class FLRAnfrageart implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRAnfrageart(Set<?> anfrageart_anfrageart_set) {
+	public FLRAnfrageart(Set<FLRAnfrageartspr> anfrageart_anfrageart_set) {
 		this.anfrageart_anfrageart_set = anfrageart_anfrageart_set;
 	}
 
@@ -85,11 +85,11 @@ public class FLRAnfrageart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getAnfrageart_anfrageart_set() {
+	public Set<FLRAnfrageartspr> getAnfrageart_anfrageart_set() {
 		return this.anfrageart_anfrageart_set;
 	}
 
-	public void setAnfrageart_anfrageart_set(Set<?> anfrageart_anfrageart_set) {
+	public void setAnfrageart_anfrageart_set(Set<FLRAnfrageartspr> anfrageart_anfrageart_set) {
 		this.anfrageart_anfrageart_set = anfrageart_anfrageart_set;
 	}
 

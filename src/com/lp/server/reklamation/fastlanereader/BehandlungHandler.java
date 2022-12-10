@@ -43,6 +43,9 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.reklamation.fastlanereader.generated.FLRBehandlung;
+import com.lp.server.reklamation.fastlanereader.generated.FLRBehandlungspr;
+import com.lp.server.reklamation.fastlanereader.generated.FLRSchwere;
+import com.lp.server.reklamation.fastlanereader.generated.FLRSchwerespr;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -52,6 +55,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -89,6 +93,7 @@ public class BehandlungHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
+			session = setFilter(session);
 			String queryString = this.getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
@@ -99,11 +104,18 @@ public class BehandlungHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
+			String sLocUI = Helper.locale2String(theClientDto
+					.getLocUi());
+			
 			while (resultListIterator.hasNext()) {
-				FLRBehandlung massnahme = (FLRBehandlung) resultListIterator.next();
+				Object o[] = (Object[]) resultListIterator.next();
+				FLRBehandlung massnahme = (FLRBehandlung) o[0];
+				
 				rows[row][col++] = massnahme.getI_id();
 				rows[row][col++] = massnahme.getC_nr();
-				rows[row++][col++] = massnahme.getC_bez();
+				Iterator<?> sprsetIterator = massnahme.getSprset()
+						.iterator();
+				rows[row++][col++] = findSpr(sLocUI, sprsetIterator);
 
 				col = 0;
 			}
@@ -120,13 +132,26 @@ public class BehandlungHandler extends UseCaseHandler {
 		}
 		return result;
 	}
+	private String findSpr(String sLocaleI, Iterator<?> iterUebersetzungenI) {
 
+		String sUebersetzung = null;
+		while (iterUebersetzungenI.hasNext()) {
+			FLRBehandlungspr spr = (FLRBehandlungspr) iterUebersetzungenI
+					.next();
+			if (spr.getLocale().getC_nr().compareTo(sLocaleI) == 0) {
+				sUebersetzung = spr.getC_bez();
+				break;
+			}
+		}
+		return sUebersetzung;
+	}
 	protected long getRowCountFromDataBase() {
 		long rowCount = 0;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 		try {
 			session = factory.openSession();
+			session = setFilter(session);
 			String queryString = "select count(*) " + this.getFromClause()
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
@@ -171,10 +196,10 @@ public class BehandlungHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(behandlung."
+						where.append(" upper("
 								+ filterKriterien[i].kritName + ")");
 					} else {
-						where.append(" behandlung." + filterKriterien[i].kritName);
+						where.append(" " + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
@@ -211,7 +236,7 @@ public class BehandlungHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("behandlung." + kriterien[i].kritName);
+						orderBy.append("" + kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -249,7 +274,7 @@ public class BehandlungHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRBehandlung behandlung ";
+		return "from FLRBehandlung behandlung LEFT JOIN behandlung.sprset AS sprset ";
 	}
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -265,7 +290,8 @@ public class BehandlungHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select behandlung.i_id from FLRBehandlung behandlung "
+				session = setFilter(session);
+				String queryString = "select behandlung.i_id from FLRBehandlung behandlung  LEFT JOIN behandlung.sprset AS sprset"
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -314,7 +340,7 @@ public class BehandlungHandler extends UseCaseHandler {
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
-			new String[] { "i_id", "c_nr", "c_bez" }));
+			new String[] { "i_id", "behandlung.c_nr", "sprset.c_bez" }));
 		}
 
 		return super.getTableInfo();

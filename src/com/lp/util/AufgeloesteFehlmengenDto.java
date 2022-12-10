@@ -34,6 +34,9 @@ package com.lp.util;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+
+import javax.persistence.Column;
 
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.LagerDto;
@@ -82,6 +85,16 @@ public class AufgeloesteFehlmengenDto implements Serializable {
 	private LagerDto lagerDto;
 	private String lagerCNr;
 	private LieferscheinDto lieferscheinDto;
+	
+	public ArtikelDto getArtikelDtoErsterOffenerAG() {
+		return artikelDtoErsterOffenerAG;
+	}
+
+	public void setArtikelDtoErsterOffenerAG(ArtikelDto artikelDtoErsterOffenerAG) {
+		this.artikelDtoErsterOffenerAG = artikelDtoErsterOffenerAG;
+	}
+
+	private ArtikelDto artikelDtoErsterOffenerAG;
 
 	public LieferscheinDto getLieferscheinDto() {
 		return lieferscheinDto;
@@ -96,6 +109,16 @@ public class AufgeloesteFehlmengenDto implements Serializable {
 
 	public void setArtikelCNr(String artikelCNr) {
 		this.artikelCNr = artikelCNr;
+	}
+	
+	private BigDecimal lagerstand;
+
+	public BigDecimal getLagerstand() {
+		return lagerstand;
+	}
+
+	public void setLagerstand(BigDecimal lagerstand) {
+		this.lagerstand = lagerstand;
 	}
 
 	private BigDecimal aufgeloesteMenge;
@@ -161,4 +184,29 @@ public class AufgeloesteFehlmengenDto implements Serializable {
 	public String[] getSSeriennrChnr() {
 		return sSeriennrChnr;
 	}
+	
+
+	public Timestamp getTAnlegen() {
+		return tAnlegen;
+	}
+
+	public void setTAnlegen(Timestamp tAnlegen) {
+		this.tAnlegen = tAnlegen;
+	}
+
+	private Timestamp tAnlegen;
+	
+	private String kurzzeichenPersonalAnlegen;
+
+	
+
+	public String getKurzzeichenPersonalAnlegen() {
+		return kurzzeichenPersonalAnlegen;
+	}
+
+	public void setKurzzeichenPersonalAnlegen(String kurzzeichenPersonalAnlegen) {
+		this.kurzzeichenPersonalAnlegen = kurzzeichenPersonalAnlegen;
+	}
+	
+	
 }

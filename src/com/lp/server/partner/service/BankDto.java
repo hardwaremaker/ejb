@@ -34,7 +34,12 @@ package com.lp.server.partner.service;
 
 import java.io.Serializable;
 
-public class BankDto implements Serializable {
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIgnore;
+import com.lp.server.util.IIId;
+
+@HvDtoLogClass(name = HvDtoLogClass.BANK)
+public class BankDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
@@ -43,6 +48,15 @@ public class BankDto implements Serializable {
 	private String cBlz;
 	private String cBic;
 	private Integer partnerIIdNeuAus = null;
+
+	
+	public Integer getIId() {
+		return partnerIId;
+	}
+
+	public void setIId(Integer iId) {
+		this.partnerIId = iId;
+	}
 
 	// Manuell hinzugefuegt.
 	private PartnerDto partnerDto = new PartnerDto();
@@ -79,16 +93,13 @@ public class BankDto implements Serializable {
 			return false;
 		}
 		BankDto that = (BankDto) obj;
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId))) {
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId))) {
 			return false;
 		}
-		if (!(that.cBlz == null ? this.cBlz == null : that.cBlz
-				.equals(this.cBlz))) {
+		if (!(that.cBlz == null ? this.cBlz == null : that.cBlz.equals(this.cBlz))) {
 			return false;
 		}
-		if (!(that.cBic == null ? this.cBic == null : that.cBic
-				.equals(this.cBic))) {
+		if (!(that.cBic == null ? this.cBic == null : that.cBic.equals(this.cBic))) {
 			return false;
 		}
 		return true;
@@ -110,6 +121,7 @@ public class BankDto implements Serializable {
 		return returnString;
 	}
 
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerDto() {
 		return partnerDto;
 	}

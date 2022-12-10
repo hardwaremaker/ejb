@@ -32,9 +32,10 @@
  ******************************************************************************/
 package com.lp.server.fertigung.service;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
-public class ReportLosnachkalkulationDto {
+public class ReportLosnachkalkulationDto implements Serializable {
 	private String sArtikelnummer = null;
 	private String sBezeichnung = null;
 	private BigDecimal bdSollmenge = null;
@@ -43,6 +44,24 @@ public class ReportLosnachkalkulationDto {
 	private BigDecimal bdSollpreis = null;
 	private BigDecimal bdIstpreis = null;
 	private BigDecimal bdSollmengeMaschine;
+	private Boolean bFertig=null;
+	private Integer iHoechsterArbeitsgang=null;
+
+	public Integer getIHoechsterArbeitsgang() {
+		return iHoechsterArbeitsgang;
+	}
+
+	public void setIHoechsterArbeitsgang(Integer iHoechsterArbeitsgang) {
+		this.iHoechsterArbeitsgang = iHoechsterArbeitsgang;
+	}
+
+	public Boolean getBFertig() {
+		return bFertig;
+	}
+
+	public void setBFertig(Boolean bFertig) {
+		this.bFertig = bFertig;
+	}
 
 	public ReportLosnachkalkulationDto() {
 		bdSollmenge = new BigDecimal(0);

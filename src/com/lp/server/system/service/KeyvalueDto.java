@@ -35,14 +35,26 @@ package com.lp.server.system.service;
 import java.io.Serializable;
 
 public class KeyvalueDto implements Serializable {
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = 1L;
 	private String cGruppe;
 	private String cKey;
 	private String cValue;
 	private String cDatentyp;
+
+	public KeyvalueDto() {
+
+	}
+
+	public KeyvalueDto(String cKey, String cValue) {
+		this.cKey = cKey;
+		
+		if(cValue!=null && cValue.length()>=3000){
+			cValue=cValue.substring(0, 2999);
+		}
+		this.cValue = cValue;
+		this.cDatentyp="java.lang.String";
+	}
 
 	public String getCGruppe() {
 		return cGruppe;

@@ -32,10 +32,13 @@
  ******************************************************************************/
 package com.lp.server.projekt.fastlanereader;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+
+import javax.swing.Icon;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -45,7 +48,9 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.projekt.fastlanereader.generated.FLRProjektQueue;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche;
 import com.lp.server.projekt.service.ProjektFac;
+import com.lp.server.projekt.service.ProjektServiceFac;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.Facade;
@@ -60,6 +65,7 @@ import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.StatusIcon;
 
 /**
  * <p>
@@ -124,30 +130,65 @@ public class ProjektQueueHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				// flrjoin: 1
-				FLRProjektQueue projekt = (FLRProjektQueue) resultListIterator
-						.next();
+				
+				
+				
+				Object[] o = (Object[]) resultListIterator.next();
 
-				rows[row][col++] = projekt.getI_id();
-				rows[row][col++] = projekt.getC_nr();
-				rows[row][col++] = projekt.getFlrpartner()
-						.getC_name1nachnamefirmazeile1();
-				rows[row][col++] = projekt.getKategorie_c_nr().trim();
-				rows[row][col++] = projekt.getC_titel();
-				rows[row][col++] = projekt.getTyp_c_nr();
-				rows[row][col++] = projekt.getI_prio();
-				rows[row][col++] = projekt.getStatus_c_nr().trim();
-				rows[row][col++] = projekt.getT_zielwunschdatum();
-				rows[row][col++] = projekt.getD_dauer();
+				Integer projektIId = (Integer) o[0];
+				String c_nr = (String) o[1];
+
+				String typ_c_nr = (String) o[2];
+				Integer i_prio = (Integer) o[3];
+				Double d_dauer = (Double) o[4];
+				Integer i_verrechenbar = (Integer) o[5];
+				String x_freetext = (String) o[6];
+				
+				String status_c_nr = (String) o[8];
+				java.util.Date t_zielwunschdatum = (java.util.Date) o[9];
+				String titel = (String) o[10];
+				String kategorie_c_nr = (String) o[11];
+				String projekt_partner = (String) o[12];
+				
+			
+
+				rows[row][col++] = projektIId;
+				rows[row][col++] = c_nr;
+				rows[row][col++] = projekt_partner;
+				
+				rows[row][col++] = kategorie_c_nr;
+				rows[row][col++] = titel;
+				rows[row][col++] = typ_c_nr;
+				rows[row][col++] = i_prio;
+				rows[row][col++] = status_c_nr;
+				rows[row][col++] = t_zielwunschdatum;
+				rows[row][col++] = d_dauer;
+				
 				Double ddArbeitszeitist = getZeiterfassungFac()
 						.getSummeZeitenEinesBeleges(LocaleFac.BELEGART_PROJEKT,
-								projekt.getI_id(), null, null, null, null,
+								projektIId, null, null, null, null,
 								theClientDto);
 				rows[row][col++] = ddArbeitszeitist;
-				rows[row][col++] = Helper.short2Boolean(projekt.getB_verrechenbar());
-				if (projekt.getX_freetext() != null) {
-					String text = "<b>" + sProjekt + " " + projekt.getC_nr()
-							+ ":</b>\n" + projekt.getX_freetext();
+				
+				
+				StatusIcon si = new StatusIcon();
+
+				String tooltip = getProjektServiceFac().getTextVerrechenbar(i_verrechenbar, theClientDto);
+				si.setTooltip(tooltip);
+				if (i_verrechenbar == ProjektServiceFac.PROJEKT_VERRECHENBAR_NICHT_DEFINIERT) {
+					si.setIcon(LocaleFac.STATUS_DATEN_UNGUELTIG);
+				} else if (i_verrechenbar == ProjektServiceFac.PROJEKT_VERRECHENBAR_NICHT_VERRECHENBAR) {
+					si = new StatusIcon();
+					si.setIcon(LocaleFac.STATUS_STORNIERT);
+				} else if (i_verrechenbar == ProjektServiceFac.PROJEKT_VERRECHENBAR_VERRECHENBAR) {
+					si.setIcon(LocaleFac.STATUS_VERRECHNET);
+				}
+
+				
+				rows[row][col++] = si;
+				if (x_freetext != null) {
+					String text = "<b>" + sProjekt + " " + c_nr
+							+ ":</b>\n" + x_freetext;
 					text = text.replaceAll("\n", "<br>");
 					text = "<html>" + text + "</html>";
 					tooltipData[row] = text;
@@ -176,34 +217,50 @@ public class ProjektQueueHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRProjektQueue projekt ";
+//		return "from FLRProjekt projekt ";
+		return "SELECT DISTINCT projekt.i_id,"
+			+ "projekt.c_nr,"
+			+ "projekt.typ_c_nr,"
+			+ "projekt.i_prio,"
+			+ "projekt.d_dauer,"
+			+ "projekt.i_verrechenbar,"
+			+ "CAST(projekt.x_freetext as string),"
+			+ "projekt.i_sort,"
+			+ "projekt.status_c_nr,"
+			+ "projekt.t_zielwunschdatum,"
+			+ "projekt.c_titel,"
+			+ "projekt.kategorie_c_nr,"
+			+ "flrpar.c_name1nachnamefirmazeile1,"
+			+ "flrpar.c_kbez,"
+			+ "flrl.c_lkz,"
+			+ "flrlpo.c_plz,"
+			+ "flro.c_name,"
+			+ "flrperszug.c_kurzzeichen,"
+			+ "flrpartnerperszug.c_name1nachnamefirmazeile1,"
+			+ "flrperserz.c_kurzzeichen,"
+			+ "flrperserz.c_kurzzeichen,"
+			+ "flrpartnerperserz.c_name1nachnamefirmazeile1"
+				+ " FROM FLRProjektQueue AS projekt "
+				+ " LEFT OUTER JOIN projekt.technikerset AS ts "
+				+ " LEFT OUTER JOIN projekt.flrpartner AS flrpar "
+				+ " LEFT OUTER JOIN flrpar.flrlandplzort AS flrlpo "
+				+ " LEFT OUTER JOIN flrlpo.flrland AS flrl "
+				+ " LEFT OUTER JOIN flrlpo.flrort AS flro "
+				+ " LEFT OUTER JOIN projekt.flrpersonalZugewiesener AS flrperszug "
+				+ " LEFT OUTER JOIN flrperszug.flrpartner AS flrpartnerperszug "
+				+ " LEFT OUTER JOIN projekt.flrpersonalErzeuger AS flrperserz "
+				+ " LEFT OUTER JOIN flrperserz.flrpartner AS flrpartnerperserz ";
+//				+ " left outer join projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort as flrlandplzort "
+//				+ " left outer join projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort.flrort as flrort "
+//				+ " left outer join projekt.flrpersonalZugewiesener.flrpartner.flrlandplzort.flrland as flrland "
 	}
 
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(e);
-		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(he);
-				}
-			}
-		}
-		return rowCount;
+		String queryString = "SELECT COUNT(DISTINCT projekt.i_id)"
+				+ " FROM FLRProjekt AS projekt"
+				+ " LEFT OUTER JOIN projekt.technikerset AS ts "
+				+ buildWhereClause();
+		return getRowCountFromDataBaseByQuery(queryString);
 	}
 
 	/**
@@ -249,27 +306,18 @@ public class ProjektQueueHandler extends UseCaseHandler {
 									ex);
 						}
 					} else if (filterKriterien[i].kritName.equals("c_suche")) {
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where
-									.append(" lower("
-											+ FLR_PROJEKT
-											+ ProjektFac.FLR_PROJEKT_FLRPROJEKTTEXTSUCHE
-											+ "." + filterKriterien[i].kritName
-											+ ")");
-						} else {
-							where
-									.append(" "
-											+ FLR_PROJEKT
-											+ ProjektFac.FLR_PROJEKT_FLRPROJEKTTEXTSUCHE
-											+ "." + filterKriterien[i].kritName);
-						}
-						where.append(" " + filterKriterien[i].operator);
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
-						} else {
-							where.append(" " + filterKriterien[i].value);
-						}
+
+						where.append(buildWhereClauseExtendedSearchWithoutDuplicates(
+								FLRProjekttextsuche.class.getSimpleName(), FLR_PROJEKT, filterKriterien[i]));
+						
+					} else if (filterKriterien[i].kritName
+							.endsWith("personal_i_id_zugewiesener")) {
+
+						where.append(" ( projekt.flrpersonalZugewiesener.i_id="
+								+ filterKriterien[i].value
+								+ " OR ts.personal_i_id="
+								+ filterKriterien[i].value + ")");
+
 					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
 							where.append(" lower(" + FLR_PROJEKT
@@ -309,9 +357,7 @@ public class ProjektQueueHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select projekt.i_id "
-						+ this.getFromClause() + this.buildWhereClause()
-						+ this.buildOrderByClause();
+				String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
 
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -424,7 +470,7 @@ public class ProjektQueueHandler extends UseCaseHandler {
 							Date.class, // termin
 							Double.class, // schaetzung
 							Double.class, // dauer
-							Boolean.class
+							Icon.class
 					},
 					new String[] {
 							"i_id",
@@ -435,12 +481,12 @@ public class ProjektQueueHandler extends UseCaseHandler {
 									locUI),
 							getTextRespectUISpr("proj.titel", mandantCNr, locUI),
 							getTextRespectUISpr("lp.typ", mandantCNr, locUI),
-							getTextRespectUISpr("proj.prio", mandantCNr, locUI),
+							getTextRespectUISpr("proj.prioritaet.short", mandantCNr, locUI),
 							getTextRespectUISpr("lp.status", mandantCNr, locUI),
 							getTextRespectUISpr("lp.termin", mandantCNr, locUI),
 							getTextRespectUISpr("proj.schaetzung", mandantCNr,locUI),
 							getTextRespectUISpr("lp.dauer", mandantCNr, locUI),
-							getTextRespectUISpr("proj.label.verrechenbar", mandantCNr, locUI)
+							getTextRespectUISpr("proj.verrechenbar.short", mandantCNr, locUI)
 							
 					},
 							
@@ -485,7 +531,11 @@ public class ProjektQueueHandler extends UseCaseHandler {
 							ProjektFac.FLR_PROJEKT_T_ZIELDATUM,
 							ProjektFac.FLR_PROJEKT_D_DAUER,
 							Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR}));
+							Facade.NICHT_SORTIERBAR},
+					new String[]{ null, null, null, null, null, null,
+							getTextRespectUISpr("proj.prioritaet.tooltip", mandantCNr, locUI), null, null, null, null,
+							getTextRespectUISpr("proj.verrechenbar.tooltip", mandantCNr, locUI),
+					}));
 		}
 
 		return super.getTableInfo();

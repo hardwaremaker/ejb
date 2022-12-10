@@ -33,12 +33,12 @@
 package com.lp.server.finanz.fastlanereader.generated;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-import com.lp.server.finanz.ejb.KontolandPK;
 import com.lp.server.system.fastlanereader.generated.FLRLand;
 
 /** @author Hibernate CodeGenerator */
@@ -50,7 +50,7 @@ public class FLRKontoLand implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	/** identifier field */
-	private KontolandPK id_comp;
+//	private KontolandPK id_comp;
 
 	/** nullable persistent field */
 	private FLRLand flrland;
@@ -61,13 +61,21 @@ public class FLRKontoLand implements Serializable {
 	/** nullable persistent field */
 	private com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto_uebersetzt;
 
+	private Timestamp gueltigAb;
+	
+	private Integer i_id;
+	
+	public FLRKontoLand(Integer i_id) {
+		this.i_id = i_id;
+	}
+	
 	/** full constructor */
 	public FLRKontoLand(
-			KontolandPK id_comp,
+			Integer i_id,
 			FLRLand flrland,
 			com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto,
 			com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto_uebersetzt) {
-		this.id_comp = id_comp;
+		this.i_id = i_id;
 		this.flrland = flrland;
 		this.flrkonto = flrkonto;
 		this.flrkonto_uebersetzt = flrkonto_uebersetzt;
@@ -75,19 +83,6 @@ public class FLRKontoLand implements Serializable {
 
 	/** default constructor */
 	public FLRKontoLand() {
-	}
-
-	/** minimal constructor */
-	public FLRKontoLand(KontolandPK id_comp) {
-		this.id_comp = id_comp;
-	}
-
-	public KontolandPK getId_comp() {
-		return this.id_comp;
-	}
-
-	public void setId_comp(KontolandPK id_comp) {
-		this.id_comp = id_comp;
 	}
 
 	public FLRLand getFlrland() {
@@ -115,9 +110,25 @@ public class FLRKontoLand implements Serializable {
 			com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto_uebersetzt) {
 		this.flrkonto_uebersetzt = flrkonto_uebersetzt;
 	}
+	
+	public Timestamp getGueltigAb() {
+		return gueltigAb;
+	}
+
+	public void setGueltigAb(Timestamp gueltigAb) {
+		this.gueltigAb = gueltigAb;
+	}
+
+	public Integer getI_id() {
+		return i_id;
+	}
+
+	public void setI_id(Integer i_id) {
+		this.i_id = i_id;
+	}
 
 	public String toString() {
-		return new ToStringBuilder(this).append("id_comp", getId_comp())
+		return new ToStringBuilder(this).append("i_id", getI_id())
 				.toString();
 	}
 
@@ -127,12 +138,11 @@ public class FLRKontoLand implements Serializable {
 		if (!(other instanceof FLRKontoLand))
 			return false;
 		FLRKontoLand castOther = (FLRKontoLand) other;
-		return new EqualsBuilder().append(this.getId_comp(),
-				castOther.getId_comp()).isEquals();
+		return new EqualsBuilder().append(this.getI_id(),
+				castOther.getI_id()).isEquals();
 	}
 
 	public int hashCode() {
-		return new HashCodeBuilder().append(getId_comp()).toHashCode();
+		return new HashCodeBuilder().append(getI_id()).toHashCode();
 	}
-
 }

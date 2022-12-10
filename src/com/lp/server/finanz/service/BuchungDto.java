@@ -36,6 +36,8 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
 
+import com.lp.server.system.service.LocaleFac;
+
 public class BuchungDto implements Serializable {
 	/**
 	 * 
@@ -57,11 +59,17 @@ public class BuchungDto implements Serializable {
 	private String belegartCNr;
 	private Short  bAutomatischeBuchung ;
 	private Short  bAutomatischeBuchungEB ;
+	private Integer uvaverprobungIId;
+	private Short bAutomatischeBuchungGV ;
 	
 	public BuchungDto(){
+		this.setAutomatischeBuchung(false);
+		this.setAutomatischeBuchungEB(false);
+		this.setAutomatischeBuchungGV(false);
 	}
 	
-	public BuchungDto(String buchungsartCNr, Date dBuchungsdatum, String cText, Integer iGeschaeftsjahr, String belegartCNr, boolean bAutomatischeBuchung, boolean bAutomatischeBuchungEB) {
+	public BuchungDto(String buchungsartCNr, Date dBuchungsdatum, String cText, Integer iGeschaeftsjahr, String belegartCNr, 
+			boolean bAutomatischeBuchung, boolean bAutomatischeBuchungEB, boolean bAutomatischeBuchungGV) {
 		this.buchungsartCNr = buchungsartCNr;
 		this.dBuchungsdatum = dBuchungsdatum;
 		this.cText = cText;
@@ -69,6 +77,7 @@ public class BuchungDto implements Serializable {
 		this.belegartCNr = belegartCNr;
 		this.setAutomatischeBuchung(bAutomatischeBuchung);
 		this.setAutomatischeBuchungEB(bAutomatischeBuchungEB) ;
+		this.setAutomatischeBuchungGV(bAutomatischeBuchungGV);
 	}
 	
 	public Integer getIId() {
@@ -217,6 +226,31 @@ public class BuchungDto implements Serializable {
 		return 0 != bAutomatischeBuchungEB ;
 	}
 	
+	public Integer getUvaverprobungIId() {
+		return uvaverprobungIId;
+	}
+
+	public void setUvaverprobungIId(Integer uvaverprobungIId) {
+		this.uvaverprobungIId = uvaverprobungIId;
+	}
+
+	public Short getbAutomatischeBuchungGV() {
+		return bAutomatischeBuchungGV;
+	}
+
+	public void setbAutomatischeBuchungGV(Short bAutomatischeBuchungGV) {
+		this.bAutomatischeBuchungGV = bAutomatischeBuchungGV;
+	}
+	
+	public void setAutomatischeBuchungGV(boolean automatischeBuchungGV) {
+		bAutomatischeBuchungGV = new Short(automatischeBuchungGV ? (short)1 : (short) 0);		
+	}
+
+	public boolean isAutomatischeBuchungGV() {
+		if(null == bAutomatischeBuchungGV) return false ;
+		return 0 != bAutomatischeBuchungGV ;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -280,6 +314,10 @@ public class BuchungDto implements Serializable {
 				: that.bAutomatischeBuchungEB.equals(this.bAutomatischeBuchungEB))) {
 			return false;
 		}
+		if (!(that.bAutomatischeBuchungGV == null ? this.bAutomatischeBuchungGV == null
+				: that.bAutomatischeBuchungGV.equals(this.bAutomatischeBuchungGV))) {
+			return false;
+		}
 		return true;
 	}
 
@@ -299,6 +337,7 @@ public class BuchungDto implements Serializable {
 		result = 37 * result + belegartCNr.hashCode();
 		result = 37 * result + bAutomatischeBuchung.hashCode() ;
 		result = 37 * result + bAutomatischeBuchungEB.hashCode() ;
+		result = 37 * result + bAutomatischeBuchungGV.hashCode() ;
 		return result;
 	}
 
@@ -318,7 +357,11 @@ public class BuchungDto implements Serializable {
 		returnString += ", " + belegartCNr;
 		returnString += ", " + bAutomatischeBuchung ;
 		returnString += ", " + bAutomatischeBuchungEB ;
+		returnString += ", " + bAutomatischeBuchungGV ;
 		return returnString;
 	}
 
+	public boolean isSchlussrechnungGegenbuchung() {
+		return LocaleFac.BELEGART_FIBU_SCHLUSSRECHNUNG.equals(getBelegartCNr());
+	}
 }

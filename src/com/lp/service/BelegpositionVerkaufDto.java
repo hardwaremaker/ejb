@@ -35,6 +35,8 @@ package com.lp.service;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
+
 import com.lp.server.system.service.LocaleFac;
 
 /**
@@ -76,6 +78,18 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 	private BigDecimal nNettoeinzelpreisplusversteckteraufschlagminusrabatte;
 	private BigDecimal nBruttoeinzelpreis;
 	private Integer positioniId;
+	
+	
+	private Integer positionIIdZugehoerig;
+
+	public Integer getPositionIIdZugehoerig() {
+		return positionIIdZugehoerig;
+	}
+
+	public void setPositionIIdZugehoerig(Integer positionIIdZugehoerig) {
+		this.positionIIdZugehoerig = positionIIdZugehoerig;
+	}
+	
 	private String typCNr;
 
 	private Integer kostentraegerIId;
@@ -163,6 +177,46 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 
 	private Integer verleihIId;
 
+	
+	private BigDecimal nDimMenge;
+	public BigDecimal getNDimMenge() {
+		return nDimMenge;
+	}
+
+	public void setNDimMenge(BigDecimal nDimMenge) {
+		this.nDimMenge = nDimMenge;
+	}
+
+	public BigDecimal getNDimHoehe() {
+		return nDimHoehe;
+	}
+
+	public void setNDimHoehe(BigDecimal nDimHoehe) {
+		this.nDimHoehe = nDimHoehe;
+	}
+
+	public BigDecimal getNDimBreite() {
+		return nDimBreite;
+	}
+
+	public void setNDimBreite(BigDecimal nDimBreite) {
+		this.nDimBreite = nDimBreite;
+	}
+
+	public BigDecimal getNDimTiefe() {
+		return nDimTiefe;
+	}
+
+	public void setNDimTiefe(BigDecimal nDimTiefe) {
+		this.nDimTiefe = nDimTiefe;
+	}
+
+	private BigDecimal nDimHoehe;
+
+	private BigDecimal nDimBreite;
+
+	private BigDecimal nDimTiefe;
+	
 	private BigDecimal nReportGesamtpreis;
 	private BigDecimal nReportEinzelpreis;
 	private BigDecimal nReportEinzelpreisplusversteckteraufschlag;
@@ -463,5 +517,16 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 	
 	public boolean isLieferschein() {
 		return LocaleFac.POSITIONSART_LIEFERSCHEIN.equalsIgnoreCase(getPositionsartCNr()) ;
+	}
+	
+	/**
+	 * Wird die Position bei der Zwischensummenberechnung ber&uuml;cksichtigt?</br>
+	 * <p>Eine Position wird f&uuml;r die Zwischensumme verwendet, wenn sie eine Menge hat
+	 * und keine Positionsposition ist.</p>
+	 * @return true wenn die Position ber&uuml;cksichtigt werden soll.
+	 */
+	public boolean isCalculateZws() { 
+		return !LocaleFac.POSITIONSART_POSITION.equals(getPositionsartCNr())
+				&& getNMenge() != null;
 	}
 }

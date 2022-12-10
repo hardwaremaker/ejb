@@ -108,7 +108,7 @@ public class PASelektionHandler extends UseCaseHandler {
 			while (resultListIterator.hasNext()) {
 				FLRPASelektion paSelektion = (FLRPASelektion) resultListIterator
 						.next();
-				rows[row][col++] = paSelektion.getId_comp();
+				rows[row][col++] = paSelektion.getI_id();
 				rows[row][col++] = paSelektion.getFlrselektion().getC_nr();
 				rows[row][col++] = paSelektion.getC_bemerkung();
 				row++;
@@ -179,7 +179,7 @@ public class PASelektionHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" paselektion.id_comp."
+					where.append(" paselektion."
 							+ filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
@@ -221,10 +221,10 @@ public class PASelektionHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("paselektion.id_comp.partner_i_id DESC ");
+				orderBy.append("paselektion.flrselektion.c_nr ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("paselektion.id_comp.partner_i_id") < 0) {
+			if (orderBy.indexOf("paselektion.flrselektion.c_nr") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -233,7 +233,7 @@ public class PASelektionHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" paselektion.id_comp.partner_i_id ");
+				orderBy.append(" paselektion.flrselektion.c_nr ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -266,7 +266,7 @@ public class PASelektionHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select paselektion.id_comp.partner_i_id from FLRPASelektion paselektion "
+				String queryString = "select paselektion.i_id from FLRPASelektion paselektion "
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();

@@ -52,9 +52,6 @@ public class Behandlung implements Serializable {
 	@Column(name = "C_NR")
 	private String cNr;
 
-	@Column(name = "C_BEZ")
-	private String cBez;
-
 	@Column(name = "I_PUNKTE")
 	private Integer iPunkte;
 
@@ -64,10 +61,9 @@ public class Behandlung implements Serializable {
 		super();
 	}
 
-	public Behandlung(Integer id, String c_nr, String bez, Integer iPunkte) {
+	public Behandlung(Integer id, String c_nr, Integer iPunkte) {
 		setIId(id);
 		setCNr(c_nr);
-		setCBez(bez);
 		setIPunkte(iPunkte);
 	}
 
@@ -86,15 +82,6 @@ public class Behandlung implements Serializable {
 	public void setCNr(String cNr) {
 		this.cNr = cNr;
 	}
-
-	public String getCBez() {
-		return this.cBez;
-	}
-
-	public void setCBez(String cBez) {
-		this.cBez = cBez;
-	}
-
 	public Integer getIPunkte() {
 		return this.iPunkte;
 	}

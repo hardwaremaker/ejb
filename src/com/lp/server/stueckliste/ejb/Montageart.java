@@ -36,11 +36,15 @@ import java.io.Serializable;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.util.ICBez;
 
 @NamedQueries( {
@@ -62,6 +66,13 @@ public class Montageart implements Serializable, ICBez {
 
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
+	
+	@Column(name = "ARTIKEL_I_ID")
+	private Integer artikelIId;
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "ARTIKEL_I_ID", referencedColumnName = "I_ID", insertable = false, updatable = false)
+	private Artikel artikel;
 
 	private static final long serialVersionUID = 1L;
 
@@ -106,6 +117,22 @@ public class Montageart implements Serializable, ICBez {
 
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
+	}
+
+	public Integer getArtikelIId() {
+		return artikelIId;
+	}
+
+	public void setArtikelIId(Integer artikelIId) {
+		this.artikelIId = artikelIId;
+	}
+
+	public Artikel getArtikel() {
+		return artikel;
+	}
+
+	public void setArtikel(Artikel artikel) {
+		this.artikel = artikel;
 	}
 
 }

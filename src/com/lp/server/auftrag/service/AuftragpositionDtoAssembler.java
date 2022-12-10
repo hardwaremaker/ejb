@@ -38,11 +38,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.auftrag.ejb.Auftragposition;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 
 public class AuftragpositionDtoAssembler {
 	public static AuftragpositionDto createDto(Auftragposition auftragposition) {
 		AuftragpositionDto auftragpositionDto = new AuftragpositionDto();
 		if (auftragposition != null) {
+			auftragpositionDto.setUsecaseIIdQuelle(QueryParameters.UC_ID_AUFTRAGPOSITION);
 			auftragpositionDto.setIId(auftragposition.getIId());
 			auftragpositionDto.setBelegIId(auftragposition.getAuftragIId());
 			auftragpositionDto.setISort(auftragposition.getISort());
@@ -121,6 +123,16 @@ public class AuftragpositionDtoAssembler {
 			auftragpositionDto.setLieferantIId(auftragposition.getLieferantIId());
 			auftragpositionDto.setNMaterialzuschlagKurs(auftragposition.getNMaterialzuschlagKurs());
 			auftragpositionDto.setTMaterialzuschlagDatum(auftragposition.getTMaterialzuschlagDatum());
+			auftragpositionDto.setBestellpositionIId(auftragposition.getBestellpositionIId());
+			auftragpositionDto.setPositionIIdZugehoerig(auftragposition.getPositionIIdZugehoerig());
+			auftragpositionDto.setBGesehen(auftragposition.getBGesehen());
+			auftragpositionDto.setBHvmauebertragen(auftragposition.getBHvmauebertragen());
+			auftragpositionDto.setBPauschal(auftragposition.getBPauschal());
+			
+			auftragpositionDto.setNDimBreite(auftragposition.getNDimBreite());
+			auftragpositionDto.setNDimHoehe(auftragposition.getNDimHoehe());
+			auftragpositionDto.setNDimTiefe(auftragposition.getNDimTiefe());
+			auftragpositionDto.setNDimMenge(auftragposition.getNDimMenge());
 		}
 		return auftragpositionDto;
 	}

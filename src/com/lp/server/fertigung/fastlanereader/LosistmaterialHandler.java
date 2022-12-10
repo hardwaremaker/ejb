@@ -33,6 +33,7 @@
 package com.lp.server.fertigung.fastlanereader;
 
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -42,8 +43,12 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
 import com.lp.server.fertigung.service.FertigungFac;
+import com.lp.server.fertigung.service.LossollmaterialDto;
+import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -80,6 +85,8 @@ public class LosistmaterialHandler extends UseCaseHandler {
 	private static final String FLR_LOSMAT = "flrlosistmaterial.";
 	private static final String FLR_LOSMAT_FROM_CLAUSE = " from FLRLosistmaterial flrlosistmaterial ";
 
+	boolean bSnrChnrBehaftet = false;
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
@@ -106,9 +113,21 @@ public class LosistmaterialHandler extends UseCaseHandler {
 				rows[row][col++] = losmat.getI_id();
 				rows[row][col++] = losmat.getN_menge();
 				rows[row][col++] = losmat.getFlrlager().getC_nr();
+
+				if (bSnrChnrBehaftet) {
+
+					List<SeriennrChargennrMitMengeDto> dtos = getLagerFac()
+							.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+									LocaleFac.BELEGART_LOS, losmat.getI_id());
+					String snrchnr = null;
+					if (dtos != null && dtos.size() > 0) {
+						snrchnr = dtos.get(0).getCSeriennrChargennr();
+					}
+
+					rows[row][col++] = snrchnr;
+				}
 				rows[row][col++] = !Helper.short2boolean(losmat.getB_abgang());
-				
-				
+
 				row++;
 				col = 0;
 			}
@@ -167,9 +186,7 @@ public class LosistmaterialHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where
-							.append(" " + FLR_LOSMAT
-									+ filterKriterien[i].kritName);
+					where.append(" " + FLR_LOSMAT + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -212,8 +229,7 @@ public class LosistmaterialHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_LOSMAT).append("i_id")
-						.append(" ASC ");
+				orderBy.append(FLR_LOSMAT).append("i_id").append(" ASC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf("i_id") < 0) {
@@ -295,20 +311,77 @@ public class LosistmaterialHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					 BigDecimal.class,String.class, Boolean.class },
-					new String[] {
-							"i_id",getTextRespectUISpr("lp.menge", mandantCNr,
-									locUI),getTextRespectUISpr("lp.lager", mandantCNr, locUI),"Zugang" }, new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, 
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
-					new String[] {
-							FertigungFac.FLR_LOSISTMATERIAL_I_ID,
-							FertigungFac.FLR_LOSISTMATERIAL_N_MENGE,
-							FertigungFac.FLR_LOSISTMATERIAL_FLRLAGER+".c_nr",
-							FertigungFac.FLR_LOSISTMATERIAL_B_ABGANG }));
+
+			if (defaultFiltersForTableInfo != null
+					&& defaultFiltersForTableInfo.length>0 ) {
+
+				
+				if (defaultFiltersForTableInfo[0].kritName
+								.equals(FertigungFac.FLR_LOSISTMATERIAL_LOSSOLLMATERIAL_I_ID)) {
+					Integer lossollmaterialIId = new Integer(
+							defaultFiltersForTableInfo[0].value);
+
+					try {
+						LossollmaterialDto sollmat = getFertigungFac()
+								.lossollmaterialFindByPrimaryKey(
+										lossollmaterialIId);
+
+						ArtikelDto aDto = getArtikelFac()
+								.artikelFindByPrimaryKeySmall(
+										sollmat.getArtikelIId(), theClientDto);
+
+						bSnrChnrBehaftet = aDto
+								.istArtikelSnrOderchargentragend();
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+
+				}
+
+			}
+
+			if (bSnrChnrBehaftet) {
+				setTableInfo(new TableInfo(new Class[] { Integer.class,
+						BigDecimal.class, String.class, String.class,
+						Boolean.class }, new String[] {
+						"i_id",
+						getTextRespectUISpr("lp.menge", mandantCNr, locUI),
+						getTextRespectUISpr("lp.lager", mandantCNr, locUI),
+						getTextRespectUISpr("lp.snrchargennr", mandantCNr,
+								locUI), "Zugang" }, new int[] {
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+						new String[] {
+								FertigungFac.FLR_LOSISTMATERIAL_I_ID,
+								FertigungFac.FLR_LOSISTMATERIAL_N_MENGE,
+								FertigungFac.FLR_LOSISTMATERIAL_FLRLAGER
+										+ ".c_nr", Facade.NICHT_SORTIERBAR,
+								FertigungFac.FLR_LOSISTMATERIAL_B_ABGANG }));
+			} else {
+				setTableInfo(new TableInfo(new Class[] { Integer.class,
+						BigDecimal.class, String.class, Boolean.class },
+						new String[] {
+								"i_id",
+								getTextRespectUISpr("lp.menge", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.lager", mandantCNr,
+										locUI), "Zugang" }, new int[] {
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+						new String[] {
+								FertigungFac.FLR_LOSISTMATERIAL_I_ID,
+								FertigungFac.FLR_LOSISTMATERIAL_N_MENGE,
+								FertigungFac.FLR_LOSISTMATERIAL_FLRLAGER
+										+ ".c_nr",
+								FertigungFac.FLR_LOSISTMATERIAL_B_ABGANG }));
+			}
+
 		}
 		return super.getTableInfo();
 	}

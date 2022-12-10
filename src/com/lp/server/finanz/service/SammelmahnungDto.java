@@ -63,6 +63,35 @@ public class SammelmahnungDto {
 	private BigDecimal bdWert = null;
 	private Integer iMahnstufe = null;
 	private BigDecimal bdZinsen = null;
+	
+	public BigDecimal getBdOffenBelegWaehrung() {
+		return bdOffenBelegWaehrung;
+	}
+
+	public void setBdOffenBelegWaehrung(BigDecimal bdOffenBelegWaehrung) {
+		this.bdOffenBelegWaehrung = bdOffenBelegWaehrung;
+	}
+
+	public BigDecimal getBdWertBelegwaehrung() {
+		return bdWertBelegwaehrung;
+	}
+
+	public void setBdWertBelegwaehrung(BigDecimal bdWertBelegwaehrung) {
+		this.bdWertBelegwaehrung = bdWertBelegwaehrung;
+	}
+
+	public String getBelegwaehrung() {
+		return belegwaehrung;
+	}
+
+	public void setBelegwaehrung(String belegwaehrung) {
+		this.belegwaehrung = belegwaehrung;
+	}
+
+	private BigDecimal bdOffenBelegWaehrung = null;
+	private BigDecimal bdWertBelegwaehrung = null;
+	private String belegwaehrung = null;
+	
 
 	public BigDecimal getBdOffen() {
 		return bdOffen;

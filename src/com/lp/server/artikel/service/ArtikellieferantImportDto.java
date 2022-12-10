@@ -97,6 +97,8 @@ public class ArtikellieferantImportDto extends ArtikellieferantDto implements
 					.shortValue());
 			super.setBRabattbehalten(csv[_CSV_RABATT].length() > 0 ? (short) 1
 					: (short) 0);
+			//SP7443 -> Default
+			super.setBNichtLieferbar( (short) 0);
 			super.setBWebshop(new Integer(csv[_CSV_WEBSHOP].isEmpty() ? "0" : csv[_CSV_WEBSHOP]).shortValue());
 			super.setCArtikelnrlieferant(hi.getStringCsv(
 					csv[_CSV_LIEFERANTENARTIKELNUMMER], zeile,
@@ -147,7 +149,7 @@ public class ArtikellieferantImportDto extends ArtikellieferantDto implements
 						&& super.getNNettopreis() != null) {
 					super.setFRabatt(Helper.getProzentsatz(super
 							.getNEinzelpreis(), super.getNEinzelpreis()
-							.subtract(super.getNNettopreis()), 6));
+							.subtract(super.getNNettopreis()), 8));
 				}
 
 			} else {

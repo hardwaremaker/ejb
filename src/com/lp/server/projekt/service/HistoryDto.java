@@ -33,6 +33,7 @@
 package com.lp.server.projekt.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 public class HistoryDto implements Serializable {
@@ -47,11 +48,43 @@ public class HistoryDto implements Serializable {
 	private Integer projektIId;
 	private Integer historyartIId;
 	private String cTitel;
-	private Short  bHtml ;
+	private Short bHtml;
+
+	private BigDecimal nDauerGeplant;
+
+	public BigDecimal getNDauerGeplant() {
+		return nDauerGeplant;
+	}
+
+	public void setNDauerGeplant(BigDecimal nDauerGeplant) {
+		this.nDauerGeplant = nDauerGeplant;
+	}
+
 	
+	private Integer personalIIdWirddurchgefuehrt;
+
+	public Integer getPersonalIIdWirddurchgefuehrt() {
+		return personalIIdWirddurchgefuehrt;
+	}
+
+	public void setPersonalIIdWirddurchgefuehrt(Integer personalIIdWirddurchgefuehrt) {
+		this.personalIIdWirddurchgefuehrt = personalIIdWirddurchgefuehrt;
+	}
+
+	public Double getFErledigungsgrad() {
+		return fErledigungsgrad;
+	}
+
+	public void setFErledigungsgrad(Double fErledigungsgrad) {
+		this.fErledigungsgrad = fErledigungsgrad;
+	}
+
+	private Double fErledigungsgrad;
+
 	public Integer getPersonalIId() {
 		return personalIId;
 	}
+
 	public Integer getHistoryartIId() {
 		return historyartIId;
 	}
@@ -107,33 +140,68 @@ public class HistoryDto implements Serializable {
 	public Short getBHtml() {
 		return bHtml;
 	}
+
 	public void setBHtml(Short bHtml) {
 		this.bHtml = bHtml;
 	}
 
-	
+	private Integer personalIIdAnlegen;
+
+	private Integer personalIIdAendern;
+
+	private Timestamp tAendern;
+
+	private Timestamp tAnlegen;
+
+	public Integer getPersonalIIdAnlegen() {
+		return personalIIdAnlegen;
+	}
+
+	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
+		this.personalIIdAnlegen = personalIIdAnlegen;
+	}
+
+	public Integer getPersonalIIdAendern() {
+		return personalIIdAendern;
+	}
+
+	public void setPersonalIIdAendern(Integer personalIIdAendern) {
+		this.personalIIdAendern = personalIIdAendern;
+	}
+
+	public Timestamp getTAendern() {
+		return tAendern;
+	}
+
+	public void setTAendern(Timestamp tAendern) {
+		this.tAendern = tAendern;
+	}
+
+	public Timestamp getTAnlegen() {
+		return tAnlegen;
+	}
+
+	public void setTAnlegen(Timestamp tAnlegen) {
+		this.tAnlegen = tAnlegen;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
 		if (!(obj instanceof HistoryDto))
 			return false;
 		HistoryDto that = (HistoryDto) obj;
-		if (!(that.personalIId == null ? this.personalIId == null
-				: that.personalIId.equals(this.personalIId)))
+		if (!(that.personalIId == null ? this.personalIId == null : that.personalIId.equals(this.personalIId)))
 			return false;
-		if (!(that.tBelegDatum == null ? this.tBelegDatum == null
-				: that.tBelegDatum.equals(this.tBelegDatum)))
+		if (!(that.tBelegDatum == null ? this.tBelegDatum == null : that.tBelegDatum.equals(this.tBelegDatum)))
 			return false;
-		if (!(that.xText == null ? this.xText == null : that.xText
-				.equals(this.xText)))
+		if (!(that.xText == null ? this.xText == null : that.xText.equals(this.xText)))
 			return false;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.projektIId == null ? this.projektIId == null
-				: that.projektIId.equals(this.projektIId)))
+		if (!(that.projektIId == null ? this.projektIId == null : that.projektIId.equals(this.projektIId)))
 			return false;
-		if (!(that.bHtml == null ? this.bHtml == null
-				: that.bHtml.equals(this.bHtml)))
+		if (!(that.bHtml == null ? this.bHtml == null : that.bHtml.equals(this.bHtml)))
 			return false;
 		return true;
 	}
@@ -145,7 +213,7 @@ public class HistoryDto implements Serializable {
 		result = 37 * result + this.xText.hashCode();
 		result = 37 * result + this.iId.hashCode();
 		result = 37 * result + this.projektIId.hashCode();
-		result = 37 * result + this.bHtml.hashCode() ;
+		result = 37 * result + this.bHtml.hashCode();
 		return result;
 	}
 

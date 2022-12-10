@@ -55,6 +55,18 @@ public class Wareneingangsposition implements Serializable {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
+	
+	@Column(name = "I_RN")
+	private Integer iRn;
+
+	public Integer getIRn() {
+		return iRn;
+	}
+
+	public void setIRn(Integer iRn) {
+		this.iRn = iRn;
+	}
+
 
 	@Column(name = "N_GELIEFERTEMENGE")
 	private BigDecimal nGeliefertemenge;
@@ -103,6 +115,29 @@ public class Wareneingangsposition implements Serializable {
 	public void setBVerraeumt(Short bVerraeumt) {
 		this.bVerraeumt = bVerraeumt;
 	}
+
+	
+	@Column(name = "N_BREITE_IN_MM")
+	private BigDecimal nBreiteInMm;
+	@Column(name = "N_TIEFE_IN_MM")
+	private BigDecimal nTiefeInMm;
+	
+	public BigDecimal getNBreiteInMm() {
+		return nBreiteInMm;
+	}
+
+	public void setNBreiteInMm(BigDecimal nBreiteInMm) {
+		this.nBreiteInMm = nBreiteInMm;
+	}
+
+	public BigDecimal getNTiefeInMm() {
+		return nTiefeInMm;
+	}
+
+	public void setNTiefeInMm(BigDecimal nTiefeInMm) {
+		this.nTiefeInMm = nTiefeInMm;
+	}
+
 
 	@Column(name = "BESTELLPOSITION_I_ID")
 	private Integer bestellpositionIId;

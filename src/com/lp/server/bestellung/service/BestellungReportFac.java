@@ -35,8 +35,8 @@ package com.lp.server.bestellung.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Locale;
 
 import javax.ejb.Remote;
@@ -57,6 +57,7 @@ public interface BestellungReportFac {
 	public final static String REPORT_BSSAMMELMAHNUNG = "bes_sammelmahnung.jasper";
 	public final static String REPORT_BSMAHNUNG = "bes_mahnung.jasper";
 	public final static String REPORT_WEP_ETIKETT = "bes_wep_etikett.jasper";
+	public final static String REPORT_WE_ETIKETTEN = "bes_we_etiketten.jasper";
 	public final static String REPORT_BESTELLUNG_JOURNAL_OFFENE = "bes_bestellung_offene.jasper";
 	public final static String REPORT_BESTELLUNG_JOURNAL_BESTELLVORSCHLAG = "bes_bestellung_bestellvorschlag.jasper";
 	public final static String REPORT_BESTELLUNG_JOURNAL_OFFENE_OHNE_DETAILS = "bes_bestellung_offene_ohne_details.jasper";
@@ -64,6 +65,11 @@ public interface BestellungReportFac {
 	public final static String REPORT_ABHOLAUFTRAG = "bes_abholauftrag.jasper";
 	public final static String REPORT_GEAENDERTE_ARTIKEL = "bes_geaenderte_artikel.jasper";
 	public final static String REPORT_RAHMENUEBERSICHT = "bes_rahmenuebersicht.jasper";
+	public final static String REPORT_ZAHLUNGSPLAN = "bes_zahlungsplan.jasper";
+	public final static String REPORT_STANDORTLISTE = "bes_standortliste.jasper";
+	public final static String REPORT_ERWARTETELIEFERUNGEN = "bes_erwartete_lieferungen.jasper";
+	public final static String REPORT_TERMINUEBERSICHT = "bes_terminuebersicht.jasper";
+	public final static String REPORT_BESTELLETIKETTEN = "bes_bestelletiketten.jasper";
 
 	// Konstanten fuer Druck Bestellung
 	public static int REPORT_BESTELLUNG_POSITION = 0;
@@ -123,7 +129,16 @@ public interface BestellungReportFac {
 	public final static int REPORT_BESTELLUNG_RAHMENMENGE = 54;
 	public final static int REPORT_BESTELLUNG_ABGERUFENE_MENGE = 55;
 	public final static int REPORT_BESTELLUNG_LETZTER_ABRUF = 56;
-	public static int REPORT_BESTELLUNG_ANZAHL_SPALTEN = 57;
+
+	public final static int REPORT_BESTELLUNG_GEBINDENAME = 57;
+	public final static int REPORT_BESTELLUNG_ANZAHL_GEBINDE = 58;
+	public final static int REPORT_BESTELLUNG_ERHALTENE_MENGE = 59;
+	public final static int REPORT_BESTELLUNG_ARTIKEL_HERSTELLERNUMMER = 60;
+	public final static int REPORT_BESTELLUNG_ARTIKEL_HERSTELLERBEZEICHNUNG = 61;
+	public final static int REPORT_BESTELLUNG_ARTIKEL_HERSTELLER_KURZBEZEICHNUNG = 62;
+	public static int REPORT_BESTELLUNG_NETTOEINZELPREIS = 63;
+	public static int REPORT_BESTELLUNG_ARTIKELGEWICHT = 64;
+	public static int REPORT_BESTELLUNG_ANZAHL_SPALTEN = 65;
 
 	public static int REPORT_BESTELLUNG_OFFENE_OD_BESTELLUNGCNR = 0;
 	public static int REPORT_BESTELLUNG_OFFENE_OD_BESTELLUNGLIEFERANT = 1;
@@ -141,28 +156,34 @@ public interface BestellungReportFac {
 	public static int REPORT_BESTELLUNG_OFFENE_BESTELLUNGLIEFERANT = 1;
 	public static int REPORT_BESTELLUNG_OFFENE_BESTELLUNGLIEFERTERMIN = 2;
 	public static int REPORT_BESTELLUNG_OFFENE_KOSTENSTELLECNR = 3;
-	public static int REPORT_BESTELLUNG_OFFENE_WERT_OFFEN = 4;
-	public static int REPORT_BESTELLUNG_OFFENE_WERT = 5;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELBEZ = 6;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELCNR = 7;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELEINHEIT = 8;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELPREIS = 9;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELMENGE = 10;
-	public static int REPORT_BESTELLUNG_OFFENE_BESTELLUNGDATUM = 11;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELOFFENEMENGE = 12;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELOFFENEWERT = 13;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELLAGERSTAND = 14;
-	public static int REPORT_BESTELLUNG_OFFENE_PROJEKT = 15;
-	public static int REPORT_BESTELLUNG_OFFENE_ABTERMIN = 16;
-	public static int REPORT_BESTELLUNG_OFFENE_BESTELLUNGARTCNR = 17;
-	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELGELIFERTEMENGE = 18;
-	public static int REPORT_BESTELLUNG_OFFENE_OFFENELIEFERUNGEN = 19;
-	public static int REPORT_BESTELLUNG_OFFENE_SORTIERKRITERIUM = 20;
-	public static int REPORT_BESTELLUNG_OFFENE_ABNUMMER = 21;
-	public static int REPORT_BESTELLUNG_OFFENE_ABKOMMENTAR = 22;
-	public static int REPORT_BESTELLUNG_OFFENE_SETARTIKEL_TYP = 23;
-	public static int REPORT_BESTELLUNG_OFFENE_ABURSPRUNGSTERMIN = 24;
-	public static int REPORT_BESTELLUNG_OFFENE_ANZAHL_SPALTEN = 25;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELBEZ = 4;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELCNR = 5;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELEINHEIT = 6;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELPREIS = 7;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELMENGE = 8;
+	public static int REPORT_BESTELLUNG_OFFENE_BESTELLUNGDATUM = 9;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELOFFENEMENGE = 10;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELOFFENEWERT = 11;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELLAGERSTAND = 12;
+	public static int REPORT_BESTELLUNG_OFFENE_PROJEKT = 13;
+	public static int REPORT_BESTELLUNG_OFFENE_ABTERMIN = 14;
+	public static int REPORT_BESTELLUNG_OFFENE_BESTELLUNGARTCNR = 15;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELGELIEFERTEMENGE = 16;
+	public static int REPORT_BESTELLUNG_OFFENE_OFFENELIEFERUNGEN = 17;
+	public static int REPORT_BESTELLUNG_OFFENE_SORTIERKRITERIUM = 18;
+	public static int REPORT_BESTELLUNG_OFFENE_ABNUMMER = 19;
+	public static int REPORT_BESTELLUNG_OFFENE_ABKOMMENTAR = 20;
+	public static int REPORT_BESTELLUNG_OFFENE_SETARTIKEL_TYP = 21;
+	public static int REPORT_BESTELLUNG_OFFENE_ABURSPRUNGSTERMIN = 22;
+	public static int REPORT_BESTELLUNG_OFFENE_GEBINDENAME = 23;
+	public static int REPORT_BESTELLUNG_OFFENE_ANZAHL_GEBINDE = 24;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELZBEZ = 25;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELZBEZ2 = 26;
+	public static int REPORT_BESTELLUNG_OFFENE_STATUS = 27;
+	public static int REPORT_BESTELLUNG_OFFENE_POS_NR = 28;
+	public static int REPORT_BESTELLUNG_OFFENE_ARTIKELREFERENZNUMMER = 29;
+	public static int REPORT_BESTELLUNG_OFFENE_OFFENE_FIXKOSTEN = 30;
+	public static int REPORT_BESTELLUNG_OFFENE_ANZAHL_SPALTEN = 31;
 
 	public static int REPORT_BESTELLVORSCHLAG_BELEGART = 0;
 	public static int REPORT_BESTELLVORSCHLAG_BESTELLUNGLIEFERANT = 1;
@@ -198,7 +219,17 @@ public interface BestellungReportFac {
 	public static int REPORT_BESTELLVORSCHLAG_ARTIKELZBEZ2 = 31;
 	public static int REPORT_BESTELLVORSCHLAG_PROJEKT = 32;
 	public static int REPORT_BESTELLVORSCHLAG_MANDANT = 33;
-	public static int REPORT_BESTELLVORSCHLAG_ANZAHL_SPALTEN = 34;
+	public static int REPORT_BESTELLVORSCHLAG_STANDORT = 34;
+	public static int REPORT_BESTELLVORSCHLAG_GEBINDENAME = 35;
+	public static int REPORT_BESTELLVORSCHLAG_ANZAHL_GEBINDE = 36;
+	public static int REPORT_BESTELLVORSCHLAG_GEBINDEPFLICHTIG = 37;
+	public static int REPORT_BESTELLVORSCHLAG_LIEFERANT_LIEF1PREIS = 38;
+	public static int REPORT_BESTELLVORSCHLAG_LIEFERANT_PREISGUELTIGAB = 39;
+	public static int REPORT_BESTELLVORSCHLAG_ARTIKELREFERENZNUMMER = 40;
+	public static int REPORT_BESTELLVORSCHLAG_ARTIKELANZAHLANGEBOTEN = 41;
+	public static int REPORT_BESTELLVORSCHLAG_ARTIKELANZAHLANGEFRAGT = 42;
+	
+	public static int REPORT_BESTELLVORSCHLAG_ANZAHL_SPALTEN = 43;
 
 	public static int REPORT_WEP_ETIKETT_ANLIEFERMENGE = 0;
 	public static int REPORT_WEP_ETIKETT_BESTELLNUMMER = 1;
@@ -226,7 +257,89 @@ public interface BestellungReportFac {
 	public static int REPORT_WEP_ETIKETT_HANDMENGE = 23;
 	public static int REPORT_WEP_ETIKETT_WE_REFERENZ = 24;
 	public static int REPORT_WEP_ETIKETT_SUBREPORT_SNRCHNR = 25;
-	public static int REPORT_WEP_ETIKETT_ANZAHL_SPALTEN = 26;
+	public static int REPORT_WEP_ETIKETT_EINSTANDSPREIS = 26;
+	public static int REPORT_WEP_ETIKETT_GESTEHUNGSPREIS = 27;
+	public static int REPORT_WEP_ETIKETT_LIEF1PREIS = 28;
+	public static int REPORT_WEP_ETIKETT_EXEMPLAR = 29;
+	public static int REPORT_WEP_ETIKETT_EXEMPLAREGESAMT = 30;
+	public static int REPORT_WEP_ETIKETT_KURZBEZEICHNUNG = 31;
+	public static int REPORT_WEP_ETIKETT_REFERENZNUMMER = 32;
+	public static int REPORT_WEP_ETIKETT_WE_LIEFERSCHEINNUMMER = 33;
+	public static int REPORT_WEP_ETIKETT_LOS_NUMMER = 34;
+	public static int REPORT_WEP_ETIKETT_LOS_STUECKLISTE = 35;
+	public static int REPORT_WEP_ETIKETT_LOS_MENGE = 36;
+	public static int REPORT_WEP_ETIKETT_LOS_STUECKLISTE_BEZEICHNUNG = 37;
+	public static int REPORT_WEP_ETIKETT_LOS_PROJEKT = 38;
+	public static int REPORT_WEP_ETIKETT_LAGERMENGE = 39;
+	public static int REPORT_WEP_ETIKETT_ANZAHL_SPALTEN = 40;
+
+	public static int REPORT_WE_ETIKETTEN_ANLIEFERMENGE = 0;
+	public static int REPORT_WE_ETIKETTEN_BESTELLNUMMER = 1;
+	public static int REPORT_WE_ETIKETTEN_CHARGENNUMMER = 2;
+	public static int REPORT_WE_ETIKETTEN_SERIENNUMMER = 3;
+	public static int REPORT_WE_ETIKETTEN_VERPACKUNGSEINHEIT = 4;
+	public static int REPORT_WE_ETIKETTEN_WARENVERKEHRSNUMMER = 5;
+	public static int REPORT_WE_ETIKETTEN_IDENT = 6;
+	public static int REPORT_WE_ETIKETTEN_BEZ = 7;
+	public static int REPORT_WE_ETIKETTEN_ZBEZ = 8;
+	public static int REPORT_WE_ETIKETTEN_ZBEZ2 = 9;
+	public static int REPORT_WE_ETIKETTEN_LIEFERANTENARTIKELNUMMER = 10;
+	public static int REPORT_WE_ETIKETTEN_LIEFERANTENARTIKELBEZ = 11;
+	public static int REPORT_WE_ETIKETTEN_LAGER = 12;
+	public static int REPORT_WE_ETIKETTEN_WE_DATUM = 13;
+	public static int REPORT_WE_ETIKETTEN_PROJEKTBEZ = 14;
+	public static int REPORT_WE_ETIKETTEN_EINHEIT = 15;
+	public static int REPORT_WE_ETIKETTEN_LIEFERANTNAME = 16;
+	public static int REPORT_WE_ETIKETTEN_HERSTELLER = 17;
+	public static int REPORT_WE_ETIKETTEN_HERSTELLERNAME = 18;
+	public static int REPORT_WE_ETIKETTEN_WE_REFERENZ = 19;
+	public static int REPORT_WE_ETIKETTEN_SUBREPORT_SNRCHNR = 20;
+	public static int REPORT_WE_ETIKETTEN_EINSTANDSPREIS = 21;
+	public static int REPORT_WE_ETIKETTEN_GESTEHUNGSPREIS = 22;
+	public static int REPORT_WE_ETIKETTEN_LIEF1PREIS = 23;
+	public static int REPORT_WE_ETIKETTEN_EXEMPLAR = 24;
+	public static int REPORT_WE_ETIKETTEN_EXEMPLAREGESAMT = 25;
+	public static int REPORT_WE_ETIKETTEN_KURZBEZEICHNUNG = 26;
+	public static int REPORT_WE_ETIKETTEN_REFERENZNUMMER = 27;
+	public static int REPORT_WE_ETIKETTEN_WE_LIEFERSCHEINNUMMER = 28;
+	public static int REPORT_WE_ETIKETTEN_PAKETMENGE = 29;
+
+	public static int REPORT_WE_ETIKETTEN_LAGERPLATZ = 30;
+	public static int REPORT_WE_ETIKETTEN_GEWICHT = 31;
+	public static int REPORT_WE_ETIKETTEN_URSPRUNGSLAND = 32;
+
+	public static int REPORT_WE_ETIKETTEN_ANZAHL_SPALTEN = 33;
+
+	public static int REPORT_BESTELLETIKETTEN_BESTELLNUMMER = 0;
+	public static int REPORT_BESTELLETIKETTEN_VERPACKUNGSEINHEIT = 1;
+	public static int REPORT_BESTELLETIKETTEN_WARENVERKEHRSNUMMER = 2;
+	public static int REPORT_BESTELLETIKETTEN_IDENT = 3;
+	public static int REPORT_BESTELLETIKETTEN_BEZ = 4;
+	public static int REPORT_BESTELLETIKETTEN_ZBEZ = 5;
+	public static int REPORT_BESTELLETIKETTEN_ZBEZ2 = 6;
+	public static int REPORT_BESTELLETIKETTEN_LIEFERANTENARTIKELNUMMER = 7;
+	public static int REPORT_BESTELLETIKETTEN_LIEFERANTENARTIKELBEZ = 8;
+	public static int REPORT_BESTELLETIKETTEN_LAGER = 9;
+	public static int REPORT_BESTELLETIKETTEN_BESTELLDATUM = 10;
+	public static int REPORT_BESTELLETIKETTEN_PROJEKTBEZ = 11;
+	public static int REPORT_BESTELLETIKETTEN_EINHEIT = 12;
+	public static int REPORT_BESTELLETIKETTEN_LIEFERANTNAME = 13;
+	public static int REPORT_BESTELLETIKETTEN_HERSTELLER = 14;
+	public static int REPORT_BESTELLETIKETTEN_HERSTELLERNAME = 15;
+	public static int REPORT_BESTELLETIKETTEN_GESTEHUNGSPREIS = 16;
+	public static int REPORT_BESTELLETIKETTEN_LIEF1PREIS = 17;
+	public static int REPORT_BESTELLETIKETTEN_EXEMPLAR = 18;
+	public static int REPORT_BESTELLETIKETTEN_EXEMPLAREGESAMT = 19;
+	public static int REPORT_BESTELLETIKETTEN_KURZBEZEICHNUNG = 20;
+	public static int REPORT_BESTELLETIKETTEN_REFERENZNUMMER = 21;
+	public static int REPORT_BESTELLETIKETTEN_PAKETMENGE = 22;
+	public static int REPORT_BESTELLETIKETTEN_LAGERPLATZ = 23;
+	public static int REPORT_BESTELLETIKETTEN_GEWICHT = 24;
+	public static int REPORT_BESTELLETIKETTEN_URSPRUNGSLAND = 25;
+	public static int REPORT_BESTELLETIKETTEN_BESTELLMENGE = 26;
+	public static int REPORT_BESTELLETIKETTEN_OFFENEMENGE = 27;
+	public static int REPORT_BESTELLETIKETTEN_GELIEFERTEMENGE = 28;
+	public static int REPORT_BESTELLETIKETTEN_ANZAHL_SPALTEN = 29;
 
 	public static int REPORT_GEAENDERTEARTIKEL_ARTIKELNUMMER_AKTUELL = 0;
 	public static int REPORT_GEAENDERTEARTIKEL_ARTIKELBEZEICHNUNG_AKTUELL = 1;
@@ -246,78 +359,111 @@ public interface BestellungReportFac {
 	public static int REPORT_GEAENDERTEARTIKEL_PREIS = 15;
 	public static int REPORT_GEAENDERTEARTIKEL_ANZAHL_SPALTEN = 16;
 
+	public final static int REPORT_ERWARTETELIEFERUNGEN_ANFORDERER = 0;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_LIEFERANT_NAME = 1;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_LIEFERANT_KBEZ = 2;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_LIEFERANT_LKZ = 3;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_LIEFERANT_PLZ = 4;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_LIEFERANT_ORT = 5;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_BESTELLUNG = 6;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_BESTELLUNGSART = 7;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_ARTIKELNUMMER = 8;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_BEZEICHNUNG = 9;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_ZUSATZBEZEICHNUNG = 10;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_ZUSATZBEZEICHNUNG2 = 11;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_KURZBEZEICHNUNG = 12;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_OFFENE_MENGE = 13;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_EKPREIS = 14;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_INFERTIGUNG = 15;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_BESTELLT = 16;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_RAHMENBESTELLT = 17;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_FEHLMENGE = 18;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_RESERVIERT = 19;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_LAGERSTAND = 20;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_EINHEIT = 21;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_SUBREPORT_TERMINE = 22;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_RUECKSTAND = 23;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_DANACH = 24;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_KOMISSIONIERUNG_GEPLANT = 25;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_KOMISSIONIERUNG_DURCHGEFUEHRT = 26;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_UNTERLAGEN_UEBERGEBEN = 27;
+	public final static int REPORT_ERWARTETELIEFERUNGEN_ANZAHL_SPALTEN = 28;
+
 	public final static String REPORT_VORKALKULATION_ZEICHEN_FUER_HANDEINGABE = ".";
 
-	public JasperPrintLP printBestellungenAlle(ReportJournalKriterienDto krit,
+	public JasperPrintLP printBestellungenAlle(ReportJournalKriterienDto krit, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printBSMahnungAusMahnlauf(Integer bsmahnungIId, boolean bMitLogo, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printBSMahnungFuerBestellung(Integer bestellpositionIId, Integer bestellungIId,
+			Integer bsmahnstufeIId, Date dMahndatum, boolean bMitLogo, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP[] printBSSammelMahnung(Integer bsmahnlaufIId, boolean bMitLogo, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printWepEtikett(Integer iIdWepI, Integer iIdBestellpositionI, Integer iIdLagerI,
+			Integer iExemplare, Integer iVerpackungseinheit, Double dGewicht, String sWarenverkehrsnummer,
+			String sLagerort, String sUrsprungsland, String sKommentar, BigDecimal bdHandmenge, String chargennummer,boolean bInklLosbuchungen,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printBSMahnungAusMahnlauf(Integer bsmahnungIId,
-			boolean bMitLogo, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public JasperPrintLP printWE_Etiketten(Integer wareneingangIId, TheClientDto theClientDto);
 
-	public JasperPrintLP printBSMahnungFuerBestellung(
-			Integer bestellpositionIId, Integer bestellungIId,
-			Integer bsmahnstufeIId, Date dMahndatum, boolean bMitLogo,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public JasperPrintLP printBestelletiketten(ArrayList<Integer> bestellpositionIIds, TheClientDto theClientDto);
 
-	public JasperPrintLP[] printBSSammelMahnung(Integer bsmahnlaufIId,
-			boolean bMitLogo, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-
-	public JasperPrintLP printWepEtikett(Integer iIdWepI,
-			Integer iIdBestellpositionI, Integer iIdLagerI, Integer iExemplare,
-			Integer iVerpackungseinheit, Double dGewicht,
-			String sWarenverkehrsnummer, String sLagerort,
-			String sUrsprungsland, String sKommentar, BigDecimal bdHandmenge,
-			Integer wePosIId, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-
-	public ArrayList<JasperPrintLP> printBSSammelMahnung(Integer bsmahnlaufIId,
-			Integer lieferantIId, TheClientDto theClientDto,
-			boolean bNurNichtGemahnte, boolean bMitLogo) throws EJBExceptionLP,
-			RemoteException;
+	public ArrayList<JasperPrintLP> printBSSammelMahnung(Integer bsmahnlaufIId, Integer lieferantIId,
+			TheClientDto theClientDto, boolean bNurNichtGemahnte, boolean bMitLogo)
+			throws EJBExceptionLP, RemoteException;
 
 	public Object[] getGeaenderteArtikelDaten(TheClientDto theClientDto);
 
-	public JasperPrintLP printBestellungOffene(ReportJournalKriterienDto krit,
-			Date dStichtag, Boolean bSortierungNachLiefertermin,
-			Integer artikelklasseIId, Integer artikelgruppeIId,
-			String artikelCNrVon, String artikelCNrBis,
-			String projektCBezeichnung, Integer auftragIId, Integer iArt,
-			boolean bNurAngelegte, boolean bNurOffeneMengenAnfuehren, Integer[] projekte,
+	public JasperPrintLP printBestellungOffene(ReportJournalKriterienDto krit, Date dStichtag,
+			Boolean bSortierungNachLiefertermin, Integer artikelklasseIId, Integer artikelgruppeIId,
+			String artikelCNrVon, String artikelCNrBis, String projektCBezeichnung, Integer auftragIId, Integer iArt,
+			boolean bNurAngelegte, boolean bNurOffeneMengenAnfuehren, Integer[] projekte, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printBestellVorschlag(ReportJournalKriterienDto krit, Boolean bSortierungNachLiefertermin,
+			boolean bAnfragevorschlag, Integer partnerIIdStandort, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP[] printBestellung(Integer iIdBestellungI, Integer iAnzahlKopienI, Boolean bMitLogo,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public JasperPrintLP printBestellVorschlag(ReportJournalKriterienDto krit,
-			Boolean bSortierungNachLiefertermin, boolean bAnfragevorschlag, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
-	public JasperPrintLP[] printBestellung(Integer iIdBestellungI,
-			Integer iAnzahlKopienI, Boolean bMitLogo, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printGeaenderteArtikel(TheClientDto theClientDto);
 
-	public JasperPrintLP printBestellungWareneingangsJournal(
-			ReportJournalKriterienDto krit, Integer artikelklasseIId,
-			Integer artikelgruppeIId, String artikelCNrVon,
-			String artikelCNrBis, String projektCBezeichnung,
-			Integer auftragIId, boolean bMitWarenverbrauch,
+	public JasperPrintLP printBestellungWareneingangsJournal(ReportJournalKriterienDto krit, Integer artikelklasseIId,
+			Integer artikelgruppeIId, String artikelCNrVon, String artikelCNrBis, String projektCBezeichnung,
+			Integer auftragIId, boolean bMitWarenverbrauch, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printAbholauftrag(Integer iIdBestellungI, TheClientDto theClientDto);
+
+	public ArrayList<JasperPrintLP> getMahnungenFuerAlleLieferanten(Integer bsmahnlaufIId, TheClientDto theClientDto,
+			boolean bNurNichtGemahnte, boolean bMitLogo) throws EJBExceptionLP, RemoteException;
+
+	public void sendMahnlauf(String cKommuniaktionsart, BSMahnlaufDto bsMahnlaufDto, Locale absenderLocale,
+			TheClientDto theClientDto) throws EJBExceptionLP, Throwable;
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printRahmenuebersicht(Integer bestellungIId, TheClientDto theClientDto);
+
+	public JasperPrintLP printZahlungsplan(Timestamp tFaelligBis, TheClientDto theClientDto);
+
+	public JasperPrintLP printStandortliste(TheClientDto theClientDto);
+
+	public JasperPrintLP printErwarteteLieferungen(TheClientDto theClientDto);
+
+	void printWepEtikettOnServer(Integer wareneingangspositionId, TheClientDto theClientDto) throws RemoteException;
+
+	void printWepEtikettOnServer(Integer wareneingangspositionId, String chargennummer, TheClientDto theClientDto)
+			throws RemoteException;
+
+	OpenTransXmlReportResult transformPrintBestellung(Integer bestellungId, Integer iAnzahlKopienI, Boolean bMitLogo,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printAbholauftrag(Integer iIdBestellungI,
-			TheClientDto theClientDto);
+	public JasperPrintLP printTerminuebersicht(Integer bestellungIId, TheClientDto theClientDto);
 
-	public ArrayList<JasperPrintLP> getMahnungenFuerAlleLieferanten(
-			Integer bsmahnlaufIId, TheClientDto theClientDto,
-			boolean bNurNichtGemahnte, boolean bMitLogo) throws EJBExceptionLP,
-			RemoteException;
-
-	public void sendMahnlauf(String cKommuniaktionsart,
-			BSMahnlaufDto bsMahnlaufDto, Locale absenderLocale,
-			TheClientDto theClientDto) throws EJBExceptionLP, Throwable;
-	
-	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printRahmenuebersicht(Integer bestellungIId,
-			TheClientDto theClientDto);
-	
 }

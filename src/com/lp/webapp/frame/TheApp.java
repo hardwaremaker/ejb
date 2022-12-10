@@ -59,6 +59,11 @@ public class TheApp {
 	static public final String CMD_WAP_SHOWLOGIN = "wap_showlogin";
 	static public final String CMD_WAP_DOLOGIN = "wap_do_login";
 	static public final String CMD_WAP_ZEIT_BUCHEN = "wap_zeit_buchen";
+	
+	static public final String CMD_OFFENE_AUFRAGSPOSITIONEN = "offeneauftragspositionen";
+	static public final String CMD_OFFENE_AUFRAG_OFFENE_POSITIONEN = "auftrag_offene_positionen";
+	static public final String CMD_TAETIGKEIT_AGBEGINN = "taetigkeit_agbeginn";
+	
 
 	// fuer Zeiterfassung
 	static public final String CMD_ZE_BDESTATION = "bdestation";

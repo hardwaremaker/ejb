@@ -42,9 +42,28 @@ public class LandDto implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	private Integer iID;
+	public LandsprDto getLandsprDto() {
+		return landsprDto;
+	}
+
+	public String getBezeichnung() {
+		if (getLandsprDto() != null && getLandsprDto().getCBez() != null) {
+			return getLandsprDto().getCBez();
+		} else {
+			return getCName();
+		}
+	}
+	
+	
+	public void setLandsprDto(LandsprDto landsprDto) {
+		this.landsprDto = landsprDto;
+	}
+
 	private String cLkz;
 	private String cName;
 	private String cTelvorwahl;
+	
+	private LandsprDto landsprDto;
 
 	private Integer landIIdGemeinsamespostland;
 
@@ -54,6 +73,16 @@ public class LandDto implements Serializable {
 
 	public void setLandIIdGemeinsamespostland(Integer landIIdGemeinsamespostland) {
 		this.landIIdGemeinsamespostland = landIIdGemeinsamespostland;
+	}
+
+	private Short bPraeferenzbeguenstigt;
+	
+	public Short getBPraeferenzbeguenstigt() {
+		return bPraeferenzbeguenstigt;
+	}
+
+	public void setBPraeferenzbeguenstigt(Short bPraeferenzbeguenstigt) {
+		this.bPraeferenzbeguenstigt = bPraeferenzbeguenstigt;
 	}
 
 	public Short getBSepa() {
@@ -73,20 +102,22 @@ public class LandDto implements Serializable {
 	}
 
 	private String waehrungCNr;
-	private Date tEUMitglied;
+	private Date tEUMitgliedVon;
 	private BigDecimal nUidnummerpruefenabbetrag;
 	private Integer iLaengeuidnummer;
 	private String cUstcode;
 	private Short bSepa;
 	private Double fGmtversatz;
 	private BigDecimal nMuenzRundung;
-
-	public void setTEUMitglied(Date tEUMitglied) {
-		this.tEUMitglied = tEUMitglied;
+	private Short bMwstMuenzRundung;
+	private Date tEUMitgliedBis;
+	
+	public void setTEUMitgliedVon(Date tEUMitgliedVon) {
+		this.tEUMitgliedVon = tEUMitgliedVon;
 	}
 
-	public Date getEUMitglied() {
-		return tEUMitglied;
+	public Date getTEUMitgliedVon() {
+		return tEUMitgliedVon;
 	}
 
 	public String getCLkz() {
@@ -133,6 +164,16 @@ public class LandDto implements Serializable {
 		this.waehrungCNr = waehrungCNr;
 	}
 
+	private Short bPostfachmitstrasse;
+
+	public Short getBPostfachmitstrasse() {
+		return bPostfachmitstrasse;
+	}
+
+	public void setBPostfachmitstrasse(Short bPostfachmitstrasse) {
+		this.bPostfachmitstrasse = bPostfachmitstrasse;
+	}
+
 	private Short bPlznachort;
 
 	public Short getBPlznachort() {
@@ -172,6 +213,22 @@ public class LandDto implements Serializable {
 		this.nMuenzRundung = nMuenzRundung;
 	}
 
+	public Short getBMwstMuenzRundung() {
+		return bMwstMuenzRundung;
+	}
+
+	public void setBMwstMuenzRundung(Short bMwstMuenzRundung) {
+		this.bMwstMuenzRundung = bMwstMuenzRundung;
+	}
+	
+	public Date getTEUMitgliedBis() {
+		return tEUMitgliedBis;
+	}
+	
+	public void setTEUMitgliedBis(Date tEUMitgliedBis) {
+		this.tEUMitgliedBis = tEUMitgliedBis;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -196,8 +253,8 @@ public class LandDto implements Serializable {
 				: that.waehrungCNr.equals(this.waehrungCNr))) {
 			return false;
 		}
-		if (!(that.tEUMitglied == null ? this.tEUMitglied == null
-				: that.tEUMitglied.equals(this.tEUMitglied))) {
+		if (!(that.tEUMitgliedVon == null ? this.tEUMitgliedVon == null
+				: that.tEUMitgliedVon.equals(this.tEUMitgliedVon))) {
 			return false;
 		}
 		if (!(that.nUidnummerpruefenabbetrag == null ? this.nUidnummerpruefenabbetrag == null
@@ -213,6 +270,13 @@ public class LandDto implements Serializable {
 				: that.nMuenzRundung.equals(this.nMuenzRundung))) {
 			return false;
 		}
+		if(!(that.bMwstMuenzRundung == null ? this.bMwstMuenzRundung == null : that.bMwstMuenzRundung.equals(this.bMwstMuenzRundung))) {
+			return false;
+		}
+		if (!(that.tEUMitgliedBis == null ? this.tEUMitgliedBis == null
+				: that.tEUMitgliedBis.equals(this.tEUMitgliedBis))) {
+			return false;
+		}
 
 		return true;
 	}
@@ -223,10 +287,12 @@ public class LandDto implements Serializable {
 		result = 37 * result + this.cName.hashCode();
 		result = 37 * result + this.cTelvorwahl.hashCode();
 		result = 37 * result + this.waehrungCNr.hashCode();
-		result = 37 * result + this.tEUMitglied.hashCode();
+		result = 37 * result + this.tEUMitgliedVon.hashCode();
 		result = 37 * result + this.nUidnummerpruefenabbetrag.hashCode();
 		result = 37 * result + this.cUstcode.hashCode();
 		result = 37 * result + this.nMuenzRundung.hashCode();
+		result = 37 * result + this.bMwstMuenzRundung.hashCode();
+		result = 37 * result + this.tEUMitgliedBis.hashCode();
 		return result;
 	}
 
@@ -236,7 +302,8 @@ public class LandDto implements Serializable {
 		returnString += ", " + cName;
 		returnString += ", " + cTelvorwahl;
 		returnString += ", " + waehrungCNr;
-		returnString += ", " + tEUMitglied;
+		returnString += ", " + tEUMitgliedVon;
+		returnString += ", " + tEUMitgliedBis;
 		returnString += ", " + nUidnummerpruefenabbetrag;
 		returnString += ", " + cUstcode;
 		returnString += ", " + nMuenzRundung;

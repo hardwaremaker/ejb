@@ -60,6 +60,8 @@ public class TheClientDtoAssembler {
 			theClientDto.setSMandantenwaehrung(theClient.getCMandantwaehrung());
 			theClientDto.setIStatus(theClient.getIStatus());
 			theClientDto.setSystemrolleIId(theClient.getSystemrolleIId());
+			theClientDto.setHvmaLizenzId(theClient.getHvmalizenIId());
+			theClientDto.setHvmaResource(theClient.getHvmaResource());
 		}
 		return theClientDto;
 	}

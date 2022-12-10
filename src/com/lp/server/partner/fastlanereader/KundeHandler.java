@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.partner.fastlanereader;
@@ -36,10 +36,10 @@ import java.awt.Color;
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import javax.swing.Icon;
 
-import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
@@ -50,6 +50,7 @@ import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.personal.service.PersonalFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeKunde;
 import com.lp.server.system.jcr.service.docnode.DocPath;
@@ -93,11 +94,12 @@ import com.lp.util.Helper;
 public class KundeHandler extends UseCaseHandler {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	boolean bSuchenInklusiveKbez = true;
-	boolean bMitKundennummer = false;
+	int bMitKundennummer = 0;
+	boolean bMitVornameStrasse = false;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 
@@ -128,46 +130,73 @@ public class KundeHandler extends UseCaseHandler {
 				Object[] o = (Object[]) resultListIterator.next();
 				// FLRKunde kunde = (FLRKunde) (o[0]);
 
-				rows[row][col++] = o[0];
-				rows[row][col++] = o[12];
-				rows[row][col++] = o[1];
-				rows[row][col++] = o[2];
-				rows[row][col++] = o[3];
-				rows[row][col++] = o[4];
+				Object[] rowToAddCandidate = new Object[colCount];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"i_id")] = o[0];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("")] = o[12];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.firma")] = o[1];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.kurzbezeichnung")] = o[2];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.telefon")] = o[3];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"part.auswahl.abc")] = o[4];
+
 				if (o[5] != null) {
-					rows[row][col++] = LocaleFac.STATUS_GESPERRT;
-				} else {
-					rows[row][col++] = null;
-				}
-				rows[row][col++] = o[6];
-				rows[row][col++] = o[7];
-				rows[row][col++] = o[8];
-				rows[row][col++] = o[9];
-				if (bMitKundennummer == false) {
-					rows[row][col++] = o[10];
-				} else {
-					rows[row][col++] = o[11];
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"part.auswahl.liefersperre")] = LocaleFac.STATUS_GESPERRT;
+
 				}
 
-				rows[row][col++] = o[13];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.lkz")] = o[6];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.plz")] = o[7];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.ort")] = o[8];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"lp.vertreter")] = o[9];
+
+				if (bMitKundennummer == 0) {
+
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.debitoren")] = o[10];
+				} else {
+
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.kundennummer")] = o[11];
+				}
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"part.auswahl.gmt")] = o[13];
 
 				if (Helper.short2boolean((Short) o[14])) {
-					rows[row][col++] = Color.LIGHT_GRAY;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"Color")] = Color.LIGHT_GRAY;
 				}
 
+				if (bMitVornameStrasse) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.firma_vorname")] = o[15];
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.strasse")] = o[16];
+				}
+
+				rows[row] = rowToAddCandidate;
 				row++;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
 					endIndex, 0);
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
+			
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
@@ -198,13 +227,7 @@ public class KundeHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(e);
 		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(he);
-				}
-			}
+			closeSession(session);
 		}
 		return rowCount;
 	}
@@ -216,19 +239,8 @@ public class KundeHandler extends UseCaseHandler {
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
+
 		StringBuffer where = new StringBuffer("");
-		try {
-			ParametermandantDto parameter = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
-			bSuchenInklusiveKbez = (java.lang.Boolean) parameter
-					.getCWertAsObject();
-
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
-
 		if (this.getQuery() != null && this.getQuery().getFilterBlock() != null
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
@@ -284,7 +296,7 @@ public class KundeHandler extends UseCaseHandler {
 						suchstring += "||' '||coalesce(partneransprechpartner.c_name3vorname2abteilung,'')||' '||coalesce(kunde.flrpartner.c_email,'')||' '||coalesce(kunde.flrpartner.c_fax,'')";
 
 						suchstring += "||' '||coalesce(kunde.flrpartner.c_telefon,'')||' '||coalesce(ansprechpartnerset.c_handy,'')||' '||coalesce(ansprechpartnerset.c_email,'')||' '||coalesce(ansprechpartnerset.c_fax,'')||' '||coalesce(ansprechpartnerset.c_telefon,'')";
-						suchstring += "||' '||coalesce(cast(ansprechpartnerset.x_bemerkung as string),'')||' '||coalesce(cast(kunde.x_kommentar as string),'')||' '||coalesce(cast(kunde.flrpartner.x_bemerkung as string),'')";
+						suchstring += "||' '||coalesce(cast(ansprechpartnerset.x_bemerkung as text),'')||' '||coalesce(cast(kunde.x_kommentar as text),'')||' '||coalesce(cast(kunde.flrpartner.x_bemerkung as text),'')";
 						suchstring += "||' '||coalesce(kunde.c_hinweisintern,'')||' '||coalesce(kunde.c_hinweisextern,'')";
 
 						String[] teile = filterKriterien[i].value.toLowerCase()
@@ -317,6 +329,25 @@ public class KundeHandler extends UseCaseHandler {
 							where.append(" kunde.b_istinteressent=1");
 						}
 
+					}
+
+					else if (filterKriterien[i].kritName
+							.equals("debitorennummer")) {
+						where.append(" (lower(kunde.flrkonto.c_nr)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase() + ")");
+					}
+
+					else if (filterKriterien[i].kritName.equals("PLZOrt")) {
+						where.append(" (lower(kunde.flrpartner.flrlandplzort.flrort.c_name)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase());
+						where.append(" OR lower(kunde.flrpartner.flrlandplzort.c_plz)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase() + ")");
 					}
 
 					else {
@@ -409,7 +440,7 @@ public class KundeHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "SELECT distinct kunde.i_id, kunde.flrpartner.c_name1nachnamefirmazeile1, kunde.flrpartner.c_kbez,kunde.flrpartner.c_telefon, kunde.c_abc, kunde.t_liefersperream, kunde.flrpartner.flrlandplzort.flrland.c_lkz, kunde.flrpartner.flrlandplzort.c_plz,kunde.flrpartner.flrlandplzort.flrort.c_name,kunde.flrpersonal.c_kurzzeichen, kunde.flrkonto.c_nr,kunde.i_kundennummer, kunde.flrpartner.c_adressart, kunde.flrpartner.f_gmtversatz, kunde.flrpartner.b_versteckt from FLRKunde as kunde "
+		return "SELECT distinct kunde.i_id, kunde.flrpartner.c_name1nachnamefirmazeile1, kunde.flrpartner.c_kbez,kunde.flrpartner.c_telefon, kunde.c_abc, kunde.t_liefersperream, kunde.flrpartner.flrlandplzort.flrland.c_lkz, kunde.flrpartner.flrlandplzort.c_plz,kunde.flrpartner.flrlandplzort.flrort.c_name,kunde.flrpersonal.c_kurzzeichen, kunde.flrkonto.c_nr,kunde.i_kundennummer, kunde.flrpartner.c_adressart, kunde.flrpartner.f_gmtversatz, kunde.flrpartner.b_versteckt,kunde.flrpartner.c_name2vornamefirmazeile2,kunde.flrpartner.c_strasse from FLRKunde as kunde "
 				+ " left join kunde.flrpartner.flrlandplzort as flrlandplzort "
 				+ " left join kunde.flrpartner.flrlandplzort.flrort as flrort "
 				+ " left join kunde.flrkonto as flrkonto "
@@ -451,11 +482,7 @@ public class KundeHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-				}
+				closeSession(session);
 			}
 		}
 
@@ -469,230 +496,145 @@ public class KundeHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
+	private TableColumnInformation createColumnInformation(String mandant,
+			Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 
-		// spalteres: 0 Hier werden die Spaltentexte geladen.
-		if (super.getTableInfo() == null) {
+		columns.add("i_id", Integer.class, "i_id", -1, "i_id");
 
-			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_KUNDEN,
-								ParameterFac.PARAMETER_KUNDE_MIT_NUMMER);
-				bMitKundennummer = (java.lang.Boolean) parameter
-						.getCWertAsObject();
+		columns.add("", String.class, "",
+				QueryParameters.FLR_BREITE_XXS, KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_C_ADRESSART);
+		columns.add("lp.firma", String.class,
+				getTextRespectUISpr("lp.firma", mandant, locUi),
+				QueryParameters.FLR_BREITE_L + QueryParameters.FLR_BREITE_M,
+				KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
 
-			} catch (RemoteException ex) {
-				throwEJBExceptionLPRespectOld(ex);
-			}
+		if (bMitVornameStrasse) {
+			columns.add("lp.firma_vorname", String.class,
+					getTextRespectUISpr("lp.firma_vorname", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, KundeFac.FLR_PARTNER + "."
+							+ PartnerFac.FLR_PARTNER_NAME2VORNAMEFIRMAZEILE2);
+		}
 
-			if (bMitKundennummer == false) {
+		columns.add(
+				"lp.kurzbezeichnung",
+				String.class,
+				getTextRespectUISpr("lp.kurzbezeichnung",
+						theClientDto.getMandant(), theClientDto.getLocUi()),
+				QueryParameters.FLR_BREITE_XM, KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_C_KBEZ);
 
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, String.class,
-								String.class, String.class, String.class,
-								String.class, Icon.class, String.class,
-								String.class, String.class, String.class,
-								String.class, Double.class, Color.class },
-						new String[] {
-								"i_id", // hier steht immer i_id oder c_nr
-								"",
-								getTextRespectUISpr("lp.firma",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.kurzbezeichnung",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.telefon",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("part.auswahl.abc",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr(
-										"part.auswahl.liefersperre",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.lkz",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.plz",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.ort",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.vertreter",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.debitoren",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("part.auswahl.gmt",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()), "" },
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_XXS,
-								QueryParameters.FLR_BREITE_L
-										+ QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_XM,
-								QueryParameters.FLR_BREITE_XM,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_XS,
-								QueryParameters.FLR_BREITE_S
-										+ QueryParameters.FLR_BREITE_XS,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_XS,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_XS, 0 },
-						new String[] {
-								"i_id",
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_C_ADRESSART,
-								KundeFac.FLR_PARTNER
-										+ "."
-										+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
+		columns.add("lp.telefon", String.class,
+				getTextRespectUISpr("lp.telefon", mandant, locUi),
+				QueryParameters.FLR_BREITE_XM, Facade.NICHT_SORTIERBAR);
 
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_C_KBEZ,
-								Facade.NICHT_SORTIERBAR,
+		columns.add("part.auswahl.abc", String.class,
+				getTextRespectUISpr("part.auswahl.abc", mandant, locUi),
+				QueryParameters.FLR_BREITE_S, KundeFac.FLR_KUNDE_C_ABC);
+		columns.add(
+				"part.auswahl.liefersperre",
+				Icon.class,
+				getTextRespectUISpr("part.auswahl.liefersperre.short", mandant, locUi),
+				QueryParameters.FLR_BREITE_S,
+				KundeFac.FLR_KUNDE_T_LIEFERSPERREAM,getTextRespectUISpr("part.auswahl.liefersperre.tooltip", mandant, locUi) );
 
-								KundeFac.FLR_KUNDE_C_ABC,
+		columns.add("lp.lkz", String.class,
+				getTextRespectUISpr("lp.lkz", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+						+ SystemFac.FLR_LP_FLRLAND + "."
+						+ SystemFac.FLR_LP_LANDLKZ);
+		columns.add("lp.plz", String.class,
+				getTextRespectUISpr("lp.plz", mandant, locUi),
+				QueryParameters.FLR_BREITE_S + QueryParameters.FLR_BREITE_XS,
+				KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+						+ SystemFac.FLR_LP_LANDPLZORTPLZ);
+		columns.add("lp.ort", String.class,
+				getTextRespectUISpr("lp.ort", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+				KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+						+ SystemFac.FLR_LP_FLRORT + "."
+						+ SystemFac.FLR_LP_ORTNAME);
 
-								KundeFac.FLR_KUNDE_T_LIEFERSPERREAM,
+		if (bMitVornameStrasse) {
+			columns.add("lp.strasse", String.class,
+					getTextRespectUISpr("lp.strasse", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, KundeFac.FLR_PARTNER + "."
+							+ PartnerFac.FLR_PARTNER_C_STRASSE);
+		}
 
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_FLRLAND + "."
-										+ SystemFac.FLR_LP_LANDLKZ,
+		columns.add("lp.vertreter", String.class,
+				getTextRespectUISpr("lp.vertreter", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, KundeFac.FLR_PERSONAL + "."
+						+ PersonalFac.FLR_PERSONAL_C_KURZZEICHEN);
 
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
+		if (bMitKundennummer>0) {
 
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_FLRORT + "."
-										+ SystemFac.FLR_LP_ORTNAME,
+			columns.add("lp.kundennummer", Integer.class,
+					getTextRespectUISpr("lp.kundennummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					KundeFac.FLR_KUNDE_I_KUNDENNUMMER);
 
-								KundeFac.FLR_PERSONAL
-										+ "."
-										+ PersonalFac.FLR_PERSONAL_C_KURZZEICHEN,
-
-								KundeFac.FLR_KONTO + ".c_nr",
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_F_GMTVERSATZ,
-								"" })
-
-				);
-			} else {
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, String.class,
-								String.class, String.class, String.class,
-								String.class, Icon.class, String.class,
-								String.class, String.class, String.class,
-								Integer.class, Double.class, Color.class },
-						new String[] {
-								"i_id", // hier steht immer i_id oder c_nr
-								"",
-								getTextRespectUISpr("lp.firma",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.kurzbezeichnung",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.telefon",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("part.auswahl.abc",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr(
-										"part.auswahl.liefersperre",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.lkz",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.plz",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.ort",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.vertreter",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.kundennummer",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-
-								getTextRespectUISpr("part.auswahl.gmt",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()), "" },
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_XXS,
-								QueryParameters.FLR_BREITE_L
-										+ QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_XM,
-								QueryParameters.FLR_BREITE_XM,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_XS,
-								QueryParameters.FLR_BREITE_S
-										+ QueryParameters.FLR_BREITE_XS,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_XS,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_XS, 0 },
-						new String[] {
-								"i_id",
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_C_ADRESSART,
-								KundeFac.FLR_PARTNER
-										+ "."
-										+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_C_KBEZ,
-								Facade.NICHT_SORTIERBAR,
-
-								KundeFac.FLR_KUNDE_C_ABC,
-
-								KundeFac.FLR_KUNDE_T_LIEFERSPERREAM,
-
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_FLRLAND + "."
-										+ SystemFac.FLR_LP_LANDLKZ,
-
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
-
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_FLRORT + "."
-										+ SystemFac.FLR_LP_ORTNAME,
-
-								KundeFac.FLR_PERSONAL
-										+ "."
-										+ PersonalFac.FLR_PERSONAL_C_KURZZEICHEN,
-
-								KundeFac.FLR_KUNDE_I_KUNDENNUMMER,
-								KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_F_GMTVERSATZ,
-								"" })
-
-				);
-
-			}
+		} else {
+			columns.add("lp.debitoren", String.class,
+					getTextRespectUISpr("lp.debitoren", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					KundeFac.FLR_KONTO + ".c_nr");
 
 		}
-		return super.getTableInfo();
+
+		columns.add("part.auswahl.gmt", Double.class,
+				getTextRespectUISpr("part.auswahl.gmt", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_F_GMTVERSATZ);
+
+		columns.add("Color", Color.class, "", 1, "");
+
+		return columns;
+	}
+
+	private void setupParameters() {
+		try {
+			ParametermandantDto parameter = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_KUNDEN,
+							ParameterFac.PARAMETER_KUNDE_MIT_NUMMER);
+			bMitKundennummer = (java.lang.Integer) parameter.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
+					ParameterFac.PARAMETER_VORNAME_UND_STRASSE_IN_AUSWAHLLISTE);
+			bMitVornameStrasse = (Boolean) parameter.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+			bSuchenInklusiveKbez = (java.lang.Boolean) parameter
+					.getCWertAsObject();
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setupParameters();
+		setTableColumnInformation(createColumnInformation(
+				theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(),
+				c.getDbColumNames(), c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 
 	public String getQueryHandler() {

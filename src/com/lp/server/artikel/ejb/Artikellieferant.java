@@ -43,18 +43,23 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries( {
-		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2"),
-		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigab", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 AND o.tPreisgueltigab = ?3"),
-		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabKleiner", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 AND o.tPreisgueltigab <= ?3 ORDER BY o.tPreisgueltigab DESC"),
+		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 ORDER BY o.iSort ASC"),
+		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabGebindeIIdIsNull", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 AND o.tPreisgueltigab = ?3 AND o.gebindeIId is null"),
+		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabGebindeIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 AND o.tPreisgueltigab = ?3 AND o.gebindeIId = ?4"),
+		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabKleiner", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 AND o.tPreisgueltigab <= ?3  AND o.gebindeIId is null ORDER BY o.tPreisgueltigab DESC"),
+		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabGebindeIIdKleiner", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 AND o.tPreisgueltigab <= ?3 AND o.gebindeIId = ?4 ORDER BY o.tPreisgueltigab DESC"),
 		@NamedQuery(name = "ArtikellieferantfindByArtikelIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "ArtikellieferantfindByCArtikelnrlieferant", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.cArtikelnrlieferant = ?1"),
 		@NamedQuery(name = "ArtikellieferantfindByCArtikelnrlieferantLieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.cArtikelnrlieferant = ?1 AND o.lieferantIId= ?2"),
-		@NamedQuery(name = "ArtikellieferantfindByArtikelIIdTPreisgueltigab", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.tPreisgueltigab <= ?2 ORDER BY o.iSort ASC"),
+		@NamedQuery(name = "ArtikellieferantfindByArtikelIIdTPreisgueltigab", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.tPreisgueltigab <= ?2 AND ( o.tPreisgueltigbis IS NULL OR o.tPreisgueltigbis >= ?2 )  ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "ArtikellieferantejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Artikellieferant o WHERE o.artikelIId = ?1"),
-		@NamedQuery(name = "ArtikellieferantfindByLieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.lieferantIId = ?1") })
+		@NamedQuery(name = "ArtikellieferantfindByLieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.lieferantIId = ?1"),
+		@NamedQuery(name = ArtikellieferantQuery.DistinctArtikelIIdByLieferantIId, query = "SELECT DISTINCT o.artikelIId FROM Artikellieferant o WHERE o.lieferantIId = :lieferant")})
 @Entity
-@Table(name = "WW_ARTIKELLIEFERANT")
+@Table(name = ITablenames.WW_ARTIKELLIEFERANT)
 public class Artikellieferant implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -71,9 +76,49 @@ public class Artikellieferant implements Serializable {
 
 	@Column(name = "B_WEBSHOP")
 	private Short bWebshop;
+	
+	@Column(name = "B_NICHT_LIEFERBAR")
+	private Short bNichtLieferbar;
+
+	public Short getBNichtLieferbar() {
+		return bNichtLieferbar;
+	}
+
+	public void setBNichtLieferbar(Short bNichtLieferbar) {
+		this.bNichtLieferbar = bNichtLieferbar;
+	}
 
 	@Column(name = "N_EINZELPREIS")
 	private BigDecimal nEinzelpreis;
+	
+	@Column(name = "N_GEBINDEMENGE")
+	private BigDecimal nGebindemenge;
+	
+	@Column(name = "N_WEBABFRAGE_BESTAND")
+	private BigDecimal nWebabfrageBestand;
+	
+	@Column(name = "N_INITIALKOSTEN")
+	private BigDecimal nInitialkosten;
+	
+	
+	public BigDecimal getNInitialkosten() {
+		return nInitialkosten;
+	}
+
+	public void setNInitialkosten(BigDecimal nInitialkosten) {
+		this.nInitialkosten = nInitialkosten;
+	}
+
+	@Column(name = "T_LETZTEWEBABFRAGE")
+	private Timestamp tLetzteWebabfrage;
+
+	public BigDecimal getNGebindemenge() {
+		return nGebindemenge;
+	}
+
+	public void setNGebindemenge(BigDecimal nGebindemenge) {
+		this.nGebindemenge = nGebindemenge;
+	}
 
 	@Column(name = "F_RABATT")
 	private Double fRabatt;
@@ -86,6 +131,17 @@ public class Artikellieferant implements Serializable {
 
 	@Column(name = "F_MINDESTBESTELLMENGE")
 	private Double fMindestbestellmenge;
+
+	@Column(name = "GEBINDE_I_ID")
+	private Integer gebindeIId;
+	
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
+	}
 
 	@Column(name = "EINHEIT_C_NR_VPE")
 	private String einheitCNrVpe;
@@ -117,6 +173,28 @@ public class Artikellieferant implements Serializable {
 	@Column(name = "C_ANGEBOTNUMMER")
 	private String cAngebotnummer;
 	
+	@Column(name = "X_KOMMENTAR_NICHT_LIEFERBAR")
+	private String xKommentarNichtLieferbar;
+	
+	public String getXKommentarNichtLieferbar() {
+		return xKommentarNichtLieferbar;
+	}
+
+	public void setXKommentarNichtLieferbar(String xKommentarNichtLieferbar) {
+		this.xKommentarNichtLieferbar = xKommentarNichtLieferbar;
+	}
+
+	@Column(name = "X_KOMMENTAR_FIXKOSTEN")
+	private String xKommentarFixkosten;
+	
+	public String getXKommentarFixkosten() {
+		return xKommentarFixkosten;
+	}
+
+	public void setXKommentarFixkosten(String xKommentarFixkosten) {
+		this.xKommentarFixkosten = xKommentarFixkosten;
+	}
+
 	@Column(name = "ZERTIFIKATART_I_ID")
 	private Integer zertifikatartIId;
 	
@@ -166,6 +244,17 @@ public class Artikellieferant implements Serializable {
 
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
+	
+	@Column(name = "ANFRAGEPOSITIONLIEFERDATEN_I_ID")
+	private Integer anfragepositionlieferdatenIId;
+
+	public Integer getAnfragepositionlieferdatenIId() {
+		return anfragepositionlieferdatenIId;
+	}
+
+	public void setAnfragepositionlieferdatenIId(Integer anfragepositionlieferdatenIId) {
+		this.anfragepositionlieferdatenIId = anfragepositionlieferdatenIId;
+	}
 
 	@Column(name = "B_RABATTBEHALTEN")
 	private Short bRabattbehalten;
@@ -215,6 +304,7 @@ public class Artikellieferant implements Serializable {
 		setBHerstellerbez(new Short((short) 0));
 		setBRabattbehalten(new Short((short) 0));
 		setBWebshop(new Short((short) 0));
+		setBNichtLieferbar(new Short((short) 0));
 		setIId(id);
 		setLieferantIId(lieferantIId);
 		setISort(sort);
@@ -369,4 +459,19 @@ public class Artikellieferant implements Serializable {
 		this.artikelIId = artikelIId;
 	}
 
+	public BigDecimal getNWebabfrageBestand() {
+		return nWebabfrageBestand;
+	}
+	
+	public void setNWebabfrageBestand(BigDecimal nWebabfrageBestand) {
+		this.nWebabfrageBestand = nWebabfrageBestand;
+	}
+	
+	public Timestamp getTLetzteWebabfrage() {
+		return tLetzteWebabfrage;
+	}
+	
+	public void setTLetzteWebabfrage(Timestamp tLetzteWebabfrage) {
+		this.tLetzteWebabfrage = tLetzteWebabfrage;
+	}
 }

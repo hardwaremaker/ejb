@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.rechnung.fastlanereader;
@@ -64,6 +64,7 @@ import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.BigDecimalFinanz;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -78,27 +79,27 @@ import com.lp.util.EJBExceptionLP;
  * </p>
  * <p>
  * </p>
- * 
+ *
  * @author Martin Bluehweis
  * @version 1.0
  */
 
 public class ZahlungHandler extends UseCaseHandler {
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = 1L;
+
 	protected static int SPALTE_I_ID = 0;
 	protected static int SPALTE_ZAHLDATUM = 1;
 	protected static int SPALTE_ART = 2;
 	protected static int SPALTE_BETRAG = 3;
 	protected static int SPALTE_BETRAGUST = 4;
 	protected static int SPALTE_OFFEN = 5;
+	protected static int SPALTE_KOMMENTAR = 6;
 
 	/**
 	 * gets the data page for the specified row using the current query. The row
 	 * at rowIndex will be located in the middle of the page.
-	 * 
+	 *
 	 * @see UseCaseHandler#getPageAt(java.lang.Integer)
 	 * @param rowIndex
 	 *            Integer
@@ -126,6 +127,9 @@ public class ZahlungHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			BigDecimal bdOffen = null;
+
+			String[] tooltipData = new String[resultList.size()];
+
 			while (resultListIterator.hasNext()) {
 				FLRRechnungZahlung zahlung = (FLRRechnungZahlung) resultListIterator
 						.next();
@@ -174,9 +178,17 @@ public class ZahlungHandler extends UseCaseHandler {
 
 				rows[row][SPALTE_OFFEN] = bdOffen;
 
+				if (zahlung.getC_kommentar() != null && !zahlung.getC_kommentar().isEmpty()) {
+					rows[row][SPALTE_KOMMENTAR] = true ;
+					tooltipData[row] = zahlung.getC_kommentar().isEmpty() ? null
+							: Helper.removeStyles(zahlung.getC_kommentar());
+				} else {
+					rows[row][SPALTE_KOMMENTAR] = false;
+				}
+
 				String zahlungsart = zahlung.getZahlungsart_c_nr();
 				String bezahlungsbelegart = zahlung.getFlrrechnung().getFlrrechnungart().getC_nr() ;
-				if (bezahlungsbelegart.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT) || 
+				if (bezahlungsbelegart.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT) ||
 						bezahlungsbelegart.equals(RechnungFac.RECHNUNGART_WERTGUTSCHRIFT)) {
 
 					if (!zahlung.getZahlungsart_c_nr().equals(
@@ -231,8 +243,13 @@ public class ZahlungHandler extends UseCaseHandler {
 				rows[row][SPALTE_ART] = zahlungsartUebersetzt + ": " + art;
 				row++;
 			}
+
+//			result = new QueryResult(rows, this.getRowCount(), startIndex,
+//					endIndex, 0);
+
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+					endIndex, 0, tooltipData);
+
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -249,7 +266,7 @@ public class ZahlungHandler extends UseCaseHandler {
 
 	/**
 	 * gets the total number of rows represented by the current query.
-	 * 
+	 *
 	 * @see UseCaseHandler#getRowCountFromDataBase()
 	 * @return int
 	 */
@@ -281,7 +298,7 @@ public class ZahlungHandler extends UseCaseHandler {
 	/**
 	 * builds the where clause of the HQL (Hibernate Query Language) statement
 	 * using the current query.
-	 * 
+	 *
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
@@ -319,7 +336,7 @@ public class ZahlungHandler extends UseCaseHandler {
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 * 
+	 *
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
@@ -371,7 +388,7 @@ public class ZahlungHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 * 
+	 *
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
@@ -381,7 +398,7 @@ public class ZahlungHandler extends UseCaseHandler {
 	/**
 	 * sorts the data described by the current query using the specified sort
 	 * criterias. The current query is also updated with the new sort criterias.
-	 * 
+	 *
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
 	 * @return QueryResult
@@ -436,35 +453,58 @@ public class ZahlungHandler extends UseCaseHandler {
 
 	/**
 	 * gets information about the Zahlungstable.
-	 * 
+	 *
 	 * @return TableInfo
 	 */
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class, Date.class,
-					String.class, BigDecimal.class, BigDecimal.class,
-					BigDecimalFinanz.class }, new String[] { "Id",
-					getTextRespectUISpr("lp.zahldatum", mandantCNr, locUI),
-					getTextRespectUISpr("lp.art", mandantCNr, locUI),
-					getTextRespectUISpr("lp.betrag", mandantCNr, locUI),
-					getTextRespectUISpr("lp.mwst", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bruttooffen", mandantCNr, locUI) },
-					new int[] { -1, QueryParameters.FLR_BREITE_M, -1,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_PREIS }, new String[] {
-							RechnungFac.FLR_RECHNUNG_ZAHLUNG_I_ID,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR }));
-
+			setTableInfo(
+				new TableInfo(
+					new Class[] {
+						Integer.class,
+						Date.class,
+						String.class,
+						BigDecimal.class,
+						BigDecimal.class,
+						BigDecimalFinanz.class,
+						Boolean.class
+					},
+					new String[] {
+						"Id",
+						getTextRespectUISpr("lp.zahldatum", mandantCNr, locUI),
+						getTextRespectUISpr("lp.art", mandantCNr, locUI),
+						getTextRespectUISpr("lp.betrag", mandantCNr, locUI),
+						getTextRespectUISpr("lp.mwst", mandantCNr, locUI),
+						getTextRespectUISpr("lp.bruttooffen", mandantCNr, locUI),
+						getTextRespectUISpr("lp.kommentar", mandantCNr,	locUI)
+					},
+					new int[] {
+						-1,
+						QueryParameters.FLR_BREITE_M,
+						-1,
+						QueryParameters.FLR_BREITE_PREIS,
+						QueryParameters.FLR_BREITE_PREIS,
+						QueryParameters.FLR_BREITE_PREIS,
+						QueryParameters.FLR_BREITE_S
+					},
+					new String[] {
+						RechnungFac.FLR_RECHNUNG_ZAHLUNG_I_ID,
+						Facade.NICHT_SORTIERBAR,
+						Facade.NICHT_SORTIERBAR,
+						Facade.NICHT_SORTIERBAR,
+						Facade.NICHT_SORTIERBAR,
+						Facade.NICHT_SORTIERBAR,
+						Facade.NICHT_SORTIERBAR
+					}
+				)
+			);
 		}
 
 		return super.getTableInfo();
 	}
-	
+
 	@Override
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
 		RechnungDto rechnungDto = null;
@@ -494,7 +534,7 @@ public class ZahlungHandler extends UseCaseHandler {
 			return null;
 		}
 	}
-	
+
 	@Override
 	public String getSTable() {
 		return "RE ZAHLUNG";

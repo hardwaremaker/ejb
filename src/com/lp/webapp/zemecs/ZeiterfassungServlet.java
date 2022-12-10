@@ -82,6 +82,12 @@ public class ZeiterfassungServlet extends FrameServlet {
 			return new CommandZE("mecs.jsp");
 		} else if (commandToDo.equals(TheApp.CMD_ANWESENHEITSLITE)) {
 			return new CommandAnwesenheitsliste(null);
+		} else if (commandToDo.equals(TheApp.CMD_OFFENE_AUFRAGSPOSITIONEN)) {
+			return new CommandOffeneAuftragspositionen(null);
+		} else if (commandToDo.equals(TheApp.CMD_OFFENE_AUFRAG_OFFENE_POSITIONEN)) {
+			return new CommandAuftragOffenePositionen(null);
+		} else if (commandToDo.equals(TheApp.CMD_TAETIGKEIT_AGBEGINN)) {
+			return new CommandTaetigkeitAGBeginn(null);
 		} else if (commandToDo.equals(TheApp.CMD_ZE_MECS_ZEITBUCHEN)) {
 			return new CommandZE("mecs.jsp");
 		} else if (commandToDo.equals(TheApp.CMD_ZE_MECS_ZEITBUCHENFINGERPRINT)) {

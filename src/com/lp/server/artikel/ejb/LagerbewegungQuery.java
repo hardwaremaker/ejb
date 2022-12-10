@@ -33,6 +33,7 @@
 package com.lp.server.artikel.ejb;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -42,6 +43,9 @@ import com.lp.server.partner.ejb.HvTypedQuery;
 
 public class LagerbewegungQuery {
 	public final static  String ByLagerbewegungfindByArtikelIIdBAbgangBelegdatumCount = "LagerbewegungfindByArtikelIIdBAbgangBelegdatumCount" ;
+	public final static String ByBelegartCNrArtikelIIdCSeriennrchargennr = "LagerbewegungfindByBelegartCNrArtikelIIdCSeriennrchargennr";
+	public final static String ByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIds = "LagerbewegungfindByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIds";
+	public final static String ByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge = "LagerbewegungfindByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge";
 	
 	public static Long countByArtikelIIdDate(EntityManager em, Integer artikelIId, Timestamp youngestDate) {
 		HvTypedQuery<Long> itemQuery = new HvTypedQuery<Long>(
@@ -61,4 +65,49 @@ public class LagerbewegungQuery {
 		
 		return count ;
 	}
+	
+	public static HvTypedQuery<Lagerbewegung> byBelegartCNrArtikelIIdCSeriennrchargennr(
+			EntityManager em, String belegartCnr, Integer artikelIId, String cSeriennrchargennr) {
+		HvTypedQuery<Lagerbewegung> theQuery = new HvTypedQuery<Lagerbewegung>(em.createNamedQuery(ByBelegartCNrArtikelIIdCSeriennrchargennr));
+		theQuery.setParameter("belegartnr", belegartCnr);
+		theQuery.setParameter("artikelId", artikelIId);
+		theQuery.setParameter("serienChargennr", cSeriennrchargennr);
+		return theQuery;
+	}
+	
+	public static List<Lagerbewegung> listByBelegartCNrArtikelIIdCSeriennrchargennr(
+			EntityManager em, String belegartCnr, Integer artikelIId, String cSeriennrchargennr) {
+		return byBelegartCNrArtikelIIdCSeriennrchargennr(em, belegartCnr, artikelIId, cSeriennrchargennr).getResultList();
+	}
+	
+	public static HvTypedQuery<Lagerbewegung> byBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIds(
+			EntityManager em, String belegartCnr, Integer artikelIId, String cSeriennrchargennr, List<Integer> belegartids) {
+		HvTypedQuery<Lagerbewegung> theQuery = new HvTypedQuery<Lagerbewegung>(em.createNamedQuery(ByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIds));
+		theQuery.setParameter("belegartnr", belegartCnr);
+		theQuery.setParameter("artikelId", artikelIId);
+		theQuery.setParameter("serienChargennr", cSeriennrchargennr);
+		theQuery.setParameter("belegartids", belegartids);
+		return theQuery;
+	}
+	
+	public static HvTypedQuery<Lagerbewegung> byBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge(
+			EntityManager em, String belegartCnr, Integer artikelIId, String cSeriennrchargennr, List<Integer> belegartids) {
+		HvTypedQuery<Lagerbewegung> theQuery = new HvTypedQuery<Lagerbewegung>(em.createNamedQuery(ByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge));
+		theQuery.setParameter("belegartnr", belegartCnr);
+		theQuery.setParameter("artikelId", artikelIId);
+		theQuery.setParameter("serienChargennr", cSeriennrchargennr);
+		theQuery.setParameter("belegartids", belegartids);
+		return theQuery;
+	}
+
+	
+	public static List<Lagerbewegung> listByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIds(
+			EntityManager em, String belegartCnr, Integer artikelIId, String cSeriennrchargennr, List<Integer> belegartids) {
+		return byBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIds(em, belegartCnr, artikelIId, cSeriennrchargennr, belegartids).getResultList();
+	}
+	public static List<Lagerbewegung> listByBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge(
+			EntityManager em, String belegartCnr, Integer artikelIId, String cSeriennrchargennr, List<Integer> belegartids) {
+		return byBelegartCNrArtikelIIdCSeriennrchargennrIBelegartIdsNurAbgaenge(em, belegartCnr, artikelIId, cSeriennrchargennr, belegartids).getResultList();
+	}
+	
 } 

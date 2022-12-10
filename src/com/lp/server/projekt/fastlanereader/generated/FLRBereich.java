@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.projekt.fastlanereader.generated;
 
 import java.io.Serializable;
@@ -51,11 +19,23 @@ public class FLRBereich implements Serializable {
     /** nullable persistent field */
     private Integer i_sort;
 
+    /** nullable persistent field */
+    private Short b_projekt_mit_betreiber;
+
+    /** nullable persistent field */
+    private Short b_projekt_mit_artikel;
+
+    /** nullable persistent field */
+    private Short b_duchgefuehrt_von_in_offene;
+
     /** full constructor */
-    public FLRBereich(String c_bez, String mandant_c_nr, Integer i_sort) {
+    public FLRBereich(String c_bez, String mandant_c_nr, Integer i_sort, Short b_projekt_mit_betreiber, Short b_projekt_mit_artikel, Short b_duchgefuehrt_von_in_offene) {
         this.c_bez = c_bez;
         this.mandant_c_nr = mandant_c_nr;
         this.i_sort = i_sort;
+        this.b_projekt_mit_betreiber = b_projekt_mit_betreiber;
+        this.b_projekt_mit_artikel = b_projekt_mit_artikel;
+        this.b_duchgefuehrt_von_in_offene = b_duchgefuehrt_von_in_offene;
     }
 
     /** default constructor */
@@ -92,6 +72,30 @@ public class FLRBereich implements Serializable {
 
     public void setI_sort(Integer i_sort) {
         this.i_sort = i_sort;
+    }
+
+    public Short getB_projekt_mit_betreiber() {
+        return this.b_projekt_mit_betreiber;
+    }
+
+    public void setB_projekt_mit_betreiber(Short b_projekt_mit_betreiber) {
+        this.b_projekt_mit_betreiber = b_projekt_mit_betreiber;
+    }
+
+    public Short getB_projekt_mit_artikel() {
+        return this.b_projekt_mit_artikel;
+    }
+
+    public void setB_projekt_mit_artikel(Short b_projekt_mit_artikel) {
+        this.b_projekt_mit_artikel = b_projekt_mit_artikel;
+    }
+
+    public Short getB_duchgefuehrt_von_in_offene() {
+        return this.b_duchgefuehrt_von_in_offene;
+    }
+
+    public void setB_duchgefuehrt_von_in_offene(Short b_duchgefuehrt_von_in_offene) {
+        this.b_duchgefuehrt_von_in_offene = b_duchgefuehrt_von_in_offene;
     }
 
     public String toString() {

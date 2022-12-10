@@ -33,7 +33,7 @@
 package com.lp.server.system.ejb;
 
 import java.io.Serializable;
-import java.sql.Date;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -42,6 +42,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+import com.lp.server.util.IISort;
+
 @NamedQueries( {
 		@NamedQuery(name = "AutomatikjobfindByISort", query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.iSort=?1"),
 		@NamedQuery(name = "AutomatikjobfindByBActive", query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.bActive=?1"),
@@ -49,11 +52,14 @@ import javax.persistence.Table;
 		@NamedQuery(name = "AutomatikjobfindBydNextperform", query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.dNextperform=?1"),
 		@NamedQuery(name = "AutomatikjobfindByCName", query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.cName=?1"),
 		@NamedQuery(name = "AutomatikjobfindByCMandantCNr", query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.mandantCNr=?1"),
-		@NamedQuery(name = "AutomatikjobfindByIAutomatikjobtypeIid", query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.iAutomatikjobtypeIid=?1")
+		@NamedQuery(name = AutomatikjobsQuery.ByIAutomatikjobtypeIid, query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.iAutomatikjobtypeIid=?1"),
+		@NamedQuery(name = AutomatikjobsQuery.ByActiveScheduler, query = "SELECT OBJECT(o) FROM Automatikjobs o WHERE o.bActive=:active AND o.iScheduler=:scheduler ORDER BY o.iSort"),
+		@NamedQuery(name = AutomatikjobsQuery.ByIAutomatikjobtypeIidMandantCnr, query = "SELECT OBJECT (o) FROM Automatikjobs o WHERE o.iAutomatikjobtypeIid=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = AutomatikjobsQuery.FindHighestIId, query = "SELECT MAX(o.iId) FROM Automatikjobs o")
 		})
 @Entity
-@Table(name = "LP_AUTOMATIKJOBS")
-public class Automatikjobs implements Serializable {
+@Table(name = ITablenames.LP_AUTOMATIKJOBS)
+public class Automatikjobs implements Serializable, IISort {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -71,10 +77,10 @@ public class Automatikjobs implements Serializable {
 	private Integer bActive;
 
 	@Column(name = "D_LASTPERFORMED")
-	private Date dLastperformed;
+	private Timestamp dLastperformed;
 
 	@Column(name = "D_NEXTPERFORM")
-	private Date dNextperform;
+	private Timestamp dNextperform;
 
 	@Column(name = "I_INTERVALL")
 	private Integer iIntervall;
@@ -90,6 +96,9 @@ public class Automatikjobs implements Serializable {
 
 	@Column(name = "I_AUTOMATIKJOBTYPE_IID")
 	private Integer iAutomatikjobtypeIid;
+
+	@Column(name = "I_SCHEDULER")
+	private Integer iScheduler;
 
 	private static final long serialVersionUID = 1L;
 
@@ -141,19 +150,19 @@ public class Automatikjobs implements Serializable {
 		this.bActive = bActive;
 	}
 
-	public Date getDLastperformed() {
+	public Timestamp getDLastperformed() {
 		return this.dLastperformed;
 	}
 
-	public void setDLastperformed(Date dLastperformed) {
+	public void setDLastperformed(Timestamp dLastperformed) {
 		this.dLastperformed = dLastperformed;
 	}
 
-	public Date getDNextperform() {
+	public Timestamp getDNextperform() {
 		return this.dNextperform;
 	}
 
-	public void setDNextperform(Date dNextperform) {
+	public void setDNextperform(Timestamp dNextperform) {
 		this.dNextperform = dNextperform;
 	}
 
@@ -196,5 +205,12 @@ public class Automatikjobs implements Serializable {
 	public void setIAutomatikjobtypeIid(Integer iAutomatikjobtypeIid) {
 		this.iAutomatikjobtypeIid = iAutomatikjobtypeIid;
 	}
-
+	
+	public Integer getIScheduler() {
+		return iScheduler;
+	}
+	
+	public void setIScheduler(Integer iScheduler) {
+		this.iScheduler = iScheduler;
+	}
 }

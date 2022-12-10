@@ -34,6 +34,10 @@ package com.lp.server.system.service;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.lp.server.finanz.service.UstWarnungDto;
 
 public class BelegPruefungDto implements Serializable {
 	private static final long serialVersionUID = 8029498872525899814L;
@@ -43,6 +47,8 @@ public class BelegPruefungDto implements Serializable {
 	private boolean kundeHatUstAberNichtUstPositionen ;
 	private boolean kundeHatKeineUstAberUstPositionen ;
 	private Timestamp berechnungsZeitpunkt ;
+	private List<RePosInfo> reposInfos;
+	private List<UstWarnungDto> ustWarnungDtos;
 	
 	public BelegPruefungDto(Integer belegId) {
 		this(belegId, null); 
@@ -51,6 +57,8 @@ public class BelegPruefungDto implements Serializable {
 	public BelegPruefungDto(Integer belegId, Integer kundeId) {
 		this.belegId = belegId ;
 		this.kundeId = kundeId ;
+		this.reposInfos = new ArrayList<RePosInfo>();
+		ustWarnungDtos = new ArrayList<UstWarnungDto>();
 	}
 	
 	public Integer getBelegId() {
@@ -84,5 +92,73 @@ public class BelegPruefungDto implements Serializable {
 	}
 	public void setBerechnungsZeitpunkt(Timestamp berechnungsZeitpunkt) {
 		this.berechnungsZeitpunkt = berechnungsZeitpunkt;
+	}
+	
+	public void addZeroPriceRePosInfo(RePosInfo reposInfo) {
+		reposInfos.add(reposInfo);
+	}
+	 
+	public List<RePosInfo> getZeroPriceRePosInfos() {
+		return reposInfos;
+	}
+	
+	public void addUstWarnung(UstWarnungDto ustWarnungDto) {
+		ustWarnungDtos.add(ustWarnungDto);
+	}
+	
+	public List<UstWarnungDto> getUstWarnungDtos() {
+		return ustWarnungDtos;
+	}
+	
+	public class RePosInfo implements Serializable {
+		private static final long serialVersionUID = -7280647300318336488L;
+		private Integer reposId;
+		private Integer reposNr;
+		private String  lsCnr;
+		private List<Integer> lsposIds;
+		private List<Integer> lsposNrs;
+		
+		public RePosInfo(Integer reposId, Integer reposNr) {
+			this.reposId = reposId;
+			this.reposNr = reposNr;
+			this.lsposIds = new ArrayList<Integer>();
+			this.lsposNrs = new ArrayList<Integer>();
+		}
+		
+		public RePosInfo(Integer reposId, String lsCnr) {
+			this.reposId = reposId;
+			this.lsCnr = lsCnr;
+			this.lsposIds = new ArrayList<Integer>();
+			this.lsposNrs = new ArrayList<Integer>();
+		}
+		
+		public Integer getReposId() {
+			return reposId;
+		}
+		
+		public Integer getReposNr() {
+			return reposNr;
+		}
+		
+		public void setLsCnr(String lsCnr) {
+			this.lsCnr = lsCnr;
+		}
+		
+		public String getLsCnr() {
+			return lsCnr;
+		}
+		
+		public List<Integer> getLsposIds() {
+			return lsposIds;
+		}
+		
+		public List<Integer> getLsposNrs() {
+			return lsposNrs;
+		}
+		
+		public void addLsposId(Integer lsposId, Integer lsposNr) {
+			lsposIds.add(lsposId);
+			lsposNrs.add(lsposNr);
+		}
 	}
 }

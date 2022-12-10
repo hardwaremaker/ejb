@@ -52,6 +52,20 @@ public class MaschineDtoAssembler {
 			maschineDto.setBVersteckt(maschine.getBVersteckt());
 			maschineDto.setTKaufdatum(maschine.getTKaufdatum());
 			maschineDto.setMaschinengruppeIId(maschine.getMaschinengruppeIId());
+
+			maschineDto.setIAbschreibungInMonaten(maschine
+					.getIAbschreibungInMonaten());
+			maschineDto.setIPlanstunden(maschine.getIPlanstunden());
+			maschineDto.setNAnschaffungskosten(maschine
+					.getNAnschaffungskosten());
+			maschineDto.setNEnergiekosten(maschine.getNEnergiekosten());
+			maschineDto.setNRaumkosten(maschine.getNRaumkosten());
+			maschineDto.setNVerzinsung(maschine.getNVerzinsung());
+			maschineDto.setNSonstigekosten(maschine.getNSonstigekosten());
+			maschineDto.setArtikelIIdVerrechnen(maschine.getArtikelIIdVerrechnen());
+			maschineDto.setBManuelleBedienung(maschine.getBManuelleBedienung());
+			maschineDto.setCSeriennummer(maschine.getCSeriennummer());
+
 		}
 		return maschineDto;
 	}

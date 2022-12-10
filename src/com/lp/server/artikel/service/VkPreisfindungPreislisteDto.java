@@ -51,6 +51,19 @@ public class VkPreisfindungPreislisteDto implements Serializable {
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
 
+	private String cBemerkung;
+
+	public String getCBemerkung() {
+		return cBemerkung;
+	}
+
+	public void setCBemerkung(String cBemerkung) {
+		if (cBemerkung != null && cBemerkung.length() > 80) {
+			cBemerkung = cBemerkung.substring(0, 79);
+		}
+		this.cBemerkung = cBemerkung;
+	}
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -86,6 +99,7 @@ public class VkPreisfindungPreislisteDto implements Serializable {
 	public BigDecimal getNArtikelstandardrabattsatz() {
 		return nArtikelstandardrabattsatz;
 	}
+
 	public Timestamp getTAendern() {
 		return tAendern;
 	}

@@ -82,6 +82,16 @@ public class FibuExportManagerFactory {
 		return exportManager;
 	}
 	
+	public static FibuExportManager getFibuExportManager(String iVariante,
+			String sFormat, String kontotypCnr, 
+			FibuExportKriterienDto exportKriterienDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		FibuExportManager exportManager = getFibuExportManager(iVariante, 
+				sFormat, exportKriterienDto, theClientDto);
+		exportManager.setKontoExportFormatter(
+				FibuKontoExportFormatterFactory.getFibuKontoExportFormatter(sFormat, kontotypCnr));
+		return exportManager;
+	}
 	/**
 	 * Einen FibuExportManager holen, der sich um die Erl&ouml;skonten k&uuml;mmert</br>
 	 * <p></p> 

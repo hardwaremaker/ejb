@@ -80,6 +80,16 @@ public class VkPreisfindungPreisliste implements Serializable {
 	@Column(name = "T_AENDERN")
 	private Timestamp tAendern;
 	
+	@Column(name = "C_BEMERKUNG")
+	private String cBemerkung;
+	public String getCBemerkung() {
+		return cBemerkung;
+	}
+
+	public void setCBemerkung(String cBemerkung) {
+		this.cBemerkung = cBemerkung;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public VkPreisfindungPreisliste() {

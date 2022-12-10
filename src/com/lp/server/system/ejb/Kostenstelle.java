@@ -42,12 +42,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICNr;
+
 @NamedQueries( {
 		@NamedQuery(name = "KostenstellefindByMandant", query = "SELECT OBJECT (o) FROM Kostenstelle o  WHERE o.mandantCNr=?1"),
 		@NamedQuery(name = "KostenstellefindByNummerMandant", query = "SELECT OBJECT(k) FROM Kostenstelle k WHERE k.cNr=?1 AND k.mandantCNr=?2") })
 @Entity
 @Table(name = "LP_KOSTENSTELLE")
-public class Kostenstelle implements Serializable {
+public class Kostenstelle implements Serializable, ICNr {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;

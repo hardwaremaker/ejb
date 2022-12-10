@@ -34,6 +34,7 @@
 package com.lp.server.angebotstkl.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -68,6 +69,40 @@ public class Agstklarbeitsplan implements Serializable {
 	@Column(name = "C_KOMMENTAR")
 	private String cKommentar;
 
+	@Column(name = "B_INITIAL")
+	private Short bInitial;
+	
+	public Short getBInitial() {
+		
+		return bInitial;
+	}
+
+	public void setBInitial(Short bInitial) {
+		this.bInitial = bInitial;
+	}
+	
+	@Column(name = "N_STUNDENSATZMANN")
+	private BigDecimal nStundensatzMann;
+	
+	public BigDecimal getNStundensatzMann() {
+		return nStundensatzMann;
+	}
+
+	public void setNStundensatzMann(BigDecimal nStundensatzMann) {
+		this.nStundensatzMann = nStundensatzMann;
+	}
+
+	public BigDecimal getNStundensatzMaschine() {
+		return nStundensatzMaschine;
+	}
+
+	public void setNStundensatzMaschine(BigDecimal nStundensatzMaschine) {
+		this.nStundensatzMaschine = nStundensatzMaschine;
+	}
+
+	@Column(name = "N_STUNDENSATZMASCHINE")
+	private BigDecimal nStundensatzMaschine;
+	
 	@Column(name = "I_UNTERARBEITSGANG")
 	private Integer iUnterarbeitsgang;
 	
@@ -134,7 +169,7 @@ public class Agstklarbeitsplan implements Serializable {
 
 	public Agstklarbeitsplan(Integer id, Integer agstklIId,
 			Integer arbeitsgang, Integer artikelIId, Long stueckzeit,
-			Long ruestzeit,Short bNurmaschinenzeit) {
+			Long ruestzeit,Short bNurmaschinenzeit,  Short bInitial) {
 		setIId(id);
 		setAgstklIId(agstklIId);
 		setIArbeitsgang(arbeitsgang);
@@ -142,6 +177,7 @@ public class Agstklarbeitsplan implements Serializable {
 		setLStueckzeit(stueckzeit);
 		setLRuestzeit(ruestzeit);
 		setBNurmaschinenzeit(bNurmaschinenzeit);
+		setBInitial(bInitial);
 	}
 
 	public Integer getIId() {

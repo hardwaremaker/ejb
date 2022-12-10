@@ -35,6 +35,8 @@ package com.lp.server.anfrage.service;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
+
 import com.lp.service.BelegDto;
 
 public class AnfrageDto extends BelegDto implements Cloneable {
@@ -43,9 +45,9 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 	 */
 	private static final long serialVersionUID = 1L;
 	/*
-	 * private Integer iId; private String cNr; private String mandantCNr;
-	 * private String anfrageartCNr; private String anfragestatusCNr; private
-	 * String belegartCNr; private Timestamp tBelegdatum;
+	 * private Integer iId; private String cNr; private String mandantCNr; private
+	 * String anfrageartCNr; private String anfragestatusCNr; private String
+	 * belegartCNr; private Timestamp tBelegdatum;
 	 */
 	private Integer lieferantIIdAnfrageadresse;
 	private Integer ansprechpartnerIIdLieferant;
@@ -55,6 +57,56 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 	// private String waehrungCNrAnfragewaehrung;
 	// private Double fWechselkursmandantwaehrungzuanfragewaehrung;
 	private Timestamp tAnliefertermin;
+
+	private Timestamp tPreisgueltigab;
+
+	public Timestamp getTPreisgueltigab() {
+		return tPreisgueltigab;
+	}
+
+	public void setTPreisgueltigab(Timestamp tPreisgueltigab) {
+		this.tPreisgueltigab = tPreisgueltigab;
+	}
+
+	
+	private Timestamp tAbgabetermin;
+
+	public Timestamp getTAbgabetermin() {
+		return tAbgabetermin;
+	}
+
+	public void setTAbgabetermin(Timestamp tAbgabetermin) {
+		this.tAbgabetermin = tAbgabetermin;
+	}
+
+	private Integer partnerIIdLieferadresse;
+	private Integer ansprechpartnerIIdLieferadresse;
+
+	public Integer getAnsprechpartnerIIdLieferadresse() {
+		return this.ansprechpartnerIIdLieferadresse;
+	}
+
+	public void setAnsprechpartnerIIdLieferadresse(Integer ansprechpartnerIIdLieferadresse) {
+		this.ansprechpartnerIIdLieferadresse = ansprechpartnerIIdLieferadresse;
+	}
+
+	public Integer getPartnerIIdLieferadresse() {
+		return this.partnerIIdLieferadresse;
+	}
+
+	public void setPartnerIIdLieferadresse(Integer partnerIIdLieferadresse) {
+		this.partnerIIdLieferadresse = partnerIIdLieferadresse;
+	}
+
+	private Integer personalIIdAnfrager;
+
+	public Integer getPersonalIIdAnfrager() {
+		return personalIIdAnfrager;
+	}
+
+	public void setPersonalIIdAnfrager(Integer personalIIdAnfrager) {
+		this.personalIIdAnfrager = personalIIdAnfrager;
+	}
 
 	private Integer anfrageerledigungsgrundIId;
 
@@ -93,13 +145,13 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 	// private BigDecimal nGesamtanfragewertinanfragewaehrung;
 	private BigDecimal nTransportkosteninanfragewaehrung;
 	/*
-	 * private Integer anfragetextIIdKopftext; private String
-	 * xKopftextuebersteuert; private Integer anfragetextIIdFusstext; private
-	 * String xFusstextuebersteuert; private Timestamp tGedruckt; private
-	 * Integer personalIIdStorniert; private Timestamp tStorniert; private
-	 * Integer personalIIdAnlegen; private Timestamp tAnlegen; private Integer
-	 * personalIIdAendern; private Timestamp tAendern; private Integer
-	 * personalIIdManuellerledigt; private Timestamp tManuellerledigt;
+	 * private Integer anfragetextIIdKopftext; private String xKopftextuebersteuert;
+	 * private Integer anfragetextIIdFusstext; private String xFusstextuebersteuert;
+	 * private Timestamp tGedruckt; private Integer personalIIdStorniert; private
+	 * Timestamp tStorniert; private Integer personalIIdAnlegen; private Timestamp
+	 * tAnlegen; private Integer personalIIdAendern; private Timestamp tAendern;
+	 * private Integer personalIIdManuellerledigt; private Timestamp
+	 * tManuellerledigt;
 	 */
 	private Integer anfrageIIdLiefergruppenanfrage;
 
@@ -115,8 +167,7 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 		return ansprechpartnerIIdLieferant;
 	}
 
-	public void setAnsprechpartnerIIdLieferant(
-			Integer ansprechpartnerIIdLieferant) {
+	public void setAnsprechpartnerIIdLieferant(Integer ansprechpartnerIIdLieferant) {
 		this.ansprechpartnerIIdLieferant = ansprechpartnerIIdLieferant;
 	}
 
@@ -148,8 +199,7 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 		return nTransportkosteninanfragewaehrung;
 	}
 
-	public void setNTransportkosteninanfragewaehrung(
-			BigDecimal nTransportkosteninanfragewaehrung) {
+	public void setNTransportkosteninanfragewaehrung(BigDecimal nTransportkosteninanfragewaehrung) {
 		this.nTransportkosteninanfragewaehrung = nTransportkosteninanfragewaehrung;
 	}
 
@@ -157,8 +207,7 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 		return this.anfrageIIdLiefergruppenanfrage;
 	}
 
-	public void setAnfrageIIdLiefergruppenanfrage(
-			Integer anfrageIIdLiefergruppenanfrageI) {
+	public void setAnfrageIIdLiefergruppenanfrage(Integer anfrageIIdLiefergruppenanfrageI) {
 		this.anfrageIIdLiefergruppenanfrage = anfrageIIdLiefergruppenanfrageI;
 	}
 
@@ -171,6 +220,35 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 	public void setCLieferartort(String cLieferartort) {
 		this.cLieferartort = cLieferartort;
 	}
+
+	private BigDecimal nZollkosteninanfragewaehrung;
+
+	public BigDecimal getNZollkosteninanfragewaehrung() {
+		return nZollkosteninanfragewaehrung;
+	}
+
+	public void setNZollkosteninanfragewaehrung(BigDecimal nZollkosteninanfragewaehrung) {
+		this.nZollkosteninanfragewaehrung = nZollkosteninanfragewaehrung;
+	}
+
+	public BigDecimal getNBankspeseninanfragewaehrung() {
+		return nBankspeseninanfragewaehrung;
+	}
+
+	public void setNBankspeseninanfragewaehrung(BigDecimal nBankspeseninanfragewaehrung) {
+		this.nBankspeseninanfragewaehrung = nBankspeseninanfragewaehrung;
+	}
+
+	public BigDecimal getNSonstigespeseninanfragewaehrung() {
+		return nSonstigespeseninanfragewaehrung;
+	}
+
+	public void setNSonstigespeseninanfragewaehrung(BigDecimal nSonstigespeseninanfragewaehrung) {
+		this.nSonstigespeseninanfragewaehrung = nSonstigespeseninanfragewaehrung;
+	}
+
+	private BigDecimal nBankspeseninanfragewaehrung;
+	private BigDecimal nSonstigespeseninanfragewaehrung;
 
 	public String toString() {
 		String returnString = super.toString();
@@ -187,14 +265,11 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 	public Object clone() {
 		AnfrageDto anfrageDto = (AnfrageDto) cloneAsBelegDto(new AnfrageDto());
 
-		anfrageDto.setLieferantIIdAnfrageadresse(this
-				.getLieferantIIdAnfrageadresse());
-		anfrageDto.setAnsprechpartnerIIdLieferant(this
-				.getAnsprechpartnerIIdLieferant());
+		anfrageDto.setLieferantIIdAnfrageadresse(this.getLieferantIIdAnfrageadresse());
+		anfrageDto.setAnsprechpartnerIIdLieferant(this.getAnsprechpartnerIIdLieferant());
 		anfrageDto.setLiefergruppeIId(this.getLiefergruppeIId());
 		anfrageDto.setCAngebotnummer(this.getCAngebotnummer());
-		anfrageDto.setNTransportkosteninanfragewaehrung(this
-				.getNTransportkosteninanfragewaehrung());
+		anfrageDto.setNTransportkosteninanfragewaehrung(this.getNTransportkosteninanfragewaehrung());
 		// Ausnahme in der Anfrage: Die Konditionen werden NACH dem Drucken
 		// gespeichert
 		anfrageDto.setBelegtextIIdKopftext(this.getBelegtextIIdKopftext());

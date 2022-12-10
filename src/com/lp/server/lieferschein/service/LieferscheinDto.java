@@ -37,22 +37,22 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import com.lp.server.eingangsrechnung.ejb.Eingangsrechnung;
+import com.lp.server.forecast.service.FclieferadresseNoka;
 import com.lp.server.system.service.HvDtoLogClass;
 import com.lp.server.system.service.HvDtoLogIdCnr;
 import com.lp.server.system.service.HvDtoLogIgnore;
+import com.lp.server.util.logger.LogEventPayload;
 import com.lp.service.BelegVerkaufDto;
 
 @HvDtoLogClass(name = HvDtoLogClass.LIEFERSCHEIN)
-public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
-	/**
-	 * 
-	 */
+public class LieferscheinDto extends BelegVerkaufDto implements Serializable, LogEventPayload {
 	private static final long serialVersionUID = 1L;
+
 	private Integer rechnungIId;
 	private String lieferscheinartCNr;
 	private String belegartCNr;
 	private Short bVerrechenbar;
-	
+
 	private Integer kundeIIdLieferadresse;
 	private Integer ansprechpartnerIId;
 	private Integer personalIIdVertreter;
@@ -66,10 +66,10 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	private Timestamp tRueckgabetermin;
 	private BigDecimal nGesamtwertInLieferscheinwaehrung;
 	private BigDecimal nGestehungswertInMandantenwaehrung;
-	private Short bMindermengenzuschlag;
 	private Integer iAnzahlPakete;
 	private Double fGewichtLieferung;
 	private String cVersandnummer;
+	private String cVersandnummer2;
 	private Timestamp tGedruckt;
 	private Integer personalIIdManuellErledigt;
 	private Timestamp tManuellErledigt;
@@ -88,9 +88,11 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	private Integer begruendungIId;
 
 	private Integer projektIId;
-	private Timestamp tLieferaviso ;
-	private Integer personalIIdLieferaviso ;
-	
+	private Timestamp tLieferaviso;
+	private Integer personalIIdLieferaviso;
+	private FclieferadresseNoka iKommissioniertyp;
+	private String laenderartCnr;
+
 	public Integer getProjektIId() {
 		return projektIId;
 	}
@@ -105,10 +107,10 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return ansprechpartnerIIdRechnungsadresse;
 	}
 
-	public void setAnsprechpartnerIIdRechnungsadresse(
-			Integer ansprechpartnerIIdRechnungsadresse) {
+	public void setAnsprechpartnerIIdRechnungsadresse(Integer ansprechpartnerIIdRechnungsadresse) {
 		this.ansprechpartnerIIdRechnungsadresse = ansprechpartnerIIdRechnungsadresse;
 	}
+
 	private Integer eingangsrechnungIdZollexport;
 
 	@HvDtoLogIdCnr(entityClass = Eingangsrechnung.class)
@@ -116,9 +118,18 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return eingangsrechnungIdZollexport;
 	}
 
-	public void setEingangsrechnungIdZollexport(
-			Integer eingangsrechnungIdZollexport) {
+	public void setEingangsrechnungIdZollexport(Integer eingangsrechnungIdZollexport) {
 		this.eingangsrechnungIdZollexport = eingangsrechnungIdZollexport;
+	}
+
+	private String xInternerkommentar;
+
+	public String getXInternerkommentar() {
+		return xInternerkommentar;
+	}
+
+	public void setXInternerkommentar(String xInternerkommentar) {
+		this.xInternerkommentar = xInternerkommentar;
 	}
 
 	private Timestamp tZollexportpapier;
@@ -145,8 +156,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return personalIIdZollexportpapier;
 	}
 
-	public void setPersonalIIdZollexportpapier(
-			Integer personalIIdZollexportpapier) {
+	public void setPersonalIIdZollexportpapier(Integer personalIIdZollexportpapier) {
 		this.personalIIdZollexportpapier = personalIIdZollexportpapier;
 	}
 
@@ -169,8 +179,6 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	public LieferscheinDto() {
 		// auftragmappings = new LieferscheinauftragmappingDto[1];
 	}
-
-	
 
 	public Integer getRechnungIId() {
 		return rechnungIId;
@@ -203,7 +211,6 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	public void setBVerrechenbar(Short verrechenbar) {
 		this.bVerrechenbar = verrechenbar;
 	}
-
 
 	public Integer getKundeIIdLieferadresse() {
 		return kundeIIdLieferadresse;
@@ -293,14 +300,6 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		this.lieferartIId = lieferartIId;
 	}
 
-	public Short getBMindermengenzuschlag() {
-		return bMindermengenzuschlag;
-	}
-
-	public void setBMindermengenzuschlag(Short bMindermengenzuschlag) {
-		this.bMindermengenzuschlag = bMindermengenzuschlag;
-	}
-
 	public Integer getIAnzahlPakete() {
 		return iAnzahlPakete;
 	}
@@ -325,6 +324,14 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		this.cVersandnummer = cVersandnummer;
 	}
 
+	public String getCVersandnummer2() {
+		return this.cVersandnummer2;
+	}
+
+	public void setCVersandnummer2(String cVersandnummer2) {
+		this.cVersandnummer2 = cVersandnummer2;
+	}
+
 	public Timestamp getTGedruckt() {
 		return tGedruckt;
 	}
@@ -333,21 +340,21 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		this.tGedruckt = tGedruckt;
 	}
 
-	public Integer getPersonalIIdManuellErledigt() {
-		return this.personalIIdManuellErledigt;
-	}
-
-	public void setPersonalIIdManuellErledigt(Integer personalIIdManuellErledigt) {
-		this.personalIIdManuellErledigt = personalIIdManuellErledigt;
-	}
-
-	public Timestamp getTManuellErledigt() {
-		return this.tManuellErledigt;
-	}
-
-	public void setTManuellErledigt(Timestamp tManuellErledigt) {
-		this.tManuellErledigt = tManuellErledigt;
-	}
+//	public Integer getPersonalIIdManuellErledigt() {
+//		return this.personalIIdManuellErledigt;
+//	}
+//
+//	public void setPersonalIIdManuellErledigt(Integer personalIIdManuellErledigt) {
+//		this.personalIIdManuellErledigt = personalIIdManuellErledigt;
+//	}
+//
+//	public Timestamp getTManuellErledigt() {
+//		return this.tManuellErledigt;
+//	}
+//
+//	public void setTManuellErledigt(Timestamp tManuellErledigt) {
+//		this.tManuellErledigt = tManuellErledigt;
+//	}
 
 	public Integer getPersonalIIdStorniert() {
 		return personalIIdStorniert;
@@ -368,10 +375,12 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	public Integer getPersonalIIdAnlegen() {
 		return personalIIdAnlegen;
 	}
+
 	@HvDtoLogIgnore
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
 	}
+
 	@HvDtoLogIgnore
 	public Timestamp getTAnlegen() {
 		return tAnlegen;
@@ -380,6 +389,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	public void setTAnlegen(Timestamp tAnlegen) {
 		this.tAnlegen = tAnlegen;
 	}
+
 	@HvDtoLogIgnore
 	public Integer getPersonalIIdAendern() {
 		return personalIIdAendern;
@@ -388,6 +398,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	public void setPersonalIIdAendern(Integer personalIIdAendern) {
 		this.personalIIdAendern = personalIIdAendern;
 	}
+
 	@HvDtoLogIgnore
 	public Timestamp getTAendern() {
 		return tAendern;
@@ -401,8 +412,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return nGesamtwertInLieferscheinwaehrung;
 	}
 
-	public void setNGesamtwertInLieferscheinwaehrung(
-			BigDecimal nGesamtwertInLieferscheinwaehrung) {
+	public void setNGesamtwertInLieferscheinwaehrung(BigDecimal nGesamtwertInLieferscheinwaehrung) {
 		this.nGesamtwertInLieferscheinwaehrung = nGesamtwertInLieferscheinwaehrung;
 	}
 
@@ -410,8 +420,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return nGestehungswertInMandantenwaehrung;
 	}
 
-	public void setNGestehungswertInMandantenwaehrung(
-			BigDecimal nGestehungswertInMandantenwaehrung) {
+	public void setNGestehungswertInMandantenwaehrung(BigDecimal nGestehungswertInMandantenwaehrung) {
 		this.nGestehungswertInMandantenwaehrung = nGestehungswertInMandantenwaehrung;
 	}
 
@@ -435,8 +444,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return lieferscheintextIIdDefaultKopftext;
 	}
 
-	public void setLieferscheintextIIdDefaultKopftext(
-			Integer lieferscheintextIIdDefaultKopftext) {
+	public void setLieferscheintextIIdDefaultKopftext(Integer lieferscheintextIIdDefaultKopftext) {
 		this.lieferscheintextIIdDefaultKopftext = lieferscheintextIIdDefaultKopftext;
 	}
 
@@ -444,8 +452,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return cLieferscheinKopftextUeberschrieben;
 	}
 
-	public void setCLieferscheinKopftextUeberschrieben(
-			String cLieferscheinKopftextUeberschrieben) {
+	public void setCLieferscheinKopftextUeberschrieben(String cLieferscheinKopftextUeberschrieben) {
 		this.cLieferscheinKopftextUeberschrieben = cLieferscheinKopftextUeberschrieben;
 	}
 
@@ -453,8 +460,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return lieferscheintextIIdDefaultFusstext;
 	}
 
-	public void setLieferscheintextIIdDefaultFusstext(
-			Integer lieferscheintextIIdDefaultFusstext) {
+	public void setLieferscheintextIIdDefaultFusstext(Integer lieferscheintextIIdDefaultFusstext) {
 		this.lieferscheintextIIdDefaultFusstext = lieferscheintextIIdDefaultFusstext;
 	}
 
@@ -462,8 +468,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		return cLieferscheinFusstextUeberschrieben;
 	}
 
-	public void setCLieferscheinFusstextUeberschrieben(
-			String cLieferscheinFusstextUeberschrieben) {
+	public void setCLieferscheinFusstextUeberschrieben(String cLieferscheinFusstextUeberschrieben) {
 		this.cLieferscheinFusstextUeberschrieben = cLieferscheinFusstextUeberschrieben;
 	}
 
@@ -492,7 +497,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	public void setCLieferartort(String cLieferartort) {
 		this.cLieferartort = cLieferartort;
 	}
-	
+
 	public Timestamp getTLieferaviso() {
 		return tLieferaviso;
 	}
@@ -500,13 +505,21 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 	public void setTLieferaviso(Timestamp tLieferaviso) {
 		this.tLieferaviso = tLieferaviso;
 	}
-	
+
 	public Integer getPersonalIIdLieferaviso() {
 		return personalIIdLieferaviso;
 	}
 
 	public void setPersonalIIdLieferaviso(Integer personalIIdLieferaviso) {
 		this.personalIIdLieferaviso = personalIIdLieferaviso;
+	}
+
+	public String getLaenderartCnr() {
+		return laenderartCnr;
+	}
+
+	public void setLaenderartCnr(String laenderartCnr) {
+		this.laenderartCnr = laenderartCnr;
 	}
 
 	// public LieferscheinauftragmappingDto[] getAuftragmappings() {
@@ -529,8 +542,7 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.rechnungIId == null ? this.rechnungIId == null
-				: that.rechnungIId.equals(this.rechnungIId))) {
+		if (!(that.rechnungIId == null ? this.rechnungIId == null : that.rechnungIId.equals(this.rechnungIId))) {
 			return false;
 		}
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr))) {
@@ -540,20 +552,17 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 				: that.lieferscheinartCNr.equals(this.lieferscheinartCNr))) {
 			return false;
 		}
-		if (!(that.statusCNr == null ? this.statusCNr == null
-				: that.statusCNr.equals(this.statusCNr))) {
+		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr.equals(this.statusCNr))) {
 			return false;
 		}
-		if (!(that.belegartCNr == null ? this.belegartCNr == null
-				: that.belegartCNr.equals(this.belegartCNr))) {
+		if (!(that.belegartCNr == null ? this.belegartCNr == null : that.belegartCNr.equals(this.belegartCNr))) {
 			return false;
 		}
 		if (!(that.bVerrechenbar == null ? this.bVerrechenbar == null
 				: that.bVerrechenbar.equals(this.bVerrechenbar))) {
 			return false;
 		}
-		if (!(that.tBelegdatum == null ? this.tBelegdatum == null
-				: that.tBelegdatum.equals(this.tBelegdatum))) {
+		if (!(that.tBelegdatum == null ? this.tBelegdatum == null : that.tBelegdatum.equals(this.tBelegdatum))) {
 			return false;
 		}
 		if (!(that.kundeIIdLieferadresse == null ? this.kundeIIdLieferadresse == null
@@ -569,25 +578,21 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 			return false;
 		}
 		if (!(that.kundeIIdRechnungsadresse == null ? this.kundeIIdRechnungsadresse == null
-				: that.kundeIIdRechnungsadresse
-						.equals(this.kundeIIdRechnungsadresse))) {
+				: that.kundeIIdRechnungsadresse.equals(this.kundeIIdRechnungsadresse))) {
 			return false;
 		}
 		if (!(that.cBezProjektbezeichnung == null ? this.cBezProjektbezeichnung == null
-				: that.cBezProjektbezeichnung
-						.equals(this.cBezProjektbezeichnung))) {
+				: that.cBezProjektbezeichnung.equals(this.cBezProjektbezeichnung))) {
 			return false;
 		}
 		if (!(that.cBestellnummer == null ? this.cBestellnummer == null
 				: that.cBestellnummer.equals(this.cBestellnummer))) {
 			return false;
 		}
-		if (!(that.lagerIId == null ? this.lagerIId == null : that.lagerIId
-				.equals(this.lagerIId))) {
+		if (!(that.lagerIId == null ? this.lagerIId == null : that.lagerIId.equals(this.lagerIId))) {
 			return false;
 		}
-		if (!(that.ziellagerIId == null ? this.ziellagerIId == null
-				: that.ziellagerIId.equals(this.ziellagerIId))) {
+		if (!(that.ziellagerIId == null ? this.ziellagerIId == null : that.ziellagerIId.equals(this.ziellagerIId))) {
 			return false;
 		}
 
@@ -608,16 +613,10 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 			return false;
 		}
 		if (!(that.fAllgemeinerRabattsatz == null ? this.fAllgemeinerRabattsatz == null
-				: that.fAllgemeinerRabattsatz
-						.equals(this.fAllgemeinerRabattsatz))) {
+				: that.fAllgemeinerRabattsatz.equals(this.fAllgemeinerRabattsatz))) {
 			return false;
 		}
-		if (!(that.lieferartIId == null ? this.lieferartIId == null
-				: that.lieferartIId.equals(this.lieferartIId))) {
-			return false;
-		}
-		if (!(that.bMindermengenzuschlag == null ? this.bMindermengenzuschlag == null
-				: that.bMindermengenzuschlag.equals(this.bMindermengenzuschlag))) {
+		if (!(that.lieferartIId == null ? this.lieferartIId == null : that.lieferartIId.equals(this.lieferartIId))) {
 			return false;
 		}
 		if (!(that.iAnzahlPakete == null ? this.iAnzahlPakete == null
@@ -632,13 +631,11 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 				: that.cVersandnummer.equals(this.cVersandnummer))) {
 			return false;
 		}
-		if (!(that.tGedruckt == null ? this.tGedruckt == null : that.tGedruckt
-				.equals(this.tGedruckt))) {
+		if (!(that.tGedruckt == null ? this.tGedruckt == null : that.tGedruckt.equals(this.tGedruckt))) {
 			return false;
 		}
 		if (!(that.personalIIdManuellErledigt == null ? this.personalIIdManuellErledigt == null
-				: that.personalIIdManuellErledigt
-						.equals(this.personalIIdManuellErledigt))) {
+				: that.personalIIdManuellErledigt.equals(this.personalIIdManuellErledigt))) {
 			return false;
 		}
 		if (!(that.tManuellErledigt == null ? this.tManuellErledigt == null
@@ -649,74 +646,65 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 				: that.personalIIdStorniert.equals(this.personalIIdStorniert))) {
 			return false;
 		}
-		if (!(that.tStorniert == null ? this.tStorniert == null
-				: that.tStorniert.equals(this.tStorniert))) {
+		if (!(that.tStorniert == null ? this.tStorniert == null : that.tStorniert.equals(this.tStorniert))) {
 			return false;
 		}
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr))) {
 			return false;
 		}
-		if (!(that.waehrungCNr == null ? this.waehrungCNr == null
-				: that.waehrungCNr.equals(this.waehrungCNr))) {
+		if (!(that.waehrungCNr == null ? this.waehrungCNr == null : that.waehrungCNr.equals(this.waehrungCNr))) {
 			return false;
 		}
 		if (!(that.nGesamtwertInLieferscheinwaehrung == null ? this.nGesamtwertInLieferscheinwaehrung == null
-				: that.nGesamtwertInLieferscheinwaehrung
-						.equals(this.nGesamtwertInLieferscheinwaehrung))) {
+				: that.nGesamtwertInLieferscheinwaehrung.equals(this.nGesamtwertInLieferscheinwaehrung))) {
 			return false;
 		}
 		if (!(that.nGestehungswertInMandantenwaehrung == null ? this.nGestehungswertInMandantenwaehrung == null
-				: that.nGestehungswertInMandantenwaehrung
-						.equals(this.nGestehungswertInMandantenwaehrung))) {
+				: that.nGestehungswertInMandantenwaehrung.equals(this.nGestehungswertInMandantenwaehrung))) {
 			return false;
 		}
 		if (!(that.zahlungszielIId == null ? this.zahlungszielIId == null
 				: that.zahlungszielIId.equals(this.zahlungszielIId))) {
 			return false;
 		}
-		if (!(that.spediteurIId == null ? this.spediteurIId == null
-				: that.spediteurIId.equals(this.spediteurIId))) {
+		if (!(that.spediteurIId == null ? this.spediteurIId == null : that.spediteurIId.equals(this.spediteurIId))) {
 			return false;
 		}
 		if (!(that.lieferscheintextIIdDefaultKopftext == null ? this.lieferscheintextIIdDefaultKopftext == null
-				: that.lieferscheintextIIdDefaultKopftext
-						.equals(this.lieferscheintextIIdDefaultKopftext))) {
+				: that.lieferscheintextIIdDefaultKopftext.equals(this.lieferscheintextIIdDefaultKopftext))) {
 			return false;
 		}
 		if (!(that.cLieferscheinKopftextUeberschrieben == null ? this.cLieferscheinKopftextUeberschrieben == null
-				: that.cLieferscheinKopftextUeberschrieben
-						.equals(this.cLieferscheinKopftextUeberschrieben))) {
+				: that.cLieferscheinKopftextUeberschrieben.equals(this.cLieferscheinKopftextUeberschrieben))) {
 			return false;
 		}
 		if (!(that.lieferscheintextIIdDefaultFusstext == null ? this.lieferscheintextIIdDefaultFusstext == null
-				: that.lieferscheintextIIdDefaultFusstext
-						.equals(this.lieferscheintextIIdDefaultFusstext))) {
+				: that.lieferscheintextIIdDefaultFusstext.equals(this.lieferscheintextIIdDefaultFusstext))) {
 			return false;
 		}
 		if (!(that.cLieferscheinFusstextUeberschrieben == null ? this.cLieferscheinFusstextUeberschrieben == null
-				: that.cLieferscheinFusstextUeberschrieben
-						.equals(this.cLieferscheinFusstextUeberschrieben))) {
+				: that.cLieferscheinFusstextUeberschrieben.equals(this.cLieferscheinFusstextUeberschrieben))) {
 			return false;
 		}
-		if (!(that.auftragIId == null ? this.auftragIId == null
-				: that.auftragIId.equals(this.auftragIId))) {
+		if (!(that.auftragIId == null ? this.auftragIId == null : that.auftragIId.equals(this.auftragIId))) {
+			return false;
+		}
+		if (!(that.laenderartCnr == null ? this.laenderartCnr == null
+				: that.laenderartCnr.equals(this.laenderartCnr))) {
 			return false;
 		}
 
@@ -747,7 +735,6 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		result = 37 * result + this.fVersteckterAufschlag.hashCode();
 		result = 37 * result + this.fAllgemeinerRabattsatz.hashCode();
 		result = 37 * result + this.lieferartIId.hashCode();
-		result = 37 * result + this.bMindermengenzuschlag.hashCode();
 		result = 37 * result + this.iAnzahlPakete.hashCode();
 		result = 37 * result + this.fGewichtLieferung.hashCode();
 		result = 37 * result + this.cVersandnummer.hashCode();
@@ -762,21 +749,16 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.mandantCNr.hashCode();
 		result = 37 * result + this.waehrungCNr.hashCode();
-		result = 37 * result
-				+ this.getNGesamtwertInLieferscheinwaehrung().hashCode();
-		result = 37 * result
-				+ this.getNGestehungswertInMandantenwaehrung().hashCode();
+		result = 37 * result + this.getNGesamtwertInLieferscheinwaehrung().hashCode();
+		result = 37 * result + this.getNGestehungswertInMandantenwaehrung().hashCode();
 		result = 37 * result + this.zahlungszielIId.hashCode();
 		result = 37 * result + this.spediteurIId.hashCode();
-		result = 37 * result
-				+ this.lieferscheintextIIdDefaultKopftext.hashCode();
-		result = 37 * result
-				+ this.cLieferscheinKopftextUeberschrieben.hashCode();
-		result = 37 * result
-				+ this.lieferscheintextIIdDefaultFusstext.hashCode();
-		result = 37 * result
-				+ this.cLieferscheinFusstextUeberschrieben.hashCode();
+		result = 37 * result + this.lieferscheintextIIdDefaultKopftext.hashCode();
+		result = 37 * result + this.cLieferscheinKopftextUeberschrieben.hashCode();
+		result = 37 * result + this.lieferscheintextIIdDefaultFusstext.hashCode();
+		result = 37 * result + this.cLieferscheinFusstextUeberschrieben.hashCode();
 		result = 37 * result + this.auftragIId.hashCode();
+		result = 37 * result + this.laenderartCnr.hashCode();
 
 		return result;
 	}
@@ -805,7 +787,6 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		returnString += ", " + fVersteckterAufschlag;
 		returnString += ", " + fAllgemeinerRabattsatz;
 		returnString += ", " + lieferartIId;
-		returnString += ", " + bMindermengenzuschlag;
 		returnString += ", " + iAnzahlPakete;
 		returnString += ", " + fGewichtLieferung;
 		returnString += ", " + cVersandnummer;
@@ -832,5 +813,20 @@ public class LieferscheinDto extends BelegVerkaufDto implements Serializable {
 		returnString += ", " + auftragIId;
 
 		return returnString;
+	}
+
+	public FclieferadresseNoka getIKommissioniertyp() {
+		return iKommissioniertyp;
+	}
+
+	public void setIKommissioniertyp(FclieferadresseNoka iKommissioniertyp) {
+		this.iKommissioniertyp = iKommissioniertyp;
+	}
+
+	@Override
+	public String asString() {
+		return "LS: [" + getCNr() + " (id:" + getIId() + ")" + ", Belegdatum:" + getTBelegdatum() + ", Status:"
+				+ getStatusCNr() + ", Art:" + getLieferscheinartCNr() + ", rechnungIId:"
+				+ String.valueOf(getRechnungIId()) + ", laenderartCnr:" + getLaenderartCnr() + "]";
 	}
 }

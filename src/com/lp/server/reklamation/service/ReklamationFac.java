@@ -166,13 +166,13 @@ public interface ReklamationFac
 	public MassnahmeDto massnahmeFindByPrimaryKey(Integer iId,
 			TheClientDto theClientDto);
 
-	public Integer createSchwere(SchwereDto schwereDto) throws RemoteException;
+	public Integer createSchwere(SchwereDto schwereDto, TheClientDto theClientDto) throws RemoteException;
 
 	public void removeSchwere(SchwereDto schwereDto) throws RemoteException;
 
-	public void updateSchwere(SchwereDto schwereDto) throws RemoteException;
+	public void updateSchwere(SchwereDto schwereDto, TheClientDto theClientDto) throws RemoteException;
 
-	public SchwereDto schwereFindByPrimaryKey(Integer iId)
+	public SchwereDto schwereFindByPrimaryKey(Integer iId,TheClientDto theClientDto)
 			throws RemoteException;
 
 	public void removeReklamation(Integer iId) throws RemoteException;
@@ -188,16 +188,16 @@ public interface ReklamationFac
 	public ReklamationDto[] reklamationFindByAnsprechpartnerIId(
 			Integer AnsprechpartnerIId) throws RemoteException;
 
-	public Integer createBehandlung(BehandlungDto beurteilungDto)
+	public Integer createBehandlung(BehandlungDto beurteilungDto,TheClientDto theClientDto)
 			throws RemoteException;
 
 	public void removeBehandlung(BehandlungDto beurteilungDto)
 			throws RemoteException;
 
-	public void updateBehandlung(BehandlungDto beurteilungDto)
+	public void updateBehandlung(BehandlungDto beurteilungDto,TheClientDto theClientDto)
 			throws RemoteException;
 
-	public BehandlungDto behandlungFindByPrimaryKey(Integer iId)
+	public BehandlungDto behandlungFindByPrimaryKey(Integer iId,TheClientDto theClientDto)
 			throws RemoteException;
 
 	public Integer createTermintreue(TermintreueDto termintreueDto)
@@ -245,5 +245,8 @@ public interface ReklamationFac
 			throws RemoteException;
 	public ReklamationbildDto[] reklamationbildFindByReklamationIId(
 			Integer reklamationIId)throws RemoteException;
+	
+	public Integer erzeugeReklamationAusReklamation(Integer iIdReklamationI, boolean bMitAnalyse,
+			TheClientDto theClientDto);
 
 }

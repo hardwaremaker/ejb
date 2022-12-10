@@ -1,44 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.angebotstkl.fastlanereader.generated;
 
+import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Set;
-
 import org.apache.commons.lang.builder.ToStringBuilder;
-
-import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 
 
 /** @author Hibernate CodeGenerator */
@@ -60,6 +26,9 @@ public class FLRAgstkl implements Serializable {
     private String c_bez;
 
     /** nullable persistent field */
+    private String c_zeichnungsnummer;
+
+    /** nullable persistent field */
     private String waehrung_c_nr;
 
     /** nullable persistent field */
@@ -69,20 +38,29 @@ public class FLRAgstkl implements Serializable {
     private Integer projekt_i_id;
 
     /** nullable persistent field */
+    private Integer ansprechpartner_i_id_kunde;
+
+    /** nullable persistent field */
+    private Short b_vorlage;
+
+    /** nullable persistent field */
     private FLRKunde flrkunde;
 
     /** persistent field */
     private Set angebotspositionen;
 
     /** full constructor */
-    public FLRAgstkl(String c_nr, String mandant_c_nr, String belegart_c_nr, String c_bez, String waehrung_c_nr, Date t_belegdatum, Integer projekt_i_id, FLRKunde flrkunde, Set angebotspositionen) {
+    public FLRAgstkl(String c_nr, String mandant_c_nr, String belegart_c_nr, String c_bez, String c_zeichnungsnummer, String waehrung_c_nr, Date t_belegdatum, Integer projekt_i_id, Integer ansprechpartner_i_id_kunde, Short b_vorlage, FLRKunde flrkunde, Set angebotspositionen) {
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
         this.belegart_c_nr = belegart_c_nr;
         this.c_bez = c_bez;
+        this.c_zeichnungsnummer = c_zeichnungsnummer;
         this.waehrung_c_nr = waehrung_c_nr;
         this.t_belegdatum = t_belegdatum;
         this.projekt_i_id = projekt_i_id;
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
+        this.b_vorlage = b_vorlage;
         this.flrkunde = flrkunde;
         this.angebotspositionen = angebotspositionen;
     }
@@ -136,6 +114,14 @@ public class FLRAgstkl implements Serializable {
         this.c_bez = c_bez;
     }
 
+    public String getC_zeichnungsnummer() {
+        return this.c_zeichnungsnummer;
+    }
+
+    public void setC_zeichnungsnummer(String c_zeichnungsnummer) {
+        this.c_zeichnungsnummer = c_zeichnungsnummer;
+    }
+
     public String getWaehrung_c_nr() {
         return this.waehrung_c_nr;
     }
@@ -158,6 +144,22 @@ public class FLRAgstkl implements Serializable {
 
     public void setProjekt_i_id(Integer projekt_i_id) {
         this.projekt_i_id = projekt_i_id;
+    }
+
+    public Integer getAnsprechpartner_i_id_kunde() {
+        return this.ansprechpartner_i_id_kunde;
+    }
+
+    public void setAnsprechpartner_i_id_kunde(Integer ansprechpartner_i_id_kunde) {
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
+    }
+
+    public Short getB_vorlage() {
+        return this.b_vorlage;
+    }
+
+    public void setB_vorlage(Short b_vorlage) {
+        this.b_vorlage = b_vorlage;
     }
 
     public FLRKunde getFlrkunde() {

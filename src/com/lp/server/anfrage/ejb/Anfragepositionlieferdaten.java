@@ -34,6 +34,7 @@ package com.lp.server.anfrage.ejb;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -88,6 +89,18 @@ public class Anfragepositionlieferdaten implements Serializable {
 
 	public void setZertifikatartIId(Integer zertifikatartIId) {
 		this.zertifikatartIId = zertifikatartIId;
+	}
+
+	@Column(name = "T_PREISGUELTIGAB")
+	private Timestamp tPreisgueltigab;
+
+	
+	public Timestamp getTPreisgueltigab() {
+		return tPreisgueltigab;
+	}
+
+	public void setTPreisgueltigab(Timestamp tPreisgueltigab) {
+		this.tPreisgueltigab = tPreisgueltigab;
 	}
 
 	public String getCBezbeilieferant() {

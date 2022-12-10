@@ -43,13 +43,16 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
-		@NamedQuery(name = "StuecklistefindByArtikelIIdMandantCNr", query = "SELECT OBJECT(o) FROM Stueckliste o WHERE o.artikelIId=?1 AND o.mandantCNr = ?2"),
-		@NamedQuery(name = "StuecklistefindByPartnerIIdMandantCNr", query = "SELECT OBJECT(O) FROM Stueckliste o WHERE o.partnerIId=?1 AND o.mandantCNr = ?2"), 
-		@NamedQuery(name = "StuecklistefindCountByPartnerIIdMandantCNr", query = "SELECT COUNT(O) FROM Stueckliste o WHERE o.partnerIId=?1 AND o.mandantCNr = ?2") 
-})
+import com.lp.server.system.service.ITablenames;
+
+@NamedQueries({
+		@NamedQuery(name = "StuecklistefindByArtikelIId", query = "SELECT OBJECT(o) FROM Stueckliste o WHERE o.artikelIId=?1"),
+		@NamedQuery(name = "StuecklistefindByCFremdsystemnrMandantCNr", query = "SELECT OBJECT(o) FROM Stueckliste o WHERE o.cFremdsystemnr=?1 AND o.mandantCNr = ?2"),
+		@NamedQuery(name = StuecklisteQuery.ByArtikelIIdMandantCNr, query = "SELECT OBJECT(o) FROM Stueckliste o WHERE o.artikelIId=?1 AND o.mandantCNr = ?2"),
+		@NamedQuery(name = "StuecklistefindByPartnerIIdMandantCNr", query = "SELECT OBJECT(O) FROM Stueckliste o WHERE o.partnerIId=?1 AND o.mandantCNr = ?2"),
+		@NamedQuery(name = "StuecklistefindCountByPartnerIIdMandantCNr", query = "SELECT COUNT(O) FROM Stueckliste o WHERE o.partnerIId=?1 AND o.mandantCNr = ?2") })
 @Entity
-@Table(name = "STK_STUECKLISTE")
+@Table(name = ITablenames.STK_STUECKLISTE)
 public class Stueckliste implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -57,11 +60,46 @@ public class Stueckliste implements Serializable {
 
 	@Column(name = "B_FREMDFERTIGUNG")
 	private Short bFremdfertigung;
+	
+	@Column(name = "B_MIT_FORMELN")
+	private Short bMitFormeln;
+	
 
+	public Short getBMitFormeln() {
+		return bMitFormeln;
+	}
+
+	public void setBMitFormeln(Short bMitFormeln) {
+		this.bMitFormeln = bMitFormeln;
+	}
+	
+
+	public String getCFremdsystemnr() {
+		return cFremdsystemnr;
+	}
+
+
+	public void setCFremdsystemnr(String fremdsystemnr) {
+		cFremdsystemnr = fremdsystemnr;
+	}
+
+	@Column(name = "B_HIERARCHISCHE_CHARGENNUMMERN")
+	private Short bHierarchischeChargennummern;
+	
+	public Short getBHierarchischeChargennummern() {
+		return bHierarchischeChargennummern;
+	}
+
+	public void setBHierarchischeChargennummern(Short bHierarchischeChargennummern) {
+		this.bHierarchischeChargennummern = bHierarchischeChargennummern;
+	}
+
+	@Column(name = "C_FREMDSYSTEMNR")
+	private String cFremdsystemnr;
+	
 	@Column(name = "B_KEINE_AUTOMATISCHE_MATERIALBUCHUNG")
 	private Short bKeineAutomatischeMaterialbuchung;
-	
-	
+
 	public Short getBKeineAutomatischeMaterialbuchung() {
 		return bKeineAutomatischeMaterialbuchung;
 	}
@@ -71,9 +109,21 @@ public class Stueckliste implements Serializable {
 		this.bKeineAutomatischeMaterialbuchung = bKeineAutomatischeMaterialbuchung;
 	}
 
+	@Column(name = "STUECKLISTE_I_ID_FORMELSTUECKLISTE")
+	private Integer stuecklisteIIdFormelstueckliste;
+	
+	public Integer getStuecklisteIIdFormelstueckliste() {
+		return stuecklisteIIdFormelstueckliste;
+	}
+
+	public void setStuecklisteIIdFormelstueckliste(
+			Integer stuecklisteIIdFormelstueckliste) {
+		this.stuecklisteIIdFormelstueckliste = stuecklisteIIdFormelstueckliste;
+	}
+
 	@Column(name = "B_UEBERLIEFERBAR")
 	private Short bUeberlieferbar;
-	
+
 	@Column(name = "B_DRUCKEINLAGERSTANDSDETAIL")
 	private Short bDruckeinlagerstandsdetail;
 
@@ -116,6 +166,17 @@ public class Stueckliste implements Serializable {
 
 	@Column(name = "B_MATERIALBUCHUNGBEIABLIEFERUNG")
 	private Short bMaterialbuchungbeiablieferung;
+	
+	@Column(name = "B_JAHRESLOS")
+	private Short bJahreslos;
+
+	public Short getBJahreslos() {
+		return bJahreslos;
+	}
+
+	public void setBJahreslos(Short bJahreslos) {
+		this.bJahreslos = bJahreslos;
+	}
 
 	@Column(name = "B_AUSGABEUNTERSTUECKLISTE")
 	private Short bAusgabeunterstueckliste;
@@ -138,7 +199,6 @@ public class Stueckliste implements Serializable {
 	@Column(name = "STUECKLISTE_I_ID_EK")
 	private Integer stuecklisteIIdEk;
 
-	
 	public Integer getStuecklisteIIdEk() {
 		return stuecklisteIIdEk;
 	}
@@ -173,26 +233,38 @@ public class Stueckliste implements Serializable {
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
 
-	@Column(name = "I_ERFASSUNGSFAKTOR")
-	private Integer iErfassungsfaktor;
+	@Column(name = "N_ERFASSUNGSFAKTOR")
+	private BigDecimal nErfassungsfaktor;
 
-	public Integer getIErfassungsfaktor() {
-		return iErfassungsfaktor;
+	public BigDecimal getNErfassungsfaktor() {
+		return nErfassungsfaktor;
 	}
 
-	public void setIErfassungsfaktor(Integer erfassungsfaktor) {
-		iErfassungsfaktor = erfassungsfaktor;
+	public void setNErfassungsfaktor(BigDecimal erfassungsfaktor) {
+		nErfassungsfaktor = erfassungsfaktor;
 	}
 
-	
 	@Column(name = "PERSONAL_I_ID_FREIGABE")
 	private Integer personalIIdFreigabe;
-	
+
 	@Column(name = "T_FREIGABE")
 	private Timestamp tFreigabe;
+
+	@Column(name = "STUECKLISTESCRIPTART_I_ID")
+	private Integer stuecklisteScriptartIId;
+
 	
+	@Column(name = "I_REIHENFOLGE")
+	private Integer iReihenfolge;
 	
-	
+	public Integer getIReihenfolge() {
+		return iReihenfolge;
+	}
+
+	public void setIReihenfolge(Integer iReihenfolge) {
+		this.iReihenfolge = iReihenfolge;
+	}
+
 	public Integer getPersonalIIdFreigabe() {
 		return personalIIdFreigabe;
 	}
@@ -215,22 +287,18 @@ public class Stueckliste implements Serializable {
 		super();
 	}
 
-	public Stueckliste(Integer id,
-			Integer artikelIId,
-			String mandantCNr,
-			Short fremdfertigung,
-			BigDecimal losgroesse,
-			Timestamp aendernposition, 
-			Integer personalIIdAendernposition2,
+	public Stueckliste(Integer id, Integer artikelIId, String mandantCNr,
+			Short fremdfertigung, BigDecimal losgroesse,
+			Timestamp aendernposition, Integer personalIIdAendernposition2,
 			Timestamp aendernarbeitsplan,
 			Integer personalIIdAendernarbeitsplan2,
-			Integer personalIIdAnlegen2,
-			Integer personalIIdAendern2, 
-			Integer fertigungsgruppeIId,			
-			String stuecklisteartCNr,
-			Short materialbuchungbeiablieferung, 
-			Short ausgabeunterstueckliste, Short ueberlieferbar,
-			Integer erfassungsfaktor,Integer lagerIIdZiellager,Short bDruckeinlagerstandsdetail,Short bKeineAutomatischeMaterialbuchung) {
+			Integer personalIIdAnlegen2, Integer personalIIdAendern2,
+			Integer fertigungsgruppeIId, String stuecklisteartCNr,
+			Short materialbuchungbeiablieferung, Short ausgabeunterstueckliste,
+			Short ueberlieferbar, BigDecimal erfassungsfaktor,
+			Integer lagerIIdZiellager, Short bDruckeinlagerstandsdetail,
+			Short bKeineAutomatischeMaterialbuchung,
+			Integer stuecklisteScriptartIId, Short bMitFormeln, Short bJahreslos, Short bHierarchischeChargennummern) {
 		setIId(id);
 		setArtikelIId(artikelIId);
 		setBFremdfertigung(fremdfertigung);
@@ -250,10 +318,14 @@ public class Stueckliste implements Serializable {
 		setBMaterialbuchungbeiablieferung(materialbuchungbeiablieferung);
 		setBUeberlieferbar(ueberlieferbar);
 		setBAusgabeunterstueckliste(ausgabeunterstueckliste);
-		setIErfassungsfaktor(erfassungsfaktor);
+		setNErfassungsfaktor(erfassungsfaktor);
 		setLagerIIdZiellager(lagerIIdZiellager);
 		setBDruckeinlagerstandsdetail(bDruckeinlagerstandsdetail);
 		setBKeineAutomatischeMaterialbuchung(bKeineAutomatischeMaterialbuchung);
+		setStuecklisteScriptartIId(stuecklisteScriptartIId);
+		setBMitFormeln(bMitFormeln);
+		setBJahreslos(bJahreslos);
+		setBHierarchischeChargennummern(bHierarchischeChargennummern);
 	}
 
 	public Integer getIId() {
@@ -426,4 +498,11 @@ public class Stueckliste implements Serializable {
 		this.artikelIId = artikelIId;
 	}
 
+	public Integer getStuecklisteScriptartIId() {
+		return stuecklisteScriptartIId;
+	}
+
+	public void setStuecklisteScriptartIId(Integer scriptartId) {
+		this.stuecklisteScriptartIId = scriptartId;
+	}
 }

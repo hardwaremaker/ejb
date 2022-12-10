@@ -66,9 +66,10 @@ public class AutomatikjobPaternoster extends AutomatikjobBasis {
 			// get all paternoster
 
 			Collection<Paternoster> allPaternoster;
-			allPaternoster = getAutoPaternosterFac().getAllPaternoster();
+//			allPaternoster = getAutoPaternosterFac().getAllPaternoster();
+			allPaternoster = getAutoPaternosterFac().paternosterFindByMandant(theClientDto.getMandant());
 			Iterator<Paternoster> iter = allPaternoster.iterator();
-
+			
 			while (iter.hasNext()) {			// for each
 				errorInJob = false;
 				int waitResponse = 5;

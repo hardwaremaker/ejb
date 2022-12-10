@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRPartner;
@@ -61,13 +29,22 @@ public class FLRPersonal implements Serializable {
     private String c_kurzzeichen;
 
     /** nullable persistent field */
+    private String c_email;
+
+    /** nullable persistent field */
     private String personalart_c_nr;
 
     /** nullable persistent field */
     private Short b_versteckt;
 
     /** nullable persistent field */
+    private Short b_synch_alle_kontakte;
+
+    /** nullable persistent field */
     private Date t_geburtsdatum;
+
+    /** nullable persistent field */
+    private String x_kommentar;
 
     /** nullable persistent field */
     private FLRPartner flrpartner;
@@ -82,15 +59,18 @@ public class FLRPersonal implements Serializable {
     private com.lp.server.personal.fastlanereader.generated.FLRPersonalgruppe flrpersonalgruppe;
 
     /** full constructor */
-    public FLRPersonal(String mandant_c_nr, String c_personalnummer, Integer personalgruppe_i_id, String c_ausweis, String c_kurzzeichen, String personalart_c_nr, Short b_versteckt, Date t_geburtsdatum, FLRPartner flrpartner, FLRKostenstelle flrkostenstelleabteilung, FLRKostenstelle flrkostenstellestamm, com.lp.server.personal.fastlanereader.generated.FLRPersonalgruppe flrpersonalgruppe) {
+    public FLRPersonal(String mandant_c_nr, String c_personalnummer, Integer personalgruppe_i_id, String c_ausweis, String c_kurzzeichen, String c_email, String personalart_c_nr, Short b_versteckt, Short b_synch_alle_kontakte, Date t_geburtsdatum, String x_kommentar, FLRPartner flrpartner, FLRKostenstelle flrkostenstelleabteilung, FLRKostenstelle flrkostenstellestamm, com.lp.server.personal.fastlanereader.generated.FLRPersonalgruppe flrpersonalgruppe) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_personalnummer = c_personalnummer;
         this.personalgruppe_i_id = personalgruppe_i_id;
         this.c_ausweis = c_ausweis;
         this.c_kurzzeichen = c_kurzzeichen;
+        this.c_email = c_email;
         this.personalart_c_nr = personalart_c_nr;
         this.b_versteckt = b_versteckt;
+        this.b_synch_alle_kontakte = b_synch_alle_kontakte;
         this.t_geburtsdatum = t_geburtsdatum;
+        this.x_kommentar = x_kommentar;
         this.flrpartner = flrpartner;
         this.flrkostenstelleabteilung = flrkostenstelleabteilung;
         this.flrkostenstellestamm = flrkostenstellestamm;
@@ -149,6 +129,14 @@ public class FLRPersonal implements Serializable {
         this.c_kurzzeichen = c_kurzzeichen;
     }
 
+    public String getC_email() {
+        return this.c_email;
+    }
+
+    public void setC_email(String c_email) {
+        this.c_email = c_email;
+    }
+
     public String getPersonalart_c_nr() {
         return this.personalart_c_nr;
     }
@@ -165,12 +153,28 @@ public class FLRPersonal implements Serializable {
         this.b_versteckt = b_versteckt;
     }
 
+    public Short getB_synch_alle_kontakte() {
+        return this.b_synch_alle_kontakte;
+    }
+
+    public void setB_synch_alle_kontakte(Short b_synch_alle_kontakte) {
+        this.b_synch_alle_kontakte = b_synch_alle_kontakte;
+    }
+
     public Date getT_geburtsdatum() {
         return this.t_geburtsdatum;
     }
 
     public void setT_geburtsdatum(Date t_geburtsdatum) {
         this.t_geburtsdatum = t_geburtsdatum;
+    }
+
+    public String getX_kommentar() {
+        return this.x_kommentar;
+    }
+
+    public void setX_kommentar(String x_kommentar) {
+        this.x_kommentar = x_kommentar;
     }
 
     public FLRPartner getFlrpartner() {

@@ -36,8 +36,6 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
-
-
 public class SerienbriefDto implements Serializable {
 	/**
 	 * 
@@ -65,14 +63,22 @@ public class SerienbriefDto implements Serializable {
 	private Integer partnerklasseIId;
 	private Integer brancheIId;
 	private String xMailtext;
-	
+
+	private String localeCNr;
+
+	public String getLocaleCNr() {
+		return localeCNr;
+	}
+
+	public void setLocaleCNr(String localeCNr) {
+		this.localeCNr = localeCNr;
+	}
+
 	private Short bWennkeinanspmitfktDannersteransp;
-	
+
 	private Short bSelektionenLogischesOder;
-	
-	
-	
-	
+	private Short bHtml;
+
 	public Short getBWennkeinanspmitfktDannersteransp() {
 		return bWennkeinanspmitfktDannersteransp;
 	}
@@ -89,13 +95,13 @@ public class SerienbriefDto implements Serializable {
 	public void setBSelektionenLogischesOder(Short bSelektionenLogischesOder) {
 		this.bSelektionenLogischesOder = bSelektionenLogischesOder;
 	}
-	
+
 	private boolean newsletter;
-	
+
 	public boolean isNewsletter() {
 		return newsletter;
 	}
-	
+
 	public void setNewsletter(boolean newsletter) {
 		this.newsletter = newsletter;
 	}
@@ -108,8 +114,6 @@ public class SerienbriefDto implements Serializable {
 		this.xMailtext = xMailtext;
 	}
 
-	
-	
 	public Integer getPartnerklasseIId() {
 		return partnerklasseIId;
 	}
@@ -125,9 +129,9 @@ public class SerienbriefDto implements Serializable {
 	public void setBrancheIId(Integer brancheIId) {
 		this.brancheIId = brancheIId;
 	}
-	
+
 	private Short bMitzugeordnetenfirmen;
-	
+
 	public Short getBMitzugeordnetenfirmen() {
 		return bMitzugeordnetenfirmen;
 	}
@@ -135,8 +139,9 @@ public class SerienbriefDto implements Serializable {
 	public void setBMitzugeordnetenfirmen(Short bMitzugeordnetenfirmen) {
 		this.bMitzugeordnetenfirmen = bMitzugeordnetenfirmen;
 	}
-	
+
 	private BigDecimal nAbumsatz;
+
 	public BigDecimal getNAbumsatz() {
 		return nAbumsatz;
 	}
@@ -172,8 +177,7 @@ public class SerienbriefDto implements Serializable {
 	private BigDecimal nBisumsatz;
 	private Timestamp tUmsatzab;
 	private Timestamp tUmsatzbis;
-	
-	
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -327,6 +331,14 @@ public class SerienbriefDto implements Serializable {
 		this.bGehtanpartner = bGehtanpartner;
 	}
 
+	public Short getBHtml() {
+		return bHtml;
+	}
+
+	public void setBHtml(Short bHtml) {
+		this.bHtml = bHtml;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -391,7 +403,19 @@ public class SerienbriefDto implements Serializable {
 		if (that.newsletter != this.newsletter) {
 			return false;
 		}
+		if (!(that.bHtml == null ? this.bHtml == null : that.bHtml
+				.equals(this.bHtml))) {
+			return false;
+		}
 		return true;
+	}
+
+	public boolean isHtml() {
+		return bHtml == null ? false : bHtml > 0;
+	}
+
+	public boolean isPlain() {
+		return bHtml == null || bHtml == 0;
 	}
 
 	public int hashCode() {
@@ -409,6 +433,7 @@ public class SerienbriefDto implements Serializable {
 		result = 37 * result + this.bVersteckteDabei.hashCode();
 		result = 37 * result + this.ansprechpartnerfunktionIId.hashCode();
 		result = 37 * result + this.bAnsprechpartnerfunktionAuchOhne.hashCode();
+		result = 37 * result + this.bHtml.hashCode();
 		return result;
 	}
 

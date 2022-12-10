@@ -43,7 +43,7 @@ import javax.persistence.Table;
 
 @NamedQueries({
 		@NamedQuery(name = "ReportvarianteFindByCReportname", query = "SELECT OBJECT(o) FROM Reportvariante o WHERE o.cReportname=?1"),
-		@NamedQuery(name = "ReportvarianteFindByCReportnameCReportnamevariante", query = "SELECT OBJECT(o) FROM Reportvariante o WHERE o.cReportname=?1 AND o.cReportnamevariante=?2") })
+		@NamedQuery(name = ReportvarianteQuery.ByCReportnameCReportnamevariante, query = "SELECT OBJECT(o) FROM Reportvariante o WHERE o.cReportname=?1 AND o.cReportnamevariante=?2") })
 @Entity
 @Table(name = "LP_REPORTVARIANTE")
 public class Reportvariante implements Serializable {

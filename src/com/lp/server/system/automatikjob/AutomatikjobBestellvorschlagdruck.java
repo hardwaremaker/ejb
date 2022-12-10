@@ -32,19 +32,12 @@
  ******************************************************************************/
 package com.lp.server.system.automatikjob;
 
-import javax.print.PrintService;
-import javax.print.PrintServiceLookup;
-
-import com.lp.server.system.ejbfac.ServerDruckerFacBean;
+import com.lp.server.system.ejbfac.HvPrinter;
 import com.lp.server.system.service.ReportJournalKriterienDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
 
 public class AutomatikjobBestellvorschlagdruck extends AutomatikjobBasis {
-
-	private boolean errorInJob;
-
-	private static final String NICHT_DRUCKEN = "Nicht Drucken";
 
 	public AutomatikjobBestellvorschlagdruck() {
 		super();
@@ -59,68 +52,103 @@ public class AutomatikjobBestellvorschlagdruck extends AutomatikjobBasis {
 	public boolean performJob(TheClientDto theClientDto) {
 		try {
 			myLogger.info("start Bestellvorschlagdruck");
-			errorInJob = false;
 			ReportJournalKriterienDto reportJournalKriterienDto = new ReportJournalKriterienDto();
 			reportJournalKriterienDto.iSortierung = ReportJournalKriterienDto.KRIT_SORT_NACH_ART;
-			boolean bIsLocked = false;
 			try {
 				getBestellvorschlagFac()
 						.pruefeBearbeitenDesBestellvorschlagsErlaubt(theClientDto);
 			} catch (Throwable t) {
-				myLogger
-						.info("Bestellvorschlag ist von einem anderen Benutzer gesperrt. Job wird nicht durchgef\u00FChrt");
-				bIsLocked = true;
-				errorInJob = true;
+				myLogger.info("Bestellvorschlag ist von einem anderen Benutzer gesperrt. Job wird nicht durchgef\u00FChrt", t);
+				return true;
 			}
-			if (!bIsLocked) {
-				JasperPrintLP print = getBestellungReportFac()
-						.printBestellVorschlag(reportJournalKriterienDto,
-								false,false, theClientDto);
-				PrintService[] printService = PrintServiceLookup
-						.lookupPrintServices(null, null);
-				int i = 0;
-				String usedPrinter = getAutoBestellvorschlagFac()
-						.autoBestellvorschlagFindByMandantCNr(theClientDto.getMandant())
-						.getCDrucker();
-				if (usedPrinter.equals("Kein Drucker gefunden")) {
-					// do nothing there is no Printer
-				} else {
-					while (i < printService.length) {
-						if (!printService[i].getName().equals(usedPrinter)) {
-							i++;
-						} else {
-							if (!usedPrinter.equals(NICHT_DRUCKEN)) {
-								ServerDruckerFacBean.print(print, printService[i]);
-							}
-							try {
-								getBestellvorschlagFac()
-										.removeLockDesBestellvorschlagesWennIchIhnSperre(
-												theClientDto);
-							} catch (Throwable t) {
-								myLogger
-										.error("Fehler beim entfernen der Sperre... Bitte heben Sie die Sperre manuell \u00FCber einen Client auf.");
-							}
-							break;
-						}
-					}
-				}
-				try {
-					getBestellvorschlagFac()
-							.removeLockDesBestellvorschlagesWennIchIhnSperre(
-									theClientDto);
-				} catch (Throwable t) {
-					myLogger
-							.error("Fehler beim entfernen der Sperre... Bitte heben Sie die Sperre manuell \u00FCber einen Client auf.");
-				}
 
+			JasperPrintLP print = getBestellungReportFac().printBestellVorschlag(
+					reportJournalKriterienDto, false, false, null, theClientDto);
+			String usedPrinter = getAutoBestellvorschlagFac()
+					.autoBestellvorschlagFindByMandantCNr(theClientDto.getMandant())
+					.getCDrucker();
+			HvPrinter hvPrinter = getServerDruckerFacLocal().createHvPrinter(usedPrinter);
+			if (getServerDruckerFacLocal().exists(hvPrinter))
+				getServerDruckerFacLocal().print(print, hvPrinter);
+			
+			try {
+				getBestellvorschlagFac()
+						.removeLockDesBestellvorschlagesWennIchIhnSperre(theClientDto);
+			} catch (Throwable t) {
+				myLogger.error("Fehler beim entfernen der Sperre... Bitte heben Sie die Sperre manuell \u00FCber einen Client auf.", t);
 			}
 		} catch (Throwable ex) {
-			myLogger
-					.error("Fehler... Der Bestellvorschlagdruck konnte nicht ausgef\u00FChrt werden");
-			errorInJob = true;
+			myLogger.error("Fehler... Der Bestellvorschlagdruck konnte nicht ausgef\u00FChrt werden", ex);
+			return true;
 		}
 		myLogger.info("ende Bestellvorschlagdruck");
-		return errorInJob;
+		return false;
 	}
 
+//	public boolean performJob(TheClientDto theClientDto) {
+//		try {
+//			myLogger.info("start Bestellvorschlagdruck");
+//			errorInJob = false;
+//			ReportJournalKriterienDto reportJournalKriterienDto = new ReportJournalKriterienDto();
+//			reportJournalKriterienDto.iSortierung = ReportJournalKriterienDto.KRIT_SORT_NACH_ART;
+//			boolean bIsLocked = false;
+//			try {
+//				getBestellvorschlagFac()
+//						.pruefeBearbeitenDesBestellvorschlagsErlaubt(theClientDto);
+//			} catch (Throwable t) {
+//				myLogger
+//						.info("Bestellvorschlag ist von einem anderen Benutzer gesperrt. Job wird nicht durchgef\u00FChrt");
+//				bIsLocked = true;
+//				errorInJob = true;
+//			}
+//			if (!bIsLocked) {
+//				JasperPrintLP print = getBestellungReportFac()
+//						.printBestellVorschlag(reportJournalKriterienDto,
+//								false,false,null, theClientDto);
+//				PrintService[] printService = PrintServiceLookup
+//						.lookupPrintServices(null, null);
+//				int i = 0;
+//				String usedPrinter = getAutoBestellvorschlagFac()
+//						.autoBestellvorschlagFindByMandantCNr(theClientDto.getMandant())
+//						.getCDrucker();
+//				if (usedPrinter.equals("Kein Drucker gefunden")) {
+//					// do nothing there is no Printer
+//				} else {
+//					while (i < printService.length) {
+//						if (!printService[i].getName().equals(usedPrinter)) {
+//							i++;
+//						} else {
+//							if (!usedPrinter.equals(NICHT_DRUCKEN)) {
+//								getServerDruckerFac().print(print, printService[i]);
+//							}
+//							try {
+//								getBestellvorschlagFac()
+//										.removeLockDesBestellvorschlagesWennIchIhnSperre(
+//												theClientDto);
+//							} catch (Throwable t) {
+//								myLogger
+//										.error("Fehler beim entfernen der Sperre... Bitte heben Sie die Sperre manuell \u00FCber einen Client auf.");
+//							}
+//							break;
+//						}
+//					}
+//				}
+//				try {
+//					getBestellvorschlagFac()
+//							.removeLockDesBestellvorschlagesWennIchIhnSperre(
+//									theClientDto);
+//				} catch (Throwable t) {
+//					myLogger
+//							.error("Fehler beim entfernen der Sperre... Bitte heben Sie die Sperre manuell \u00FCber einen Client auf.");
+//				}
+//
+//			}
+//		} catch (Throwable ex) {
+//			myLogger
+//					.error("Fehler... Der Bestellvorschlagdruck konnte nicht ausgef\u00FChrt werden");
+//			errorInJob = true;
+//		}
+//		myLogger.info("ende Bestellvorschlagdruck");
+//		return errorInJob;
+//	}
 }

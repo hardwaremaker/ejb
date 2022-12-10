@@ -60,8 +60,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Personal implementiert. Pro UseCase
- * gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Personal implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -95,8 +95,7 @@ public class ReiseHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -115,20 +114,15 @@ public class ReiseHandler extends UseCaseHandler {
 				cal.setTimeInMillis(reise.getT_zeit().getTime());
 				String tag = kurzeWochentage[cal.get(Calendar.DAY_OF_WEEK)];
 
-				if (row > 0
-						&& Helper.short2boolean(reise.getB_beginn()) == true
-						&& Helper.short2boolean(letzterReiseeintrag
-								.getB_beginn()) == false) {
+				if (row > 0 && Helper.short2boolean(reise.getB_beginn()) == true
+						&& Helper.short2boolean(letzterReiseeintrag.getB_beginn()) == false) {
 					rows[row - 1][col] = "/";
 				}
-				if (row > 0
-						&& Helper.short2boolean(reise.getB_beginn()) == false
-						&& Helper.short2boolean(letzterReiseeintrag
-								.getB_beginn()) == true) {
+				if (row > 0 && Helper.short2boolean(reise.getB_beginn()) == false
+						&& Helper.short2boolean(letzterReiseeintrag.getB_beginn()) == true) {
 					rows[row - 1][col] = "\\";
 				}
-				if (resultListIterator.hasNext() == false
-						&& Helper.short2boolean(reise.getB_beginn()) == true) {
+				if (resultListIterator.hasNext() == false && Helper.short2boolean(reise.getB_beginn()) == true) {
 					rows[row][col++] = "\\";
 				} else {
 					rows[row][col++] = "|";
@@ -144,30 +138,21 @@ public class ReiseHandler extends UseCaseHandler {
 				}
 				rows[row][col++] = reise.getC_kommentar();
 				if (reise.getFlrpartner() != null) {
-					String firma = reise.getFlrpartner()
-							.getC_name1nachnamefirmazeile1();
+					String firma = reise.getFlrpartner().getC_name1nachnamefirmazeile1();
 					if (reise.getFlrpartner().getC_name2vornamefirmazeile2() != null) {
-						firma += " "
-								+ reise.getFlrpartner()
-										.getC_name2vornamefirmazeile2();
+						firma += " " + reise.getFlrpartner().getC_name2vornamefirmazeile2();
 					}
 					rows[row][col++] = firma;
 				} else {
 					rows[row][col++] = null;
 				}
-				if (reise.getI_kmbeginn() != null
-						&& reise.getI_kmende() != null) {
-					rows[row][col++] = reise.getI_kmende()
-							- reise.getI_kmbeginn();
-				} else {
-					rows[row][col++] = null;
-				}
+				rows[row][col++] = getZeiterfassungFac().getEntfernungInKmEinerReise(reise.getI_id());
+
 				row++;
 				letzterReiseeintrag = reise;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -186,8 +171,7 @@ public class ReiseHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -206,8 +190,8 @@ public class ReiseHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -218,8 +202,7 @@ public class ReiseHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -255,8 +238,7 @@ public class ReiseHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -273,8 +255,7 @@ public class ReiseHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("reise." + ZeiterfassungFac.FLR_REISE_T_ZEIT
-						+ " DESC ");
+				orderBy.append("reise." + ZeiterfassungFac.FLR_REISE_T_ZEIT + " DESC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf("reise.i_id") < 0) {
@@ -305,8 +286,7 @@ public class ReiseHandler extends UseCaseHandler {
 		return "from FLRReise reise ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -318,8 +298,8 @@ public class ReiseHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select reise.i_id from FLRReise reise "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "select reise.i_id from FLRReise reise " + this.buildWhereClause()
+						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -357,53 +337,31 @@ public class ReiseHandler extends UseCaseHandler {
 
 		if (super.getTableInfo() == null) {
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							java.sql.Timestamp.class, java.lang.Boolean.class,
-							String.class, String.class, String.class,
+					new Class[] { Integer.class, String.class, String.class, java.sql.Timestamp.class,
+							java.lang.Boolean.class, String.class, String.class, String.class,
 							java.lang.Integer.class },
-					new String[] {
-							"Id",
-							"",
-							getTextRespectUISpr("lp.tag", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.zeit", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.ende", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("pers.reiseland", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.kommentar", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.kunde", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.entfernung", theClientDto
-									.getMandant(), theClientDto.getLocUi()) },
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XL,
+					new String[] { "Id", "",
+							getTextRespectUISpr("lp.tag", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.zeit", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.ende", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("pers.reiseland", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.kommentar", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.kunde", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.entfernung", theClientDto.getMandant(), theClientDto.getLocUi()) },
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_S, QueryParameters.FLR_BREITE_XS, QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_XS, QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_XL,
 							QueryParameters.FLR_BREITE_M },
 
-					new String[] {
-							"i_id",
-							Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR,
-							ZeiterfassungFac.FLR_REISE_T_ZEIT,
-							ZeiterfassungFac.FLR_REISE_B_BEGINN,
-							ZeiterfassungFac.FLR_REISE_FLRDIAETEN + ".c_bez",
-							ZeiterfassungFac.FLR_REISE_C_KOMMENTAR,
-							ZeiterfassungFac.FLR_REISE_FLRPARTNER
-									+ "."
+					new String[] { "i_id", Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
+							ZeiterfassungFac.FLR_REISE_T_ZEIT, ZeiterfassungFac.FLR_REISE_B_BEGINN,
+							ZeiterfassungFac.FLR_REISE_FLRDIAETEN + ".c_bez", ZeiterfassungFac.FLR_REISE_C_KOMMENTAR,
+							ZeiterfassungFac.FLR_REISE_FLRPARTNER + "."
 									+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1,
 							Facade.NICHT_SORTIERBAR }));
 
-			kurzeWochentage = new DateFormatSymbols(theClientDto.getLocUi())
-					.getShortWeekdays();
+			kurzeWochentage = new DateFormatSymbols(theClientDto.getLocUi()).getShortWeekdays();
 
 		}
 

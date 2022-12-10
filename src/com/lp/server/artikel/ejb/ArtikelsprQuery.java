@@ -41,6 +41,7 @@ import com.lp.server.partner.ejb.HvTypedQuery;
 
 public class ArtikelsprQuery {
 	public final static String ByChangedDate = "ArtikelsprByChangedDate" ;
+	public final static String ByCKBez = "ArtikelsprByCKBez";
 
 	public static HvTypedQuery<Artikelspr> byChangedDate(EntityManager em, Timestamp changedDate) {
 		HvTypedQuery<Artikelspr> theQuery = new HvTypedQuery<Artikelspr>(em.createNamedQuery(ByChangedDate)) ;
@@ -51,4 +52,16 @@ public class ArtikelsprQuery {
 	public static List<Artikelspr> listByChangedDate(EntityManager em, Timestamp changedDate) {
 		return byChangedDate(em, changedDate).getResultList() ;
 	}	
+	
+	public static HvTypedQuery<Artikelspr> byCKBez(EntityManager em, String cKBez, String locale) {
+		HvTypedQuery<Artikelspr> theQuery = new HvTypedQuery<Artikelspr>(em.createNamedQuery(ByCKBez)) ;
+		return theQuery
+				.setParameter("kBez", cKBez)
+				.setParameter("locale", locale);
+	}
+	
+	public static List<Artikelspr> listByCKBez(EntityManager em, String cKBez, String locale) {
+		return byCKBez(em, cKBez, locale).getResultList() ;
+	}	
+	
 }

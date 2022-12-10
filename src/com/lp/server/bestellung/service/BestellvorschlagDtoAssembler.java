@@ -40,54 +40,42 @@ import java.util.List;
 import com.lp.server.bestellung.ejb.Bestellvorschlag;
 
 public class BestellvorschlagDtoAssembler {
-	public static BestellvorschlagDto createDto(
-			Bestellvorschlag bestellvorschlag) {
+	public static BestellvorschlagDto createDto(Bestellvorschlag bestellvorschlag) {
 		BestellvorschlagDto bestellvorschlagDto = new BestellvorschlagDto();
 		if (bestellvorschlag != null) {
 			bestellvorschlagDto.setIId(bestellvorschlag.getIId());
-			bestellvorschlagDto
-					.setCMandantCNr(bestellvorschlag.getMandantCNr());
+			bestellvorschlagDto.setCMandantCNr(bestellvorschlag.getMandantCNr());
 			bestellvorschlagDto.setIArtikelId(bestellvorschlag.getArtikelIId());
-			bestellvorschlagDto.setNZubestellendeMenge(bestellvorschlag
-					.getNZubestellendemenge());
-			bestellvorschlagDto.setTLiefertermin(bestellvorschlag
-					.getTLiefertermin());
-			bestellvorschlagDto.setCBelegartCNr(bestellvorschlag
-					.getBelegartCNr());
-			bestellvorschlagDto.setIBelegartId(bestellvorschlag
-					.getIBelegartid());
-			bestellvorschlagDto.setILieferantId(bestellvorschlag
-					.getLieferantIId());
-			bestellvorschlagDto.setNNettoeinzelpreis(bestellvorschlag
-					.getNNettoeinzelpreis());
-			bestellvorschlagDto.setNRabattbetrag(bestellvorschlag
-					.getNRabattbetrag());
-			bestellvorschlagDto.setNNettogesamtpreis(bestellvorschlag
-					.getNNettogesamtpreis());
-			bestellvorschlagDto
-					.setNNettoGesamtPreisMinusRabatte(bestellvorschlag
-							.getNNettogesamtpreisminusrabatte());
-			bestellvorschlagDto.setDRabattsatz(bestellvorschlag
-					.getFRabattsatz());
-			bestellvorschlagDto.setIBelegartpositionid(bestellvorschlag
-					.getIBelegartpositionid());
-			bestellvorschlagDto.setBNettopreisuebersteuert(bestellvorschlag
-					.getBNettopreisuebersteuert());
+			bestellvorschlagDto.setNZubestellendeMenge(bestellvorschlag.getNZubestellendemenge());
+			bestellvorschlagDto.setTLiefertermin(bestellvorschlag.getTLiefertermin());
+			bestellvorschlagDto.setCBelegartCNr(bestellvorschlag.getBelegartCNr());
+			bestellvorschlagDto.setIBelegartId(bestellvorschlag.getIBelegartid());
+			bestellvorschlagDto.setILieferantId(bestellvorschlag.getLieferantIId());
+			bestellvorschlagDto.setIWiederbeschaffungszeit(bestellvorschlag.getIWiederbeschaffungszeit());
+			bestellvorschlagDto.setNNettoeinzelpreis(bestellvorschlag.getNNettoeinzelpreis());
+			bestellvorschlagDto.setNRabattbetrag(bestellvorschlag.getNRabattbetrag());
+			bestellvorschlagDto.setNNettogesamtpreis(bestellvorschlag.getNNettogesamtpreis());
+			bestellvorschlagDto.setNNettoGesamtPreisMinusRabatte(bestellvorschlag.getNNettogesamtpreisminusrabatte());
+			bestellvorschlagDto.setDRabattsatz(bestellvorschlag.getFRabattsatz());
+			bestellvorschlagDto.setIBelegartpositionid(bestellvorschlag.getIBelegartpositionid());
+			bestellvorschlagDto.setBNettopreisuebersteuert(bestellvorschlag.getBNettopreisuebersteuert());
 			bestellvorschlagDto.setProjektIId(bestellvorschlag.getProjektIId());
-			bestellvorschlagDto.setXTextinhalt(bestellvorschlag
-					.getXTextinhalt());
-			bestellvorschlagDto.setBVormerkung(bestellvorschlag
-					.getBVormerkung());
-			bestellvorschlagDto.setTVormerkung(bestellvorschlag
-					.getTVormerkung());
-			bestellvorschlagDto.setPersonalIIdVormerkung(bestellvorschlag
-					.getPersonalIIdVormerkung());
+			bestellvorschlagDto.setXTextinhalt(bestellvorschlag.getXTextinhalt());
+			bestellvorschlagDto.setBVormerkung(bestellvorschlag.getBVormerkung());
+			bestellvorschlagDto.setTVormerkung(bestellvorschlag.getTVormerkung());
+			bestellvorschlagDto.setPersonalIIdVormerkung(bestellvorschlag.getPersonalIIdVormerkung());
+			bestellvorschlagDto.setPartnerIIdStandort(bestellvorschlag.getPartnerIIdStandort());
+			bestellvorschlagDto.setGebindeIId(bestellvorschlag.getGebindeIId());
+			bestellvorschlagDto.setNAnzahlgebinde(bestellvorschlag.getNAnzahlgebinde());
+			bestellvorschlagDto.setPersonalIId(bestellvorschlag.getPersonalIId());
+			bestellvorschlagDto.setPersonalIIdBearbeitet(bestellvorschlag.getPersonalIIdBearbeitet());
+			bestellvorschlagDto.setTBearbeitet(bestellvorschlag.getTBearbeitet());
+			bestellvorschlagDto.setFLagermindest(bestellvorschlag.getFLagermindest());
 		}
 		return bestellvorschlagDto;
 	}
 
-	public static BestellvorschlagDto[] createDtos(
-			Collection<?> bestellvorschlags) {
+	public static BestellvorschlagDto[] createDtos(Collection<?> bestellvorschlags) {
 		List<BestellvorschlagDto> list = new ArrayList<BestellvorschlagDto>();
 		if (bestellvorschlags != null) {
 			Iterator<?> iterator = bestellvorschlags.iterator();

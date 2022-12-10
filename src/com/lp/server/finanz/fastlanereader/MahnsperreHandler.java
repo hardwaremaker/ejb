@@ -414,7 +414,7 @@ public class MahnsperreHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.whg", mandantCNr, locUI),
 							getTextRespectUISpr("lp.vertreter", mandantCNr,
 									locUI),
-							getTextRespectUISpr("lp.m", mandantCNr, locUI),
+							getTextRespectUISpr("rechnung.mahnstufe", mandantCNr, locUI),
 							getTextRespectUISpr("lp.mahnsperrebis", mandantCNr,
 									locUI),
 							getTextRespectUISpr(
@@ -443,7 +443,11 @@ public class MahnsperreHandler extends UseCaseHandler {
 									+ PersonalFac.FLR_PERSONAL_C_KURZZEICHEN,
 							Facade.NICHT_SORTIERBAR,
 							RechnungFac.FLR_RECHNUNG_T_MAHNSPERREBIS,
-							FinanzFac.FLR_MAHNUNG_T_GEDRUCKT }));
+							FinanzFac.FLR_MAHNUNG_T_GEDRUCKT },
+					new String[]{
+							null, null, null, null, null, null, null, null, 
+							getTextRespectUISpr("rechnung.mahnstufe.tooltip", mandantCNr, locUI), null, null
+					}));
 		}
 		return super.getTableInfo();
 	}

@@ -42,17 +42,13 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.lp.server.artikel.service.ArtikelfehlmengeDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosgutschlecht;
-import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
-import com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.partner.service.PartnerFac;
-import com.lp.server.personal.ejbfac.ZeiterfassungFacBean;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.personal.service.ZeiterfassungFacAll;
-import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -62,7 +58,6 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
-import com.lp.util.Helper;
 
 /**
  * <p>
@@ -98,8 +93,7 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 			int endIndex = startIndex + PAGE_SIZE - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(PAGE_SIZE);
@@ -109,27 +103,23 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRLosgutschlecht losmat = (FLRLosgutschlecht) resultListIterator
-						.next();
+				FLRLosgutschlecht losmat = (FLRLosgutschlecht) resultListIterator.next();
 				rows[row][col++] = losmat.getI_id();
 
 				if (losmat.getFlrzeitdaten() != null) {
 					rows[row][col++] = losmat.getFlrzeitdaten().getT_zeit();
 
-					String person = losmat.getFlrzeitdaten().getFlrpersonal()
-							.getFlrpartner().getC_name1nachnamefirmazeile1();
+					String person = losmat.getFlrzeitdaten().getFlrpersonal().getFlrpartner()
+							.getC_name1nachnamefirmazeile1();
 
-					if (losmat.getFlrzeitdaten().getFlrpersonal()
-							.getFlrpartner().getC_name2vornamefirmazeile2() != null) {
-						person = person
-								+ " "
-								+ losmat.getFlrzeitdaten().getFlrpersonal()
-										.getFlrpartner()
-										.getC_name2vornamefirmazeile2();
+					if (losmat.getFlrzeitdaten().getFlrpersonal().getFlrpartner()
+							.getC_name2vornamefirmazeile2() != null) {
+						person = person + " " + losmat.getFlrzeitdaten().getFlrpersonal().getFlrpartner()
+								.getC_name2vornamefirmazeile2();
 					}
 
 					rows[row][col++] = person;
-				} else {
+				} else if (losmat.getFlrmaschinenzeitdaten() != null) {
 					rows[row][col++] = losmat.getFlrmaschinenzeitdaten().getT_von();
 
 					String maschine = "M: ";
@@ -141,16 +131,27 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 					}
 
 					rows[row][col++] = maschine;
+				} else {
+					rows[row][col++] = losmat.getT_zeitpunkt();
+					rows[row][col++] = "";
 				}
 				rows[row][col++] = losmat.getN_gut();
 				rows[row][col++] = losmat.getN_schlecht();
 				rows[row][col++] = losmat.getN_inarbeit();
 
+				if (losmat.getFlrpersonal_erfasst() != null) {
+					rows[row][col++] = HelperServer.formatPersonAusFLRPErsonal(losmat.getFlrpersonal_erfasst());
+				} else {
+					rows[row][col++] = null;
+				}
+
+				rows[row][col++] = losmat.getFlrpersonal_anlegen().getC_kurzzeichen();
+				rows[row][col++] = losmat.getT_anlegen();
+
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -165,8 +166,7 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -181,8 +181,8 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -193,8 +193,7 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -204,8 +203,7 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_LOSGUTSCHLECHT
-							+ filterKriterien[i].kritName);
+					where.append(" " + FLR_LOSGUTSCHLECHT + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -230,15 +228,13 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_LOSGUTSCHLECHT
-									+ kriterien[i].kritName);
+							orderBy.append(FLR_LOSGUTSCHLECHT + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -249,8 +245,7 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_LOSGUTSCHLECHT)
-						.append("i_id").append(" ASC ");
+				orderBy.append(FLR_LOSGUTSCHLECHT).append("i_id").append(" ASC ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -269,8 +264,7 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 		return FLR_LOSGUTSCHLECHT_FROM_CLAUSE;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -282,10 +276,8 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select " + FLR_LOSGUTSCHLECHT
-						+ FertigungFac.FLR_LOSSOLLMATERIAL_I_ID
-						+ FLR_LOSGUTSCHLECHT_FROM_CLAUSE
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "select " + FLR_LOSGUTSCHLECHT + FertigungFac.FLR_LOSSOLLMATERIAL_I_ID
+						+ FLR_LOSGUTSCHLECHT_FROM_CLAUSE + this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -319,42 +311,38 @@ public class LosgutschlechtHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
+
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, java.sql.Timestamp.class,
-							String.class, BigDecimal.class, BigDecimal.class,
-							BigDecimal.class },
-					new String[] {
-							"i_id",
-							getTextRespectUISpr("lp.zeit", mandantCNr, locUI),
-							getTextRespectUISpr("lp.person", mandantCNr, locUI)
-									+ "/"
-									+ getTextRespectUISpr("lp.maschine",
-											mandantCNr, locUI),
+					new Class[] { Integer.class, java.sql.Timestamp.class, String.class, BigDecimal.class,
+							BigDecimal.class, BigDecimal.class, String.class, String.class, java.sql.Timestamp.class },
+					new String[] { "i_id", getTextRespectUISpr("lp.zeit", mandantCNr, locUI),
+							getTextRespectUISpr("lp.person", mandantCNr, locUI) + "/"
+									+ getTextRespectUISpr("lp.maschine", mandantCNr, locUI),
 							getTextRespectUISpr("lp.gut", mandantCNr, locUI),
-							getTextRespectUISpr("lp.schlecht", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.inarbeit", mandantCNr,
-									locUI) },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_L,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_PREIS },
-					new String[] {
-							"i_id",
+							getTextRespectUISpr("lp.schlecht", mandantCNr, locUI),
+							getTextRespectUISpr("lp.inarbeit", mandantCNr, locUI),
+							getTextRespectUISpr("fert.gutschlecht.erfasst.fuer", mandantCNr, locUI),
+							getTextRespectUISpr("fert.gutschlecht.anleger", mandantCNr, locUI),
+							getTextRespectUISpr("fert.gutschlecht.anlagezeitpunkt", mandantCNr, locUI) },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_L,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_PREIS,
+							QueryParameters.FLR_BREITE_PREIS, QueryParameters.FLR_BREITE_PREIS,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new String[] { "i_id",
 							FertigungFac.FLR_LOSGUTSCHLECHT_FLRZEITDATEN + "."
 									+ ZeiterfassungFacAll.FLR_ZEITDATEN_T_ZEIT,
-							FertigungFac.FLR_LOSGUTSCHLECHT_FLRZEITDATEN
-									+ "."
-									+ ZeiterfassungFacAll.FLR_ZEITDATEN_FLRPERSONAL
-									+ "."
-									+ PersonalFac.FLR_PERSONAL_FLRPARTNER
-									+ "."
+							FertigungFac.FLR_LOSGUTSCHLECHT_FLRZEITDATEN + "."
+									+ ZeiterfassungFacAll.FLR_ZEITDATEN_FLRPERSONAL + "."
+									+ PersonalFac.FLR_PERSONAL_FLRPARTNER + "."
 									+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1,
-							FertigungFac.FLR_LOSGUTSCHLECHT_N_GUT,
-							FertigungFac.FLR_LOSGUTSCHLECHT_N_SCHLECHT,
-							FertigungFac.FLR_LOSGUTSCHLECHT_N_INARBEIT }));
+							FertigungFac.FLR_LOSGUTSCHLECHT_N_GUT, FertigungFac.FLR_LOSGUTSCHLECHT_N_SCHLECHT,
+							FertigungFac.FLR_LOSGUTSCHLECHT_N_INARBEIT,
+							"flrpersonal_erfasst" + "." + PersonalFac.FLR_PERSONAL_FLRPARTNER + "."
+									+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1,
+							"flrpersonal_anlegen" + "." + PersonalFac.FLR_PERSONAL_FLRPARTNER + "."
+									+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1,
+							"t_anlegen" }));
 		}
 		return super.getTableInfo();
 	}

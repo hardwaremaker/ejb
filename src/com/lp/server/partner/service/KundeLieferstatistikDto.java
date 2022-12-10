@@ -69,16 +69,65 @@ public class KundeLieferstatistikDto {
 	public final static int REPORT_STATISTIK_SERIENNUMMER = 7;
 	public final static int REPORT_STATISTIK_SETARTIKEL_TYP = 8;
 	public final static int REPORT_STATISTIK_MATERIALZUSCHLAG = 9;
+	public final static int REPORT_STATISTIK_AUFTGRAGSNUMMER = 10;
 
 	private String sRechnungsnummer = null;
+	private String sAuftragsnummer = null;
+	public String getSAuftragsnummer() {
+		return sAuftragsnummer;
+	}
+
+	public void setSAuftragsnummer(String sAuftragsnummer) {
+		this.sAuftragsnummer = sAuftragsnummer;
+	}
+
+	private Date dRechnungsdatum = null;
+
+	public Date getDRechnungsdatum() {
+		return dRechnungsdatum;
+	}
+
+	public void setDRechnungsdatum(Date dRechnungsdatum) {
+		this.dRechnungsdatum = dRechnungsdatum;
+	}
+
+	private String sLieferscheinart = null;
+	
+	public String getSLieferscheinart() {
+		return sLieferscheinart;
+	}
+
+	public void setSLieferscheinart(String sLieferscheinart) {
+		this.sLieferscheinart = sLieferscheinart;
+	}
+
 	private String sLieferscheinnummer = null;
 	private Date dWarenausgangsdatum = null;
+	private Date dRueckgabe = null;
+	private Date dManuellErledigt = null;
+
+	public Date getDRueckgabe() {
+		return dRueckgabe;
+	}
+
+	public void setDRueckgabe(Date dRueckgabe) {
+		this.dRueckgabe = dRueckgabe;
+	}
+
+	public Date getDManuellErledigt() {
+		return dManuellErledigt;
+	}
+
+	public void setDManuellErledigt(Date dManuellErledigt) {
+		this.dManuellErledigt = dManuellErledigt;
+	}
+
 	private String sIdent = "";
 	private String sBezeichnung = null;
 	private BigDecimal nMenge = null;
 	private BigDecimal nPreis = null;
 	private BigDecimal nMaterialzuschlag = null;
-	
+
 	private String sWarenausgangverursacher = null;
 	private BigDecimal nMwstsatz = null;
 	private String sKonto;
@@ -95,8 +144,8 @@ public class KundeLieferstatistikDto {
 	private String sPlzStatistikadresse;
 	private String sLandStatistikadresse;
 	private String sSetartikelTyp;
-	private BigDecimal nWert ;
-	
+	private BigDecimal nWert;
+
 	public String getSSetartikelTyp() {
 		return sSetartikelTyp;
 	}
@@ -108,7 +157,7 @@ public class KundeLieferstatistikDto {
 	private Integer iVerleihtage;
 	private Double dVerleihfaktor;
 	private List<SeriennrChargennrMitMengeDto> snrs;
-	
+
 	public List<SeriennrChargennrMitMengeDto> getSnrs() {
 		return snrs;
 	}
@@ -324,6 +373,5 @@ public class KundeLieferstatistikDto {
 	public void setNWert(BigDecimal nWert) {
 		this.nWert = nWert;
 	}
-
 
 }

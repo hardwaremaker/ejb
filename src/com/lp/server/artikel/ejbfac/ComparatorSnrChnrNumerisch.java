@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.artikel.ejbfac;
 
+import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.Comparator;
 
@@ -84,27 +85,41 @@ public class ComparatorSnrChnrNumerisch implements Comparator<Object> {
 
 		if (bSortiereNachSeriennummerChanrgennummer) {
 
-			Long l1 = bewegDto1.getKeyFuerSortierung();
-			Long l2 = bewegDto2.getKeyFuerSortierung();
+			BigInteger bi1 = bewegDto1.getKeyFuerSortierung();
+			BigInteger bi2 = bewegDto2.getKeyFuerSortierung();
+
+			return bi1.compareTo(bi2);
+			// if (l1.compareTo(l2) > 0) {
+			// return 1;
+			// } else if (l1.equals(l2)) {
+			//
+			// return bewegDto2.getCSeriennrChargennr().compareTo(
+			// bewegDto1.getCSeriennrChargennr());
+			// } else {
+			// return -1;
+			// }
+		} else {
+
+			long l1 = 0;
+			long l2 = 0;
+
+			if (bewegDto1.getTBuchungszeit() != null) {
+				l1 = bewegDto1.getTBuchungszeit().getTime();
+			}
+			if (bewegDto2.getTBuchungszeit() != null) {
+				l2 = bewegDto2.getTBuchungszeit().getTime();
+			}
+
+			if (l1 == l2) {
+				return 0;
+			}
 
 			if (l1 > l2) {
 				return 1;
-			} else if (l1.equals(l2)) {
-
-				return bewegDto2.getCSeriennrChargennr().compareTo(
-						bewegDto1.getCSeriennrChargennr());
 			} else {
 				return -1;
 			}
-		} else {
-			Timestamp ts1 = bewegDto1.getTBuchungszeit();
-			Timestamp ts2 = bewegDto2.getTBuchungszeit();
 
-			if (ts1 != null && ts2 != null && ts1.getTime() > ts2.getTime()) {
-				return 1;
-			} else {
-				return -1;
-			}
 		}
 	}
 }

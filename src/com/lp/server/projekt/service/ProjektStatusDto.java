@@ -51,6 +51,16 @@ public class ProjektStatusDto implements Serializable {
 		this.cNr = cNr;
 	}
 
+	private Short bGesperrt;
+
+	public Short getBGesperrt() {
+		return bGesperrt;
+	}
+
+	public void setBGesperrt(Short bGesperrt) {
+		this.bGesperrt = bGesperrt;
+	}
+
 	public Integer getISort() {
 		return iSort;
 	}
@@ -95,11 +105,9 @@ public class ProjektStatusDto implements Serializable {
 		ProjektStatusDto that = (ProjektStatusDto) obj;
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr)))
 			return false;
-		if (!(that.iSort == null ? this.iSort == null : that.iSort
-				.equals(this.iSort)))
+		if (!(that.iSort == null ? this.iSort == null : that.iSort.equals(this.iSort)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
 
 		return true;

@@ -52,6 +52,7 @@ public class ArtikelkommentarartDtoAssembler {
 					.getBWebshop());
 			artikelkommentarartDto.setBTooltip(artikelkommentarart
 					.getBTooltip());
+			artikelkommentarartDto.setBDetail(artikelkommentarart.getBDetail());
 		}
 		return artikelkommentarartDto;
 	}

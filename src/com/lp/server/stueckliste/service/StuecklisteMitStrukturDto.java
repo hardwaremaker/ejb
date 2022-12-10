@@ -52,8 +52,60 @@ public class StuecklisteMitStrukturDto implements Serializable {
 	private java.util.Date tFreigabe = null;
 	private String cKurzzeichenPersonFreigabe = null;
 
-	private Integer iAnzahlArbeitsschritte=null;
+	private String reportDebug;
+	private String reportInfo;
+	private String reportWarn;
+	private String reportError;
 	
+	public StuecklisteMitStrukturDto clone() {
+		StuecklisteMitStrukturDto klon = new StuecklisteMitStrukturDto(
+				this.getIEbene(), this.getStuecklistepositionDto());
+
+		klon.setBArbeitszeit(this.isBArbeitszeit());
+		klon.setBIstFremdfertigung(this.isBFremdfertigung());
+		klon.setBMaschinenzeit(this.isBMaschinenzeit());
+		klon.setBStueckliste(this.isBStueckliste());
+		klon.setCKurzzeichenPersonFreigabe(this.getCKurzzeichenPersonFreigabe());
+		klon.setDurchlaufzeit(this.getDurchlaufzeit());
+		klon.setIAnzahlArbeitsschritte(this.getiAnzahlArbeitsschritte());
+		klon.setIEbene(this.getIEbene());
+		klon.setMandantCNr(this.getMandantCNr());
+		klon.setMandantCKbez(this.getMandantCKbez());
+		klon.setStuecklistearbeitsplanDto(this.getStuecklistearbeitsplanDto());
+		klon.setStuecklisteDto(this.getStuecklisteDto());
+
+		klon.setStuecklistepositionDto(this.getStuecklistepositionDto());
+		klon.setTFreigabe(this.getTFreigabe());
+		klon.setReportDebug(this.getReportDebug());
+		klon.setReportInfo(this.getReportInfo());
+		klon.setReportWarn(this.getReportWarn());
+		klon.setReportError(this.getReportError());
+		
+		return klon;
+	}
+
+	private String mandantCKbez = null;
+	
+	public String getMandantCKbez() {
+		return mandantCKbez;
+	}
+
+	public void setMandantCKbez(String mandantCKbez) {
+		this.mandantCKbez = mandantCKbez;
+	}
+
+	private String mandantCNr = null;
+
+	public String getMandantCNr() {
+		return mandantCNr;
+	}
+
+	public void setMandantCNr(String mandantCNr) {
+		this.mandantCNr = mandantCNr;
+	}
+
+	private Integer iAnzahlArbeitsschritte = null;
+
 	public Integer getiAnzahlArbeitsschritte() {
 		return iAnzahlArbeitsschritte;
 	}
@@ -158,5 +210,37 @@ public class StuecklisteMitStrukturDto implements Serializable {
 
 	public void setDurchlaufzeit(BigDecimal durchlaufzeit) {
 		this.durchlaufzeit = durchlaufzeit;
+	}
+
+	public String getReportDebug() {
+		return reportDebug;
+	}
+
+	public void setReportDebug(String reportDebug) {
+		this.reportDebug = reportDebug;
+	}
+
+	public String getReportInfo() {
+		return reportInfo;
+	}
+
+	public void setReportInfo(String reportInfo) {
+		this.reportInfo = reportInfo;
+	}
+
+	public String getReportWarn() {
+		return reportWarn;
+	}
+
+	public void setReportWarn(String reportWarn) {
+		this.reportWarn = reportWarn;
+	}
+
+	public String getReportError() {
+		return reportError;
+	}
+
+	public void setReportError(String reportError) {
+		this.reportError = reportError;
 	}
 }

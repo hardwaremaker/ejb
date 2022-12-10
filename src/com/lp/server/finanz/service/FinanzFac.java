@@ -2,44 +2,48 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.service;
 
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
 import javax.ejb.Remote;
 
+import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.HvOptional;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -47,12 +51,13 @@ public interface FinanzFac {
 
 	// die anzahl der nachkommastellen ist fix!!!
 	public static final int NACHKOMMASTELLEN = 2;
-	public static final int NACHKOMMASTELLEN_I = new Integer(NACHKOMMASTELLEN);
+	public static final Integer NACHKOMMASTELLEN_I = new Integer(NACHKOMMASTELLEN);
 
 	public static final int MAX_BANKVERBINDUNG_BANKKONTONUMMER = 25;
 	public static final int MAX_BANKVERBINDUNG_IBAN = 34;
 	public static final int MAX_BANKVERBINDUNG_BEZEICHNUNG = 40;
-
+	public static final int MAX_BANKVERBINDUNG_SEPAVERZEICHNIS = 100;
+	
 	public static final int MAX_KONTO_NUMMER = 15;
 	public static final int MAX_KONTO_BEZEICHNUNG = 80;
 
@@ -66,6 +71,8 @@ public interface FinanzFac {
 	public static final int MAX_WAEHRUNG_C_NR = 3;
 	public static final int MAX_WAEHRUNG_C_KOMMENTAR = 80;
 
+	public static final int MAX_KONTOLAENDERART_BEZEICHNUNG = 80 ;
+	
 	public static final int ERGEBNISGRUPPE_TYP_ERGEBNISGRUPPE = 0;
 	public static final int ERGEBNISGRUPPE_TYP_LEEREZEILE = 1;
 	public static final int ERGEBNISGRUPPE_TYP_LINIE = 2;
@@ -81,6 +88,7 @@ public interface FinanzFac {
 	public static final String FILTER_BUCHUNGDETAILS_NUR_OFFENE = "nur offene";
 	public static final String FILTER_KONTO_OHNE_MITLAUFENDE = "OHNE_MITLAUFENDE";
 	public static final String FILTER_KONTO_OHNE_UST_VST_KONTEN_AUSSER_MWSTSATZBEZ = "OHNE_UST_VST_KONTEN_AUSSER_MWSTSATZBEZ";
+	public static final String FILTER_KONTEN_MIT_BUCHUNGEN = "FILTER_KONTEN_MIT_BUCHUNGEN";
 
 	// public static final String BUCHUNGSART_AUSGANGSRECHNUNG =
 	// "Ausgangsrechnung";
@@ -165,14 +173,15 @@ public interface FinanzFac {
 	public static final String FLR_BUCHUNGDETAIL_FLRGEGENKONTO = "flrgegenkonto";
 	public static final String FLR_BUCHUNGDETAIL_FLRKONTO = "flrkonto";
 	public static final String FLR_BUCHUNGDETAIL_I_AUSZIFFERN = "i_ausziffern";
-	public static final String FLR_BUCHUNGDETAIL_KOMMENTAR = "kommentar";
+	public static final String FLR_BUCHUNGDETAIL_KOMMENTAR = "c_kommentar";
 	public static final String FLR_BUCHUNGDETAIL_BUCHUNGBELEGART = "buchungbelegart" ;
 	public static final String FLR_BUCHUNGDETAIL_BUCHUNGART = "buchart.c_kbez" ;
 	public static final String FLR_BUCHUNGDETAIL_BELEGART = "belegart.c_kbez" ;
-	
+
  	public static final String FLR_UVAART_I_ID = "i_id";
 	public static final String FLR_UVAART_C_NR = "c_nr";
 	public static final String FLR_UVAART_C_KENNZEICHEN = "c_kennzeichen";
+	public static final String FLR_UVAART_B_KEINE_AUSWAHL_BEI_ER = "b_keine_auswahl_bei_er";
 	public static final String FLR_UVAART_I_SORT = "i_sort";
 
 	public static final String FLR_UVAARTSPR_I_ID = "i_id";
@@ -208,6 +217,7 @@ public interface FinanzFac {
 	public static final String FLR_ERGEBNISGRUPPE_B_INVERTIERT = "b_invertiert";
 	public static final String FLR_ERGEBNISGRUPPE_B_BILANZGRUPPE = "b_bilanzgruppe";
 	public static final String FLR_ERGEBNISGRUPPE_B_PROZENTBASIS = "b_prozentbasis";
+	public static final String FLR_ERGEBNISGRUPPE_B_JAHRESGEWINN = "b_jahresgewinn";
 	public static final String FLR_ERGEBNISGRUPPE_I_TYP = "i_typ";
 	public static final String FLR_ERGEBNISGRUPPE_I_REIHUNG = "i_reihung";
 	public static final String FLR_ERGEBNISGRUPPE_FLRERGEBNISGRUPPE_SUMME = "flrergebnisgruppe_summe";
@@ -236,18 +246,23 @@ public interface FinanzFac {
 	public static final String FLR_MAHNSPESEN_MAHNSTUFE_I_ID = "mahnstufe_i_id";
 	public static final String FLR_MAHNSPESEN_N_MAHNSPESEN = "n_mahnspesen";
 
+	public static final String FLR_KONTOLAENDERART_I_ID = "i_id";
 	public static final String FLR_KONTOLAENDERART_ID_COMP = "id_comp";
 	public static final String FLR_KONTOLAENDERART_KONTO_I_ID = "konto_i_id";
 	public static final String FLR_KONTOLAENDERART_LAENDERART_C_NR = "laenderart_c_nr";
+	public static final String FLR_KONTOLAENDERART_GUELTIG_AB = "gueltigAb";
 	public static final String FLR_KONTOLAENDERART_FLRKONTO = "flrkonto";
 	public static final String FLR_KONTOLAENDERART_FLRKONTOUEBERSETZT = "flrkonto_uebersetzt";
 	public static final String FLR_KONTOLAENDERART_FINANZAMT_I_ID = "finanzamt_i_id";
+	public static final String FLR_KONTOLAENDERART_REVERSECHARGEART_BEZ = "reversechargeart_bez";
 
-	public static final String FLR_KONTOLAND_ID_COMP = "id_comp";
+	public static final String FLR_KONTOLAND_I_ID = "i_id";
+//	public static final String FLR_KONTOLAND_ID_COMP = "id_comp";
 	public static final String FLR_KONTOLAND_KONTO_I_ID = "konto_i_id";
 	public static final String FLR_KONTOLAND_FLRLAND = "flrland";
 	public static final String FLR_KONTOLAND_FLRKONTO = "flrkonto";
 	public static final String FLR_KONTOLAND_FLRKONTOUEBERSETZT = "flrkonto_uebersetzt";
+	public static final String FLR_KONTOLAND_GUELTIG_AB = "gueltigAb";
 
 	public static final String FLR_EXPORTLAUF_I_ID = "i_id";
 	public static final String FLR_EXPORTLAUF_MANDANT_C_NR = "mandant_c_nr";
@@ -367,13 +382,13 @@ public interface FinanzFac {
 			throws RemoteException;
 
 	/**
-	 * 
+	 *
 	 * @param cNrI
 	 * @param sMandantI
 	 * @param theClientDto
 	 * @return KontoDto passend zur cNrI
 	 * @throws RemoteException
-	 * 
+	 *
 	 * @deprecated use
 	 *             {@link #kontoFindByCnrKontotypMandantOhneExc(String, String, String, TheClientDto)}
 	 * @see #kontoFindByCnrKontotypMandantOhneExc(String, String, String,
@@ -391,7 +406,7 @@ public interface FinanzFac {
 	 * Ist das Konto ein mitlaufendes Konto? Mitlaufende Konten sind jene,
 	 * welche in den Steuerkategorien als Forderungs- und Verbindlichkeitskonten
 	 * hinterlegt sind.
-	 * 
+	 *
 	 * @param kontoIId
 	 * @return true wenn es ein mitlaufendes Konto ist
 	 * @throws RemoteException
@@ -400,7 +415,7 @@ public interface FinanzFac {
 
 	/**
 	 * Alle Konten vom angegebenen Typ f&uuml;r den Mandanten zur&uuml;ckliefern
-	 * 
+	 *
 	 * @param kontotypCNr
 	 *            der gesuchte Kontotyp #see
 	 *            {@link FinanzServiceFac#KONTOTYP_DEBITOR}
@@ -433,13 +448,17 @@ public interface FinanzFac {
 			KontolaenderartDto kontolaenderartDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public KontolaenderartDto kontolaenderartFindByPrimaryKey(Integer kontoIId,
+/*	public KontolaenderartDto kontolaenderartFindByPrimaryKey(Integer kontoIId,
 			String laenderartCNr, Integer finanzamtIId, String mandantCNr)
 			throws EJBExceptionLP, RemoteException;
 
 	public KontolaenderartDto kontolaenderartFindByPrimaryKeyOhneExc(
 			Integer kontoIId, String laenderartCNr, Integer finanzamtIId,
 			String mandantCNr) throws EJBExceptionLP, RemoteException;
+*/
+	public KontolaenderartDto kontolaenderartFindByPrimaryKey(
+			Integer kontoIId, Integer reversechargeartId,  String laenderartCNr, 
+			Integer finanzamtIId, String mandantCNr) throws RemoteException, EJBExceptionLP ;
 
 	public void pruefeBuchungszeitraum(Date d, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -478,16 +497,10 @@ public interface FinanzFac {
 	public void updateKontolands(KontolandDto[] kontolandDtos,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public KontolandDto kontolandFindByPrimaryKey(Integer kontoIId,
-			Integer LandIId) throws RemoteException;
-
-	public KontolandDto kontolandFindByPrimaryKeyOhneExc(Integer kontoIId,
-			Integer LandIId) throws RemoteException;
-
 	/**
 	 * Handelt es sich beim angegebenen Konto um eines welches einen
 	 * Vorperiodensaldo unterstuetzt
-	 * 
+	 *
 	 * @param kontoIId
 	 * @param theClientDto
 	 * @return true wenn das Konto einen Vorperiodensaldo kennt. Also
@@ -501,7 +514,7 @@ public interface FinanzFac {
 	public FinanzamtDto[] finanzamtFindAllByMandantCNr(TheClientDto theClientDto);
 
 	public SteuerkategorieDto getSteuerkategorieZuLaenderart(
-			Integer finanzamtIId, String laenderart, TheClientDto theClientDto);
+			Integer finanzamtIId, String laenderart, TheClientDto theClientDto) throws RemoteException;
 
 	public KontoImporterResult importCsv(List<String[]> allLines,
 			boolean checkOnly, TheClientDto theClientDto);
@@ -510,5 +523,98 @@ public interface FinanzFac {
 			boolean bBilanzgruppe) throws EJBExceptionLP;
 
 	public KassenbuchDto getHauptkassabuch(TheClientDto theClientDto);
+	
+	public List<BankverbindungDto> bankverbindungFindByMandantCNrOhneExc(String mandantCNr) 
+			throws EJBExceptionLP;
+
+	public KontoRequest[] kontoExist(String mandant, KontoRequest ... kontoRequest)
+			throws RemoteException;
+	
+	KontolaenderartDto kontolaenderartFindByPrimaryKeyOhneExc(
+			Integer kontoIId, Integer reversechargeartId, String laenderartCNr,
+			Integer finanzamtIId, String mandantCNr) throws EJBExceptionLP ;	
+	
+	/**
+	 * F&uuml;r eine "Liste" von Konto-Ids deren KontoDto ermitteln
+	 * @param ids das Array mit den KontoIIds. Es k&ouml;nnen auch null-Ids enthalten sein,
+	 * die ignoriert werden und entsprechend null f&uuml;r das dto liefern.
+	 * @return das Array der KontoDtoSmall f&uuml;r die angegebenen Ids
+	 * @throws EJBExceptionLP
+	 */
+	KontoDtoSmall[] kontosFindByPrimaryKeySmall(Integer[] ids) throws EJBExceptionLP ;
+
+	/**
+	 * Liste aller Konten die der kontoart im Mandanten/Finanzamt entsprechen
+	 * @param kontoartCNr
+	 * @param mandantCNr
+	 * @param finanzamtIid
+	 * @return eine (leere) Liste von Konten die der Kontoart im Mandanten und Finanzamt entsprechen
+	 */
+	List<KontoDto> kontoFindAllByKontoartMandantFinanzamtList(String kontoartCNr,	String mandantCNr, Integer finanzamtIid) ;
+	
+	/**
+	 * Alle Konten die der Uvaart entsprechen
+	 * @param uvaartId die gesuchte UvaaartId
+	 * @param mandantCnr im Mandanten
+	 * @param finanzamtId im Finanzamt
+	 * @return ein (leeres) Array der Konten die die angegebene UVAArt haben
+	 */
+	List<KontoDto> kontoFindAllByUvaartMandantFinanzamt(
+			Integer uvaartId, String mandantCnr, Integer finanzamtId) ;	
+	
+	/**
+	 * Die Laenderart passend zur Steuerkategorie ermitteln</br>
+	 * <p>Diese Umwandlung geht bereits davon aus, dass die neuen Reversecharge-Arten 
+	 * ("Bauleistung,...) vorhanden sind, da damit Laendert*_Reverse hinfaellig wird.</p>
+	 * 
+	 * @param steuerkategorieCnr ist die gegebene Steuerkategorie
+	 * @return die entsprechende LaenderartCnr @see FinanzFac.LAENDERART_*
+	 */
+	String getLaenderartFuerSteuerkategorie(String steuerkategorieCnr) ;
+
+	/**
+	 * Bankverbindung, die bFuerSepaLastschrift gesetzt hat.
+	 * Sind mehrere vorhanden, wird die erste geliefert.
+	 * @param mandantCnr
+	 * @return Bankverbindung, die bFuerSepaLastschrift gesetzt hat. Wenn keine, dann null
+	 */
+	BankverbindungDto getBankverbindungFuerSepaLastschriftByMandantOhneExc(String mandantCnr);
+
+	/** 
+	 * Das zu diesem Partner passende Finanzamt ermitteln</br>
+	 * <p>Bei Integrierten Fibu-Anwendern ist das Mandanten-Hauptfinanzamt. Bei 
+	 * nicht integrierter Fibu wird - sofern mehrere Finanz&auml;mter definiert sind
+	 * und im Partner ein abweichendes USt.Land definiert ist - das "beste" 
+	 * passende Finanzamt ermittelt.
+	 * 
+	 * @param partnerDto
+	 * @param theClientDto
+	 * @return PartnerId des Finanzamts welches zu diesem Partner passt.
+	 * @throws RemoteException
+	 */
+	Integer findDefaultFinanzamtIdForPartner(PartnerDto partnerDto, TheClientDto theClientDto) throws RemoteException;
+	
+	
+	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(int iSortierungNeuePositionI,
+			boolean bBilanzgruppe, TheClientDto theClientDto);
+
+	FinanzamtDto finanzamtFindByKunde(KundeDto kundeDto, TheClientDto theClientDto) throws RemoteException;
+
+	FinanzamtDto finanzamtFindByLieferant(LieferantDto lieferantDto, TheClientDto theClientDto) throws RemoteException;
+
+	KontolaenderartDto kontolaenderartFindByPrimaryKey(Integer kontolaenderartIId);
+
+	HvOptional<KontolaenderartDto> kontolaenderartZuDatum(Integer kontoId, Integer reversechargeartId,
+			String laenderartCnr, Integer finanzamtId, String mandantCnr, Timestamp gueltigZum);
+
+	KontolandDto kontolandFindByPrimaryKey(Integer kontolandId);
+
+	KontolandDto kontolandFindByPrimaryKey(Integer kontoId, Integer landId, Timestamp gueltigAb) throws EJBExceptionLP;
+
+	HvOptional<KontolandDto> kontolandFindByPrimaryKeyOhneExc(Integer kontoId, Integer landId, Timestamp gueltigAb)
+			throws EJBExceptionLP;
+
+	HvOptional<KontolandDto> kontolandZuDatum(Integer kontoId, Integer landId, Timestamp gueltigZum)
+			throws EJBExceptionLP;
 
 }

@@ -72,22 +72,10 @@ public class TheJudgeFacBean extends Facade implements TheJudgeFac {
 
 	public Integer getSystemrolleIId(TheClientDto theClientDto) {
 		try {
-			int iLength = 0;
-			if (theClientDto.getBenutzername().indexOf("|") == -1) {
-				iLength = theClientDto.getBenutzername().length();
-			} else {
-				iLength = theClientDto.getBenutzername().indexOf("|");
-			}
-			String sBenutzer = theClientDto.getBenutzername().substring(0,
-					iLength);
-			// AD wegen lpwebappzemecs aus Webservice
-			sBenutzer = sBenutzer.trim();
-
-			BenutzermandantsystemrolleDto bmsr = getBenutzerFac()
-					.benutzermandantsystemrolleFindByBenutzerCNrMandantCNr(
-							sBenutzer, theClientDto.getMandant());
-			SystemrolleDto rolle = getBenutzerFac().systemrolleFindByPrimaryKey(bmsr.getSystemrolleIId());
+			String sBenutzer = getBenutzerFrom(theClientDto);
+			Integer rolleId = getRolleIdFor(sBenutzer, theClientDto);
 			
+			SystemrolleDto rolle = getBenutzerFac().systemrolleFindByPrimaryKey(rolleId);			
 			return rolle.getAliasRolleIId() == null ? rolle.getIId() : rolle.getAliasRolleIId();
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -95,6 +83,45 @@ public class TheJudgeFacBean extends Facade implements TheJudgeFac {
 		}
 	}
 
+	private String getBenutzerFrom(TheClientDto theClientDto) {
+		int pipePos = theClientDto.getBenutzername().indexOf("|");
+		String benutzer = pipePos < 0 
+				? theClientDto.getBenutzername() 
+				: theClientDto.getBenutzername().substring(0, pipePos);
+		return benutzer.trim();
+	}
+	
+	private Integer getRolleIdFor(String benutzer, 
+			TheClientDto theClientDto) throws RemoteException {
+		BenutzermandantsystemrolleDto bmsr = getBenutzerFac()
+				.benutzermandantsystemrolleFindByBenutzerCNrMandantCNr(
+						benutzer, theClientDto.getMandant());
+		Integer rolleId = bmsr.getSystemrolleIId() ;
+		if(!theClientDto.isDesktopBenutzer()) {
+			if(theClientDto.getHvmaLizenzId() != null) {
+				if(bmsr.getSystemrolleIIdHvma() != null) {
+					rolleId = bmsr.getSystemrolleIIdHvma();
+				} else {
+					myLogger.warn("HVMA-Rolle fehlt fuer SystemRolle-Id '" 
+							+ bmsr.getSystemrolleIId() + "'.");
+					throw EJBExcFactory.systemRolleHvmaFehlt(benutzer,
+							bmsr.getSystemrolleIId());
+				}
+			} else {
+				if(bmsr.getSystemrolleIIdRestapi() != null) {
+					rolleId = bmsr.getSystemrolleIIdRestapi() ;
+				} else {
+					myLogger.warn("Restapi-Rolle fehlt fuer Systemrolle-Id '"
+							+ bmsr.getSystemrolleIId() + "'.");
+					throw EJBExcFactory.systemRolleRestApiFehlt(benutzer,
+							bmsr.getSystemrolleIId());
+				}		
+			}		
+		}
+
+		return rolleId;
+	}
+	
 	public boolean hatRecht(String rechtCNr, TheClientDto theClientDto) {
 		if(theClientDto == null) return false;
 		Integer systemrolleIId = theClientDto.getSystemrolleIId();
@@ -106,6 +133,18 @@ public class TheJudgeFacBean extends Facade implements TheJudgeFac {
 		return getBenutzerServicesFac().hatRecht(rechtCNr, theClientDto);
 	}
 
+	public boolean hatRechtOder(String recht1Cnr, String recht2Cnr, TheClientDto theClientDto) {
+		if(theClientDto == null) return false;
+		Integer systemrolleIId = theClientDto.getSystemrolleIId();
+		if (systemrolleIId == null) {
+			systemrolleIId = getSystemrolleIId(theClientDto);
+			theClientDto.setSystemrolleIId(systemrolleIId);
+		}
+
+		return getBenutzerServicesFac().hatRecht(recht1Cnr, theClientDto) || 
+				getBenutzerServicesFac().hatRecht(recht2Cnr, theClientDto);
+	}
+	
 	/**
 	 * Feststellen, ob ein Lock auf diesen Datensatz schon existiert.
 	 * 
@@ -310,47 +349,3 @@ public class TheJudgeFacBean extends Facade implements TheJudgeFac {
 		em.flush();
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

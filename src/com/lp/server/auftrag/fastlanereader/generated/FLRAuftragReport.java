@@ -1,37 +1,6 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.auftrag.fastlanereader.generated;
 
+import com.lp.server.angebot.fastlanereader.generated.FLRAngebot;
 import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
@@ -40,6 +9,7 @@ import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -68,10 +38,25 @@ public class FLRAuftragReport implements Serializable {
     private Date t_liefertermin;
 
     /** nullable persistent field */
+    private Date t_liefertermin_timestamp;
+
+    /** nullable persistent field */
+    private Date t_auftragsfreigabe;
+
+    /** nullable persistent field */
     private Date t_bestelldatum;
 
     /** nullable persistent field */
     private Date t_finaltermin;
+
+    /** nullable persistent field */
+    private Date t_finaltermin_timestamp;
+
+    /** nullable persistent field */
+    private Integer bestellung_i_id_anderermandant;
+
+    /** nullable persistent field */
+    private Date t_wunschtermin;
 
     /** nullable persistent field */
     private Date t_belegdatum;
@@ -96,6 +81,12 @@ public class FLRAuftragReport implements Serializable {
 
     /** nullable persistent field */
     private Integer kunde_i_id_rechnungsadresse;
+
+    /** nullable persistent field */
+    private Integer ansprechpartner_i_id_kunde;
+
+    /** nullable persistent field */
+    private Integer lager_i_id_abbuchungslager;
 
     /** nullable persistent field */
     private Integer kostenstelle_i_id;
@@ -137,7 +128,25 @@ public class FLRAuftragReport implements Serializable {
     private Date t_verrechenbar;
 
     /** nullable persistent field */
+    private Integer i_aenderungsauftrag_version;
+
+    /** nullable persistent field */
+    private Date t_lauftermin;
+
+    /** nullable persistent field */
+    private Date t_lauftermin_bis;
+
+    /** nullable persistent field */
+    private String auftragwiederholungsintervall_c_nr;
+
+    /** nullable persistent field */
+    private com.lp.server.auftrag.fastlanereader.generated.FLRVerrechenbar flrverrechenbar;
+
+    /** nullable persistent field */
     private FLRPersonal flrpersonalverrechenbar;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonalauftragsfreigabe;
 
     /** nullable persistent field */
     private FLRKunde flrkunde;
@@ -161,18 +170,32 @@ public class FLRAuftragReport implements Serializable {
     private FLRProjekt flrprojekt;
 
     /** nullable persistent field */
+    private FLRKunde flrkundelieferadresse;
+
+    /** nullable persistent field */
+    private FLRAngebot flrangebot;
+
+    /** nullable persistent field */
     private com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag flrauftrag_rahmenauftrag;
 
+    /** persistent field */
+    private Set flrauftragkostenstellen;
+
     /** full constructor */
-    public FLRAuftragReport(String mandant_c_nr, String c_nr, String auftragart_c_nr, String c_bez, String c_bestellnummer, Date t_liefertermin, Date t_bestelldatum, Date t_finaltermin, Date t_belegdatum, String auftragstatus_c_nr, String waehrung_c_nr_auftragswaehrung, BigDecimal n_gesamtauftragswertinauftragswaehrung, Double f_wechselkursmandantwaehrungzuauftragswaehrung, Integer kunde_i_id_auftragsadresse, Integer kunde_i_id_lieferadresse, Integer kunde_i_id_rechnungsadresse, Integer kostenstelle_i_id, Integer zahlungsziel_i_id, Integer vertreter_i_id, Date t_erledigt, Integer personal_i_id_erledigt, Short b_teillieferungmoeglich, Short b_poenale, Short b_rohs, Short b_versteckt, Short b_lieferterminunverbindlich, Double f_erfuellungsgrad, String x_internerkommentar, Date t_verrechenbar, FLRPersonal flrpersonalverrechenbar, FLRKunde flrkunde, FLRAnsprechpartner flrkundeansprechpartner, FLRKunde flrkunderechnungsadresse, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragtextsuche flrauftragtextsuche, FLRProjekt flrprojekt, com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag flrauftrag_rahmenauftrag) {
+    public FLRAuftragReport(String mandant_c_nr, String c_nr, String auftragart_c_nr, String c_bez, String c_bestellnummer, Date t_liefertermin, Date t_liefertermin_timestamp, Date t_auftragsfreigabe, Date t_bestelldatum, Date t_finaltermin, Date t_finaltermin_timestamp, Integer bestellung_i_id_anderermandant, Date t_wunschtermin, Date t_belegdatum, String auftragstatus_c_nr, String waehrung_c_nr_auftragswaehrung, BigDecimal n_gesamtauftragswertinauftragswaehrung, Double f_wechselkursmandantwaehrungzuauftragswaehrung, Integer kunde_i_id_auftragsadresse, Integer kunde_i_id_lieferadresse, Integer kunde_i_id_rechnungsadresse, Integer ansprechpartner_i_id_kunde, Integer lager_i_id_abbuchungslager, Integer kostenstelle_i_id, Integer zahlungsziel_i_id, Integer vertreter_i_id, Date t_erledigt, Integer personal_i_id_erledigt, Short b_teillieferungmoeglich, Short b_poenale, Short b_rohs, Short b_versteckt, Short b_lieferterminunverbindlich, Double f_erfuellungsgrad, String x_internerkommentar, Date t_verrechenbar, Integer i_aenderungsauftrag_version, Date t_lauftermin, Date t_lauftermin_bis, String auftragwiederholungsintervall_c_nr, com.lp.server.auftrag.fastlanereader.generated.FLRVerrechenbar flrverrechenbar, FLRPersonal flrpersonalverrechenbar, FLRPersonal flrpersonalauftragsfreigabe, FLRKunde flrkunde, FLRAnsprechpartner flrkundeansprechpartner, FLRKunde flrkunderechnungsadresse, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragtextsuche flrauftragtextsuche, FLRProjekt flrprojekt, FLRKunde flrkundelieferadresse, FLRAngebot flrangebot, com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag flrauftrag_rahmenauftrag, Set flrauftragkostenstellen) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.auftragart_c_nr = auftragart_c_nr;
         this.c_bez = c_bez;
         this.c_bestellnummer = c_bestellnummer;
         this.t_liefertermin = t_liefertermin;
+        this.t_liefertermin_timestamp = t_liefertermin_timestamp;
+        this.t_auftragsfreigabe = t_auftragsfreigabe;
         this.t_bestelldatum = t_bestelldatum;
         this.t_finaltermin = t_finaltermin;
+        this.t_finaltermin_timestamp = t_finaltermin_timestamp;
+        this.bestellung_i_id_anderermandant = bestellung_i_id_anderermandant;
+        this.t_wunschtermin = t_wunschtermin;
         this.t_belegdatum = t_belegdatum;
         this.auftragstatus_c_nr = auftragstatus_c_nr;
         this.waehrung_c_nr_auftragswaehrung = waehrung_c_nr_auftragswaehrung;
@@ -181,6 +204,8 @@ public class FLRAuftragReport implements Serializable {
         this.kunde_i_id_auftragsadresse = kunde_i_id_auftragsadresse;
         this.kunde_i_id_lieferadresse = kunde_i_id_lieferadresse;
         this.kunde_i_id_rechnungsadresse = kunde_i_id_rechnungsadresse;
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
+        this.lager_i_id_abbuchungslager = lager_i_id_abbuchungslager;
         this.kostenstelle_i_id = kostenstelle_i_id;
         this.zahlungsziel_i_id = zahlungsziel_i_id;
         this.vertreter_i_id = vertreter_i_id;
@@ -194,7 +219,13 @@ public class FLRAuftragReport implements Serializable {
         this.f_erfuellungsgrad = f_erfuellungsgrad;
         this.x_internerkommentar = x_internerkommentar;
         this.t_verrechenbar = t_verrechenbar;
+        this.i_aenderungsauftrag_version = i_aenderungsauftrag_version;
+        this.t_lauftermin = t_lauftermin;
+        this.t_lauftermin_bis = t_lauftermin_bis;
+        this.auftragwiederholungsintervall_c_nr = auftragwiederholungsintervall_c_nr;
+        this.flrverrechenbar = flrverrechenbar;
         this.flrpersonalverrechenbar = flrpersonalverrechenbar;
+        this.flrpersonalauftragsfreigabe = flrpersonalauftragsfreigabe;
         this.flrkunde = flrkunde;
         this.flrkundeansprechpartner = flrkundeansprechpartner;
         this.flrkunderechnungsadresse = flrkunderechnungsadresse;
@@ -202,11 +233,19 @@ public class FLRAuftragReport implements Serializable {
         this.flrvertreter = flrvertreter;
         this.flrauftragtextsuche = flrauftragtextsuche;
         this.flrprojekt = flrprojekt;
+        this.flrkundelieferadresse = flrkundelieferadresse;
+        this.flrangebot = flrangebot;
         this.flrauftrag_rahmenauftrag = flrauftrag_rahmenauftrag;
+        this.flrauftragkostenstellen = flrauftragkostenstellen;
     }
 
     /** default constructor */
     public FLRAuftragReport() {
+    }
+
+    /** minimal constructor */
+    public FLRAuftragReport(Set flrauftragkostenstellen) {
+        this.flrauftragkostenstellen = flrauftragkostenstellen;
     }
 
     public Integer getI_id() {
@@ -265,6 +304,22 @@ public class FLRAuftragReport implements Serializable {
         this.t_liefertermin = t_liefertermin;
     }
 
+    public Date getT_liefertermin_timestamp() {
+        return this.t_liefertermin_timestamp;
+    }
+
+    public void setT_liefertermin_timestamp(Date t_liefertermin_timestamp) {
+        this.t_liefertermin_timestamp = t_liefertermin_timestamp;
+    }
+
+    public Date getT_auftragsfreigabe() {
+        return this.t_auftragsfreigabe;
+    }
+
+    public void setT_auftragsfreigabe(Date t_auftragsfreigabe) {
+        this.t_auftragsfreigabe = t_auftragsfreigabe;
+    }
+
     public Date getT_bestelldatum() {
         return this.t_bestelldatum;
     }
@@ -279,6 +334,30 @@ public class FLRAuftragReport implements Serializable {
 
     public void setT_finaltermin(Date t_finaltermin) {
         this.t_finaltermin = t_finaltermin;
+    }
+
+    public Date getT_finaltermin_timestamp() {
+        return this.t_finaltermin_timestamp;
+    }
+
+    public void setT_finaltermin_timestamp(Date t_finaltermin_timestamp) {
+        this.t_finaltermin_timestamp = t_finaltermin_timestamp;
+    }
+
+    public Integer getBestellung_i_id_anderermandant() {
+        return this.bestellung_i_id_anderermandant;
+    }
+
+    public void setBestellung_i_id_anderermandant(Integer bestellung_i_id_anderermandant) {
+        this.bestellung_i_id_anderermandant = bestellung_i_id_anderermandant;
+    }
+
+    public Date getT_wunschtermin() {
+        return this.t_wunschtermin;
+    }
+
+    public void setT_wunschtermin(Date t_wunschtermin) {
+        this.t_wunschtermin = t_wunschtermin;
     }
 
     public Date getT_belegdatum() {
@@ -343,6 +422,22 @@ public class FLRAuftragReport implements Serializable {
 
     public void setKunde_i_id_rechnungsadresse(Integer kunde_i_id_rechnungsadresse) {
         this.kunde_i_id_rechnungsadresse = kunde_i_id_rechnungsadresse;
+    }
+
+    public Integer getAnsprechpartner_i_id_kunde() {
+        return this.ansprechpartner_i_id_kunde;
+    }
+
+    public void setAnsprechpartner_i_id_kunde(Integer ansprechpartner_i_id_kunde) {
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
+    }
+
+    public Integer getLager_i_id_abbuchungslager() {
+        return this.lager_i_id_abbuchungslager;
+    }
+
+    public void setLager_i_id_abbuchungslager(Integer lager_i_id_abbuchungslager) {
+        this.lager_i_id_abbuchungslager = lager_i_id_abbuchungslager;
     }
 
     public Integer getKostenstelle_i_id() {
@@ -449,12 +544,60 @@ public class FLRAuftragReport implements Serializable {
         this.t_verrechenbar = t_verrechenbar;
     }
 
+    public Integer getI_aenderungsauftrag_version() {
+        return this.i_aenderungsauftrag_version;
+    }
+
+    public void setI_aenderungsauftrag_version(Integer i_aenderungsauftrag_version) {
+        this.i_aenderungsauftrag_version = i_aenderungsauftrag_version;
+    }
+
+    public Date getT_lauftermin() {
+        return this.t_lauftermin;
+    }
+
+    public void setT_lauftermin(Date t_lauftermin) {
+        this.t_lauftermin = t_lauftermin;
+    }
+
+    public Date getT_lauftermin_bis() {
+        return this.t_lauftermin_bis;
+    }
+
+    public void setT_lauftermin_bis(Date t_lauftermin_bis) {
+        this.t_lauftermin_bis = t_lauftermin_bis;
+    }
+
+    public String getAuftragwiederholungsintervall_c_nr() {
+        return this.auftragwiederholungsintervall_c_nr;
+    }
+
+    public void setAuftragwiederholungsintervall_c_nr(String auftragwiederholungsintervall_c_nr) {
+        this.auftragwiederholungsintervall_c_nr = auftragwiederholungsintervall_c_nr;
+    }
+
+    public com.lp.server.auftrag.fastlanereader.generated.FLRVerrechenbar getFlrverrechenbar() {
+        return this.flrverrechenbar;
+    }
+
+    public void setFlrverrechenbar(com.lp.server.auftrag.fastlanereader.generated.FLRVerrechenbar flrverrechenbar) {
+        this.flrverrechenbar = flrverrechenbar;
+    }
+
     public FLRPersonal getFlrpersonalverrechenbar() {
         return this.flrpersonalverrechenbar;
     }
 
     public void setFlrpersonalverrechenbar(FLRPersonal flrpersonalverrechenbar) {
         this.flrpersonalverrechenbar = flrpersonalverrechenbar;
+    }
+
+    public FLRPersonal getFlrpersonalauftragsfreigabe() {
+        return this.flrpersonalauftragsfreigabe;
+    }
+
+    public void setFlrpersonalauftragsfreigabe(FLRPersonal flrpersonalauftragsfreigabe) {
+        this.flrpersonalauftragsfreigabe = flrpersonalauftragsfreigabe;
     }
 
     public FLRKunde getFlrkunde() {
@@ -513,12 +656,36 @@ public class FLRAuftragReport implements Serializable {
         this.flrprojekt = flrprojekt;
     }
 
+    public FLRKunde getFlrkundelieferadresse() {
+        return this.flrkundelieferadresse;
+    }
+
+    public void setFlrkundelieferadresse(FLRKunde flrkundelieferadresse) {
+        this.flrkundelieferadresse = flrkundelieferadresse;
+    }
+
+    public FLRAngebot getFlrangebot() {
+        return this.flrangebot;
+    }
+
+    public void setFlrangebot(FLRAngebot flrangebot) {
+        this.flrangebot = flrangebot;
+    }
+
     public com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag getFlrauftrag_rahmenauftrag() {
         return this.flrauftrag_rahmenauftrag;
     }
 
     public void setFlrauftrag_rahmenauftrag(com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag flrauftrag_rahmenauftrag) {
         this.flrauftrag_rahmenauftrag = flrauftrag_rahmenauftrag;
+    }
+
+    public Set getFlrauftragkostenstellen() {
+        return this.flrauftragkostenstellen;
+    }
+
+    public void setFlrauftragkostenstellen(Set flrauftragkostenstellen) {
+        this.flrauftragkostenstellen = flrauftragkostenstellen;
     }
 
     public String toString() {

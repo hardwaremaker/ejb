@@ -75,6 +75,10 @@ public class AgstklpositionDtoAssembler {
 			agstklpositionDto.setNAufschlag(agstklposition.getNAufschlag());
 			agstklpositionDto.setNNettogesamtmitaufschlag(agstklposition
 					.getNNettogesamtmitaufschlag());
+			agstklpositionDto.setCPosition(agstklposition.getCPosition());
+			agstklpositionDto.setBMitPreisen(agstklposition.getBMitPreisen());
+			agstklpositionDto.setBRuestmenge(agstklposition.getBRuestmenge());
+			agstklpositionDto.setBInitial(agstklposition.getBInitial());
 		}
 		return agstklpositionDto;
 	}

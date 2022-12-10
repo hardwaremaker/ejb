@@ -34,8 +34,10 @@ package com.lp.server.fertigung.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 
 import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.stueckliste.service.StuecklistearbeitsplanDto;
 
 public class LosAusAuftragDto implements Serializable {
 
@@ -45,9 +47,49 @@ public class LosAusAuftragDto implements Serializable {
 	private BigDecimal reservierungen = null;
 	private BigDecimal fehlmengen = null;
 	private Integer auftragspositionsnummer = null;
-	private Integer auftragpositionIId = null;
 	private Integer iSort = null;
 	private boolean bDatumVerschoben = false;
+	private boolean bGesperrt = false;
+	private boolean bKommentareVorhanden = false;
+	
+	private boolean auftragspositionIstErledigt = false;
+	
+	
+	public boolean isAuftragspositionIstErledigt() {
+		return auftragspositionIstErledigt;
+	}
+
+	public void setAuftragspositionIstErledigt(boolean auftragspositionIstErledigt) {
+		this.auftragspositionIstErledigt = auftragspositionIstErledigt;
+	}
+
+	ArrayList<StuecklistearbeitsplanDto> alStuecklistearbeitsplan =new ArrayList<StuecklistearbeitsplanDto>();
+	
+	public ArrayList<StuecklistearbeitsplanDto> getAlStuecklistearbeitsplan() {
+		return alStuecklistearbeitsplan;
+	}
+
+	public void setAlStuecklistearbeitsplan(
+			ArrayList<StuecklistearbeitsplanDto> alStuecklistearbeitsplan) {
+		this.alStuecklistearbeitsplan = alStuecklistearbeitsplan;
+	}
+
+	public boolean isGesperrt() {
+		return bGesperrt;
+	}
+
+	public void setBGesperrt(boolean bGesperrt) {
+		this.bGesperrt = bGesperrt;
+	}
+
+	public boolean isKommentareVorhanden() {
+		return bKommentareVorhanden;
+	}
+
+	public void setBKommentareVorhanden(boolean bKommentareVorhanden) {
+		this.bKommentareVorhanden = bKommentareVorhanden;
+	}
+
 	private BigDecimal offeneFertigungsmenge = null;
 	
 	private LosDto[] bereitsVorhandeneLose =null;
@@ -74,14 +116,6 @@ public class LosAusAuftragDto implements Serializable {
 
 	public void setBDatumVerschoben(boolean datumVerschoben) {
 		bDatumVerschoben = datumVerschoben;
-	}
-
-	public Integer getAuftragpositionIId() {
-		return auftragpositionIId;
-	}
-
-	public void setAuftragpositionIId(Integer auftragpositionIId) {
-		this.auftragpositionIId = auftragpositionIId;
 	}
 
 	public Integer getISort() {

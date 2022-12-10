@@ -32,11 +32,8 @@
  ******************************************************************************/
 package com.lp.server.personal.service;
 
-import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Date;
 
 import javax.ejb.Remote;
 
@@ -50,22 +47,25 @@ public interface ZeiterfassungReportFac {
 	public final static String REPORT_ZESTIFTE = "pers_zestifte.jasper";
 	public final static String REPORT_MASCHINENPRODUKTIVITAET = "pers_maschinenproduktivitaet.jasper";
 	public final static String REPORT_MASCHINENLISTE = "pers_maschinenliste.jasper";
+	public final static String REPORT_MASCHINENLISTE_BARCODE = "pers_maschinenliste_barcode.jasper";
+	public final static String REPORT_MASCHINENVERWENDUNG = "pers_maschinenverwendung.jasper";
 	public final static String REPORT_MASCHINENZEITDATEN = "pers_maschinenzeitdaten.jasper";
 	public final static String REPORT_ZEITDATEN = "pers_zeitdaten.jasper";
 	public final static String REPORT_MASCHINENBELEGUNG = "pers_maschinenbelegung.jasper";
 	public final static String REPORT_MITARBEITEREINTEILUNG = "pers_mitarbeitereinteilung.jasper";
 	public final static String REPORT_MASCHINENERFOLG = "pers_maschinenerfolg.jasper";
 	public final static String REPORT_ABGESCHLOSSENE_ZEITBUCHUNGEN = "pers_abgeschlossene_zeitbuchungen.jasper";
+
 	
-	
-	
-	public final static String REPORT_REISEZEITEN = "pers_reisezeiten.jasper";
 	public final static String REPORT_FAHRTENBUCH = "pers_fahrtenbuch.jasper";
 
 	public final static String REPORT_ARBEITSZEITSTATISTIK = "pers_arbeitszeitstatistik.jasper";
 	public final static String REPORT_AUFTRAGSZEITSTATISTIK = "pers_auftragszeitstatistik.jasper";
-	
+
 	public final static String REPORT_ZEITERFASSUNG_AENDERUNGEN = "pers_zeiterfassung_aenderungen.jasper";
+	
+	public final static String REPORT_TELEFONZEIT = "pers_telefonzeit.jasper";
+	
 
 	public final static int REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_AUFTRAG = 0;
 	public final static int REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_ADRESSE = 1;
@@ -75,6 +75,7 @@ public interface ZeiterfassungReportFac {
 	public final static int REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_ARTIKELKLASSE = 5;
 	public final static int REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_KOSTENSTELLE = 6;
 	public final static int REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_KUNDE_BELEG_PERSONAL = 7;
+	public final static int REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_KUNDE_DATUM_PERSONAL_ARTIKEL = 8;
 
 	public final static String REPORT_ARBEITSZEITSTATISTIKVERDICHTET = "pers_arbeitszeitstatistikverdichtet.jasper";
 
@@ -85,8 +86,6 @@ public interface ZeiterfassungReportFac {
 	public final static String REPORT_FAHRZEUGE = "pers_fahrzeuge.jasper";
 	public final static String REPORT_URLAUBSANTRAG = "pers_urlaubsantrag.jasper";
 
-	
-	
 	public static int REPORT_ZEITDATEN_PERSONALNR = 0;
 	public static int REPORT_ZEITDATEN_NAME = 1;
 	public static int REPORT_ZEITDATEN_ZEIT = 2;
@@ -111,90 +110,105 @@ public interface ZeiterfassungReportFac {
 	public static int REPORT_ZEITDATEN_SOLLZEIT = 21;
 	public static int REPORT_ZEITDATEN_ZEIT_BIS = 22;
 	public static int REPORT_ZEITDATEN_ZUSATZ = 23;
-	public static int REPORT_ZEITDATEN_ANZAHL_SPALTEN = 24;
+	public static int REPORT_ZEITDATEN_ZEITGUTSCHRIFT = 24;
+	public static int REPORT_ZEITDATEN_FRUEHESTES_KOMMT = 25;
+	public static int REPORT_ZEITDATEN_KOMMT_AKZEPTIERT_BIS = 26;
+	public static int REPORT_ZEITDATEN_SPAETESTES_GEHT = 27;
+	public static int REPORT_ZEITDATEN_GEHT_AKZEPTIERT_AB = 28;
+	public static int REPORT_ZEITDATEN_ZEITDATEN_I_ID = 29;
+	public static int REPORT_ZEITDATEN_PROJEKT_BEREICH = 30;
+	public static int REPORT_ZEITDATEN_PROJEKT_I_ID = 31;
+	public static int REPORT_ZEITDATEN_VERRECHENBAR_INPROZENT = 32;
+	public static int REPORT_ZEITDATEN_PERSON_ERLEDIGT = 33;
+	public static int REPORT_ZEITDATEN_ZEITPUNKT_ERLEDIGT = 34;
+	public static int REPORT_ZEITDATEN_TAETIGKEIT_KENNUNG = 35;
+	public static int REPORT_ZEITDATEN_TAETIGKEIT_SONDERZEIT_KENNUNG = 36;
+	public static int REPORT_ZEITDATEN_FRUEHESTES_KOMMT_VORTAG = 37;
+	public static int REPORT_ZEITDATEN_SCHICHTTAG = 38;
+	public static int REPORT_ZEITDATEN_BEZAHLT = 39;
+	public static int REPORT_ZEITDATEN_KOMMENTAR_INTERN = 40;
+	public static int REPORT_ZEITDATEN_TELEFONZEIT_ENDE = 41;
+	public static int REPORT_ZEITDATEN_ANZAHL_SPALTEN = 42;
 
-	
-	public JasperPrintLP printZestiftliste(TheClientDto theClientDto)
-			throws RemoteException;
+	public static String REPORT_AENDERUNGEN_OP_INSERT = "INSERT";
+	public static String REPORT_AENDERUNGEN_OP_UPDATE = "UPDATE";
+	public static String REPORT_AENDERUNGEN_OP_DELETE = "DELETE";
 
-	public JasperPrintLP printAuftragszeitstatistik(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, TheClientDto theClientDto);
+	public JasperPrintLP printZestiftliste(TheClientDto theClientDto) throws RemoteException;
 
-	public JasperPrintLP printTelefonzeiten(Integer personalIId,
-			Integer partnerIId, java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, boolean bSortiertNachPersonal,
+	public JasperPrintLP printAuftragszeitstatistik(java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			TheClientDto theClientDto);
+
+	public JasperPrintLP printTelefonzeiten(Integer personalIId, Integer partnerIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tBis, boolean bSortiertNachPersonal, TheClientDto theClientDto) throws RemoteException;
+
+	/*
+	 * public JasperPrintLP printArbeitszeitstatistik(java.sql.Timestamp tVon,
+	 * java.sql.Timestamp tBis, int iOptionSortierung, String belegartCNr, Integer
+	 * belegartIId, String belegnummerFuerReport, Integer personalIId, Integer
+	 * artikelIId, Integer partnerIId, Integer artikelgruppeIId, Integer
+	 * artikelklasseIId, boolean bVerdichtet, boolean
+	 * mitErledigtenProjektenImZeitraum, boolean
+	 * projektInterneErledigungBeruecksichtigen, TheClientDto theClientDto) throws
+	 * RemoteException;
+	 */
+	public JasperPrintLP printMitarbeiteruebersicht(Integer personalIId, Integer iJahrVon, Integer iMonatVon,
+			Integer iJahrBis, Integer iMonatBis, Integer iOption, Integer kostenstelleIIdAbteilung, Integer iOptionSortierung, boolean bPlusVersteckte,
+			boolean bNurAnwesende, boolean bDetailinfos,  boolean bAnerkannteZeiten, TheClientDto theClientDto) throws RemoteException;
+
+	public JasperPrintLP printFahrtenbuch(Integer personalIId, Timestamp tVon, Timestamp tBis, Integer iOption,Integer kostenstelleIIdAbteilung,
+			boolean bPlusVersteckte, boolean bNurAnwesende, TheClientDto theClientDto) throws RemoteException;
+
+	public JasperPrintLP printMaschinenproduktivitaet(Integer maschineIId, Timestamp tVon, Timestamp tBis,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public JasperPrintLP printReisezeiten(Integer personalIId, Timestamp tVon,
-			Timestamp tBis, Integer iOption, boolean bPlusVersteckte,boolean bNurAnwesende,
+	public JasperPrintLP printMaschinenliste(Timestamp tStichtag, boolean bMitVersteckten, boolean bMitBarcodes,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public JasperPrintLP printArbeitszeitstatistik(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, int iOptionSortierung, String belegartCNr,
-			Integer belegartIId, Integer personalIId, Integer artikelIId,
-			Integer partnerIId, Integer artikelgruppeIId,
-			Integer artikelklasseIId, boolean bVerdichtet,
-			TheClientDto theClientDto) throws RemoteException;
+	public MaschinenerfolgReportDto printMaschinenerfolg(Integer personalIId, Integer personalgruppeIId,
+			java.sql.Timestamp tVon, java.sql.Timestamp tBis, Integer iOptionSortierung, String sortierung,
+			boolean bMonatsbetrachtung, TheClientDto theClientDto);
 
-	public JasperPrintLP printMitarbeiteruebersicht(Integer personalIId,
-			Integer iJahrVon, Integer iMonatVon, Integer iJahrBis,
-			Integer iMonatBis, Integer iOption, Integer iOptionSortierung,
-			boolean bPlusVersteckte, boolean bNurAnwesende, TheClientDto theClientDto)
+	public JasperPrintLP printMaschinenzeitdaten(Integer maschineIId, Timestamp tVon, Timestamp tBis,
+			boolean bAlleMaschinen, TheClientDto theClientDto) throws RemoteException;
+
+	public JasperPrintLP printZeitdatenjournal(Integer personalIId, Timestamp tVon, Timestamp tBis, Integer iOption, Integer kostenstelleIIdAbteilung,
+			Boolean bPlusVersteckte, TheClientDto theClientDto) throws RemoteException;
+
+	public JasperPrintLP printMaschinenbelegung(Integer maschineIId, java.sql.Timestamp tStichtag,
+			boolean bMitErstemUagDesNaechstenAg, TheClientDto theClientDto);
+
+	public JasperPrintLP printMitarbeitereinteilung(Integer personalIId, Integer personalgruppeIId,
+			java.sql.Timestamp tStichtag, Integer iOptionSortierung, String sortierung, TheClientDto theClientDto);
+
+	public JasperPrintLP printProduktivitaetstagesstatistik(Integer personalIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tBis, Integer iOption, Integer kostenstelleIIdAbteilung, boolean bMitVersteckten, boolean bNurAnwesende,
+			boolean bMonatsbetrachtung, Integer personalgruppeIId, TheClientDto theClientDto);
+
+	public JasperPrintLP printFahrzeuge(Integer fahrzeugIId, java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			TheClientDto theClientDto);
+
+	public Object[][] erstelleZeitdatenjournal(Integer personalIId, java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			Integer iOption, Integer kostenstelleIIdAbteilung, Boolean bPlusVersteckte, TheClientDto theClientDto);
+
+	public JasperPrintLP printUrlaubsantrag(Integer personalIId, Integer[] integerIIds, boolean bGenehmigt,
+			String cVorraussetzung, TheClientDto theClientDto);
+
+	public JasperPrintLP printAbgeschlosseneZeitbuchungen(boolean bMitVersteckten, TheClientDto theClientDto);
+
+	public JasperPrintLP printAenderungen(Integer personalIId, DatumsfilterVonBis dfZeitbuchungen,
+			DatumsfilterVonBis dfAenderungen, boolean mitInserts, boolean mitUpdates, boolean mitDeletes,
+			Integer sortierungsart, TheClientDto theClientDto);
+
+	public ZeiterfassungAenderungenReportDto printAenderungenNew(Integer personalIId,
+			DatumsfilterVonBis dfZeitbuchungen, DatumsfilterVonBis dfAenderungen, boolean mitInserts,
+			boolean mitUpdates, boolean mitDeletes, Integer sortierungsart, TheClientDto theClientDto);
+
+	public JasperPrintLP printMaschinenverwendung(Integer maschineIId, TheClientDto theClientDto);
+
+	JasperPrintLP printArbeitszeitstatistik(ArbeitszeitstatistikJournalKriterienDto krit, TheClientDto theClientDto)
 			throws RemoteException;
-
-	public JasperPrintLP printFahrtenbuch(Integer personalIId, Timestamp tVon,
-			Timestamp tBis, Integer iOption, boolean bPlusVersteckte,boolean bNurAnwesende,
-			TheClientDto theClientDto) throws RemoteException;
-
-	public JasperPrintLP printMaschinenproduktivitaet(Integer maschineIId,
-			Timestamp tVon, Timestamp tBis, TheClientDto theClientDto)
-			throws RemoteException;
-
-	public JasperPrintLP printMaschinenliste(Timestamp tStichtag,
-			boolean bMitVersteckten, TheClientDto theClientDto)
-			throws RemoteException;
-
-	public MaschinenerfolgReportDto printMaschinenerfolg(Integer personalIId,
-			Integer personalgruppeIId, java.sql.Timestamp tVon, java.sql.Timestamp tBis,
-			Integer iOptionSortierung, String sortierung, boolean bMonatsbetrachtung,
-			TheClientDto theClientDto);
 	
-	public JasperPrintLP printMaschinenzeitdaten(Integer maschineIId,
-			Timestamp tVon, Timestamp tBis, TheClientDto theClientDto)
-			throws RemoteException;
-
-	
-	public JasperPrintLP printZeitdatenjournal(Integer personalIId,
-			Timestamp tVon, Timestamp tBis, TheClientDto theClientDto)
-			throws RemoteException;
-
-	public JasperPrintLP printMaschinenbelegung(Integer maschineIId,
-			java.sql.Timestamp tStichtag, boolean bMitErstemUagDesNaechstenAg,
-			TheClientDto theClientDto);
-
-	public JasperPrintLP printMitarbeitereinteilung(Integer personalIId,
-			Integer personalgruppeIId, java.sql.Timestamp tStichtag,
-			Integer iOptionSortierung, String sortierung,
-			TheClientDto theClientDto);
-	
-	public JasperPrintLP printProduktivitaetstagesstatistik(Integer personalIId,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis,Integer iOption, boolean bMitVersteckten, boolean bNurAnwesende, boolean bMonatsbetrachtung, Integer personalgruppeIId,
-			TheClientDto theClientDto);
-	
-	public JasperPrintLP printFahrzeuge(Integer fahrzeugIId,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis, TheClientDto theClientDto);
-	public Object[][] erstelleZeitdatenjournal(Integer personalIId,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
-			TheClientDto theClientDto);
-	public JasperPrintLP printUrlaubsantrag(Integer personalIId,
-			Integer[] integerIIds, boolean bGenehmigt, String cVorraussetzung,
-			TheClientDto theClientDto);
-	public JasperPrintLP printAbgeschlosseneZeitbuchungen(
-			boolean bMitVersteckten, TheClientDto theClientDto);
-	public JasperPrintLP printAenderungen(Integer personalIId,
-			DatumsfilterVonBis datumsfilter,
-			boolean mitInserts, boolean mitUpdates, boolean mitDeletes,
-			TheClientDto theClientDto);
-	
+	public JasperPrintLP printTelefonzeit(Integer telefonzeitIId, TheClientDto theClientDto);
 	
 }

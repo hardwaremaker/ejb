@@ -1,54 +1,18 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.partner.fastlanereader.generated;
 
 import java.io.Serializable;
+import java.util.Date;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
 /** @author Hibernate CodeGenerator */
 public class FLRPartnerbank implements Serializable {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-
-	/** identifier field */
+    /** identifier field */
     private Integer i_id;
 
     /** nullable persistent field */
-    private String partner_i_id;
+    private Integer partner_i_id;
 
     /** nullable persistent field */
     private String c_ktonr;
@@ -60,14 +24,26 @@ public class FLRPartnerbank implements Serializable {
     private Integer i_sort;
 
     /** nullable persistent field */
+    private String waehrung_c_nr;
+
+    /** nullable persistent field */
+    private String c_sepamandatsnummer;
+
+    /** nullable persistent field */
+    private Date t_sepaerteilt;
+
+    /** nullable persistent field */
     private com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner;
 
     /** full constructor */
-    public FLRPartnerbank(String partner_i_id, String c_ktonr, String c_iban, Integer i_sort, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner) {
+    public FLRPartnerbank(Integer partner_i_id, String c_ktonr, String c_iban, Integer i_sort, String waehrung_c_nr, String c_sepamandatsnummer, Date t_sepaerteilt, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner) {
         this.partner_i_id = partner_i_id;
         this.c_ktonr = c_ktonr;
         this.c_iban = c_iban;
         this.i_sort = i_sort;
+        this.waehrung_c_nr = waehrung_c_nr;
+        this.c_sepamandatsnummer = c_sepamandatsnummer;
+        this.t_sepaerteilt = t_sepaerteilt;
         this.flrpartner = flrpartner;
     }
 
@@ -83,11 +59,11 @@ public class FLRPartnerbank implements Serializable {
         this.i_id = i_id;
     }
 
-    public String getPartner_i_id() {
+    public Integer getPartner_i_id() {
         return this.partner_i_id;
     }
 
-    public void setPartner_i_id(String partner_i_id) {
+    public void setPartner_i_id(Integer partner_i_id) {
         this.partner_i_id = partner_i_id;
     }
 
@@ -113,6 +89,30 @@ public class FLRPartnerbank implements Serializable {
 
     public void setI_sort(Integer i_sort) {
         this.i_sort = i_sort;
+    }
+
+    public String getWaehrung_c_nr() {
+        return this.waehrung_c_nr;
+    }
+
+    public void setWaehrung_c_nr(String waehrung_c_nr) {
+        this.waehrung_c_nr = waehrung_c_nr;
+    }
+
+    public String getC_sepamandatsnummer() {
+        return this.c_sepamandatsnummer;
+    }
+
+    public void setC_sepamandatsnummer(String c_sepamandatsnummer) {
+        this.c_sepamandatsnummer = c_sepamandatsnummer;
+    }
+
+    public Date getT_sepaerteilt() {
+        return this.t_sepaerteilt;
+    }
+
+    public void setT_sepaerteilt(Date t_sepaerteilt) {
+        this.t_sepaerteilt = t_sepaerteilt;
     }
 
     public com.lp.server.partner.fastlanereader.generated.FLRPartner getFlrpartner() {

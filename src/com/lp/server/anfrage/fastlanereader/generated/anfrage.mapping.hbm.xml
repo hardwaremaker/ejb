@@ -19,7 +19,8 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd"> 
 <hibernate-mapping package="com.lp.server.anfrage.fastlanereader.generated">
 	<class name="FLRAnfrage" table="ANF_ANFRAGE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -45,9 +46,23 @@
 			type="java.sql.Timestamp" not-null="false" />
 		<property name="c_versandtype" column="C_VERSANDTYPE" type="java.lang.String" />
 		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
+		<property name="partner_i_id_lieferadresse" column="PARTNER_I_ID_LIEFERADRESSE"
+			type="java.lang.Integer" />
+		<property name="anfrage_i_id_liefergruppenanfrage" column="ANFRAGE_I_ID_LIEFERGRUPPENANFRAGE"
+			type="java.lang.Integer" />
+		<property name="ansprechpartner_i_id_lieferant" column="ANSPRECHPARTNER_I_ID_LIEFERANT"
+			type="java.lang.Integer" />
 		<many-to-one name="flrlieferant"
 			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
 			column="LIEFERANT_I_ID_ANFRAGEADRESSE" unique="true" />
+		<many-to-one name="flranfrage_liefergruppenanfrage"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage"
+			column="ANFRAGE_I_ID_LIEFERGRUPPENANFRAGE" unique="true" insert="false" update="false" />
+
+		<many-to-one name="flrpartner_lieferadresse"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID_LIEFERADRESSE" unique="true" insert="false"
+			update="false" />
 
 		<many-to-one name="flrliefergruppe"
 			class="com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe"
@@ -65,7 +80,20 @@
 		<many-to-one name="flrpersonalaenderer"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID_AENDERN" unique="true" insert="false" update="false" />
+		<many-to-one name="flranfragetextsuche"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfragetextsuche"
+			column="I_ID" insert="false" update="false" />
 	</class>
+
+	<class name="FLRAnfragetextsuche" table="ANF_TEXTSUCHE">
+		<id name="i_id" column="I_ID" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="c_typ" column="C_TYP" type="java.lang.String" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_suche" column="C_SUCHE" type="java.lang.String" />
+	</class>
+
 	<class name="FLRAnfrageposition" table="ANF_ANFRAGEPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -76,8 +104,19 @@
 		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
 		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="c_zbez" column="C_ZBEZ" type="java.lang.String" />
 		<property name="n_richtpreis" column="N_RICHTPREIS" type="java.math.BigDecimal" />
 		<property name="x_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+
+		<property name="anfrageposition_i_id_zugehoerig" column="ANFRAGEPOSITION_I_ID_ZUGEHOERIG"
+			type="java.lang.Integer" />
+			
+		<property name="lossollmaterial_i_id" column="LOSSOLLMATERIAL_I_ID"
+			type="java.lang.Integer" />
+
+		<many-to-one name="flranfrageposition_zugehoerig"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrageposition"
+			column="ANFRAGEPOSITION_I_ID_ZUGEHOERIG" insert="false" update="false" />
 		<many-to-one name="flranfrage"
 			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage"
 			column="ANFRAGE_I_ID" unique="true" />
@@ -139,12 +178,38 @@
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="n_richtpreis" column="N_RICHTPREIS" type="java.math.BigDecimal" />
 		<property name="c_zbez" column="C_ZBEZ" type="java.lang.String" />
+		<property name="anfrageposition_i_id_zugehoerig" column="ANFRAGEPOSITION_I_ID_ZUGEHOERIG"
+			type="java.lang.Integer" />
 		<many-to-one name="flranfrage"
 			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage"
 			column="ANFRAGE_I_ID" unique="true" />
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" unique="true" />
+
+
+
+
+
+		<many-to-one name="flranfrageposition_zugehoerig"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrageposition"
+			column="ANFRAGEPOSITION_I_ID_ZUGEHOERIG" insert="false" update="false" />
+			
+			
+			<set name="ersatztypen_set" inverse="true" order-by="I_SORT">
+			<key column="ANFRAGEPOSITION_I_ID_ZUGEHOERIG" />
+			<one-to-many
+				class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfragepositionReport" />
+		</set>
+			
+			<set name="lieferdaten_set" inverse="true">
+			<key column="ANFRAGEPOSITION_I_ID" />
+			<one-to-many
+				class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfragepositionlieferdatenReport" />
+		</set>
+			
+			
+
 	</class>
 	<class name="FLRAnfragepositionart" table="ANF_ANFRAGEPOSITIONART">
 		<id name="positionsart_c_nr" column="POSITIONSART_C_NR" type="java.lang.String">
@@ -159,7 +224,7 @@
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
 	</class>
-	
+
 	<class name="FLRAnfrageart" table="ANF_ANFRAGEART">
 		<id name="c_nr" column="C_NR" type="java.lang.String">
 			<generator class="native" />

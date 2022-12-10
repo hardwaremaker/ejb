@@ -38,6 +38,8 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
+import com.lp.server.personal.service.ZeitdatenDto;
+import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.util.EJBExceptionLP;
 
 public class AuftragzeitenDto extends TabelleDto implements Serializable {
@@ -52,8 +54,8 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		return maschinengruppe;
 	}
 
-	private boolean bTelefonzeit=false;
-	
+	private boolean bTelefonzeit = false;
+
 	public boolean isBTelefonzeit() {
 		return bTelefonzeit;
 	}
@@ -85,9 +87,8 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		this.maschinengruppe = maschinengruppe;
 	}
 
-	
 	private String sPersonalKurzzeichen;
-	
+
 	public String getSPersonalKurzzeichen() {
 		return sPersonalKurzzeichen;
 	}
@@ -105,7 +106,7 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 	}
 
 	public void setsPersonNachnameVorname(String sPersonNachnameVorname) {
-		
+
 		this.sPersonNachnameVorname = sPersonNachnameVorname;
 	}
 
@@ -119,6 +120,16 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 
 	public void setSArtikelzusatzbezeichnung(String sArtikelzusatzbezeichnung) {
 		this.sArtikelzusatzbezeichnung = sArtikelzusatzbezeichnung;
+	}
+
+	private String sKommentarIntern;
+
+	public String getSKommentarIntern() {
+		return sKommentarIntern;
+	}
+
+	public void setSKommentarIntern(String sKommentarIntern) {
+		this.sKommentarIntern = sKommentarIntern;
 	}
 
 	private String sZeitbuchungtext;
@@ -141,7 +152,34 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		sKommentar = kommentar;
 	}
 
-	private boolean bPerson;
+	private Timestamp tsErledigt;
+	private Double fVerrechenbarInProzent;
+	private String sPersonalKurzzeichenErledigt;
+
+	public Timestamp getTsErledigt() {
+		return tsErledigt;
+	}
+
+	public void setTsErledigt(Timestamp tsErledigt) {
+		this.tsErledigt = tsErledigt;
+	}
+
+	public Double getFVerrechenbarInProzent() {
+		return fVerrechenbarInProzent;
+	}
+
+	public void setFVerrechenbarInProzent(Double fVerrechenbarInProzent) {
+		this.fVerrechenbarInProzent = fVerrechenbarInProzent;
+	}
+
+	public String getSPersonalKurzzeichenErledigt() {
+		return sPersonalKurzzeichenErledigt;
+	}
+
+	public void setSPersonalKurzzeichenErledigt(String sPersonalKurzzeichenErledigt) {
+		this.sPersonalKurzzeichenErledigt = sPersonalKurzzeichenErledigt;
+	}
+
 	private Integer artikelIId;
 	private Timestamp tsBeginn;
 	private Timestamp tsEnde;
@@ -153,6 +191,24 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 	private Integer artikelklasseIId;
 	private Integer iPersonalMaschinenId;
 	private Integer belegpositionIId;
+	private String sArtikelgruppe;
+	private String sQuelle;
+
+	public String getSQuelle() {
+		return sQuelle;
+	}
+
+	public void setSQuelle(String sQuelle) {
+		this.sQuelle = sQuelle;
+	}
+
+	public String getSArtikelgruppe() {
+		return sArtikelgruppe;
+	}
+
+	public void setSArtikelgruppe(String sArtikelgruppe) {
+		this.sArtikelgruppe = sArtikelgruppe;
+	}
 
 	public Integer getBelegpositionIId() {
 		return belegpositionIId;
@@ -238,10 +294,6 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		return tDauer;
 	}
 
-	public boolean isBPerson() {
-		return bPerson;
-	}
-
 	public Integer getArtikelgruppeIId() {
 		return artikelgruppeIId;
 	}
@@ -274,10 +326,6 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		this.tDauer = tDauer;
 	}
 
-	public void setBPerson(boolean bPerson) {
-		this.bPerson = bPerson;
-	}
-
 	public void setArtikelgruppeIId(Integer artikelgruppeIId) {
 		this.artikelgruppeIId = artikelgruppeIId;
 	}
@@ -290,10 +338,9 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		this.iPersonalMaschinenId = iPersonalMaschinenId;
 	}
 
-	public static AuftragzeitenDto[] add2BelegzeitenDtos(
-			ArrayList<AuftragzeitenDto> alDaten,
+	public static AuftragzeitenDto[] add2BelegzeitenDtos(ArrayList<AuftragzeitenDto> alDaten,
 			AuftragzeitenDto[] vorhandenDtos) {
-		if (alDaten != null && alDaten.size()>0) {
+		if (alDaten != null && alDaten.size() > 0) {
 			ArrayList alnew = new ArrayList<AuftragzeitenDto>();
 			for (int i = 0; i < vorhandenDtos.length; i++) {
 				alnew.add(vorhandenDtos[i]);
@@ -311,30 +358,52 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 
 	}
 
-	public static AuftragzeitenDto[] sortiereBelegzeitDtos(
-			AuftragzeitenDto[] azDtos, boolean bOrderByArtikelCNr) {
+	public static AuftragzeitenDto[] sortiereBelegzeitDtos(AuftragzeitenDto[] azDtos, int iSortierung) {
 
 		try {
-			if (bOrderByArtikelCNr == true) {
+			if (iSortierung == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL) {
 
 				for (int i = azDtos.length - 1; i > 0; --i) {
 					for (int j = 0; j < i; ++j) {
-						if (azDtos[j].getSArtikelcnr().compareTo(
-								azDtos[j + 1].getSArtikelcnr()) > 0) {
+						if (azDtos[j].getSArtikelcnr().compareTo(azDtos[j + 1].getSArtikelcnr()) > 0) {
 							AuftragzeitenDto tauschDto = azDtos[j];
 							azDtos[j] = azDtos[j + 1];
 							azDtos[j + 1] = tauschDto;
 						}
 					}
 				}
-			} else {
+			} else if (iSortierung == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_PERSONAL) {
 				for (int i = azDtos.length - 1; i > 0; --i) {
 					for (int j = 0; j < i; ++j) {
-						if (azDtos[j].getsPersonNachnameVorname().compareTo(
-								azDtos[j + 1].getsPersonNachnameVorname()) > 0) {
+						if (azDtos[j].getsPersonNachnameVorname()
+								.compareTo(azDtos[j + 1].getsPersonNachnameVorname()) > 0) {
 							AuftragzeitenDto tauschDto = azDtos[j];
 							azDtos[j] = azDtos[j + 1];
 							azDtos[j + 1] = tauschDto;
+						} else if (azDtos[j].getsPersonNachnameVorname()
+								.compareTo(azDtos[j + 1].getsPersonNachnameVorname()) == 0) {
+							if (azDtos[j].getTsBeginn().before(azDtos[j + 1].getTsBeginn())) {
+								AuftragzeitenDto tauschDto = azDtos[j];
+								azDtos[j] = azDtos[j + 1];
+								azDtos[j + 1] = tauschDto;
+							}
+						}
+					}
+				}
+			} else if (iSortierung == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ZEITPUNKT_PERSONAL) {
+				for (int i = azDtos.length - 1; i > 0; --i) {
+					for (int j = 0; j < i; ++j) {
+						if (azDtos[j].getTsBeginn().before(azDtos[j + 1].getTsBeginn())) {
+							AuftragzeitenDto tauschDto = azDtos[j];
+							azDtos[j] = azDtos[j + 1];
+							azDtos[j + 1] = tauschDto;
+						} else if (azDtos[j].getTsBeginn().equals(azDtos[j + 1].getTsBeginn())) {
+							if (azDtos[j].getsPersonNachnameVorname()
+									.compareTo(azDtos[j + 1].getsPersonNachnameVorname()) > 0) {
+								AuftragzeitenDto tauschDto = azDtos[j];
+								azDtos[j] = azDtos[j + 1];
+								azDtos[j + 1] = tauschDto;
+							}
 						}
 					}
 				}
@@ -347,4 +416,45 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		return azDtos;
 	}
 
+	public static AuftragzeitenDto clone(AuftragzeitenDto orig) {
+		AuftragzeitenDto klon = new AuftragzeitenDto();
+		klon.setArtikelgruppeIId(orig.getArtikelgruppeIId());
+		klon.setArtikelIId(orig.getArtikelIId());
+		klon.setArtikelklasseIId(orig.getArtikelklasseIId());
+		klon.setBdKosten(orig.getBdKosten());
+		klon.setBelegpositionIId(orig.getBelegpositionIId());
+		klon.setBTelefonzeit(orig.isBTelefonzeit());
+		klon.setDdDauer(orig.getDdDauer());
+		klon.setFVerrechenbarInProzent(orig.getFVerrechenbarInProzent());
+		klon.setiArbeitsgang(orig.getiArbeitsgang());
+		klon.setIPersonalMaschinenId(orig.getIPersonalMaschinenId());
+		klon.setiUnterarbeitsgang(orig.getiUnterarbeitsgang());
+		klon.setMaschinengruppe(orig.getMaschinengruppe());
+		klon.setSArtikelbezeichnung(orig.getSArtikelbezeichnung());
+		klon.setSArtikelcnr(orig.getSArtikelcnr());
+		klon.setSArtikelgruppe(orig.getSArtikelgruppe());
+		klon.setSArtikelzusatzbezeichnung(orig.getSArtikelzusatzbezeichnung());
+		klon.setSBewegungsart(orig.getSBewegungsart());
+		klon.setSKommentar(orig.getSKommentar());
+		klon.setSKommentarIntern(orig.getSKommentarIntern());
+		klon.setSPersonalKurzzeichen(orig.getSPersonalKurzzeichen());
+
+		klon.setSPersonalKurzzeichenErledigt(orig.getSPersonalKurzzeichenErledigt());
+		klon.setSPersonalMaschinenname(orig.getSPersonalMaschinenname());
+		klon.setSPersonalnummer(orig.getSPersonalnummer());
+		klon.setsPersonNachnameVorname(orig.getsPersonNachnameVorname());
+		klon.setSPersonalKurzzeichen(orig.getSPersonalKurzzeichen());
+
+		klon.setSQuelle(orig.getSQuelle());
+
+		klon.setSZeilenheader(orig.getSZeilenHeader());
+		klon.setSZeitbuchungtext(orig.getSZeitbuchungtext());
+		klon.setTDauer(orig.getTDauer());
+		klon.setTsBeginn(orig.getTsBeginn());
+		klon.setTsEnde(orig.getTsEnde());
+		klon.setTsErledigt(orig.getTsErledigt());
+		klon.setZeitdatenIIdBelegbuchung(orig.getZeitdatenIIdBelegbuchung());
+
+		return klon;
+	}
 }

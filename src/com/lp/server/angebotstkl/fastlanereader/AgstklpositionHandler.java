@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -43,16 +44,21 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
 import com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstklposition;
 import com.lp.server.angebotstkl.service.AgstklDto;
 import com.lp.server.angebotstkl.service.AgstklpositionDto;
 import com.lp.server.angebotstkl.service.AngebotstklpositionFac;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelsperren;
 import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.artikel.service.SperrenIcon;
 import com.lp.server.bestellung.service.WareneingangDto;
 import com.lp.server.bestellung.service.WareneingangspositionDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste;
+import com.lp.server.stueckliste.service.StuecklisteFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeAgstklPosition;
 import com.lp.server.system.jcr.service.docnode.DocPath;
@@ -119,8 +125,7 @@ public class AgstklpositionHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -140,11 +145,9 @@ public class AgstklpositionHandler extends UseCaseHandler {
 
 				if (agstklposition.getFlrartikelliste() != null) {
 					if (agstklposition.getFlrartikelliste().getStuecklisten() != null) {
-						Iterator iterator = agstklposition.getFlrartikelliste()
-								.getStuecklisten().iterator();
+						Iterator iterator = agstklposition.getFlrartikelliste().getStuecklisten().iterator();
 						if (iterator.hasNext()) {
-							FLRStueckliste stkl = (FLRStueckliste) iterator
-									.next();
+							FLRStueckliste stkl = (FLRStueckliste) iterator.next();
 							artikelart = stkl.getStuecklisteart_c_nr();
 
 						}
@@ -152,39 +155,38 @@ public class AgstklpositionHandler extends UseCaseHandler {
 				}
 				rows[row][col++] = artikelart;
 
-				if (iKalkulationsart == 3) {
-
-				} else {
-					if (agstklposition.getFlrartikel() != null) {
-						rows[row][col++] = agstklposition.getFlrartikel()
-								.getC_nr();
-					} else {
-						rows[row][col++] = null;
-					}
-
-				}
-
 				rows[row][col++] = agstklposition.getEinheit_c_nr() == null ? ""
 						: agstklposition.getEinheit_c_nr().trim();
+				
+				if (agstklposition.getFlrartikel() != null) {
+					rows[row][col++] = agstklposition.getFlrartikel().getC_nr();
+
+					if (bReferenznummerInPositionen) {
+						rows[row][col++] = agstklposition.getFlrartikel().getC_referenznr();
+					}
+
+				} else {
+					rows[row][col++] = null;
+					if (bReferenznummerInPositionen) {
+						rows[row][col++] = null;
+					}
+				}
+
+				
 
 				// in der Spalte Bezeichnung koennen verschiedene Dinge stehen
 				String sBezeichnung = null;
 
-				if (agstklposition.getAgstklpositionsart_c_nr().equals(
-						LocaleFac.POSITIONSART_IDENT)) {
+				if (agstklposition.getAgstklpositionsart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)) {
 					// die sprachabhaengig Artikelbezeichnung anzeigen
-					sBezeichnung = getArtikelFac()
-							.formatArtikelbezeichnungEinzeiligOhneExc(
-									agstklposition.getFlrartikel().getI_id(),
-									theClientDto.getLocUi());
+					sBezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+							agstklposition.getFlrartikel().getI_id(), theClientDto.getLocUi());
 				}
-				if (agstklposition.getAgstklpositionsart_c_nr().equals(
-						LocaleFac.POSITIONSART_AGSTUECKLISTE)) {
+				if (agstklposition.getAgstklpositionsart_c_nr().equals(LocaleFac.POSITIONSART_AGSTUECKLISTE)) {
 					sBezeichnung = agstklposition.getFlragstkl().getC_nr();
 
 					if (agstklposition.getFlragstkl().getC_bez() != null
-							&& agstklposition.getFlragstkl().getC_bez()
-									.length() > 0) {
+							&& agstklposition.getFlragstkl().getC_bez().length() > 0) {
 						sBezeichnung = agstklposition.getFlragstkl().getC_bez();
 					}
 				} else {
@@ -200,44 +202,31 @@ public class AgstklpositionHandler extends UseCaseHandler {
 
 				// PJ18253
 				if (iKalkulationsart == 3) {
-					if (agstklposition.getAgstklpositionsart_c_nr().equals(
-							LocaleFac.POSITIONSART_IDENT)) {
+					if (agstklposition.getAgstklpositionsart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)) {
 
-						ArtikellieferantDto alDto = getArtikelFac()
-								.getArtikelEinkaufspreis(
-										agstklposition.getFlrartikel()
-												.getI_id(),
-										null,
-										agstklposition.getN_menge(),
-										agstklposition.getFlragstkl()
-												.getWaehrung_c_nr(),
-										new java.sql.Date(agstklposition
-												.getFlragstkl()
-												.getT_belegdatum().getTime()),
-										theClientDto);
+						ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(
+								agstklposition.getFlrartikel().getI_id(), null, agstklposition.getN_menge(),
+								agstklposition.getFlragstkl().getWaehrung_c_nr(),
+								new java.sql.Date(agstklposition.getFlragstkl().getT_belegdatum().getTime()),
+								theClientDto);
 						if (alDto != null) {
 							rows[row][col++] = alDto.getNNettopreis();
 						} else {
 							rows[row][col++] = null;
 						}
 
-						Integer wepIId = getLagerFac().getLetzteWEP_IID(
-								agstklposition.getFlrartikel().getI_id());
+						Integer wepIId = getLagerFac().getLetzteWEP_IID(agstklposition.getFlrartikel().getI_id());
 						if (wepIId != null) {
 							WareneingangspositionDto wepDto = getWareneingangFac()
-									.wareneingangspositionFindByPrimaryKeyOhneExc(
-											wepIId);
+									.wareneingangspositionFindByPrimaryKeyOhneExc(wepIId);
 
 							if (wepDto != null) {
 
 								WareneingangDto weDto = getWareneingangFac()
-										.wareneingangFindByPrimaryKey(
-												wepDto.getWareneingangIId());
+										.wareneingangFindByPrimaryKey(wepDto.getWareneingangIId());
 
-								rows[row][col++] = wepDto
-										.getNGelieferterpreis();
-								rows[row][col++] = weDto
-										.getTWareneingangsdatum();
+								rows[row][col++] = wepDto.getNGelieferterpreis();
+								rows[row][col++] = weDto.getTWareneingangsdatum();
 							} else {
 								rows[row][col++] = null;
 								rows[row][col++] = null;
@@ -255,13 +244,26 @@ public class AgstklpositionHandler extends UseCaseHandler {
 
 				}
 
-				rows[row++][col++] = new Boolean(
-						Helper.short2boolean(agstklposition.getB_drucken()));
+				rows[row][col++] =agstklposition.getC_position();
+				
+				rows[row][col++] = new Boolean(Helper.short2boolean(agstklposition.getB_drucken()));
 
+				FLRArtikelsperren as = (FLRArtikelsperren) o[1];
+
+				if (as != null) {
+					String gesperrt = null;
+
+					if (as != null) {
+						gesperrt = as.getFlrsperren().getC_bez();
+					}
+
+					rows[row][col++] = gesperrt;
+
+				}
+				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -281,7 +283,7 @@ public class AgstklpositionHandler extends UseCaseHandler {
 		try {
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "select count(*) " + this.getFromClause()
+			String queryString = "select count(*) from FLRAgstklposition agstklposition LEFT OUTER JOIN agstklposition.flrartikelliste.stuecklisten AS stuecklisten "
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -301,8 +303,8 @@ public class AgstklpositionHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -313,8 +315,7 @@ public class AgstklpositionHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -325,16 +326,13 @@ public class AgstklpositionHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(agstklposition."
-								+ filterKriterien[i].kritName + ")");
+						where.append(" upper(agstklposition." + filterKriterien[i].kritName + ")");
 					} else {
-						where.append(" agstklposition."
-								+ filterKriterien[i].kritName);
+						where.append(" agstklposition." + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -361,15 +359,13 @@ public class AgstklpositionHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("agstklposition."
-									+ kriterien[i].kritName);
+							orderBy.append("agstklposition." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -408,11 +404,10 @@ public class AgstklpositionHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRAgstklposition agstklposition LEFT OUTER JOIN agstklposition.flrartikelliste.stuecklisten AS stuecklisten ";
+		return "SELECT agstklposition,(SELECT s FROM FLRArtikelsperren as s WHERE s.artikel_i_id=agstklposition.flrartikel.i_id AND s.i_sort=1) as sperren from FLRAgstklposition agstklposition LEFT OUTER JOIN agstklposition.flrartikelliste.stuecklisten AS stuecklisten ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -462,144 +457,97 @@ public class AgstklpositionHandler extends UseCaseHandler {
 
 	public Session setFilter(Session session) {
 		session = super.setFilter(session);
-		session.enableFilter("filterMandant").setParameter("paramMandant",
-				theClientDto.getMandant());
+		session.enableFilter("filterMandant").setParameter("paramMandant", theClientDto.getMandant());
 		return session;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			int iNachkommastellenMenge = 3;
-			try {
-				iNachkommastellenMenge = getMandantFac()
-						.getNachkommastellenMenge(theClientDto.getMandant());
-				
-				ParametermandantDto parameterMand = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
-								ParameterFac.PARAMETER_KALKULATIONSART);
-				iKalkulationsart = (Integer) parameterMand.getCWertAsObject();
-			} catch (RemoteException ex) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+		try {
+			String mandantCNr = theClientDto.getMandant();
+
+			ParametermandantDto parameterMand = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE, ParameterFac.PARAMETER_KALKULATIONSART);
+			iKalkulationsart = (Integer) parameterMand.getCWertAsObject();
+
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(mandantCNr);
+			int iNachkommastellenPreisEK = getMandantFac().getNachkommastellenPreisEK(mandantCNr);
+
+			columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+
+			columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.menge", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_MENGE);
+
+			columns.add("angbstkl.stuecklistenart", String.class,
+					getTextRespectUISpr("angbstkl.stuecklistenart", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR, getTextRespectUISpr("angbstkl.stuecklistenart.tooltip",
+							theClientDto.getMandant(), theClientDto.getLocUi()));
+
+			columns.add("lp.einheit", String.class, getTextRespectUISpr("lp.einheit", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, AngebotstklpositionFac.FLR_AGSTKLPOSITION_EINHEIT_C_NR);
+
+			columns.add("lp.ident", String.class, getTextRespectUISpr("lp.ident", mandant, locUi), getUIBreiteIdent(),
+					"flrartikel.c_nr");
+
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM, "flrartikel.c_referenznr");
 			}
+			columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, AngebotstklpositionFac.FLR_AGSTKLPOSITION_C_BEZ);
+
+			columns.add("lp.preis", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("lp.preis", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_NETTOGESAMTPREIS);
 
 			if (iKalkulationsart == 3) {
 
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								String.class, String.class, String.class,
-								BigDecimal.class, BigDecimal.class,
-								BigDecimal.class, java.util.Date.class,
-								Boolean.class },
-						new String[] {
-								"i_id",
-								getTextRespectUISpr("lp.menge",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.stuecklistenart",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.einheit",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.bezeichnung",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.preis",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("artikel.label.lief1Preis",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.gelpreis",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.wedatum",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()), "" },
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-								// Spalte
-								// wird
-								// ausgeblendet
-								QueryParameters.FLR_BREITE_M, // Format 1234.123
-								QueryParameters.FLR_BREITE_M, // Format 1234.123
-								QueryParameters.FLR_BREITE_XS,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
-								// variabel
-								QueryParameters.FLR_BREITE_M, // Format
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_S // TRUE/FALSE
-						},
-						new String[] {
-								"i_id",
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_MENGE,
-								Facade.NICHT_SORTIERBAR,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_EINHEIT_C_NR,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_C_BEZ,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_NETTOGESAMTPREIS,
-								Facade.NICHT_SORTIERBAR,
-								Facade.NICHT_SORTIERBAR,
-								Facade.NICHT_SORTIERBAR,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_B_DRUCKEN }));
-			} else {
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, BigDecimal.class,
-								String.class, String.class, String.class,
-								String.class, BigDecimal.class, Boolean.class },
-						new String[] {
-								"i_id",
-								getTextRespectUISpr("lp.menge",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.stuecklistenart",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("artikel.artikelnummer",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.einheit",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.bezeichnung",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.preis",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()), "" },
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-								// Spalte
-								// wird
-								// ausgeblendet
-								QueryParameters.FLR_BREITE_M, // Format 1234.123
-								QueryParameters.FLR_BREITE_M, // Format 1234.123
-								QueryParameters.FLR_BREITE_XM,
-								QueryParameters.FLR_BREITE_XS,
-								
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
-								// variabel
-								QueryParameters.FLR_BREITE_M, // Format
-																// 1234567.12
-								QueryParameters.FLR_BREITE_S // TRUE/FALSE
-						},
-						new String[] {
-								"i_id",
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_MENGE,
-								Facade.NICHT_SORTIERBAR,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_FLRARTIKEL
-										+ ".c_nr",
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_EINHEIT_C_NR,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_C_BEZ,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_NETTOGESAMTPREIS,
-								AngebotstklpositionFac.FLR_AGSTKLPOSITION_B_DRUCKEN }));
-			}
+				columns.add("artikel.label.lief1Preis",
+						super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreisEK),
+						getTextRespectUISpr("artikel.label.lief1Preis", mandant, locUi), QueryParameters.FLR_BREITE_M,
+						Facade.NICHT_SORTIERBAR);
 
+				columns.add("bes.gelpreis", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreisEK),
+						getTextRespectUISpr("bes.gelpreis", mandant, locUi), QueryParameters.FLR_BREITE_M,
+						Facade.NICHT_SORTIERBAR);
+
+				columns.add("bes.wedatum", java.util.Date.class, getTextRespectUISpr("bes.wedatum", mandant, locUi),
+						QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+			}
+			
+			columns.add("lp.position", String.class, getTextRespectUISpr("lp.position", mandant, locUi),
+					QueryParameters.FLR_BREITE_M,
+					"c_position");
+			
+			columns.add("mitdrucken", Boolean.class, "", QueryParameters.FLR_BREITE_S,
+					AngebotstklpositionFac.FLR_AGSTKLPOSITION_B_DRUCKEN);
+
+			columns.add("angbstkl.sperre", SperrenIcon.class, getTextRespectUISpr("angbstkl.sperre", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR,
+					getTextRespectUISpr("angbstkl.sperre.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
-		return super.getTableInfo();
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
@@ -608,14 +556,10 @@ public class AgstklpositionHandler extends UseCaseHandler {
 		KundeDto kundeDto = null;
 		PartnerDto partnerDto = null;
 		try {
-			agstklpositionDto = getAngebotstklpositionFac()
-					.agstklpositionFindByPrimaryKey((Integer) key, theClientDto);
-			agstklDto = getAngebotstklFac().agstklFindByPrimaryKey(
-					agstklpositionDto.getBelegIId());
-			kundeDto = getKundeFac().kundeFindByPrimaryKey(
-					agstklDto.getKundeIId(), theClientDto);
-			partnerDto = getPartnerFac().partnerFindByPrimaryKey(
-					kundeDto.getPartnerIId(), theClientDto);
+			agstklpositionDto = getAngebotstklpositionFac().agstklpositionFindByPrimaryKey((Integer) key, theClientDto);
+			agstklDto = getAngebotstklFac().agstklFindByPrimaryKey(agstklpositionDto.getBelegIId());
+			kundeDto = getKundeFac().kundeFindByPrimaryKey(agstklDto.getKundeIId(), theClientDto);
+			partnerDto = getPartnerFac().partnerFindByPrimaryKey(kundeDto.getPartnerIId(), theClientDto);
 		} catch (Exception e) {
 			// Nicht gefunden
 		}
@@ -627,8 +571,7 @@ public class AgstklpositionHandler extends UseCaseHandler {
 			// + agstklDto.getCNr().replace("/", ".") + "/"
 			// + "Angebotsstuecklistenpositionen/" + "Position "
 			// + agstklpositionDto.getIId();
-			DocPath docPath = new DocPath(new DocNodeAgstklPosition(
-					agstklpositionDto, agstklDto));
+			DocPath docPath = new DocPath(new DocNodeAgstklPosition(agstklpositionDto, agstklDto));
 			Integer iPartnerIId = null;
 			if (partnerDto != null) {
 				iPartnerIId = partnerDto.getIId();

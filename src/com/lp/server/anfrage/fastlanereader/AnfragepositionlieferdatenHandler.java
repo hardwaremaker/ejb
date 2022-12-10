@@ -32,9 +32,12 @@
  ******************************************************************************/
 package com.lp.server.anfrage.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -46,6 +49,7 @@ import com.lp.server.anfrage.fastlanereader.generated.FLRAnfragepositionlieferda
 import com.lp.server.anfrage.service.AnfrageServiceFac;
 import com.lp.server.anfrage.service.AnfragepositionFac;
 import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -94,8 +98,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			// myLogger.info("HQL= " + queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -107,50 +110,42 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 			int col = 0;
 
 			while (resultListIterator.hasNext()) {
-				FLRAnfragepositionlieferdaten position = (FLRAnfragepositionlieferdaten) resultListIterator
-						.next();
+				FLRAnfragepositionlieferdaten position = (FLRAnfragepositionlieferdaten) resultListIterator.next();
 				rows[row][col++] = position.getI_id();
 				rows[row][col++] = position.getN_anliefermenge();
-				rows[row][col++] = position.getFlranfrageposition()
-						.getFlrartikel().getEinheit_c_nr() == null ? ""
-						: position.getFlranfrageposition().getFlrartikel()
-								.getEinheit_c_nr().trim();
+				rows[row][col++] = position.getFlranfrageposition().getFlrartikel().getEinheit_c_nr() == null ? ""
+						: position.getFlranfrageposition().getFlrartikel().getEinheit_c_nr().trim();
 				String sIdentnummer = "";
+				String ref = "";
 				if (position.getFlranfrageposition().getFlrartikel() != null) {
-					sIdentnummer = position.getFlranfrageposition()
-							.getFlrartikel().getC_nr();
+					sIdentnummer = position.getFlranfrageposition().getFlrartikel().getC_nr();
+					ref = position.getFlranfrageposition().getFlrartikel().getC_referenznr();
 				}
 				rows[row][col++] = sIdentnummer;
+
+				if (bReferenznummerInPositionen) {
+					rows[row][col++] = ref;
+				}
+
 				String cArtikelbezeichnung = null;
 
 				Boolean bArtikellieferantVorhanden = false;
 
-				if (position.getFlranfrageposition()
-						.getAnfragepositionart_c_nr()
+				if (position.getFlranfrageposition().getAnfragepositionart_c_nr()
 						.equals(AnfrageServiceFac.ANFRAGEPOSITIONART_IDENT)) {
 					// die sprachabhaengig Artikelbezeichnung anzeigen
-					cArtikelbezeichnung = getArtikelFac()
-							.formatArtikelbezeichnungEinzeiligOhneExc(
-									position.getFlranfrageposition()
-											.getFlrartikel().getI_id(),
-									theClientDto.getLocUi());
+					cArtikelbezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+							position.getFlranfrageposition().getFlrartikel().getI_id(), theClientDto.getLocUi());
 
-					ArtikellieferantDto alDto = getArtikelFac()
-							.getArtikelEinkaufspreis(
-									position.getFlranfrageposition()
-											.getFlrartikel().getI_id(),
-									position.getFlranfrageposition()
-											.getFlranfrage().getFlrlieferant()
-											.getI_id(),
-									BigDecimal.ONE,
+					ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(
+							position.getFlranfrageposition().getFlrartikel().getI_id(),
+							position.getFlranfrageposition().getFlranfrage().getFlrlieferant().getI_id(),
+							BigDecimal.ONE,
 
-									position.getFlranfrageposition()
-											.getFlranfrage()
-											.getWaehrung_c_nr_anfragewaehrung(),
-									new java.sql.Date(position
-											.getFlranfrageposition()
-											.getFlranfrage().getT_belegdatum()
-											.getTime()), theClientDto);
+							position.getFlranfrageposition().getFlranfrage().getWaehrung_c_nr_anfragewaehrung(),
+							new java.sql.Date(
+									position.getFlranfrageposition().getFlranfrage().getT_belegdatum().getTime()),
+							theClientDto);
 
 					if (alDto != null) {
 						bArtikellieferantVorhanden = true;
@@ -158,20 +153,23 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 
 				} else {
 					if (position.getFlranfrageposition().getC_bez() != null) {
-						cArtikelbezeichnung = position.getFlranfrageposition()
-								.getC_bez();
+						cArtikelbezeichnung = position.getFlranfrageposition().getC_bez();
 					}
 				}
 
 				rows[row][col++] = cArtikelbezeichnung;
 				rows[row][col++] = position.getN_nettogesamtpreis();
 
-				rows[row++][col++] = bArtikellieferantVorhanden;
+				rows[row][col++] = bArtikellieferantVorhanden;
 
+				if (position.getFlranfrageposition().getAnfrageposition_i_id_zugehoerig() != null) {
+					rows[row][col++] = new Color(89, 188, 41);
+				}
+
+				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -190,8 +188,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -204,8 +201,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 				try {
 					session.close();
 				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE,
-							he);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE, he);
 				}
 			}
 		}
@@ -213,8 +209,8 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -225,8 +221,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -236,8 +231,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_ANFRAGEPOSITIONLIEFERDATEN
-							+ filterKriterien[i].kritName);
+					where.append(" " + FLR_ANFRAGEPOSITIONLIEFERDATEN + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -263,15 +257,13 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_ANFRAGEPOSITIONLIEFERDATEN
-									+ kriterien[i].kritName);
+							orderBy.append(FLR_ANFRAGEPOSITIONLIEFERDATEN + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -284,10 +276,8 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 				}
 				orderBy.append(FLR_ANFRAGEPOSITIONLIEFERDATEN)
 						// default Sortierung nach iSort
-						.append(AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION)
-						.append(".")
-						.append(AnfragepositionFac.FLR_ANFRAGEPOSITION_I_SORT)
-						.append(" ASC ");
+						.append(AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION).append(".")
+						.append(AnfragepositionFac.FLR_ANFRAGEPOSITION_I_SORT).append(" ASC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_ANFRAGEPOSITIONLIEFERDATEN + "i_id") < 0) {
@@ -299,8 +289,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_ANFRAGEPOSITIONLIEFERDATEN)
-						.append("i_id").append(" ");
+				orderBy.append(" ").append(FLR_ANFRAGEPOSITIONLIEFERDATEN).append("i_id").append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -319,8 +308,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 		return FLR_ANFRAGEPOSITIONLIEFERDATEN_FROM_CLAUSE;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -332,9 +320,9 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select " + FLR_ANFRAGEPOSITIONLIEFERDATEN
-						+ "i_id" + FLR_ANFRAGEPOSITIONLIEFERDATEN_FROM_CLAUSE
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "select " + FLR_ANFRAGEPOSITIONLIEFERDATEN + "i_id"
+						+ FLR_ANFRAGEPOSITIONLIEFERDATEN_FROM_CLAUSE + this.buildWhereClause()
+						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -368,113 +356,69 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 		return result;
 	}
 
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+		try {
+			String mandantCNr = theClientDto.getMandant();
+
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisEK(mandantCNr);
+
+			columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+
+			columns.add("anf.anliefermenge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("anf.anliefermenge", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_N_ANLIEFERMENGE);
+			columns.add("lp.einheit", String.class, getTextRespectUISpr("lp.einheit", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS,
+					AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION + "."
+							+ AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL + "."
+							+ AnfragepositionFac.FLR_ANFRAGEPOSITION_EINHEIT_C_NR);
+
+			columns.add("lp.ident", String.class, getTextRespectUISpr("lp.ident", mandant, locUi), getUIBreiteIdent(),
+					AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION + "."
+							+ AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL + ".c_nr");
+
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM,
+						AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION + "."
+								+ AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL + ".c_referenznr");
+			}
+			columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+			columns.add("anf.anlieferpreis", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("anf.anlieferpreis", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION + "."
+							+ AnfragepositionFac.FLR_ANFRAGEPOSITION_N_RICHTPREIS);
+			columns.add("anfr.artikelieferant.bereitsvorhanden.short", Boolean.class,
+					getTextRespectUISpr("anfr.artikelieferant.bereitsvorhanden.short", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR,
+					getTextRespectUISpr("anfr.artikelieferant.bereitsvorhanden.tooltip", theClientDto.getMandant(),
+							theClientDto.getLocUi()));
+
+			columns.add("Color", Color.class, "", 1, Facade.NICHT_SORTIERBAR);
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+
+		return columns;
+
+	}
+
 	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, BigDecimal.class,
-							String.class, String.class, String.class,
-							BigDecimal.class, Boolean.class },
-					new String[] {
-							"i_id", // hier steht immer i_id oder c_nr
-							getTextRespectUISpr("anf.anliefermenge",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.einheit",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bezeichnung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.ident",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("anf.anlieferpreis",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr(
-									"anfr.artiellieferant.bereitsvorhanden",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()) },
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_XS,
-							getUIBreiteIdent(), // ident
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_S, },
-					new String[] {
-							"i_id",
-							AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_N_ANLIEFERMENGE,
-							AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION
-									+ "."
-									+ AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL
-									+ "."
-									+ AnfragepositionFac.FLR_ANFRAGEPOSITION_EINHEIT_C_NR,
-							Facade.NICHT_SORTIERBAR,
-							AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION
-									+ ".c_bez", // dummy
-							AnfragepositionFac.FLR_ANFRAGEPOSITIONLIEFERDATEN_FLRANFRAGEPOSITION
-									+ "."
-									+ AnfragepositionFac.FLR_ANFRAGEPOSITION_N_RICHTPREIS,
-							Facade.NICHT_SORTIERBAR }));
-		}
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
 
-		return super.getTableInfo();
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 
-	private static String buildReportWhereClause(
-			FilterKriterium[] aFilterKriteriumI) {
-		StringBuffer where = new StringBuffer("");
-
-		if (aFilterKriteriumI != null && aFilterKriteriumI.length > 0) {
-			for (int i = 0; i < aFilterKriteriumI.length; i++) {
-				if (aFilterKriteriumI[i].value != null) {
-
-					where.append(
-							FLR_ANFRAGEPOSITIONLIEFERDATEN
-									+ aFilterKriteriumI[i].kritName)
-							.append(aFilterKriteriumI[i].operator)
-							.append(aFilterKriteriumI[i].value).append(" AND ");
-				}
-			}
-		}
-
-		String whereString = "";
-
-		if (where.length() > 0) {
-			where.insert(0, " WHERE ");
-			whereString = where.substring(0, where.length() - 5); // dads letzte
-			// " AND "
-			// abschneiden
-		}
-
-		return whereString;
-	}
-
-	private static String buildReportOrderByClause(
-			SortierKriterium[] aSortierKriteriumI) {
-		StringBuffer orderby = new StringBuffer("");
-
-		if (aSortierKriteriumI != null && aSortierKriteriumI.length > 0) {
-			for (int i = 0; i < aSortierKriteriumI.length; i++) {
-				if (aSortierKriteriumI[i].value.equals("true")) {
-					orderby.append(FLR_ANFRAGEPOSITIONLIEFERDATEN
-							+ aSortierKriteriumI[i].kritName + " ,");
-				}
-			}
-		}
-
-		String orderbyString = "";
-
-		if (orderby.length() > 0) {
-			orderby.insert(0, " ORDER BY ");
-			orderbyString = orderby.substring(0, orderby.length() - 2); // das
-			// letzte
-			// " ,"
-			// abschneiden
-		}
-
-		return orderbyString;
-	}
 }

@@ -59,6 +59,7 @@ import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -68,6 +69,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -135,7 +137,14 @@ public class AuftragEingangsrechnungenHandler extends UseCaseHandler {
 				rows[row][col++] = eingangsrechnung.getC_nr();
 				rows[row][col++] = eingangsrechnung.getFlrlieferant()
 						.getFlrpartner().getC_name1nachnamefirmazeile1();
-				
+
+				if (eingangsrechnung.getFlrbestellung() != null) {
+					rows[row][col++] = eingangsrechnung.getFlrbestellung()
+							.getC_nr();
+				} else {
+					rows[row][col++] = null;
+				}
+
 				rows[row][col++] = eingangsrechnung.getT_belegdatum();
 				String sStatus = eingangsrechnung.getStatus_c_nr();
 				if (eingangsrechnung.getT_gedruckt() != null) {
@@ -159,10 +168,12 @@ public class AuftragEingangsrechnungenHandler extends UseCaseHandler {
 					lrnText = "";
 				}
 				rows[row][col++] = lrnText;
-				
-				rows[row][col++] =flrEingangsrechnungAuftragszuordnung.getC_text();
-				rows[row][col++] =flrEingangsrechnungAuftragszuordnung.getN_betrag();
-				
+
+				rows[row][col++] = flrEingangsrechnungAuftragszuordnung
+						.getC_text();
+				rows[row][col++] = flrEingangsrechnungAuftragszuordnung
+						.getN_betrag();
+
 				if (bBruttoStattNetto == false) {
 					if (eingangsrechnung.getN_betragfw() != null
 							&& eingangsrechnung.getN_ustbetragfw() != null) {
@@ -177,7 +188,9 @@ public class AuftragEingangsrechnungenHandler extends UseCaseHandler {
 				}
 				rows[row][col++] = eingangsrechnung.getWaehrung_c_nr();
 
-			
+				rows[row][col++] = Helper
+						.short2Boolean(flrEingangsrechnungAuftragszuordnung
+								.getB_keine_auftragswertung());
 
 				row++;
 				col = 0;
@@ -408,9 +421,9 @@ public class AuftragEingangsrechnungenHandler extends UseCaseHandler {
 
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class,
-							 Date.class, Icon.class, String.class,String.class,
-							 BigDecimal.class,BigDecimal.class, String.class,  },
+							String.class, String.class, Date.class, Icon.class,
+							String.class, String.class, BigDecimal.class,
+							BigDecimal.class, String.class, Boolean.class },
 					new String[] {
 							"i_id",
 							" ",
@@ -418,26 +431,39 @@ public class AuftragEingangsrechnungenHandler extends UseCaseHandler {
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.lieferant", mandantCNr,
 									locUI),
+							getTextRespectUISpr("bes.bestellung", mandantCNr,
+									locUI),
+
 							// ortimhandler: 3 Ueberschrift ist "Ort"
 							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
 							getTextRespectUISpr("lp.status", mandantCNr, locUI),
 							getTextRespectUISpr("lp.text", mandantCNr, locUI),
-							getTextRespectUISpr("auft.erzuordnung.splittkommentar", mandantCNr, locUI),
-							getTextRespectUISpr("auft.erzuordnung.splittbetrag", mandantCNr, locUI),
+							getTextRespectUISpr(
+									"auft.erzuordnung.splittkommentar",
+									mandantCNr, locUI),
+							getTextRespectUISpr(
+									"auft.erzuordnung.splittbetrag",
+									mandantCNr, locUI),
 							bBruttoStattNetto ? getTextRespectUISpr(
 									"lp.bruttobetrag", mandantCNr, locUI)
 									: getTextRespectUISpr("lp.nettobetrag",
 											mandantCNr, locUI),
-							getTextRespectUISpr("er.whg", mandantCNr, locUI)},
+							getTextRespectUISpr("er.whg", mandantCNr, locUI),
+							getTextRespectUISpr("auft.keineauftragswertung.short",
+									mandantCNr, locUI) },
 					new int[] {
 							-1, // ausgeblendet
-							1, QueryParameters.FLR_BREITE_M,
+							1,
+							QueryParameters.FLR_BREITE_M,
+							-1,
 							-1,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_XS, // status
-							QueryParameters.FLR_BREITE_M,
-							-1,QueryParameters.FLR_BREITE_PREIS, QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_WAEHRUNG },
+							QueryParameters.FLR_BREITE_M, -1,
+							QueryParameters.FLR_BREITE_PREIS,
+							QueryParameters.FLR_BREITE_PREIS,
+							QueryParameters.FLR_BREITE_WAEHRUNG,
+							QueryParameters.FLR_BREITE_S },
 					new String[] {
 							EingangsrechnungFac.FLR_ER_I_ID,
 							"flreingangsrechnung."
@@ -448,19 +474,23 @@ public class AuftragEingangsrechnungenHandler extends UseCaseHandler {
 									+ EingangsrechnungFac.FLR_ER_FLRLIEFERANT
 									+ "."
 									+ LieferantFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-						
+							Facade.NICHT_SORTIERBAR,
 							"flreingangsrechnung."
 									+ EingangsrechnungFac.FLR_ER_D_BELEGDATUM,
 							"flreingangsrechnung."
 									+ EingangsrechnungFac.FLR_ER_STATUS_C_NR,
 							"flreingangsrechnung."
 									+ EingangsrechnungFac.FLR_ER_C_LIEFERANTENRECHNUNGSNUMMER,
-									"c_text",
-									"n_betrag",
+							"c_text",
+							"n_betrag",
 							"flreingangsrechnung."
 									+ EingangsrechnungFac.FLR_ER_N_BETRAGFW,
 							"flreingangsrechnung."
-									+ EingangsrechnungFac.FLR_ER_WAEHRUNG_C_NR }));
+									+ EingangsrechnungFac.FLR_ER_WAEHRUNG_C_NR,
+							"b_keine_auftragswertung" },
+					new String[]{ null, null, null, null, null, null, null, null, null, null, null, null, 
+							getTextRespectUISpr("auft.keineauftragswertung.tooltip", mandantCNr, locUI),
+					}));
 		}
 		return super.getTableInfo();
 	}

@@ -160,21 +160,33 @@ public class ArtikellieferantstaffelHandler extends UseCaseHandler {
 					rows[row][col++] = null;
 				}
 
-				rows[row][col++] = getLocaleFac()
-						.rechneUmInAndereWaehrungZuDatum(
-								artikellieferantstaffel
+				
+				//SP5327
+				if(artikellieferantstaffel
 										.getFlrartikellieferant()
-										.getN_einzelpreis(),
-								artikellieferantstaffel
-										.getFlrartikellieferant()
-										.getFlrlieferant().getWaehrung_c_nr(),
-								theClientDto.getSMandantenwaehrung(),
-								new Date(System.currentTimeMillis()),
-								theClientDto);
+										.getN_einzelpreis()!=null && artikellieferantstaffel.getF_rabatt()!=null){
+					rows[row][col++] = getLocaleFac()
+							.rechneUmInAndereWaehrungZuDatum(
+									artikellieferantstaffel
+											.getFlrartikellieferant()
+											.getN_einzelpreis(),
+									artikellieferantstaffel
+											.getFlrartikellieferant()
+											.getFlrlieferant().getWaehrung_c_nr(),
+									theClientDto.getSMandantenwaehrung(),
+									new Date(System.currentTimeMillis()),
+									theClientDto);
+					rows[row][col++] = Helper.rundeKaufmaennisch(
+							new java.math.BigDecimal(artikellieferantstaffel
+									.getF_rabatt().doubleValue()), 2);
+				} else {
+					rows[row][col++] = null;
+					rows[row][col++] = null;
+				}
+				
+				
 
-				rows[row][col++] = Helper.rundeKaufmaennisch(
-						new java.math.BigDecimal(artikellieferantstaffel
-								.getF_rabatt().doubleValue()), 2);
+				
 				rows[row][col++] = getLocaleFac()
 						.rechneUmInAndereWaehrungZuDatum(
 								artikellieferantstaffel.getN_nettopreis(),

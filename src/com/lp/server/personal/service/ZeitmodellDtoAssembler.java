@@ -57,7 +57,15 @@ public class ZeitmodellDtoAssembler {
 			zeitmodellDto.setIMinutenabzug(zeitmodell.getIMinutenabzug());
 			zeitmodellDto.setBFeiertagssollAddieren(zeitmodell.getBFeiertagssollAddieren());
 			zeitmodellDto.setNMaximalesWochenist(zeitmodell.getNMaximalesWochenist());
+			zeitmodellDto.setNMaximaleMehrzeit(zeitmodell.getNMaximaleMehrzeit());
 			zeitmodellDto.setBFixepauseTrotzkommtgeht(zeitmodell.getBFixepauseTrotzkommtgeht());
+			zeitmodellDto.setSchichtIId(zeitmodell.getSchichtIId());
+			zeitmodellDto.setBFirmenzeitmodell(zeitmodell.getBFirmenzeitmodell());
+			
+			zeitmodellDto.setUGutschriftGeht(zeitmodell.getUGutschriftGeht());
+			zeitmodellDto.setUGutschriftKommt(zeitmodell.getUGutschriftKommt());
+			zeitmodellDto.setBUnproduktivAlsPause(zeitmodell.getBUnproduktivAlsPause());
+			zeitmodellDto.setBFeiertagAmNaechstenTag(zeitmodell.getBFeiertagAmNaechstenTag());
 		}
 		return zeitmodellDto;
 	}

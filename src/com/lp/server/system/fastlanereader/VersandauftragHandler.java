@@ -44,6 +44,7 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.system.fastlanereader.generated.FLRVersandauftrag;
 import com.lp.server.system.service.VersandFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -121,6 +122,7 @@ public class VersandauftragHandler extends UseCaseHandler {
 						.getT_sendezeitpunktwunsch().getTime());
 				rows[row][col++] = versandauftrag.getT_sendezeitpunkt();
 				rows[row][col++] = versandauftrag.getStatus_c_nr();
+				rows[row][col++] = (versandauftrag.getStatus_c_nr() == null && versandauftrag.getC_jobid() != null);
 				row++;
 				col = 0;
 			}
@@ -342,7 +344,8 @@ public class VersandauftragHandler extends UseCaseHandler {
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
 							String.class, java.sql.Timestamp.class,
-							java.sql.Timestamp.class, String.class },
+							java.sql.Timestamp.class, String.class,
+							java.lang.Boolean.class},
 					new String[] {
 							"Id",
 							getTextRespectUISpr("lp.betreff", mandantCNr, locUI),
@@ -354,7 +357,8 @@ public class VersandauftragHandler extends UseCaseHandler {
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.sendezeitpunkt",
 									mandantCNr, locUI),
-							getTextRespectUISpr("lp.status", mandantCNr, locUI) },
+							getTextRespectUISpr("lp.status", mandantCNr, locUI),
+							getTextRespectUISpr("lp.versandaktiv", mandantCNr, locUI)},
 
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
@@ -363,7 +367,8 @@ public class VersandauftragHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST},
 
 					new String[] {
 							VersandFac.FLR_VERSANDAUFTRAG_I_ID,
@@ -372,7 +377,8 @@ public class VersandauftragHandler extends UseCaseHandler {
 							VersandFac.FLR_VERSANDAUFTRAG_C_ABSENDERADRESSE,
 							VersandFac.FLR_VERSANDAUFTRAG_T_SENDEZEITPUNKTWUNSCH,
 							VersandFac.FLR_VERSANDAUFTRAG_T_SENDEZEITPUNKT,
-							VersandFac.FLR_VERSANDAUFTRAG_STATUS_C_NR }));
+							VersandFac.FLR_VERSANDAUFTRAG_STATUS_C_NR,
+							Facade.NICHT_SORTIERBAR}));
 
 		}
 		return super.getTableInfo();

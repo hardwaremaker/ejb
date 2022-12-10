@@ -64,6 +64,7 @@ public class AnwenderDto extends CryptDto implements Serializable, ICryptDto {
 	transient private byte[] oCode = null;
 	transient private byte[] oHash = null;
 	private Timestamp tSubscription;
+	private Integer serverId;
 	
 	public String getMandantCNrHauptmandant() {
 		return mandantCNrHauptmandant;
@@ -300,5 +301,11 @@ public class AnwenderDto extends CryptDto implements Serializable, ICryptDto {
 		return false;
 	}
 
+	public Integer getServerId() {
+		return serverId;
+	}
 
+	public void setServerId(Integer serverId) {
+		this.serverId = serverId;
+	}
 }

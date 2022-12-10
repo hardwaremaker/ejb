@@ -35,6 +35,10 @@ package com.lp.server.fertigung.service;
 import java.awt.Image;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public class ReportLosAusgabelisteDto implements Serializable {
 	/**
@@ -42,6 +46,37 @@ public class ReportLosAusgabelisteDto implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	private String sKommentarMaterial;
+	private Double fDimension1Material;
+	private Double fDimension2Material;
+	private Double fDimension3Material;
+	private String sPositionMaterial;
+	
+	private String kurzbezeichnung;
+	private String referenznummer;
+	
+	// cNr des zugehoerigen Loses, wenn verdichtet nach Ident, dann eventuell
+	// mehrere Losnummern, getrennt mit ,
+	private String losnummer;
+	private List<Integer> losSollmaterialIIds;
+	
+	public String getKurzbezeichnung() {
+		return kurzbezeichnung;
+	}
+
+	public void setKurzbezeichnung(String kurzbezeichnung) {
+		this.kurzbezeichnung = kurzbezeichnung;
+	}
+
+	public String getReferenznummer() {
+		return referenznummer;
+	}
+
+	public void setReferenznummer(String referenznummer) {
+		this.referenznummer = referenznummer;
+	}
+
+	
 	public String getSSnrChnr() {
 		return sSnrChnr;
 	}
@@ -91,6 +126,14 @@ public class ReportLosAusgabelisteDto implements Serializable {
 	private String sBezeichnung = null;
 	private String sZusatzBezeichnung = null;
 	private String sLager = null;
+	private String sStandort = null;
+	public String getSStandort() {
+		return sStandort;
+	}
+
+	public void setSStandort(String sStandort) {
+		this.sStandort = sStandort;
+	}
 	private String sZusatzBezeichnung2;
 	private String sFarbcode="";
 	private String sLagerort = null;
@@ -106,6 +149,44 @@ public class ReportLosAusgabelisteDto implements Serializable {
 	private Double dGewichtkg;
 	private Double dRasterstehend;
 	private BigDecimal bdAnzahlBestellt;
+	private String sSortAusStueckliste = null;
+	public String getSSortAusStueckliste() {
+		return sSortAusStueckliste;
+	}
+
+	private BigDecimal bdFehlmenge=BigDecimal.ZERO;
+	
+	public BigDecimal getBdFehlmenge() {
+		return bdFehlmenge;
+	}
+
+	public void setBdFehlmenge(BigDecimal bdFehlmenge) {
+		this.bdFehlmenge = bdFehlmenge;
+	}
+
+	public void setSSortAusStueckliste(String sSortAusStueckliste) {
+		this.sSortAusStueckliste = sSortAusStueckliste;
+	}
+	
+	
+	private String einheitStueckliste = null;
+	private BigDecimal sollmengeStueckliste = null;
+	
+	public String getEinheitStueckliste() {
+		return einheitStueckliste;
+	}
+
+	public void setEinheitStueckliste(String einheitStueckliste) {
+		this.einheitStueckliste = einheitStueckliste;
+	}
+
+	public BigDecimal getSollmengeStueckliste() {
+		return sollmengeStueckliste;
+	}
+
+	public void setSollmengeStueckliste(BigDecimal sollmengeStueckliste) {
+		this.sollmengeStueckliste = sollmengeStueckliste;
+	}
 	private String sKommentarStueckliste = null;
 	private String sPositionStueckliste = null;
 	public String getSPositionStueckliste() {
@@ -336,4 +417,194 @@ public class ReportLosAusgabelisteDto implements Serializable {
 	public void setSKommentarStueckliste(String sKommentarStueckliste) {
 		this.sKommentarStueckliste = sKommentarStueckliste;
 	}
+	
+	public String getSKommentarMaterial() {
+		return sKommentarMaterial;
+	}
+	
+	public void setSKommentarMaterial(String sKommentarMaterial) {
+		this.sKommentarMaterial = sKommentarMaterial;
+	}
+	
+	public String getSPositionMaterial() {
+		return sPositionMaterial;
+	}
+	
+	public void setSPositionMaterial(String sPositionMaterial) {
+		this.sPositionMaterial = sPositionMaterial;
+	}
+	
+	public Double getFDimension1Material() {
+		return fDimension1Material;
+	}
+	
+	public void setFDimension1Material(Double fDimension1Material) {
+		this.fDimension1Material = fDimension1Material;
+	}
+
+	public Double getFDimension2Material() {
+		return fDimension2Material;
+	}
+	
+	public void setFDimension2Material(Double fDimension2Material) {
+		this.fDimension2Material = fDimension2Material;
+	}
+
+	public Double getFDimension3Material() {
+		return fDimension3Material;
+	}
+	
+	public void setFDimension3Material(Double fDimension3Material) {
+		this.fDimension3Material = fDimension3Material;
+	}
+	
+	public void setLosnummer(String losnummer) {
+		this.losnummer = losnummer;
+	}
+	
+	public void addLosnummer(String losnummer) {
+		if(this.losnummer == null) {
+			this.losnummer = losnummer;
+		} else if(losnummer != null) {
+			this.losnummer += ", " + losnummer;
+		}
+	}
+	
+	public String getLosnummer() {
+		return losnummer;
+	}
+	
+	public void addLosSollmaterialIId(Integer sollMatIId) {
+		if(this.losSollmaterialIIds == null) {
+			this.losSollmaterialIIds = new ArrayList<Integer>();
+		}
+		this.losSollmaterialIIds.add(sollMatIId);
+	}
+
+	public void addLosSollmaterialIIds(Collection<Integer> sollMatIIds) {
+		this.losSollmaterialIIds.addAll(sollMatIIds);
+	}
+	
+	public List<Integer> getLosSollmaterialIIds() {
+		return losSollmaterialIIds;
+	}
+	
+	
+	public BigDecimal getBdLosLosgroesse() {
+		return bdLosLosgroesse;
+	}
+
+	public void setBdLosLosgroesse(BigDecimal bdLosLosgroesse) {
+		this.bdLosLosgroesse = bdLosLosgroesse;
+	}
+
+	public BigDecimal getBdLosStuecklisteErfassungsfaktor() {
+		return bdLosStuecklisteErfassungsfaktor;
+	}
+
+	public void setBdLosStuecklisteErfassungsfaktor(BigDecimal bdLosStuecklisteErfassungsfaktor) {
+		this.bdLosStuecklisteErfassungsfaktor = bdLosStuecklisteErfassungsfaktor;
+	}
+
+	public Timestamp gettLosAngelegt() {
+		return tLosAngelegt;
+	}
+
+	public void settLosAngelegt(Timestamp tLosAngelegt) {
+		this.tLosAngelegt = tLosAngelegt;
+	}
+
+	public java.sql.Date getdLosProduktionsbeginn() {
+		return dLosProduktionsbeginn;
+	}
+
+	public void setdLosProduktionsbeginn(java.sql.Date dLosProduktionsbeginn) {
+		this.dLosProduktionsbeginn = dLosProduktionsbeginn;
+	}
+
+	public java.sql.Date getdLosProduktionsende() {
+		return dLosProduktionsende;
+	}
+
+	public void setdLosProduktionsende(java.sql.Date dLosProduktionsende) {
+		this.dLosProduktionsende = dLosProduktionsende;
+	}
+
+	public String getsLosLosnummer() {
+		return sLosLosnummer;
+	}
+
+	public void setsLosLosnummer(String sLosLosnummer) {
+		this.sLosLosnummer = sLosLosnummer;
+	}
+
+	public String getsLosAuftragsnummer() {
+		return sLosAuftragsnummer;
+	}
+
+	public void setsLosAuftragsnummer(String sLosAuftragsnummer) {
+		this.sLosAuftragsnummer = sLosAuftragsnummer;
+	}
+
+	public String getsLosKostenstellenummer() {
+		return sLosKostenstellenummer;
+	}
+
+	public void setsLosKostenstellenummer(String sLosKostenstellenummer) {
+		this.sLosKostenstellenummer = sLosKostenstellenummer;
+	}
+
+	public String getsLosKunde() {
+		return sLosKunde;
+	}
+
+	public void setsLosKunde(String sLosKunde) {
+		this.sLosKunde = sLosKunde;
+	}
+
+	public String getsLosStuecklistenummer() {
+		return sLosStuecklistenummer;
+	}
+
+	public void setsLosStuecklistenummer(String sLosStuecklistenummer) {
+		this.sLosStuecklistenummer = sLosStuecklistenummer;
+	}
+
+	public String getsLosStuecklistebezeichnung() {
+		return sLosStuecklistebezeichnung;
+	}
+
+	public void setsLosStuecklistebezeichnung(String sLosStuecklistebezeichnung) {
+		this.sLosStuecklistebezeichnung = sLosStuecklistebezeichnung;
+	}
+
+	public String getsLosStuecklistezusatzbezeichnung() {
+		return sLosStuecklistezusatzbezeichnung;
+	}
+
+	public void setsLosStuecklistezusatzbezeichnung(String sLosStuecklistezusatzbezeichnung) {
+		this.sLosStuecklistezusatzbezeichnung = sLosStuecklistezusatzbezeichnung;
+	}
+	private BigDecimal bdLosLosgroesse;
+	private BigDecimal bdLosStuecklisteErfassungsfaktor;
+	
+	
+	private Timestamp tLosAngelegt;
+	private java.sql.Date dLosProduktionsbeginn;
+	private java.sql.Date dLosProduktionsende;
+	
+	private String sLosLosnummer;
+	private String sLosAuftragsnummer;
+	private String sLosKostenstellenummer;
+	private String sLosKunde;
+	private String sLosStuecklistenummer;
+	private String sLosStuecklistebezeichnung;
+	private String sLosStuecklistezusatzbezeichnung;
+	
+	
+	
+	
+	
+	
+	
 }

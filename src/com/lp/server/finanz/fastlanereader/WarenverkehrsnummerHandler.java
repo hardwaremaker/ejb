@@ -89,8 +89,8 @@ public class WarenverkehrsnummerHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit();
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -110,6 +110,7 @@ public class WarenverkehrsnummerHandler extends UseCaseHandler {
 				rows[row][col++] = intbest.getC_nr();
 				rows[row][col++] = intbest.getC_nr();
 				rows[row][col++] = intbest.getC_bez();
+				rows[row][col++] = intbest.getC_bm();
 				row++;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -308,17 +309,22 @@ public class WarenverkehrsnummerHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { String.class,
-					String.class, String.class }, new String[] { "c_nr",
-					getTextRespectUISpr("lp.nummer", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
+			setTableInfo(
+					new TableInfo(new Class[] { String.class,
+							String.class, String.class, String.class },
+					new String[] { "c_nr",
+							getTextRespectUISpr("lp.nummer", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("finanz.masseinheit", mandantCNr, locUI)},
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M},
 					new String[] {
 							FinanzServiceFac.FLR_WARENVERKEHRSNUMMER_C_NR,
 							FinanzServiceFac.FLR_WARENVERKEHRSNUMMER_C_NR,
-							FinanzServiceFac.FLR_WARENVERKEHRSNUMMER_C_BEZ }));
+							FinanzServiceFac.FLR_WARENVERKEHRSNUMMER_C_BEZ,
+							FinanzServiceFac.FLR_WARENVERKEHRSNUMMER_C_BM}));
 		}
 		return super.getTableInfo();
 	}

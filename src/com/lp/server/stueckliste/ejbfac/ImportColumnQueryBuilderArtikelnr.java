@@ -39,7 +39,7 @@ import com.lp.service.StklImportSpezifikation;
 public class ImportColumnQueryBuilderArtikelnr implements
 		IImportColumnQueryBuilder {
 	
-	private static final String QUERY = "{ALIAS}.c_nr = '{VALUE}'";
+	private static final String QUERY = "{ALIAS}.c_nr LIKE '{VALUE}%'";
 
 	@Override
 	public boolean isTotalMatch() {

@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.system.fastlanereader;
 
+import java.awt.Color;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -42,7 +43,8 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.lp.server.system.fastlanereader.generated.FLRMediastandard;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche;
+import com.lp.server.system.fastlanereader.generated.FLRMediastandardTextsuche;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -52,6 +54,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -76,16 +79,16 @@ public class MediastandardHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_MEDIASTANDARD = " flrmediastandard.";
-	public static final String FLR_MEDIASTANDARD_FROM_CLAUSE = " from FLRMediastandard flrmediastandard ";
+	public static final String FLR_MEDIASTANDARD_FROM_CLAUSE = " from FLRMediastandardTextsuche flrmediastandard ";
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 		try {
-			int colCount = this.getTableInfo().getColumnClasses().length;
-			int pageSize = PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int colCount = getTableInfo().getColumnClasses().length;
+			int pageSize = getLimit();
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -97,57 +100,46 @@ public class MediastandardHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount];
+			String[] tooltipData = new String[resultList.size()];
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRMediastandard mediastandard = (FLRMediastandard) resultListIterator
+				FLRMediastandardTextsuche mediastandard = (FLRMediastandardTextsuche) resultListIterator
 						.next();
 				rows[row][col++] = mediastandard.getI_id();
 				rows[row][col++] = mediastandard.getC_nr();
 				rows[row][col++] = mediastandard.getLocale_c_nr();
-				rows[row++][col++] = mediastandard.getDatenformat_c_nr();
+				rows[row][col++] = mediastandard.getDatenformat_c_nr();
+
+				if (Helper.short2boolean(mediastandard.getB_versteckt())) {
+					rows[row][col++] = Color.LIGHT_GRAY;
+				}
+				
+				
+				if (mediastandard.getC_inhalt_o_media() != null) {
+					String text = mediastandard.getC_inhalt_o_media() .replaceAll("\n", "<br>");
+					text = "<html>" + text + "</html>";
+					tooltipData[row] = text;
+				}
+				
+				row++;
 
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+					endIndex, 0,tooltipData);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
 
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
-		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
-			}
-		}
-		return rowCount;
+		String query = "select count(*) " + getFromClause()
+			+ buildWhereClause();
+		return getRowCountFromDataBaseByQuery(query);
 	}
 
 	/**
@@ -174,19 +166,29 @@ public class MediastandardHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" lower(" + FLR_MEDIASTANDARD
-								+ filterKriterien[i].kritName + ")");
+
+					if (filterKriterien[i].kritName.equals(MediaFac.FLR_MEDIASTANDARD_TEXTSUCHE_C_INHALT_O_MEDIA)) {
+
+						where.append(buildWhereClauseExtendedSearchWithoutDuplicates(
+								FLRMediastandardTextsuche.class.getSimpleName(),
+								FLR_MEDIASTANDARD, filterKriterien[i]));
+
 					} else {
-						where.append(FLR_MEDIASTANDARD
-								+ filterKriterien[i].kritName);
-					}
-					where.append(" " + filterKriterien[i].operator);
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
-					} else {
-						where.append(" " + filterKriterien[i].value);
+
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" lower(" + FLR_MEDIASTANDARD
+									+ filterKriterien[i].kritName + ")");
+						} else {
+							where.append(FLR_MEDIASTANDARD
+									+ filterKriterien[i].kritName);
+						}
+						where.append(" " + filterKriterien[i].operator);
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" "
+									+ filterKriterien[i].value.toLowerCase());
+						} else {
+							where.append(" " + filterKriterien[i].value);
+						}
 					}
 				}
 			}
@@ -227,12 +229,13 @@ public class MediastandardHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_MEDIASTANDARD).append(
-						MediaFac.FLR_MEDIASTANDARD_I_ID).append(" ASC ");
+				orderBy.append(FLR_MEDIASTANDARD)
+						.append(MediaFac.FLR_MEDIASTANDARD_C_NR)
+						.append(" ASC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_MEDIASTANDARD
-					+ MediaFac.FLR_MEDIASTANDARD_I_ID) < 0) {
+					+ MediaFac.FLR_MEDIASTANDARD_C_NR) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -241,8 +244,8 @@ public class MediastandardHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_MEDIASTANDARD).append(
-						MediaFac.FLR_MEDIASTANDARD_I_ID).append(" ");
+				orderBy.append(" ").append(FLR_MEDIASTANDARD)
+						.append(MediaFac.FLR_MEDIASTANDARD_C_NR).append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -294,11 +297,7 @@ public class MediastandardHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
+				closeSession(session);
 			}
 		}
 
@@ -316,18 +315,21 @@ public class MediastandardHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class }, new String[] {
-					"Id",
-					getTextRespectUISpr("bes.artikelbezeichnung", mandantCNr,
-							locUI),
-					getTextRespectUISpr("lp.sprache", mandantCNr, locUI),
-					getTextRespectUISpr("lp.datenformat", mandantCNr, locUI) },
-					new int[] { -1, -1, -1, 10 }, new String[] {
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class,
+							String.class, Color.class },
+					new String[] {
+							"Id",
+							getTextRespectUISpr("bes.artikelbezeichnung",
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.sprache", mandantCNr, locUI),
+							getTextRespectUISpr("lp.datenformat", mandantCNr,
+									locUI), "" }, new int[] { -1, -1, -1, 10,
+							-1 }, new String[] {
 							MediaFac.FLR_MEDIASTANDARD_I_ID,
 							MediaFac.FLR_MEDIASTANDARD_C_NR,
 							MediaFac.FLR_MEDIASTANDARD_LOCALE_C_NR,
-							MediaFac.FLR_MEDIASTANDARD_DATENFORMAT_C_NR }));
+							MediaFac.FLR_MEDIASTANDARD_DATENFORMAT_C_NR, "" }));
 
 		}
 		return super.getTableInfo();

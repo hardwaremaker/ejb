@@ -41,8 +41,17 @@ public class SchwereDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
 	private String cNr;
-	private String cBez;
 	private Integer iPunkte;
+
+	private SchweresprDto sprDto;
+
+	public SchweresprDto getSchweresprDto() {
+		return sprDto;
+	}
+
+	public void setSchweresprDto(SchweresprDto sprDto) {
+		this.sprDto = sprDto;
+	}
 
 	public Integer getIId() {
 		return iId;
@@ -54,8 +63,8 @@ public class SchwereDto implements Serializable {
 
 	public String formatBezeichnung() {
 		String bez = getCNr();
-		if (getCBez() != null) {
-			bez = " " + getCBez();
+		if (getSchweresprDto() != null && getSchweresprDto().getCBez() != null) {
+			bez = " " + getSchweresprDto().getCBez();
 		}
 		return bez;
 	}
@@ -66,14 +75,6 @@ public class SchwereDto implements Serializable {
 
 	public void setCNr(String cNr) {
 		this.cNr = cNr;
-	}
-
-	public String getCBez() {
-		return cBez;
-	}
-
-	public void setCBez(String cBez) {
-		this.cBez = cBez;
 	}
 
 	public Integer getIPunkte() {
@@ -94,9 +95,6 @@ public class SchwereDto implements Serializable {
 			return false;
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr)))
 			return false;
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez)))
-			return false;
 		if (!(that.iPunkte == null ? this.iPunkte == null : that.iPunkte
 				.equals(this.iPunkte)))
 			return false;
@@ -107,7 +105,6 @@ public class SchwereDto implements Serializable {
 		int result = 17;
 		result = 37 * result + this.iId.hashCode();
 		result = 37 * result + this.cNr.hashCode();
-		result = 37 * result + this.cBez.hashCode();
 		result = 37 * result + this.iPunkte.hashCode();
 		return result;
 	}
@@ -117,7 +114,6 @@ public class SchwereDto implements Serializable {
 		returnStringBuffer.append("[");
 		returnStringBuffer.append("iId:").append(iId);
 		returnStringBuffer.append("cNr:").append(cNr);
-		returnStringBuffer.append("cBez:").append(cBez);
 		returnStringBuffer.append("iPunkte:").append(iPunkte);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();

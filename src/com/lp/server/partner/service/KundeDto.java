@@ -38,7 +38,22 @@ import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.BitSet;
 
-public class KundeDto implements Serializable {
+import com.lp.server.artikel.ejb.Artikel;
+import com.lp.server.artikel.ejb.Lager;
+import com.lp.server.finanz.ejb.Konto;
+import com.lp.server.partner.ejb.Branche;
+import com.lp.server.partner.ejb.Partner;
+import com.lp.server.system.ejb.Kostenstelle;
+import com.lp.server.system.ejb.Lieferart;
+import com.lp.server.system.ejb.Zahlungsziel;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCBez;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.system.service.HvDtoLogIgnore;
+import com.lp.server.util.IIId;
+
+@HvDtoLogClass(name = HvDtoLogClass.KUNDE)
+public class KundeDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
@@ -105,8 +120,6 @@ public class KundeDto implements Serializable {
 	public int iFpersonalAendernIID = iF++;
 	private Integer personalAendernIID;
 
-	public int iFbbGeneriereKurznr = iF++;
-	private Boolean bbGeneriereKurznr = null;
 
 	public int iFcKurznr = iF++;
 	private String cKurznr;
@@ -217,6 +230,16 @@ public class KundeDto implements Serializable {
 
 	private String cIdExtern;
 
+	private Integer verrechnungsmodellIId;
+
+	public Integer getVerrechnungsmodellIId() {
+		return verrechnungsmodellIId;
+	}
+
+	public void setVerrechnungsmodellIId(Integer verrechnungsmodellIId) {
+		this.verrechnungsmodellIId = verrechnungsmodellIId;
+	}
+
 	public Integer getILieferdauer() {
 		return iLieferdauer;
 	}
@@ -233,6 +256,29 @@ public class KundeDto implements Serializable {
 
 	private Timestamp tErwerbsberechtigung;
 	private String cErwerbsberechtigungsbegruendung;
+
+	private BigDecimal nKupferzahl;
+
+	public BigDecimal getNKupferzahl() {
+		return nKupferzahl;
+	}
+
+	public void setNKupferzahl(BigDecimal nKupferzahl) {
+		this.nKupferzahl = nKupferzahl;
+	}
+
+	private Integer iMaxRepos;
+
+	public Integer getIMaxRepos() {
+		return iMaxRepos;
+	}
+
+	public void setIMaxRepos(Integer iMaxRepos) {
+		this.iMaxRepos = iMaxRepos;
+	}
+
+	private Integer reversechargeartId;
+	private String laenderartCnr;
 
 	public KundeDto() {
 		// indi: 1 alle nicht gesetzt
@@ -251,6 +297,7 @@ public class KundeDto implements Serializable {
 
 	private Integer lagerIIdAbbuchungslager;
 
+	@HvDtoLogIdCnr(entityClass = Lager.class)
 	public Integer getLagerIIdAbbuchungslager() {
 		return this.lagerIIdAbbuchungslager;
 	}
@@ -269,6 +316,18 @@ public class KundeDto implements Serializable {
 		this.bZollpapier = bZollpapier;
 	}
 
+	private Short bVkpreisAnhandLSDatum;
+	
+	
+	public Short getBVkpreisAnhandLSDatum() {
+		return bVkpreisAnhandLSDatum;
+	}
+
+	public void setBVkpreisAnhandLSDatum(Short bVkpreisAnhandLSDatum) {
+		this.bVkpreisAnhandLSDatum = bVkpreisAnhandLSDatum;
+	}
+
+	
 	public Integer getPartnerIId() {
 		return partnerIId;
 	}
@@ -285,6 +344,7 @@ public class KundeDto implements Serializable {
 		this.mandantCNr = mandantCNr;
 	}
 
+
 	public String getCWaehrung() {
 		return cWaehrung;
 	}
@@ -294,6 +354,7 @@ public class KundeDto implements Serializable {
 		this.cWaehrung = cWaehrung;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Lieferart.class)
 	public Integer getLieferartIId() {
 		return lieferartIId;
 	}
@@ -311,6 +372,7 @@ public class KundeDto implements Serializable {
 		this.spediteurIId = speditionIId;
 	}
 
+	@HvDtoLogIdCBez(entityClass = Zahlungsziel.class)
 	public Integer getZahlungszielIId() {
 		return zahlungszielIId;
 	}
@@ -319,6 +381,7 @@ public class KundeDto implements Serializable {
 		this.zahlungszielIId = zahlungszielIId;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Kostenstelle.class)
 	public Integer getKostenstelleIId() {
 		return kostenstelleIId;
 	}
@@ -339,8 +402,7 @@ public class KundeDto implements Serializable {
 		return vkpfArtikelpreislisteIIdStdpreisliste;
 	}
 
-	public void setVkpfArtikelpreislisteIIdStdpreisliste(
-			Integer vkpfArtikelpreislisteIIdStdpreisliste) {
+	public void setVkpfArtikelpreislisteIIdStdpreisliste(Integer vkpfArtikelpreislisteIIdStdpreisliste) {
 		this.vkpfArtikelpreislisteIIdStdpreisliste = vkpfArtikelpreislisteIIdStdpreisliste;
 	}
 
@@ -371,6 +433,7 @@ public class KundeDto implements Serializable {
 		this.xKommentar = xKommentar;
 	}
 
+	@HvDtoLogIgnore
 	public Timestamp getTAnlegen() {
 		return tAnlegen;
 	}
@@ -380,6 +443,7 @@ public class KundeDto implements Serializable {
 		this.tAnlegen = tAnlegen;
 	}
 
+	@HvDtoLogIgnore
 	public Integer getPersonalAnlegenIId() {
 		return personalAnlegenIID;
 	}
@@ -389,6 +453,7 @@ public class KundeDto implements Serializable {
 		this.personalAnlegenIID = personalAnlegenIID;
 	}
 
+	@HvDtoLogIgnore
 	public Timestamp getTAendern() {
 		return tAendern;
 	}
@@ -398,6 +463,7 @@ public class KundeDto implements Serializable {
 		this.tAendern = tAendern;
 	}
 
+	@HvDtoLogIgnore
 	public Integer getPersonalAendernIId() {
 		return personalAendernIID;
 	}
@@ -405,15 +471,6 @@ public class KundeDto implements Serializable {
 	public void setPersonalAendernIID(Integer personalAendernIID) {
 		bsIndikator.set(iFpersonalAendernIID, true);
 		this.personalAendernIID = personalAendernIID;
-	}
-
-	public Boolean getBbGeneriereKurznr() {
-		return bbGeneriereKurznr;
-	}
-
-	public void setBbGeneriereKurznr(Boolean bbGeneriereKurznr) {
-		bsIndikator.set(iFbbGeneriereKurznr, true);
-		this.bbGeneriereKurznr = bbGeneriereKurznr;
 	}
 
 	public String getCKurznr() {
@@ -477,6 +534,16 @@ public class KundeDto implements Serializable {
 	public void setBReversecharge(Short bReversecharge) {
 		bsIndikator.set(iFbReversecharge, true);
 		this.bReversecharge = bReversecharge;
+	}
+
+	private Short bZuschlagInklusive;
+
+	public Short getBZuschlagInklusive() {
+		return bZuschlagInklusive;
+	}
+
+	public void setBZuschlagInklusive(Short bZuschlagInklusive) {
+		this.bZuschlagInklusive = bZuschlagInklusive;
 	}
 
 	public Short getBVersteckterlieferant() {
@@ -650,10 +717,12 @@ public class KundeDto implements Serializable {
 		this.cFremdsystemnr = cFremdsystemnr;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Konto.class)
 	public Integer getIidErloeseKonto() {
 		return iidErloeseKonto;
 	}
 
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerDto() {
 		return partnerDto;
 	}
@@ -668,8 +737,7 @@ public class KundeDto implements Serializable {
 		this.partnerDto = partnerDto;
 	}
 
-	public void setCErwerbsberechtigungsbegruendung(
-			String cErwerbsberechtigungsbegruendung) {
+	public void setCErwerbsberechtigungsbegruendung(String cErwerbsberechtigungsbegruendung) {
 		this.cErwerbsberechtigungsbegruendung = cErwerbsberechtigungsbegruendung;
 	}
 
@@ -696,24 +764,19 @@ public class KundeDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId))) {
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId))) {
 			return false;
 		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr))) {
 			return false;
 		}
-		if (!(that.cWaehrung == null ? this.cWaehrung == null : that.cWaehrung
-				.equals(this.cWaehrung))) {
+		if (!(that.cWaehrung == null ? this.cWaehrung == null : that.cWaehrung.equals(this.cWaehrung))) {
 			return false;
 		}
-		if (!(that.lieferartIId == null ? this.lieferartIId == null
-				: that.lieferartIId.equals(this.lieferartIId))) {
+		if (!(that.lieferartIId == null ? this.lieferartIId == null : that.lieferartIId.equals(this.lieferartIId))) {
 			return false;
 		}
-		if (!(that.spediteurIId == null ? this.spediteurIId == null
-				: that.spediteurIId.equals(this.spediteurIId))) {
+		if (!(that.spediteurIId == null ? this.spediteurIId == null : that.spediteurIId.equals(this.spediteurIId))) {
 			return false;
 		}
 		if (!(that.zahlungszielIId == null ? this.zahlungszielIId == null
@@ -729,48 +792,40 @@ public class KundeDto implements Serializable {
 			return false;
 		}
 		if (!(that.vkpfArtikelpreislisteIIdStdpreisliste == null ? this.vkpfArtikelpreislisteIIdStdpreisliste == null
-				: that.vkpfArtikelpreislisteIIdStdpreisliste
-						.equals(this.vkpfArtikelpreislisteIIdStdpreisliste))) {
+				: that.vkpfArtikelpreislisteIIdStdpreisliste.equals(this.vkpfArtikelpreislisteIIdStdpreisliste))) {
 			return false;
 		}
-		if (!(that.fRabattsatz == null ? this.fRabattsatz == null
-				: that.fRabattsatz.equals(this.fRabattsatz))) {
+		if (!(that.fRabattsatz == null ? this.fRabattsatz == null : that.fRabattsatz.equals(this.fRabattsatz))) {
 			return false;
 		}
 		if (!(that.iGarantieinmonaten == null ? this.iGarantieinmonaten == null
 				: that.iGarantieinmonaten.equals(this.iGarantieinmonaten))) {
 			return false;
 		}
-		if (!(that.xKommentar == null ? this.xKommentar == null
-				: that.xKommentar.equals(this.xKommentar))) {
+		if (!(that.xKommentar == null ? this.xKommentar == null : that.xKommentar.equals(this.xKommentar))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
 		if (!(that.personalAnlegenIID == null ? this.personalAnlegenIID == null
 				: that.personalAnlegenIID.equals(this.personalAnlegenIID))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
 		if (!(that.personalAendernIID == null ? this.personalAendernIID == null
 				: that.personalAendernIID.equals(this.personalAendernIID))) {
 			return false;
 		}
-		if (!(that.cKurznr == null ? this.cKurznr == null : that.cKurznr
-				.equals(this.cKurznr))) {
+		if (!(that.cKurznr == null ? this.cKurznr == null : that.cKurznr.equals(this.cKurznr))) {
 			return false;
 		}
-		if (!(that.nKreditlimit == null ? this.nKreditlimit == null
-				: that.nKreditlimit.equals(this.nKreditlimit))) {
+		if (!(that.nKreditlimit == null ? this.nKreditlimit == null : that.nKreditlimit.equals(this.nKreditlimit))) {
 			return false;
 		}
-		if (!(that.tBonitaet == null ? this.tBonitaet == null : that.tBonitaet
-				.equals(this.tBonitaet))) {
+		if (!(that.tBonitaet == null ? this.tBonitaet == null : that.tBonitaet.equals(this.tBonitaet))) {
 			return false;
 		}
 		if (!(that.tLiefersperream == null ? this.tLiefersperream == null
@@ -793,43 +848,41 @@ public class KundeDto implements Serializable {
 				: that.bIstreempfaenger.equals(this.bIstreempfaenger))) {
 			return false;
 		}
+		if (!(that.bVkpreisAnhandLSDatum == null ? this.bVkpreisAnhandLSDatum == null
+				: that.bVkpreisAnhandLSDatum.equals(this.bVkpreisAnhandLSDatum))) {
+			return false;
+		}
 		if (!(that.bPreiseanlsandrucken == null ? this.bPreiseanlsandrucken == null
 				: that.bPreiseanlsandrucken.equals(this.bPreiseanlsandrucken))) {
 			return false;
 		}
 		if (!(that.iDefaultrekopiendrucken == null ? this.iDefaultrekopiendrucken == null
-				: that.iDefaultrekopiendrucken
-						.equals(this.iDefaultrekopiendrucken))) {
+				: that.iDefaultrekopiendrucken.equals(this.iDefaultrekopiendrucken))) {
 			return false;
 		}
 		if (!(that.iDefaultlskopiendrucken == null ? this.iDefaultlskopiendrucken == null
-				: that.iDefaultlskopiendrucken
-						.equals(this.iDefaultlskopiendrucken))) {
+				: that.iDefaultlskopiendrucken.equals(this.iDefaultlskopiendrucken))) {
 			return false;
 		}
 		if (!(that.bRechnungsdruckmitrabatt == null ? this.bRechnungsdruckmitrabatt == null
-				: that.bRechnungsdruckmitrabatt
-						.equals(this.bRechnungsdruckmitrabatt))) {
+				: that.bRechnungsdruckmitrabatt.equals(this.bRechnungsdruckmitrabatt))) {
 			return false;
 		}
 		if (!(that.iMitarbeiteranzahl == null ? this.iMitarbeiteranzahl == null
 				: that.iMitarbeiteranzahl.equals(this.iMitarbeiteranzahl))) {
 			return false;
 		}
-		if (!(that.cTour == null ? this.cTour == null : that.cTour
-				.equals(this.cTour))) {
+		if (!(that.cTour == null ? this.cTour == null : that.cTour.equals(this.cTour))) {
 			return false;
 		}
 		if (!(that.cLieferantennr == null ? this.cLieferantennr == null
 				: that.cLieferantennr.equals(this.cLieferantennr))) {
 			return false;
 		}
-		if (!(that.bDistributor == null ? this.bDistributor == null
-				: that.bDistributor.equals(this.bDistributor))) {
+		if (!(that.bDistributor == null ? this.bDistributor == null : that.bDistributor.equals(this.bDistributor))) {
 			return false;
 		}
-		if (!(that.bIstkunde == null ? this.bIstkunde == null : that.bIstkunde
-				.equals(this.bIstkunde))) {
+		if (!(that.bIstkunde == null ? this.bIstkunde == null : that.bIstkunde.equals(this.bIstkunde))) {
 			return false;
 		}
 		if (!(that.bReversecharge == null ? this.bReversecharge == null
@@ -840,8 +893,7 @@ public class KundeDto implements Serializable {
 				: that.bVersteckterlieferant.equals(this.bVersteckterlieferant))) {
 			return false;
 		}
-		if (!(that.cAbc == null ? this.cAbc == null : that.cAbc
-				.equals(this.cAbc))) {
+		if (!(that.cAbc == null ? this.cAbc == null : that.cAbc.equals(this.cAbc))) {
 			return false;
 		}
 		if (!(that.tAgbuebermittelung == null ? this.tAgbuebermittelung == null
@@ -849,8 +901,7 @@ public class KundeDto implements Serializable {
 			return false;
 		}
 		if (!(that.bAkzeptiertteillieferung == null ? this.bAkzeptiertteillieferung == null
-				: that.bAkzeptiertteillieferung
-						.equals(this.bAkzeptiertteillieferung))) {
+				: that.bAkzeptiertteillieferung.equals(this.bAkzeptiertteillieferung))) {
 			return false;
 		}
 		if (!(that.bLsgewichtangeben == null ? this.bLsgewichtangeben == null
@@ -878,8 +929,7 @@ public class KundeDto implements Serializable {
 			return false;
 		}
 		if (!(that.personaliIdProvisionsempfaenger == null ? this.personaliIdProvisionsempfaenger == null
-				: that.personaliIdProvisionsempfaenger
-						.equals(this.personaliIdProvisionsempfaenger))) {
+				: that.personaliIdProvisionsempfaenger.equals(this.personaliIdProvisionsempfaenger))) {
 			return false;
 		}
 		if (!(that.tErwerbsberechtigung == null ? this.tErwerbsberechtigung == null
@@ -887,12 +937,15 @@ public class KundeDto implements Serializable {
 			return false;
 		}
 		if (!(that.cErwerbsberechtigungsbegruendung == null ? this.cErwerbsberechtigungsbegruendung == null
-				: that.cErwerbsberechtigungsbegruendung
-						.equals(this.cErwerbsberechtigungsbegruendung))) {
+				: that.cErwerbsberechtigungsbegruendung.equals(this.cErwerbsberechtigungsbegruendung))) {
 			return false;
 		}
 		if (!(that.iKundennummer == null ? this.iKundennummer == null
 				: that.iKundennummer.equals(this.iKundennummer))) {
+			return false;
+		}
+		if (!(that.laenderartCnr == null ? this.laenderartCnr == null
+				: that.laenderartCnr.equals(this.laenderartCnr))) {
 			return false;
 		}
 		return true;
@@ -909,8 +962,7 @@ public class KundeDto implements Serializable {
 		result = 37 * result + this.zahlungszielIId.hashCode();
 		result = 37 * result + this.kostenstelleIId.hashCode();
 		result = 37 * result + this.mwstsatzbezIId.hashCode();
-		result = 37 * result
-				+ this.vkpfArtikelpreislisteIIdStdpreisliste.hashCode();
+		result = 37 * result + this.vkpfArtikelpreislisteIIdStdpreisliste.hashCode();
 		result = 37 * result + this.fRabattsatz.hashCode();
 		result = 37 * result + this.iGarantieinmonaten.hashCode();
 		result = 37 * result + this.xKommentar.hashCode();
@@ -950,6 +1002,7 @@ public class KundeDto implements Serializable {
 		result = 37 * result + this.tErwerbsberechtigung.hashCode();
 		result = 37 * result + this.cErwerbsberechtigungsbegruendung.hashCode();
 		result = 37 * result + this.iKundennummer.hashCode();
+		result = 37 * result + this.laenderartCnr.hashCode();
 		return result;
 	}
 
@@ -1011,6 +1064,7 @@ public class KundeDto implements Serializable {
 		return personaliIdProvisionsempfaenger;
 	}
 
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerRechnungsadresseDto() {
 		return partnerRechnungsadresseDto;
 	}
@@ -1019,14 +1073,12 @@ public class KundeDto implements Serializable {
 		return partnerIIdRechnungsadresse;
 	}
 
-	public void setPersonaliIdProvisionsempfaenger(
-			Integer personaliIdProvisionsempfaenger) {
+	public void setPersonaliIdProvisionsempfaenger(Integer personaliIdProvisionsempfaenger) {
 		bsIndikator.set(iFPersonaliIdProvisionsempfaenger, true);
 		this.personaliIdProvisionsempfaenger = personaliIdProvisionsempfaenger;
 	}
 
-	public void setPartnerRechnungsadresseDto(
-			PartnerDto partnerRechnungsadresseDto) {
+	public void setPartnerRechnungsadresseDto(PartnerDto partnerRechnungsadresseDto) {
 		bsIndikator.set(iFpartnerRechnungsadresseDto, true);
 		this.partnerRechnungsadresseDto = partnerRechnungsadresseDto;
 	}
@@ -1036,22 +1088,27 @@ public class KundeDto implements Serializable {
 		this.partnerIIdRechnungsadresse = partnerIIdRechnungsadresse;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Konto.class)
 	public Integer getIidDebitorenkonto() {
 		return iidDebitorenkonto;
 	}
 
+	@HvDtoLogIgnore
 	public Integer getIDebitorenkontoAsIntegerNotiId() {
 		return iDebitorenkontoAsIntegerNotiId;
 	}
 
+	@HvDtoLogIgnore
 	public int getUpdateModeDebitorenkonto() {
 		return iUpdateDebitorenkonto;
 	}
 
+	@HvDtoLogIgnore
 	public BitSet getBsIndikator() {
 		return bsIndikator;
 	}
 
+	@HvDtoLogIgnore
 	public AnsprechpartnerDto[] getAnsprechpartnerDto() {
 		return ansprechpartnerDto;
 	}
@@ -1077,8 +1134,7 @@ public class KundeDto implements Serializable {
 		this.iidDebitorenkonto = iidDebitorenkonto;
 	}
 
-	public void setIDebitorenkontoAsIntegerNotiId(
-			Integer iDebitorenkontoAsIntegerNotiIdI) {
+	public void setIDebitorenkontoAsIntegerNotiId(Integer iDebitorenkontoAsIntegerNotiIdI) {
 		bsIndikator.set(iFiDebitorenkontoAsIntegerNotiId, true);
 		this.iDebitorenkontoAsIntegerNotiId = iDebitorenkontoAsIntegerNotiIdI;
 	}
@@ -1115,6 +1171,16 @@ public class KundeDto implements Serializable {
 		this.iKundennummer = iKundennummer;
 	}
 
+	private BigDecimal nMindestbestellwert;
+
+	public BigDecimal getNMindestbestellwert() {
+		return nMindestbestellwert;
+	}
+
+	public void setNMindestbestellwert(BigDecimal nMindestbestellwert) {
+		this.nMindestbestellwert = nMindestbestellwert;
+	}
+
 	/**
 	 * Die externe ID (Magento-Id)
 	 * 
@@ -1127,4 +1193,51 @@ public class KundeDto implements Serializable {
 	public void setCIdExtern(String cIdExtern) {
 		this.cIdExtern = cIdExtern;
 	}
+
+	public Integer getReversechargeartId() {
+		return reversechargeartId;
+	}
+
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId;
+	}
+
+	private String cEmailRechnungsempfang;
+
+	public String getCEmailRechnungsempfang() {
+		return cEmailRechnungsempfang;
+	}
+
+	public void setCEmailRechnungsempfang(String cEmailRechnungsempfang) {
+		this.cEmailRechnungsempfang = cEmailRechnungsempfang;
+	}
+
+	public String getLaenderartCnr() {
+		return laenderartCnr;
+	}
+
+	public void setLaenderartCnr(String laenderartCnr) {
+		this.laenderartCnr = laenderartCnr;
+	}
+
+	private Short bRechnungJeLieferadresse;
+
+	public Short getBRechnungJeLieferadresse() {
+		return bRechnungJeLieferadresse;
+	}
+
+	public void setBRechnungJeLieferadresse(Short bRechnungJeLieferadresse) {
+		this.bRechnungJeLieferadresse = bRechnungJeLieferadresse;
+	}
+
+	private Double fVerpackungskostenInProzent;
+
+	public Double getfVerpackungskostenInProzent() {
+		return fVerpackungskostenInProzent;
+	}
+
+	public void setfVerpackungskostenInProzent(Double fVerpackungskostenInProzent) {
+		this.fVerpackungskostenInProzent = fVerpackungskostenInProzent;
+	}
+
 }

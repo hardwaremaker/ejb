@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.personal.fastlanereader;
 
+import java.rmi.RemoteException;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -44,6 +45,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.personal.fastlanereader.generated.FLRSonderzeiten;
+import com.lp.server.personal.service.ZeitdatenDto;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -59,8 +61,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Sonderzeiten implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Sonderzeiten
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur GmbH (c) 2004
@@ -92,8 +94,7 @@ public class SonderzeitenHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -103,25 +104,37 @@ public class SonderzeitenHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRSonderzeiten sonderzeiten = (FLRSonderzeiten) resultListIterator
-						.next();
+				FLRSonderzeiten sonderzeiten = (FLRSonderzeiten) resultListIterator.next();
 				rows[row][col++] = sonderzeiten.getI_id();
 				rows[row][col++] = sonderzeiten.getT_datum();
 				rows[row][col++] = sonderzeiten.getFlrtaetigkeit().getC_nr();
-				rows[row][col++] = Helper
-						.short2boolean(sonderzeiten.getB_tag()) ? "ja" : "nein";
+				rows[row][col++] = Helper.short2boolean(sonderzeiten.getB_tag()) ? "ja" : "nein";
 				;
-				rows[row][col++] = Helper.short2boolean(sonderzeiten
-						.getB_halbtag()) ? "ja" : "nein";
+				rows[row][col++] = Helper.short2boolean(sonderzeiten.getB_halbtag()) ? "ja" : "nein";
 				;
-				rows[row++][col++] = sonderzeiten.getU_stunden() == null ? null
-						: new java.sql.Time(sonderzeiten.getU_stunden()
-								.getTime()).toString();
+				rows[row][col++] = sonderzeiten.getU_stunden() == null ? null
+						: new java.sql.Time(sonderzeiten.getU_stunden().getTime()).toString();
 
+				try {
+					ZeitdatenDto[] zDtos = getZeiterfassungFac().zeitdatenFindZeitdatenEinesTagesUndEinerPerson(
+							sonderzeiten.getPersonal_i_id(),
+							Helper.cutTimestamp(new java.sql.Timestamp(sonderzeiten.getT_datum().getTime())),
+							Helper.cutTimestampAddDays(new java.sql.Timestamp(sonderzeiten.getT_datum().getTime()), 1));
+
+					if (zDtos != null && zDtos.length > 0) {
+						rows[row][col++] = Boolean.TRUE;
+					} else {
+						rows[row][col++] = Boolean.FALSE;
+					}
+
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+				rows[row][col++] = Helper.short2Boolean(sonderzeiten.getB_automatik());
+				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -140,8 +153,7 @@ public class SonderzeitenHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -160,8 +172,8 @@ public class SonderzeitenHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -172,8 +184,7 @@ public class SonderzeitenHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -184,16 +195,13 @@ public class SonderzeitenHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(sonderzeiten."
-								+ filterKriterien[i].kritName + ")");
+						where.append(" upper(sonderzeiten." + filterKriterien[i].kritName + ")");
 					} else {
-						where.append(" sonderzeiten."
-								+ filterKriterien[i].kritName);
+						where.append(" sonderzeiten." + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -220,15 +228,13 @@ public class SonderzeitenHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("sonderzeiten."
-									+ kriterien[i].kritName);
+							orderBy.append("sonderzeiten." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -239,12 +245,10 @@ public class SonderzeitenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("sonderzeiten."
-						+ ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM + " DESC ");
+				orderBy.append("sonderzeiten." + ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM + " DESC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("sonderzeiten."
-					+ ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM) < 0) {
+			if (orderBy.indexOf("sonderzeiten." + ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -253,8 +257,7 @@ public class SonderzeitenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" sonderzeiten."
-						+ ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM + " ");
+				orderBy.append(" sonderzeiten." + ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -273,8 +276,7 @@ public class SonderzeitenHandler extends UseCaseHandler {
 		return "from FLRSonderzeiten sonderzeiten ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -287,8 +289,7 @@ public class SonderzeitenHandler extends UseCaseHandler {
 				try {
 					session = factory.openSession();
 					String queryString = "select sonderzeiten.i_id from FLRSonderzeiten sonderzeiten "
-							+ this.buildWhereClause()
-							+ this.buildOrderByClause();
+							+ this.buildWhereClause() + this.buildOrderByClause();
 					Query query = session.createQuery(queryString);
 					ScrollableResults scrollableResult = query.scroll();
 					if (scrollableResult != null) {
@@ -333,33 +334,24 @@ public class SonderzeitenHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, Date.class, String.class,
-							String.class, String.class, String.class },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
-							getTextRespectUISpr("lp.taetigkeit", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.tageweise", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.halbtageweise", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.stunden", mandantCNr, locUI) },
+					new Class[] { Integer.class, Date.class, String.class, String.class, String.class, String.class,
+							Boolean.class, Boolean.class },
+					new String[] { "Id", getTextRespectUISpr("lp.datum", mandantCNr, locUI),
+							getTextRespectUISpr("lp.taetigkeit", mandantCNr, locUI),
+							getTextRespectUISpr("lp.tageweise", mandantCNr, locUI),
+							getTextRespectUISpr("lp.halbtageweise", mandantCNr, locUI),
+							getTextRespectUISpr("lp.stunden", mandantCNr, locUI),
+							getTextRespectUISpr("pers.sonderzeiten.zeitenvorhanden", mandantCNr, locUI),
+							getTextRespectUISpr("pers.sonderzeiten.automatikbuchung", mandantCNr, locUI) },
 
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M }, new String[] {
-							"i_id",
-							ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM,
-							ZeiterfassungFac.FLR_SONDERZEITEN_FLRTAETIGKEIT
-									+ ".c_nr",
-							ZeiterfassungFac.FLR_SONDERZEITEN_B_TAG,
-							ZeiterfassungFac.FLR_SONDERZEITEN_B_HALBTAG,
-							ZeiterfassungFac.FLR_SONDERZEITEN_U_STUNDEN }));
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_XS },
+					new String[] { "i_id", ZeiterfassungFac.FLR_SONDERZEITEN_D_DATUM,
+							ZeiterfassungFac.FLR_SONDERZEITEN_FLRTAETIGKEIT + ".c_nr",
+							ZeiterfassungFac.FLR_SONDERZEITEN_B_TAG, ZeiterfassungFac.FLR_SONDERZEITEN_B_HALBTAG,
+							ZeiterfassungFac.FLR_SONDERZEITEN_U_STUNDEN, Facade.NICHT_SORTIERBAR, "b_automatik" }));
 
 		}
 

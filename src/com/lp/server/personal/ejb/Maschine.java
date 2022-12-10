@@ -33,6 +33,7 @@
 package com.lp.server.personal.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
@@ -47,6 +48,7 @@ import com.lp.server.util.ICBez;
 @NamedQueries( {
 		@NamedQuery(name = "MaschinefindByMandantCNrCInventarnummer", query = "SELECT OBJECT(C) FROM Maschine c WHERE c.mandantCNr = ?1 AND  c.cInventarnummer = ?2"),
 		@NamedQuery(name = "MaschinefindByCIdentifikationsnr", query = "SELECT OBJECT(C) FROM Maschine c WHERE c.cIdentifikationsnr = ?1"),
+		@NamedQuery(name = "MaschinefindByCIdentifikationsnrMandantCNr", query = "SELECT OBJECT(C) FROM Maschine c WHERE c.cIdentifikationsnr = ?1 AND c.mandantCNr = ?2"),
 		@NamedQuery(name = "MaschinefindByMaschinengruppeIId", query = "SELECT OBJECT(C) FROM Maschine c WHERE c.maschinengruppeIId = ?1"),
 		@NamedQuery(name = "MaschinefindByByMandantCNr", query = "SELECT OBJECT(C) FROM Maschine c WHERE c.mandantCNr = ?1") })
 @Entity
@@ -71,6 +73,17 @@ public class Maschine implements Serializable, ICBez {
 	@Column(name = "C_IDENTIFIKATIONSNR")
 	private String cIdentifikationsnr;
 
+	@Column(name = "C_SERIENNUMMER")
+	private String cSeriennummer;
+	
+	public String getCSeriennummer() {
+		return cSeriennummer;
+	}
+
+	public void setCSeriennummer(String cSeriennummer) {
+		this.cSeriennummer = cSeriennummer;
+	}
+
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
 
@@ -80,6 +93,106 @@ public class Maschine implements Serializable, ICBez {
 	@Column(name = "B_VERSTECKT")
 	private Short bVersteckt;
 	
+	@Column(name = "ARTIKEL_I_ID_VERRECHNEN")
+	private Integer artikelIIdVerrechnen;
+	
+	public Integer getArtikelIIdVerrechnen() {
+		return artikelIIdVerrechnen;
+	}
+
+	public void setArtikelIIdVerrechnen(Integer artikelIIdVerrechnen) {
+		this.artikelIIdVerrechnen = artikelIIdVerrechnen;
+	}
+
+	@Column(name = "N_ANSCHAFFUNGSKOSTEN")
+	private BigDecimal nAnschaffungskosten;
+	
+	public BigDecimal getNAnschaffungskosten() {
+		return nAnschaffungskosten;
+	}
+
+	public void setNAnschaffungskosten(BigDecimal nAnschaffungskosten) {
+		this.nAnschaffungskosten = nAnschaffungskosten;
+	}
+
+	public Integer getIAbschreibungInMonaten() {
+		return iAbschreibungInMonaten;
+	}
+
+	public void setIAbschreibungInMonaten(Integer iAbschreibungInMonaten) {
+		this.iAbschreibungInMonaten = iAbschreibungInMonaten;
+	}
+
+	public BigDecimal getNVerzinsung() {
+		return nVerzinsung;
+	}
+
+	public void setNVerzinsung(BigDecimal nVerzinsung) {
+		this.nVerzinsung = nVerzinsung;
+	}
+
+	public BigDecimal getNEnergiekosten() {
+		return nEnergiekosten;
+	}
+
+	public void setNEnergiekosten(BigDecimal nEnergiekosten) {
+		this.nEnergiekosten = nEnergiekosten;
+	}
+
+	public BigDecimal getNRaumkosten() {
+		return nRaumkosten;
+	}
+
+	public void setNRaumkosten(BigDecimal nRaumkosten) {
+		this.nRaumkosten = nRaumkosten;
+	}
+
+	public BigDecimal getNSonstigekosten() {
+		return nSonstigekosten;
+	}
+
+	public void setNSonstigekosten(BigDecimal nSonstigekosten) {
+		this.nSonstigekosten = nSonstigekosten;
+	}
+
+	public Integer getIPlanstunden() {
+		return iPlanstunden;
+	}
+
+	public void setIPlanstunden(Integer iPlanstunden) {
+		this.iPlanstunden = iPlanstunden;
+	}
+
+	@Column(name = "I_ABSCHREIBUNG_IN_MONATEN")
+	private Integer iAbschreibungInMonaten;
+	
+	@Column(name = "N_VERZINSUNG")
+	private BigDecimal nVerzinsung;
+	
+	@Column(name = "N_ENERGIERKOSTEN")
+	private BigDecimal nEnergiekosten;
+	
+	@Column(name = "N_RAUMKOSTEN")
+	private BigDecimal nRaumkosten;
+	
+	@Column(name = "N_SONSTIGE_KOSTEN")
+	private BigDecimal nSonstigekosten;
+	
+	@Column(name = "I_PLANSTUNDEN")
+	private Integer iPlanstunden;
+	
+	
+	@Column(name = "B_MANUELLE_BEDIENUNG")
+	private Short bManuelleBedienung;
+	
+	public Short getBManuelleBedienung() {
+		return bManuelleBedienung;
+	}
+
+	public void setBManuelleBedienung(Short bManuelleBedienung) {
+		this.bManuelleBedienung = bManuelleBedienung;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Maschine() {
@@ -88,13 +201,14 @@ public class Maschine implements Serializable, ICBez {
 
 	public Maschine(Integer id, String mandantCNr2, String inventarnummer,
 			 Short autoendebeigeht,
-			Integer maschinengruppeIId2, Short bVersteckt) {
+			Integer maschinengruppeIId2, Short bVersteckt,Short bManuelleBedienung) {
 		setIId(id);
 		setMandantCNr(mandantCNr2);
 		setCInventarnummer(inventarnummer);
 		setBAutoendebeigeht(autoendebeigeht);
 		setMaschinengruppeIId(maschinengruppeIId2);
 		setBVersteckt(bVersteckt);
+		setBManuelleBedienung(bManuelleBedienung);
 	}
 
 	public Integer getIId() {

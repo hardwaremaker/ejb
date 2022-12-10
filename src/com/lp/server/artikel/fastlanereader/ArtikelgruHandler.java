@@ -44,9 +44,12 @@ import org.hibernate.SessionFactory;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppespr;
 import com.lp.server.artikel.service.ArtgruDto;
+import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeArtikelgruppe;
 import com.lp.server.system.jcr.service.docnode.DocPath;
+import com.lp.server.system.service.MandantFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -103,7 +106,7 @@ public class ArtikelgruHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = ArtikelgruHandler.PAGE_SIZE;
+			int pageSize = PAGE_SIZE;
 			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
 			int endIndex = startIndex + pageSize - 1;
 
@@ -125,6 +128,7 @@ public class ArtikelgruHandler extends UseCaseHandler {
 
 			String sLocUI = Helper.locale2String(theClientDto.getLocUi());
 
+			
 			while (resultListIterator.hasNext()) {
 				Object o[] = (Object[]) resultListIterator.next();
 				FLRArtikelgruppe artikelgruppe = (FLRArtikelgruppe) o[0];
@@ -149,8 +153,11 @@ public class ArtikelgruHandler extends UseCaseHandler {
 					rows[row][col++] =null;
 				}
 				
-				rows[row][col++] = artikelgruppe.getFlrkonto() == null ? null
-						: artikelgruppe.getFlrkonto().getC_nr();
+				
+				FLRFinanzKonto flrkonto=artikelgruppe.getFlrkonto(theClientDto.getMandant());
+				
+				rows[row][col++] =flrkonto == null ? null
+						: flrkonto.getC_nr();
 
 				row++;
 				col = 0;
@@ -320,8 +327,7 @@ public class ArtikelgruHandler extends UseCaseHandler {
 	private String getFromClause() {
 		return " FROM FLRArtikelgruppe AS artikelgruppe"
 				+ " LEFT OUTER JOIN artikelgruppe.artikelgruppesprset AS artikelgruppesprset "
-				+ " LEFT OUTER JOIN artikelgruppe.flrartikelgruppe.artikelgruppesprset AS vatergruppesprset "
-				+ " LEFT OUTER JOIN artikelgruppe.flrkonto AS konto";
+				+ " LEFT OUTER JOIN artikelgruppe.flrartikelgruppe.artikelgruppesprset AS vatergruppesprset ";
 	}
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -423,7 +429,7 @@ public class ArtikelgruHandler extends UseCaseHandler {
 							"artikelgruppesprset.c_bez",
 							"artikelgruppe.flrartikelgruppe.c_nr",
 							"vatergruppesprset.c_bez",
-							"konto.c_nr"
+							Facade.NICHT_SORTIERBAR
 					})
 			);
 		}

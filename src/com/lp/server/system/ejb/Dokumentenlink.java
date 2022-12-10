@@ -32,7 +32,6 @@
  ******************************************************************************/
 package com.lp.server.system.ejb;
 
-
 import java.io.Serializable;
 
 import javax.persistence.Column;
@@ -42,9 +41,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+@NamedQueries({
 		@NamedQuery(name = "DokumentenlinkfindByBelegartCNrMandantCNr", query = "SELECT OBJECT (o) FROM Dokumentenlink o WHERE o.belegartCNr=?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = "DokumentenlinkfindByBelegartCNrMandantCNrBPfadabsolut", query = "SELECT OBJECT (o) FROM Dokumentenlink o WHERE o.belegartCNr=?1 AND o.mandantCNr=?2 AND o.bPfadabsolut=?3")})
+		@NamedQuery(name = "DokumentenlinkfindByBelegartCNrMandantCNrBPfadabsolut", query = "SELECT OBJECT (o) FROM Dokumentenlink o WHERE o.belegartCNr=?1 AND o.mandantCNr=?2 AND o.bPfadabsolut=?3") })
 @Entity
 @Table(name = "LP_DOKUMENTENLINK")
 public class Dokumentenlink implements Serializable {
@@ -54,6 +53,17 @@ public class Dokumentenlink implements Serializable {
 
 	@Column(name = "BELEGART_C_NR")
 	private String belegartCNr;
+	
+	@Column(name = "RECHT_C_NR")
+	private String rechtCNr;
+
+	public String getRechtCNr() {
+		return rechtCNr;
+	}
+
+	public void setRechtCNr(String rechtCNr) {
+		this.rechtCNr = rechtCNr;
+	}
 
 	@Column(name = "C_BASISPFAD")
 	private String cBasispfad;
@@ -65,6 +75,7 @@ public class Dokumentenlink implements Serializable {
 
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
+
 	public String getBelegartCNr() {
 		return belegartCNr;
 	}
@@ -72,10 +83,23 @@ public class Dokumentenlink implements Serializable {
 	@Column(name = "B_PFADABSOLUT")
 	private Short bPfadabsolut;
 
+	@Column(name = "B_PFAD_AUS_ARBEITSPLATZPARAMETER")
+	private Short bPfadAusArbeitsplatzparameter;
+	
+	@Column(name = "B_TITEL")
+	private Short bTitel;
+
+	public Short getBPfadAusArbeitsplatzparameter() {
+		return bPfadAusArbeitsplatzparameter;
+	}
+
+	public void setBPfadAusArbeitsplatzparameter(Short bPfadAusArbeitsplatzparameter) {
+		this.bPfadAusArbeitsplatzparameter = bPfadAusArbeitsplatzparameter;
+	}
+
 	@Column(name = "B_URL")
 	private Short bUrl;
 
-	
 	public Short getBPfadabsolut() {
 		return bPfadabsolut;
 	}
@@ -112,14 +136,16 @@ public class Dokumentenlink implements Serializable {
 		cMenuetext = menuetext;
 	}
 
-
 	private static final long serialVersionUID = 1L;
 
 	public Dokumentenlink() {
 		super();
 	}
 
-	public Dokumentenlink(Integer id,String belegartCNr, String basispfad,String mandantCNr, String menuetext, Short bPfadabsolut, Short bUrl) {
+	public Dokumentenlink(Integer id, String belegartCNr, String basispfad,
+			String mandantCNr, String menuetext, Short bPfadabsolut,
+			Short bUrl, Short bPfadAusArbeitsplatzparameter,
+			Short bTitel) {
 		setIId(id);
 		setCBasispfad(basispfad);
 		setCMenuetext(menuetext);
@@ -127,7 +153,8 @@ public class Dokumentenlink implements Serializable {
 		setMandantCNr(mandantCNr);
 		setBPfadabsolut(bPfadabsolut);
 		setBUrl(bUrl);
-		
+		setBPfadAusArbeitsplatzparameter(bPfadAusArbeitsplatzparameter);
+		setBTitel(bTitel);
 	}
 
 	public Short getBUrl() {
@@ -146,7 +173,6 @@ public class Dokumentenlink implements Serializable {
 		this.iId = iId;
 	}
 
-
 	public String getMandantCNr() {
 		return this.mandantCNr;
 	}
@@ -155,6 +181,11 @@ public class Dokumentenlink implements Serializable {
 		this.mandantCNr = mandant;
 	}
 
-
-
+	public Short getBTitel() {
+		return bTitel;
+	}
+	
+	public void setBTitel(Short bTitel) {
+		this.bTitel = bTitel;
+	}
 }

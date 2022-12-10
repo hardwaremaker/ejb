@@ -57,6 +57,17 @@ public class AutoMahnungsversand implements Serializable {
 
 	@Column(name = "C_DRUCKER")
 	private String cDrucker;
+	
+	@Column(name = "C_EMAIL_ZUSAETZILCH")
+	private String cEmailZusaetzlich;
+
+	public String getCEmailZusaetzlich() {
+		return cEmailZusaetzlich;
+	}
+
+	public void setCEmailZusaetzlich(String cEmailZusaetzlich) {
+		this.cEmailZusaetzlich = cEmailZusaetzlich;
+	}
 
 	@Column(name = "C_VERSANDART")
 	private String cVersandart;

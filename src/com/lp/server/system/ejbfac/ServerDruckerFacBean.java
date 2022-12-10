@@ -41,41 +41,36 @@ import javax.jws.WebService;
 import javax.jws.soap.SOAPBinding;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
-import javax.print.attribute.HashPrintRequestAttributeSet;
-import javax.print.attribute.PrintRequestAttributeSet;
-import javax.print.attribute.PrintServiceAttributeSet;
-import javax.print.attribute.standard.OrientationRequested;
 
-import net.sf.jasperreports.engine.JRExporterParameter;
-import net.sf.jasperreports.engine.JRReport;
-import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.export.JRPrintServiceExporter;
-import net.sf.jasperreports.engine.export.JRPrintServiceExporterParameter;
-import net.sf.jasperreports.engine.type.OrientationEnum;
-
+import com.lp.server.system.service.ArbeitsplatzparameterDto;
+import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ServerDruckerFac;
+import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.report.JasperPrintLP;
+import com.lp.util.Helper;
+
+import net.sf.jasperreports.engine.JasperPrint;
 
 @WebService
 @SOAPBinding(style = SOAPBinding.Style.RPC)
 @Stateless
-public class ServerDruckerFacBean extends Facade implements ServerDruckerFac{
-
+public class ServerDruckerFacBean extends Facade implements ServerDruckerFac, ServerDruckerFacLocal {
 	
 	@WebMethod
 	@WebResult(name="sPrinters")
 	public String[] getServerPrinters() throws RemoteException {
 		PrintService[] printers = PrintServiceLookup.lookupPrintServices(null,null);
+		if (printers.length < 1) {
+			return new String[]{"Kein Drucker gefunden"};
+		}
+		
 		String [] sPrinters = new String[printers.length];
 		for(int i=0;i<printers.length;i++){
 			sPrinters[i] = printers[i].getName();
 		}
-		if (sPrinters != null){
-			return sPrinters;
-		} else {
-			return new String[]{"Kein Drucker gefunden"};
-		}
+		
+		return sPrinters;
 	}
 
 	@WebMethod
@@ -88,56 +83,176 @@ public class ServerDruckerFacBean extends Facade implements ServerDruckerFac{
 		}
 	}
 	
-	public static void print(JasperPrintLP toPrint, PrintService printerToUse)
-	throws Throwable {
-		JasperPrint print = toPrint.getPrint();
-		if (print.getPages().size() > 0) {
-			try {
-				JRPrintServiceExporter exporter = new JRPrintServiceExporter();
-				// set the report to print
-				exporter.setParameter(JRExporterParameter.JASPER_PRINT, print);
-				PrintRequestAttributeSet aset = new HashPrintRequestAttributeSet();
-
-				PrintService printer = printerToUse;
-				if (printer != null) {
-					// Hochformat
-					
-					
-					if (print.getOrientationValue() == OrientationEnum.PORTRAIT) {
-						aset.add(OrientationRequested.PORTRAIT);
-					}
-					// Querformat
-					else if (print.getOrientationValue() == OrientationEnum.LANDSCAPE) {
-						aset.add(OrientationRequested.LANDSCAPE);
-					}
-
-					PrintServiceAttributeSet serviceAttributeSet = printer
-					.getAttributes();
-
-					exporter
-					.setParameter(
-							JRPrintServiceExporterParameter.PRINT_REQUEST_ATTRIBUTE_SET,
-							aset);
-					exporter
-					.setParameter(
-							JRPrintServiceExporterParameter.PRINT_SERVICE_ATTRIBUTE_SET,
-							serviceAttributeSet);
-					// Erweiterte Druckdialoge zzt nicht anzeigen
-					exporter
-					.setParameter(
-							JRPrintServiceExporterParameter.DISPLAY_PAGE_DIALOG,
-							Boolean.FALSE);
-					exporter
-					.setParameter(
-							JRPrintServiceExporterParameter.DISPLAY_PRINT_DIALOG,
-							Boolean.FALSE);
-					// print it
-					exporter.exportReport();
-				}
-			} catch (Exception ex) {
-
-			}
+	@Override
+	public HvPrinter createHvPrinter(String printer) {
+		if (Helper.isStringEmpty(printer)) 
+			return new HvPrinterDummy();
+		
+		if (!isPrintingPrinter(printer)) {
+			myLogger.info("Druckername '" + printer + "' wurde als nicht zu drucken erkannt => HvPrinterDummy wird erstellt");
+			return new HvPrinterDummy();
 		}
+		
+		if (printer.startsWith(PROXY_PROTOCOL_PREFIX)) {
+			myLogger.info("Druckername '" + printer + "' wurde als Proxy-Druckername erkannt => HvPrinterProxy wird erstellt");
+			return new HvPrinterProxy(printer);
+		}
+		
+		myLogger.info("Druckername '" + printer + "' wurde als lokaler Drucker erkannt => HvPrinterJRExport wird erstellt");
+		return new HvPrinterJRExport(printer);
+	}
+	
+	private boolean isPrintingPrinter(String printer) {
+		return !(NICHT_DRUCKEN.equals(printer) ||
+				KEIN_DRUCKER_GEFUNDEN.equals(printer) ||
+				printer.endsWith(DONT_PRINT));
 	}
 
+	@Override
+	public boolean exists(HvPrinter hvPrinter) {
+		return hvPrinter.exists();
+	}
+	
+	@Override
+	public void printMehrereSeiten(JasperPrintLP[] prints, HvPrinter hvPrinter) {
+		if (prints == null) return;
+		
+		for (JasperPrintLP print : prints) {
+			print(print, hvPrinter);
+		}
+	}
+	
+	@Override
+	public void print(JasperPrintLP printLP, HvPrinter hvPrinter) {
+		if (printLP == null || hvPrinter == null) return;
+		
+		JasperPrint print = printLP.getPrint();
+		if (print.getPages().size() > 0) {
+			hvPrinter.print(printLP);
+		}
+	}
+	
+	
+	@Override
+	public String getPrinterNameByArbeitsplatzparameter(String arbeitsplatzparameter, TheClientDto theClientDto) {
+		ArbeitsplatzDruckerResult result = getPrinterNameByArbeitsplatzparameterOhneExcImpl(arbeitsplatzparameter, theClientDto);
+		
+		if (result.hasPrinterName()) {
+			return result.getPrinterName();
+		}
+
+		throw EJBExcFactory.keinDruckernameHinterlegt(result.getPcName(), arbeitsplatzparameter);
+	}
+
+	@Override
+	public String getPrinterNameByArbeitsplatzparameterOhneExc(String arbeitsplatzparameter,
+			TheClientDto theClientDto) {
+		ArbeitsplatzDruckerResult result = getPrinterNameByArbeitsplatzparameterOhneExcImpl(arbeitsplatzparameter, theClientDto);
+		
+		return result.getPrinterName();
+	}
+	
+	private ArbeitsplatzDruckerResult getPrinterNameByArbeitsplatzparameterOhneExcImpl(String arbeitsplatzparameter,
+			TheClientDto theClientDto) {
+		String pcname = "";
+		int index = theClientDto.getBenutzername().indexOf('|');
+		if (index > 0) {
+			pcname = theClientDto.getBenutzername().substring(index + 1).trim();
+		}
+		ArbeitsplatzparameterDto apDto = getBenutzerServicesFac()
+				.holeArbeitsplatzparameter(pcname, arbeitsplatzparameter);
+		
+		return apDto != null ? new ArbeitsplatzDruckerResult(pcname, apDto.getCWert()) 
+				: new ArbeitsplatzDruckerResult(pcname);
+	}
+	
+	public HvPrinter createMobileDefaultPrinter(String printerName, TheClientDto theClientDto) {
+		return createMobileDefaultPagePrinter(printerName, theClientDto);
+	}
+	
+	public HvPrinter createMobileDefaultPagePrinter(String printerName, TheClientDto theClientDto) { 
+		return createMobilePrinter(printerName, Format.Page, theClientDto);
+	}
+	
+	public HvPrinter createMobileDefaultLabelPrinter(String printerName, TheClientDto theClientDto) {
+		return createMobilePrinter(printerName, Format.Label, theClientDto);
+	}
+	
+	public HvPrinter createMobilePrinter(String printer, Format format, TheClientDto theClientDto) {
+		printer = getDefaultPrintername(printer, format, theClientDto);
+
+		if (Helper.isStringEmpty(printer) || printer.equals(".")) {
+			return new HvPrinterMissing();
+		}
+		
+		if (!isPrintingPrinter(printer)) {
+			myLogger.info("Druckername '" + printer + "' wurde als nicht zu drucken erkannt => HvPrinterDummy wird erstellt");
+			return new HvPrinterDummy();
+		}
+		
+		if (printer.startsWith(PROXY_PROTOCOL_PREFIX)) {
+			myLogger.info("Druckername '" + printer + "' wurde als Proxy-Druckername erkannt => HvPrinterProxy wird erstellt");
+			return new HvPrinterProxy(printer);
+		}
+		
+		myLogger.info("Druckername '" + printer + "' wurde als lokaler Drucker erkannt => HvPrinterJRExport wird erstellt");
+		return new HvPrinterJRExport(printer);
+	}
+
+	private String getDefaultPrintername(String optionalPrinter, Format format, TheClientDto theClientDto) {
+		if(Helper.isStringEmpty(optionalPrinter)) {
+			optionalPrinter = getPrinterNameByArbeitsplatzparameterOhneExc(
+					format.equals(Format.Page) 
+						? ParameterFac.ARBEITSPLATZPARAMETER_DEFAULT_MOBIL_DRUCKERNAME_SEITE
+						: ParameterFac.ARBEITSPLATZPARAMETER_DEFAULT_MOBIL_DRUCKERNAME_ETIKETT, theClientDto);
+		}
+
+		if(Helper.isStringEmpty(optionalPrinter)) {
+			optionalPrinter = format.equals(Format.Page)
+					? getParameterFac().getDefaultMobilDruckernameSeite(theClientDto.getMandant())
+					: getParameterFac().getDefaultMobilDruckernameEtikett(theClientDto.getMandant());
+		}
+		return optionalPrinter;
+	}
+	
+	public void printMobile(JasperPrintLP print, HvPrinter hvPrinter) {
+		if(print == null || hvPrinter == null) return;
+
+		JasperPrint jprint = print.getPrint();
+		if (jprint.getPages().size() > 0) {
+			hvPrinter.print(print);
+		}
+	}
+	
+	// TODO Das ist noch nicht wirklich gut!
+	// Problem: bei printMobile wird geprueft, ob der Druck ueberhaupt seiten hat,
+	// beim printMobileMehrere kann das nicht ueberprueft werden. 
+	// Daher sollte eigentlich auch der hvPrinter.print() das selbst pruefen
+	@Override
+	public void printMobileMehrere(JasperPrintLP[] prints, HvPrinter hvPrinter) {
+		if(prints == null || prints.length == 0 || hvPrinter == null) return;
+		hvPrinter.print(prints);
+	}
+	
+	private class ArbeitsplatzDruckerResult {
+		private String pcName;
+		private String printerName;
+		
+		public ArbeitsplatzDruckerResult(String pcName, String printerName) {
+			this.pcName = pcName;
+			this.printerName = printerName;
+		}
+		public ArbeitsplatzDruckerResult(String pcName) {
+			this.pcName = pcName;
+		}		
+		public String getPcName() {
+			return pcName;
+		}
+		public String getPrinterName() {
+			return printerName;
+		}
+		public boolean hasPrinterName() {
+			return !Helper.isStringEmpty(getPrinterName());
+		}
+	}
 }

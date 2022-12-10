@@ -52,9 +52,12 @@ import com.lp.util.Helper;
 		@NamedQuery(name = "BestellpositionejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Bestellposition o WHERE o.bestellungIId=?1"),
 		@NamedQuery(name = "BestellpositionfindAll", query = "SELECT OBJECT(o) FROM Bestellposition o ORDER BY o.iId"),
 		@NamedQuery(name = "BestellpositionfindByBestellung", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.bestellungIId=?1 ORDER BY o.iSort"),
+		@NamedQuery(name = "BestellpositionfindByKundeIId", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.kundeIId=?1"),
+		@NamedQuery(name = "BestellpositionfindByBestellungIIdArtikelIId", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.bestellungIId=?1 AND o.artikelIId=?2"),
 		@NamedQuery(name = "BestellpositionfindByArtikelOrderByTAuftragsbestaetigungstermin", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.artikelIId=?1 AND o.tAuftragsbestaetigungstermin is not null ORDER BY o.tAuftragsbestaetigungstermin ASC"),
+		@NamedQuery(name = "BestellpositionfindByArtikelOrderByTAuftragsbestaetigungstermin2", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.artikelIId=?1 ORDER BY o.tAuftragsbestaetigungstermin ASC"),
 		@NamedQuery(name = "BestellpositionfindByBestellungIIdBestellpositionIIdRahmenposition", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.bestellungIId=?1 AND o.bestellpositionIIdRahmenposition=?2"),
-		@NamedQuery(name = "BestellpositionfindByPositionIIdArtikelset", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.positionIIdArtikelset=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0 ORDER BY o.iSort ASC"),
+		@NamedQuery(name = BestellpositionQuery.ByPositionIIdArtikelset, query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.positionIIdArtikelset=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "BestellpositionfindByBestellungMengeNotNull", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.bestellungIId=?1 AND o.nMenge IS NOT NULL"),
 		@NamedQuery(name = "BestellpositionfindByLossollmaterialIId", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.lossollmaterialIId=?1"),
 		@NamedQuery(name = "BestellpositionfindByBestellpositionIIdRahmenposition", query = "SELECT OBJECT (o) FROM Bestellposition o WHERE o.bestellpositionIIdRahmenposition=?1") })
@@ -71,6 +74,17 @@ public class Bestellposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "B_NETTOPREISUEBERSTEUERT")
 	private Short bNettopreisuebersteuert;
 
+	@Column(name = "B_WEP_INFO_AN_ANFORDERER")
+	private Short bWepinfoAnAnforderer;
+	
+	public Short getBWepinfoAnAnforderer() {
+		return bWepinfoAnAnforderer;
+	}
+
+	public void setBWepinfoAnAnforderer(Short bWepinfoAnAnforderer) {
+		this.bWepinfoAnAnforderer = bWepinfoAnAnforderer;
+	}
+	
 	@Column(name = "C_BEZ")
 	private String cBez;
 
@@ -107,6 +121,29 @@ public class Bestellposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "N_MATERIALZUSCHLAG")
 	private BigDecimal nMaterialzuschlag;
 
+	@Column(name = "N_ANZAHLGEBINDE")
+	private BigDecimal nAnzahlgebinde;
+
+	public BigDecimal getNAnzahlgebinde() {
+		return nAnzahlgebinde;
+	}
+
+	public void setNAnzahlgebinde(BigDecimal nAnzahlgebinde) {
+		this.nAnzahlgebinde = nAnzahlgebinde;
+	}
+	
+	
+	@Column(name = "GEBINDE_I_ID")
+	private Integer gebindeIId;
+	
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
+	}
+	
 	@Column(name = "KUNDE_I_ID")
 	private Integer kundeIId;
 
@@ -148,6 +185,17 @@ public class Bestellposition implements Serializable, IISort, IPositionIIdArtike
 
 	@Column(name = "T_AUFTRAGSBESTAETIGUNGSTERMIN")
 	private Date tAuftragsbestaetigungstermin;
+	
+	@Column(name = "T_AB_BELEGDATUM")
+	private Date tAbBelegdatum;
+
+	public Date getTAbBelegdatum() {
+		return tAbBelegdatum;
+	}
+
+	public void setTAbBelegdatum(Date tAbBelegdatum) {
+		this.tAbBelegdatum = tAbBelegdatum;
+	}
 
 	@Column(name = "C_ABKOMMENTAR")
 	private String cAbkommentar;
@@ -261,13 +309,14 @@ public class Bestellposition implements Serializable, IISort, IPositionIIdArtike
 		Timestamp t = new Timestamp(System.currentTimeMillis());
 		setTUebersteuerterliefertermin(t);
 		setBestellpositionstatusCNr(bestellpositionstatusCNr);
+		setBWepinfoAnAnforderer(Helper.boolean2Short(false));
 	}
 
 	public Bestellposition(Integer id, Integer bestellungIId,
 			String bestellpositionartCNr, Short artikelbezuebersteuert,
 			Short mwstsatzuebersteuert, Timestamp uebersteuerterliefertermin,
 			Short drucken, String bestellpositionstatusCNr,
-			Short bNettopreisuebersteuert) {
+			Short bNettopreisuebersteuert,Short bWepinfoAnAnforderer) {
 		setIId(id);
 		setBestellpositionartCNr(bestellpositionartCNr);
 		setBestellungIId(bestellungIId);
@@ -277,6 +326,7 @@ public class Bestellposition implements Serializable, IISort, IPositionIIdArtike
 		setTUebersteuerterliefertermin(uebersteuerterliefertermin);
 		setBestellpositionstatusCNr(bestellpositionstatusCNr);
 		setBNettopreisuebersteuert(bNettopreisuebersteuert);
+		setBWepinfoAnAnforderer(bWepinfoAnAnforderer);
 	}
 
 	public Integer getIId() {

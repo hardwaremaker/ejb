@@ -49,30 +49,43 @@ public interface PartnerReportFac {
 	// reports
 	public final static String REPORT_PART_SERIENBRIEF = "part_serienbrief.jasper";
 	public final static String REPORT_PART_KURZBRIEF = "part_kurzbrief.jasper";
+	public final static String REPORT_PART_LASTSCHRIFT = "part_lastschrift.jasper";
 	public final static String REPORT_PART_ADRESSETIKETT = "part_adressetikett.jasper";
 	public final static String REPORT_PART_PARTNERSTAMMBLATT = "part_partnerstammblatt.jasper";
 	public final static String REPORT_PART_EMPFAENGERLISTE = "part_empfaengerliste.jasper";
 	public final static String REPORT_PART_GEBURTSTAGSLISTE = "part_geburtstagsliste.jasper";
+	public final static String REPORT_PART_BEAUSKUNFTUNG = "part_beauskunftung.jasper";
+
+	public final static String REPORT_PART_NEWSLETTER_AENDERUNG = "part_newsletter_aenderung.jasper";
 
 	public final static String REPORT_KUNDE_LIEFERSTATISTIK = "part_kunde_lieferstatistik.jasper";
 	public final static String REPORT_KUNDE_MONATSSTATISTIK = "part_kunde_monatsstatistik.jasper";
 	public final static String REPORT_KUNDE_UMSATZSTATISTIK = "part_kunde_umsatzstatistik";
 
-	public JasperPrintLP printAdressetikett(Integer partnerIId,
-			Integer ansprechpartnerIId, TheClientDto theClientDto) throws RemoteException;
+	public static int REPORT_ADRESSETIKETT_OPTION_PARTNER = 0;
+	public static int REPORT_ADRESSETIKETT_OPTION_KUNDE = 1;
+	public static int REPORT_ADRESSETIKETT_OPTION_LIEFERANT = 2;
 
-	public int faxeSerienbrief(Integer serienbriefIId, String sAbsender,
+	public JasperPrintLP printAdressetikett(Integer partnerIId,
+			Integer ansprechpartnerIId, int iOption, TheClientDto theClientDto)
+			throws RemoteException;
+
+	public int faxeSerienbrief(Integer serienbriefIId, SerienbriefEmpfaengerDto[] serienbriefEmpfaengerDtos, String sAbsender,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public int maileSerienbrief(Integer serienbriefIId, String sAbsenderEmail,
-			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
+	MaileSerienbriefResponse maileSerienbrief(Integer serienbriefIId,SerienbriefEmpfaengerDto[] serienbriefEmpfaengerDtos,
+			String sAbsenderEmail, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP;
 
-	public JasperPrintLP druckeSerienbrief(Integer serienbriefIId,
+	public JasperPrintLP druckeSerienbrief(Integer serienbriefIId,SerienbriefEmpfaengerDto[] serienbriefEmpfaengerDtos,
 			boolean bMitLogo, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
+	public SerienbriefEmpfaengerDto[] getSerienbriefEmpfaenger(Integer serienbriefIId, TheClientDto theClientDto)throws RemoteException;
+	
 	public SerienbriefEmpfaengerDto[] getSerienbriefEmpfaenger(
-			Integer serienbriefIId, TheClientDto theClientDto) throws RemoteException;
+			Integer serienbriefIId, String localeCNr, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public JasperPrintLP printEmpfaengerliste(Integer serienbriefIId,
 			TheClientDto theClientDto) throws RemoteException;
@@ -80,12 +93,24 @@ public interface PartnerReportFac {
 	public JasperPrintLP printKurzbrief(KurzbriefDto kurzbriefDtoI,
 			TheClientDto theClientDto, Integer iIdPartnerI, boolean bMitLogo)
 			throws EJBExceptionLP, RemoteException;
-	public JasperPrintLP printSerienbrief(SerienbriefDto kurzbriefDtoI,Integer ansprechpartnerIId,
-			TheClientDto theClientDto, Integer iIdPartnerI, boolean bMitLogo)
-			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printSerienbrief(SerienbriefDto kurzbriefDtoI,
+			Integer ansprechpartnerIId, TheClientDto theClientDto,
+			Integer iIdPartnerI, boolean bMitLogo) throws EJBExceptionLP,
+			RemoteException;
+
 	public JasperPrintLP printPartnerstammblatt(Integer partnerIId,
 			TheClientDto theClientDto);
+
 	public JasperPrintLP printGeburtstagsliste(java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, TheClientDto theClientDto);
+
+	public JasperPrintLP printNewsletterAenderung(Integer partnerIId,
+			TheClientDto theClientDto);
+
+	public JasperPrintLP printLastschrift(Integer partnerbankIId,boolean bMitLogo,
+			TheClientDto theClientDto);
+
+	public JasperPrintLP printBeauskunftung(Integer partnerIId, Integer beauskunftungIId, TheClientDto theClientDto);
 	
 }

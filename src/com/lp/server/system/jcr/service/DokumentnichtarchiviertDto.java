@@ -34,8 +34,6 @@ package com.lp.server.system.jcr.service;
 
 import java.io.Serializable;
 
-import com.lp.server.system.jcr.ejb.Dokumentnichtarchiviert;
-
 public class DokumentnichtarchiviertDto implements Serializable {
 	/**
 	 * 
@@ -49,11 +47,6 @@ public class DokumentnichtarchiviertDto implements Serializable {
 	public DokumentnichtarchiviertDto(String mandantCNr,String cReportname){
 		this.mandantCNr=mandantCNr;
 		this.cReportname = cReportname;
-	}
-	
-	public DokumentnichtarchiviertDto(Dokumentnichtarchiviert dokumentnichtarchiviert){
-		this.mandantCNr=dokumentnichtarchiviert.getMandantCNr();
-		this.cReportname = dokumentnichtarchiviert.getCReportname();
 	}
 	
 	public String getCNr(){

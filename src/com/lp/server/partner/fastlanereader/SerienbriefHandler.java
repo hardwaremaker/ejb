@@ -274,6 +274,10 @@ public class SerienbriefHandler extends UseCaseHandler {
 		QueryResult result = null;
 		int rowNumber = 0;
 
+		if(selectedId instanceof String) {
+			myLogger.error("wrong type, should be Integer, has value '" + (String) selectedId + "'");
+			selectedId = null ;
+		}
 		if (selectedId != null && ((Integer) selectedId).intValue() >= 0) {
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			Session session = null;

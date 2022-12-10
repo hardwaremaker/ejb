@@ -57,6 +57,7 @@ public class AnwenderDtoAssembler {
 			anwenderDto.setTSubscription(anwender.getTSubscription());
 			anwenderDto.setOCode(anwender.getOCode());
 			anwenderDto.setOHash(anwender.getOHash());
+			anwenderDto.setServerId(anwender.getServerId());
 		}
 		return anwenderDto;
 /* AD

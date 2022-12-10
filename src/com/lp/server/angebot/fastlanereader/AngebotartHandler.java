@@ -99,7 +99,7 @@ public class AngebotartHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = AngebotartHandler.PAGE_SIZE;
+			int pageSize = PAGE_SIZE;
 			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
 			int endIndex = startIndex + pageSize - 1;
 

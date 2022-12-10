@@ -41,10 +41,23 @@ public class Validator {
 	 * 
 	 * @param value der zu pruefende Wert
 	 * @param nullParameterName ist der Name des Methoden-Parameters der null ist
-	 * @throws EJBExceptionLP wenn value == null
+	 * @throws EJBExceptionLP.FEHLER_PARAMETER_IS_NULL wenn value == null
 	 */
 	public static void notNull(Object value, String nullParameterName) throws EJBExceptionLP {
 		if(value == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception(nullParameterName + " == null")) ;
+		}
+	}
+
+	/**
+	 * Value einer KeyId darf nicht null sein
+	 * 
+	 * @param value der zu pruefende Wert
+	 * @param nullParameterName ist der Name des Methoden-Parameters der null ist
+	 * @throws EJBExceptionLP.FEHLER_PARAMETER_IS_NULL wenn value == null oder die dahinterliegende Id == null
+	 */
+	public static void notNull(BaseIntegerKey value, String nullParameterName) throws EJBExceptionLP {
+		if(value == null || !value.isValid()) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception(nullParameterName + " == null")) ;
 		}
 	}
@@ -113,6 +126,104 @@ public class Validator {
 		if(value == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 				new Exception(errorMessage));
+		}
+	}
+	
+	/**
+	 * Betrachtet value als PK-Field und prueft dieses auf != null
+	 * 
+	 * @param value ist das zu pruefende PK Field
+	 * @param nullParameterName der Name des Parameters
+	 * @throws EJBExceptionLP wenn value == null
+	 */
+	public static void pkFieldNotNull(String value, String nullParameterName) {
+		if(value == null || value.trim().isEmpty()) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+				new Exception(nullParameterName + " == null"));
+		}
+	}
+
+	/**
+	 * Betrachtet value als PK-Field und prueft dieses auf != null
+	 * 
+	 * @param value ist das zu pruefende PK Field
+	 * @param errorMessage die Nachricht die ausgegeben werden soll
+	 * @throws EJBExceptionLP wenn value == null
+	 */
+	public static void pkFieldNotNullUserMessage(String value, String errorMessage) {
+		if(value == null || value.trim().isEmpty()) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+				new Exception(errorMessage));
+		}
+	}
+	
+	/**
+	 * Betrachtet value als PK-Field und prueft dieses auf != null
+	 * 
+	 * @param key ist das zu pruefende PK Field, weder key noch 
+	 * die key.id() darf null sein
+	 * @param errorMessage die Nachricht die ausgegeben werden soll
+	 * @throws EJBExceptionLP wenn value == null
+	 */
+	public static BaseIntegerKey pkFieldNotNull(
+			BaseIntegerKey key, String parameterName) {
+		if (key == null || !key.isValid()) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception(parameterName + " == null"));
+		}
+		
+		return key;
+	}
+	
+	public static void dtoNotNull(Object dto,  String dtoName) {
+		if (dto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception(dtoName + " == null"));
+		}
+	}
+	
+	/**
+	 * Ueberprueft, ob die Entity gefunden wurde (!= null ist)
+	 * 
+	 * @param entity die zu pruefende Entity
+	 * @param key ist der primary key der gesuchten Entity
+	 * @throws EJBExceptionLP wenn die Entity nicht gefunden wurde
+	 */
+	public static void entityFound(Object entity, Integer key) {
+		if(entity == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, key.toString());
+		}
+	}
+	
+	/**
+	 * &Uuml;berpr&uuml;ft, ob die Entity gefunden wurde (!= null ist)
+	 * 
+	 * @param entity die zu pr&uuml;fende Entity
+	 * @param key ist der primary key der gesuchten Entity
+	 * @throws EJBExceptionLP wenn die Entity nicht gefunden wurde
+	 */
+	public static void entityFoundCnr(Object entity, String key) {
+		if(entity == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, key);
+		}
+	}
+	
+	public static <T> T entityFound(HvOptional<T> entity, Integer key) {
+		if (entity.isPresent()) return entity.get();
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, key.toString());
+	}
+	
+	public static <T> T entityFound(HvOptional<T> entity, BaseIntegerKey key) {
+		if (entity.isPresent()) return entity.get();
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, key.id().toString());
+	}
+
+	
+	public static void pkFieldValid(BaseIntegerKey key, String nullParameterName) {
+		if (!key.isValid()) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception(nullParameterName + " == null"));
 		}
 	}
 }

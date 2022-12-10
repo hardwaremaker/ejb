@@ -47,6 +47,7 @@ public class StandarddruckerDtoAssembler {
 			standarddruckerDto.setCPc(standarddrucker.getCPc());
 			standarddruckerDto.setCReportname(standarddrucker.getCReportname());
 			standarddruckerDto.setCDrucker(standarddrucker.getCDrucker());
+			standarddruckerDto.setCDruckerKopien(standarddrucker.getCDruckerKopien());
 			standarddruckerDto.setMandantCNr(standarddrucker.getMandantCNr());
 			standarddruckerDto.setReportvarianteIId(standarddrucker
 					.getReportvarianteIId());

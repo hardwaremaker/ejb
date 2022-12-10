@@ -38,17 +38,81 @@ import java.sql.Timestamp;
 
 import com.lp.server.lieferschein.service.LieferscheinpositionDto;
 import com.lp.service.BelegpositionVerkaufDto;
+import com.lp.util.Helper;
 
-public class AuftragpositionDto extends BelegpositionVerkaufDto implements
-		Serializable {
-	/**
-	 * 
-	 */
+public class AuftragpositionDto extends BelegpositionVerkaufDto implements Serializable {
+	
+
+	public AuftragpositionDto(){
+		super();
+	}
+	public AuftragpositionDto(BelegpositionVerkaufDto belegpositionVerkaufDto){
+		super();
+		this.setFRabattsatz(belegpositionVerkaufDto.getFRabattsatz());
+		this.setBRabattsatzuebersteuert(belegpositionVerkaufDto.getBRabattsatzuebersteuert());
+		this.setFZusatzrabattsatz(belegpositionVerkaufDto.getFZusatzrabattsatz());
+		this.setMwstsatzIId(belegpositionVerkaufDto.getMwstsatzIId());
+		this.setBMwstsatzuebersteuert(belegpositionVerkaufDto.getBMwstsatzuebersteuert());
+		this.setNEinzelpreis(belegpositionVerkaufDto.getNEinzelpreis());
+		this.setNEinzelpreisplusversteckteraufschlag(belegpositionVerkaufDto.getNEinzelpreisplusversteckteraufschlag());
+		this.setNNettoeinzelpreis(belegpositionVerkaufDto.getNNettoeinzelpreis());
+		this.setNNettoeinzelpreisplusversteckteraufschlag(belegpositionVerkaufDto.getNNettoeinzelpreisplusversteckteraufschlag());
+		this.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(belegpositionVerkaufDto.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+		this.setNBruttoeinzelpreis(belegpositionVerkaufDto.getNBruttoeinzelpreis());
+		this.setPositioniId(belegpositionVerkaufDto.getPositioniId());
+		this.setTypCNr(belegpositionVerkaufDto.getTypCNr());
+		this.setBNettopreisuebersteuert(belegpositionVerkaufDto.getBNettopreisuebersteuert());
+		this.setIId(belegpositionVerkaufDto.getIId());
+		this.setBelegIId(belegpositionVerkaufDto.getBelegIId());
+		this.setISort(belegpositionVerkaufDto.getISort());
+		this.setPositionsartCNr(belegpositionVerkaufDto.getPositionsartCNr());
+		this.setArtikelIId(belegpositionVerkaufDto.getArtikelIId());
+		this.setCBez(belegpositionVerkaufDto.getCBez());
+		this.setCZusatzbez(belegpositionVerkaufDto.getCZusatzbez());
+		this.setBArtikelbezeichnunguebersteuert(belegpositionVerkaufDto.getBArtikelbezeichnunguebersteuert());
+		this.setXTextinhalt(belegpositionVerkaufDto.getXTextinhalt());
+		this.setMediastandardIId(belegpositionVerkaufDto.getMediastandardIId());
+		this.setNMenge(belegpositionVerkaufDto.getNMenge());
+		this.setEinheitCNr(belegpositionVerkaufDto.getEinheitCNr());
+		this.setZwsVonPosition(belegpositionVerkaufDto.getZwsVonPosition()) ;
+		this.setZwsBisPosition(belegpositionVerkaufDto.getZwsBisPosition()) ;
+	}
+	
+	
 	private static final long serialVersionUID = 1L;
 	private String auftragpositionstatusCNr;
 	private BigDecimal nOffeneMenge;
 	private BigDecimal nOffeneRahmenMenge;
-	
+
+	private Short bPauschal;
+
+	public Short getBPauschal() {
+		return bPauschal;
+	}
+
+	public void setBPauschal(Short bPauschal) {
+		this.bPauschal = bPauschal;
+	}
+
+	private Short bGesehen;
+
+	public Short getBGesehen() {
+		return bGesehen;
+	}
+
+	public void setBGesehen(Short bGesehen) {
+		this.bGesehen = bGesehen;
+	}
+
+	private Short bHvmauebertragen;
+
+	public Short getBHvmauebertragen() {
+		return bHvmauebertragen;
+	}
+
+	public void setBHvmauebertragen(Short bHvmauebertragen) {
+		this.bHvmauebertragen = bHvmauebertragen;
+	}
 
 	private Timestamp tUebersteuerbarerLiefertermin;
 	private Short bDrucken;
@@ -73,6 +137,15 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 		this.nOffeneRahmenMenge = nOffeneRahmenMenge;
 	}
 
+	private Integer bestellpositionIId;
+
+	public Integer getBestellpositionIId() {
+		return bestellpositionIId;
+	}
+
+	public void setBestellpositionIId(Integer bestellpositionIId) {
+		this.bestellpositionIId = bestellpositionIId;
+	}
 
 	public BigDecimal getBdEinkaufpreis() {
 		return nEinkaufpreis;
@@ -102,8 +175,7 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 		return this.auftragpositionIIdRahmenposition;
 	}
 
-	public void setAuftragpositionIIdRahmenposition(
-			Integer auftragpositionIIdRahmenposition) {
+	public void setAuftragpositionIIdRahmenposition(Integer auftragpositionIIdRahmenposition) {
 		this.auftragpositionIIdRahmenposition = auftragpositionIIdRahmenposition;
 	}
 
@@ -139,16 +211,14 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 			return false;
 		}
 		AuftragpositionDto that = (AuftragpositionDto) obj;
-		if (!(that.getIId() == null ? this.getIId() == null : that.getIId()
-				.equals(this.getIId()))) {
+		if (!(that.getIId() == null ? this.getIId() == null : that.getIId().equals(this.getIId()))) {
 			return false;
 		}
-		if (!(that.getBelegIId() == null ? this.getBelegIId() == null : that
-				.getBelegIId().equals(this.getBelegIId()))) {
+		if (!(that.getBelegIId() == null ? this.getBelegIId() == null
+				: that.getBelegIId().equals(this.getBelegIId()))) {
 			return false;
 		}
-		if (!(that.getISort() == null ? this.getISort() == null : that
-				.getISort().equals(this.getISort()))) {
+		if (!(that.getISort() == null ? this.getISort() == null : that.getISort().equals(this.getISort()))) {
 			return false;
 		}
 		if (!(that.getPositionsartCNr() == null ? this.getPositionsartCNr() == null
@@ -159,16 +229,14 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 				: that.getArtikelIId().equals(this.getArtikelIId()))) {
 			return false;
 		}
-		if (!(that.getCBez() == null ? this.getCBez() == null : that.getCBez()
-				.equals(this.getCBez()))) {
+		if (!(that.getCBez() == null ? this.getCBez() == null : that.getCBez().equals(this.getCBez()))) {
 			return false;
 		}
 		if (!(that.getCZusatzbez() == null ? this.getCZusatzbez() == null
 				: that.getCZusatzbez().equals(this.getCZusatzbez()))) {
 			return false;
 		}
-		if (!(that.getNMenge() == null ? this.getNMenge() == null : that
-				.getNMenge().equals(this.getNMenge()))) {
+		if (!(that.getNMenge() == null ? this.getNMenge() == null : that.getNMenge().equals(this.getNMenge()))) {
 			return false;
 		}
 		if (!(that.getEinheitCNr() == null ? this.getEinheitCNr() == null
@@ -183,14 +251,11 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 				: that.getMwstsatzIId().equals(this.getMwstsatzIId()))) {
 			return false;
 		}
-		if (!(that.bDrucken == null ? this.bDrucken == null : that.bDrucken
-				.equals(this.bDrucken))) {
+		if (!(that.bDrucken == null ? this.bDrucken == null : that.bDrucken.equals(this.bDrucken))) {
 			return false;
 		}
-		if (!(that.getBArtikelbezeichnunguebersteuert() == null ? this
-				.getBArtikelbezeichnunguebersteuert() == null : that
-				.getBArtikelbezeichnunguebersteuert().equals(
-						this.getBArtikelbezeichnunguebersteuert()))) {
+		if (!(that.getBArtikelbezeichnunguebersteuert() == null ? this.getBArtikelbezeichnunguebersteuert() == null
+				: that.getBArtikelbezeichnunguebersteuert().equals(this.getBArtikelbezeichnunguebersteuert()))) {
 			return false;
 		}
 		if (!(that.getXTextinhalt() == null ? this.getXTextinhalt() == null
@@ -198,24 +263,18 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 			return false;
 		}
 		if (!(that.tUebersteuerbarerLiefertermin == null ? this.tUebersteuerbarerLiefertermin == null
-				: that.tUebersteuerbarerLiefertermin
-						.equals(this.tUebersteuerbarerLiefertermin))) {
+				: that.tUebersteuerbarerLiefertermin.equals(this.tUebersteuerbarerLiefertermin))) {
 			return false;
 		}
-		if (!(that.getBRabattsatzuebersteuert() == null ? this
-				.getBRabattsatzuebersteuert() == null : that
-				.getBRabattsatzuebersteuert().equals(
-						this.getBRabattsatzuebersteuert()))) {
+		if (!(that.getBRabattsatzuebersteuert() == null ? this.getBRabattsatzuebersteuert() == null
+				: that.getBRabattsatzuebersteuert().equals(this.getBRabattsatzuebersteuert()))) {
 			return false;
 		}
-		if (!(that.getBMwstsatzuebersteuert() == null ? this
-				.getBMwstsatzuebersteuert() == null : that
-				.getBMwstsatzuebersteuert().equals(
-						this.getBMwstsatzuebersteuert()))) {
+		if (!(that.getBMwstsatzuebersteuert() == null ? this.getBMwstsatzuebersteuert() == null
+				: that.getBMwstsatzuebersteuert().equals(this.getBMwstsatzuebersteuert()))) {
 			return false;
 		}
-		if (!(that.nOffeneMenge == null ? this.nOffeneMenge == null
-				: that.nOffeneMenge.equals(this.nOffeneMenge))) {
+		if (!(that.nOffeneMenge == null ? this.nOffeneMenge == null : that.nOffeneMenge.equals(this.nOffeneMenge))) {
 			return false;
 		}
 		if (!(that.nOffeneRahmenMenge == null ? this.nOffeneRahmenMenge == null
@@ -223,8 +282,7 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 			return false;
 		}
 		if (!(that.auftragpositionstatusCNr == null ? this.auftragpositionstatusCNr == null
-				: that.auftragpositionstatusCNr
-						.equals(this.auftragpositionstatusCNr))) {
+				: that.auftragpositionstatusCNr.equals(this.auftragpositionstatusCNr))) {
 			return false;
 		}
 		if (!(that.cSeriennrchargennr == null ? this.cSeriennrchargennr == null
@@ -247,8 +305,7 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 		result = 37 * result + this.getFRabattsatz().hashCode();
 		result = 37 * result + this.getMwstsatzIId().hashCode();
 		result = 37 * result + this.bDrucken.hashCode();
-		result = 37 * result
-				+ this.getBArtikelbezeichnunguebersteuert().hashCode();
+		result = 37 * result + this.getBArtikelbezeichnunguebersteuert().hashCode();
 		result = 37 * result + this.getCZusatzbez().hashCode();
 		result = 37 * result + this.getXTextinhalt().hashCode();
 		result = 37 * result + this.tUebersteuerbarerLiefertermin.hashCode();
@@ -297,8 +354,7 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 		auftragpositionDto.auftragpositionstatusCNr = AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN;
 		auftragpositionDto.setArtikelIId(this.getArtikelIId());
 		auftragpositionDto.setCBez(this.getCBez());
-		auftragpositionDto.setBArtikelbezeichnunguebersteuert(this
-				.getBArtikelbezeichnunguebersteuert());
+		auftragpositionDto.setBArtikelbezeichnunguebersteuert(this.getBArtikelbezeichnunguebersteuert());
 		auftragpositionDto.setCZusatzbez(this.getCZusatzbez());
 		auftragpositionDto.setXTextinhalt(this.getXTextinhalt());
 		auftragpositionDto.setMediastandardIId(this.getMediastandardIId());
@@ -306,32 +362,34 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 		auftragpositionDto.nOffeneMenge = this.getNMenge(); // !!!
 		auftragpositionDto.setEinheitCNr(this.getEinheitCNr());
 		auftragpositionDto.setFRabattsatz(this.getFRabattsatz());
-		auftragpositionDto.setBRabattsatzuebersteuert(this
-				.getBRabattsatzuebersteuert());
+		auftragpositionDto.setBRabattsatzuebersteuert(this.getBRabattsatzuebersteuert());
 		auftragpositionDto.setFZusatzrabattsatz(this.getFZusatzrabattsatz());
 		auftragpositionDto.setMwstsatzIId(this.getMwstsatzIId());
-		auftragpositionDto.setBMwstsatzuebersteuert(this
-				.getBMwstsatzuebersteuert());
-		auftragpositionDto.setBNettopreisuebersteuert(this
-				.getBNettopreisuebersteuert());
+		auftragpositionDto.setBMwstsatzuebersteuert(this.getBMwstsatzuebersteuert());
+		auftragpositionDto.setBNettopreisuebersteuert(this.getBNettopreisuebersteuert());
 		auftragpositionDto.setNEinzelpreis(this.getNEinzelpreis());
 		auftragpositionDto.setKostentraegerIId(this.getKostentraegerIId());
 		auftragpositionDto.setCLvposition(this.getCLvposition());
-		auftragpositionDto.setNEinzelpreisplusversteckteraufschlag(this
-				.getNEinzelpreisplusversteckteraufschlag());
+		auftragpositionDto.setNEinzelpreisplusversteckteraufschlag(this.getNEinzelpreisplusversteckteraufschlag());
 		auftragpositionDto.setNRabattbetrag(this.getNRabattbetrag());
 		auftragpositionDto.setNNettoeinzelpreis(this.getNNettoeinzelpreis());
-		auftragpositionDto.setNNettoeinzelpreisplusversteckteraufschlag(this
-				.getNNettoeinzelpreisplusversteckteraufschlag());
 		auftragpositionDto
-				.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(this
-						.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+				.setNNettoeinzelpreisplusversteckteraufschlag(this.getNNettoeinzelpreisplusversteckteraufschlag());
+		auftragpositionDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+				this.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
 		auftragpositionDto.setNMwstbetrag(this.getNMwstbetrag());
 		auftragpositionDto.setNBruttoeinzelpreis(this.getNBruttoeinzelpreis());
 		auftragpositionDto.tUebersteuerbarerLiefertermin = this.tUebersteuerbarerLiefertermin;
 		auftragpositionDto.bDrucken = this.bDrucken;
 		auftragpositionDto.setTypCNr(this.getTypCNr());
 		auftragpositionDto.setLieferantIId(this.getLieferantIId());
+		auftragpositionDto.setBdEinkaufpreis(this.getBdEinkaufpreis());
+		
+		auftragpositionDto.setNDimMenge(this.getNDimMenge());
+		auftragpositionDto.setNDimBreite(this.getNDimBreite());
+		auftragpositionDto.setNDimHoehe(this.getNDimHoehe());
+		auftragpositionDto.setNDimTiefe(this.getNDimTiefe());
+		
 		return auftragpositionDto;
 	}
 
@@ -347,85 +405,145 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 		// iId null
 		// lieferscheinIId null
 		lieferscheinpositionDto.setISort(this.getISort());
-		lieferscheinpositionDto.setLieferscheinpositionartCNr(this
-				.getPositionsartCNr());
+		lieferscheinpositionDto.setLieferscheinpositionartCNr(this.getPositionsartCNr());
 		lieferscheinpositionDto.setArtikelIId(this.getArtikelIId());
 		// Serien- Chargennummer aus UI
 		lieferscheinpositionDto.setCBez(this.getCBez());
 		lieferscheinpositionDto.setCZusatzbez(this.getCZusatzbez());
-		lieferscheinpositionDto.setBArtikelbezeichnunguebersteuert(this
-				.getBArtikelbezeichnunguebersteuert());
+		lieferscheinpositionDto.setBArtikelbezeichnunguebersteuert(this.getBArtikelbezeichnunguebersteuert());
 		// cZusatzbezeichnung: dieses Feld gibt es nicht auf der DB
 		lieferscheinpositionDto.setXTextinhalt(this.getXTextinhalt());
 		lieferscheinpositionDto.setMediastandardIId(this.getMediastandardIId());
 		lieferscheinpositionDto.setNMenge(this.getNMenge());
 		lieferscheinpositionDto.setEinheitCNr(this.getEinheitCNr());
 		lieferscheinpositionDto.setFRabattsatz(this.getFRabattsatz());
-		lieferscheinpositionDto.setBRabattsatzuebersteuert(this
-				.getBRabattsatzuebersteuert());
-		lieferscheinpositionDto.setFZusatzrabattsatz(this
-				.getFZusatzrabattsatz());
+		lieferscheinpositionDto.setBRabattsatzuebersteuert(this.getBRabattsatzuebersteuert());
+		lieferscheinpositionDto.setFZusatzrabattsatz(this.getFZusatzrabattsatz());
 		lieferscheinpositionDto.setMwstsatzIId(this.getMwstsatzIId());
-		lieferscheinpositionDto.setBMwstsatzuebersteuert(this
-				.getBMwstsatzuebersteuert());
-		lieferscheinpositionDto.setBNettopreisuebersteuert(this
-				.getBNettopreisuebersteuert());
+		lieferscheinpositionDto.setBMwstsatzuebersteuert(this.getBMwstsatzuebersteuert());
+		lieferscheinpositionDto.setBNettopreisuebersteuert(this.getBNettopreisuebersteuert());
 		lieferscheinpositionDto.setNEinzelpreis(this.getNEinzelpreis());
-		lieferscheinpositionDto.setNEinzelpreis(this
-				.getNEinzelpreisplusversteckteraufschlag());
+		lieferscheinpositionDto.setNEinzelpreis(this.getNEinzelpreisplusversteckteraufschlag());
 		lieferscheinpositionDto.setNRabattbetrag(this.getNRabattbetrag());
-		lieferscheinpositionDto.setNNettoeinzelpreis(this
-				.getNNettoeinzelpreis());
-		lieferscheinpositionDto.setNMaterialzuschlag(this
-				.getNMaterialzuschlag());
+		lieferscheinpositionDto.setNNettoeinzelpreis(this.getNNettoeinzelpreis());
+		lieferscheinpositionDto.setNMaterialzuschlag(this.getNMaterialzuschlag());
 		lieferscheinpositionDto.setNMaterialzuschlagKurs(this.getNMaterialzuschlagKurs());
 		lieferscheinpositionDto.setTMaterialzuschlagDatum(this.getTMaterialzuschlagDatum());
 		lieferscheinpositionDto
-				.setNNettoeinzelpreisplusversteckteraufschlag(this
-						.getNNettoeinzelpreisplusversteckteraufschlag());
-		lieferscheinpositionDto
-				.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(this
-						.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+				.setNNettoeinzelpreisplusversteckteraufschlag(this.getNNettoeinzelpreisplusversteckteraufschlag());
+		lieferscheinpositionDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+				this.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
 		lieferscheinpositionDto.setNMwstbetrag(this.getNMwstbetrag());
-		lieferscheinpositionDto.setNBruttoeinzelpreis(this
-				.getNBruttoeinzelpreis());
+		lieferscheinpositionDto.setNBruttoeinzelpreis(this.getNBruttoeinzelpreis());
 		lieferscheinpositionDto.setAuftragpositionIId(this.getIId());
 		lieferscheinpositionDto.setTypCNr(this.getTypCNr());
 		lieferscheinpositionDto.setVerleihIId(this.getVerleihIId());
+		lieferscheinpositionDto.setKostentraegerIId(this.getKostentraegerIId());
+		
+		lieferscheinpositionDto.setNDimMenge(this.getNDimMenge());
+		lieferscheinpositionDto.setNDimBreite(this.getNDimBreite());
+		lieferscheinpositionDto.setNDimHoehe(this.getNDimHoehe());
+		lieferscheinpositionDto.setNDimTiefe(this.getNDimTiefe());
 
 		return lieferscheinpositionDto;
 	}
 
 	/**
 	 * Handelt es sich um eine Ident-Position?
+	 * 
 	 * @return true wenn es eine Artikelposition ist
 	 */
 	public boolean isIdent() {
-		return AuftragServiceFac.AUFTRAGPOSITIONART_IDENT.equalsIgnoreCase(getPositionsartCNr()) ;
+		return AuftragServiceFac.AUFTRAGPOSITIONART_IDENT.equalsIgnoreCase(getPositionsartCNr());
 	}
-	
+
 	/**
 	 * Handelt es sich um eine Handeingabe?
+	 * 
 	 * @return true wenn es sich um eine Handeingabe handelt
 	 */
 	public boolean isHandeingabe() {
-		return AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE.equalsIgnoreCase(getPositionsartCNr()) ;
+		return AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE.equalsIgnoreCase(getPositionsartCNr());
 	}
-	
+
 	/**
 	 * Handelt es sich um eine Position?
+	 * 
 	 * @return true wenn es eine "POSITION" ist
 	 */
 	public boolean isPosition() {
-		return AuftragServiceFac.AUFTRAGPOSITIONART_POSITION.equalsIgnoreCase(getPositionsartCNr()) ;		
+		return AuftragServiceFac.AUFTRAGPOSITIONART_POSITION.equalsIgnoreCase(getPositionsartCNr());
 	}
-	
+
 	/**
 	 * Handelt es sich um eine Intelligente Zwischensumme?
+	 * 
 	 * @return true wenn es eine intelligente Zwischensumme ist
 	 */
-	public boolean isIntelligenteZwischensumme() {
-		return AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME
-				.equalsIgnoreCase(getPositionsartCNr()) ;	
+//	public boolean isIntelligenteZwischensumme() {
+//		return AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME
+//				.equalsIgnoreCase(getPositionsartCNr()) ;	
+//	}
+
+	/**
+	 * Ist der Status der Auftragposition 'storniert'?
+	 * 
+	 * @return true, wenn der Status der Auftragposition auf storniert gesetzt ist
+	 */
+	public boolean isStorniert() {
+		return AuftragServiceFac.AUFTRAGPOSITIONSTATUS_STORNIERT.equalsIgnoreCase(getAuftragpositionstatusCNr());
+	}
+
+	/**
+	 * Ist der Status der Auftragposition 'erledigt'?</br>
+	 * <p>
+	 * Ber&uuml;cksichtigt keine Mengen
+	 * </p>
+	 * 
+	 * @return true, wenn der Status der Auftragposition auf erledigt gesetzt ist
+	 */
+	public boolean isErledigt() {
+		return AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT.equalsIgnoreCase(getAuftragpositionstatusCNr());
+	}
+
+	/**
+	 * Ist der Status der Auftragposition 'teilerledigt'?
+	 * 
+	 * @return true, wenn der Status der Auftragposition auf teilerledigt gesetzt
+	 *         ist
+	 */
+	public boolean isTeilerledigt() {
+		return AuftragServiceFac.AUFTRAGPOSITIONSTATUS_TEILERLEDIGT.equalsIgnoreCase(getAuftragpositionstatusCNr());
+	}
+
+	/**
+	 * Ist der Status der Auftragposition 'offen'?
+	 * 
+	 * @return true, wenn der Status der Auftragposition auf offen gesetzt ist
+	 */
+	public boolean isOffen() {
+		return AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN.equalsIgnoreCase(getAuftragpositionstatusCNr());
+	}
+
+	/**
+	 * Handelt es sich um eine Texteingabe-Position?
+	 * 
+	 * @return true wenn es eine Texteingabeposition ist
+	 */
+	public boolean isTexteingabe() {
+		return AuftragServiceFac.AUFTRAGPOSITIONART_TEXTEINGABE.equalsIgnoreCase(getPositionsartCNr());
+	}
+
+	/**
+	 * Handelt es sich um eine Textbaustein-Position?
+	 * 
+	 * @return true wenn es eine Textbausteinposition ist
+	 */
+	public boolean isTextbaustein() {
+		return AuftragServiceFac.AUFTRAGPOSITIONART_TEXTBAUSTEIN.equalsIgnoreCase(getPositionsartCNr());
+	}
+
+	public boolean isUebertragen() {
+		return Helper.isTrue(getBHvmauebertragen());
 	}
 }

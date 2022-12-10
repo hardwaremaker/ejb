@@ -40,43 +40,31 @@ import java.util.List;
 import com.lp.server.artikel.ejb.Artikellieferantstaffel;
 
 public class ArtikellieferantstaffelDtoAssembler {
-	public static ArtikellieferantstaffelDto createDto(
-			Artikellieferantstaffel artikellieferantstaffel) {
+	public static ArtikellieferantstaffelDto createDto(Artikellieferantstaffel artikellieferantstaffel) {
 		ArtikellieferantstaffelDto artikellieferantstaffelDto = new ArtikellieferantstaffelDto();
 		if (artikellieferantstaffel != null) {
 			artikellieferantstaffelDto.setIId(artikellieferantstaffel.getIId());
-			artikellieferantstaffelDto
-					.setArtikellieferantIId(artikellieferantstaffel
-							.getArtikellieferantIId());
-			artikellieferantstaffelDto.setNMenge(artikellieferantstaffel
-					.getNMenge());
-			artikellieferantstaffelDto.setFRabatt(artikellieferantstaffel
-					.getFRabatt());
-			artikellieferantstaffelDto
-					.setBRabattbehalten(artikellieferantstaffel
-							.getBRabattbehalten());
-			artikellieferantstaffelDto.setNNettopreis(artikellieferantstaffel
-					.getNNettopreis());
-			artikellieferantstaffelDto
-					.setTPreisgueltigab(artikellieferantstaffel
-							.getTPreisgueltigab());
-			artikellieferantstaffelDto
-					.setTPreisgueltigbis(artikellieferantstaffel
-							.getTPreisgueltigbis());
-			artikellieferantstaffelDto
-					.setIWiederbeschaffungszeit(artikellieferantstaffel
-							.getIWiederbeschaffungszeit());
-			artikellieferantstaffelDto
-					.setPersonalIIdAendern(artikellieferantstaffel
-							.getPersonalIIdAendern());
-			artikellieferantstaffelDto.setTAendern(artikellieferantstaffel
-					.getTAendern());
+			artikellieferantstaffelDto.setArtikellieferantIId(artikellieferantstaffel.getArtikellieferantIId());
+			artikellieferantstaffelDto.setNMenge(artikellieferantstaffel.getNMenge());
+			artikellieferantstaffelDto.setFRabatt(artikellieferantstaffel.getFRabatt());
+			artikellieferantstaffelDto.setBRabattbehalten(artikellieferantstaffel.getBRabattbehalten());
+			artikellieferantstaffelDto.setNNettopreis(artikellieferantstaffel.getNNettopreis());
+			artikellieferantstaffelDto.setTPreisgueltigab(artikellieferantstaffel.getTPreisgueltigab());
+			artikellieferantstaffelDto.setTPreisgueltigbis(artikellieferantstaffel.getTPreisgueltigbis());
+			artikellieferantstaffelDto.setIWiederbeschaffungszeit(artikellieferantstaffel.getIWiederbeschaffungszeit());
+			artikellieferantstaffelDto.setPersonalIIdAendern(artikellieferantstaffel.getPersonalIIdAendern());
+			artikellieferantstaffelDto.setTAendern(artikellieferantstaffel.getTAendern());
+			artikellieferantstaffelDto.setCAngebotnummer(artikellieferantstaffel.getCAngebotnummer());
+			artikellieferantstaffelDto.setCArtikelnrlieferant(artikellieferantstaffel.getCArtikelnrlieferant());
+			artikellieferantstaffelDto.setCBezbeilieferant(artikellieferantstaffel.getCBezbeilieferant());
+			artikellieferantstaffelDto.setEinheitCNrVpe(artikellieferantstaffel.getEinheitCNrVpe());
+			artikellieferantstaffelDto.setAnfragepositionlieferdatenIId(artikellieferantstaffel.getAnfragepositionlieferdatenIId());
+
 		}
 		return artikellieferantstaffelDto;
 	}
 
-	public static ArtikellieferantstaffelDto[] createDtos(
-			Collection<?> artikellieferantstaffels) {
+	public static ArtikellieferantstaffelDto[] createDtos(Collection<?> artikellieferantstaffels) {
 		List<ArtikellieferantstaffelDto> list = new ArrayList<ArtikellieferantstaffelDto>();
 		if (artikellieferantstaffels != null) {
 			Iterator<?> iterator = artikellieferantstaffels.iterator();
@@ -84,8 +72,7 @@ public class ArtikellieferantstaffelDtoAssembler {
 				list.add(createDto((Artikellieferantstaffel) iterator.next()));
 			}
 		}
-		ArtikellieferantstaffelDto[] returnArray = new ArtikellieferantstaffelDto[list
-				.size()];
+		ArtikellieferantstaffelDto[] returnArray = new ArtikellieferantstaffelDto[list.size()];
 		return (ArtikellieferantstaffelDto[]) list.toArray(returnArray);
 	}
 }

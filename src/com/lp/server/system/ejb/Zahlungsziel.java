@@ -42,12 +42,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICBez;
+
 @NamedQueries({
 		@NamedQuery(name = "ZahlungszielfindAllByMandant", query = "SELECT OBJECT (o) FROM Zahlungsziel o WHERE o.mandantCNr = ?1"),
 		@NamedQuery(name = "ZahlungszielfindByCBezMandantCNr", query = "SELECT OBJECT (o) FROM Zahlungsziel o WHERE o.mandantCNr = ?1 AND o.cBez = ?2") })
 @Entity
 @Table(name = "LP_ZAHLUNGSZIEL")
-public class Zahlungsziel implements Serializable {
+public class Zahlungsziel implements Serializable,ICBez {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -57,9 +59,43 @@ public class Zahlungsziel implements Serializable {
 
 	@Column(name = "I_ANZAHLZIELTAGEFUERNETTO")
 	private Integer iAnzahlzieltagefuernetto;
+	
+	@Column(name = "I_FOLGEMONAT_SKONTOTAGE1")
+	private Integer iFolgemonatSkontotage1;
+	
+	public Integer getIFolgemonatSkontotage1() {
+		return iFolgemonatSkontotage1;
+	}
+
+	public void setIFolgemonatSkontotage1(Integer iFolgemonatSkontotage1) {
+		this.iFolgemonatSkontotage1 = iFolgemonatSkontotage1;
+	}
+
+	public Integer getIFolgemonatSkontotage2() {
+		return iFolgemonatSkontotage2;
+	}
+
+	public void setIFolgemonatSkontotage2(Integer iFolgemonatSkontotage2) {
+		this.iFolgemonatSkontotage2 = iFolgemonatSkontotage2;
+	}
+
+	@Column(name = "I_FOLGEMONAT_SKONTOTAGE2")
+	private Integer iFolgemonatSkontotage2;
 
 	@Column(name = "N_SKONTOPROZENTSATZ1")
 	private BigDecimal nSkontoprozentsatz1;
+
+	@Column(name = "N_ANZAHLUNG_PROZENT")
+	private BigDecimal nAnzahlungProzent;
+	
+	
+	public BigDecimal getNAnzahlungProzent() {
+		return nAnzahlungProzent;
+	}
+
+	public void setNAnzahlungProzent(BigDecimal nAnzahlungProzent) {
+		this.nAnzahlungProzent = nAnzahlungProzent;
+	}
 
 	@Column(name = "I_SKONTOANZAHLTAGE1")
 	private Integer iSkontoanzahltage1;
@@ -86,6 +122,18 @@ public class Zahlungsziel implements Serializable {
 	private Integer iStichtag;
 	@Column(name = "I_FOLGEMONAT")
 	private Integer iFolgemonat;
+	
+	@Column(name = "B_LASTSCHRIFT")
+	private Short bLastschrift;
+	
+
+	public Short getBLastschrift() {
+		return bLastschrift;
+	}
+
+	public void setBLastschrift(Short bLastschrift) {
+		this.bLastschrift = bLastschrift;
+	}
 
 	public Short getBStichtag() {
 		return bStichtag;
@@ -140,7 +188,7 @@ public class Zahlungsziel implements Serializable {
 	public Zahlungsziel(Integer idZahlungszielO, String mandantCNr, String bez,
 			Short versteckt, Integer iAnzahlzieltagefuernetto,
 			Short bInzahlungsvorschlagberuecksichtigen, Short bStichtag,
-			Short bStichtagMonatsletzter) {
+			Short bStichtagMonatsletzter, Short bLastschrift) {
 		setIId(idZahlungszielO);
 		setMandantCNr(mandantCNr);
 		setCBez(bez);
@@ -149,6 +197,7 @@ public class Zahlungsziel implements Serializable {
 		setBInzahlungsvorschlagberuecksichtigen(bInzahlungsvorschlagberuecksichtigen);
 		setBStichtag(bStichtag);
 		setBStichtagMonatsletzter(bStichtagMonatsletzter);
+		setBLastschrift(bLastschrift);
 	}
 
 	public Integer getIId() {

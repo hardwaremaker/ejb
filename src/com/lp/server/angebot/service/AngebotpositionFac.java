@@ -111,6 +111,8 @@ public interface AngebotpositionFac extends IPositionNumber {
 	public AngebotpositionDto[] angebotpositionFindByAngebotIId(
 			Integer iIdAngebotI, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
+	public AngebotpositionDto[] angebotpositionFindByAngebotIId(
+			Integer iIdAngebotI) throws EJBExceptionLP, RemoteException ;
 	
 	public AngebotpositionDto[] angebotpositionFindByAngebotIIdOhneAlternative(
 			Integer iIdAngebotI, TheClientDto theClientDto) throws EJBExceptionLP,
@@ -166,5 +168,6 @@ public interface AngebotpositionFac extends IPositionNumber {
 	
 	public Double berechneArbeitszeitSoll(Integer iIdAngebotI,
 			TheClientDto theClientDto) ;
+	public void sortiereNachArtikelnummer(Integer angebotIId, TheClientDto theClientDto);
 	
 }

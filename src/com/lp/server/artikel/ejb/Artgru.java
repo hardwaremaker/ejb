@@ -33,6 +33,7 @@
 package com.lp.server.artikel.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
@@ -44,13 +45,11 @@ import javax.persistence.Table;
 
 import com.lp.server.util.ICNr;
 
-@NamedQueries({
-		@NamedQuery(name = "ArtgrufindAll", query = "SELECT OBJECT(o) FROM Artgru o"),
+@NamedQueries({ @NamedQuery(name = "ArtgrufindAll", query = "SELECT OBJECT(o) FROM Artgru o"),
 		@NamedQuery(name = "ArtgrufindByMandantCNr", query = "SELECT OBJECT(o) FROM Artgru o WHERE o.mandantCNr = ?1"),
 		@NamedQuery(name = "ArtgrufindByArtgruIId", query = "SELECT OBJECT(o) FROM Artgru o WHERE o.artgruIId=?1"),
-		@NamedQuery(name = "ArtgrufindAllRoot", query = "SELECT OBJECT(o) FROM Artgru o WHERE o.artgruIId IS NULL"),
-		@NamedQuery(name = "ArtgrufindByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Artgru o WHERE o.cNr = ?1 AND o.mandantCNr = ?2")
- })
+		@NamedQuery(name = "ArtgrufindAllRoot", query = "SELECT OBJECT(o) FROM Artgru o WHERE o.artgruIId IS NULL AND o.mandantCNr = ?1"),
+		@NamedQuery(name = "ArtgrufindByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Artgru o WHERE o.cNr = ?1 AND o.mandantCNr = ?2") })
 @Entity
 @Table(name = "WW_ARTGRU")
 public class Artgru implements Serializable, ICNr {
@@ -61,11 +60,53 @@ public class Artgru implements Serializable, ICNr {
 	@Column(name = "C_NR")
 	private String cNr;
 
-	@Column(name = "KONTO_I_ID")
-	private Integer kontoIId;
+	@Column(name = "B_FREMDFERTIGUNG")
+	private Short bFremdfertigung;
+
+	public Short getBFremdfertigung() {
+		return this.bFremdfertigung;
+	}
+
+	public void setBFremdfertigung(Short bFremdfertigung) {
+		this.bFremdfertigung = bFremdfertigung;
+	}
+	
+	@Column(name = "B_BEI_ERSTER_ZEITBUCHUNG_ABBUCHEN")
+	private Short bBeiErsterZeitbuchungAbbuchen;
+	
+
+	public Short getBBeiErsterZeitbuchungAbbuchen() {
+		return bBeiErsterZeitbuchungAbbuchen;
+	}
+
+	public void setBBeiErsterZeitbuchungAbbuchen(Short bBeiErsterZeitbuchungAbbuchen) {
+		this.bBeiErsterZeitbuchungAbbuchen = bBeiErsterZeitbuchungAbbuchen;
+	}
+
+	@Column(name = "N_EKPREISAUFSCHLAG")
+	private BigDecimal nEkpreisaufschlag;
+
+	public BigDecimal getNEkpreisaufschlag() {
+		return nEkpreisaufschlag;
+	}
+
+	public void setNEkpreisaufschlag(BigDecimal nEkpreisaufschlag) {
+		this.nEkpreisaufschlag = nEkpreisaufschlag;
+	}
 
 	@Column(name = "ARTGRU_I_ID")
 	private Integer artgruIId;
+
+	@Column(name = "KOSTENSTELLE_I_ID")
+	private Integer kostenstelleIId;
+
+	public Integer getKostenstelleIId() {
+		return this.kostenstelleIId;
+	}
+
+	public void setKostenstelleIId(Integer kostenstelle) {
+		this.kostenstelleIId = kostenstelle;
+	}
 
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
@@ -81,12 +122,45 @@ public class Artgru implements Serializable, ICNr {
 	@Column(name = "B_ZERTIFIZIERUNG")
 	private Short bZertifizierung;
 
+	@Column(name = "B_KEIN_BELEGDRUCK_MIT_RABATT")
+	private Short bKeinBelegdruckMitRabatt;
+
+	public Short getBKeinBelegdruckMitRabatt() {
+		return bKeinBelegdruckMitRabatt;
+	}
+
+	public void setBKeinBelegdruckMitRabatt(Short bKeinBelegdruckMitRabatt) {
+		this.bKeinBelegdruckMitRabatt = bKeinBelegdruckMitRabatt;
+	}
+
 	public Short getBZertifizierung() {
 		return bZertifizierung;
 	}
 
 	public void setBZertifizierung(Short bZertifizierung) {
 		this.bZertifizierung = bZertifizierung;
+	}
+
+	@Column(name = "B_SERIENNRTRAGEND")
+	private Short bSeriennrtragend;
+
+	@Column(name = "B_CHARGENNRTRAGEND")
+	private Short bChargennrtragend;
+
+	public Short getBSeriennrtragend() {
+		return this.bSeriennrtragend;
+	}
+
+	public void setBSeriennrtragend(Short bSeriennrtragend) {
+		this.bSeriennrtragend = bSeriennrtragend;
+	}
+
+	public Short getBChargennrtragend() {
+		return this.bChargennrtragend;
+	}
+
+	public void setBChargennrtragend(Short bChargennrtragend) {
+		this.bChargennrtragend = bChargennrtragend;
 	}
 
 	@Column(name = "T_ANLEGEN")
@@ -104,6 +178,17 @@ public class Artgru implements Serializable, ICNr {
 	@Column(name = "B_KEINEVKWARNMELDUNGENIMLS")
 	private Short bKeinevkwarnmeldungimls;
 
+	@Column(name = "B_AUFSCHLAG_EINZELPREIS")
+	private Short bAufschlagEinzelpreis;
+
+	public Short getBAufschlagEinzelpreis() {
+		return bAufschlagEinzelpreis;
+	}
+
+	public void setBAufschlagEinzelpreis(Short bAufschlagEinzelpreis) {
+		this.bAufschlagEinzelpreis = bAufschlagEinzelpreis;
+	}
+
 	@Column(name = "B_RUECKGABE")
 	private Short bRueckgabe;
 
@@ -115,16 +200,27 @@ public class Artgru implements Serializable, ICNr {
 		bRueckgabe = rueckgabe;
 	}
 
+	@Column(name = "ARTIKEL_I_ID_KOMMENTAR")
+	private Integer artikelIIdKommentar;
+
+	public Integer getArtikelIIdKommentar() {
+		return artikelIIdKommentar;
+	}
+
+	public void setArtikelIIdKommentar(Integer artikelIIdKommentar) {
+		this.artikelIIdKommentar = artikelIIdKommentar;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Artgru() {
 		super();
 	}
 
-	public Artgru(Integer id, String nr, Short rueckgabe, String mandantCNr,
-			Short bZertifizierung, Integer personalIIdAnlegen,
-			Integer personalIIdAendern, Timestamp tAnlegen, Timestamp tAendern,
-			 Short bKeinevkwarnmeldungimls) {
+	public Artgru(Integer id, String nr, Short rueckgabe, String mandantCNr, Short bZertifizierung,
+			Integer personalIIdAnlegen, Integer personalIIdAendern, Timestamp tAnlegen, Timestamp tAendern,
+			Short bKeinevkwarnmeldungimls, Short bSeriennrtragend, Short bChargennrtragend,
+			Short bKeinBelegdruckMitRabatt, Short bAufschlagEinzelpreis, Short fremdfertigung, Short bBeiErsterZeitbuchungAbbuchen) {
 		setCNr(nr);
 		setIId(id);
 		setBRueckgabe(rueckgabe);
@@ -135,7 +231,12 @@ public class Artgru implements Serializable, ICNr {
 		setTAnlegen(tAnlegen);
 		setTAendern(tAendern);
 		setBKeinevkwarnmeldungimls(bKeinevkwarnmeldungimls);
-
+		setBSeriennrtragend(bSeriennrtragend);
+		setBChargennrtragend(bChargennrtragend);
+		setBKeinBelegdruckMitRabatt(bKeinBelegdruckMitRabatt);
+		setBAufschlagEinzelpreis(bAufschlagEinzelpreis);
+		setBFremdfertigung(fremdfertigung);
+		setBBeiErsterZeitbuchungAbbuchen(bBeiErsterZeitbuchungAbbuchen);
 	}
 
 	public Short getBKeinevkwarnmeldungimls() {
@@ -192,14 +293,6 @@ public class Artgru implements Serializable, ICNr {
 
 	public void setCNr(String cNr) {
 		this.cNr = cNr;
-	}
-
-	public Integer getKontoIId() {
-		return this.kontoIId;
-	}
-
-	public void setKontoIId(Integer kontoIId) {
-		this.kontoIId = kontoIId;
 	}
 
 	public Integer getArtgruIId() {

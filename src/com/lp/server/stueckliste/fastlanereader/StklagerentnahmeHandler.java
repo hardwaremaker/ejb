@@ -262,7 +262,7 @@ public class StklagerentnahmeHandler extends UseCaseHandler {
 			try {
 				session = factory.openSession();
 				String queryString = "select " + FLR_STKLAGER
-						+ "i_sort"
+						+ "i_id"
 						+ FLR_STKLAGER_FROM_CLAUSE + this.buildWhereClause()
 						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);

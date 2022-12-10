@@ -1,39 +1,8 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.anfrage.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
 import com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe;
+import com.lp.server.partner.fastlanereader.generated.FLRPartner;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
@@ -89,7 +58,22 @@ public class FLRAnfrage implements Serializable {
     private Integer projekt_i_id;
 
     /** nullable persistent field */
+    private Integer partner_i_id_lieferadresse;
+
+    /** nullable persistent field */
+    private Integer anfrage_i_id_liefergruppenanfrage;
+
+    /** nullable persistent field */
+    private Integer ansprechpartner_i_id_lieferant;
+
+    /** nullable persistent field */
     private FLRLieferant flrlieferant;
+
+    /** nullable persistent field */
+    private com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage flranfrage_liefergruppenanfrage;
+
+    /** nullable persistent field */
+    private FLRPartner flrpartner_lieferadresse;
 
     /** nullable persistent field */
     private FLRLiefergruppe flrliefergruppe;
@@ -106,8 +90,11 @@ public class FLRAnfrage implements Serializable {
     /** nullable persistent field */
     private FLRPersonal flrpersonalaenderer;
 
+    /** nullable persistent field */
+    private com.lp.server.anfrage.fastlanereader.generated.FLRAnfragetextsuche flranfragetextsuche;
+
     /** full constructor */
-    public FLRAnfrage(String mandant_c_nr, String c_nr, String anfrageart_c_nr, String c_bez, Date t_belegdatum, Integer lfliefergruppe_i_id, String anfragestatus_c_nr, String waehrung_c_nr_anfragewaehrung, Double f_wechselkursmandantwaehrungzuanfragewaehrung, BigDecimal n_gesamtanfragewertinanfragewaehrung, Date t_versandzeitpunkt, String c_versandtype, Integer projekt_i_id, FLRLieferant flrlieferant, FLRLiefergruppe flrliefergruppe, FLRKostenstelle flrkostenstelle, FLRProjekt flrprojekt, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer) {
+    public FLRAnfrage(String mandant_c_nr, String c_nr, String anfrageart_c_nr, String c_bez, Date t_belegdatum, Integer lfliefergruppe_i_id, String anfragestatus_c_nr, String waehrung_c_nr_anfragewaehrung, Double f_wechselkursmandantwaehrungzuanfragewaehrung, BigDecimal n_gesamtanfragewertinanfragewaehrung, Date t_versandzeitpunkt, String c_versandtype, Integer projekt_i_id, Integer partner_i_id_lieferadresse, Integer anfrage_i_id_liefergruppenanfrage, Integer ansprechpartner_i_id_lieferant, FLRLieferant flrlieferant, com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage flranfrage_liefergruppenanfrage, FLRPartner flrpartner_lieferadresse, FLRLiefergruppe flrliefergruppe, FLRKostenstelle flrkostenstelle, FLRProjekt flrprojekt, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, com.lp.server.anfrage.fastlanereader.generated.FLRAnfragetextsuche flranfragetextsuche) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.anfrageart_c_nr = anfrageart_c_nr;
@@ -121,12 +108,18 @@ public class FLRAnfrage implements Serializable {
         this.t_versandzeitpunkt = t_versandzeitpunkt;
         this.c_versandtype = c_versandtype;
         this.projekt_i_id = projekt_i_id;
+        this.partner_i_id_lieferadresse = partner_i_id_lieferadresse;
+        this.anfrage_i_id_liefergruppenanfrage = anfrage_i_id_liefergruppenanfrage;
+        this.ansprechpartner_i_id_lieferant = ansprechpartner_i_id_lieferant;
         this.flrlieferant = flrlieferant;
+        this.flranfrage_liefergruppenanfrage = flranfrage_liefergruppenanfrage;
+        this.flrpartner_lieferadresse = flrpartner_lieferadresse;
         this.flrliefergruppe = flrliefergruppe;
         this.flrkostenstelle = flrkostenstelle;
         this.flrprojekt = flrprojekt;
         this.flrpersonalanleger = flrpersonalanleger;
         this.flrpersonalaenderer = flrpersonalaenderer;
+        this.flranfragetextsuche = flranfragetextsuche;
     }
 
     /** default constructor */
@@ -245,12 +238,52 @@ public class FLRAnfrage implements Serializable {
         this.projekt_i_id = projekt_i_id;
     }
 
+    public Integer getPartner_i_id_lieferadresse() {
+        return this.partner_i_id_lieferadresse;
+    }
+
+    public void setPartner_i_id_lieferadresse(Integer partner_i_id_lieferadresse) {
+        this.partner_i_id_lieferadresse = partner_i_id_lieferadresse;
+    }
+
+    public Integer getAnfrage_i_id_liefergruppenanfrage() {
+        return this.anfrage_i_id_liefergruppenanfrage;
+    }
+
+    public void setAnfrage_i_id_liefergruppenanfrage(Integer anfrage_i_id_liefergruppenanfrage) {
+        this.anfrage_i_id_liefergruppenanfrage = anfrage_i_id_liefergruppenanfrage;
+    }
+
+    public Integer getAnsprechpartner_i_id_lieferant() {
+        return this.ansprechpartner_i_id_lieferant;
+    }
+
+    public void setAnsprechpartner_i_id_lieferant(Integer ansprechpartner_i_id_lieferant) {
+        this.ansprechpartner_i_id_lieferant = ansprechpartner_i_id_lieferant;
+    }
+
     public FLRLieferant getFlrlieferant() {
         return this.flrlieferant;
     }
 
     public void setFlrlieferant(FLRLieferant flrlieferant) {
         this.flrlieferant = flrlieferant;
+    }
+
+    public com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage getFlranfrage_liefergruppenanfrage() {
+        return this.flranfrage_liefergruppenanfrage;
+    }
+
+    public void setFlranfrage_liefergruppenanfrage(com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage flranfrage_liefergruppenanfrage) {
+        this.flranfrage_liefergruppenanfrage = flranfrage_liefergruppenanfrage;
+    }
+
+    public FLRPartner getFlrpartner_lieferadresse() {
+        return this.flrpartner_lieferadresse;
+    }
+
+    public void setFlrpartner_lieferadresse(FLRPartner flrpartner_lieferadresse) {
+        this.flrpartner_lieferadresse = flrpartner_lieferadresse;
     }
 
     public FLRLiefergruppe getFlrliefergruppe() {
@@ -291,6 +324,14 @@ public class FLRAnfrage implements Serializable {
 
     public void setFlrpersonalaenderer(FLRPersonal flrpersonalaenderer) {
         this.flrpersonalaenderer = flrpersonalaenderer;
+    }
+
+    public com.lp.server.anfrage.fastlanereader.generated.FLRAnfragetextsuche getFlranfragetextsuche() {
+        return this.flranfragetextsuche;
+    }
+
+    public void setFlranfragetextsuche(com.lp.server.anfrage.fastlanereader.generated.FLRAnfragetextsuche flranfragetextsuche) {
+        this.flranfragetextsuche = flranfragetextsuche;
     }
 
     public String toString() {

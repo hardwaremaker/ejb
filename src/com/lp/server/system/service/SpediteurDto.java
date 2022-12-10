@@ -48,6 +48,9 @@ public class SpediteurDto implements Serializable {
 	private Timestamp tAendern;
 
 	private Integer ansprechpartnerIId;
+	private Integer partnerIId;
+	private String cEmail;
+	private String cVerkehrszweig;
 
 	public Integer getAnsprechpartnerIId() {
 		return ansprechpartnerIId;
@@ -57,7 +60,6 @@ public class SpediteurDto implements Serializable {
 		this.ansprechpartnerIId = ansprechpartnerIId;
 	}
 
-	private Integer partnerIId;
 
 	public Integer getPartnerIId() {
 		return partnerIId;
@@ -67,7 +69,6 @@ public class SpediteurDto implements Serializable {
 		this.partnerIId = partnerIId;
 	}
 
-	private String cEmail;
 
 	public String getCEmail() {
 		return cEmail;
@@ -125,6 +126,14 @@ public class SpediteurDto implements Serializable {
 		this.bVersteckt = bVersteckt;
 	}
 
+	public String getCVerkehrszweig() {
+		return this.cVerkehrszweig;
+	}
+	
+	public void setCVerkehrszweig(String cIntrastatVerkehrszweig) {
+		this.cVerkehrszweig = cIntrastatVerkehrszweig;
+	}
+	
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -152,6 +161,10 @@ public class SpediteurDto implements Serializable {
 				.equals(this.tAendern))) {
 			return false;
 		}
+		if (!(that.cVerkehrszweig == null ? this.cVerkehrszweig == null
+				: that.cVerkehrszweig.equals(this.cVerkehrszweig))) {
+			return false;
+		}
 		return true;
 	}
 
@@ -162,6 +175,7 @@ public class SpediteurDto implements Serializable {
 		result = 37 * result + this.cNameDesSpediteurs.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
 		result = 37 * result + this.tAendern.hashCode();
+		result = 37 * result + this.cVerkehrszweig.hashCode();
 		return result;
 	}
 

@@ -39,8 +39,12 @@ import java.sql.Timestamp;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+@NamedQueries( { 
+	@NamedQuery(name = ZahlungsvorschlaglaufQuery.ByMandantCnrTGespeichertIsNull, query = "SELECT OBJECT(o) FROM Zahlungsvorschlaglauf o WHERE o.mandantCNr = :mandant AND o.tGespeichert IS NULL")})
 @Entity
 @Table(name = "ER_ZAHLUNGSVORSCHLAGLAUF")
 public class Zahlungsvorschlaglauf implements Serializable {

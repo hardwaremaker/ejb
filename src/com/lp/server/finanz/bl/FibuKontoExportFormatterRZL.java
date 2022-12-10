@@ -79,19 +79,24 @@ class FibuKontoExportFormatterRZL extends FibuKontoExportFormatter {
 	private final static String P_MAHNFRIST3 = "Mahnfrist3";
 	private final static String P_LAND = "Land";
 	private final static String P_PLZ = "PLZ";
+	private final static String P_ZUSATZTEXT = "Zusatztext";
+	private final static String P_KUNDENNUMMER = "Kundennummer";
+	private final static String P_MAHNSCHEMA = "Mahnschema";
+	private final static String P_ABW_ZAHLUNGSFRIST_VERWENDEN = "AbwZahlungsfristVerw";
+	private final static String P_ABW_ZAHLUNGSFRIST = "AbwZahlungsfrist";
 
-	private final static String KONTENART_ANLAGEKONTO = "1";
-	private final static String KONTENART_BESTANDSKONTO = "2";
-	private final static String KONTENART_AUFWANDSKONTO = "3";
-	private final static String KONTENART_ERTRAGSKONTO = "4";
-	private final static String KONTENART_DEBITOR_I = "5";
-	private final static String KONTENART_DEBITOR_II = "6";
-	private final static String KONTENART_KREDITOR_I = "7";
-	private final static String KONTENART_KREDITOR_II = "8";
-	private final static String KONTENART_DEBITOR_III = "9";
-	private final static String KONTENART_DEBITOR_IV = "10";
-	private final static String KONTENART_KREDITOR_III = "11";
-	private final static String KONTENART_KREDITOR_IV = "12";
+	protected final static String KONTENART_ANLAGEKONTO = "1";
+	protected final static String KONTENART_BESTANDSKONTO = "2";
+	protected final static String KONTENART_AUFWANDSKONTO = "3";
+	protected final static String KONTENART_ERTRAGSKONTO = "4";
+	protected final static String KONTENART_DEBITOR_I = "5";
+	protected final static String KONTENART_DEBITOR_II = "6";
+	protected final static String KONTENART_KREDITOR_I = "7";
+	protected final static String KONTENART_KREDITOR_II = "8";
+	protected final static String KONTENART_DEBITOR_III = "9";
+	protected final static String KONTENART_DEBITOR_IV = "10";
+	protected final static String KONTENART_KREDITOR_III = "11";
+	protected final static String KONTENART_KREDITOR_IV = "12";
 
 	protected String exportiereDaten(FibuKontoExportDto[] fibuExportDtos,
 			TheClientDto theClientDto) throws EJBExceptionLP {
@@ -142,18 +147,7 @@ class FibuKontoExportFormatterRZL extends FibuKontoExportFormatter {
 			}
 			mt.addParameter(P_KONTONUMMER, kontoDto.getCNr());
 			// Kontenart
-			String sKontenart = null;
-			if (kontoDto.getKontotypCNr().equals(
-					FinanzServiceFac.KONTOTYP_DEBITOR)) {
-				sKontenart = KONTENART_DEBITOR_I;
-			} else if (kontoDto.getKontotypCNr().equals(
-					FinanzServiceFac.KONTOTYP_KREDITOR)) {
-				sKontenart = KONTENART_KREDITOR_I;
-			} else if (kontoDto.getKontotypCNr().equals(
-					FinanzServiceFac.KONTOTYP_SACHKONTO)) {
-				sKontenart = KONTENART_ANLAGEKONTO;
-			}
-			mt.addParameter(P_KONTENART, sKontenart);
+			mt.addParameter(P_KONTENART, getKontenartOfKonto(kontoDto));
 			// keine Fremdwaehrungskonten
 			mt.addParameter(P_FREMDWAEHRUNG, "");
 			// UID - Nummer wenn vorhanden
@@ -247,6 +241,21 @@ class FibuKontoExportFormatterRZL extends FibuKontoExportFormatter {
 			}
 			mt.addParameter(P_LAND, sLKZ);
 			mt.addParameter(P_PLZ, sPLZ);
+			String sZweiterName;
+			if (partnerDto != null
+					&& partnerDto.getCName2vornamefirmazeile2() != null) {
+				sZweiterName = partnerDto.getCName2vornamefirmazeile2().replace(';',
+						' ');
+			} else {
+				sZweiterName = "";
+			}
+			mt.addParameter(P_ZUSATZTEXT, sZweiterName);
+			
+			mt.addParameter(P_KUNDENNUMMER, "");
+			mt.addParameter(P_MAHNSCHEMA, "");
+			mt.addParameter(P_ABW_ZAHLUNGSFRIST_VERWENDEN, "");
+			mt.addParameter(P_ABW_ZAHLUNGSFRIST, "");
+			
 			String sZeile = mt.transformText(FinanzReportFac.REPORT_MODUL,
 					theClientDto.getMandant(), getXSLFile(), theClientDto
 							.getLocMandant(), theClientDto);
@@ -283,9 +292,27 @@ class FibuKontoExportFormatterRZL extends FibuKontoExportFormatter {
 		mt.addParameter(P_MAHNFRIST3, P_MAHNFRIST3);
 		mt.addParameter(P_LAND, P_LAND);
 		mt.addParameter(P_PLZ, P_PLZ);
+		mt.addParameter(P_ZUSATZTEXT, P_ZUSATZTEXT);
+		
+		mt.addParameter(P_KUNDENNUMMER, P_KUNDENNUMMER);
+		mt.addParameter(P_MAHNSCHEMA, P_MAHNSCHEMA);
+		mt.addParameter(P_ABW_ZAHLUNGSFRIST_VERWENDEN, P_ABW_ZAHLUNGSFRIST_VERWENDEN);
+		mt.addParameter(P_ABW_ZAHLUNGSFRIST, P_ABW_ZAHLUNGSFRIST);
 		String sZeile = mt.transformText(FinanzReportFac.REPORT_MODUL,
 				theClientDto.getMandant(), getXSLFile(), theClientDto
 						.getLocMandant(), theClientDto);
 		return sZeile;
+	}
+	
+	protected String getKontenartOfKonto(KontoDto kontoDto) {
+		String kontotypCnr = kontoDto.getKontotypCNr();
+		if (FinanzServiceFac.KONTOTYP_DEBITOR.equals(kontotypCnr)) {
+			return KONTENART_DEBITOR_I;
+		} else if (FinanzServiceFac.KONTOTYP_KREDITOR.equals(kontotypCnr)) {
+			return KONTENART_KREDITOR_I;
+		} else if (FinanzServiceFac.KONTOTYP_SACHKONTO.equals(kontotypCnr)) {
+			return KONTENART_ANLAGEKONTO;
+		}
+		return null;
 	}
 }

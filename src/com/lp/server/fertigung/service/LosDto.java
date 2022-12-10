@@ -37,10 +37,19 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-public class LosDto implements Serializable {
+import javax.persistence.Column;
+
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
+
+@HvDtoLogClass(name = HvDtoLogClass.LOS, filtername = HvDtoLogClass.LOS)
+public class LosDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
+
+	public Integer artikelIIdFuerInterneZwecke = null;
+
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
 	private String mandantCNr;
@@ -80,7 +89,30 @@ public class LosDto implements Serializable {
 	private Integer fertigungsgruppeIId;
 	private Integer wiederholendeloseIId;
 	private Double fBewertung;
-	private Integer iSortFuerUnterlos;
+
+	private String cAbposnr;
+
+	public String getCAbposnr() {
+		return cAbposnr;
+	}
+
+	public void setCAbposnr(String cAbposnr) {
+		this.cAbposnr = cAbposnr;
+	}
+
+	private String losUnternummerReihenfolgenplanung = null;
+
+	public String getLosUnternummerReihenfolgenplanung() {
+		return losUnternummerReihenfolgenplanung;
+	}
+
+	public void setLosUnternummerReihenfolgenplanung(String losUnternummerReihenfolgenplanung) {
+		this.losUnternummerReihenfolgenplanung = losUnternummerReihenfolgenplanung;
+	}
+
+	private Integer forecastpositionIId;
+	private Date tNachtraeglichGeoeffnet;
+	private Integer personalIIdNachtraeglichGeoeffnet;
 
 	private Integer personalIIdMaterialvollstaendig;
 
@@ -88,8 +120,7 @@ public class LosDto implements Serializable {
 		return personalIIdMaterialvollstaendig;
 	}
 
-	public void setPersonalIIdMaterialvollstaendig(
-			Integer personalIIdMaterialvollstaendig) {
+	public void setPersonalIIdMaterialvollstaendig(Integer personalIIdMaterialvollstaendig) {
 		this.personalIIdMaterialvollstaendig = personalIIdMaterialvollstaendig;
 	}
 
@@ -99,6 +130,36 @@ public class LosDto implements Serializable {
 
 	public void setTMaterialvollstaendig(Timestamp tMaterialvollstaendig) {
 		this.tMaterialvollstaendig = tMaterialvollstaendig;
+	}
+
+	private String cSchachtelplan;
+
+	public String getCSchachtelplan() {
+		return cSchachtelplan;
+	}
+
+	public void setCSchachtelplan(String cSchachtelplan) {
+		this.cSchachtelplan = cSchachtelplan;
+	}
+
+	private Integer personalIIdVpEtikettengedruckt;
+
+	public Integer getPersonalIIdVpEtikettengedruckt() {
+		return personalIIdVpEtikettengedruckt;
+	}
+
+	public void setPersonalIIdVpEtikettengedruckt(Integer personalIIdVpEtikettengedruckt) {
+		this.personalIIdVpEtikettengedruckt = personalIIdVpEtikettengedruckt;
+	}
+
+	private Timestamp tVpEtikettengedruckt;
+
+	public Timestamp getTVpEtikettengedruckt() {
+		return tVpEtikettengedruckt;
+	}
+
+	public void setTVpEtikettengedruckt(Timestamp tVpEtikettengedruckt) {
+		this.tVpEtikettengedruckt = tVpEtikettengedruckt;
 	}
 
 	private Timestamp tMaterialvollstaendig;
@@ -133,14 +194,6 @@ public class LosDto implements Serializable {
 
 	private Integer kundeIId;
 
-	public Integer getISortFuerUnterlos() {
-		return iSortFuerUnterlos;
-	}
-
-	public void setISortFuerUnterlos(Integer sortFuerUnterlos) {
-		iSortFuerUnterlos = sortFuerUnterlos;
-	}
-
 	public String getXProduktionsinformation() {
 		return xProduktionsinformation;
 	}
@@ -165,6 +218,17 @@ public class LosDto implements Serializable {
 
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
+	}
+
+	
+	private Integer lagerplatzIId;
+	public Integer getLagerplatzIId() {
+		return this.lagerplatzIId;
+	}
+
+
+	public void setLagerplatzIId(Integer lagerplatzIId) {
+		this.lagerplatzIId = lagerplatzIId;
 	}
 
 	public String getCNr() {
@@ -347,8 +411,7 @@ public class LosDto implements Serializable {
 		return tAktualisierungstueckliste;
 	}
 
-	public void setTAktualisierungstueckliste(
-			Timestamp tAktualisierungstueckliste) {
+	public void setTAktualisierungstueckliste(Timestamp tAktualisierungstueckliste) {
 		this.tAktualisierungstueckliste = tAktualisierungstueckliste;
 	}
 
@@ -356,8 +419,7 @@ public class LosDto implements Serializable {
 		return tAktualisierungarbeitszeit;
 	}
 
-	public void setTAktualisierungarbeitszeit(
-			Timestamp tAktualisierungarbeitszeit) {
+	public void setTAktualisierungarbeitszeit(Timestamp tAktualisierungarbeitszeit) {
 		this.tAktualisierungarbeitszeit = tAktualisierungarbeitszeit;
 	}
 
@@ -467,6 +529,22 @@ public class LosDto implements Serializable {
 		this.nSollmaterial = nSollmaterial;
 	}
 
+	public Date getTNachtraeglichGeoeffnet() {
+		return tNachtraeglichGeoeffnet;
+	}
+
+	public void setTNachtraeglichGeoeffnet(Date tNachtraeglichGeoeffnet) {
+		this.tNachtraeglichGeoeffnet = tNachtraeglichGeoeffnet;
+	}
+
+	public Integer getPersonalIIdNachtraeglichGeoeffnet() {
+		return personalIIdNachtraeglichGeoeffnet;
+	}
+
+	public void setPersonalIIdNachtraeglichGeoeffnet(Integer personalIIdNachtraeglichGeoeffnet) {
+		this.personalIIdNachtraeglichGeoeffnet = personalIIdNachtraeglichGeoeffnet;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -475,8 +553,7 @@ public class LosDto implements Serializable {
 		LosDto that = (LosDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr)))
 			return false;
@@ -489,21 +566,17 @@ public class LosDto implements Serializable {
 		if (!(that.auftragpositionIId == null ? this.auftragpositionIId == null
 				: that.auftragpositionIId.equals(this.auftragpositionIId)))
 			return false;
-		if (!(that.cKommentar == null ? this.cKommentar == null
-				: that.cKommentar.equals(this.cKommentar)))
+		if (!(that.cKommentar == null ? this.cKommentar == null : that.cKommentar.equals(this.cKommentar)))
 			return false;
-		if (!(that.cProjekt == null ? this.cProjekt == null : that.cProjekt
-				.equals(this.cProjekt)))
+		if (!(that.cProjekt == null ? this.cProjekt == null : that.cProjekt.equals(this.cProjekt)))
 			return false;
 		if (!(that.stuecklisteIId == null ? this.stuecklisteIId == null
 				: that.stuecklisteIId.equals(this.stuecklisteIId)))
 			return false;
-		if (!(that.nLosgroesse == null ? this.nLosgroesse == null
-				: that.nLosgroesse.equals(this.nLosgroesse)))
+		if (!(that.nLosgroesse == null ? this.nLosgroesse == null : that.nLosgroesse.equals(this.nLosgroesse)))
 			return false;
 		if (!(that.partnerIIdFertigungsort == null ? this.partnerIIdFertigungsort == null
-				: that.partnerIIdFertigungsort
-						.equals(this.partnerIIdFertigungsort)))
+				: that.partnerIIdFertigungsort.equals(this.partnerIIdFertigungsort)))
 			return false;
 		if (!(that.personalIIdTechniker == null ? this.personalIIdTechniker == null
 				: that.personalIIdTechniker.equals(this.personalIIdTechniker)))
@@ -514,14 +587,12 @@ public class LosDto implements Serializable {
 		if (!(that.tProduktionsbeginn == null ? this.tProduktionsbeginn == null
 				: that.tProduktionsbeginn.equals(this.tProduktionsbeginn)))
 			return false;
-		if (!(that.tAusgabe == null ? this.tAusgabe == null : that.tAusgabe
-				.equals(this.tAusgabe)))
+		if (!(that.tAusgabe == null ? this.tAusgabe == null : that.tAusgabe.equals(this.tAusgabe)))
 			return false;
 		if (!(that.personalIIdAusgabe == null ? this.personalIIdAusgabe == null
 				: that.personalIIdAusgabe.equals(this.personalIIdAusgabe)))
 			return false;
-		if (!(that.tErledigt == null ? this.tErledigt == null : that.tErledigt
-				.equals(this.tErledigt)))
+		if (!(that.tErledigt == null ? this.tErledigt == null : that.tErledigt.equals(this.tErledigt)))
 			return false;
 		if (!(that.personalIIdErledigt == null ? this.personalIIdErledigt == null
 				: that.personalIIdErledigt.equals(this.personalIIdErledigt)))
@@ -530,57 +601,45 @@ public class LosDto implements Serializable {
 				: that.tProduktionsstop.equals(this.tProduktionsstop)))
 			return false;
 		if (!(that.personalIIdProduktionsstop == null ? this.personalIIdProduktionsstop == null
-				: that.personalIIdProduktionsstop
-						.equals(this.personalIIdProduktionsstop)))
+				: that.personalIIdProduktionsstop.equals(this.personalIIdProduktionsstop)))
 			return false;
 		if (!(that.tLeitstandstop == null ? this.tLeitstandstop == null
 				: that.tLeitstandstop.equals(this.tLeitstandstop)))
 			return false;
 		if (!(that.personalIIdLeitstandstop == null ? this.personalIIdLeitstandstop == null
-				: that.personalIIdLeitstandstop
-						.equals(this.personalIIdLeitstandstop)))
+				: that.personalIIdLeitstandstop.equals(this.personalIIdLeitstandstop)))
 			return false;
-		if (!(that.lagerIIdZiel == null ? this.lagerIIdZiel == null
-				: that.lagerIIdZiel.equals(this.lagerIIdZiel)))
+		if (!(that.lagerIIdZiel == null ? this.lagerIIdZiel == null : that.lagerIIdZiel.equals(this.lagerIIdZiel)))
 			return false;
-		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr
-				.equals(this.statusCNr)))
+		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr.equals(this.statusCNr)))
 			return false;
 		if (!(that.tAktualisierungstueckliste == null ? this.tAktualisierungstueckliste == null
-				: that.tAktualisierungstueckliste
-						.equals(this.tAktualisierungstueckliste)))
+				: that.tAktualisierungstueckliste.equals(this.tAktualisierungstueckliste)))
 			return false;
 		if (!(that.tAktualisierungarbeitszeit == null ? this.tAktualisierungarbeitszeit == null
-				: that.tAktualisierungarbeitszeit
-						.equals(this.tAktualisierungarbeitszeit)))
+				: that.tAktualisierungarbeitszeit.equals(this.tAktualisierungarbeitszeit)))
 			return false;
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen)))
 			return false;
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen)))
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		if (!(that.personalIIdManuellerledigt == null ? this.personalIIdManuellerledigt == null
-				: that.personalIIdManuellerledigt
-						.equals(this.personalIIdManuellerledigt)))
+				: that.personalIIdManuellerledigt.equals(this.personalIIdManuellerledigt)))
 			return false;
 		if (!(that.tManuellerledigt == null ? this.tManuellerledigt == null
 				: that.tManuellerledigt.equals(this.tManuellerledigt)))
 			return false;
-		if (!(that.xText == null ? this.xText == null : that.xText
-				.equals(this.xText)))
+		if (!(that.xText == null ? this.xText == null : that.xText.equals(this.xText)))
 			return false;
-		if (!(that.cZusatznummer == null ? this.cZusatznummer == null
-				: that.cZusatznummer.equals(this.cZusatznummer)))
+		if (!(that.cZusatznummer == null ? this.cZusatznummer == null : that.cZusatznummer.equals(this.cZusatznummer)))
 			return false;
-		if (!(that.auftragIId == null ? this.auftragIId == null
-				: that.auftragIId.equals(this.auftragIId)))
+		if (!(that.auftragIId == null ? this.auftragIId == null : that.auftragIId.equals(this.auftragIId)))
 			return false;
 		return true;
 	}
@@ -663,5 +722,13 @@ public class LosDto implements Serializable {
 		returnString += ", " + cZusatznummer;
 		returnString += ", " + auftragIId;
 		return returnString;
+	}
+
+	public Integer getForecastpositionIId() {
+		return forecastpositionIId;
+	}
+
+	public void setForecastpositionIId(Integer forecastpositionIId) {
+		this.forecastpositionIId = forecastpositionIId;
 	}
 }

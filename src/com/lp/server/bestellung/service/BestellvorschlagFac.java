@@ -35,13 +35,16 @@ package com.lp.server.bestellung.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import javax.ejb.Remote;
 
-import com.lp.server.stueckliste.service.StrukturierterImportDto;
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.ArtikelId;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.util.EJBExceptionLP;
@@ -69,76 +72,76 @@ public interface BestellvorschlagFac {
 	public static final String FLR_BESTELLVORSCHLAG_I_BELEGARTID = "i_belegartid";
 	public static final String FLR_BESTELLVORSCHLAG_ARTIKEL_I_ID = "artikel_i_id";
 	public static final String FLR_BESTELLVORSCHLAG_PROJEKT_I_ID = "projekt_i_id";
-
-	  
+	public static final String FLR_BESTELLVORSCHLAG_PERSONAL_I_ID = "personal_i_id";
+	public static final String FLR_BESTELLVORSCHLAG_PARTNER_I_ID_STANDORT = "partner_i_id_standort";
+	public static final String FLR_BESTELLVORSCHLAG_T_BEARBEITET = "t_bearbeitet";
 
 	public static final int SORT_KRITERIUM_BESTELLVORSCHLAG = 0;
 
 	public static final int IDX_KRIT_ARTIKEL_ID = 0;
 	public static final int IDX_KRIT_LIEFERANT_ID = 1;
 
-	public Integer createBestellvorschlag(
-			BestellvorschlagDto bestellvorschlagDtoI, TheClientDto theClientDto)
+	public Integer createBestellvorschlag(BestellvorschlagDto bestellvorschlagDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void removeBestellvorschlag(Integer iId) throws EJBExceptionLP,
-			RemoteException;
+	public void removeBestellvorschlag(Integer iId) throws EJBExceptionLP, RemoteException;
 
-	public void erstelleBestellvorschlagAnhandStuecklistenmindestlagerstand(java.sql.Date dLiefertermin, boolean vormerklisteLoeschen, TheClientDto theClientDto);
-	
-	public void removeBestellvorschlag(BestellvorschlagDto bestellvorschlagDto)
-			throws EJBExceptionLP, RemoteException;
+	public void erstelleBestellvorschlagAnhandStuecklistenmindestlagerstand(java.sql.Date dLiefertermin,
+			boolean vormerklisteLoeschen, TheClientDto theClientDto, Integer partnerIIdStandort,boolean bBestellvorschlagLoechen);
+
+	public void removeBestellvorschlag(BestellvorschlagDto bestellvorschlagDto) throws EJBExceptionLP, RemoteException;
 
 	public void updateBestellvorschlag(BestellvorschlagDto bestellvorschlagDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateBestellvorschlags(
-			BestellvorschlagDto[] bestellvorschlagDtos, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-
-	public BestellvorschlagDto bestellvorschlagFindByPrimaryKey(Integer iId)
+	public void updateBestellvorschlags(BestellvorschlagDto[] bestellvorschlagDtos, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public BestellvorschlagDto[] bestellvorschlagFindByLieferantIIdMandantCNr(
-			Integer iLieferantId, String cNrMandant) throws EJBExceptionLP,
-			RemoteException;
+	public BestellvorschlagDto bestellvorschlagFindByPrimaryKey(Integer iId) throws EJBExceptionLP, RemoteException;
 
-	public void uebernimmLieferantAusLieferantOptimieren(
-			Integer bestellvorschlagIId, Integer lieferantIIdNeu,
+	public BestellvorschlagDto[] bestellvorschlagFindByLieferantIIdMandantCNr(Integer iLieferantId, String cNrMandant)
+			throws EJBExceptionLP, RemoteException;
+
+	public void uebernimmLieferantAusLieferantOptimieren(Integer bestellvorschlagIId, Integer lieferantIIdNeu,
 			TheClientDto theClientDto);
-	
-	public BestellvorschlagDto[] bestellvorschlagFindByLieferantIIdMandantCNrOhneExc(
-			Integer iLieferantId, String cNrMandant) throws RemoteException;
 
-	public long getAnzahlBestellvorschlagDesMandanten(TheClientDto theClientDto)
+	public BestellvorschlagDto[] bestellvorschlagFindByLieferantIIdMandantCNrOhneExc(Integer iLieferantId,
+			String cNrMandant) throws RemoteException;
+
+	public long getAnzahlBestellvorschlagDesMandanten(TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void erstelleBestellvorschlag(Integer iVorlaufzeit, Integer iToleranz,
+			Date dateFuerEintraegeOhneLiefertermin, ArrayList<Integer> arLosIId, ArrayList<Integer> arAuftragIId,
+			boolean bMitNichtlagerbewirtschafteten, boolean bNurLospositionenBeruecksichtigen,
+			boolean vormerklisteLoeschen, boolean bBestellvorschlagLoechen,
+			boolean bNichtFreigegebeneAuftraegeBeruecksichtigen, TheClientDto theClientDto, Integer partnerIIdStandort, boolean bArtikelNurAufAuftraegeIgnorieren, boolean bExakterAuftragsbezug)
 			throws EJBExceptionLP, RemoteException;
 
-	public void erstelleBestellvorschlag(Integer iVorlaufzeit,
-			Integer iToleranz, Date dateFuerEintraegeOhneLiefertermin, ArrayList<Integer> arLosIId, ArrayList<Integer> arAuftragIId,
-			boolean bMitNichtlagerbewirtschafteten, boolean bNurLospositionenBeruecksichtigen,boolean vormerklisteLoeschen, 
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public void erstelleBestellvorschlagAnhandEinesAngebots(Integer angebotIId,
-			java.sql.Date dLiefertermin, TheClientDto theClientDto);
-	
-	public Boolean createBESausBVfuerAlleLieferantenMitGleichenTermin(
-			FilterKriterium[] fk, SortierKriterium[] ski, TheClientDto theClientDto,
-			Integer kostenstelleIId, boolean bProjektklammerberuecksichtigen) throws EJBExceptionLP, RemoteException;
-
-	public boolean mindestbestellwertErreicht(Integer iLieferantId,
+	public void erstelleBestellvorschlagAnhandEinesAngebots(Integer angebotIId, java.sql.Date dLiefertermin,
 			TheClientDto theClientDto);
-	
-	public Boolean createBESausBVjeLieferant(FilterKriterium[] fk,
-			SortierKriterium[] ski, TheClientDto theClientDto, Integer kostenstelleIId, boolean bProjektklammerberuecksichtigen)
+
+	public void erstelleBestellvorschlagAnhandEkag(Integer einkaufsangebotIId, int menge,  Timestamp tGeplanterFertigungstermin,
+			Integer vorlaufzeit, TheClientDto theClientDto);
+
+	public RueckgabeUeberleitungDto createBESausBVfuerAlleLieferantenMitGleichenTermin(FilterKriterium[] fk,
+			SortierKriterium[] ski, TheClientDto theClientDto, Integer kostenstelleIId,
+			boolean bProjektklammerberuecksichtigen, boolean gemeinsameArtikelBestellen, Integer standortIId ,boolean bRahmenbestellungErzeugen, boolean bInklGesperrteArtikel)
 			throws EJBExceptionLP, RemoteException;
 
-	public Boolean createBESausBVfuerBestimmtenLieferantUndTermin(
-			FilterKriterium[] fk, SortierKriterium[] ski, TheClientDto theClientDto,
-			Integer kostenstelleIId, boolean bProjektklammerberuecksichtigen) throws EJBExceptionLP, RemoteException;
+	public boolean mindestbestellwertErreicht(Integer iLieferantId, TheClientDto theClientDto);
 
-	public Boolean createBESausBVfueBestimmtenLieferant(FilterKriterium[] fk,
-			SortierKriterium[] ski, TheClientDto theClientDto, Integer kostenstelleIId, boolean bProjektklammerberuecksichtigen)
+	public RueckgabeUeberleitungDto createBESausBVjeLieferant(FilterKriterium[] fk, SortierKriterium[] ski,
+			TheClientDto theClientDto, Integer kostenstelleIId, boolean bProjektklammerberuecksichtigen,
+			boolean gemeinsameArtikelBestellen, Integer standortIId ,boolean bRahmenbestellungErzeugen, boolean bInklGesperrteArtikel) throws EJBExceptionLP, RemoteException;
+
+	public RueckgabeUeberleitungDto createBESausBVfuerBestimmtenLieferantUndTermin(FilterKriterium[] fk,
+			SortierKriterium[] ski, TheClientDto theClientDto, Integer kostenstelleIId,
+			boolean bProjektklammerberuecksichtigen, boolean gemeinsameArtikelBestellen, Integer standortIId ,boolean bRahmenbestellungErzeugen, boolean bInklGesperrteArtikel)
 			throws EJBExceptionLP, RemoteException;
+
+	public RueckgabeUeberleitungDto createBESausBVfueBestimmtenLieferant(FilterKriterium[] fk, SortierKriterium[] ski,
+			TheClientDto theClientDto, Integer kostenstelleIId, boolean bProjektklammerberuecksichtigen,
+			boolean gemeinsameArtikelBestellen, Integer standortIId ,boolean bRahmenbestellungErzeugen, boolean bInklGesperrteArtikel) throws EJBExceptionLP, RemoteException;
 
 	public void removeLockDesBestellvorschlagesWennIchIhnSperre(TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -146,38 +149,69 @@ public interface BestellvorschlagFac {
 	public void pruefeBearbeitenDesBestellvorschlagsErlaubt(TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void bestellvorschlagInLiefergruppenanfragenUmwandeln(String projekt,TheClientDto theClientDto);
-	
-	public void verdichteBestellvorschlag(Long iVerdichtungszeitraum,
-			boolean bMindestbestellmengenBeruecksichtigt,boolean bBeruecksichtigeProjektklammer, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void bestellvorschlagInLiefergruppenanfragenUmwandeln(String projekt, TheClientDto theClientDto);
 
-	public void loescheSpaeterWiederbeschaffbarePositionen(Date tNaechsterBV,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public void verdichteBestellvorschlag(Long iVerdichtungszeitraum, boolean bMindestbestellmengenBeruecksichtigt,
+			boolean bBeruecksichtigeProjektklammer,boolean bPreiseaktualisieren, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void loescheSpaeterWiederbeschaffbarePositionen(Date tNaechsterBV, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public void loescheBestellvorlaegeEinesMandaten(boolean vormerklisteLoeschen, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
-	public void befuellenDerBestellungUndBestellposition(
-			BestellvorschlagDto[] aBestellvorschlagDto,
-			Integer kostenstelleIId, TheClientDto theClientDto) throws EJBExceptionLP;
-	
-	public void befuellenDerBestellungausBVfuerBestimmtenLieferant(
-			BestellvorschlagDto[] aBestellvorschlagDto,
-			Integer kostenstelleIId, TheClientDto theClientDto) throws EJBExceptionLP;
-	
+
+	public java.util.TreeMap befuellenDerBestellungUndBestellposition(BestellvorschlagDto[] aBestellvorschlagDto,
+			Integer kostenstelleIId, Integer partnerIIdStandort, boolean bRahmenbestellungErzeugen, TheClientDto theClientDto) throws EJBExceptionLP;
+
+	public java.util.TreeMap befuellenDerBestellungausBVfuerBestimmtenLieferant(
+			BestellvorschlagDto[] aBestellvorschlagDto, Integer kostenstelleIId, Integer partnerIIdStandort,boolean bRahmenbestellungErzeugen,
+			TheClientDto theClientDto) throws EJBExceptionLP;
+
 	public void loescheBestellvorschlaegeAbTermin(Date dTermin, TheClientDto theClientDto);
-	
-	public BestellungDto[] createBESausBVzuRahmen(FilterKriterium[] fk,
-			SortierKriterium[] ski, TheClientDto theClientDto)
-		throws EJBExceptionLP, RemoteException;
-	
-	public BestellungDto[] erstelleAbrufbestellungenAusBV(BestellvorschlagDto[] bestellvorschlagDto, TheClientDto theClientDto)
-		throws EJBExceptionLP, RemoteException;
-	public void bestellvorschlagDtoErzeugen(String belegartCNr,
-			String mandantCNr, Integer artikelIId, Integer belegIId,
-			Integer belegpositionIId, java.sql.Timestamp tTermin,
-			BigDecimal nMenge, Integer projektIId,String xTextinhalt,Integer lieferantIId, BigDecimal nEinkaufspreis, TheClientDto theClientDto);	
+
+	public RueckgabeUeberleitungDto createBESausBVzuRahmen(FilterKriterium[] fk, SortierKriterium[] ski,
+			Integer standortIId, boolean gemeinsameArtikelBestellen, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public RueckgabeUeberleitungDto erstelleAbrufbestellungenAusBV(BestellvorschlagDto[] bestellvorschlagDto,
+			Integer partnerIIdStandort, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void bestellvorschlagDtoErzeugen(String belegartCNr, String mandantCNr, Integer artikelIId, Integer belegIId,
+			Integer belegpositionIId, java.sql.Timestamp tTermin, BigDecimal nMenge, Integer projektIId,
+			String xTextinhalt, Integer lieferantIId, BigDecimal nEinkaufspreis,Double fLagermindest, Integer partnerIIdStandort,
+			boolean bZentralerArtikelstamm, TheClientDto theClientDto);
+
 	public Map getAllLieferantenDesBestellvorschlages(TheClientDto theClientDto);
+
 	public void artikellieferantZuruecksetzen(ArrayList<Integer> bestellvorschlagIIds, TheClientDto theClientDto);
+
+	public void verdichteEinenArtikel(Long lVerdichtungszeitraumparam, boolean bBeruecksichtigeProjektklammer,
+			TheClientDto theClientDto, boolean lagerminJeLager, ArtikelDto artikelDto);
+
+	public void verdichteBestellvorschlagNachDatum(Long lVerdichtungszeitraumparam,
+			boolean bBeruecksichtigeProjektklammer, TheClientDto theClientDto);
+
+	public void verdichteBestellvorschlagNachMindesbestellmengen(boolean bBeruecksichtigeProjektklammer,
+			TheClientDto theClientDto) throws EJBExceptionLP;
+
+	public String getKEYVALUE_EINSTELLUNGEN_LETZTER_BESTELLVORSCHLAG(TheClientDto theClientDto);
+
+	public void gemeinsameArtikelLoeschen(TheClientDto theClientDto);
+
+	List<BestellvorschlagDto> bestellvorschlagFindByArtikelIdVormerkungMandantCNr(ArtikelId artikelId,
+			String mandantCNr);
+
+	Integer setupCreateBestellvorschlag(CreateBestellvorschlagDto createDto, TheClientDto theClientDto);
+
+	BestellvorschlagDto bestellvorschlagFindByPrimaryKeyOhneExc(Integer iId);
+
+	public String pruefeUndImportiereBestellvorschlagXLS(byte[] xlsDatei, java.sql.Timestamp tLiefertermin,
+			boolean bVorhandenenBestellvorschlagLoeschen, boolean bImportierenWennKeinFehler,
+			TheClientDto theClientDto);
+	public void termineAnhandLiefertagVerschieben(TheClientDto theClientDto);
+
+	public void toggleBearbeitet(Integer bestellvorschlagIId, TheClientDto theClientDto);
+	
+	public void aktualisierePreiseWbz(TheClientDto theClientDto);
+	
 }

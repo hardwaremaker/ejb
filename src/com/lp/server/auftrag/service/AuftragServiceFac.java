@@ -114,12 +114,14 @@ public interface AuftragServiceFac {
 	public static final String FLR_AUFTRAGPOSITIONART_POSITIONSART_C_NR = "positionsart_c_nr";
 	public static final String FLR_AUFTRAGPOSITIONART_AUFTRAGPOSITIONSART_POSITIONSART_SET = "auftragpositionsart_positionsart_set";
 
-	public static final String FLR_ZEITPLAN_I_TERMIN_VOR_LIEFERTERMIN = "i_termin_vor_liefertermin";
+	public static final String FLR_ZEITPLAN_T_TERMIN = "t_termin";
 	public static final String FLR_ZEITPLAN_N_MATERIAL = "n_material";
 	public static final String FLR_ZEITPLAN_N_DAUER = "n_dauer";
 	public static final String FLR_ZEITPLAN_C_KOMMENTAR = "c_kommentar";
+	public static final String FLR_ZEITPLAN_T_DAUER_ERLEDIGT = "t_dauer_erledigt";
+	public static final String FLR_ZEITPLAN_T_MATERIAL_ERLEDIGT = "t_material_erledigt";
 
-	public static final String FLR_ZAHLUNGSPLAN_I_TAGE_VOR_LIEFERTERMIN = "i_tage_vor_liefertermin";
+	public static final String FLR_ZAHLUNGSPLAN_T_TERMIN = "t_termin";
 	public static final String FLR_ZAHLUNGSPLAN_N_BETRAG = "n_betrag";
 
 	public static final String FLR_ZAHLUNGSPLAN_C_KOMMENTAR = "c_kommentar";
@@ -353,13 +355,15 @@ public interface AuftragServiceFac {
 
 	public void removeZeitplan(ZeitplanDto zeitplanDto);
 
-	public Integer createZahlungsplan(ZahlungsplanDto zahlungsplanDto);
+	public Integer createZahlungsplan(ZahlungsplanDto zahlungsplanDto,
+			TheClientDto theClientDto);
 
 	public ZahlungsplanDto zahlungsplanFindByPrimaryKey(Integer iId);
 
 	public void removeZahlungsplan(ZahlungsplanDto zahlungsplanDto);
 
-	public void updateZahlungsplan(ZahlungsplanDto dto);
+	public void updateZahlungsplan(ZahlungsplanDto dto,
+			TheClientDto theClientDto);
 
 	public Integer createZahlungsplanmeilenstein(
 			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto,
@@ -377,5 +381,65 @@ public interface AuftragServiceFac {
 
 	public void toggleZahlungplanmeilensteinErledigt(
 			Integer zahlungsplanmeilensteinIId, TheClientDto theClientDto);
+
+	public void vertauscheMeilenstein(Integer iIdPosition1I,
+			Integer iIdPosition2I);
+
+	public void vertauscheZahlungsplanmeilenstein(Integer iIdPosition1I,
+			Integer iIdPosition2I);
+
+	public ZahlungsplanmeilensteinDto[] zahlungsplanmeilensteinFindByZahlungplanIIdOrderByTErledigt(
+			Integer zahlungsplanIId);
+
+	public void toggleZeitplanDauerErledigt(Integer zeitplanIId,
+			TheClientDto theClientDto);
+
+	public void toggleZeitplanMaterialErledigt(Integer zeitplanIId,
+			TheClientDto theClientDto);
+
+	public Integer createZeitplantyp(ZeitplantypDto dto,
+			TheClientDto theClientDto);
+
+	public void removeZeitplantyp(ZeitplantypDto zeitplantypDto);
+
+	public void removeZeitplantypdetail(
+			ZeitplantypdetailDto zeitplantypdetailDto);
+
+	public Integer createZeitplantypdetail(
+			ZeitplantypdetailDto zeitplantypdetailDto, TheClientDto theClientDto);
+
+	public ZeitplantypdetailDto zeitplantypdetailFindByPrimaryKey(Integer iId);
+
+	public ZeitplantypDto zeitplantypFindByPrimaryKey(Integer iId);
+
+	public void updateZeitplantypdetail(ZeitplantypdetailDto dto);
+
+	public void updateZeitplantyp(ZeitplantypDto dto, TheClientDto theClientDto);
+
+	public void vertauscheZeitplantypdetail(Integer iIdPosition1I,
+			Integer iIdPosition2I);
+	
+	public void importierteZeitplanAusZeitplantyp(Integer zeitplantypIId, Integer auftragIId,
+			TheClientDto theClientDto);
+	
+	public Integer createVerrechenbar(VerrechenbarDto dto,
+			TheClientDto theClientDto);
+	public void removeVerrechenbar(VerrechenbarDto dto);
+	public VerrechenbarDto verrechenbarFindByPrimaryKey(Integer iId);
+	public void vertauscheVerrechenbar(Integer iIdPosition1I,
+			Integer iIdPosition2I);
+	public void updateVerrechenbar(VerrechenbarDto dto,
+			TheClientDto theClientDto);
+	public Map getAllVerrechenbar();
+	
+	public AuftragkostenstelleDto auftragkostenstelleFindByPrimaryKey(
+			Integer iId);
+	public void updateAuftragkostenstelle(AuftragkostenstelleDto dto);
+	public void removeAuftragkostenstelle(
+			AuftragkostenstelleDto auftragkostenstelleDto);
+	public Integer createAuftragkostenstelle(AuftragkostenstelleDto dto,
+			TheClientDto theClientDto);
+	public AuftragkostenstelleDto[] auftragkostenstellefindByAuftrag(
+			Integer auftragIId);
 
 }

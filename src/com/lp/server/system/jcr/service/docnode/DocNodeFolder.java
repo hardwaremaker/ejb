@@ -73,13 +73,13 @@ public class DocNodeFolder extends DocNodeBase {
 	}
 
 	@Override
-	protected void persistSub(Node node) throws RepositoryException {
+	protected void persistToImpl(Node node) throws RepositoryException {
 		node.setProperty(NODEPROPERTY_NODETYPE, getNodeType());
 		node.setProperty(NODEPROPERTY_BELEGART, belegart);
 	}
 
 	@Override
-	protected void applyPropertiesSub(Node node) throws RepositoryException {
+	protected void loadFromImpl(Node node) throws RepositoryException {
 		belegart = node.getProperty(NODEPROPERTY_BELEGART).getString();
 	}
 

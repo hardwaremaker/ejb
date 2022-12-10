@@ -41,7 +41,6 @@ package com.lp.util;
 
 import java.io.Serializable;
 
-import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
 
 import com.lp.server.util.logger.LpLoggerFactory;
@@ -91,7 +90,8 @@ public class LpLoggerCS extends Logger implements Serializable {
 //		return Logger.getLogger(clazz.getName(), myFactory);
 //	}
 
-	public static Category getInstance(Class clazz) {
+//	public static Category getInstance(Class clazz) {
+	public static Logger getInstance(Class clazz) {
 		return Logger.getLogger(clazz.getName(), myFactory);
 	}
 

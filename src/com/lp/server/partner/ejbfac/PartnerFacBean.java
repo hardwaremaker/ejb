@@ -37,6 +37,7 @@ import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -53,8 +54,10 @@ import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
+import javax.persistence.Transient;
 
 import org.hibernate.Session;
+import org.modelmapper.ModelMapper;
 
 import com.lp.server.artikel.service.HerstellerDto;
 import com.lp.server.auftrag.service.AuftragteilnehmerDto;
@@ -65,40 +68,45 @@ import com.lp.server.fertigung.ejb.Wiederholendelose;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.WiederholendeloseDto;
 import com.lp.server.finanz.service.FinanzFac;
-import com.lp.server.finanz.service.FinanzServiceFac;
 import com.lp.server.finanz.service.FinanzamtDto;
 import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.partner.ejb.Anrede;
 import com.lp.server.partner.ejb.Anredespr;
 import com.lp.server.partner.ejb.AnredesprPK;
 import com.lp.server.partner.ejb.Ansprechpartner;
-import com.lp.server.partner.ejb.Branche;
+import com.lp.server.partner.ejb.Ansprechpartneradressbuch;
+import com.lp.server.partner.ejb.Geodaten;
+import com.lp.server.partner.ejb.GeodatenQuery;
 import com.lp.server.partner.ejb.Kontakt;
 import com.lp.server.partner.ejb.Kunde;
 import com.lp.server.partner.ejb.Kurzbrief;
 import com.lp.server.partner.ejb.Lieferant;
-import com.lp.server.partner.ejb.PASelektionPK;
 import com.lp.server.partner.ejb.Partner;
 import com.lp.server.partner.ejb.PartnerQuery;
+import com.lp.server.partner.ejb.Partneradressbuch;
 import com.lp.server.partner.ejb.Partnerart;
 import com.lp.server.partner.ejb.Partnerartspr;
 import com.lp.server.partner.ejb.PartnerartsprPK;
 import com.lp.server.partner.ejb.Partnerklasse;
 import com.lp.server.partner.ejb.Partnerklassespr;
 import com.lp.server.partner.ejb.PartnerklassesprPK;
+import com.lp.server.partner.ejb.Partnerkommentar;
 import com.lp.server.partner.ejb.Partnerkommunikation;
 import com.lp.server.partner.ejb.Paselektion;
+import com.lp.server.partner.ejb.Telefonnummer;
 import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.partner.fastlanereader.generated.FLRPartner;
+import com.lp.server.partner.fastlanereader.generated.FLRPersoenlichesadressbuch;
+import com.lp.server.partner.service.AdressbuchExportDto;
 import com.lp.server.partner.service.AnredeDto;
 import com.lp.server.partner.service.AnredeDtoAssembler;
 import com.lp.server.partner.service.AnredesprDto;
 import com.lp.server.partner.service.AnredesprDtoAssembler;
 import com.lp.server.partner.service.AnsprechpartnerDto;
-import com.lp.server.partner.service.AnsprechpartnerfunktionDto;
 import com.lp.server.partner.service.BankDto;
-import com.lp.server.partner.service.BrancheDto;
+import com.lp.server.partner.service.GeodatenDto;
+import com.lp.server.partner.service.GeodatenDtoAssembler;
 import com.lp.server.partner.service.KontaktDto;
 import com.lp.server.partner.service.KontaktDtoAssembler;
 import com.lp.server.partner.service.KundeDto;
@@ -111,7 +119,6 @@ import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerDtoAssembler;
 import com.lp.server.partner.service.PartnerDtoSmall;
 import com.lp.server.partner.service.PartnerFac;
-import com.lp.server.partner.service.PartnerImportDto;
 import com.lp.server.partner.service.PartnerartDto;
 import com.lp.server.partner.service.PartnerartDtoAssembler;
 import com.lp.server.partner.service.PartnerartsprDto;
@@ -121,9 +128,12 @@ import com.lp.server.partner.service.PartnerklasseDto;
 import com.lp.server.partner.service.PartnerklasseDtoAssembler;
 import com.lp.server.partner.service.PartnerklassesprDto;
 import com.lp.server.partner.service.PartnerklassesprDtoAssembler;
+import com.lp.server.partner.service.PartnerkommentarartDto;
 import com.lp.server.partner.service.PartnerkommunikationDto;
 import com.lp.server.partner.service.PartnerkommunikationDtoAssembler;
-import com.lp.server.partner.service.SelektionDto;
+import com.lp.server.partner.service.SerienbriefEmpfaengerDto;
+import com.lp.server.partner.service.TelefonSuchergebnisDto;
+import com.lp.server.personal.ejb.Personal;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.personal.service.ReiseDto;
@@ -133,9 +143,6 @@ import com.lp.server.projekt.ejb.Projekt;
 import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.stueckliste.ejb.Stueckliste;
 import com.lp.server.stueckliste.service.StuecklisteDto;
-import com.lp.server.system.ejb.Ort;
-import com.lp.server.system.fastlanereader.generated.FLRLand;
-import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.GeschaeftsjahrMandantDto;
@@ -143,14 +150,15 @@ import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LandplzortDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
-import com.lp.server.system.service.OrtDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.VersandauftragDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -160,50 +168,50 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	@PersistenceContext
 	private EntityManager em;
 
+	@Transient
+	private transient ModelMapper mapper = null;
+
 	/**
 	 * Lege einen neuen Partner an.
 	 * 
-	 * @param partnerDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            aktueller Benutzer
+	 * @param partnerDto   PartnerDto
+	 * @param theClientDto aktueller Benutzer
 	 * @throws EJBExceptionLP
 	 * @return Integer
 	 */
-	public Integer createPartner(PartnerDto partnerDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPartner(PartnerDto partnerDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		// Preconditions.
 		if (partnerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerDto == null"));
 		}
 
 		if (partnerDto.getCKbez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("partnerDto.getCKbez() == null"));
 		}
 
 		if (partnerDto.getCName1nachnamefirmazeile1() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"partnerDto.getCName1nachnamefirmazeile1() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("partnerDto.getCName1nachnamefirmazeile1() == null"));
 		}
 
 		if (partnerDto.getPartnerartCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("partnerDto.getPartnerartCNr() == null"));
 		}
 		if (partnerDto.getBVersteckt() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("partnerDto.getBVersteckt() == null"));
 		}
+
+		if (partnerDto.getLocaleCNrKommunikation() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("partnerDto.getLocaleCNrKommunikation() == null"));
+		}
+
 		// Wer legt an setzen; Ausnahme wegen Junittest
-		partnerDto.setPersonalIIdAendern(partnerDto.getPersonalIIdAendern());
-		partnerDto.setPersonalIIdAnlegen(partnerDto.getPersonalIIdAnlegen());
+		partnerDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+		partnerDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
 
 		// PK fuer Partner generieren.
 		PKGeneratorObj pkGen = new PKGeneratorObj();
@@ -211,12 +219,9 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		partnerDto.setIId(iIdPartnerNew);
 
 		try {
-			Partner partner = new Partner(partnerDto.getIId(),
-					partnerDto.getLocaleCNrKommunikation(),
-					partnerDto.getPartnerartCNr(), partnerDto.getCKbez(),
-					partnerDto.getBVersteckt(),
-					partnerDto.getCName1nachnamefirmazeile1(),
-					partnerDto.getPersonalIIdAnlegen(),
+			Partner partner = new Partner(partnerDto.getIId(), partnerDto.getLocaleCNrKommunikation(),
+					partnerDto.getPartnerartCNr(), partnerDto.getCKbez(), partnerDto.getBVersteckt(),
+					partnerDto.getCName1nachnamefirmazeile1(), partnerDto.getPersonalIIdAnlegen(),
 					partnerDto.getPersonalIIdAendern());
 			em.persist(partner);
 			em.flush();
@@ -236,905 +241,22 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		} catch (PersistenceException ep) {
 			throwEJBExceptionLPforPersistence(ep);
 		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
+
+		HvDtoLogger<PartnerDto> partnerLogger = new HvDtoLogger<PartnerDto>(em, theClientDto);
+		partnerLogger.logInsert(partnerDto);
+
+		getPartnerFac().telefonnummerFuerTapiSynchronisieren(partnerDto.getIId(), null, theClientDto);
+
 		return partnerDto.getIId();
 	}
 
-	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public String pruefeCSVImport(PartnerImportDto[] daten,
-			TheClientDto theClientDto) {
-
-		byte[] CRLFAscii = { 13, 10 };
-		String rueckgabe = "";
-
-		for (int i = 2; i < daten.length + 2; i++) {
-
-			String fehler = "";
-			PartnerImportDto zeile = daten[i - 2];
-
-			if (zeile.getAnrede().length() > 15) {
-				fehler += "Feld Anrede zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getAnrede().length() > 0) {
-				if (zeile.getAnrede().equals(
-						PartnerFac.PARTNER_ANREDE_HERR.trim())) {
-
-				} else if (zeile.getAnrede().equals(
-						PartnerFac.PARTNER_ANREDE_FRAU.trim())) {
-
-				} else if (zeile.getAnrede().equals(
-						PartnerFac.PARTNER_ANREDE_FIRMA.trim())) {
-
-				} else {
-					fehler += " Anrede '" + zeile.getAnrede()
-							+ "' nicht vorhanden, Zeile:" + i + "; ";
-				}
-
-			}
-
-			if (zeile.getAnsprechpartnerNachname().length() == 0
-					&& zeile.getAnsprechpartnerFunktion().length() == 0) {
-				// Es gibt keinen Ansprechpartner
-
-			} else {
-
-				if (zeile.getAnsprechpartnerAnrede().length() > 15) {
-					fehler += "Feld AnsprechpartnerAnrede zu Lang, Zeile:" + i
-							+ "; ";
-				}
-
-				if (zeile.getAnsprechpartnerAnrede().length() > 0) {
-					if (zeile.getAnsprechpartnerAnrede().equals(
-							PartnerFac.PARTNER_ANREDE_HERR.trim())) {
-
-					} else if (zeile.getAnsprechpartnerAnrede().equals(
-							PartnerFac.PARTNER_ANREDE_FRAU.trim())) {
-
-					} else if (zeile.getAnsprechpartnerAnrede().equals(
-							PartnerFac.PARTNER_ANREDE_FIRMA.trim())) {
-
-					} else {
-						fehler += " AnsprechpartnerAnrede '"
-								+ zeile.getAnsprechpartnerAnrede()
-								+ "' nicht vorhanden, Zeile:" + i + "; ";
-					}
-
-				}
-
-				if (zeile.getAnsprechpartnerBemerkung().length() > 300) {
-					fehler += "Feld AnsprechpartnerBemerkung zu Lang, Zeile:"
-							+ i + "; ";
-				}
-				if (zeile.getAnsprechpartnerEmail().length() > 80) {
-					fehler += "Feld AnsprechpartnerEmail zu Lang, Zeile:" + i
-							+ "; ";
-				}
-				if (zeile.getAnsprechpartnerFaxDW().length() > 80) {
-					fehler += "Feld AnsprechpartnerFaxDW zu Lang, Zeile:" + i
-							+ "; ";
-				}
-				if (zeile.getAnsprechpartnerDirektfax().length() > 80) {
-					fehler += "Feld AnsprechpartnerDirektfax zu Lang, Zeile:"
-							+ i + "; ";
-				}
-				if (zeile.getAnsprechpartnerFunktion().length() == 0) {
-					fehler += "Feld AnsprechpartnerFunktion nicht bef\u00FCllt, Zeile:"
-							+ i + "; ";
-				} else {
-					try {
-						getAnsprechpartnerFac()
-								.ansprechpartnerfunktionFindByCnr(
-										zeile.getAnsprechpartnerFunktion(),
-										theClientDto);
-					} catch (Throwable e) {
-						fehler += " AnsprechpartnerFunktion '"
-								+ zeile.getAnsprechpartnerFunktion()
-								+ "' nicht vorhanden, Zeile:" + i + "; ";
-					}
-
-				}
-				if (zeile.getAnsprechpartnerGueltigab() == null) {
-					fehler += "Feld AnsprechpartnerGueltigab nicht bef\u00FCllt, Zeile:"
-							+ i + "; ";
-				}
-
-				if (zeile.getAnsprechpartnerMobil().length() > 80) {
-					fehler += "Feld AnsprechpartnerMobil zu Lang, Zeile:" + i
-							+ "; ";
-				}
-				if (zeile.getAnsprechpartnerNachname().length() > 40) {
-					fehler += "Feld AnsprechpartnerNachname zu Lang, Zeile:"
-							+ i + "; ";
-				}
-				if (zeile.getAnsprechpartnerTelefonDW().length() > 80) {
-					fehler += "Feld AnsprechpartnerTelefonDW zu Lang, Zeile:"
-							+ i + "; ";
-				}
-				if (zeile.getAnsprechpartnerTitel().length() > 80) {
-					fehler += "Feld AnsprechpartnerTitel zu Lang, Zeile:" + i
-							+ "; ";
-				}
-				if (zeile.getAnsprechpartnerVorname().length() > 40) {
-					fehler += "Feld AnsprechpartnerVorname zu Lang, Zeile:" + i
-							+ "; ";
-				}
-
-			}
-
-			if (zeile.getBemerkung().length() > 3000) {
-				fehler += "Feld Bemerkung zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getEmail().length() > 80) {
-				fehler += "Feld Email zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getFax().length() > 80) {
-				fehler += "Feld Fax zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getHomepage().length() > 80) {
-				fehler += "Feld Homepage zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getLand().length() > 50) {
-				fehler += "Feld Land zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getName1().length() > 40) {
-				fehler += "Feld Name1 zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getName2().length() > 40) {
-				fehler += "Feld Name2 zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getName3().length() > 40) {
-				fehler += "Feld Name3 zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getOrt().length() > 50) {
-				fehler += "Feld Ort zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getFirmenbuchnummer().length() > 50) {
-				fehler += "Feld Firmenbuchnummer zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getGerichtsstand().length() > 40) {
-				fehler += "Feld Gerichtsstand zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getPostfach().length() > 15) {
-				fehler += "Feld Postfach zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getPlz().length() > 15) {
-				fehler += "Feld Plz zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getSelektion().length() > 20) {
-				fehler += "Feld Selektion zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getIln().length() > 15) {
-				fehler += "Feld ILN zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getFilialnr().length() > 15) {
-				fehler += "Feld Filialnr. zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getUid().length() > 20) {
-				fehler += "Feld UIDNr zu Lang, Zeile:" + i + "; ";
-			}
-
-			if (zeile.getPartnerklasse().length() > 15) {
-				fehler += "Feld Partnerklass zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getBranche().length() > 50) {
-				fehler += "Feld Branche zu Lang, Zeile:" + i + "; ";
-			}
-
-			if (zeile.getSelektion().length() > 0) {
-
-				try {
-					SelektionDto selektionDto = getPartnerServicesFac()
-							.selektionFindByCNrMandantCNr(zeile.getSelektion(),
-									theClientDto);
-					if (selektionDto == null) {
-						fehler += "Selektion '" + zeile.getSelektion()
-								+ "' nicht vorhanden, Zeile:" + i + "; ";
-
-					}
-				} catch (RemoteException e) {
-					throwEJBExceptionLPRespectOld(e);
-				}
-
-			}
-
-			if (zeile.getStrasse().length() > 80) {
-				fehler += "Feld Strasse zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getTelefon().length() > 80) {
-				fehler += "Feld Telefon zu Lang, Zeile:" + i + "; ";
-			}
-			if (zeile.getTitel().length() > 80) {
-				fehler += "Feld Titel zu Lang, Zeile:" + i + "; ";
-			}
-
-			// Feldlaengen
-			// zeile
-
-			if (fehler.length() > 0) {
-				rueckgabe += fehler + new String(CRLFAscii);
-			}
-
-		}
-
-		return rueckgabe;
-	}
-
-	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public void importierePartner(PartnerImportDto[] daten,
-			TheClientDto theClientDto, boolean bErzeugeKunde,
-			boolean bErzeugeLieferant) {
-
-		MandantDto mandantDto = null;
+	public void kontoFuerPartnerImportAnlegen(String sKontonummer, String kontotypCNr, Integer kundeIId,
+			Integer lieferantIId, TheClientDto theClientDto) {
 		try {
-			mandantDto = getMandantFac().mandantFindByPrimaryKey(
+			KontoDto kontoDto = getFinanzFac().kontoFindByCnrKontotypMandantOhneExc(sKontonummer, kontotypCNr,
 					theClientDto.getMandant(), theClientDto);
-		} catch (RemoteException e2) {
-			throwEJBExceptionLPRespectOld(e2);
-		}
-
-		for (int i = 0; i < daten.length; i++) {
-
-			System.out.println(i + " von " + daten.length);
-
-			PartnerImportDto zeile = daten[i];
-
-			Session session = FLRSessionFactory.getFactory().openSession();
-
-			String queryString = "SELECT p FROM FLRPartner as p WHERE p.c_name1nachnamefirmazeile1='"
-					+ zeile.getName1().replaceAll("'", "''") + "'";
-
-			if (zeile.getName2() != null && zeile.getName2().length() > 0) {
-				queryString += " AND p.c_name2vornamefirmazeile2 ='"
-						+ zeile.getName2().replaceAll("'", "''") + "'";
-			}
-
-			if (zeile.getName3() != null && zeile.getName3().length() > 0) {
-				queryString += " AND p.c_name3vorname2abteilung ='"
-						+ zeile.getName3().replaceAll("'", "''") + "'";
-			}
-
-			if (zeile.getStrasse() != null && zeile.getStrasse().length() > 0) {
-				queryString += " AND p.c_strasse ='"
-						+ zeile.getStrasse().replaceAll("'", "''") + "'";
-			}
-
-			org.hibernate.Query query = session.createQuery(queryString);
-			List<?> resultList = query.list();
-			Iterator<?> resultListIterator = resultList.iterator();
-
-			boolean bIstNeu = false;
-			boolean bAnsprechpartnerVorhanden = false;
-
-			Integer partnerIIdFuerAnsprechpartner = null;
-
-			if (resultList.size() > 0) {
-
-				while (resultListIterator.hasNext()) {
-					FLRPartner p = (FLRPartner) resultListIterator.next();
-					partnerIIdFuerAnsprechpartner = p.getI_id();
-
-					if (zeile.getAnsprechpartnerNachname().length() == 0
-							&& zeile.getAnsprechpartnerFunktion().length() == 0) {
-						// Es gibt keinen Ansprechpartner
-
-					} else {
-
-						if (zeile.getAnsprechpartnerNachname().length() > 0) {
-
-							// Ansprechpartner
-							java.util.Set ansprechpartner = p
-									.getAnsprechpartner();
-							if (ansprechpartner.size() > 0) {
-								Iterator anspIt = ansprechpartner.iterator();
-								while (anspIt.hasNext()) {
-									FLRAnsprechpartner flrAnsprechpartner = (FLRAnsprechpartner) anspIt
-											.next();
-
-									if (zeile
-											.getAnsprechpartnerNachname()
-											.equals(flrAnsprechpartner
-													.getFlrpartneransprechpartner()
-													.getC_name1nachnamefirmazeile1())) {
-										bAnsprechpartnerVorhanden = true;
-
-									}
-
-								}
-
-							}
-
-						}
-					}
-				}
-			} else {
-				bIstNeu = true;
-			}
-			if (bIstNeu) {
-				// Zuerst partner anlegen
-				PartnerDto partnerDto = new PartnerDto();
-				partnerDto.setPartnerartCNr(PartnerFac.PARTNERART_ADRESSE);
-				partnerDto.setBVersteckt(Helper.boolean2Short(false));
-				partnerDto.setCName1nachnamefirmazeile1(zeile.getName1());
-				partnerDto.setLocaleCNrKommunikation(theClientDto
-						.getLocUiAsString());
-
-				if (zeile.getName2().length() > 0) {
-					partnerDto.setCName2vornamefirmazeile2(zeile.getName2());
-				}
-				if (zeile.getName3().length() > 0) {
-					partnerDto.setCName3vorname2abteilung(zeile.getName3());
-				}
-				if (zeile.getTitel().length() > 0) {
-					partnerDto.setCTitel(zeile.getTitel());
-				}
-				if (zeile.getStrasse().length() > 0) {
-					partnerDto.setCStrasse(zeile.getStrasse());
-				}
-
-				if (zeile.getFirmenbuchnummer().length() > 0) {
-					partnerDto.setCFirmenbuchnr(zeile.getFirmenbuchnummer());
-				}
-				if (zeile.getGerichtsstand().length() > 0) {
-					partnerDto.setCGerichtsstand(zeile.getGerichtsstand());
-				}
-				if (zeile.getPostfach().length() > 0) {
-					partnerDto.setCPostfach(zeile.getPostfach());
-				}
-
-				partnerDto.setCIln(zeile.getIln());
-				partnerDto.setCUid(zeile.getUid());
-				partnerDto.setCFilialnummer(zeile.getFilialnr());
-
-				if (zeile.getGmtversatz().length() > 0) {
-
-					try {
-						Double d = new Double(zeile.getGmtversatz());
-
-						partnerDto.setFGmtversatz(d);
-					} catch (NumberFormatException e) {
-						//
-					}
-				}
-
-				// Partnerklasse
-
-				Integer partnerklasseIId = null;
-
-				if (zeile.getPartnerklasse().length() > 0) {
-					try {
-						Query klasse = em
-								.createNamedQuery("PartnerklassefindByCNr");
-						klasse.setParameter(1, zeile.getPartnerklasse());
-						partnerklasseIId = ((Partnerklasse) klasse
-								.getSingleResult()).getIId();
-
-					} catch (NoResultException ex) {
-						// Neu anlegen
-						PartnerklasseDto klasseDto = new PartnerklasseDto();
-						klasseDto.setCNr(zeile.getPartnerklasse());
-						try {
-							partnerklasseIId = getPartnerFac()
-									.createPartnerklasse(klasseDto,
-											theClientDto);
-						} catch (RemoteException e) {
-							throwEJBExceptionLPRespectOld(e);
-						}
-					}
-				}
-				partnerDto.setPartnerklasseIId(partnerklasseIId);
-
-				// Branche
-
-				Integer brancheIId = null;
-
-				if (zeile.getBranche().length() > 0) {
-					try {
-						Query branche = em.createNamedQuery("BranchefindByCNr");
-						branche.setParameter(1, zeile.getBranche());
-						brancheIId = ((Branche) branche.getSingleResult())
-								.getIId();
-
-					} catch (NoResultException ex) {
-						// Neu anlegen
-						BrancheDto brancheDto = new BrancheDto();
-						brancheDto.setCNr(zeile.getBranche());
-						try {
-							brancheIId = getPartnerServicesFac().createBranche(
-									brancheDto, theClientDto);
-						} catch (RemoteException e) {
-							throwEJBExceptionLPRespectOld(e);
-						}
-					}
-				}
-				partnerDto.setBrancheIId(brancheIId);
-
-				// Anrede
-				if (zeile.getAnrede().length() > 0) {
-					if (zeile.getAnrede().equals(
-							PartnerFac.PARTNER_ANREDE_HERR.trim())) {
-						partnerDto.setAnredeCNr(PartnerFac.PARTNER_ANREDE_HERR);
-					} else if (zeile.getAnrede().equals(
-							PartnerFac.PARTNER_ANREDE_FRAU.trim())) {
-						partnerDto.setAnredeCNr(PartnerFac.PARTNER_ANREDE_FRAU);
-
-					} else if (zeile.getAnrede().equals(
-							PartnerFac.PARTNER_ANREDE_FIRMA.trim())) {
-						partnerDto
-								.setAnredeCNr(PartnerFac.PARTNER_ANREDE_FIRMA);
-					}
-				}
-
-				// Landplzort
-				// LAND
-				Session session1 = FLRSessionFactory.getFactory().openSession();
-
-				String querystring1 = "SELECT l FROM FLRLand as l WHERE l.c_lkz='"
-						+ zeile.getLand() + "'";
-
-				org.hibernate.Query query1 = session1.createQuery(querystring1);
-				List<?> results = query1.list();
-
-				Integer landIId = null;
-
-				if (results.size() > 0) {
-
-					FLRLand flrLand = (FLRLand) results.iterator().next();
-					// bereits vorhanden, dann ID holen
-					landIId = flrLand.getI_id();
-				} else {
-					LandDto landDto = new LandDto();
-					landDto.setCLkz(zeile.getLand());
-					landDto.setCName(zeile.getLand());
-					landDto.setILaengeuidnummer(10);
-					landDto.setBSepa(Helper.boolean2Short(false));
-
-					try {
-						landIId = getSystemFac().createLand(landDto,
-								theClientDto);
-					} catch (RemoteException e) {
-						throwEJBExceptionLPRespectOld(e);
-					}
-				}
-
-				session1.close();
-
-				// ORT
-
-				Query queryOrt = em.createNamedQuery("OrtfindByCName");
-				queryOrt.setParameter(1, zeile.getOrt());
-
-				results = queryOrt.getResultList();
-
-				Integer ortIId = null;
-
-				if (results.size() > 0) {
-
-					Ort ort = (Ort) results.iterator().next();
-					// bereits vorhanden, dann ID holen
-					ortIId = ort.getIId();
-				} else {
-					OrtDto landDto = new OrtDto();
-					landDto.setCName(zeile.getOrt());
-					try {
-						ortIId = getSystemFac()
-								.createOrt(landDto, theClientDto);
-					} catch (RemoteException e) {
-						throwEJBExceptionLPRespectOld(e);
-					}
-				}
-
-				// PLZ
-				session1 = FLRSessionFactory.getFactory().openSession();
-
-				querystring1 = "SELECT plz FROM FLRLandplzort as plz WHERE plz.c_plz='"
-						+ zeile.getPlz()
-						+ "' AND plz.flrort.i_id="
-						+ ortIId
-						+ " AND plz.flrland.i_id=" + landIId;
-
-				query1 = session1.createQuery(querystring1);
-				results = query1.list();
-
-				Integer landplzortIId = null;
-
-				if (results.size() > 0) {
-
-					FLRLandplzort flrLandplzort = (FLRLandplzort) results
-							.iterator().next();
-					// bereits vorhanden, dann ID holen
-					landplzortIId = flrLandplzort.getI_id();
-				} else {
-					LandplzortDto landplzortDto = new LandplzortDto();
-					landplzortDto.setCPlz(zeile.getPlz());
-					landplzortDto.setOrtIId(ortIId);
-					landplzortDto.setIlandID(landIId);
-
-					LandDto landDto = new LandDto();
-					landDto.setCLkz(zeile.getLand());
-					landDto.setCName(zeile.getLand());
-					landDto.setILaengeuidnummer(10);
-					landDto.setIID(landIId);
-					landplzortDto.setLandDto(landDto);
-
-					OrtDto ortDto = new OrtDto();
-					ortDto.setCName(zeile.getOrt());
-					ortDto.setIId(ortIId);
-					landplzortDto.setOrtDto(ortDto);
-					try {
-						landplzortIId = getSystemFac().createLandplzort(
-								landplzortDto, theClientDto);
-					} catch (RemoteException e) {
-						throwEJBExceptionLPRespectOld(e);
-					}
-				}
-
-				session1.close();
-
-				partnerDto.setLandplzortIId(landplzortIId);
-
-				// Kommunikation
-				// Telefon
-				if (zeile.getTelefon().length() > 0) {
-					partnerDto.setCTelefon(zeile.getTelefon());
-				}
-				// Fax
-				if (zeile.getFax().length() > 0) {
-					partnerDto.setCFax(zeile.getFax());
-				}
-				// Email
-				if (zeile.getEmail().length() > 0) {
-					partnerDto.setCEmail(zeile.getEmail());
-				}
-				// Homepage
-				if (zeile.getHomepage().length() > 0) {
-					partnerDto.setCHomepage(zeile.getHomepage());
-				}
-
-				partnerDto.setXBemerkung(zeile.getBemerkung());
-
-				// Kurzbezeichnung
-
-				try {
-					String sN1 = partnerDto.getCName1nachnamefirmazeile1()
-							+ " ";
-
-					int iE = sN1.indexOf(" ");
-					if (iE > PartnerFac.MAX_KBEZ / 2) {
-						iE = PartnerFac.MAX_KBEZ / 2;
-					}
-					partnerDto.setCKbez(sN1.substring(0, iE));
-				} catch (Exception e1) {
-					partnerDto.setCKbez("KBEZ");
-				}
-
-				Integer partnerIId = null;
-				try {
-					partnerIId = getPartnerFac().createPartner(partnerDto,
-							theClientDto);
-				} catch (RemoteException e1) {
-					throwEJBExceptionLPRespectOld(e1);
-				}
-				partnerIIdFuerAnsprechpartner = partnerIId;
-				// Selektion
-				if (zeile.getSelektion().length() > 0) {
-
-					try {
-						SelektionDto selektionDto = getPartnerServicesFac()
-								.selektionFindByCNrMandantCNr(
-										zeile.getSelektion(), theClientDto);
-						if (selektionDto != null) {
-
-							PASelektionDto paselDto = new PASelektionDto();
-							paselDto.setPartnerIId(partnerIId);
-							paselDto.setSelektionIId(selektionDto.getIId());
-							createPASelektion(paselDto, theClientDto);
-						}
-					} catch (RemoteException e) {
-						throwEJBExceptionLPRespectOld(e);
-					}
-				}
-
-				// LAND-PLZ-ORT
-				if (zeile.getLand().length() > 0 && zeile.getPlz().length() > 0
-						&& zeile.getOrt().length() > 0) {
-
-					// getSystemFac().
-
-				}
-
-				// Ansprechpartner anlegen
-				// Wenn Vorname/Nachname noch nicht vorhanden
-
-			}
-
-			if (bAnsprechpartnerVorhanden == false
-					&& partnerIIdFuerAnsprechpartner != null) {
-				if (zeile.getAnsprechpartnerNachname().length() > 0) {
-
-					// Partner vorher anlegen
-					PartnerDto partnerDto = new PartnerDto();
-					partnerDto.setCName1nachnamefirmazeile1(zeile
-							.getAnsprechpartnerNachname());
-					partnerDto.setCName2vornamefirmazeile2(zeile
-							.getAnsprechpartnerVorname());
-					partnerDto.setCTitel(zeile.getAnsprechpartnerTitel());
-					partnerDto
-							.setPartnerartCNr(PartnerFac.PARTNERART_ANSPRECHPARTNER);
-					partnerDto.setBVersteckt(com.lp.util.Helper
-							.boolean2Short(false));
-					partnerDto.setLocaleCNrKommunikation(theClientDto
-							.getLocUiAsString());
-
-					String kbez = zeile.getAnsprechpartnerNachname();
-					if (kbez.length() > 14) {
-						kbez = zeile.getAnsprechpartnerNachname().substring(0,
-								13);
-					}
-
-					partnerDto.setCKbez(kbez);
-
-					// Anrede
-					if (zeile.getAnsprechpartnerAnrede().length() > 0) {
-						if (zeile.getAnsprechpartnerAnrede().equals(
-								PartnerFac.PARTNER_ANREDE_HERR.trim())) {
-							partnerDto
-									.setAnredeCNr(PartnerFac.PARTNER_ANREDE_HERR);
-						} else if (zeile.getAnsprechpartnerAnrede().equals(
-								PartnerFac.PARTNER_ANREDE_FRAU.trim())) {
-							partnerDto
-									.setAnredeCNr(PartnerFac.PARTNER_ANREDE_FRAU);
-
-						} else if (zeile.getAnsprechpartnerAnrede().equals(
-								PartnerFac.PARTNER_ANREDE_FIRMA.trim())) {
-							partnerDto
-									.setAnredeCNr(PartnerFac.PARTNER_ANREDE_FIRMA);
-						}
-					}
-
-					if (zeile.getGeburtsdatumansprechpartner() != null) {
-						partnerDto
-								.setDGeburtsdatumansprechpartner(new java.sql.Date(
-										zeile.getGeburtsdatumansprechpartner()
-												.getTime()));
-					}
-
-					AnsprechpartnerDto ansprechpartnerDto = new AnsprechpartnerDto();
-					try {
-						ansprechpartnerDto
-								.setPartnerIIdAnsprechpartner(getPartnerFac()
-										.createPartner(partnerDto, theClientDto));
-					} catch (RemoteException e1) {
-						throwEJBExceptionLPRespectOld(e1);
-					}
-					ansprechpartnerDto
-							.setPartnerIId(partnerIIdFuerAnsprechpartner);
-
-					ansprechpartnerDto.setBVersteckt(com.lp.util.Helper
-							.boolean2Short(false));
-					ansprechpartnerDto.setXBemerkung(zeile
-							.getAnsprechpartnerBemerkung());
-
-					if (zeile.getAnsprechpartnerGueltigab() != null) {
-						ansprechpartnerDto.setDGueltigab(new java.sql.Date(
-								zeile.getAnsprechpartnerGueltigab().getTime()));
-					} else {
-						ansprechpartnerDto.setDGueltigab(new java.sql.Date(
-								System.currentTimeMillis()));
-					}
-
-					// FAX-DW
-					if (zeile.getAnsprechpartnerFaxDW().length() > 0) {
-						ansprechpartnerDto.setCFax(zeile
-								.getAnsprechpartnerFaxDW());
-					}
-					// TEL-DW
-					if (zeile.getAnsprechpartnerTelefonDW().length() > 0) {
-						ansprechpartnerDto.setCTelefon(zeile
-								.getAnsprechpartnerTelefonDW());
-					}
-					// Handy
-
-					if (zeile.getAnsprechpartnerMobil().length() > 0) {
-						ansprechpartnerDto.setCHandy(zeile
-								.getAnsprechpartnerMobil());
-					}
-					// Email
-
-					if (zeile.getAnsprechpartnerEmail().length() > 0) {
-						ansprechpartnerDto.setCEmail(zeile
-								.getAnsprechpartnerEmail());
-					}
-					// Direktfax
-
-					if (zeile.getAnsprechpartnerDirektfax().length() > 0) {
-						ansprechpartnerDto.setCDirektfax(zeile
-								.getAnsprechpartnerDirektfax());
-					}
-
-					// Ansprpechpartnerfunktion
-					AnsprechpartnerfunktionDto dto = null;
-					try {
-						dto = getAnsprechpartnerFac()
-								.ansprechpartnerfunktionFindByCnr(
-										zeile.getAnsprechpartnerFunktion(),
-										theClientDto);
-
-						ansprechpartnerDto.setAnsprechpartnerfunktionIId(dto
-								.getIId());
-						ansprechpartnerDto.setISort(getAnsprechpartnerFac()
-								.getMaxISort(partnerIIdFuerAnsprechpartner)
-								.intValue() + 1);
-
-						getAnsprechpartnerFac().createAnsprechpartner(
-								ansprechpartnerDto, theClientDto);
-
-					} catch (Throwable e) {
-						e.printStackTrace();
-						// auslassen
-					}
-
-				}
-
-			}
-			// Kunde anlegen
-
-			if (partnerIIdFuerAnsprechpartner != null && bErzeugeKunde == true) {
-				try {
-
-					PartnerDto partnerDto = getPartnerFac()
-							.partnerFindByPrimaryKey(
-									partnerIIdFuerAnsprechpartner, theClientDto);
-
-					KundeDto kundeDto = getKundeFac()
-							.kundeFindByiIdPartnercNrMandantOhneExc(
-									partnerIIdFuerAnsprechpartner,
-									theClientDto.getMandant(), theClientDto);
-
-					if (kundeDto == null) {
-						kundeDto = new KundeDto();
-						kundeDto.setMwstsatzbezIId(mandantDto
-								.getMwstsatzbezIIdStandardinlandmwstsatz());
-						kundeDto.setVkpfArtikelpreislisteIIdStdpreisliste(mandantDto
-								.getVkpfArtikelpreislisteIId());
-						kundeDto.setKostenstelleIId(mandantDto
-								.getIIdKostenstelle());
-						kundeDto.setbIstinteressent(new Short((short) 0));
-
-						kundeDto.setPersonaliIdProvisionsempfaenger(theClientDto
-								.getIDPersonal());
-
-						kundeDto.setBVersteckterlieferant(Helper
-								.boolean2Short(false));
-						// Vorbelegungen werden vom Mandanten geholt
-
-						kundeDto.setMandantCNr(mandantDto.getCNr());
-						kundeDto.setLieferartIId(mandantDto
-								.getLieferartIIdKunde());
-						kundeDto.setSpediteurIId(mandantDto
-								.getSpediteurIIdKunde());
-						kundeDto.setZahlungszielIId(mandantDto
-								.getZahlungszielIIdKunde());
-						kundeDto.setCWaehrung(mandantDto.getWaehrungCNr());
-						kundeDto.setbIstinteressent(Helper.boolean2Short(false));
-						kundeDto.setBAkzeptiertteillieferung(Helper
-								.boolean2Short(false));
-						kundeDto.setBDistributor(Helper.boolean2Short(false));
-						kundeDto.setBIstreempfaenger(Helper
-								.boolean2Short(false));
-						kundeDto.setBLsgewichtangeben(Helper
-								.boolean2Short(false));
-						kundeDto.setBMindermengenzuschlag(Helper
-								.boolean2Short(false));
-						kundeDto.setBMonatsrechnung(Helper.boolean2Short(false));
-						kundeDto.setBPreiseanlsandrucken(Helper
-								.boolean2Short(false));
-						kundeDto.setBRechnungsdruckmitrabatt(Helper
-								.boolean2Short(false));
-						kundeDto.setBSammelrechnung(Helper.boolean2Short(false));
-						kundeDto.setBReversecharge(Helper.boolean2Short(false));
-
-						// damit die Debitorenkto. nicht anschlaegt.
-						kundeDto.setUpdateModeDebitorenkonto(KundeDto.I_UPD_DEBITORENKONTO_KEIN_UPDATE);
-
-						kundeDto.setPartnerDto(partnerDto);
-
-						Integer kundeIId = getKundeFac().createKunde(kundeDto,
-								theClientDto);
-
-						if (zeile.getKontonummer() != null
-								&& zeile.getKontonummer().length() > 0) {
-							getPartnerFac().kontoFuerPartnerImportAnlegen(
-									zeile.getKontonummer(),
-									FinanzServiceFac.KONTOTYP_DEBITOR,
-									kundeIId, null, theClientDto);
-						}
-
-					}
-
-				} catch (RemoteException e) {
-					throwEJBExceptionLPRespectOld(e);
-				}
-			}
-
-			// Lieferant anlegen
-
-			if (partnerIIdFuerAnsprechpartner != null
-					&& bErzeugeLieferant == true) {
-				try {
-
-					PartnerDto partnerDto = getPartnerFac()
-							.partnerFindByPrimaryKey(
-									partnerIIdFuerAnsprechpartner, theClientDto);
-
-					LieferantDto lieferantDto = getLieferantFac()
-							.lieferantFindByiIdPartnercNrMandantOhneExc(
-									partnerIIdFuerAnsprechpartner,
-									theClientDto.getMandant(), theClientDto);
-
-					if (lieferantDto == null) {
-						lieferantDto = new LieferantDto();
-						lieferantDto.setMwstsatzbezIId(mandantDto
-								.getMwstsatzbezIIdStandardinlandmwstsatz());
-
-						lieferantDto.setIIdKostenstelle((mandantDto
-								.getIIdKostenstelle()));
-						lieferantDto.setBMoeglicherLieferant(new Short(
-								(short) 0));
-
-						lieferantDto.setBVersteckt(Helper.boolean2Short(false));
-						// Vorbelegungen werden vom Mandanten geholt
-
-						lieferantDto.setMandantCNr(mandantDto.getCNr());
-						lieferantDto.setLieferartIId(mandantDto
-								.getLieferartIIdKunde());
-						lieferantDto.setIdSpediteur(mandantDto
-								.getSpediteurIIdKunde());
-						lieferantDto.setZahlungszielIId(mandantDto
-								.getZahlungszielIIdKunde());
-						lieferantDto
-								.setWaehrungCNr(mandantDto.getWaehrungCNr());
-
-						lieferantDto.setBIgErwerb(Helper.boolean2Short(false));
-
-						lieferantDto.setBReversecharge(Helper
-								.boolean2Short(false));
-
-						lieferantDto.setPartnerDto(partnerDto);
-
-						Integer liferantIId = getLieferantFac()
-								.createLieferant(lieferantDto, theClientDto);
-
-						if (zeile.getKontonummer() != null
-								&& zeile.getKontonummer().length() > 0) {
-							getPartnerFac().kontoFuerPartnerImportAnlegen(
-									zeile.getKontonummer(),
-									FinanzServiceFac.KONTOTYP_KREDITOR, null,
-									liferantIId, theClientDto);
-						}
-
-					}
-
-				} catch (RemoteException e) {
-					throwEJBExceptionLPRespectOld(e);
-				}
-			}
-
-			session.close();
-
-		}
-
-	}
-
-	public void kontoFuerPartnerImportAnlegen(String sKontonummer,
-			String kontotypCNr, Integer kundeIId, Integer lieferantIId,
-			TheClientDto theClientDto) {
-		try {
-			KontoDto kontoDto = getFinanzFac()
-					.kontoFindByCnrKontotypMandantOhneExc(sKontonummer,
-							kontotypCNr, theClientDto.getMandant(),
-							theClientDto);
 
 			Integer kontoIId = null;
 
@@ -1143,32 +265,24 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 				kontoDto.setCNr(sKontonummer);
 
 				if (lieferantIId != null) {
-					kontoDto.setCBez(getLieferantFac()
-							.lieferantFindByPrimaryKey(lieferantIId,
-									theClientDto).getPartnerDto()
-							.getCName1nachnamefirmazeile1());
-				} else {
-					kontoDto.setCBez(getKundeFac()
-							.kundeFindByPrimaryKey(kundeIId, theClientDto)
+					kontoDto.setCBez(getLieferantFac().lieferantFindByPrimaryKey(lieferantIId, theClientDto)
 							.getPartnerDto().getCName1nachnamefirmazeile1());
+				} else {
+					kontoDto.setCBez(getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto).getPartnerDto()
+							.getCName1nachnamefirmazeile1());
 				}
 
 				// Pflichtfelder befuellen
-				GeschaeftsjahrMandantDto gjDto = getSystemFac()
-						.geschaeftsjahrFindByPrimaryKey(
-								getParameterFac().getGeschaeftsjahr(
-										theClientDto.getMandant()),
-								theClientDto.getMandant());
-				kontoDto.setDGueltigvon(new Date(gjDto.getDBeginndatum()
-						.getTime()));
+				GeschaeftsjahrMandantDto gjDto = getSystemFac().geschaeftsjahrFindByPrimaryKey(
+						getParameterFac().getGeschaeftsjahr(theClientDto.getMandant()), theClientDto.getMandant());
+				kontoDto.setDGueltigvon(new Date(gjDto.getDBeginndatum().getTime()));
 				kontoDto.setBAllgemeinsichtbar(Helper.boolean2Short(true));
 				kontoDto.setBAutomeroeffnungsbuchung(Helper.boolean2Short(true));
 				kontoDto.setBManuellbebuchbar(Helper.boolean2Short(true));
 				kontoDto.setMandantCNr(theClientDto.getMandant());
 				kontoDto.setKontotypCNr(kontotypCNr);
-				MandantDto mandantDto = getMandantFac()
-						.mandantFindByPrimaryKey(theClientDto.getMandant(),
-								theClientDto);
+				MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(),
+						theClientDto);
 				kontoDto.setFinanzamtIId(mandantDto.getPartnerIIdFinanzamt());
 				kontoDto.setBOhneUst(Helper.boolean2Short(false));
 
@@ -1195,30 +309,35 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Loesche Partner und all seine "Satelliten".
 	 * 
-	 * @param partnerDtoI
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerDtoI  PartnerDto
+	 * @param theClientDto String
 	 * @throws EJBExceptionLP
 	 */
-	public void removePartner(PartnerDto partnerDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removePartner(PartnerDto partnerDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (partnerDtoI.getIId() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("partnerDtoI.getIId()"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("partnerDtoI.getIId()"));
 		}
 
 		try {
 
 			Partner partner = em.find(Partner.class, partnerDtoI.getIId());
 
-			PartnerkommunikationDto[] partkommdto = getPartnerFac()
-					.partnerkommFindByPartnerIId(partner.getIId());
+			Query query = em.createQuery("DELETE Telefonnummer x WHERE x.partnerIId = " + partnerDtoI.getIId());
+			query.executeUpdate();
+
+			PartnerkommunikationDto[] partkommdto = getPartnerFac().partnerkommFindByPartnerIId(partner.getIId());
 			for (int i = 0; i < partkommdto.length; i++) {
-				getPartnerFac().removePartnerkommunikation(
-						partkommdto[i].getIId(), theClientDto);
+				getPartnerFac().removePartnerkommunikation(partkommdto[i].getIId(), theClientDto);
 			}
+
+			GeodatenDto geodatenDto = geodatenFindByPartnerIIdOhneExc(partner.getIId());
+			if (geodatenDto != null) {
+				getPartnerFac().removeGeodaten(geodatenDto.getIId());
+			}
+
+			HvDtoLogger<PartnerDto> partnerLogger = new HvDtoLogger<PartnerDto>(em, partnerDtoI.getIId(), theClientDto);
+			partnerLogger.logDelete(partnerDtoI);
 
 			// Partner loeschen.
 			em.remove(partner);
@@ -1233,18 +352,14 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Schreibe Partner zurueck.
 	 * 
-	 * @param partnerDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerDto   PartnerDto
+	 * @param theClientDto String
 	 * @throws EJBExceptionLP
 	 */
-	public void updatePartner(PartnerDto partnerDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void updatePartner(PartnerDto partnerDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (partnerDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerDto == null"));
 		}
 
 		if (partnerDto.getIId() == null) {
@@ -1253,16 +368,13 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 
 		if (partnerDto.getPartnerartCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("partnerDto.getPartnerartCNr() == null"));
 		}
 
 		if (partnerDto.getLocaleCNrKommunikation() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"partnerDto.getLocaleCNrKommunikation() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("partnerDto.getLocaleCNrKommunikation() == null"));
 		}
 
 		Integer iId = partnerDto.getIId();
@@ -1270,9 +382,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 			// Suche Partner.
 			Partner partner = em.find(Partner.class, iId);
+
+			PartnerDto dtoVorher = assemblePartnerDto(partner);
+
 			if (partner == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
 			// PJ15739 Wenn LKZ geaendert wird und Kunde bereits in LS oder RE
@@ -1280,46 +394,36 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			if (partner.getLandplzortIId() != null) {
 
 				if (partnerDto.getLandplzortIId() == null
-						|| !partnerDto.getLandplzortIId().equals(
-								partner.getLandplzortIId())) {
+						|| !partnerDto.getLandplzortIId().equals(partner.getLandplzortIId())) {
 
 					boolean bLandGeaendert = false;
 
 					if (partnerDto.getLandplzortIId() != null
-							&& !partnerDto.getLandplzortIId().equals(
-									partner.getLandplzortIId())) {
+							&& !partnerDto.getLandplzortIId().equals(partner.getLandplzortIId())) {
 
 						LandplzortDto landplzortDto = getSystemFac()
-								.landplzortFindByPrimaryKey(
-										partner.getLandplzortIId());
+								.landplzortFindByPrimaryKey(partner.getLandplzortIId());
 						LandplzortDto landplzortDtoNeu = getSystemFac()
-								.landplzortFindByPrimaryKey(
-										partnerDto.getLandplzortIId());
+								.landplzortFindByPrimaryKey(partnerDto.getLandplzortIId());
 
-						if (!landplzortDto.getIlandID().equals(
-								landplzortDtoNeu.getIlandID())) {
+						if (!landplzortDto.getIlandID().equals(landplzortDtoNeu.getIlandID())) {
 							bLandGeaendert = true;
 						}
 
 					}
 
-					if (bLandGeaendert == true
-							|| partnerDto.getLandplzortIId() == null) {
+					if (bLandGeaendert == true || partnerDto.getLandplzortIId() == null) {
 
-						KundeDto kundeDto = getKundeFac()
-								.kundeFindByiIdPartnercNrMandantOhneExc(iId,
-										theClientDto.getMandant(), theClientDto);
+						KundeDto kundeDto = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(iId,
+								theClientDto.getMandant(), theClientDto);
 
 						if (kundeDto != null) {
 
-							Session session = FLRSessionFactory.getFactory()
-									.openSession();
+							Session session = FLRSessionFactory.getFactory().openSession();
 							// ----------------------RECHNUNG-------------------
-							String queryString = "SELECT rech"
-									+ " FROM FLRRechnung AS rech WHERE rech.flrkunde.i_id="
+							String queryString = "SELECT rech" + " FROM FLRRechnung AS rech WHERE rech.flrkunde.i_id="
 									+ kundeDto.getIId();
-							org.hibernate.Query query = session
-									.createQuery(queryString);
+							org.hibernate.Query query = session.createQuery(queryString);
 							query.setMaxResults(1);
 							List<?> resultList = query.list();
 
@@ -1333,14 +437,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 							if (bVerwendet == false) {
 
-								session = FLRSessionFactory.getFactory()
-										.openSession();
+								session = FLRSessionFactory.getFactory().openSession();
 								// ----------------------LIEFERSCHEIN------------
 
 								queryString = "SELECT lsch"
 										+ " FROM FLRLieferschein AS lsch WHERE lsch.kunde_i_id_lieferadresse="
-										+ kundeDto.getIId()
-										+ " OR lsch.kunde_i_id_rechnungsadresse="
+										+ kundeDto.getIId() + " OR lsch.kunde_i_id_rechnungsadresse="
 										+ kundeDto.getIId();
 								query = session.createQuery(queryString);
 								query.setMaxResults(1);
@@ -1353,8 +455,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 							}
 
 							if (bVerwendet == true) {
-								throw new EJBExceptionLP(
-										EJBExceptionLP.FEHLER_PARTNER_LKZ_AENDERUNG_NICHT_MOEGLICH,
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_LKZ_AENDERUNG_NICHT_MOEGLICH,
 										"");
 							}
 
@@ -1370,11 +471,15 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			setPartnerFromPartnerDto(partner, partnerDto);
 
 			// Partner Felder setzen.
-			partner.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
+			partner.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 			partner.setPersonalIIdAendern(theClientDto.getIDPersonal());
 
 			setPartnerFromPartnerDto(partner, partnerDto);
+
+			HvDtoLogger<PartnerDto> artikelLogger = new HvDtoLogger<PartnerDto>(em, partner.getIId(), theClientDto);
+			artikelLogger.log(dtoVorher, partnerDto);
+
+			getPartnerFac().telefonnummerFuerTapiSynchronisieren(partnerDto.getIId(), null, theClientDto);
 
 			// }
 			// catch (FinderException ex) {
@@ -1389,15 +494,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Hole einen Partner.
 	 * 
-	 * @param iIdPartnerI
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param iIdPartnerI  Integer
+	 * @param theClientDto String
 	 * @throws EJBExceptionLP
 	 * @return PartnerDto
 	 */
-	public PartnerDto partnerFindByPrimaryKey(Integer iIdPartnerI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PartnerDto partnerFindByPrimaryKey(Integer iIdPartnerI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// begin JMS testing
 		// try {
@@ -1408,8 +510,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// end JMS testing
 
 		if (iIdPartnerI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_IN,
-					new Exception("iIdPartnerI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_IN, new Exception("iIdPartnerI == null"));
 		}
 
 		PartnerDto partnerDto = null;
@@ -1417,26 +518,25 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			// Partner lesen.
 			Partner partner = em.find(Partner.class, iIdPartnerI);
 			if (partner == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				myLogger.error("Partner with primarykey '" + iIdPartnerI + "' not found!");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, iIdPartnerI.toString());
 			}
 			partnerDto = assemblePartnerDto(partner);
 
 			if (partnerDto.getLandplzortIId() != null) {
 				// Land lesen.
-				LandplzortDto landplzortDto = getSystemFac()
-						.landplzortFindByPrimaryKey(
-								partnerDto.getLandplzortIId());
+				LandplzortDto landplzortDto = getSystemFac().landplzortFindByPrimaryKey(partnerDto.getLandplzortIId());
 				partnerDto.setLandplzortDto(landplzortDto);
 			}
 
 			if (partnerDto.getLandplzortIIdPostfach() != null) {
 				// Land lesen.
 				LandplzortDto landplzortDto = getSystemFac()
-						.landplzortFindByPrimaryKey(
-								partnerDto.getLandplzortIIdPostfach());
+						.landplzortFindByPrimaryKey(partnerDto.getLandplzortIIdPostfach());
 				partnerDto.setLandplzortDto_Postfach(landplzortDto);
 			}
+
+			partnerDto.setGeodatenDto(geodatenFindByPartnerIIdOhneExc(iIdPartnerI));
 			// }
 			// catch (FinderException ex) {
 			// throw new EJBExceptionLP(ex);
@@ -1444,14 +544,13 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			// exccatch: hier ist die Catchkaskade
 			throwEJBExceptionLPRespectOld(ex);
 		} catch (Exception e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
 		}
 		return partnerDto;
 	}
 
-	public PartnerDto partnerFindByPrimaryKeyOhneExc(Integer iIdPartnerI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PartnerDto partnerFindByPrimaryKeyOhneExc(Integer iIdPartnerI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		PartnerDto partnerDto = null;
 		try {
 			partnerDto = partnerFindByPrimaryKey(iIdPartnerI, theClientDto);
@@ -1464,19 +563,15 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	private void setPartnerFromPartnerDto(Partner partner, PartnerDto partnerDto) {
 
-		partner.setLocaleCNrKommunikation(partnerDto
-				.getLocaleCNrKommunikation());
+		partner.setLocaleCNrKommunikation(partnerDto.getLocaleCNrKommunikation());
 		partner.setPartnerartCNr(partnerDto.getPartnerartCNr());
 		partner.setCKbez(partnerDto.getCKbez());
 		partner.setCIln(partnerDto.getCIln());
 		partner.setCFilialnummer(partnerDto.getCFilialnummer());
 		partner.setAnredeCNr(partnerDto.getAnredeCNr());
-		partner.setCName1nachnamefirmazeile1(partnerDto
-				.getCName1nachnamefirmazeile1());
-		partner.setCName2vornamefirmazeile2(partnerDto
-				.getCName2vornamefirmazeile2());
-		partner.setCName3vorname2abteilung(partnerDto
-				.getCName3vorname2abteilung());
+		partner.setCName1nachnamefirmazeile1(partnerDto.getCName1nachnamefirmazeile1());
+		partner.setCName2vornamefirmazeile2(partnerDto.getCName2vornamefirmazeile2());
+		partner.setCName3vorname2abteilung(partnerDto.getCName3vorname2abteilung());
 		partner.setCStrasse(partnerDto.getCStrasse());
 		partner.setLandplzortIId(partnerDto.getLandplzortIId());
 		partner.setLandplzortIIdPostfach(partnerDto.getLandplzortIIdPostfach());
@@ -1487,8 +582,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		partner.setCUid(partnerDto.getCUid());
 		partner.setLagerIIdZiellager(partnerDto.getLagerIIdZiellager());
 		partner.setXBemerkung(partnerDto.getXBemerkung());
-		partner.setTGeburtsdatumansprechpartner(partnerDto
-				.getDGeburtsdatumansprechpartner());
+		partner.setTGeburtsdatumansprechpartner(partnerDto.getDGeburtsdatumansprechpartner());
 		partner.setRechtsformIId(partnerDto.getRechtsformIId());
 		partner.setPartnerIIdEigentuemer(partnerDto.getPartnerIIdEigentuemer());
 		partner.setCFirmenbuchnr(partnerDto.getCFirmenbuchnr());
@@ -1504,11 +598,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		partner.setCHandy(partnerDto.getCHandy());
 		partner.setCTelefon(partnerDto.getCTelefon());
 		partner.setCHomepage(partnerDto.getCHomepage());
-		partner.setLandIIdAbweichendesustland(partnerDto
-				.getLandIIdAbweichendesustland());
+		partner.setLandIIdAbweichendesustland(partnerDto.getLandIIdAbweichendesustland());
 		partner.setFGmtversatz(partnerDto.getFGmtversatz());
 		partner.setCEori(partnerDto.getCEori());
 		partner.setVersandwegIId(partnerDto.getVersandwegIId());
+		partner.setNewslettergrundIId(partnerDto.getNewslettergrundIId());
 		em.merge(partner);
 		em.flush();
 	}
@@ -1516,8 +610,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Referenz auf System2FacHome erzeugen.
 	 * 
-	 * @param partner
-	 *            Partner
+	 * @param partner Partner
 	 * @return PartnerDto
 	 */
 	private PartnerDto assemblePartnerDto(Partner partner) {
@@ -1541,8 +634,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return (PartnerDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createPartnerkommunikation(
-			PartnerkommunikationDto partnerkommunikationDto,
+	public Integer createPartnerkommunikation(PartnerkommunikationDto partnerkommunikationDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// Precondition.
@@ -1552,20 +644,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 		try {
 
-			Query query = em
-					.createNamedQuery("PartnerkommunikationfindByPartnerIIdKommunikationsartCNrCBez");
+			Query query = em.createNamedQuery("PartnerkommunikationfindByPartnerIIdKommunikationsartCNrCBez");
 			query.setParameter(1, partnerkommunikationDto.getPartnerIId());
-			query.setParameter(2,
-					partnerkommunikationDto.getKommunikationsartCNr());
+			query.setParameter(2, partnerkommunikationDto.getKommunikationsartCNr());
 			query.setParameter(3, partnerkommunikationDto.getCBez());
 			query.setParameter(4, partnerkommunikationDto.getCInhalt());
 			// @todo getSingleResult oder getResultList ?
-			Partnerkommunikation partnerkommunikation = (Partnerkommunikation) query
-					.getSingleResult();
+			Partnerkommunikation partnerkommunikation = (Partnerkommunikation) query.getSingleResult();
 			if (partnerkommunikation != null) {
 				// CK: Projekt 10510: Wenn gefunden, dann updaten
-				setPartnerkommunikationFromPartnerkommunikationDto(
-						partnerkommunikation, partnerkommunikationDto);
+				setPartnerkommunikationFromPartnerkommunikationDto(partnerkommunikation, partnerkommunikationDto);
 				return partnerkommunikation.getIId();
 			}
 
@@ -1576,21 +664,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		try {
 			// Generiere neuen Partnerkommunikation PK.
 			PKGeneratorObj pkGen = new PKGeneratorObj();
-			Integer iIIdPartnerkommunikationNew = pkGen
-					.getNextPrimaryKey(PKConst.PK_PARTNEKOMMUNIKATION);
+			Integer iIIdPartnerkommunikationNew = pkGen.getNextPrimaryKey(PKConst.PK_PARTNEKOMMUNIKATION);
 			partnerkommunikationDto.setIId(iIIdPartnerkommunikationNew);
 
-			Partnerkommunikation partnerkommunikation = new Partnerkommunikation(
-					partnerkommunikationDto.getIId(),
-					partnerkommunikationDto.getPartnerIId(),
-					partnerkommunikationDto.getKommunikationsartCNr(),
-					partnerkommunikationDto.getCBez(),
-					partnerkommunikationDto.getCInhalt());
+			Partnerkommunikation partnerkommunikation = new Partnerkommunikation(partnerkommunikationDto.getIId(),
+					partnerkommunikationDto.getPartnerIId(), partnerkommunikationDto.getKommunikationsartCNr(),
+					partnerkommunikationDto.getCBez(), partnerkommunikationDto.getCInhalt());
 			em.persist(partnerkommunikation);
 			em.flush();
 
-			setPartnerkommunikationFromPartnerkommunikationDto(
-					partnerkommunikation, partnerkommunikationDto);
+			setPartnerkommunikationFromPartnerkommunikationDto(partnerkommunikation, partnerkommunikationDto);
 			partnerkommunikationDto.setIId(iIIdPartnerkommunikationNew);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
@@ -1598,30 +681,23 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return partnerkommunikationDto.getIId();
 	}
 
-	public void removePartnerkommunikation(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePartnerkommunikation(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		try {
-			Partnerkommunikation partnerkommunikation = em.find(
-					Partnerkommunikation.class, iId);
+			Partnerkommunikation partnerkommunikation = em.find(Partnerkommunikation.class, iId);
 			if (partnerkommunikation == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			// MB 18.05.06 IMS 1661 es duerfen nur Kommunikationsdaten des
 			// eigenen mandanten
 			// oder private geloescht werden
 			if (partnerkommunikation.getMandantCNr() != null) {
-				if (!partnerkommunikation.getMandantCNr().equals(
-						theClientDto.getMandant())) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_PARTNER_KOMM_AENDERN_NUR_EIGENER_MANDANT,
-							new Exception(
-									"FEHLER_PARTNER_KOMM_AENDERN_NUR_EIGENER_MANDANT"));
+				if (!partnerkommunikation.getMandantCNr().equals(theClientDto.getMandant())) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_KOMM_AENDERN_NUR_EIGENER_MANDANT,
+							new Exception("FEHLER_PARTNER_KOMM_AENDERN_NUR_EIGENER_MANDANT"));
 				}
 			}
 
@@ -1634,9 +710,8 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public void updatePartnerkommunikation(
-			PartnerkommunikationDto partnerkommunikationDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePartnerkommunikation(PartnerkommunikationDto partnerkommunikationDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (partnerkommunikationDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -1646,13 +721,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("partnerkommunikationDto.getIId() == null"));
 		}
-		if (partnerkommunikationDto.getKommunikationsartCNr() == null
-				|| partnerkommunikationDto.getCBez() == null
+		if (partnerkommunikationDto.getKommunikationsartCNr() == null || partnerkommunikationDto.getCBez() == null
 				|| partnerkommunikationDto.getPartnerIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"partnerkommunikationDto.getKommunikationsartCNr() == null || partnerkommunikationDto.getCBez() == null || partnerkommunikationDto.getPartnerIId() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"partnerkommunikationDto.getKommunikationsartCNr() == null || partnerkommunikationDto.getCBez() == null || partnerkommunikationDto.getPartnerIId() == null"));
 		}
 		// MB 18.05.06 IMS 1661 es duerfen nur Kommunikationsdaten des eigenen
 		// mandanten
@@ -1664,31 +736,25 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 		/*
 		 * if (partnerkommunikationDto.getCNrMandant() != null) { if
-		 * (!partnerkommunikationDto.getCNrMandant().equals(
-		 * theClientDto.getMandant())) { throw new EJBExceptionLP(
+		 * (!partnerkommunikationDto.getCNrMandant().equals( theClientDto.getMandant()))
+		 * { throw new EJBExceptionLP(
 		 * EJBExceptionLP.FEHLER_PARTNER_KOMM_AENDERN_NUR_EIGENER_MANDANT, new
 		 * Exception( "FEHLER_PARTNER_KOMM_AENDERN_NUR_EIGENER_MANDANT")); } }
 		 */
 		Integer iId = partnerkommunikationDto.getIId();
 
-		Partnerkommunikation partnerkommunikation = em.find(
-				Partnerkommunikation.class, iId);
+		Partnerkommunikation partnerkommunikation = em.find(Partnerkommunikation.class, iId);
 		if (partnerkommunikation == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		setPartnerkommunikationFromPartnerkommunikationDto(
-				partnerkommunikation, partnerkommunikationDto);
+		setPartnerkommunikationFromPartnerkommunikationDto(partnerkommunikation, partnerkommunikationDto);
 	}
 
-	public PartnerkommunikationDto partnerkommunikationFindByPrimaryKey(
-			Integer iId) throws EJBExceptionLP {
+	public PartnerkommunikationDto partnerkommunikationFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		// try {
-		Partnerkommunikation partnerkommunikation = em.find(
-				Partnerkommunikation.class, iId);
+		Partnerkommunikation partnerkommunikation = em.find(Partnerkommunikation.class, iId);
 		if (partnerkommunikation == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePartnerkommunikationDto(partnerkommunikation);
 		// }
@@ -1698,10 +764,8 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// }
 	}
 
-	public PartnerkommunikationDto partnerkommunikationFindByPrimaryKeyOhneExc(
-			Integer iId) throws EJBExceptionLP {
-		Partnerkommunikation partnerkommunikation = em.find(
-				Partnerkommunikation.class, iId);
+	public PartnerkommunikationDto partnerkommunikationFindByPrimaryKeyOhneExc(Integer iId) throws EJBExceptionLP {
+		Partnerkommunikation partnerkommunikation = em.find(Partnerkommunikation.class, iId);
 		if (partnerkommunikation == null) { // @ToDo null Pruefung?
 			return null;
 		}
@@ -1717,24 +781,19 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// }
 	}
 
-	private void setPartnerkommunikationFromPartnerkommunikationDto(
-			Partnerkommunikation partnerkommunikation,
+	private void setPartnerkommunikationFromPartnerkommunikationDto(Partnerkommunikation partnerkommunikation,
 			PartnerkommunikationDto partnerkommunikationDto) {
 
-		partnerkommunikation.setPartnerIId(partnerkommunikationDto
-				.getPartnerIId());
-		partnerkommunikation.setKommunikationsartCNr(partnerkommunikationDto
-				.getKommunikationsartCNr());
+		partnerkommunikation.setPartnerIId(partnerkommunikationDto.getPartnerIId());
+		partnerkommunikation.setKommunikationsartCNr(partnerkommunikationDto.getKommunikationsartCNr());
 		partnerkommunikation.setCBez(partnerkommunikationDto.getCBez());
 		partnerkommunikation.setCInhalt(partnerkommunikationDto.getCInhalt());
-		partnerkommunikation.setMandantCNr(partnerkommunikationDto
-				.getCNrMandant());
+		partnerkommunikation.setMandantCNr(partnerkommunikationDto.getCNrMandant());
 		em.merge(partnerkommunikation);
 		em.flush();
 	}
 
-	private PartnerkommunikationDto assemblePartnerkommunikationDto(
-			Partnerkommunikation partnerkommunikation) {
+	private PartnerkommunikationDto assemblePartnerkommunikationDto(Partnerkommunikation partnerkommunikation) {
 		return PartnerkommunikationDtoAssembler.createDto(partnerkommunikation);
 	}
 
@@ -1758,15 +817,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Lesen aller in der DB vorhandenen Partnerarten.
 	 * 
-	 * @param cNrLocaleI
-	 *            Sprache
-	 * @param theClientDto
-	 *            User
+	 * @param cNrLocaleI   Sprache
+	 * @param theClientDto User
 	 * @throws EJBExceptionLP
 	 * @return Map
 	 */
-	public Map getAllPartnerArten(String cNrLocaleI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Map getAllPartnerArten(String cNrLocaleI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		Map<String, String> map = null;
 
@@ -1810,8 +866,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Lesen aller in der DB vorhandenen Anreden.
 	 * 
-	 * @param locAnredeI
-	 *            Locale
+	 * @param locAnredeI Locale
 	 * @return TreeMap
 	 * @throws EJBExceptionLP
 	 */
@@ -1820,8 +875,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		String locAnredeAsString = null;
 
 		if (locAnredeI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("locAnrede == null"));
 		}
 
@@ -1839,8 +893,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			String key = anredeTemp.getCNr();
 			String value = null;
 			// try {
-			Anredespr anredespr = em.find(Anredespr.class, new AnredesprPK(
-					anredeTemp.getCNr(), locAnredeAsString));
+			Anredespr anredespr = em.find(Anredespr.class, new AnredesprPK(anredeTemp.getCNr(), locAnredeAsString));
 			if (anredespr == null) {
 				value = anredeTemp.getCNr();
 			} else {
@@ -1861,12 +914,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return tmAnreden;
 	}
 
-	public String createAnrede(AnredeDto anredeDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public String createAnrede(AnredeDto anredeDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (anredeDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("anredeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("anredeDto == null"));
 		}
 		if (anredeDtoI.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -1881,19 +932,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			em.flush();
 			Anrede helper = em.find(Anrede.class, anrede.getCNr());
 			if (helper == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			ret = helper.getCNr(); // wegen Blanks!
 
 			if (anredeDtoI.getAnredesprDto() != null) {
 				String sprache = theClientDto.getLocUiAsString();
-				Anredespr anredespr = new Anredespr(anredeDtoI.getCNr(),
-						sprache);
+				Anredespr anredespr = new Anredespr(anredeDtoI.getCNr(), sprache);
 				em.persist(anredespr);
 				em.flush();
-				setAnredesprFromAnredesprDto(anredespr,
-						anredeDtoI.getAnredesprDto());
+				setAnredesprFromAnredesprDto(anredespr, anredeDtoI.getAnredesprDto());
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -1906,12 +954,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return ret; // wegen Blanks!
 	}
 
-	public void removeAnrede(String cNrI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removeAnrede(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("cNr == null"));
 		}
 
 		try {
@@ -1925,8 +971,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			}
 			Anrede anrede = em.find(Anrede.class, cNrI);
 			if (anrede == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(anrede);
 			em.flush();
@@ -1940,12 +985,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public void updateAnrede(AnredeDto anredeDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void updateAnrede(AnredeDto anredeDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (anredeDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("anredeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("anredeDto == null"));
 		}
 		if (anredeDtoI.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -1956,8 +999,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// try {
 		Anrede anrede = em.find(Anrede.class, cNr);
 		if (anrede == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		if (anredeDtoI.getAnredesprDto() != null) {
@@ -1971,14 +1013,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 				Anredespr anredespr = new Anredespr(cNr, sprache);
 				em.persist(anredespr);
 				em.flush();
-				setAnredesprFromAnredesprDto(anredespr,
-						anredeDtoI.getAnredesprDto());
+				setAnredesprFromAnredesprDto(anredespr, anredeDtoI.getAnredesprDto());
 			} else {
 				// upd
-				Anredespr anredespr = em.find(Anredespr.class, new AnredesprPK(
-						cNr, sprache));
-				setAnredesprFromAnredesprDto(anredespr,
-						anredeDtoI.getAnredesprDto());
+				Anredespr anredespr = em.find(Anredespr.class, new AnredesprPK(cNr, sprache));
+				setAnredesprFromAnredesprDto(anredespr, anredeDtoI.getAnredesprDto());
 			}
 		}
 		// }
@@ -1991,28 +1030,24 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// }
 	}
 
-	public AnredeDto anredeFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public AnredeDto anredeFindByPrimaryKey(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("cNr == null"));
 		}
 
 		AnredeDto anredeDto = null;
 		// try {
 		Anrede anrede = em.find(Anrede.class, cNrI);
 		if (anrede == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		anredeDto = assembleAnredeDto(anrede);
 
 		AnredesprDto anredesprDto = null;
 		// try {
 		String sprache = theClientDto.getLocUiAsString();
-		Anredespr anredespr = em.find(Anredespr.class, new AnredesprPK(cNrI,
-				sprache));
+		Anredespr anredespr = em.find(Anredespr.class, new AnredesprPK(cNrI, sprache));
 		if (anredespr != null) {
 			anredesprDto = assembleAnredesprDto(anredespr);
 		}
@@ -2034,12 +1069,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return AnredeDtoAssembler.createDto(anrede);
 	}
 
-	public Integer createPartnerklasse(PartnerklasseDto partnerklasseDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPartnerklasse(PartnerklasseDto partnerklasseDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (partnerklasseDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerklasseDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerklasseDtoI == null"));
 		}
 		if (partnerklasseDtoI.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -2051,8 +1085,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			query.setParameter(1, partnerklasseDtoI.getCNr());
 			// @todo getSingleResult oder getResultList ?
 			query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PART_PARTNERKLASSE.CNR"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PART_PARTNERKLASSE.CNR"));
 		}
 
 		catch (NoResultException ex) {
@@ -2064,35 +1097,30 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		iId = pkGen.getNextPrimaryKey(PKConst.PK_PARTNERKLASSE);
 		partnerklasseDtoI.setIId(iId);
 
-		Partnerklasse partnerklasse = new Partnerklasse(
-				partnerklasseDtoI.getIId(), partnerklasseDtoI.getCNr());
+		Partnerklasse partnerklasse = new Partnerklasse(partnerklasseDtoI.getIId(), partnerklasseDtoI.getCNr());
 		partnerklasse.setCImportart(partnerklasseDtoI.getCImportart());
 		em.persist(partnerklasse);
 		em.flush();
 
 		if (partnerklasseDtoI.getPartnerklassesprDto() != null) {
-			Partnerklassespr partnerklassespr = new Partnerklassespr(
-					partnerklasseDtoI.getIId(), theClientDto.getLocUiAsString());
+			Partnerklassespr partnerklassespr = new Partnerklassespr(partnerklasseDtoI.getIId(),
+					theClientDto.getLocUiAsString());
 			em.persist(partnerklassespr);
 			em.flush();
 
-			setPartnerklassesprFromPartnerklassesprDto(partnerklassespr,
-					partnerklasseDtoI.getPartnerklassesprDto());
+			setPartnerklassesprFromPartnerklassesprDto(partnerklassespr, partnerklasseDtoI.getPartnerklassesprDto());
 		}
 		return iId;
 	}
 
-	public void removePartnerklasse(Integer iIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removePartnerklasse(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iIdI == null"));
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("PartnerklassesprfindByPartnerklasseIId");
+			Query query = em.createNamedQuery("PartnerklassesprfindByPartnerklasseIId");
 			query.setParameter(1, iIdI);
 			Collection<?> allSpr = query.getResultList();
 			Iterator<?> iter = allSpr.iterator();
@@ -2102,8 +1130,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			}
 			Partnerklasse partnerklasse = em.find(Partnerklasse.class, iIdI);
 			if (partnerklasse == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
 			em.remove(partnerklasse);
@@ -2117,13 +1144,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// }
 	}
 
-	public void updatePartnerklasse(PartnerklasseDto partnerklasseDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePartnerklasse(PartnerklasseDto partnerklasseDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		// Precondition.
 		if (partnerklasseDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerklasseDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerklasseDto == null"));
 		}
 		if (partnerklasseDtoI.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -2135,12 +1161,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			Query query = em.createNamedQuery("PartnerklassefindByCNr");
 			query.setParameter(1, partnerklasseDtoI.getCNr());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Partnerklasse) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Partnerklasse) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PART_PARTNERKLASSE.CNR"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PART_PARTNERKLASSE.CNR"));
 			}
 		} catch (NoResultException ex) {
 			//
@@ -2149,34 +1173,27 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		try {
 			Partnerklasse partnerklasse = em.find(Partnerklasse.class, iId);
 			if (partnerklasse == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			partnerklasse.setCNr(partnerklasseDtoI.getCNr());
 			partnerklasse.setCImportart(partnerklasseDtoI.getCImportart());
 			if (partnerklasseDtoI.getPartnerklassesprDto() != null) {
 				// -- upd oder create
-				if (partnerklasseDtoI.getPartnerklassesprDto()
-						.getPartnerklasseIId() == null) {
+				if (partnerklasseDtoI.getPartnerklassesprDto().getPartnerklasseIId() == null) {
 					// create
 					// Key(teil) setzen.
-					partnerklasseDtoI.getPartnerklassesprDto()
-							.setPartnerklasseIId(partnerklasseDtoI.getIId());
+					partnerklasseDtoI.getPartnerklassesprDto().setPartnerklasseIId(partnerklasseDtoI.getIId());
 
-					Partnerklassespr partnerklassespr = new Partnerklassespr(
-							iId, theClientDto.getLocUiAsString());
+					Partnerklassespr partnerklassespr = new Partnerklassespr(iId, theClientDto.getLocUiAsString());
 					em.persist(partnerklassespr);
 					em.flush();
-					setPartnerklassesprFromPartnerklassesprDto(
-							partnerklassespr,
+					setPartnerklassesprFromPartnerklassesprDto(partnerklassespr,
 							partnerklasseDtoI.getPartnerklassesprDto());
 				} else {
 					// upd
-					Partnerklassespr partnerklassespr = em.find(
-							Partnerklassespr.class, new PartnerklassesprPK(iId,
-									theClientDto.getLocUiAsString()));
-					setPartnerklassesprFromPartnerklassesprDto(
-							partnerklassespr,
+					Partnerklassespr partnerklassespr = em.find(Partnerklassespr.class,
+							new PartnerklassesprPK(iId, theClientDto.getLocUiAsString()));
+					setPartnerklassesprFromPartnerklassesprDto(partnerklassespr,
 							partnerklasseDtoI.getPartnerklassesprDto());
 				}
 			}
@@ -2189,29 +1206,23 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public PartnerklasseDto partnerklasseFindByPrimaryKey(Integer iIdI,
-			TheClientDto theClientDto) {
+	public PartnerklasseDto partnerklasseFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto) {
 
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iIdI == null"));
 		}
 
 		// try {
 		Partnerklasse partnerklasse = em.find(Partnerklasse.class, iIdI);
 		if (partnerklasse == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		PartnerklasseDto partnerklasseDto = assemblePartnerklasseDto(partnerklasse);
 
 		try {
-			Partnerklassespr partnerklassespr = em.find(
-					Partnerklassespr.class,
-					new PartnerklassesprPK(iIdI, theClientDto
-							.getLocUiAsString()));
-			partnerklasseDto
-					.setPartnerklassesprDto(assemblePartnerklassesprDto(partnerklassespr));
+			Partnerklassespr partnerklassespr = em.find(Partnerklassespr.class,
+					new PartnerklassesprPK(iIdI, theClientDto.getLocUiAsString()));
+			partnerklasseDto.setPartnerklassesprDto(assemblePartnerklassesprDto(partnerklassespr));
 		} catch (Throwable t) {
 			// nothing here.
 		}
@@ -2224,8 +1235,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// }
 	}
 
-	private PartnerklasseDto assemblePartnerklasseDto(
-			Partnerklasse partnerklasse) {
+	private PartnerklasseDto assemblePartnerklasseDto(Partnerklasse partnerklasse) {
 		return PartnerklasseDtoAssembler.createDto(partnerklasse);
 	}
 
@@ -2246,20 +1256,17 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return (PartnerartDto[]) list.toArray(returnArray);
 	}
 
-	private void setPartnerartsprFromPartnerartsprDto(
-			Partnerartspr partnerartspr, PartnerartsprDto partnerartsprDto) {
+	private void setPartnerartsprFromPartnerartsprDto(Partnerartspr partnerartspr, PartnerartsprDto partnerartsprDto) {
 		partnerartspr.setCBez(partnerartsprDto.getCBez());
 		em.merge(partnerartspr);
 		em.flush();
 	}
 
-	private PartnerartsprDto assemblePartnerartsprDto(
-			Partnerartspr partnerartspr) {
+	private PartnerartsprDto assemblePartnerartsprDto(Partnerartspr partnerartspr) {
 		return PartnerartsprDtoAssembler.createDto(partnerartspr);
 	}
 
-	private void setAnredesprFromAnredesprDto(Anredespr anredespr,
-			AnredesprDto anredesprDto) {
+	private void setAnredesprFromAnredesprDto(Anredespr anredespr, AnredesprDto anredesprDto) {
 		anredespr.setCBez(anredesprDto.getCBez());
 		em.merge(anredespr);
 		em.flush();
@@ -2269,16 +1276,14 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return AnredesprDtoAssembler.createDto(anredespr);
 	}
 
-	private void setPartnerklassesprFromPartnerklassesprDto(
-			Partnerklassespr partnerklassespr,
+	private void setPartnerklassesprFromPartnerklassesprDto(Partnerklassespr partnerklassespr,
 			PartnerklassesprDto partnerklassesprDto) {
 		partnerklassespr.setCBez(partnerklassesprDto.getCBez());
 		em.merge(partnerklassespr);
 		em.flush();
 	}
 
-	private PartnerklassesprDto assemblePartnerklassesprDto(
-			Partnerklassespr partnerklassespr) {
+	private PartnerklassesprDto assemblePartnerklassesprDto(Partnerklassespr partnerklassespr) {
 		return PartnerklassesprDtoAssembler.createDto(partnerklassespr);
 	}
 
@@ -2288,7 +1293,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		String sQuery = "SELECT distinct(kontakt.flrpersonal) FROM FLRKontakt AS kontakt WHERE kontakt.t_erledigt IS NULL  ORDER BY kontakt.flrpersonal.c_kurzzeichen ASC";
+		// String sQuery =
+		// "SELECT distinct(kontakt.flrpersonal) FROM FLRKontakt AS kontakt WHERE
+		// kontakt.t_erledigt IS NULL ORDER BY kontakt.flrpersonal.c_kurzzeichen ASC";
+		String sQuery = "SELECT flrpersonal FROM FLRPersonal AS flrpersonal WHERE flrpersonal.i_id IN (SELECT distinct(kontakt.flrpersonal.i_id) FROM FLRKontakt AS kontakt WHERE kontakt.t_erledigt IS NULL) ORDER BY flrpersonal.c_kurzzeichen ASC";
 
 		org.hibernate.Query query = session.createQuery(sQuery);
 		List<?> resultList = query.list();
@@ -2324,39 +1332,29 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 		if (bIchBinSelbstSchonDabei == false) {
 
-			PersonalDto personalDto = getPersonalFac()
-					.personalFindByPrimaryKey(theClientDto.getIDPersonal(),
-							theClientDto);
+			PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(theClientDto.getIDPersonal(),
+					theClientDto);
 
-			m.put(personalDto.getIId(), personalDto.getPartnerDto()
-					.formatFixName2Name1());
+			m.put(personalDto.getIId(), personalDto.getPartnerDto().formatFixName2Name1());
 
 		}
 
 		// Nun noch ALLE hinzufuegen
 
-		m.put(new Integer(-1),
-				getTextRespectUISpr("lp.alle", theClientDto.getMandant(),
-						theClientDto.getLocUi()));
+		m.put(new Integer(-1), getTextRespectUISpr("lp.alle", theClientDto.getMandant(), theClientDto.getLocUi()));
 
 		return m;
 	}
 
-	public Integer createKontakt(KontaktDto kontaktDto,
-			TheClientDto theClientDto) {
+	public Integer createKontakt(KontaktDto kontaktDto, TheClientDto theClientDto) {
 		if (kontaktDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kontaktDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kontaktDto == null"));
 		}
-		if (kontaktDto.getCTitel() == null
-				|| kontaktDto.getPartnerIId() == null
-				|| kontaktDto.getKontaktartIId() == null
-				|| kontaktDto.getPersonalIIdZugewiesener() == null
+		if (kontaktDto.getCTitel() == null || kontaktDto.getPartnerIId() == null
+				|| kontaktDto.getKontaktartIId() == null || kontaktDto.getPersonalIIdZugewiesener() == null
 				|| kontaktDto.getTKontakt() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"kontaktDto.getCTitel() == null || kontaktDto.getPartnerIId() == null || kontaktDto.getKontaktartIId() == null || kontaktDto.getPersonalIIdZugewiesener() == null || kontaktDto.getTKontakt() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"kontaktDto.getCTitel() == null || kontaktDto.getPartnerIId() == null || kontaktDto.getKontaktartIId() == null || kontaktDto.getPersonalIIdZugewiesener() == null || kontaktDto.getTKontakt() == null"));
 		}
 
 		try {
@@ -2368,12 +1366,9 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			kontaktDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
 			kontaktDto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
 
-			Kontakt kontakt = new Kontakt(kontaktDto.getIId(),
-					kontaktDto.getCTitel(), kontaktDto.getPartnerIId(),
-					kontaktDto.getPersonalIIdZugewiesener(),
-					kontaktDto.getKontaktartIId(), kontaktDto.getTKontakt(),
-					kontaktDto.getPersonalIIdAnlegen(),
-					kontaktDto.getTAnlegen());
+			Kontakt kontakt = new Kontakt(kontaktDto.getIId(), kontaktDto.getCTitel(), kontaktDto.getPartnerIId(),
+					kontaktDto.getPersonalIIdZugewiesener(), kontaktDto.getKontaktartIId(), kontaktDto.getTKontakt(),
+					kontaktDto.getPersonalIIdAnlegen(), kontaktDto.getTAnlegen());
 			em.persist(kontakt);
 			em.flush();
 			setKontaktFromKontaktDto(kontakt, kontaktDto);
@@ -2385,19 +1380,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	public void removeKontakt(KontaktDto dto) {
 		if (dto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("dto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("dto == null"));
 		}
 		if (dto.getIId() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("dto.getIId() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("dto.getIId() == null"));
 		}
 
 		Integer iId = dto.getIId();
 		Kontakt toRemove = em.find(Kontakt.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -2408,28 +1400,860 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	}
 
+	@Override
+	public List<TelefonSuchergebnisDto> findeTelefonnummer(String telefonnummer, boolean modified,
+			TheClientDto theClientDto) {
+		if (Helper.isStringEmpty(telefonnummer)) {
+			return new ArrayList<TelefonSuchergebnisDto>();
+		}
+
+		if (modified) {
+			return sucheTelefonnummer(telefonnummer, theClientDto);
+		}
+
+		if (telefonnummer.startsWith("+")) {
+			return sucheTelefonnummer(telefonnummer.substring(1), theClientDto);
+		}
+
+		String telefonnummerOri = telefonnummer;
+		MandantDto[] mDtos = getMandantFac().mandantFindAll(theClientDto);
+
+		for (MandantDto mDto : mDtos) {
+			telefonnummer = telefonnummerOri;
+
+			try {
+				ParametermandantDto pAuslandsvorwahl = getParameterFac().getMandantparameter(mDto.getCNr(),
+						ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_AUSLANDSVORWAHL);
+				String sAuslandsvorwahl = pAuslandsvorwahl.getCWert().trim();
+
+				ParametermandantDto pMaxLangeInterneNummer = getParameterFac().getMandantparameter(mDto.getCNr(),
+						ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_MAXIMALLAENGE_INTERNE_TELEFONNUMMER);
+				Integer maxLaengeInterneNummer = (Integer) pMaxLangeInterneNummer.getCWertAsObject();
+
+				if (telefonnummer.startsWith(sAuslandsvorwahl)) {
+					telefonnummer = telefonnummer.substring(sAuslandsvorwahl.length());
+				} else {
+					if (telefonnummer.length() > maxLaengeInterneNummer) {
+
+						PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(mDto.getPartnerIId(),
+								theClientDto);
+
+						if (partnerDto.getLandplzortDto() != null
+								&& partnerDto.getLandplzortDto().getLandDto().getCTelvorwahl() != null) {
+
+							String vorwahl = partnerDto.getLandplzortDto().getLandDto().getCTelvorwahl();
+							if (vorwahl.startsWith("+")) {
+								vorwahl = vorwahl.substring(1);
+							}
+
+							else if (vorwahl.startsWith(sAuslandsvorwahl)) {
+								vorwahl = vorwahl.substring(sAuslandsvorwahl.length());
+							}
+
+							telefonnummer = vorwahl + telefonnummer;
+						}
+					}
+				}
+
+				List<TelefonSuchergebnisDto> ergebnis = sucheTelefonnummer(telefonnummer, theClientDto);
+
+				if (ergebnis.size() > 0) {
+					return ergebnis;
+				}
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+		}
+
+		return sucheTelefonnummer(telefonnummerOri, theClientDto);
+	}
+
+	private List<TelefonSuchergebnisDto> sucheTelefonnummer(String telefonnummer, TheClientDto theClientDto) {
+
+		List<TelefonSuchergebnisDto> ergebnis = new ArrayList<TelefonSuchergebnisDto>();
+
+		Query query = em.createQuery(
+				"SELECT t FROM  Telefonnummer t WHERE t.cNummer = '" + telefonnummer + "' ORDER BY t.bVersteckt ASC");
+		List l = query.getResultList();
+		Iterator it = l.iterator();
+		while (it.hasNext()) {
+			Telefonnummer t = (Telefonnummer) it.next();
+
+			PartnerDto pDto = getPartnerFac().partnerFindByPrimaryKey(t.getPartnerIId(), theClientDto);
+
+			TelefonSuchergebnisDto telefonSuchergebnisDto = new TelefonSuchergebnisDto(t.getPartnerIId(),
+					t.getAnsprechpartnerIId(), pDto.formatAnrede(), null, Helper.short2boolean(t.getBVersteckt()));
+
+			if (t.getAnsprechpartnerIId() != null) {
+				try {
+					AnsprechpartnerDto anspDto = getAnsprechpartnerFac()
+							.ansprechpartnerFindByPrimaryKey(t.getAnsprechpartnerIId(), theClientDto);
+
+					telefonSuchergebnisDto
+							.setAnsprechpartner(anspDto.getPartnerDto().formatFixTitelVornameNachnameNTitel());
+
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+			}
+
+			ergebnis.add(telefonSuchergebnisDto);
+		}
+		return ergebnis;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public void testAdressdatenexport(TheClientDto theClientDto) {
+		testAdressdatenexport(null, theClientDto);
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public void testAdressdatenexport(String cEmailAdresse, TheClientDto theClientDto) {
+
+		System.out.println("BEGIN:" + new Timestamp(System.currentTimeMillis()));
+
+		int iAnzahl = 0;
+		int iGesamt = 0;
+		do {
+
+			ArrayList<AdressbuchExportDto> alDaten;
+
+			if (cEmailAdresse == null) {
+				alDaten = getPartnerFac().getDatenFuerAdressbuchExport(1000, theClientDto);
+			} else {
+				alDaten = getPartnerFac().getDatenFuerAdressbuchExport(1000, cEmailAdresse, theClientDto);
+			}
+
+			iAnzahl = alDaten.size();
+
+			for (int i = 0; i < alDaten.size(); i++) {
+				AdressbuchExportDto dto = alDaten.get(i);
+
+				System.out.println(dto.toString());
+
+				getPartnerFac().adressdatensatzEinesPartnersAlsExportiertMarkieren(dto.getPARTNER_I_ID(),
+						dto.getANSPRECHPARTNER_I_ID(), cEmailAdresse, "EX_ID" + iGesamt);
+				iGesamt++;
+				System.out.println("GESAMT:" + iGesamt);
+			}
+		} while (iAnzahl > 0);
+
+		System.out.println("ENDE:" + new Timestamp(System.currentTimeMillis()));
+	}
+
+	public void adressdatensatzEinesPartnersAlsExportiertMarkieren(Integer partnerIId, Integer ansprechpartnerIId,
+			String cEmailAdresse, String exchangeId) {
+
+		if (cEmailAdresse == null) {
+
+			if (ansprechpartnerIId != null) {
+				Ansprechpartner ansp = em.find(Ansprechpartner.class, ansprechpartnerIId);
+
+				ansp.setTZuletztExportiert(new Timestamp(System.currentTimeMillis()));
+				ansp.setCExchangeid(exchangeId);
+				em.merge(ansp);
+				em.flush();
+			} else {
+				Partner partner = em.find(Partner.class, partnerIId);
+
+				partner.setTZuletztExportiert(new Timestamp(System.currentTimeMillis()));
+				partner.setCExchangeid(exchangeId);
+				em.merge(partner);
+				em.flush();
+			}
+		} else {
+
+			cEmailAdresse = cEmailAdresse.toLowerCase();
+
+			Timestamp tJetzt = new Timestamp(System.currentTimeMillis());
+
+			if (ansprechpartnerIId != null) {
+				try {
+
+					Query query = em
+							.createNamedQuery(Ansprechpartneradressbuch.QueryFindByCEmailadresseAnsprechpartnerIId);
+					query.setParameter(1, cEmailAdresse);
+					query.setParameter(2, ansprechpartnerIId);
+					Ansprechpartneradressbuch ansprechpartneradressbuch = (Ansprechpartneradressbuch) query
+							.getSingleResult();
+
+					ansprechpartneradressbuch.setCExchangeid(exchangeId);
+					ansprechpartneradressbuch.setTZuletztExportiert(tJetzt);
+					em.merge(ansprechpartneradressbuch);
+					em.flush();
+				}
+
+				catch (NoResultException ex) {
+
+					PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+					Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ANSPRECHPARTNERADRESSBUCH);
+
+					Ansprechpartneradressbuch ansprechpartneradressbuch = new Ansprechpartneradressbuch(pk,
+							cEmailAdresse, ansprechpartnerIId, exchangeId, tJetzt);
+					em.merge(ansprechpartneradressbuch);
+					em.flush();
+				}
+			} else {
+
+				try {
+
+					Query query = em.createNamedQuery(Partneradressbuch.QueryFindByCEmailadresseAnsprechpartnerIId);
+					query.setParameter(1, cEmailAdresse);
+					query.setParameter(2, partnerIId);
+					Partneradressbuch partneradressbuch = (Partneradressbuch) query.getSingleResult();
+
+					partneradressbuch.setCExchangeid(exchangeId);
+					partneradressbuch.setTZuletztExportiert(tJetzt);
+					em.merge(partneradressbuch);
+					em.flush();
+				}
+
+				catch (NoResultException ex) {
+
+					PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+					Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PARTNERADRESSBUCH);
+
+					Partneradressbuch partneradressbuch = new Partneradressbuch(pk, cEmailAdresse, partnerIId,
+							exchangeId, tJetzt);
+					em.merge(partneradressbuch);
+					em.flush();
+				}
+			}
+
+		}
+
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public ArrayList<AdressbuchExportDto> getDatenFuerAdressbuchExport(int iMaximaleAanzahl,
+			TheClientDto theClientDto) {
+		ArrayList<AdressbuchExportDto> alExport = new ArrayList<AdressbuchExportDto>();
+
+		String sQuery = "SELECT flrpartner,ansprechpartnerset FROM FLRPartner AS flrpartner LEFT OUTER JOIN flrpartner.ansprechpartner AS ansprechpartnerset WHERE flrpartner.b_versteckt=0 AND (ansprechpartnerset.b_versteckt IS NULL or ansprechpartnerset.b_versteckt=0 ) AND ((flrpartner.t_zuletzt_exportiert IS NULL OR flrpartner.t_zuletzt_exportiert<flrpartner.t_aendern )  AND (ansprechpartnerset.t_zuletzt_exportiert IS NULL OR ansprechpartnerset.t_zuletzt_exportiert<ansprechpartnerset.t_aendern )) ORDER BY flrpartner.c_name1nachnamefirmazeile1 ASC";
+		Session session = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Query query = session.createQuery(sQuery);
+		query.setMaxResults(iMaximaleAanzahl);
+		List<?> resultList = query.list();
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		HashSet<Integer> hmPartnerBereitsHinzugefuegt = new HashSet<Integer>();
+
+		while (resultListIterator.hasNext()) {
+
+			Object[] o = (Object[]) resultListIterator.next();
+
+			FLRPartner p = (FLRPartner) o[0];
+			FLRAnsprechpartner ansp = (FLRAnsprechpartner) o[1];
+
+			if (!hmPartnerBereitsHinzugefuegt.contains(p.getI_id())) {
+
+				if (p.getT_zuletzt_exportiert() == null
+						|| p.getT_zuletzt_exportiert().getTime() < p.getT_aendern().getTime()) {
+
+					AdressbuchExportDto aExpDto = new AdressbuchExportDto();
+
+					aExpDto.setExportId(p.getC_exchangeid());
+
+					// Man ist eine Firma, wenn die Anrede Firma oder NULL ist
+					if (p.getAnrede_c_nr() == null || p.getAnrede_c_nr().equals(PartnerFac.PARTNER_ANREDE_FIRMA)) {
+						aExpDto.setCompany(HelperServer.formatNameAusFLRPartner(p));
+					}
+					aExpDto.setDisplayName(HelperServer.formatNameAusFLRPartner(p));
+
+					aExpDto.setEmail(p.getC_email());
+
+					aExpDto.setFirstName(p.getC_name1nachnamefirmazeile1());
+					aExpDto.setLastName(p.getC_name2vornamefirmazeile2());
+
+					aExpDto.setNotes(p.getX_bemerkung());
+					aExpDto.setPARTNER_I_ID(p.getI_id());
+					aExpDto.setPhone(p.getC_telefon());
+
+					aExpDto.setStressAdress(p.getC_strasse());
+
+					if (p.getFlrlandplzort() != null) {
+						aExpDto.setCity(p.getFlrlandplzort().getFlrort().getC_name());
+						aExpDto.setCountry(p.getFlrlandplzort().getFlrland().getC_name());
+						aExpDto.setPostalCode(p.getFlrlandplzort().getC_plz());
+					}
+
+					alExport.add(aExpDto);
+				}
+
+				hmPartnerBereitsHinzugefuegt.add(p.getI_id());
+
+			}
+
+			// und deren Ansprechpartner
+
+			if (ansp != null) {
+
+				if (ansp.getT_zuletzt_exportiert() == null
+						|| ansp.getT_zuletzt_exportiert().getTime() < ansp.getT_aendern().getTime()) {
+
+					AdressbuchExportDto aExpDtoAnsp = new AdressbuchExportDto();
+					aExpDtoAnsp.setANSPRECHPARTNER_I_ID(ansp.getI_id());
+					aExpDtoAnsp.setExportId(ansp.getFlrpartneransprechpartner().getC_exchangeid());
+					// Man ist eine Firma, wenn die Anrede Firma oder NULL ist
+					if (p.getAnrede_c_nr() == null || p.getAnrede_c_nr().equals(PartnerFac.PARTNER_ANREDE_FIRMA)) {
+						aExpDtoAnsp.setCompany(HelperServer.formatNameAusFLRPartner(p));
+					}
+
+					aExpDtoAnsp
+							.setDisplayName(HelperServer.formatPersonAusFLRPartner(ansp.getFlrpartneransprechpartner()));
+
+					aExpDtoAnsp.setEmail(ansp.getC_email());
+
+					aExpDtoAnsp.setFirstName(ansp.getFlrpartneransprechpartner().getC_name2vornamefirmazeile2());
+					aExpDtoAnsp.setLastName(ansp.getFlrpartneransprechpartner().getC_name1nachnamefirmazeile1());
+					
+					aExpDtoAnsp.setNotes(ansp.getFlrpartneransprechpartner().getX_bemerkung());
+					aExpDtoAnsp.setPARTNER_I_ID(ansp.getFlrpartneransprechpartner().getI_id());
+
+					if (Helper.short2boolean(ansp.getB_durchwahl()) && ansp.getC_telefon() != null) {
+						String tel = enrichNumber(p.getI_id(), PartnerFac.KOMMUNIKATIONSART_TELEFON, theClientDto,
+								ansp.getC_telefon(), false);
+						aExpDtoAnsp.setPhone(tel);
+
+					} else {
+						aExpDtoAnsp.setPhone(ansp.getC_telefon());
+					}
+
+					aExpDtoAnsp.setStressAdress(p.getC_strasse());
+
+					if (p.getFlrlandplzort() != null) {
+						aExpDtoAnsp.setCity(p.getFlrlandplzort().getFlrort().getC_name());
+						aExpDtoAnsp.setCountry(p.getFlrlandplzort().getFlrland().getC_name());
+						aExpDtoAnsp.setPostalCode(p.getFlrlandplzort().getC_plz());
+					}
+
+					aExpDtoAnsp.setMobilePhone(ansp.getC_handy());
+					alExport.add(aExpDtoAnsp);
+
+				}
+			}
+
+		}
+
+		return alExport;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public ArrayList<AdressbuchExportDto> getDatenFuerAdressbuchExport(int iMaximaleAanzahl, String cEmailAdresse,
+			TheClientDto theClientDto) {
+
+		ArrayList<AdressbuchExportDto> alExport = new ArrayList<AdressbuchExportDto>();
+
+		if (cEmailAdresse != null) {
+
+			cEmailAdresse = cEmailAdresse.toLowerCase();
+
+			java.sql.Date dVorZweiJAhren = Helper.addiereTageZuDatum(new java.util.Date(), -730);
+
+			boolean syncall = false;
+
+			String sQueryPersonal = "SELECT flrpersonal FROM FLRPersonal flrpersonal WHERE lower(flrpersonal.c_email)='"
+					+ cEmailAdresse.toLowerCase() + "'";
+
+			Session sessionPersonal = FLRSessionFactory.getFactory().openSession();
+			org.hibernate.Query queryPersonal = sessionPersonal.createQuery(sQueryPersonal);
+			List<?> resultListPersonal = queryPersonal.list();
+			Iterator<?> resultListIteratorPersonal = resultListPersonal.iterator();
+
+			HashSet<Integer> personalIIds = new HashSet<Integer>();
+
+			while (resultListIteratorPersonal.hasNext()) {
+				FLRPersonal flrPersonal = (FLRPersonal) resultListIteratorPersonal.next();
+
+				personalIIds.add(flrPersonal.getI_id());
+				if (Helper.short2boolean(flrPersonal.getB_synch_alle_kontakte())) {
+					syncall = true;
+				}
+			}
+
+			String inPersonal = "(";
+			Iterator itPersonal = personalIIds.iterator();
+			while (itPersonal.hasNext()) {
+				Integer personalIId = (Integer) itPersonal.next();
+
+				inPersonal += personalIId;
+
+				if (itPersonal.hasNext()) {
+					inPersonal += ",";
+				}
+
+			}
+			inPersonal += ")";
+
+			if (personalIIds.size() == 0) {
+				inPersonal = "(-999)";
+			}
+
+			String sQuery = null;
+			HashSet<Integer> hmPartnerIIDs = new HashSet<Integer>();
+			HashSet<Integer> hmAnsprechpartnerIIDs = new HashSet<Integer>();
+
+			if (!syncall) {
+				// PROJEKT
+				String sQueryPartnerIN = "SELECT distinct flrprojekt.partner_i_id, flrprojekt.ansprechpartner_i_id FROM FLRProjekt flrprojekt LEFT OUTER JOIN flrprojekt.historyset AS hs WHERE flrprojekt.t_anlegen > '"
+						+ Helper.formatDateWithSlashes(dVorZweiJAhren)
+						+ "' AND  flrprojekt.personal_i_id_zugewiesener IN " + inPersonal
+						+ " OR hs.flrpersonal_wirddurchgefuehrtvon.i_id IN" + inPersonal;
+
+				Session sessionIN = FLRSessionFactory.getFactory().openSession();
+				org.hibernate.Query queryIN = sessionIN.createQuery(sQueryPartnerIN);
+				List<?> resultListIN = queryIN.list();
+				Iterator<?> resultListIteratorIN = resultListIN.iterator();
+
+				while (resultListIteratorIN.hasNext()) {
+					Object[] o = (Object[]) resultListIteratorIN.next();
+					Integer partnerIId = (Integer) o[0];
+					Integer ansprechpartnerIId = (Integer) o[1];
+
+					if (partnerIId == 68780) {
+						int z = 0;
+					}
+
+					hmPartnerIIDs.add(partnerIId);
+					if (ansprechpartnerIId != null) {
+						hmAnsprechpartnerIIDs.add(ansprechpartnerIId);
+					}
+
+				}
+
+				// ANGEBOT
+				sQueryPartnerIN = "SELECT distinct flrangebot.flrkunde.flrpartner.i_id, flrangebot.ansprechpartner_i_id_kunde FROM FLRAngebot flrangebot WHERE flrangebot.t_belegdatum > '"
+						+ Helper.formatDateWithSlashes(dVorZweiJAhren) + "' AND flrangebot.flrvertreter.i_id IN "
+						+ inPersonal;
+
+				sessionIN = FLRSessionFactory.getFactory().openSession();
+				queryIN = sessionIN.createQuery(sQueryPartnerIN);
+				resultListIN = queryIN.list();
+				resultListIteratorIN = resultListIN.iterator();
+
+				while (resultListIteratorIN.hasNext()) {
+					Object[] o = (Object[]) resultListIteratorIN.next();
+					Integer partnerIId = (Integer) o[0];
+					Integer ansprechpartnerIId = (Integer) o[1];
+
+					hmPartnerIIDs.add(partnerIId);
+					if (ansprechpartnerIId != null) {
+						hmAnsprechpartnerIIDs.add(ansprechpartnerIId);
+					}
+
+				}
+
+				// AUFTRAG
+				sQueryPartnerIN = "SELECT distinct flrauftrag.flrkunde.flrpartner.i_id, flrauftrag.ansprechpartner_i_id_kunde FROM FLRAuftrag flrauftrag WHERE flrauftrag.t_belegdatum > '"
+						+ Helper.formatDateWithSlashes(dVorZweiJAhren) + "' AND flrauftrag.flrvertreter.i_id IN"
+						+ inPersonal;
+
+				sessionIN = FLRSessionFactory.getFactory().openSession();
+				queryIN = sessionIN.createQuery(sQueryPartnerIN);
+				resultListIN = queryIN.list();
+				resultListIteratorIN = resultListIN.iterator();
+
+				while (resultListIteratorIN.hasNext()) {
+					Object[] o = (Object[]) resultListIteratorIN.next();
+					Integer partnerIId = (Integer) o[0];
+					Integer ansprechpartnerIId = (Integer) o[1];
+
+					hmPartnerIIDs.add(partnerIId);
+					if (ansprechpartnerIId != null) {
+						hmAnsprechpartnerIIDs.add(ansprechpartnerIId);
+					}
+
+				}
+
+				// AUFTRAEGE bei denen ich Teilnehemer bin
+				sQueryPartnerIN = "SELECT distinct flrAuftragteilnehmer.flrauftrag.flrkunde.flrpartner.i_id, flrAuftragteilnehmer.flrauftrag.ansprechpartner_i_id_kunde FROM FLRAuftragteilnehmer flrAuftragteilnehmer WHERE flrAuftragteilnehmer.flrauftrag.t_belegdatum > '"
+						+ Helper.formatDateWithSlashes(dVorZweiJAhren)
+						+ "' AND flrAuftragteilnehmer.flrpersonal.i_id IN " + inPersonal;
+
+				sessionIN = FLRSessionFactory.getFactory().openSession();
+				queryIN = sessionIN.createQuery(sQueryPartnerIN);
+				resultListIN = queryIN.list();
+				resultListIteratorIN = resultListIN.iterator();
+
+				while (resultListIteratorIN.hasNext()) {
+					Object[] o = (Object[]) resultListIteratorIN.next();
+					Integer partnerIId = (Integer) o[0];
+					Integer ansprechpartnerIId = (Integer) o[1];
+
+					hmPartnerIIDs.add(partnerIId);
+					if (ansprechpartnerIId != null) {
+						hmAnsprechpartnerIIDs.add(ansprechpartnerIId);
+					}
+
+				}
+
+				// RECHNUNG
+				sQueryPartnerIN = "SELECT distinct flrrechnung.flrkunde.flrpartner.i_id, flrrechnung.ansprechpartner_i_id FROM FLRRechnung flrrechnung WHERE flrrechnung.d_belegdatum > '"
+						+ Helper.formatDateWithSlashes(dVorZweiJAhren) + "' AND flrrechnung.flrvertreter.i_id IN "
+						+ inPersonal;
+
+				sessionIN = FLRSessionFactory.getFactory().openSession();
+				queryIN = sessionIN.createQuery(sQueryPartnerIN);
+				resultListIN = queryIN.list();
+				resultListIteratorIN = resultListIN.iterator();
+
+				while (resultListIteratorIN.hasNext()) {
+					Object[] o = (Object[]) resultListIteratorIN.next();
+					Integer partnerIId = (Integer) o[0];
+					Integer ansprechpartnerIId = (Integer) o[1];
+
+					hmPartnerIIDs.add(partnerIId);
+					if (ansprechpartnerIId != null) {
+						hmAnsprechpartnerIIDs.add(ansprechpartnerIId);
+					}
+
+				}
+
+				// Kunde, bei denen ich Provisionsempfaenger bin
+				sQueryPartnerIN = "SELECT distinct flrkunde.flrpartner.i_id FROM FLRKunde flrkunde WHERE  flrkunde.personal_i_id_bekommeprovision IN "
+						+ inPersonal;
+
+				sessionIN = FLRSessionFactory.getFactory().openSession();
+				queryIN = sessionIN.createQuery(sQueryPartnerIN);
+				resultListIN = queryIN.list();
+				resultListIteratorIN = resultListIN.iterator();
+
+				while (resultListIteratorIN.hasNext()) {
+					Integer partnerIId = (Integer) resultListIteratorIN.next();
+					hmPartnerIIDs.add(partnerIId);
+				}
+
+				// Kunde, bei denen ich Sachbearbeiter bin
+				sQueryPartnerIN = "SELECT distinct flrsachbearbeiter.flrkunde.flrpartner.i_id FROM FLRSachbearbeiter flrsachbearbeiter WHERE flrsachbearbeiter.flrpersonal.i_id IN"
+						+ inPersonal;
+
+				sessionIN = FLRSessionFactory.getFactory().openSession();
+				queryIN = sessionIN.createQuery(sQueryPartnerIN);
+				resultListIN = queryIN.list();
+				resultListIteratorIN = resultListIN.iterator();
+
+				while (resultListIteratorIN.hasNext()) {
+					Integer partnerIId = (Integer) resultListIteratorIN.next();
+					hmPartnerIIDs.add(partnerIId);
+				}
+
+			}
+
+			String inPArtner = "(";
+			Iterator itPartner = hmPartnerIIDs.iterator();
+			while (itPartner.hasNext()) {
+				Integer partnerIId = (Integer) itPartner.next();
+
+				inPArtner += partnerIId;
+
+				if (itPartner.hasNext()) {
+					inPArtner += ",";
+				}
+
+			}
+			inPArtner += ")";
+
+			if (hmPartnerIIDs.size() == 0) {
+				inPArtner = "(-999)";
+			}
+
+			String inAnsprechpArtner = "(";
+			Iterator itAnsprechpartner = hmAnsprechpartnerIIDs.iterator();
+			while (itAnsprechpartner.hasNext()) {
+				Integer ansprechpartnerIId = (Integer) itAnsprechpartner.next();
+
+				inAnsprechpArtner += ansprechpartnerIId;
+
+				if (itAnsprechpartner.hasNext()) {
+					inAnsprechpArtner += ",";
+				}
+
+			}
+			inAnsprechpArtner += ")";
+
+			if (hmAnsprechpartnerIIDs.size() == 0) {
+				inAnsprechpArtner = "(-999)";
+			}
+
+			if (syncall) {
+				sQuery = "SELECT p, (SELECT padr.c_exchangeid FROM FLRPartneradressbuch padr WHERE padr.c_emailadresse = '"
+						+ cEmailAdresse
+						+ "' AND padr.partner_i_id = p.i_id ) AS exchange_id FROM FLRPartner p WHERE p.b_versteckt = 0 AND (p.c_telefon IS NOT NULL OR p.c_email IS NOT NULL) AND p.i_id NOT IN (SELECT padr.partner_i_id FROM FLRPartneradressbuch padr WHERE padr.c_emailadresse='"
+						+ cEmailAdresse + "' AND padr.t_zuletzt_exportiert >p.t_aendern )";
+
+			} else {
+				sQuery = "SELECT p, (SELECT padr.c_exchangeid FROM FLRPartneradressbuch padr WHERE padr.c_emailadresse='"
+						+ cEmailAdresse
+						+ "' AND padr.partner_i_id = p.i_id ) AS exchange_id FROM FLRPartner p WHERE p.b_versteckt = 0 AND p.i_id IN "
+						+ inPArtner
+						+ " AND p.i_id NOT IN (SELECT padr.partner_i_id FROM FLRPartneradressbuch padr WHERE padr.c_emailadresse='"
+						+ cEmailAdresse + "' AND padr.t_zuletzt_exportiert >p.t_aendern )";
+
+			}
+
+			Session session = FLRSessionFactory.getFactory().openSession();
+
+			org.hibernate.Query query = session.createQuery(sQuery);
+			query.setMaxResults(iMaximaleAanzahl);
+			List<?> resultList = query.list();
+			Iterator<?> resultListIterator = resultList.iterator();
+
+			HashSet<Integer> hmPartnerBereitsHinzugefuegt = new HashSet<Integer>();
+
+			while (resultListIterator.hasNext()) {
+
+				Object[] o = (Object[]) resultListIterator.next();
+
+				FLRPartner p = (FLRPartner) o[0];
+
+				String exchangeid = (String) o[1];
+
+				if (p.getI_id() == 68780) {
+					int z = 0;
+				}
+
+				AdressbuchExportDto aExpDto = new AdressbuchExportDto();
+
+				aExpDto.setExportId(exchangeid);
+
+				// Man ist eine Firma, wenn die Anrede Firma oder NULL ist
+				if (p.getAnrede_c_nr() == null || p.getAnrede_c_nr().equals(PartnerFac.PARTNER_ANREDE_FIRMA)) {
+					aExpDto.setCompany(HelperServer.formatNameAusFLRPartner(p));
+				}
+				aExpDto.setDisplayName(HelperServer.formatNameAusFLRPartner(p));
+
+				aExpDto.setEmail(p.getC_email());
+
+				aExpDto.setFirstName(p.getC_name1nachnamefirmazeile1());
+				aExpDto.setLastName(p.getC_name2vornamefirmazeile2());
+
+				aExpDto.setNotes(p.getX_bemerkung());
+				aExpDto.setPARTNER_I_ID(p.getI_id());
+				aExpDto.setPhone(p.getC_telefon());
+
+				aExpDto.setStressAdress(p.getC_strasse());
+
+				if (p.getFlrlandplzort() != null) {
+					aExpDto.setCity(p.getFlrlandplzort().getFlrort().getC_name());
+					aExpDto.setCountry(p.getFlrlandplzort().getFlrland().getC_name());
+					aExpDto.setPostalCode(p.getFlrlandplzort().getC_plz());
+				}
+
+				alExport.add(aExpDto);
+
+				hmPartnerBereitsHinzugefuegt.add(p.getI_id());
+
+			}
+
+			// und deren Ansprechpartner
+
+			if (syncall) {
+				sQuery = "SELECT ansp, (SELECT padr.c_exchangeid FROM FLRAnsprechpartneradressbuch padr WHERE padr.c_emailadresse='"
+						+ cEmailAdresse
+						+ "' AND padr.ansprechpartner_i_id = ansp.i_id ) AS exchange_id FROM FLRAnsprechpartner ansp WHERE ansp.b_versteckt = 0 AND (ansp.c_email IS NOT NULL OR ansp.c_telefon IS NOT NULL OR ansp.c_handy IS NOT NULL ) AND ansp.i_id NOT IN (SELECT padr.ansprechpartner_i_id FROM FLRAnsprechpartneradressbuch padr WHERE padr.c_emailadresse='"
+						+ cEmailAdresse
+						+ "' AND padr.t_zuletzt_exportiert > ansp.t_aendern AND padr.t_zuletzt_exportiert > ansp.flrpartner.t_aendern  )";
+
+			} else {
+
+				sQuery = "SELECT ansp, (SELECT padr.c_exchangeid FROM FLRAnsprechpartneradressbuch padr WHERE padr.c_emailadresse='"
+						+ cEmailAdresse
+						+ "' AND padr.ansprechpartner_i_id = ansp.i_id ) AS exchange_id FROM FLRAnsprechpartner ansp WHERE ansp.b_versteckt = 0 AND ansp.i_id IN "
+						+ inAnsprechpArtner
+						+ " AND ansp.i_id NOT IN (SELECT padr.ansprechpartner_i_id FROM FLRAnsprechpartneradressbuch padr WHERE padr.c_emailadresse='"
+						+ cEmailAdresse
+						+ "' AND padr.t_zuletzt_exportiert > ansp.t_aendern AND padr.t_zuletzt_exportiert > ansp.flrpartner.t_aendern  )";
+			}
+
+			query = session.createQuery(sQuery);
+			query.setMaxResults(iMaximaleAanzahl);
+			resultList = query.list();
+			resultListIterator = resultList.iterator();
+
+			hmPartnerBereitsHinzugefuegt = new HashSet<Integer>();
+
+			while (resultListIterator.hasNext()) {
+
+				Object[] o = (Object[]) resultListIterator.next();
+
+				FLRAnsprechpartner ansp = (FLRAnsprechpartner) o[0];
+
+				String exchangeid = (String) o[1];
+
+				AdressbuchExportDto aExpDtoAnsp = new AdressbuchExportDto();
+				aExpDtoAnsp.setANSPRECHPARTNER_I_ID(ansp.getI_id());
+				aExpDtoAnsp.setExportId(exchangeid);
+				// Man ist eine Firma, wenn die Anrede Firma oder NULL ist
+				if (ansp.getFlrpartner().getAnrede_c_nr() == null
+						|| ansp.getFlrpartner().getAnrede_c_nr().equals(PartnerFac.PARTNER_ANREDE_FIRMA)) {
+					aExpDtoAnsp.setCompany(HelperServer.formatNameAusFLRPartner(ansp.getFlrpartner()));
+				}
+
+				aExpDtoAnsp.setDisplayName(HelperServer.formatPersonAusFLRPartner(ansp.getFlrpartneransprechpartner()));
+
+				aExpDtoAnsp.setEmail(ansp.getC_email());
+
+				aExpDtoAnsp.setFirstName(ansp.getFlrpartneransprechpartner().getC_name2vornamefirmazeile2());
+				aExpDtoAnsp.setLastName(ansp.getFlrpartneransprechpartner().getC_name1nachnamefirmazeile1());
+
+				aExpDtoAnsp.setNotes(ansp.getFlrpartneransprechpartner().getX_bemerkung());
+				aExpDtoAnsp.setPARTNER_I_ID(ansp.getFlrpartneransprechpartner().getI_id());
+
+				if (Helper.short2boolean(ansp.getB_durchwahl()) && ansp.getC_telefon() != null) {
+					String tel = enrichNumber(ansp.getFlrpartner().getI_id(), PartnerFac.KOMMUNIKATIONSART_TELEFON,
+							theClientDto, ansp.getC_telefon(), false);
+					aExpDtoAnsp.setPhone(tel);
+
+				} else {
+					aExpDtoAnsp.setPhone(ansp.getC_telefon());
+				}
+
+				aExpDtoAnsp.setStressAdress(ansp.getFlrpartner().getC_strasse());
+
+				if (ansp.getFlrpartner().getFlrlandplzort() != null) {
+					aExpDtoAnsp.setCity(ansp.getFlrpartner().getFlrlandplzort().getFlrort().getC_name());
+					aExpDtoAnsp.setCountry(ansp.getFlrpartner().getFlrlandplzort().getFlrland().getC_name());
+					aExpDtoAnsp.setPostalCode(ansp.getFlrpartner().getFlrlandplzort().getC_plz());
+				}
+
+				aExpDtoAnsp.setMobilePhone(ansp.getC_handy());
+				alExport.add(aExpDtoAnsp);
+
+			}
+		}
+		return alExport;
+
+	}
+
+	public void telefonnummerFuerTapiSynchronisieren(Integer partnerIId, Integer ansprechpartnerIId,
+			TheClientDto theClientDto) {
+
+		// Zuerst Partner OHNE Asprechpartner
+
+		if (ansprechpartnerIId != null) {
+			Query query = em.createQuery("DELETE Telefonnummer x WHERE  x.ansprechpartnerIId = " + ansprechpartnerIId);
+			query.executeUpdate();
+		} else {
+			Query query = em.createQuery("DELETE Telefonnummer x WHERE x.partnerIId = " + partnerIId);
+			query.executeUpdate();
+		}
+
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+
+		PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(partnerIId, theClientDto);
+
+		if (ansprechpartnerIId == null) {
+			if (partnerDto.getCTelefon() != null) {
+				String tel = passeInlandsAuslandsVorwahlAn(partnerIId, theClientDto.getMandant(),
+						partnerDto.getCTelefon(), true, theClientDto);
+				tel = Helper.befreieNummerVonSonderzeichenInklisiveLeerzeichen(tel);
+				Telefonnummer telpartner = new Telefonnummer(pkGen.getNextPrimaryKey(PKConst.PK_TELEFONNUMMER),
+						partnerIId, null, tel, partnerDto.getBVersteckt());
+				em.merge(telpartner);
+
+			}
+
+			// PJ21597
+			if (partnerDto.getCHandy() != null) {
+
+				String tel = passeInlandsAuslandsVorwahlAn(partnerIId, theClientDto.getMandant(),
+						partnerDto.getCHandy(), true, theClientDto);
+
+				tel = Helper.befreieNummerVonSonderzeichenInklisiveLeerzeichen(tel);
+				Telefonnummer telpartner = new Telefonnummer(pkGen.getNextPrimaryKey(PKConst.PK_TELEFONNUMMER),
+						partnerIId, null, tel, partnerDto.getBVersteckt());
+				em.merge(telpartner);
+
+			}
+
+			// Wenn Personal -> Interne Nummer eintragen
+			Query query = em.createQuery(
+					"SELECT c FROM Personal c WHERE c.cTelefon IS NOT NULL AND c.partnerIId =" + partnerIId);
+			Collection c = query.getResultList();
+			Iterator it = c.iterator();
+			while (it.hasNext()) {
+				Personal p = (Personal) it.next();
+				Telefonnummer telpartner = new Telefonnummer(pkGen.getNextPrimaryKey(PKConst.PK_TELEFONNUMMER),
+						partnerIId, null, p.getCTelefon(), p.getBVersteckt());
+				em.merge(telpartner);
+
+			}
+
+		}
+
+		try {
+
+			AnsprechpartnerDto[] anspDtos = getAnsprechpartnerFac().ansprechpartnerFindByPartnerIId(partnerIId,
+					theClientDto);
+
+			for (AnsprechpartnerDto anspDto : anspDtos) {
+				if (ansprechpartnerIId != null && !anspDto.getIId().equals(ansprechpartnerIId)) {
+					continue;
+				}
+
+				boolean bVersteckt = Helper.short2boolean(partnerDto.getBVersteckt());
+				if (bVersteckt == false && Helper.short2boolean(anspDto.getBVersteckt())) {
+					bVersteckt = true;
+				}
+
+				if (anspDto.getCHandy() != null) {
+
+					String tel = passeInlandsAuslandsVorwahlAn(partnerIId, theClientDto.getMandant(),
+							anspDto.getCHandy(), true, theClientDto);
+
+					tel = Helper.befreieNummerVonSonderzeichenInklisiveLeerzeichen(tel);
+					Telefonnummer telpartner = new Telefonnummer(pkGen.getNextPrimaryKey(PKConst.PK_TELEFONNUMMER),
+							partnerIId, anspDto.getIId(), tel, Helper.boolean2Short(bVersteckt));
+					em.merge(telpartner);
+
+				}
+
+				if (anspDto.getCTelefon() != null) {
+					String tel = "";
+					if (Helper.short2boolean(anspDto.getBDurchwahl())) {
+						tel = enrichNumber(partnerIId, PartnerFac.KOMMUNIKATIONSART_TELEFON, theClientDto,
+								anspDto.getCTelefon(), false);
+						tel = passeInlandsAuslandsVorwahlAn(partnerIId, theClientDto.getMandant(), tel, true,
+								theClientDto);
+					} else {
+
+						tel = passeInlandsAuslandsVorwahlAn(partnerIId, theClientDto.getMandant(),
+								anspDto.getCTelefon(), true, theClientDto);
+
+					}
+
+					tel = Helper.befreieNummerVonSonderzeichenInklisiveLeerzeichen(tel);
+					Telefonnummer telpartner = new Telefonnummer(pkGen.getNextPrimaryKey(PKConst.PK_TELEFONNUMMER),
+							partnerIId, anspDto.getIId(), tel, Helper.boolean2Short(bVersteckt));
+					em.merge(telpartner);
+
+				}
+
+			}
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+	}
+
 	public void updateKontakt(KontaktDto kontaktDto) {
 		if (kontaktDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kontaktDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kontaktDto == null"));
 		}
-		if (kontaktDto.getIId() == null || kontaktDto.getCTitel() == null
-				|| kontaktDto.getPartnerIId() == null
-				|| kontaktDto.getKontaktartIId() == null
-				|| kontaktDto.getPersonalIIdZugewiesener() == null
+		if (kontaktDto.getIId() == null || kontaktDto.getCTitel() == null || kontaktDto.getPartnerIId() == null
+				|| kontaktDto.getKontaktartIId() == null || kontaktDto.getPersonalIIdZugewiesener() == null
 				|| kontaktDto.getTKontakt() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"kontaktDto.getIId() == null || kontaktDto.getCTitel() == null || kontaktDto.getPartnerIId() == null || kontaktDto.getKontaktartIId() == null || kontaktDto.getPersonalIIdZugewiesener() == null || kontaktDto.getTKontakt() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"kontaktDto.getIId() == null || kontaktDto.getCTitel() == null || kontaktDto.getPartnerIId() == null || kontaktDto.getKontaktartIId() == null || kontaktDto.getPersonalIIdZugewiesener() == null || kontaktDto.getTKontakt() == null"));
 		}
 
 		Integer iId = kontaktDto.getIId();
 		// try {
 		Kontakt kontakt = em.find(Kontakt.class, iId);
 		if (kontakt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		setKontaktFromKontaktDto(kontakt, kontaktDto);
@@ -2438,14 +2262,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	public KontaktDto kontaktFindByPrimaryKey(Integer iId) {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		Kontakt kontakt = em.find(Kontakt.class, iId);
 		if (kontakt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleKontaktDto(kontakt);
 
@@ -2457,8 +2279,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		kontakt.setKontaktartIId(kontaktDto.getKontaktartIId());
 		kontakt.setPartnerIId(kontaktDto.getPartnerIId());
 		kontakt.setPersonalIIdAnlegen(kontaktDto.getPersonalIIdAnlegen());
-		kontakt.setPersonalIIdZugewiesener(kontaktDto
-				.getPersonalIIdZugewiesener());
+		kontakt.setPersonalIIdZugewiesener(kontaktDto.getPersonalIIdZugewiesener());
 		kontakt.setTAnlegen(kontaktDto.getTAnlegen());
 		kontakt.setTErledigt(kontaktDto.getTErledigt());
 		kontakt.setTKontakt(kontaktDto.getTKontakt());
@@ -2467,6 +2288,31 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		kontakt.setXKommentar(kontaktDto.getXKommentar());
 		em.merge(kontakt);
 		em.flush();
+	}
+
+	public void empfaengerlisteAlsKontakteBeiPartnernEintragen(String titel, SerienbriefEmpfaengerDto[] empfaenger,
+			Timestamp tKontakt, Timestamp tWiedervorlage, Integer kontaktartIId, Integer personalIIdZugewiesener,
+			TheClientDto theClientDto) {
+
+		for (int i = 0; i < empfaenger.length; i++) {
+			KontaktDto kontaktDto = new KontaktDto();
+
+			kontaktDto.setPartnerIId(empfaenger[i].getPartnerDto().getIId());
+			if (empfaenger[i].getAnsprechpartnerDto() != null) {
+				kontaktDto.setAnsprechpartnerIId(empfaenger[i].getAnsprechpartnerDto().getIId());
+			}
+
+			kontaktDto.setCTitel(titel);
+			kontaktDto.setTKontakt(tKontakt);
+			kontaktDto.setTWiedervorlage(tWiedervorlage);
+			kontaktDto.setKontaktartIId(kontaktartIId);
+			kontaktDto.setCTitel(titel);
+			kontaktDto.setPersonalIIdZugewiesener(personalIIdZugewiesener);
+
+			createKontakt(kontaktDto, theClientDto);
+
+		}
+
 	}
 
 	private KontaktDto assembleKontaktDto(Kontakt kontakt) {
@@ -2486,29 +2332,25 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return (KontaktDto[]) list.toArray(returnArray);
 	}
 
-	public String createPartnerart(PartnerartDto partnerartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createPartnerart(PartnerartDto partnerartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (partnerartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerartDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerartDto == null"));
 		}
 		if (partnerartDtoI.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("partnerartDto.getCNr() == null"));
 		}
 
-		
 		try {
 			Query query = em.createNamedQuery("PartnerartfindByCNr");
 			query.setParameter(1, partnerartDtoI.getCNr());
 			Partnerart partnerart = (Partnerart) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PART_PARTNERART.C_NR"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PART_PARTNERART.C_NR"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
-		
+
 		Partnerart partnerart = null;
 
 		try {
@@ -2517,13 +2359,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			em.flush();
 
 			if (partnerartDtoI.getPartnerartsprDto() != null) {
-				Partnerartspr partnerartspr = new Partnerartspr(
-						partnerartDtoI.getCNr(),
+				Partnerartspr partnerartspr = new Partnerartspr(partnerartDtoI.getCNr(),
 						theClientDto.getLocMandantAsString());
 				em.persist(partnerartspr);
 				em.flush();
-				setPartnerartsprFromPartnerartsprDto(partnerartspr,
-						partnerartDtoI.getPartnerartsprDto());
+				setPartnerartsprFromPartnerartsprDto(partnerartspr, partnerartDtoI.getPartnerartsprDto());
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -2531,22 +2371,18 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return partnerart.getCNr();
 	}
 
-	public void removePartnerart(String cNrI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removePartnerart(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		Query query = em.createNamedQuery("PartnerartsprfindByPartnerartCNr");
 		query.setParameter(1, cNrI);
 		Collection<?> c = query.getResultList();
 
-		if (cNrI.equals(PartnerFac.PARTNERART_ADRESSE)
-				|| cNrI.equals(PartnerFac.PARTNERART_ANSPRECHPARTNER)
-				|| cNrI.equals(PartnerFac.PARTNERART_FIRMA)
-				|| cNrI.equals(PartnerFac.PARTNERART_PERSON)
-				|| cNrI.equals(PartnerFac.PARTNERART_SONSTIGES)
-				|| cNrI.equals(PartnerFac.PARTNERART_VEREIN)) {
-			ArrayList al=new ArrayList();
+		if (cNrI.equals(PartnerFac.PARTNERART_ADRESSE) || cNrI.equals(PartnerFac.PARTNERART_ANSPRECHPARTNER)
+				|| cNrI.equals(PartnerFac.PARTNERART_FIRMA) || cNrI.equals(PartnerFac.PARTNERART_PERSON)
+				|| cNrI.equals(PartnerFac.PARTNERART_SONSTIGES) || cNrI.equals(PartnerFac.PARTNERART_VEREIN)) {
+			ArrayList al = new ArrayList();
 			al.add(cNrI);
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNERART_DARF_NICHT_GELOESCHT_GEAENDERT_WERDEN,al,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNERART_DARF_NICHT_GELOESCHT_GEAENDERT_WERDEN, al,
 					new Exception("FEHLER_PARTNERART_DARF_NICHT_GELOESCHT_GEAENDERT_WERDEN"));
 
 		}
@@ -2559,8 +2395,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			}
 			Partnerart toRemove = em.find(Partnerart.class, cNrI);
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(toRemove);
 			em.flush();
@@ -2572,8 +2407,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
 	}
 
-	public void removePartnerart(PartnerartDto partnerartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePartnerart(PartnerartDto partnerartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (partnerartDtoI != null) {
 			String cNr = partnerartDtoI.getCNr();
@@ -2582,21 +2416,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * &Uuml;berpr&uuml;ft, ob Ziel- und Quellpartner vollst&auml;ndige Partner
-	 * sind
+	 * &Uuml;berpr&uuml;ft, ob Ziel- und Quellpartner vollst&auml;ndige Partner sind
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
 	 */
-	private void checkInputParamsZielQuellPartnerDtos(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto)
+	private void checkInputParamsZielQuellPartnerDtos(PartnerDto partnerZielDto, PartnerDto partnerQuellDto)
 			throws EJBExceptionLP {
 
 		if (partnerZielDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerDto == null (Ziel)"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerDto == null (Ziel)"));
 		}
 
 		if (partnerZielDto.getIId() == null) {
@@ -2605,15 +2434,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 
 		if (partnerZielDto.getPartnerartCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"partnerDto.getPartnerartCNr() == null (Ziel)"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("partnerDto.getPartnerartCNr() == null (Ziel)"));
 		}
 
 		if (partnerQuellDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerDto == null (Quell)"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerDto == null (Quell)"));
 		}
 
 		if (partnerQuellDto.getIId() == null) {
@@ -2622,10 +2448,8 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 
 		if (partnerQuellDto.getPartnerartCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"partnerDto.getPartnerartCNr() == null (Quell)"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("partnerDto.getPartnerartCNr() == null (Quell)"));
 		}
 	}
 
@@ -2634,24 +2458,19 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * Kommunikationsdaten angepasst, da ansonsten der Quellpartner wegen
 	 * eventueller Abh&auml;ngigkeiten nicht gel&ouml;scht werden kann.
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	public void reassignPartnerkommunikationBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignPartnerkommunikationBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		// Suchen aller Kommunikationen der Quelle und diese setzen auf das Ziel
 
-		PartnerkommunikationDto[] partkommDto = getPartnerFac()
-				.partnerkommFindByPartnerIId(partnerQuellDto.getIId());
+		PartnerkommunikationDto[] partkommDto = getPartnerFac().partnerkommFindByPartnerIId(partnerQuellDto.getIId());
 
 		PartnerkommunikationDto[] partkommZielDto = getPartnerFac()
 				.partnerkommFindByPartnerIId(partnerZielDto.getIId());
@@ -2659,16 +2478,14 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			partkommDto[i].setPartnerIId(partnerZielDto.getIId());
 			boolean bVorhanden = false;
 			for (int y = 0; y < partkommZielDto.length; y++) {
-				if (partkommDto[i].getCInhalt().equals(
-						partkommZielDto[y].getCInhalt())) {
+				if (partkommDto[i].getCInhalt().equals(partkommZielDto[y].getCInhalt())) {
 					bVorhanden = true;
 				}
 			}
 			if (!bVorhanden) {
 				updatePartnerkommunikation(partkommDto[i], theClientDto);
 			} else {
-				removePartnerkommunikation(partkommDto[i].getIId(),
-						theClientDto);
+				removePartnerkommunikation(partkommDto[i].getIId(), theClientDto);
 			}
 		}
 
@@ -2681,16 +2498,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt den Empf&auml;nger und den Sender (wenn vorhanden) vom
 	 * Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignVersandauftragBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignVersandauftragBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// lp_versandauftrag - partner_i_id_empfaenger, partner_i_id_sender
 		VersandauftragDto[] aVersandauftragDtos = null;
@@ -2699,26 +2512,19 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 		try {
 			aVersandauftragDtos = getVersandFac()
-					.versandauftragFindByEmpfaengerPartnerIIdOhneExc(
-							partnerQuellDto.getIId());
+					.versandauftragFindByEmpfaengerPartnerIIdOhneExc(partnerQuellDto.getIId());
 			if (aVersandauftragDtos != null) {
 				for (int j = 0; j < aVersandauftragDtos.length; j++) {
-					aVersandauftragDtos[j]
-							.setPartnerIIdEmpfaenger(partnerZielDto.getIId());
-					getVersandFac().updateVersandauftrag(
-							aVersandauftragDtos[j], theClientDto);
+					aVersandauftragDtos[j].setPartnerIIdEmpfaenger(partnerZielDto.getIId());
+					getVersandFac().updateVersandauftrag(aVersandauftragDtos[j], theClientDto);
 				}
 			}
 			aVersandauftragDtos = null;
-			aVersandauftragDtos = getVersandFac()
-					.versandauftragFindBySenderPartnerIIdOhneExc(
-							partnerQuellDto.getIId());
+			aVersandauftragDtos = getVersandFac().versandauftragFindBySenderPartnerIIdOhneExc(partnerQuellDto.getIId());
 			if (aVersandauftragDtos != null) {
 				for (int j = 0; j < aVersandauftragDtos.length; j++) {
-					aVersandauftragDtos[j].setPartnerIIdSender(partnerZielDto
-							.getIId());
-					getVersandFac().updateVersandauftrag(
-							aVersandauftragDtos[j], theClientDto);
+					aVersandauftragDtos[j].setPartnerIIdSender(partnerZielDto.getIId());
+					getVersandFac().updateVersandauftrag(aVersandauftragDtos[j], theClientDto);
 				}
 			}
 		} catch (RemoteException ex1) {
@@ -2727,27 +2533,22 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt den Artikelhersteller-Partner vom Quellpartner auf den
-	 * Zielpartner um
+	 * H&auml;ngt den Artikelhersteller-Partner vom Quellpartner auf den Zielpartner
+	 * um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignHerstellerBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignHerstellerBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// ww_hersteller - artikel - grunddaten - hersteller
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		HerstellerDto[] aHerstellerDtos = null;
 		try {
-			aHerstellerDtos = getArtikelFac().herstellerFindByPartnerIId(
-					partnerQuellDto.getIId(), theClientDto);
+			aHerstellerDtos = getArtikelFac().herstellerFindByPartnerIId(partnerQuellDto.getIId(), theClientDto);
 			if (aHerstellerDtos != null) {
 				for (int j = 0; j < aHerstellerDtos.length; j++) {
 					aHerstellerDtos[j].setPartnerDto(partnerZielDto);
@@ -2760,9 +2561,8 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public void reassignKontakteBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void reassignKontakteBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		Query query = em.createNamedQuery("KontaktfindByPartnerIId");
 		query.setParameter(1, partnerQuellDto.getIId());
@@ -2785,16 +2585,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt die Partnerbank (wenn vorhanden) vom Quellpartner auf den
 	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignPartnerbankBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignPartnerbankBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// part_partnerbank - partner_i_id - pro Partner mehrere
 		// Bankverbindungen
@@ -2802,8 +2598,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		try {
-			partnerbankDtos = getBankFac().partnerbankFindByPartnerIIdOhneExc(
-					partnerQuellDto.getIId(), theClientDto);
+			partnerbankDtos = getBankFac().partnerbankFindByPartnerIIdOhneExc(partnerQuellDto.getIId(), theClientDto);
 			for (int j = 0; j < partnerbankDtos.length; j++) {
 				partnerbankDtos[j].setPartnerIId(partnerZielDto.getIId());
 				getBankFac().updatePartnerbank(partnerbankDtos[j]);
@@ -2817,31 +2612,24 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt die Bank und die zugeh&ouml;rigen Partnerbankeintrag (wenn
 	 * vorhanden) vom Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
-	 * @param bBankMitverdichten
-	 *            boolean
+	 * @param partnerZielDto     PartnerDto
+	 * @param partnerQuellDto    PartnerDto
+	 * @param theClientDto       String
+	 * @param bBankMitverdichten boolean
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignBankBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, TheClientDto theClientDto,
-			boolean bBankMitverdichten) throws EJBExceptionLP {
+	public void reassignBankBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			TheClientDto theClientDto, boolean bBankMitverdichten) throws EJBExceptionLP {
 		// part_bank - partner_i_id
 
 		try {
-			BankDto bankQuellDto = getBankFac().bankFindByPrimaryKeyOhneExc(
-					partnerQuellDto.getIId(), theClientDto);
+			BankDto bankQuellDto = getBankFac().bankFindByPrimaryKeyOhneExc(partnerQuellDto.getIId(), theClientDto);
 			BankDto bankZielDto = partnerZielDto.getBankDto();
 			if (bankZielDto != null) {
 
 				// Gibts die Zielbank schon?
-				BankDto bankZielDtoSchonVorhanden = getBankFac()
-						.bankFindByPrimaryKeyOhneExc(partnerZielDto.getIId(),
-								theClientDto);
+				BankDto bankZielDtoSchonVorhanden = getBankFac().bankFindByPrimaryKeyOhneExc(partnerZielDto.getIId(),
+						theClientDto);
 
 				getBankFac().updateBank(bankZielDto, theClientDto);
 
@@ -2854,11 +2642,9 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 					bankZielDto.setPartnerDto(partnerZielDto);
 					bankZielDto.setPartnerIIdNeuAus(partnerZielDto.getIId());
 					bankToRemove = partnerQuellDto.getIId();
-					Integer bankIId = getBankFac().createBank(bankZielDto,
-							theClientDto);
+					Integer bankIId = getBankFac().createBank(bankZielDto, theClientDto);
 
-					bankZielDto = getBankFac().bankFindByPrimaryKey(bankIId,
-							theClientDto);
+					bankZielDto = getBankFac().bankFindByPrimaryKey(bankIId, theClientDto);
 				}
 
 				if (bankQuellDto != null) {
@@ -2866,8 +2652,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 					// SP1382 Wenn in FIBU Bankverbindungen vorhanden sind, dann
 					// ist ein zusammenfuehren nicht moeglich
 
-					Query query = em
-							.createNamedQuery("BankverbindungfindByBankIId");
+					Query query = em.createNamedQuery("BankverbindungfindByBankIId");
 					query.setParameter(1, bankQuellDto.getPartnerIId());
 					Collection<?> bvs = query.getResultList();
 
@@ -2881,18 +2666,15 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 					// part_partnerbank - partnerbank_i_id - ist partnerid der
 					// part_bank
 					partnerbankDtos = null;
-					partnerbankDtos = getBankFac()
-							.partnerbankFindByPartnerBankIIdOhneExc(
-									partnerQuellDto.getIId(), theClientDto);
+					partnerbankDtos = getBankFac().partnerbankFindByPartnerBankIIdOhneExc(partnerQuellDto.getIId(),
+							theClientDto);
 					for (int j = 0; j < partnerbankDtos.length; j++) {
-						partnerbankDtos[j].setBankPartnerIId(partnerZielDto
-								.getIId());
+						partnerbankDtos[j].setBankPartnerIId(partnerZielDto.getIId());
 						getBankFac().updatePartnerbank(partnerbankDtos[j]);
 					}
 
 					if (bankQuellDto != null) {
-						getBankFac().removeBank(bankQuellDto.getPartnerIId(),
-								theClientDto);
+						getBankFac().removeBank(bankQuellDto.getPartnerIId(), theClientDto);
 					}
 				}
 
@@ -2906,83 +2688,73 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt den Lieferanten (wenn vorhanden) vom Quellpartner auf den
 	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param bLieferantMitverdichten
-	 *            boolean
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto          PartnerDto
+	 * @param partnerQuellDto         PartnerDto
+	 * @param mandantCNr              String
+	 * @param bLieferantMitverdichten boolean
+	 * @param theClientDto            String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignLieferantBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, String mandantCNr,
-			boolean bLieferantMitverdichten, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void reassignLieferantBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			String mandantCNr, boolean bLieferantMitverdichten, TheClientDto theClientDto) throws EJBExceptionLP {
 		// part_lieferant - pro Mandant darf ein Lieferant auf dem
 		// mandantenunabhaengigen Partner haengen
 		// partner_i_id & partner_i_id_rechnungsadresse
 		/*
-		 * abfangen, wenn bereits ein lieferant auf diesem mandanten auf dem
-		 * zielpartner vorhanden aber quellpartner auch einen lieferanten auf
-		 * dem mandanten hat - mitverdichten oder meldung
+		 * abfangen, wenn bereits ein lieferant auf diesem mandanten auf dem zielpartner
+		 * vorhanden aber quellpartner auch einen lieferanten auf dem mandanten hat -
+		 * mitverdichten oder meldung
 		 */
 		LieferantDto lieferantQuellDto = null;
 		LieferantDto lieferantZielDto = null;
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 		try {
-			lieferantQuellDto = getLieferantFac()
-					.lieferantFindByiIdPartnercNrMandantOhneExc(
-							partnerQuellDto.getIId(), mandantCNr, theClientDto);
+			lieferantQuellDto = getLieferantFac().lieferantFindByiIdPartnercNrMandantOhneExc(partnerQuellDto.getIId(),
+					mandantCNr, theClientDto);
 			if (lieferantQuellDto != null) {
-				lieferantZielDto = getLieferantFac()
-						.lieferantFindByiIdPartnercNrMandantOhneExc(
-								partnerZielDto.getIId(), mandantCNr,
-								theClientDto);
+
+				// SP4656
+				lieferantQuellDto = getLieferantFac().lieferantFindByPrimaryKey(lieferantQuellDto.getIId(),
+						theClientDto);
+
+				lieferantZielDto = getLieferantFac().lieferantFindByiIdPartnercNrMandantOhneExc(partnerZielDto.getIId(),
+						mandantCNr, theClientDto);
 				if (lieferantZielDto != null) {
 					if (bLieferantMitverdichten) {
 						// hier lieferanten automatisch zusammenfuehren -
 						// ziellieferant bleibt, quelllieferant zu loeschen
-						getLieferantFac().zusammenfuehrenLieferant(
-								lieferantZielDto, lieferantQuellDto.getIId(),
-								null, theClientDto);
+						getLieferantFac().zusammenfuehrenLieferant(lieferantZielDto, lieferantQuellDto.getIId(), null,
+								theClientDto);
 					} else {
 						ArrayList<Object> allInfoForTheClient = new ArrayList<Object>();
 						allInfoForTheClient.add("lp.lieferant");
 						allInfoForTheClient.add(lieferantQuellDto.getIId());
 						allInfoForTheClient.add(lieferantZielDto.getIId());
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
-								allInfoForTheClient,
-								new Exception(
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
+								allInfoForTheClient, new Exception(
 										"Lieferant bereits auf dem Zielmandanten vorhanden - vorher Lieferanten zusammenfuehren noetig"));
 					}
 				} else {
 					lieferantQuellDto.setPartnerIId(partnerZielDto.getIId());
 					lieferantQuellDto.setPartnerDto(partnerZielDto);
-					getLieferantFac().updateLieferant(lieferantQuellDto,
-							theClientDto);
+					getLieferantFac().updateLieferant(lieferantQuellDto, theClientDto);
 				}
 			}
 
 			// part_lieferant - partner_i_id_rechnungsadresse
 			LieferantDto[] aLieferantQuellDtos = null;
-			aLieferantQuellDtos = getLieferantFac()
-					.lieferantFindByRechnungsadresseiIdPartnercNrMandantOhneExc(
-							partnerQuellDto.getIId(), mandantCNr, theClientDto);
+			aLieferantQuellDtos = getLieferantFac().lieferantFindByRechnungsadresseiIdPartnercNrMandantOhneExc(
+					partnerQuellDto.getIId(), mandantCNr, theClientDto);
 			if (aLieferantQuellDtos != null) {
 				for (int j = 0; j < aLieferantQuellDtos.length; j++) {
 					if (aLieferantQuellDtos[j] != null) {
-						aLieferantQuellDtos[j]
-								.setPartnerIIdRechnungsadresse(partnerZielDto
-										.getIId());
-						aLieferantQuellDtos[j]
-								.setPartnerRechnungsadresseDto(partnerZielDto);
-						getLieferantFac().updateLieferant(
-								aLieferantQuellDtos[j], theClientDto);
+
+						aLieferantQuellDtos[j].setPartnerDto(
+								partnerFindByPrimaryKey(aLieferantQuellDtos[j].getPartnerIId(), theClientDto));
+
+						aLieferantQuellDtos[j].setPartnerIIdRechnungsadresse(partnerZielDto.getIId());
+						aLieferantQuellDtos[j].setPartnerRechnungsadresseDto(partnerZielDto);
+						getLieferantFac().updateLieferant(aLieferantQuellDtos[j], theClientDto);
 					}
 				}
 			}
@@ -2994,19 +2766,14 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * H&auml;ngt die Rechnungsadresse vom Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param mandantCNr      String
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignRechnungBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, String mandantCNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void reassignRechnungBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		// try {
@@ -3033,35 +2800,28 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt bei der St&uuml;ckliste die PartnerIId des Kunden vom
-	 * Quellpartner auf den Zielpartner um
+	 * H&auml;ngt bei der St&uuml;ckliste die PartnerIId des Kunden vom Quellpartner
+	 * auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param mandantCNr      String
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignStuecklisteBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignStuecklisteBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		try {
 			// stk_stueckliste - partner_i_id
 			StuecklisteDto[] aStuecklisteDto = null;
-			aStuecklisteDto = getStuecklisteFac()
-					.stuecklisteFindByPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr, theClientDto);
+			aStuecklisteDto = getStuecklisteFac().stuecklisteFindByPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(),
+					mandantCNr, theClientDto);
 			if (aStuecklisteDto != null) {
 				for (int j = 0; j < aStuecklisteDto.length; j++) {
 					if (aStuecklisteDto[j] != null) {
-						Stueckliste zeile = em.find(Stueckliste.class,
-								aStuecklisteDto[j].getIId());
+						Stueckliste zeile = em.find(Stueckliste.class, aStuecklisteDto[j].getIId());
 						zeile.setPartnerIId(partnerZielDto.getIId());
 						em.merge(zeile);
 						em.flush();
@@ -3075,25 +2835,18 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt den Kunden (wenn vorhanden) vom Quellpartner auf den
-	 * Zielpartner um
+	 * H&auml;ngt den Kunden (wenn vorhanden) vom Quellpartner auf den Zielpartner
+	 * um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param bKundeMitverdichten
-	 *            boolean
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto      PartnerDto
+	 * @param partnerQuellDto     PartnerDto
+	 * @param mandantCNr          String
+	 * @param bKundeMitverdichten boolean
+	 * @param theClientDto        String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignKundeBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, String mandantCNr,
-			boolean bKundeMitverdichten, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void reassignKundeBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			String mandantCNr, boolean bKundeMitverdichten, TheClientDto theClientDto) throws EJBExceptionLP {
 		KundeDto kundeQuellDto = null;
 		KundeDto kundeZielDto = null;
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
@@ -3102,31 +2855,26 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			// part_kunde - pro Mandant darf ein Kunde auf dem
 			// mandantenunabhaengigen Partner haengen
 
-			kundeQuellDto = getKundeFac()
-					.kundeFindByiIdPartnercNrMandantOhneExc(
-							partnerQuellDto.getIId(), mandantCNr, theClientDto);
+			kundeQuellDto = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(partnerQuellDto.getIId(), mandantCNr,
+					theClientDto);
 			if (kundeQuellDto != null) {
-				kundeZielDto = getKundeFac()
-						.kundeFindByiIdPartnercNrMandantOhneExc(
-								partnerZielDto.getIId(), mandantCNr,
-								theClientDto);
+
+				kundeQuellDto = getKundeFac().kundeFindByPrimaryKey(kundeQuellDto.getIId(), theClientDto);
+
+				kundeZielDto = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(partnerZielDto.getIId(), mandantCNr,
+						theClientDto);
 				if (kundeZielDto != null) {
 					if (bKundeMitverdichten) {
 						// hier kunden automatisch zusammenfuehren - zielkunde
 						// bleibt, quellkunde zu loeschen
-						getKundeFac().zusammenfuehrenKunde(kundeZielDto,
-								kundeQuellDto.getIId(),
-								kundeZielDto.getIId().intValue(), null,
-								theClientDto);
+						getKundeFac().zusammenfuehrenKunde(kundeZielDto, kundeQuellDto.getIId(), null, theClientDto);
 					} else {
 						ArrayList<Object> allInfoForTheClient = new ArrayList<Object>();
 						allInfoForTheClient.add("lp.kunde");
 						allInfoForTheClient.add(kundeQuellDto.getIId());
 						allInfoForTheClient.add(kundeZielDto.getIId());
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
-								allInfoForTheClient,
-								new Exception(
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
+								allInfoForTheClient, new Exception(
 										"Kunde bereits auf dem Zielmandanten vorhanden - vorher Kunden zusammenfuehren noetig"));
 					}
 				} else {
@@ -3144,19 +2892,14 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt den Partner beim Finanzamt vom Quell- auf den Zielpartner um -
 	 * aber nur Meldung an den Client
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param mandantCNr      String
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignFinanzamtBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, String mandantCNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void reassignFinanzamtBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		FinanzamtDto finanzamtQuellDto = null;
 		FinanzamtDto finanzamtZielDto = null;
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
@@ -3165,26 +2908,20 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			// lp_finanzamt - pro Mandant darf ein Finanzamt auf dem
 			// mandantenunabhaengigen Partner haengen
 			/*
-			 * ABER: wenn beim zusammenfuehren einer der beiden Partner ein
-			 * Finanzamt ist, dann Meldung an den Client, dass dies nicht
-			 * erlaubt ist
+			 * ABER: wenn beim zusammenfuehren einer der beiden Partner ein Finanzamt ist,
+			 * dann Meldung an den Client, dass dies nicht erlaubt ist
 			 */
 
-			finanzamtQuellDto = getFinanzFac()
-					.finanzamtFindByPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr, theClientDto);
-			finanzamtZielDto = getFinanzFac()
-					.finanzamtFindByPartnerIIdMandantCNrOhneExc(
-							partnerZielDto.getIId(), mandantCNr, theClientDto);
+			finanzamtQuellDto = getFinanzFac().finanzamtFindByPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(),
+					mandantCNr, theClientDto);
+			finanzamtZielDto = getFinanzFac().finanzamtFindByPartnerIIdMandantCNrOhneExc(partnerZielDto.getIId(),
+					mandantCNr, theClientDto);
 			if (finanzamtQuellDto != null || finanzamtZielDto != null) {
 				if (finanzamtQuellDto != null && finanzamtZielDto != null) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
-							new Exception(
-									"Das Zusammenfuehren zweier Finanzaemter ist nicht moeglich!"));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
+							new Exception("Das Zusammenfuehren zweier Finanzaemter ist nicht moeglich!"));
 				} else {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
 							new Exception(
 									"Das Zusammenfuehren eines Finanzamtes mit einem Partner ist nicht moeglich!"));
 				}
@@ -3195,24 +2932,19 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt den Partner beim Mandanten vom Quellpartner auf den
-	 * Zielpartner um
+	 * H&auml;ngt den Partner beim Mandanten vom Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignMandantBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void reassignMandantBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		// lp_mandant - partner_i_id
 		/*
-		 * wenn man partner mit einem mandanten kombinieren moechte, gibt es
-		 * eine meldung, dass es nicht moeglich ist
+		 * wenn man partner mit einem mandanten kombinieren moechte, gibt es eine
+		 * meldung, dass es nicht moeglich ist
 		 */
 		MandantDto[] aMandantQuellDtos = null;
 		MandantDto[] aMandantZielDtos = null;
@@ -3221,20 +2953,15 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		try {
 			// lp_mandant
 			/*
-			 * ABER: wenn beim zusammenfuehren einer der beiden Partner ein
-			 * Mandant ist, dann Meldung an den Client, dass dies nicht erlaubt
-			 * ist
+			 * ABER: wenn beim zusammenfuehren einer der beiden Partner ein Mandant ist,
+			 * dann Meldung an den Client, dass dies nicht erlaubt ist
 			 */
 
-			aMandantQuellDtos = getMandantFac().mandantFindByPartnerIIdOhneExc(
-					partnerQuellDto.getIId(), theClientDto);
-			aMandantZielDtos = getMandantFac().mandantFindByPartnerIIdOhneExc(
-					partnerZielDto.getIId(), theClientDto);
+			aMandantQuellDtos = getMandantFac().mandantFindByPartnerIIdOhneExc(partnerQuellDto.getIId(), theClientDto);
+			aMandantZielDtos = getMandantFac().mandantFindByPartnerIIdOhneExc(partnerZielDto.getIId(), theClientDto);
 			if (aMandantQuellDtos.length > 0 || aMandantZielDtos.length > 0) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
-						new Exception(
-								"Das Zusammenfuehren eines Mandanten mit einem Partner ist nicht gestattet!"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
+						new Exception("Das Zusammenfuehren eines Mandanten mit einem Partner ist nicht gestattet!"));
 			}
 		} catch (RemoteException ex1) {
 			throwEJBExceptionLPRespectOld(ex1);
@@ -3242,19 +2969,15 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt den Auftragteilnehmer (wenn vorhanden) vom Quellpartner auf
-	 * den Zielpartner um
+	 * H&auml;ngt den Auftragteilnehmer (wenn vorhanden) vom Quellpartner auf den
+	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignAuftragteilnehmerBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignAuftragteilnehmerBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// auft_auftragteilnehmer - partner_i_id
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
@@ -3262,15 +2985,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		try {
 			AuftragteilnehmerDto[] aAuftragteilnehmerDtos = null;
 			aAuftragteilnehmerDtos = getAuftragteilnehmerFac()
-					.auftragteilnehmerFindByPartnerIIdAuftragteilnehmer(
-							partnerQuellDto.getIId());
+					.auftragteilnehmerFindByPartnerIIdAuftragteilnehmer(partnerQuellDto.getIId());
 			for (int j = 0; j < aAuftragteilnehmerDtos.length; j++) {
 				if (aAuftragteilnehmerDtos[j] != null) {
-					aAuftragteilnehmerDtos[j]
-							.setPartnerIIdAuftragteilnehmer(partnerZielDto
-									.getIId());
-					getAuftragteilnehmerFac().updateAuftragteilnehmer(
-							aAuftragteilnehmerDtos[j]);
+					aAuftragteilnehmerDtos[j].setPartnerIIdAuftragteilnehmer(partnerZielDto.getIId());
+					getAuftragteilnehmerFac().updateAuftragteilnehmer(aAuftragteilnehmerDtos[j]);
 				}
 			}
 		} catch (RemoteException ex1) {
@@ -3282,22 +3001,15 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt den Partner, den Sozialversicherer und die Partnerfirma (wenn
 	 * vorhanden) vom Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param bPersonalMitverdichten
-	 *            boolean
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto         PartnerDto
+	 * @param partnerQuellDto        PartnerDto
+	 * @param mandantCNr             String
+	 * @param bPersonalMitverdichten boolean
+	 * @param theClientDto           String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignPersonalBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, String mandantCNr,
-			boolean bPersonalMitverdichten, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void reassignPersonalBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			String mandantCNr, boolean bPersonalMitverdichten, TheClientDto theClientDto) throws EJBExceptionLP {
 		PersonalDto personalQuellDto = null;
 		PersonalDto personalZielDto = null;
 		PersonalDto[] aPersonalDtos = null;
@@ -3305,82 +3017,61 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 		try {
 			// pers_personal - partner_i_id
-			personalQuellDto = getPersonalFac()
-					.personalFindByPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr);
+			personalQuellDto = getPersonalFac().personalFindByPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(),
+					mandantCNr);
 			if (personalQuellDto != null) {
-				personalZielDto = getPersonalFac()
-						.personalFindByPartnerIIdMandantCNrOhneExc(
-								partnerZielDto.getIId(), mandantCNr);
+				personalZielDto = getPersonalFac().personalFindByPartnerIIdMandantCNrOhneExc(partnerZielDto.getIId(),
+						mandantCNr);
 				if (personalZielDto != null) {
 					if (bPersonalMitverdichten) {
 						// ToDo: hier Personal automatisch zusammenfuehren
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
-								new Exception(
-										"Personal automatisch zusammenfuehren ist noch nicht implementiert!"));
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
+								new Exception("Personal automatisch zusammenfuehren ist noch nicht implementiert!"));
 					} else {
 						ArrayList<Object> allInfoForTheClient = new ArrayList<Object>();
 						allInfoForTheClient.add("button.personal.tooltip");
 						allInfoForTheClient.add(personalQuellDto.getIId());
 						allInfoForTheClient.add(personalZielDto.getIId());
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
-								allInfoForTheClient,
-								new Exception(
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH,
+								allInfoForTheClient, new Exception(
 										"Personal bereits auf dem Zielmandanten vorhanden - vorher Personal zusammenfuehren noetig"));
 					}
 				} else { // partnerDto und partnerIId von der quelle auf
 					// zielpartner setzen
 					personalQuellDto.setPartnerIId(partnerZielDto.getIId());
 					personalQuellDto.setPartnerDto(partnerZielDto);
-					getPersonalFac().updatePersonal(personalQuellDto,
-							theClientDto);
+					getPersonalFac().updatePersonal(personalQuellDto, theClientDto);
 				}
 			}
 
 			// pers_personal - partner_i_id_sozialversicherer
 			aPersonalDtos = getPersonalFac()
-					.personalFindBySozialversichererPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr);
+					.personalFindBySozialversichererPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(), mandantCNr);
 			if (aPersonalDtos != null) {
 				for (int j = 0; j < aPersonalDtos.length; j++) {
-					if (aPersonalDtos[j].getPartnerDto() == null
-							&& aPersonalDtos[j].getPartnerIId() != null) {
-						aPersonalDtos[j].setPartnerDto(this
-								.partnerFindByPrimaryKey(
-										aPersonalDtos[j].getPartnerIId(),
-										theClientDto));
+					if (aPersonalDtos[j].getPartnerDto() == null && aPersonalDtos[j].getPartnerIId() != null) {
+						aPersonalDtos[j].setPartnerDto(
+								this.partnerFindByPrimaryKey(aPersonalDtos[j].getPartnerIId(), theClientDto));
 					}
-					aPersonalDtos[j]
-							.setPartnerDto_Sozialversicherer(partnerZielDto);
-					aPersonalDtos[j]
-							.setPartnerIIdSozialversicherer(partnerZielDto
-									.getIId());
-					getPersonalFac().updatePersonal(aPersonalDtos[j],
-							theClientDto);
+					aPersonalDtos[j].setPartnerDto_Sozialversicherer(partnerZielDto);
+					aPersonalDtos[j].setPartnerIIdSozialversicherer(partnerZielDto.getIId());
+					getPersonalFac().updatePersonal(aPersonalDtos[j], theClientDto);
 				}
 			}
 
 			// pers_personal - partner_i_id_firma
 			aPersonalDtos = null;
-			aPersonalDtos = getPersonalFac()
-					.personalFindByFirmaPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr);
+			aPersonalDtos = getPersonalFac().personalFindByFirmaPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(),
+					mandantCNr);
 			if (aPersonalDtos != null) {
 				for (int j = 0; j < aPersonalDtos.length; j++) {
-					if (aPersonalDtos[j].getPartnerDto() == null
-							&& aPersonalDtos[j].getPartnerIId() != null) {
-						aPersonalDtos[j].setPartnerDto(this
-								.partnerFindByPrimaryKey(
-										aPersonalDtos[j].getPartnerIId(),
-										theClientDto));
+					if (aPersonalDtos[j].getPartnerDto() == null && aPersonalDtos[j].getPartnerIId() != null) {
+						aPersonalDtos[j].setPartnerDto(
+								this.partnerFindByPrimaryKey(aPersonalDtos[j].getPartnerIId(), theClientDto));
 					}
 					aPersonalDtos[j].setPartnerDto_Firma(partnerZielDto);
-					aPersonalDtos[j]
-							.setPartnerIIdFirma(partnerZielDto.getIId());
-					getPersonalFac().updatePersonal(aPersonalDtos[j],
-							theClientDto);
+					aPersonalDtos[j].setPartnerIIdFirma(partnerZielDto.getIId());
+					getPersonalFac().updatePersonal(aPersonalDtos[j], theClientDto);
 				}
 			}
 
@@ -3393,18 +3084,13 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt die Bestellung (falls vorhanden) vom Quellpartner auf den
 	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param mandantCNr      String
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignBestellungBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignBestellungBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		BestellungDto[] aBestellungDtos = null;
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
@@ -3412,22 +3098,18 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		try {
 			// bes_bestellung - partner_i_id_lieferadresse
 			aBestellungDtos = getBestellungFac()
-					.bestellungFindByLieferadressePartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr);
+					.bestellungFindByLieferadressePartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(), mandantCNr);
 			if (aBestellungDtos != null) {
 				for (int j = 0; j < aBestellungDtos.length; j++) {
-					Bestellung bestellung = em.find(Bestellung.class,
-							aBestellungDtos[j].getIId());
-					bestellung.setPartnerIIdLieferadresse(partnerZielDto
-							.getIId());
+					Bestellung bestellung = em.find(Bestellung.class, aBestellungDtos[j].getIId());
+					bestellung.setPartnerIIdLieferadresse(partnerZielDto.getIId());
 					bestellung.setAnsprechpartnerIIdLieferadresse(null);
 					em.merge(bestellung);
 					em.flush();
 				}
 			}
 
-			Query query = em
-					.createNamedQuery("BestellungfindByAbholadressepartnerIIdMandantCNr");
+			Query query = em.createNamedQuery("BestellungfindByAbholadressepartnerIIdMandantCNr");
 			query.setParameter(1, partnerQuellDto.getIId());
 			query.setParameter(2, mandantCNr);
 			Collection cl = query.getResultList();
@@ -3447,30 +3129,23 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt beim Los (falls vorhanden) den Quellpartner auf den
-	 * Zielpartner um
+	 * H&auml;ngt beim Los (falls vorhanden) den Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param mandantCNr      String
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignLosBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, String mandantCNr,
+	public void reassignLosBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto, String mandantCNr,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		LosDto[] aLosDtos = null;
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		try {
 			// fert_los - partner_i_id_fertigungsort
-			aLosDtos = getFertigungFac()
-					.losFindByFertigungsortPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr);
+			aLosDtos = getFertigungFac().losFindByFertigungsortPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(),
+					mandantCNr);
 			if (aLosDtos != null) {
 				for (int j = 0; j < aLosDtos.length; j++) {
 
@@ -3486,21 +3161,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt beim wiederholenden Los (falls vorhanden) den Quellpartner auf
-	 * den Zielpartner um
+	 * H&auml;ngt beim wiederholenden Los (falls vorhanden) den Quellpartner auf den
+	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param mandantCNr      String
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignWiederholendesLosBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignWiederholendesLosBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		WiederholendeloseDto[] aLosDtos = null;
@@ -3510,14 +3180,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			// fert_wiederholendelose - partner_i_id_fertigungsort -
 			// normalerweise nur ein mandant, und mandZusammenfuehren darf man
 			// nicht
-			aLosDtos = getFertigungFac()
-					.wiederholendeloseFindByPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr);
+			aLosDtos = getFertigungFac().wiederholendeloseFindByPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(),
+					mandantCNr);
 			if (aLosDtos != null) {
 				for (int j = 0; j < aLosDtos.length; j++) {
 
-					Wiederholendelose los = em.find(Wiederholendelose.class,
-							aLosDtos[j].getIId());
+					Wiederholendelose los = em.find(Wiederholendelose.class, aLosDtos[j].getIId());
 					los.setPartnerIIdFertigungsort(partnerZielDto.getIId());
 					em.merge(los);
 					em.flush();
@@ -3533,32 +3201,25 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt beim Projekt (falls vorhanden) den Quellpartner auf den
 	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param mandantCNr      String
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignProjektBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, String mandantCNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void reassignProjektBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		ProjektDto[] aProjektDtos = null;
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		try {
 			// proj_projekt - partner_i_id
-			aProjektDtos = getProjektFac()
-					.projektFindByPartnerIIdMandantCNrOhneExc(
-							partnerQuellDto.getIId(), mandantCNr);
+			aProjektDtos = getProjektFac().projektFindByPartnerIIdMandantCNrOhneExc(partnerQuellDto.getIId(),
+					mandantCNr);
 			if (aProjektDtos != null) {
 				for (int j = 0; j < aProjektDtos.length; j++) {
 
-					Projekt zeile = em.find(Projekt.class,
-							aProjektDtos[j].getIId());
+					Projekt zeile = em.find(Projekt.class, aProjektDtos[j].getIId());
 					zeile.setPartnerIId(partnerZielDto.getIId());
 					zeile.setAnsprechpartnerIId(null);
 					em.merge(zeile);
@@ -3571,19 +3232,56 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
+	public void reassignPartnerkommentarBeimZusammenfuehren(Integer partnerIId_Ziel, Integer partnerIId_Quelle,
+			boolean bKunde, TheClientDto theClientDto) {
+		ProjektDto[] aProjektDtos = null;
+
+		Query query = em.createNamedQuery("PartnerkommentarfindByPartnerIIdBKunde");
+		query.setParameter(1, partnerIId_Quelle);
+		query.setParameter(2, Helper.boolean2Short(bKunde));
+
+		Collection c = query.getResultList();
+		Iterator it = c.iterator();
+		while (it.hasNext()) {
+			Partnerkommentar partnerkommentarQuelle = (Partnerkommentar) it.next();
+
+			// Wenn beim Ziel noch keine gleiche Partnerkommentarart gibt
+
+			Query queryZiel = em.createNamedQuery("PartnerkommentarfindByPartnerIIdPartnerkommentarartIIdBKunde");
+			queryZiel.setParameter(1, partnerIId_Ziel);
+			queryZiel.setParameter(2, partnerkommentarQuelle.getPartnerkommentarartIId());
+			queryZiel.setParameter(3, Helper.boolean2Short(bKunde));
+			if (queryZiel.getResultList().size() == 0) {
+
+				partnerkommentarQuelle.setPartnerIId(partnerIId_Ziel);
+				em.merge(partnerkommentarQuelle);
+				em.flush();
+
+			} else {
+				// FEHLER
+
+				PartnerkommentarartDto pkDto = getPartnerServicesFac().partnerkommentarartFindByPrimaryKey(
+						partnerkommentarQuelle.getPartnerkommentarartIId(), theClientDto);
+				ArrayList al = new ArrayList();
+				al.add(pkDto.getCBez());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_PARTNERKOMMENTAR,
+						al, new Exception(pkDto.getCBez()));
+
+			}
+
+		}
+
+	}
+
 	/**
 	 * H&auml;ngt beim Ansprechpartner die PartnerIId und AnsprechpartnerIId vom
 	 * Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 */
-	public void reassignAnsprechpartnerBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignAnsprechpartnerBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
@@ -3593,112 +3291,73 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			AnsprechpartnerDto[] aAnsprechpartnerDtos = null;
 			// pruefen, ob beide partner vielleicht den selben ansprechpartner
 			// haben
-			aAnsprechpartnerDtos = getAnsprechpartnerFac()
-					.ansprechpartnerFindByPartnerIId(partnerQuellDto.getIId(),
-							theClientDto);
+			aAnsprechpartnerDtos = getAnsprechpartnerFac().ansprechpartnerFindByPartnerIId(partnerQuellDto.getIId(),
+					theClientDto);
 			AnsprechpartnerDto[] aAnsprechpartnerDtosVomZielpartner = getAnsprechpartnerFac()
-					.ansprechpartnerFindByPartnerIIdOrPartnerIIdAnsprechpartnerOhneExc(
-							partnerZielDto.getIId(), theClientDto);
+					.ansprechpartnerFindByPartnerIIdOrPartnerIIdAnsprechpartnerOhneExc(partnerZielDto.getIId(),
+							theClientDto);
 			for (int j = 0; j < aAnsprechpartnerDtos.length; j++) {
 				for (int k = 0; k < aAnsprechpartnerDtosVomZielpartner.length; k++) {
 					if (aAnsprechpartnerDtos[j].getPartnerIIdAnsprechpartner()
-							.intValue() == aAnsprechpartnerDtosVomZielpartner[k]
-							.getPartnerIIdAnsprechpartner().intValue()
-							&& aAnsprechpartnerDtos[j]
-									.getAnsprechpartnerfunktionIId().intValue() == aAnsprechpartnerDtosVomZielpartner[k]
-									.getAnsprechpartnerfunktionIId().intValue()) {
+							.intValue() == aAnsprechpartnerDtosVomZielpartner[k].getPartnerIIdAnsprechpartner()
+									.intValue()
+							&& aAnsprechpartnerDtos[j].getAnsprechpartnerfunktionIId()
+									.intValue() == aAnsprechpartnerDtosVomZielpartner[k].getAnsprechpartnerfunktionIId()
+											.intValue()) {
 						// dh: der zielpartner haette dann den selben
 						// ansprechpartner mit der selben
 						// ansprechpartnerfunktion 2x
 						// Zusammenfuehren
-						getAnsprechpartnerFac().zusammenfuehrenAnsprechpartner(
-								aAnsprechpartnerDtosVomZielpartner[k],
-								aAnsprechpartnerDtos[j].getIId(),
-								partnerQuellDto, theClientDto);
+						getAnsprechpartnerFac().zusammenfuehrenAnsprechpartner(aAnsprechpartnerDtosVomZielpartner[k],
+								aAnsprechpartnerDtos[j].getIId(), partnerQuellDto, theClientDto);
 					}
 				}
 			}
-			aAnsprechpartnerDtos = getAnsprechpartnerFac()
-					.ansprechpartnerFindByPartnerIId(partnerQuellDto.getIId(),
-							theClientDto);
+			aAnsprechpartnerDtos = getAnsprechpartnerFac().ansprechpartnerFindByPartnerIId(partnerQuellDto.getIId(),
+					theClientDto);
 			for (int j = 0; j < aAnsprechpartnerDtos.length; j++) {
 				// SK ist ja in beiden if das gleiche deshalb weg
-				if (aAnsprechpartnerDtos[j].getPartnerIId().intValue() == partnerQuellDto
-						.getIId().intValue()) {
-					aAnsprechpartnerDtos[j].setPartnerIId(partnerZielDto
-							.getIId());
+				if (aAnsprechpartnerDtos[j].getPartnerIId().intValue() == partnerQuellDto.getIId().intValue()) {
+					aAnsprechpartnerDtos[j].setPartnerIId(partnerZielDto.getIId());
 					aAnsprechpartnerDtos[j].setPartnerDto(partnerZielDto);
-					aAnsprechpartnerDtos[j].setCDirektfax(partnerZielDto
-							.getCDirektfax());
-					aAnsprechpartnerDtos[j].setCEmail(partnerZielDto
-							.getCEmail());
-					aAnsprechpartnerDtos[j].setCFax(partnerZielDto.getCFax());
-					aAnsprechpartnerDtos[j].setCHandy(partnerZielDto
-							.getCHandy());
-					aAnsprechpartnerDtos[j].setCTelefon(partnerZielDto
-							.getCTelefon());
 
 				}
-				if (aAnsprechpartnerDtos[j].getPartnerIIdAnsprechpartner()
-						.intValue() == partnerQuellDto.getIId().intValue()) {
-					aAnsprechpartnerDtos[j]
-							.setPartnerIIdAnsprechpartner(partnerZielDto
-									.getIId());
-					aAnsprechpartnerDtos[j].setCDirektfax(partnerZielDto
-							.getCDirektfax());
-					aAnsprechpartnerDtos[j].setCEmail(partnerZielDto
-							.getCEmail());
-					aAnsprechpartnerDtos[j].setCFax(partnerZielDto.getCFax());
-					aAnsprechpartnerDtos[j].setCHandy(partnerZielDto
-							.getCHandy());
-					aAnsprechpartnerDtos[j].setCTelefon(partnerZielDto
-							.getCTelefon());
+				if (aAnsprechpartnerDtos[j].getPartnerIIdAnsprechpartner().intValue() == partnerQuellDto.getIId()
+						.intValue()) {
+					aAnsprechpartnerDtos[j].setPartnerIIdAnsprechpartner(partnerZielDto.getIId());
 
 				}
-				getAnsprechpartnerFac().updateAnsprechpartner(
-						aAnsprechpartnerDtos[j], theClientDto);
+				getAnsprechpartnerFac().updateAnsprechpartner(aAnsprechpartnerDtos[j], theClientDto);
 			}
 
 			AnsprechpartnerDto[] dtos = getAnsprechpartnerFac()
-					.ansprechpartnerFindByPartnerIIdAnsprechpartner(
-							partnerQuellDto.getIId(), theClientDto);
+					.ansprechpartnerFindByPartnerIIdAnsprechpartner(partnerQuellDto.getIId(), theClientDto);
 			for (int j = 0; j < dtos.length; j++) {
 				dtos[j].setPartnerIIdAnsprechpartner(partnerZielDto.getIId());
 
 				try {
-					Query query = em
-							.createNamedQuery("AnsprechpartnerfindByPartnerFunktionGueltigAb");
+					Query query = em.createNamedQuery("AnsprechpartnerfindByPartnerFunktionGueltigAb");
 					query.setParameter(1, dtos[j].getPartnerIId());
-					query.setParameter(2,
-							dtos[j].getPartnerIIdAnsprechpartner());
-					query.setParameter(3,
-							dtos[j].getAnsprechpartnerfunktionIId());
+					query.setParameter(2, dtos[j].getPartnerIIdAnsprechpartner());
+					query.setParameter(3, dtos[j].getAnsprechpartnerfunktionIId());
 					query.setParameter(4, dtos[j].getDGueltigab());
 					// @todo getSingleResult oder getResultList ?
-					Ansprechpartner ansprechpartner = (Ansprechpartner) query
-							.getSingleResult();
-					if (ansprechpartner.getIId().intValue() != dtos[j].getIId()
-							.intValue()) {
+					Ansprechpartner ansprechpartner = (Ansprechpartner) query.getSingleResult();
+					if (ansprechpartner.getIId().intValue() != dtos[j].getIId().intValue()) {
 
 						getAnsprechpartnerFac()
 								.zusammenfuehrenAnsprechpartner(
-										getAnsprechpartnerFac()
-												.ansprechpartnerFindByPrimaryKey(
-														ansprechpartner
-																.getIId(),
-														theClientDto),
-										dtos[j].getIId(), partnerQuellDto,
-										theClientDto);
+										getAnsprechpartnerFac().ansprechpartnerFindByPrimaryKey(
+												ansprechpartner.getIId(), theClientDto),
+										dtos[j].getIId(), partnerQuellDto, theClientDto);
 
 					} else {
 
-						getAnsprechpartnerFac().updateAnsprechpartner(dtos[j],
-								theClientDto);
+						getAnsprechpartnerFac().updateAnsprechpartner(dtos[j], theClientDto);
 					}
 
 				} catch (NoResultException ex) {
-					getAnsprechpartnerFac().updateAnsprechpartner(dtos[j],
-							theClientDto);
+					getAnsprechpartnerFac().updateAnsprechpartner(dtos[j], theClientDto);
 				}
 
 			}
@@ -3710,31 +3369,25 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt beim Kurzbrief die PartnerIId vom Quellpartner auf den
-	 * Zielpartner um
+	 * H&auml;ngt beim Kurzbrief die PartnerIId vom Quellpartner auf den Zielpartner
+	 * um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 */
-	public void reassignPartnerkurzbriefBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignPartnerkurzbriefBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		KurzbriefDto[] aKurzbriefDtos = null;
 		try {
 			// part_kurzbrief - partner_i_id
-			aKurzbriefDtos = getPartnerFac().kurzbriefFindByPartnerIIdOhneExc(
-					partnerQuellDto.getIId(), theClientDto);
+			aKurzbriefDtos = getPartnerFac().kurzbriefFindByPartnerIIdOhneExc(partnerQuellDto.getIId(), theClientDto);
 			if (aKurzbriefDtos != null) {
 				for (int j = 0; j < aKurzbriefDtos.length; j++) {
 					aKurzbriefDtos[j].setPartnerIId(partnerZielDto.getIId());
-					getPartnerFac().updateKurzbrief(aKurzbriefDtos[j],
-							theClientDto);
+					getPartnerFac().updateKurzbrief(aKurzbriefDtos[j], theClientDto);
 				}
 			}
 
@@ -3744,32 +3397,25 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * H&auml;ngt bei Reisen die PartnerIId vom Quellpartner auf den Zielpartner
-	 * um
+	 * H&auml;ngt bei Reisen die PartnerIId vom Quellpartner auf den Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 */
-	public void reassignReiseBeimZusammenfuehren(PartnerDto partnerZielDto,
-			PartnerDto partnerQuellDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void reassignReiseBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		ReiseDto[] aReiseDtos = null;
 		ReiselogDto[] aReiselogDtos = null;
 		try {
 			// pers_reise
-			aReiseDtos = getZeiterfassungFac().reiseFindByPartnerIIdOhneExc(
-					partnerQuellDto.getIId(), theClientDto);
+			aReiseDtos = getZeiterfassungFac().reiseFindByPartnerIIdOhneExc(partnerQuellDto.getIId(), theClientDto);
 			if (aReiseDtos != null) {
 				for (int j = 0; j < aReiseDtos.length; j++) {
 					aReiseDtos[j].setPartnerIId(partnerZielDto.getIId());
-					getZeiterfassungFac().updateReise(aReiseDtos[j],
-							theClientDto);
+					getZeiterfassungFac().updateReise(aReiseDtos[j], theClientDto);
 				}
 			}
 		} catch (RemoteException ex1) {
@@ -3778,14 +3424,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 		try {
 			// pers_reiselog - partner_i_id
-			aReiselogDtos = getZeiterfassungFac()
-					.reiselogFindByPartnerIIdOhneExc(partnerQuellDto.getIId(),
-							theClientDto);
+			aReiselogDtos = getZeiterfassungFac().reiselogFindByPartnerIIdOhneExc(partnerQuellDto.getIId(),
+					theClientDto);
 			if (aReiselogDtos != null) {
 				for (int j = 0; j < aReiselogDtos.length; j++) {
 					aReiselogDtos[j].setPartnerIId(partnerZielDto.getIId());
-					getZeiterfassungFac().updateReiselog(aReiselogDtos[j],
-							theClientDto);
+					getZeiterfassungFac().updateReiselog(aReiselogDtos[j], theClientDto);
 				}
 			}
 		} catch (RemoteException ex1) {
@@ -3797,32 +3441,24 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt bei den Telefonzeiten die PartnerIId vom Quellpartner auf den
 	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignTelefonzeitBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignTelefonzeitBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
 		TelefonzeitenDto[] aTelefonzeitenDtos = null;
 		try {
 			// pers_telefonzeiten - partner_i_id
-			aTelefonzeitenDtos = getZeiterfassungFac()
-					.telefonzeitenFindByPartnerIIdOhneExc(
-							partnerQuellDto.getIId());
+			aTelefonzeitenDtos = getZeiterfassungFac().telefonzeitenFindByPartnerIIdOhneExc(partnerQuellDto.getIId());
 			if (aTelefonzeitenDtos != null) {
 				for (int j = 0; j < aTelefonzeitenDtos.length; j++) {
-					aTelefonzeitenDtos[j]
-							.setPartnerIId(partnerZielDto.getIId());
+					aTelefonzeitenDtos[j].setPartnerIId(partnerZielDto.getIId());
 					aTelefonzeitenDtos[j].setAnsprechpartnerIId(null);
-					getZeiterfassungFac().updateTelefonzeiten(
-							aTelefonzeitenDtos[j], theClientDto);
+					getZeiterfassungFac().updateTelefonzeiten(aTelefonzeitenDtos[j], theClientDto);
 				}
 			}
 		} catch (RemoteException ex1) {
@@ -3834,16 +3470,12 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	 * H&auml;ngt bei den Selektionen die PartnerIId vom Quellpartner auf den
 	 * Zielpartner um
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDto
-	 *            PartnerDto
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto  PartnerDto
+	 * @param partnerQuellDto PartnerDto
+	 * @param theClientDto    String
 	 * @throws EJBExceptionLP
 	 */
-	public void reassignPaSelektionBeimZusammenfuehren(
-			PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
+	public void reassignPaSelektionBeimZusammenfuehren(PartnerDto partnerZielDto, PartnerDto partnerQuellDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkInputParamsZielQuellPartnerDtos(partnerZielDto, partnerQuellDto);
 
@@ -3851,60 +3483,61 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		try {
 			// part_paselektion - partner_i_id
 			/*
-			 * beim partner darf eine bestimmte selektion nur einmal eingetragen
-			 * sein, sonst fehler: class com.lp.client.frame.ExceptionLP
+			 * beim partner darf eine bestimmte selektion nur einmal eingetragen sein, sonst
+			 * fehler: class com.lp.client.frame.ExceptionLP
 			 * javax.ejb.DuplicateKeyException: Entity with primary key
 			 * com.lp.server.partner.service.PASelektionPK@69b3 already exists
 			 */
-			aPaselektionDtos = getPartnerFac()
-					.pASelektionFindByPartnerIIdOhneExc(
-							partnerQuellDto.getIId());
+			aPaselektionDtos = getPartnerFac().pASelektionFindByPartnerIIdOhneExc(partnerQuellDto.getIId());
 			if (aPaselektionDtos != null) {
 				for (int j = 0; j < aPaselektionDtos.length; j++) {
-					aPaselektionDtos[j].setPartnerIId(partnerZielDto.getIId());
-					// getPartnerFac().updatePASelektion(aPaselektionDtos[j],
-					// cNrUserI);
-					updatePASelektionPartner(aPaselektionDtos[j],
-							partnerQuellDto.getIId(), theClientDto);
+
+					try {
+						Query query = em.createNamedQuery("PASelektionfindByPartnerIIdSelektionIId");
+						query.setParameter(1, partnerZielDto.getIId());
+						query.setParameter(2, aPaselektionDtos[j].getSelektionIId());
+
+						Integer iIdVorhanden = ((Paselektion) query.getSingleResult()).getIId();
+						// Wenn vorhanden, dann loeschen
+						removePASelektion(aPaselektionDtos[j], theClientDto);
+
+					} catch (NoResultException ex) {
+						aPaselektionDtos[j].setPartnerIId(partnerZielDto.getIId());
+						// Wenn nicht vorhanden, dann neu eintragen
+						getPartnerFac().updatePASelektion(aPaselektionDtos[j], theClientDto);
+
+					}
+
 				}
 			}
-			aPaselektionDtos = getPartnerFac()
-					.pASelektionFindByPartnerIIdOhneExc(
-							partnerQuellDto.getIId());
+			aPaselektionDtos = getPartnerFac().pASelektionFindByPartnerIIdOhneExc(partnerQuellDto.getIId());
 		} catch (RemoteException ex1) {
 			throwEJBExceptionLPRespectOld(ex1);
 		}
 	}
 
 	/**
-	 * Fuehrt zwei Partner zusammen. Schreibt den Partner partnerZielDto mit
-	 * evtl. neuen Daten in die Datenbank zur&uuml;ck, setzt die
-	 * Partnerverbindungen von dem Partner mit der IId von partnerQuellDtoIId
-	 * auf den Zielpartner um und l&ouml;scht zum Schluss den Partner, der zur
-	 * partnerQuellDtoIId geh&ouml;rt, aus der Datenbank
+	 * Fuehrt zwei Partner zusammen. Schreibt den Partner partnerZielDto mit evtl.
+	 * neuen Daten in die Datenbank zur&uuml;ck, setzt die Partnerverbindungen von
+	 * dem Partner mit der IId von partnerQuellDtoIId auf den Zielpartner um und
+	 * l&ouml;scht zum Schluss den Partner, der zur partnerQuellDtoIId geh&ouml;rt,
+	 * aus der Datenbank
 	 * 
-	 * @param partnerZielDto
-	 *            PartnerDto
-	 * @param partnerQuellDtoIid
-	 *            int
-	 * @param kundeMitverdichten
-	 *            boolean - verkn&uuml;pfte Kunden werden automatisch
-	 *            zusammengef&uuml;hrt
-	 * @param lieferantMitverdichten
-	 *            boolean - verkn&uuml;pfte Lieferanten werden automatisch
-	 *            zusammengef&uuml;hrt
-	 * @param bankMitverdichten
-	 *            boolean - verkn&uuml;pfte Banken werden automatisch
-	 *            zusammengef&uuml;hrt
-	 * @param theClientDto
-	 *            String
+	 * @param partnerZielDto         PartnerDto
+	 * @param partnerQuellDtoIid     int
+	 * @param kundeMitverdichten     boolean - verkn&uuml;pfte Kunden werden
+	 *                               automatisch zusammengef&uuml;hrt
+	 * @param lieferantMitverdichten boolean - verkn&uuml;pfte Lieferanten werden
+	 *                               automatisch zusammengef&uuml;hrt
+	 * @param bankMitverdichten      boolean - verkn&uuml;pfte Banken werden
+	 *                               automatisch zusammengef&uuml;hrt
+	 * @param theClientDto           String
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	public void zusammenfuehrenPartner(PartnerDto partnerZielDto,
-			int partnerQuellDtoIid, boolean kundeMitverdichten,
-			boolean lieferantMitverdichten, boolean bankMitverdichten,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	public void zusammenfuehrenPartner(PartnerDto partnerZielDto, int partnerQuellDtoIid, boolean kundeMitverdichten,
+			boolean lieferantMitverdichten, boolean bankMitverdichten, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 
 		PartnerDto partnerQuellDto = null;
 		/* diese Werte setzen, sobald sie vom Client zurueckgegeben werden */
@@ -3924,17 +3557,13 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 
 		if (partnerZielDto.getPartnerartCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"partnerDto.getPartnerartCNr() == null (Ziel oder Quell)"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("partnerDto.getPartnerartCNr() == null (Ziel oder Quell)"));
 		}
 
 		if (partnerZielDto.getLocaleCNrKommunikation() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"partnerDto.getLocaleCNrKommunikation() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("partnerDto.getLocaleCNrKommunikation() == null"));
 		}
 
 		myLogger.info("Zielpartner: " + partnerZielDto.toString());
@@ -3947,21 +3576,18 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		String abwQuelle = "";
 		String abwZiel = "";
 		if (partnerQuelle.getLandIIdAbweichendesustland() != null) {
-			LandDto landDto = getSystemFac().landFindByPrimaryKey(
-					partnerQuelle.getLandIIdAbweichendesustland());
+			LandDto landDto = getSystemFac().landFindByPrimaryKey(partnerQuelle.getLandIIdAbweichendesustland());
 			abwQuelle = landDto.getCLkz();
 		}
 		if (partnerZiel.getLandIIdAbweichendesustland() != null) {
-			LandDto landDto = getSystemFac().landFindByPrimaryKey(
-					partnerZiel.getLandIIdAbweichendesustland());
+			LandDto landDto = getSystemFac().landFindByPrimaryKey(partnerZiel.getLandIIdAbweichendesustland());
 			abwZiel = landDto.getCLkz();
 		}
 
 		if (!abwQuelle.equals(abwZiel)) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_ABW_UST,
-					new Exception(
-							"FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_ABW_UST"));
+					new Exception("FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_ABW_UST"));
 		}
 
 		// UID muss gleich sein
@@ -3974,36 +3600,29 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			uidZiel = partnerZiel.getCUid();
 		}
 
-		if (!uidQuelle.equals(uidZiel)) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_UID,
-					new Exception(
-							"FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_UID"));
+		if (!uidQuelle.equals(uidZiel) && !uidQuelle.equals("")) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_UID,
+					new Exception("FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_UID"));
 		}
 
 		// LKZ muss gleich sein
 		String lkzQuelle = "";
 		String lkzZiel = "";
 		if (partnerQuelle.getLandplzortIId() != null) {
-			LandplzortDto plzort = getSystemFac().landplzortFindByPrimaryKey(
-					partnerQuelle.getLandplzortIId());
+			LandplzortDto plzort = getSystemFac().landplzortFindByPrimaryKey(partnerQuelle.getLandplzortIId());
 			lkzQuelle = plzort.getLandDto().getCLkz();
 		}
 		if (partnerZiel.getLandplzortIId() != null) {
-			LandplzortDto plzort = getSystemFac().landplzortFindByPrimaryKey(
-					partnerZiel.getLandplzortIId());
+			LandplzortDto plzort = getSystemFac().landplzortFindByPrimaryKey(partnerZiel.getLandplzortIId());
 			lkzZiel = plzort.getLandDto().getCLkz();
 		}
 
 		if (!lkzQuelle.equals(lkzZiel)) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_LKZ,
-					new Exception(
-							"FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_LKZ"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_LKZ,
+					new Exception("FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_LKZ"));
 		}
 
-		partnerQuellDto = partnerFindByPrimaryKey(partnerQuellDtoIid,
-				theClientDto);
+		partnerQuellDto = partnerFindByPrimaryKey(partnerQuellDtoIid, theClientDto);
 
 		// Partnerkommunikation umhaengen, wenn noetig
 		if (partnerQuellDto != null) {
@@ -4018,34 +3637,21 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 			try {
 				// mandantenunabhaengig
-				getDokumenteFac().vertauscheBelegartIdBeiBelegartdokumenten(
-						LocaleFac.BELEGART_PARTNER, partnerQuellDto.getIId(),
-						partnerZielDto.getIId(), theClientDto);
-				getJCRDocFac().fuehreDokumenteZusammen(partnerZielDto,
-						partnerQuellDto);
-				reassignVersandauftragBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignPartnerbankBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignBankBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto, bBankMitverdichten);
-				reassignAuftragteilnehmerBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
+				getDokumenteFac().vertauscheBelegartIdBeiBelegartdokumenten(LocaleFac.BELEGART_PARTNER,
+						partnerQuellDto.getIId(), partnerZielDto.getIId(), theClientDto);
+				getJCRDocFac().fuehreDokumenteZusammen(partnerZielDto, partnerQuellDto);
+				reassignVersandauftragBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignPartnerbankBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignBankBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto, bBankMitverdichten);
+				reassignAuftragteilnehmerBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
 
-				reassignPartnerkurzbriefBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignReiseBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignTelefonzeitBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignPaSelektionBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignHerstellerBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignMandantBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignKontakteBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
+				reassignPartnerkurzbriefBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignReiseBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignTelefonzeitBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignPaSelektionBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignHerstellerBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignMandantBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignKontakteBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
 
 				// PJ 14649 Rechnungsadresse im Kunden ersetzen
 				Session session = FLRSessionFactory.getFactory().openSession();
@@ -4068,45 +3674,33 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 				int i = 0;
 				while (i < aMandantDtos.length) {
-					reassignKundeBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignKundeBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							bKundeMitverdichten, theClientDto);
-					reassignLieferantBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignLieferantBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							bLieferantMitverdichten, theClientDto);
-					reassignPersonalBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignPersonalBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							bPersonalMitverdichten, theClientDto);
 
-					reassignBestellungBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignBestellungBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							theClientDto);
-					reassignLosBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignLosBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							theClientDto);
-					reassignWiederholendesLosBeimZusammenfuehren(
-							partnerZielDto, partnerQuellDto,
+					reassignWiederholendesLosBeimZusammenfuehren(partnerZielDto, partnerQuellDto,
 							aMandantDtos[i].getCNr(), theClientDto);
-					reassignProjektBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignProjektBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							theClientDto);
-					reassignRechnungBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignRechnungBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							theClientDto);
-					reassignStuecklisteBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignStuecklisteBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							theClientDto);
-					reassignFinanzamtBeimZusammenfuehren(partnerZielDto,
-							partnerQuellDto, aMandantDtos[i].getCNr(),
+					reassignFinanzamtBeimZusammenfuehren(partnerZielDto, partnerQuellDto, aMandantDtos[i].getCNr(),
 							theClientDto);
 
 					i++;
 				}
 
-				reassignAnsprechpartnerBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
-				reassignPartnerkommunikationBeimZusammenfuehren(partnerZielDto,
-						partnerQuellDto, theClientDto);
+				reassignAnsprechpartnerBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
+				reassignPartnerkommunikationBeimZusammenfuehren(partnerZielDto, partnerQuellDto, theClientDto);
 
 			} catch (RemoteException ex1) {
 				throwEJBExceptionLPRespectOld(ex1);
@@ -4119,55 +3713,43 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public void updatePartnerart(PartnerartDto partnerartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePartnerart(PartnerartDto partnerartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		String cNr = partnerartDtoI.getCNr();
 		Partnerart partnerart = em.find(Partnerart.class, cNr);
 		if (partnerart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
-		
 		try {
 			Query query = em.createNamedQuery("PartnerartfindByCNr");
 			query.setParameter(1, cNr);
-			String cNrVorhanden = ((Partnerart) query.getSingleResult())
-					.getCNr();
+			String cNrVorhanden = ((Partnerart) query.getSingleResult()).getCNr();
 			if (partnerart.getCNr().equals(cNrVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PART_PARTNERART.C_NR"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PART_PARTNERART.C_NR"));
 			}
 		} catch (NoResultException ex) {
 
 		}
-		
+
 		if (partnerartDtoI.getPartnerartsprDto() != null) {
 			// -- upd oder create
 
 			try {
 				Partnerartspr partnerartspr = em.find(Partnerartspr.class,
-						new PartnerartsprPK(theClientDto.getLocUiAsString(),
-								partnerartDtoI.getCNr()));
+						new PartnerartsprPK(theClientDto.getLocUiAsString(), partnerartDtoI.getCNr()));
 
 				if (partnerartspr == null) {
-					partnerartspr = new Partnerartspr(partnerartDtoI.getCNr(),
-							theClientDto.getLocUiAsString());
+					partnerartspr = new Partnerartspr(partnerartDtoI.getCNr(), theClientDto.getLocUiAsString());
 				}
 
-				partnerartspr.setCBez(partnerartDtoI.getPartnerartsprDto()
-						.getCBez());
+				partnerartspr.setCBez(partnerartDtoI.getPartnerartsprDto().getCBez());
 				em.persist(partnerartspr);
 				em.flush();
 			} catch (NoResultException e) {
-				partnerartDtoI.getPartnerartsprDto().setPartnerartCNr(
-						partnerartDtoI.getCNr());
-				partnerartDtoI.getPartnerartsprDto().setLocaleCNr(
-						theClientDto.getLocUiAsString());
-				createPartnerartspr(partnerartDtoI.getPartnerartsprDto(),
-						theClientDto);
+				partnerartDtoI.getPartnerartsprDto().setPartnerartCNr(partnerartDtoI.getCNr());
+				partnerartDtoI.getPartnerartsprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+				createPartnerartspr(partnerartDtoI.getPartnerartsprDto(), theClientDto);
 			}
 
 		}
@@ -4245,37 +3827,30 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	// }
 	/**
 	 * 
-	 * @param cNrI
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param cNrI         String
+	 * @param theClientDto String
 	 * @return PartnerartDto
 	 * @throws EJBExceptionLP
 	 */
-	public PartnerartDto partnerartFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PartnerartDto partnerartFindByPrimaryKey(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrI == null"));
 		}
 
 		PartnerartDto partnerartDto = null;
 		// try {
 		Partnerart partnerart = em.find(Partnerart.class, cNrI);
 		if (partnerart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		partnerartDto = assemblePartnerartDto(partnerart);
 
 		try {
 			Partnerartspr partnerartspr = em.find(Partnerartspr.class,
-					new PartnerartsprPK(theClientDto.getLocUiAsString(),
-							partnerartDto.getCNr()));
-			partnerartDto
-					.setPartnerartsprDto(assemblePartnerartsprDto(partnerartspr));
+					new PartnerartsprPK(theClientDto.getLocUiAsString(), partnerartDto.getCNr()));
+			partnerartDto.setPartnerartsprDto(assemblePartnerartsprDto(partnerartspr));
 		} catch (Throwable t) {
 			// nothing here.
 		}
@@ -4302,29 +3877,23 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// }
 	}
 
-	public PartnerartsprPK createPartnerartspr(
-			PartnerartsprDto partnerartsprDtoI, TheClientDto theClientDto)
+	public PartnerartsprPK createPartnerartspr(PartnerartsprDto partnerartsprDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		Partnerartspr partnerartspr = null;
 
 		try {
-			partnerartspr = new Partnerartspr(
-					partnerartsprDtoI.getPartnerartCNr(),
-					partnerartsprDtoI.getLocaleCNr());
+			partnerartspr = new Partnerartspr(partnerartsprDtoI.getPartnerartCNr(), partnerartsprDtoI.getLocaleCNr());
 			em.persist(partnerartspr);
 			em.flush();
-			setPartnerartsprFromPartnerartsprDto(partnerartspr,
-					partnerartsprDtoI);
+			setPartnerartsprFromPartnerartsprDto(partnerartspr, partnerartsprDtoI);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-		return new PartnerartsprPK(partnerartspr.getPk().getPartnerartCNr(),
-				partnerartspr.getPk().getLocaleCNr());
+		return new PartnerartsprPK(partnerartspr.getPk().getPartnerartCNr(), partnerartspr.getPk().getLocaleCNr());
 	}
 
-	public void removePartnerartspr(String partnerartCNrI, String cNrLocaleI)
-			throws EJBExceptionLP {
+	public void removePartnerartspr(String partnerartCNrI, String cNrLocaleI) throws EJBExceptionLP {
 
 		PartnerartsprPK partnerartsprPK = new PartnerartsprPK();
 		partnerartsprPK.setPartnerartCNr(partnerartCNrI);
@@ -4332,8 +3901,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 		Partnerartspr toRemove = em.find(Partnerartspr.class, partnerartsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -4343,8 +3911,8 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public void removePartnerartspr(PartnerartsprDto partnerartsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePartnerartspr(PartnerartsprDto partnerartsprDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (partnerartsprDtoI != null) {
 			String partnerartCNr = partnerartsprDtoI.getPartnerartCNr();
 			String spracheCNr = partnerartsprDtoI.getLocaleCNr();
@@ -4352,22 +3920,18 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public void updatePartnerartspr(PartnerartsprDto partnerartsprDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePartnerartspr(PartnerartsprDto partnerartsprDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (partnerartsprDtoI != null) {
 			PartnerartsprPK partnerartsprPK = new PartnerartsprPK();
-			partnerartsprPK.setPartnerartCNr(partnerartsprDtoI
-					.getPartnerartCNr());
+			partnerartsprPK.setPartnerartCNr(partnerartsprDtoI.getPartnerartCNr());
 			partnerartsprPK.setLocaleCNr(partnerartsprDtoI.getLocaleCNr());
 			// try {
-			Partnerartspr partnerartspr = em.find(Partnerartspr.class,
-					partnerartsprPK);
+			Partnerartspr partnerartspr = em.find(Partnerartspr.class, partnerartsprPK);
 			if (partnerartspr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setPartnerartsprFromPartnerartsprDto(partnerartspr,
-					partnerartsprDtoI);
+			setPartnerartsprFromPartnerartsprDto(partnerartspr, partnerartsprDtoI);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -4376,18 +3940,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public PartnerartsprDto partnerartsprFindByPrimaryKey(String partnerartCNr,
-			String cNrLocaleI) throws EJBExceptionLP {
+	public PartnerartsprDto partnerartsprFindByPrimaryKey(String partnerartCNr, String cNrLocaleI)
+			throws EJBExceptionLP {
 
 		// try {
 		PartnerartsprPK partnerartsprPK = new PartnerartsprPK();
 		partnerartsprPK.setPartnerartCNr(partnerartCNr);
 		partnerartsprPK.setLocaleCNr(cNrLocaleI);
-		Partnerartspr partnerartspr = em.find(Partnerartspr.class,
-				partnerartsprPK);
+		Partnerartspr partnerartspr = em.find(Partnerartspr.class, partnerartsprPK);
 		if (partnerartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePartnerartsprDto(partnerartspr);
 
@@ -4398,8 +3960,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// }
 	}
 
-	public PartnerDto[] partnerFindByName1(String sName1I,
-			TheClientDto theClientDto) {
+	public PartnerDto[] partnerFindByName1(String sName1I, TheClientDto theClientDto) {
 		Collection<?> c = null;
 		// try {
 		Query query = em.createNamedQuery("PartnerfindByCName1");
@@ -4415,25 +3976,21 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return assemblePartnerDtos(c);
 	}
 
-	public PartnerDtoSmall partnerFindByPrimaryKeySmall(Integer iIdPartnerI,
-			TheClientDto theClientDto) {
+	public PartnerDtoSmall partnerFindByPrimaryKeySmall(Integer iIdPartnerI, TheClientDto theClientDto) {
 
 		if (iIdPartnerI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_IN,
-					new Exception("iIdPartnerI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_IN, new Exception("iIdPartnerI == null"));
 		}
 
 		PartnerDtoSmall partnerDtoSmall = partnerFindByPrimaryKeySmallOhneExc(iIdPartnerI);
 		if (partnerDtoSmall == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		return partnerDtoSmall;
 	}
 
-	public PartnerDtoSmall partnerFindByPrimaryKeySmallOhneExc(
-			Integer iIdPartnerI) {
+	public PartnerDtoSmall partnerFindByPrimaryKeySmallOhneExc(Integer iIdPartnerI) {
 
 		Partner partner = em.find(Partner.class, iIdPartnerI);
 		if (partner == null) {
@@ -4442,12 +3999,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return assemblePartnerDtoSmall(partner);
 	}
 
-	public String formatBriefAnrede(PartnerDto partnerDto, Locale loI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String formatBriefAnrede(PartnerDto partnerDto, Locale loI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (partnerDto == null || loI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("partnerDto == null || loI==null"));
 		}
 
@@ -4456,33 +4012,39 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		// Anrede aus lp.text ohne Herr Frau
 		String sAnredeCNr = partnerDto.getAnredeCNr();
 		String sParameter;
-		if (sAnredeCNr == null || sAnredeCNr.equals("")
-				|| sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_FAMILIE)) {
+		if (sAnredeCNr == null || sAnredeCNr.equals("") || sAnredeCNr.equals(PartnerFac.PARTNER_ANREDE_FAMILIE)) {
 			sParameter = "lp.anrede.null";
 		} else {
 			sParameter = "lp.anrede." + sAnredeCNr.toLowerCase().trim();
 		}
-		buff.append(getTextRespectUISpr(sParameter, theClientDto.getMandant(),
-				loI));
+		buff.append(getTextRespectUISpr(sParameter, theClientDto.getMandant(), loI));
 		buff.append(" ");
-		buff.append(formatFixAnredeTitelName2Name1(partnerDto, loI,
-				theClientDto));
+		buff.append(formatFixAnredeTitelName2Name1(partnerDto, loI, theClientDto));
 		buff.append(",");
 
 		return buff.toString();
 	}
 
-	public PASelektionPK createPASelektion(PASelektionDto pASelektionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPASelektion(PASelektionDto pASelektionDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
-		if (pASelektionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerartDto == null"));
+		Integer iId = null;
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+		iId = pkGen.getNextPrimaryKey(PKConst.PK_PASELEKTION);
+		pASelektionDto.setIId(iId);
+
+		try {
+			Query query = em.createNamedQuery("PASelektionfindByPartnerIIdSelektionIId");
+			query.setParameter(1, pASelektionDto.getPartnerIId());
+			query.setParameter(2, pASelektionDto.getSelektionIId());
+			Paselektion paselektion = (Paselektion) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PART_PASELEKTION.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
 		}
 
 		Paselektion pASelektion = null;
 		try {
-			pASelektion = new Paselektion(pASelektionDto.getPartnerIId(),
+			pASelektion = new Paselektion(pASelektionDto.getIId(), pASelektionDto.getPartnerIId(),
 					pASelektionDto.getSelektionIId());
 			em.persist(pASelektion);
 			em.flush();
@@ -4490,23 +4052,15 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-		return new PASelektionPK(pASelektionDto.getPartnerIId(),
-				pASelektionDto.getSelektionIId());
+		return pASelektionDto.getIId();
 	}
 
-	public void removePASelektion(PASelektionPK pASelektionPKI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePASelektion(PASelektionDto pASelektionDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
-		if (pASelektionPKI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("pASelektionPKI == null"));
-		}
 		try {
-			Paselektion pASelektion = em
-					.find(Paselektion.class, pASelektionPKI);
+			Paselektion pASelektion = em.find(Paselektion.class, pASelektionDto.getIId());
 			if (pASelektion == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(pASelektion);
 			em.flush();
@@ -4515,77 +4069,38 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public void updatePASelektion(PASelektionDto pASelektionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePASelektion(PASelektionDto pASelektionDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (pASelektionDto != null) {
+
+			Integer iId = pASelektionDto.getIId();
+			try {
+				Query query = em.createNamedQuery("PASelektionfindByPartnerIIdSelektionIId");
+				query.setParameter(1, pASelektionDto.getPartnerIId());
+				query.setParameter(2, pASelektionDto.getSelektionIId());
+
+				Integer iIdVorhanden = ((Paselektion) query.getSingleResult()).getIId();
+				if (iId.equals(iIdVorhanden) == false) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+							new Exception("PART_PASELEKTION.UK"));
+				}
+			} catch (NoResultException ex) {
+				//
+			}
+
 			Paselektion pASelektion = null;
-			// try {
-			pASelektion = em.find(Paselektion.class,
-					new PASelektionPK(pASelektionDto.getPartnerIId(),
-							pASelektionDto.getSelektionIId()));
+			pASelektion = em.find(Paselektion.class, pASelektionDto.getIId());
 			if (pASelektion == null) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, "");
 			}
-			// }
-			// catch (FinderException ex) {
-			// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, ex);
-			// }
 			setPASelektionFromPASelektionDto(pASelektion, pASelektionDto);
 		}
 	}
 
-	public void updatePASelektionPartner(PASelektionDto pASelektionDto,
-			Integer iOldPartnerIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		if (pASelektionDto != null && iOldPartnerIId != null) {
-			Paselektion pASelektion = null;
-			Paselektion pASelektionNew = null;
-			PASelektionPK paselPkNew = null;
-			PASelektionPK paselPk = null;
-			// try {
-			paselPk = new PASelektionPK(iOldPartnerIId,
-					pASelektionDto.getSelektionIId());
-			pASelektion = em.find(Paselektion.class, paselPk);
-			if (pASelektion == null) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, "");
-			}
-			try {
-				// hat der neue partner diese selektion bereits?
-				paselPkNew = new PASelektionPK(pASelektionDto.getPartnerIId(),
-						pASelektionDto.getSelektionIId());
-				pASelektionNew = em.find(Paselektion.class, paselPkNew);
-				// damit er nicht doppelt vorhanden ist alten partnereintrag
-				// loeschen
-				getPartnerFac().removePASelektion(paselPk, theClientDto);
-			} catch (RemoteException ex) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-			}
-			if (pASelektionNew == null) {
-				try {
-					// SK wird oben schon entfernt
-					// getPartnerFac().removePASelektion(paselPk, theClientDto);
-					getPartnerFac().createPASelektion(pASelektionDto,
-							theClientDto);
-				} catch (RemoteException ex) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-				}
-			}
-			// }
-			// catch (FinderException ex) {
-			// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, ex);
-			// }
-		}
-	}
-
-	public PASelektionDto pASelektionFindByPrimaryKey(
-			PASelektionPK pASelektionPKI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public PASelektionDto pASelektionFindByPrimaryKey(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
 		try {
-			Paselektion paselektion = em
-					.find(Paselektion.class, pASelektionPKI);
+			Paselektion paselektion = em.find(Paselektion.class, iId);
 			if (paselektion == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			return assemblePASelektionDto(paselektion);
 		} catch (Exception e) {
@@ -4593,8 +4108,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public PASelektionDto[] pASelektionFindByPartnerIId(Integer partnerIId)
-			throws EJBExceptionLP {
+	public PASelektionDto[] pASelektionFindByPartnerIId(Integer partnerIId) throws EJBExceptionLP {
 		try {
 			Query query = em.createNamedQuery("PASelektionfindByPartnerIId");
 			query.setParameter(1, partnerIId);
@@ -4608,8 +4122,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public PASelektionDto[] pASelektionFindByPartnerIIdOhneExc(
-			Integer partnerIId) throws EJBExceptionLP {
+	public PASelektionDto[] pASelektionFindByPartnerIIdOhneExc(Integer partnerIId) throws EJBExceptionLP {
 		Query query = em.createNamedQuery("PASelektionfindByPartnerIId");
 		query.setParameter(1, partnerIId);
 		Collection<?> cl = query.getResultList();
@@ -4619,9 +4132,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return assemblePASelektionDtos(cl);
 	}
 
-	private void setPASelektionFromPASelektionDto(Paselektion paselektion,
-			PASelektionDto pASelektionDto) {
+	private void setPASelektionFromPASelektionDto(Paselektion paselektion, PASelektionDto pASelektionDto) {
 		paselektion.setCBemerkung(pASelektionDto.getCBemerkung());
+		paselektion.setPartnerIId(pASelektionDto.getPartnerIId());
+		paselektion.setSelektionIId(pASelektionDto.getSelektionIId());
 		em.merge(paselektion);
 		em.flush();
 	}
@@ -4643,11 +4157,9 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return (PASelektionDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createKurzbrief(KurzbriefDto kurzbriefDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createKurzbrief(KurzbriefDto kurzbriefDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (kurzbriefDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kurzbriefDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kurzbriefDtoI == null"));
 		}
 
 		// PK fuer Kurzbrief generieren.
@@ -4666,12 +4178,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 				kurzbriefDtoI.setBHtml(Helper.boolean2Short(false));
 			}
 
-			kurzbrief = new Kurzbrief(kurzbriefDtoI.getIId(),
-					kurzbriefDtoI.getPartnerIId(),
-					kurzbriefDtoI.getAnsprechpartnerIId(),
-					kurzbriefDtoI.getPersonalIIdAnlegen(),
-					kurzbriefDtoI.getPersonalIIdAendern(),
-					kurzbriefDtoI.getBelegartCNr(), kurzbriefDtoI.getBHtml());
+			kurzbrief = new Kurzbrief(kurzbriefDtoI.getIId(), kurzbriefDtoI.getPartnerIId(),
+					kurzbriefDtoI.getAnsprechpartnerIId(), kurzbriefDtoI.getPersonalIIdAnlegen(),
+					kurzbriefDtoI.getPersonalIIdAendern(), kurzbriefDtoI.getBelegartCNr(), kurzbriefDtoI.getBHtml(),
+					kurzbriefDtoI.getMandantCNr());
 			em.persist(kurzbrief);
 			em.flush();
 			setKurzbriefFromKurzbriefDto(kurzbrief, kurzbriefDtoI);
@@ -4681,37 +4191,31 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return kurzbrief.getIId();
 	}
 
-	public void removeKurzbrief(Integer iIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removeKurzbrief(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iIdI"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iIdI"));
 		}
 
 		try {
 			Kurzbrief toRemove = em.find(Kurzbrief.class, iIdI);
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 		} catch (EJBExceptionLP ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
 		}
 	}
 
-	public void updateKurzbrief(KurzbriefDto kurzbriefDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateKurzbrief(KurzbriefDto kurzbriefDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (kurzbriefDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kurzbriefDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kurzbriefDtoI == null"));
 		}
 
 		Integer iId = kurzbriefDtoI.getIId();
@@ -4723,20 +4227,17 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public KurzbriefDto kurzbriefFindByPrimaryKey(Integer iIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public KurzbriefDto kurzbriefFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iIdI == null"));
 		}
 
 		try {
 			Kurzbrief kurzbrief = em.find(Kurzbrief.class, iIdI);
 			if (kurzbrief == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			return assembleKurzbriefDto(kurzbrief);
 		} catch (Exception e) {
@@ -4744,13 +4245,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 	}
 
-	public KurzbriefDto kurzbriefFindByPrimaryKeyOhneExc(Integer iIdI,
-			TheClientDto theClientDto) {
+	public KurzbriefDto kurzbriefFindByPrimaryKeyOhneExc(Integer iIdI, TheClientDto theClientDto) {
 
 		// precondition
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iIdI == null"));
 		}
 
 		try {
@@ -4767,19 +4266,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Findet alle Kurzbriefe eines Partners
 	 * 
-	 * @param iPartnerIdI
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param iPartnerIdI  Integer
+	 * @param theClientDto String
 	 * @return KurzbriefDto[]
 	 * @throws EJBExceptionLP
 	 */
-	public KurzbriefDto[] kurzbriefFindByPartnerIId(Integer iPartnerIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public KurzbriefDto[] kurzbriefFindByPartnerIId(Integer iPartnerIdI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		// precondition
 		if (iPartnerIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iPartnerIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iPartnerIdI == null"));
 		}
 
 		Query query = em.createNamedQuery("KurzbrieffindByPartnerIId");
@@ -4795,19 +4291,16 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	/**
 	 * Findet alle Kurzbriefe eines Partners
 	 * 
-	 * @param iPartnerIdI
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param iPartnerIdI  Integer
+	 * @param theClientDto String
 	 * @return KurzbriefDto[]
 	 * @throws EJBExceptionLP
 	 */
-	public KurzbriefDto[] kurzbriefFindByPartnerIIdOhneExc(Integer iPartnerIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public KurzbriefDto[] kurzbriefFindByPartnerIIdOhneExc(Integer iPartnerIdI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		// precondition
 		if (iPartnerIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iPartnerIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iPartnerIdI == null"));
 		}
 
 		Query query = em.createNamedQuery("KurzbrieffindByPartnerIId");
@@ -4820,13 +4313,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	}
 
-	public KurzbriefDto[] kurzbriefFindByAnsprechpartnerIId(
-			Integer iAnsprechartnerIdI, TheClientDto theClientDto)
+	public KurzbriefDto[] kurzbriefFindByAnsprechpartnerIId(Integer iAnsprechartnerIdI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		// precondition
 		if (iAnsprechartnerIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iAnsprechartnerIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iAnsprechartnerIdI == null"));
 		}
 
 		Query query = em.createNamedQuery("KurzbrieffindByAnsprechpartnerIId");
@@ -4839,13 +4330,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	}
 
-	public KurzbriefDto[] kurzbriefFindByAnsprechpartnerIIdOhneExc(
-			Integer iAnsprechartnerIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public KurzbriefDto[] kurzbriefFindByAnsprechpartnerIIdOhneExc(Integer iAnsprechartnerIdI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		// precondition
 		if (iAnsprechartnerIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iAnsprechartnerIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iAnsprechartnerIdI == null"));
 		}
 
 		Query query = em.createNamedQuery("KurzbrieffindByAnsprechpartnerIId");
@@ -4858,8 +4347,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	}
 
-	private void setKurzbriefFromKurzbriefDto(Kurzbrief kurzbrief,
-			KurzbriefDto kurzbriefDto) {
+	private void setKurzbriefFromKurzbriefDto(Kurzbrief kurzbrief, KurzbriefDto kurzbriefDto) {
 		kurzbrief.setPartnerIId(kurzbriefDto.getPartnerIId());
 		kurzbrief.setXText(kurzbriefDto.getXText());
 		kurzbrief.setCBetreff(kurzbriefDto.getCBetreff());
@@ -4868,6 +4356,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		kurzbrief.setTAendern(kurzbriefDto.getTAendern());
 		kurzbrief.setPersonalIIdAendern(kurzbriefDto.getPersonalIIdAendern());
 		kurzbrief.setBHtml(kurzbriefDto.getBHtml());
+		kurzbrief.setMandantCNr(kurzbriefDto.getMandantCNr());
 		em.merge(kurzbrief);
 		em.flush();
 	}
@@ -4890,73 +4379,86 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * Hole die Komm. (E-Mail, Fax, Telefon, ...) einer cNrKommunikationsartI
-	 * von einem iIdPartnerAnsprechpartnerI bei einem iIdPartnerI oder <BR/>
+	 * Hole die Komm. (E-Mail, Fax, Telefon, ...) einer cNrKommunikationsartI von
+	 * einem iIdPartnerAnsprechpartnerI bei einem iIdPartnerI oder <BR/>
 	 * wenn iIdAnsprechpartnerI == null die des iIdPartnerI.
 	 * 
-	 * @param iIdPartnerI
-	 *            Integer
-	 * @param iIdPartnerAnsprechpartnerI
-	 *            Integer
-	 * @param cNrKommunikationsartI
-	 *            String
-	 * @param cNrMandantI
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param iIdPartnerI           Integer
+	 * @param ansprechpartnerIId    Integer
+	 * @param cNrKommunikationsartI String
+	 * @param cNrMandantI           String
+	 * @param theClientDto          String
 	 * @return PartnerkommunikationDto
 	 */
-	public String partnerkommFindOhneExec(Integer iIdPartnerI,
-			Integer iIdPartnerAnsprechpartnerI, String cNrKommunikationsartI,
+	public String partnerkommFindOhneExec(Integer iIdPartnerI, Integer ansprechpartnerIId, String cNrKommunikationsartI,
 			String cNrMandantI, TheClientDto theClientDto) {
 
 		String partnerkommunikationDto = null;
-		try {
-			if (iIdPartnerAnsprechpartnerI != null) {
-				// 1. hole komm. zu ansppartner bei partner
-				AnsprechpartnerDto[] ansprechpartnerDto = getAnsprechpartnerFac()
-						.ansprechpartnerFindByPartnerIIdAndPartnerIIdAnsprechpartner(
-								iIdPartnerI, iIdPartnerAnsprechpartnerI,
-								theClientDto);
+		partnerkommunikationDto = partnerkommFindOhneAnpassungOhneExec(iIdPartnerI, ansprechpartnerIId,
+				cNrKommunikationsartI, cNrMandantI, theClientDto);
+		// Nur bei Telefonnummern
+		if (cNrKommunikationsartI != null && (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)
+				|| cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_FAX)
+				|| cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_HANDY)
+				|| cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON))) {
+			partnerkommunikationDto = passeInlandsAuslandsVorwahlAn(iIdPartnerI, cNrMandantI, partnerkommunikationDto,
+					theClientDto);
+		}
+		return partnerkommunikationDto;
+	}
 
-				if (ansprechpartnerDto != null && ansprechpartnerDto.length > 0) {
+	/**
+	 * Wie
+	 * {@link PartnerFacBean#partnerkommFindOhneExec(Integer, Integer, String, String, TheClientDto)},
+	 * normiert aber TelNr nicht. Verwenden fuer Report wo TelNr so sein soll wie im
+	 * Textfeld eingegeben
+	 * 
+	 * @param iIdPartnerI
+	 * @param ansprechpartnerIId
+	 * @param cNrKommunikationsartI
+	 * @param cNrMandantI
+	 * @param theClientDto
+	 * @param partnerkommunikationDto
+	 * @return
+	 */
+	public String partnerkommFindOhneAnpassungOhneExec(Integer iIdPartnerI, Integer ansprechpartnerIId,
+			String cNrKommunikationsartI, String cNrMandantI, TheClientDto theClientDto) {
+		String partnerkommunikationDto = null;
+		try {
+			if (ansprechpartnerIId != null) {
+				// 1. hole komm. zu ansppartner bei partner
+				AnsprechpartnerDto ansprechpartnerDto = getAnsprechpartnerFac()
+						.ansprechpartnerFindByPrimaryKey(ansprechpartnerIId, theClientDto);
+
+				if (ansprechpartnerDto != null) {
 					// da gibt's eine komm
-					if (cNrKommunikationsartI
-							.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)
-							&& ansprechpartnerDto[0].getCDirektfax() != null) {
+					if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)
+							&& ansprechpartnerDto.getCDirektfax() != null) {
 						// direktfax
-						partnerkommunikationDto = ansprechpartnerDto[0]
-								.getCDirektfax();
-					} else if (cNrKommunikationsartI
-							.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)
-							&& ansprechpartnerDto[0].getCEmail() != null) {
+						partnerkommunikationDto = ansprechpartnerDto.getCDirektfax();
+					} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)
+							&& ansprechpartnerDto.getCEmail() != null) {
 						// e-mail
-						partnerkommunikationDto = ansprechpartnerDto[0]
-								.getCEmail();
-					} else if (cNrKommunikationsartI
-							.equals(PartnerFac.KOMMUNIKATIONSART_FAX)
-							&& ansprechpartnerDto[0].getCFax() != null) {
+						partnerkommunikationDto = ansprechpartnerDto.getCEmail();
+					} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_FAX)
+							&& ansprechpartnerDto.getCFax() != null) {
 						// fax
-						partnerkommunikationDto = ansprechpartnerDto[0]
-								.getCFax();
-						partnerkommunikationDto = enrichNumber(iIdPartnerI,
-								cNrKommunikationsartI, theClientDto,
+						partnerkommunikationDto = ansprechpartnerDto.getCFax();
+						partnerkommunikationDto = enrichNumber(iIdPartnerI, cNrKommunikationsartI, theClientDto,
 								partnerkommunikationDto, false);
-					} else if (cNrKommunikationsartI
-							.equals(PartnerFac.KOMMUNIKATIONSART_HANDY)
-							&& ansprechpartnerDto[0].getCHandy() != null) {
+					} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_HANDY)
+							&& ansprechpartnerDto.getCHandy() != null) {
 						// handy
-						partnerkommunikationDto = ansprechpartnerDto[0]
-								.getCHandy();
-					} else if (cNrKommunikationsartI
-							.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)
-							&& ansprechpartnerDto[0].getCTelefon() != null) {
+						partnerkommunikationDto = ansprechpartnerDto.getCHandy();
+					} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)
+							&& ansprechpartnerDto.getCTelefon() != null) {
 						// telefon
-						partnerkommunikationDto = ansprechpartnerDto[0]
-								.getCTelefon();
-						partnerkommunikationDto = enrichNumber(iIdPartnerI,
-								cNrKommunikationsartI, theClientDto,
-								partnerkommunikationDto, false);
+						partnerkommunikationDto = ansprechpartnerDto.getCTelefon();
+
+						if (Helper.short2boolean(ansprechpartnerDto.getBDurchwahl())) {
+							partnerkommunikationDto = enrichNumber(iIdPartnerI, cNrKommunikationsartI, theClientDto,
+									partnerkommunikationDto, false);
+						}
 					}
 
 				}
@@ -4966,185 +4468,122 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			// Partners.
 			if (partnerkommunikationDto == null) {
 
-				PartnerDto p = getPartnerFac().partnerFindByPrimaryKey(
-						iIdPartnerI, theClientDto);
+				PartnerDto p = getPartnerFac().partnerFindByPrimaryKey(iIdPartnerI, theClientDto);
 
-				if (cNrKommunikationsartI
-						.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)) {
+				if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)) {
 					// direktfax
 					return p.getCDirektfax();
-				} else if (cNrKommunikationsartI
-						.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)) {
+				} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)) {
 					// e-mail
 					return p.getCEmail();
-				} else if (cNrKommunikationsartI
-						.equals(PartnerFac.KOMMUNIKATIONSART_FAX)) {
+				} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_FAX)) {
 					// fax
 					partnerkommunikationDto = p.getCFax();
-				} else if (cNrKommunikationsartI
-						.equals(PartnerFac.KOMMUNIKATIONSART_HANDY)) {
+				} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_HANDY)) {
 					// handy
 					partnerkommunikationDto = p.getCHandy();
-				} else if (cNrKommunikationsartI
-						.equals(PartnerFac.KOMMUNIKATIONSART_HOMEPAGE)) {
+				} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_HOMEPAGE)) {
 					// homepage
 					partnerkommunikationDto = p.getCHomepage();
-				} else if (cNrKommunikationsartI
-						.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)) {
+				} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)) {
 					// telefon
 					partnerkommunikationDto = p.getCTelefon();
 				}
 
 			}
-			// Nur bei Telefonnummern
-			if (cNrKommunikationsartI != null
-					&& (cNrKommunikationsartI
-							.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)
-							|| cNrKommunikationsartI
-									.equals(PartnerFac.KOMMUNIKATIONSART_FAX)
-							|| cNrKommunikationsartI
-									.equals(PartnerFac.KOMMUNIKATIONSART_HANDY) || cNrKommunikationsartI
-								.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON))) {
-				partnerkommunikationDto = passeInlandsAuslandsVorwahlAn(
-						iIdPartnerI, cNrMandantI, partnerkommunikationDto,
-						theClientDto);
-			}
-		} catch (RemoteException ex) {
-			// nothing here
-			myLogger.logKritisch(":-(", ex);
-		} catch (EJBExceptionLP ex) {
-			// nothing here
-			myLogger.logKritisch(":-(", ex);
+			return partnerkommunikationDto;
+		} catch (RemoteException e) {
+			myLogger.logKritisch("Exception in partnerkommFind", e);
+			return null;
+		} catch (EJBExceptionLP e) {
+			myLogger.logKritisch("Exception in partnerkommFind", e);
+			return null;
 		}
-		return partnerkommunikationDto;
+	}
+
+	public String passeInlandsAuslandsVorwahlAn(Integer iIdPartnerI, String cNrMandantI, String cTelefonnummer,
+			TheClientDto theClientDto) {
+		return passeInlandsAuslandsVorwahlAn(iIdPartnerI, cNrMandantI, cTelefonnummer, false, theClientDto);
 	}
 
 	/**
-	 * Vorwahlen lt. Mandantenparameter und Laenderart anpassen.
-	 * 
+	 * Vorwahlen fuer HVTE und Anrufe entsprechend anpassen <br>
+	 * - fuer ausgehende Anrufe wird ein + am Anfang der Nummer mit der
+	 * Auslandsvorwahl ausgetauscht <br>
+	 * - fuer HVTE werden + bzw. die Auslandsvorwahl entfernt, wenn diese nicht
+	 * vorhanden sind wird die Landesvorwahl des Landes vom Partner als Vorwahl
+	 * angenommen
+	 *
 	 * @param iIdPartnerI
-	 *            Integer
 	 * @param cNrMandantI
-	 *            String
 	 * @param cTelefonnummer
-	 *            die Telefonnummer
+	 * @param fuerHVTE
 	 * @param theClientDto
-	 *            String
-	 * @throws EJBExceptionLP
-	 * @return PartnerkommunikationDto
+	 * @return String cTelefonnummerAngepasst
 	 */
-	public String passeInlandsAuslandsVorwahlAn(Integer iIdPartnerI,
-			String cNrMandantI, String cTelefonnummer, TheClientDto theClientDto) {
+	public String passeInlandsAuslandsVorwahlAn(Integer iIdPartnerI, String cNrMandantI, String cTelefonnummer,
+			boolean fuerHVTE, TheClientDto theClientDto) {
 		try {
-			// Hab ich eine gefunden, muss ich die Inlands/Auslandsvorwahlen
-			// behandeln.
-			// Nur fuer Telefon- und Faxnummern.
-			if (cTelefonnummer != null) {
+			if (cTelefonnummer == null) {
+				return null;
+			}
+			// SP1957
+			cTelefonnummer = cTelefonnummer.trim().replaceAll(" ", "");
 
-				// SP1957
-				cTelefonnummer = cTelefonnummer.trim();
+			ParametermandantDto pAuslandsvorwahl = getParameterFac().getMandantparameter(cNrMandantI,
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_AUSLANDSVORWAHL);
+			String sAuslandsvorwahl = pAuslandsvorwahl.getCWert().trim();
 
-				MandantDto mandantDto = getMandantFac()
-						.mandantFindByPrimaryKey(cNrMandantI, theClientDto);
-				PartnerDto partnerDto = partnerFindByPrimaryKey(iIdPartnerI,
-						theClientDto);
-				String laenderartCNr = getFinanzServiceFac()
-						.getLaenderartZuPartner(mandantDto, partnerDto,
-								theClientDto);
-				// PJ16127
-				if (laenderartCNr == null && cTelefonnummer != null) {
+			ParametermandantDto pInlandsvorwahl = getParameterFac().getMandantparameter(cNrMandantI,
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_INLANDSVORWAHL);
+			String sInlandsvorwahl = pInlandsvorwahl.getCWert().trim();
 
-					// Wenn das Land des Mandanten die gleiche Laendervorwahl
-					// hat
-					// wie die Nummer des Ansprechpartners, dann = INLAND
-					LandDto landDto = mandantDto.getPartnerDto()
-							.getLandplzortDto().getLandDto();
-					if (landDto.getCTelvorwahl() != null
-							&& cTelefonnummer.startsWith(landDto
-									.getCTelvorwahl())) {
-						laenderartCNr = FinanzFac.LAENDERART_INLAND;
+			if (fuerHVTE) {
+				if (cTelefonnummer.startsWith(sAuslandsvorwahl)) {
+					cTelefonnummer = cTelefonnummer.substring(sAuslandsvorwahl.length());
+
+					// Wenn keine Landesvorwahl vorhanden, dann Landesvorwahl des Partners verwenden
+				} else if (!cTelefonnummer.startsWith("+")) {
+					PartnerDto partnerDto = partnerFindByPrimaryKey(iIdPartnerI, theClientDto);
+					// Wenn partner kein Land eingetragen hat, eigenes Land verwenden
+					if (partnerDto.getLandplzortDto() == null) {
+						partnerDto = getMandantFac().mandantFindByPrimaryKey(cNrMandantI, theClientDto).getPartnerDto();
 					}
+					String sTelefonvorwahl = partnerDto.getLandplzortDto().getLandDto().getCTelvorwahl();
+
+					if (sTelefonvorwahl == null) {
+
+						sTelefonvorwahl = "";
+						// SP8378 Beim Partnerimport wissen wir die Vorwahl leider nicht, daher wurde
+						// diese Fehler wieder auskommentiert
+						// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LAND_HAT_KEINE_VORWAHL,
+						// "Das Land hat keine Vorwahl",
+						// partnerDto.getLandplzortDto().getLandDto().getCLkz());
+					}
+					// Wenn Inlandsvorwahl, dann entfernen und Laendervorwahl anhaengen
+					if (cTelefonnummer.startsWith(sInlandsvorwahl)) {
+						cTelefonnummer = cTelefonnummer.substring(sInlandsvorwahl.length());
+					}
+
+					// Wenn die Laendervorwahl die Auslandsvorwahl davor hat, dann die entfernen
+					if (sTelefonvorwahl.startsWith("+")) {
+						sTelefonvorwahl = sTelefonvorwahl.substring(1);
+					} else if (sTelefonvorwahl.startsWith(sAuslandsvorwahl)) {
+						sTelefonvorwahl = sTelefonvorwahl.substring(sAuslandsvorwahl.length());
+					}
+
+					cTelefonnummer = sTelefonvorwahl.trim() + cTelefonnummer;
 
 				}
 
-				// In- und Auslandsvorwahl sind in den Mandantenparametern
-				// definiert.
-				ParametermandantDto pInlandsvorwahl = getParameterFac()
-						.getMandantparameter(cNrMandantI,
-								ParameterFac.KATEGORIE_ALLGEMEIN,
-								ParameterFac.PARAMETER_INLANDSVORWAHL);
-				ParametermandantDto pAuslandsvorwahl = getParameterFac()
-						.getMandantparameter(cNrMandantI,
-								ParameterFac.KATEGORIE_ALLGEMEIN,
-								ParameterFac.PARAMETER_AUSLANDSVORWAHL);
-				String sInlandsvorwahl = pInlandsvorwahl.getCWert().trim();
-				String sAuslandsvorwahl = pAuslandsvorwahl.getCWert().trim();
-				// das "+" gleich durch die Auslandsvorwahl ersetzen.
 				if (cTelefonnummer.startsWith("+")) {
-					cTelefonnummer = sAuslandsvorwahl
-							+ cTelefonnummer.substring(1);
+					cTelefonnummer = cTelefonnummer.substring(1);
+				}
+			} else {
+				if (cTelefonnummer.startsWith("+")) {
+					cTelefonnummer = sAuslandsvorwahl + cTelefonnummer.substring(1);
 				}
 
-				if (laenderartCNr == null
-						|| laenderartCNr.equals(FinanzFac.LAENDERART_INLAND)) {
-					// bei einer Inlandsnummer muss ich die Vorwahl eventuell
-					// entfernen.
-					LandDto landDto = mandantDto.getPartnerDto()
-							.getLandplzortDto().getLandDto();
-					if (landDto.getCTelvorwahl() != null) {
-						// In Auslandsvorwahl umwandeln.
-						String cVorwahl = landDto.getCTelvorwahl();
-						if (cVorwahl.startsWith("+")) {
-							cVorwahl = sAuslandsvorwahl + cVorwahl.substring(1);
-						}
-						// wenn die Nummer mit der Auslandsvorwahl beginnt, muss
-						// ich die in eine Inlandsnummer umwandeln.
-						// d.h. Auslandsvorwahl weg, dafuer vorn die
-						// Inlandsvorwahl dranhaengen.
-						if (cTelefonnummer.startsWith(cVorwahl)) {
-
-							try {
-								String cNeueNummer = cTelefonnummer
-										.replaceFirst(cVorwahl, sInlandsvorwahl);
-								cTelefonnummer = cNeueNummer;
-							} catch (java.util.regex.PatternSyntaxException e) {
-								// PJ 16805
-								String cNeueNummer = cTelefonnummer
-										.replaceFirst(java.util.regex.Pattern
-												.quote(cVorwahl),
-												sInlandsvorwahl);
-								cTelefonnummer = cNeueNummer;
-							}
-						}
-					}
-				} else {
-					// Eine Auslandsnummer. da muss die Auslandsvorwahl
-					// eventuell drangehaengt werden.
-					LandDto landDto = partnerDto.getLandplzortDto()
-							.getLandDto();
-					if (landDto.getCTelvorwahl() != null) {
-						// In Auslandsvorwahl umwandeln.
-						String cVorwahl = landDto.getCTelvorwahl().trim();
-						if (cVorwahl.startsWith("+")) {
-							cVorwahl = sAuslandsvorwahl + cVorwahl.substring(1);
-						}
-						// wenn die Nummer nicht mit der Auslandsvorwahl
-						// beginnt, muss ich die in eine Auslandsnummer
-						// umwandeln.
-						// d.h. Inlandsvorwahl (falls vorhanden) weg, dafuer
-						// vorn die Auslandsvorwahl dranhaengen.
-						if (!cTelefonnummer.startsWith(cVorwahl)) {
-							String cNeueNummer = cTelefonnummer;
-							if (cTelefonnummer.startsWith(sInlandsvorwahl)) {
-								cNeueNummer = cNeueNummer.replaceFirst(
-										sInlandsvorwahl, "");
-							}
-							// Auslandsvorwahl dranhaengen.
-							cNeueNummer = cVorwahl + " " + cNeueNummer;
-							cTelefonnummer = cNeueNummer;
-						}
-					}
-				}
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -5152,33 +4591,44 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return cTelefonnummer;
 	}
 
+	public Integer getDefaultMWSTSatzIIdAnhandLand(LandDto landDto, TheClientDto theClientDto) {
+		if (landDto == null)
+			return null;
+
+		try {
+			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
+			String sLKZMandant = mandantDto.getPartnerDto().getLandplzortDto().getLandDto().getCLkz();
+			if (landDto.getCLkz().equals(sLKZMandant)) {
+				return mandantDto.getMwstsatzbezIIdStandardinlandmwstsatz();
+			}
+
+			return getSystemFac().isEUMitglied(landDto) ? mandantDto.getMwstsatzbezIIdStandardauslandmwstsatz()
+					: mandantDto.getMwstsatzbezIIdStandarddrittlandmwstsatz();
+		} catch (Throwable e) {
+			// Sollte nicht vorkommen... und wenn doch dann gibts keinen MWST
+			// vorbesetzt
+			return null;
+		}
+	}
+
 	/**
 	 * Durchwahl gegen persoenliche Durchwahl austauschen.
 	 * 
-	 * @param iIdPartnerI
-	 *            Integer
-	 * @param cNrKommunikationsartI
-	 *            String
-	 * @param theClientDto
-	 *            aktueller Benutzer
-	 * @param cTelefon
-	 *            die Telefonnummer
+	 * @param iIdPartnerI           Integer
+	 * @param cNrKommunikationsartI String
+	 * @param theClientDto          aktueller Benutzer
+	 * @param cTelefon              die Telefonnummer
 	 * @param bNurNummerAbschneiden
 	 * @return PartnerkommunikationDto
 	 */
-	public String enrichNumber(Integer iIdPartnerI,
-			String cNrKommunikationsartI, TheClientDto theClientDto,
+	public String enrichNumber(Integer iIdPartnerI, String cNrKommunikationsartI, TheClientDto theClientDto,
 			String cTelefon, boolean bNurNummerAbschneiden) {
-		String partnerKomm = getKommFromPartner(iIdPartnerI,
-				cNrKommunikationsartI, theClientDto);
+		String partnerKomm = getKommFromPartner(iIdPartnerI, cNrKommunikationsartI, theClientDto);
 
 		int iAnzahlStellenDurchwahl = 3;
 		try {
-			ParametermandantDto pInlandsvorwahl = getParameterFac()
-					.getMandantparameter(
-							theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.PARAMETER_MAXIMALELAENGE_DURCHWAHL_ZENTRALE);
+			ParametermandantDto pInlandsvorwahl = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_MAXIMALELAENGE_DURCHWAHL_ZENTRALE);
 
 			iAnzahlStellenDurchwahl = new Integer(pInlandsvorwahl.getCWert());
 
@@ -5194,12 +4644,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			sb = new StringBuffer(partnerKomm);
 			// zb. 07754 8912-0
 			int i = sb.lastIndexOf("-");
-			if (i > -1
-					&& (i >= (partnerKomm.length() - iAnzahlStellenDurchwahl)
-					/*
-					 * nur wenn maximal 'iAnzahlStellenDurchwahl' stellen nach
-					 * dem letzen - gilt es als Durchwahl
-					 */)) {
+			if (i > -1 && (i >= (partnerKomm.length() - iAnzahlStellenDurchwahl)
+			/*
+			 * nur wenn maximal 'iAnzahlStellenDurchwahl' stellen nach dem letzen - gilt es
+			 * als Durchwahl
+			 */)) {
 				// 07754 8912
 				sb = new StringBuffer(sb.substring(0, i));
 			}
@@ -5209,8 +4658,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			partnerKomm = sb.toString();
 			return partnerKomm;
 		} else {
-			if (partnerKomm != null && cTelefon != null && sb != null
-					&& !cTelefon.equals(partnerKomm)) {
+			if (partnerKomm != null && cTelefon != null && sb != null && !cTelefon.equals(partnerKomm)) {
 				// Die andere Durchwahl anhaengen.
 				// 07754 8912 24
 				sb.append("-").append(cTelefon);
@@ -5221,41 +4669,31 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 
 	}
 
-	private String getKommFromPartner(Integer iIdPartnerI,
-			String cNrKommunikationsartI, TheClientDto theClientDto) {
+	private String getKommFromPartner(Integer iIdPartnerI, String cNrKommunikationsartI, TheClientDto theClientDto) {
 
 		// precondition
 		if (iIdPartnerI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iIdPartnerI"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iIdPartnerI"));
 		}
 		if (cNrKommunikationsartI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("cNrKommunikationsartI"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("cNrKommunikationsartI"));
 		}
 
 		String partKomm = null;
 		PartnerDto partnerDto = null;
 
-		partnerDto = getPartnerFac().partnerFindByPrimaryKey(iIdPartnerI,
-				theClientDto);
-		if (cNrKommunikationsartI
-				.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)) {
+		partnerDto = getPartnerFac().partnerFindByPrimaryKey(iIdPartnerI, theClientDto);
+		if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_DIREKTFAX)) {
 			partKomm = partnerDto.getCDirektfax();
-		} else if (cNrKommunikationsartI
-				.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)) {
+		} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)) {
 			partKomm = partnerDto.getCEmail();
-		} else if (cNrKommunikationsartI
-				.equals(PartnerFac.KOMMUNIKATIONSART_FAX)) {
+		} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_FAX)) {
 			partKomm = partnerDto.getCFax();
-		} else if (cNrKommunikationsartI
-				.equals(PartnerFac.KOMMUNIKATIONSART_HANDY)) {
+		} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_HANDY)) {
 			partKomm = partnerDto.getCHandy();
-		} else if (cNrKommunikationsartI
-				.equals(PartnerFac.KOMMUNIKATIONSART_HOMEPAGE)) {
+		} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_HOMEPAGE)) {
 			partKomm = partnerDto.getCHomepage();
-		} else if (cNrKommunikationsartI
-				.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)) {
+		} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)) {
 			partKomm = partnerDto.getCTelefon();
 		}
 
@@ -5263,58 +4701,41 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	/**
-	 * Hole fuer den iIdAnsprechpartnerI die Kommunikation als String (E-Mail,
-	 * Fax, Telefon, ...) ist eine Kombination der Daten von Partner (=
-	 * normalerweise Kunde bzw. Lieferant) mit "seinem" Ansprechpartner. Ist der
-	 * Ansprechpartner null, zieht nur der iIdPartnerI.
+	 * Hole fuer den iIdAnsprechpartnerI die Kommunikation als String (E-Mail, Fax,
+	 * Telefon, ...) ist eine Kombination der Daten von Partner (= normalerweise
+	 * Kunde bzw. Lieferant) mit "seinem" Ansprechpartner. Ist der Ansprechpartner
+	 * null, zieht nur der iIdPartnerI. <br>
+	 * Seit SP8637 wird hier die TelNr nicht mehr angepasst, sondern wie eingegeben
+	 * verwendet. Diese Methode sollte also nur f&uuml;r Reports verwendet werden
 	 * 
-	 * @param iIdPartnerAnsprechpartnerI
-	 *            Integer
-	 * @param partnerDtoI
-	 *            Integer
-	 * @param cNrKommunikationsartI
-	 *            String
-	 * @param cNrMandantI
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param iIdPartnerAnsprechpartnerI Integer
+	 * @param partnerDtoI                Integer
+	 * @param cNrKommunikationsartI      String
+	 * @param cNrMandantI                String
+	 * @param theClientDto               String
 	 * @return PartnerkommunikationDto
 	 * @throws EJBExceptionLP
 	 */
-	public String partnerkommFindRespectPartnerAsStringOhneExec(
-			Integer iIdPartnerAnsprechpartnerI, PartnerDto partnerDtoI,
-			String cNrKommunikationsartI, String cNrMandantI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String partnerkommFindRespectPartnerAsStringOhneExec(Integer ansprechpartnerIId, PartnerDto partnerDtoI,
+			String cNrKommunikationsartI, String cNrMandantI, TheClientDto theClientDto) throws EJBExceptionLP {
 
-		String komm = partnerkommFindOhneExec(partnerDtoI.getIId(),
-				iIdPartnerAnsprechpartnerI, cNrKommunikationsartI, cNrMandantI,
-				theClientDto);
+		String komm = partnerkommFindOhneAnpassungOhneExec(partnerDtoI.getIId(), ansprechpartnerIId,
+				cNrKommunikationsartI, cNrMandantI, theClientDto);
 
 		StringBuffer sKommunikation = new StringBuffer();
 
 		if (komm != null) {
 			// Praefix ist die Kommunikationsart
 			String sPraefix;
-			if (cNrKommunikationsartI
-					.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)) {
-				sPraefix = getTextRespectUISpr("lp.email",
-						theClientDto.getMandant(),
-						Helper.string2Locale(partnerDtoI
-								.getLocaleCNrKommunikation()))
-						+ ":";
-			} else if (cNrKommunikationsartI
-					.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)) {
-				sPraefix = getTextRespectUISpr("lp.tel",
-						theClientDto.getMandant(),
-						Helper.string2Locale(partnerDtoI
-								.getLocaleCNrKommunikation()));
-			} else if (cNrKommunikationsartI
-					.equals(PartnerFac.KOMMUNIKATIONSART_FAX)) {
-				sPraefix = getTextRespectUISpr("lp.fax",
-						theClientDto.getMandant(),
-						Helper.string2Locale(partnerDtoI
-								.getLocaleCNrKommunikation()))
-						+ ":";
+			if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_EMAIL)) {
+				sPraefix = getTextRespectUISpr("lp.email", theClientDto.getMandant(),
+						Helper.string2Locale(partnerDtoI.getLocaleCNrKommunikation())) + ":";
+			} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_TELEFON)) {
+				sPraefix = getTextRespectUISpr("lp.tel", theClientDto.getMandant(),
+						Helper.string2Locale(partnerDtoI.getLocaleCNrKommunikation()));
+			} else if (cNrKommunikationsartI.equals(PartnerFac.KOMMUNIKATIONSART_FAX)) {
+				sPraefix = getTextRespectUISpr("lp.fax", theClientDto.getMandant(),
+						Helper.string2Locale(partnerDtoI.getLocaleCNrKommunikation())) + ":";
 			} else {
 				sPraefix = "";
 			}
@@ -5326,13 +4747,11 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	}
 
 	public PartnerkommunikationDto[] partnerkommFindByPartnerIIdKommunikationsartPAiIdKommArtMandant(
-			Integer iIdPartnerI, String cNrKommunikationsartI,
-			String cNrMandantI, TheClientDto theClientDto)
+			Integer iIdPartnerI, String cNrKommunikationsartI, String cNrMandantI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		PartnerkommunikationDto[] dto = null;
 		// try {
-		Query query = em
-				.createNamedQuery("PartnerkommunikationfindByPartnerIIdKommunikationsartPAiIdKommArtMandant");
+		Query query = em.createNamedQuery("PartnerkommunikationfindByPartnerIIdKommunikationsartPAiIdKommArtMandant");
 		query.setParameter(1, iIdPartnerI);
 		query.setParameter(2, cNrKommunikationsartI);
 		query.setParameter(3, cNrMandantI);
@@ -5344,11 +4763,9 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return dto;
 	}
 
-	public PartnerkommunikationDto[] partnerkommFindByPartnerIId(
-			Integer iIdPartnerI) throws EJBExceptionLP {
+	public PartnerkommunikationDto[] partnerkommFindByPartnerIId(Integer iIdPartnerI) throws EJBExceptionLP {
 		PartnerkommunikationDto[] aPartkommDto = null;
-		Query query = em
-				.createNamedQuery("PartnerkommunikationfindByPartnerIId");
+		Query query = em.createNamedQuery("PartnerkommunikationfindByPartnerIId");
 		query.setParameter(1, iIdPartnerI);
 		Collection<?> cl = query.getResultList();
 		// if(cl.isEmpty()){
@@ -5361,12 +4778,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return aPartkommDto;
 	}
 
-	public PartnerkommunikationDto[] partnerkommFindByPartnerIIdMandantCNr(
-			Integer iIdPartnerI, String cNrMandantI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public PartnerkommunikationDto[] partnerkommFindByPartnerIIdMandantCNr(Integer iIdPartnerI, String cNrMandantI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		PartnerkommunikationDto[] aPartkommDto = null;
-		Query query = em
-				.createNamedQuery("PartnerkommunikationfindByPartnerIIdMandantCNr");
+		Query query = em.createNamedQuery("PartnerkommunikationfindByPartnerIIdMandantCNr");
 		query.setParameter(1, iIdPartnerI);
 		query.setParameter(2, cNrMandantI);
 		Collection<?> cl = query.getResultList();
@@ -5380,12 +4795,10 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return aPartkommDto;
 	}
 
-	public PartnerkommunikationDto[] partnerkommFindByPartnerIIdMandantCNrOhneExc(
-			Integer iIdPartnerI, String cNrMandantI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public PartnerkommunikationDto[] partnerkommFindByPartnerIIdMandantCNrOhneExc(Integer iIdPartnerI,
+			String cNrMandantI, TheClientDto theClientDto) throws EJBExceptionLP {
 		PartnerkommunikationDto[] aPartkommDto = null;
-		Query query = em
-				.createNamedQuery("PartnerkommunikationfindByPartnerIIdMandantCNr");
+		Query query = em.createNamedQuery("PartnerkommunikationfindByPartnerIIdMandantCNr");
 		query.setParameter(1, iIdPartnerI);
 		query.setParameter(2, cNrMandantI);
 		Collection<?> cl = query.getResultList();
@@ -5399,37 +4812,45 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return aPartkommDto;
 	}
 
-	private PartnerkommunikationDto[] assemblePartnerkommunikationDtos(
-			Collection<?> partners) {
+	private PartnerkommunikationDto[] assemblePartnerkommunikationDtos(Collection<?> partners) {
 		List<PartnerkommunikationDto> list = new ArrayList<PartnerkommunikationDto>();
 		if (partners != null) {
 			Iterator<?> iterator = partners.iterator();
 			while (iterator.hasNext()) {
-				Partnerkommunikation partner = (Partnerkommunikation) iterator
-						.next();
+				Partnerkommunikation partner = (Partnerkommunikation) iterator.next();
 				list.add(assemblePartnerkommunikationDto(partner));
 			}
 		}
-		PartnerkommunikationDto[] returnArray = new PartnerkommunikationDto[list
-				.size()];
+		PartnerkommunikationDto[] returnArray = new PartnerkommunikationDto[list.size()];
 		return (PartnerkommunikationDto[]) list.toArray(returnArray);
 	}
 
-	public String formatFixAnredeTitelName2Name1(PartnerDto partnerDto,
-			Locale loc, TheClientDto theClientDto) throws EJBExceptionLP {
+	public String formatFixAnredeTitelName2Name1(PartnerDto partnerDto, Locale loc, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		String ret = "";
+
+		int iBriefanredeMitTitel = 0;
+
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_BRIEFANREDE_MIT_TITEL);
+			iBriefanredeMitTitel = ((Integer) parameter.getCWertAsObject()).intValue();
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+
 		boolean bFamilie = false;
 		if (partnerDto.getAnredeCNr() != null) {
 
-			if (partnerDto.getAnredeCNr().equals(
-					PartnerFac.PARTNER_ANREDE_FAMILIE)) {
+			if (partnerDto.getAnredeCNr().equals(PartnerFac.PARTNER_ANREDE_FAMILIE)) {
 				bFamilie = true;
 			}
 
 			AnredesprDto anredesprDto = null;
 			if (loc != null) {
-				anredesprDto = anredesprFindByAnredeCNrLocaleCNrOhneExc(
-						partnerDto.getAnredeCNr(), Helper.locale2String(loc));
+				anredesprDto = anredesprFindByAnredeCNrLocaleCNrOhneExc(partnerDto.getAnredeCNr(),
+						Helper.locale2String(loc));
 				if (anredesprDto != null) {
 					ret += anredesprDto.getCBez().trim();
 				}
@@ -5441,23 +4862,21 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		}
 
 		if (partnerDto.getCTitel() != null) {
-			ret += " " + partnerDto.getCTitel().trim();
+
+			if (iBriefanredeMitTitel == 0 || iBriefanredeMitTitel == 2) {
+				ret += " " + partnerDto.getCTitel().trim();
+			}
 		}
 
 		if (bFamilie == false) {
 
 			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ALLGEMEIN,
-								ParameterFac.PARAMETER_ANREDE_MIT_VORNAME);
-				boolean bMitVorname = ((Boolean) parameter.getCWertAsObject())
-						.booleanValue();
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_ANREDE_MIT_VORNAME);
+				boolean bMitVorname = ((Boolean) parameter.getCWertAsObject()).booleanValue();
 
-				if (bMitVorname == true
-						&& partnerDto.getCName2vornamefirmazeile2() != null) {
-					ret += " "
-							+ partnerDto.getCName2vornamefirmazeile2().trim();
+				if (bMitVorname == true && partnerDto.getCName2vornamefirmazeile2() != null) {
+					ret += " " + partnerDto.getCName2vornamefirmazeile2().trim();
 				}
 
 			} catch (RemoteException ex) {
@@ -5468,22 +4887,29 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			ret += " " + partnerDto.getCName1nachnamefirmazeile1().trim();
 		}
 
+		// SP4286 Kein NTtitel bei der Briefanrede
+		// if (partnerDto.getCNtitel() != null) {
+		// ret += " " + partnerDto.getCNtitel().trim();
+		// }
+
+		// SP4809 Titel anhand Parameter
 		if (partnerDto.getCNtitel() != null) {
-			ret += " " + partnerDto.getCNtitel().trim();
+			if (iBriefanredeMitTitel == 2 || iBriefanredeMitTitel == 3) {
+				ret += ", " + partnerDto.getCNtitel().trim();
+			}
 		}
 
 		return ret.trim();
 	}
 
-	public String formatFixAnredeTitelName2Name1FuerAdresskopf(
-			PartnerDto partnerDto, Locale loc, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public String formatFixAnredeTitelName2Name1FuerAdresskopf(PartnerDto partnerDto, Locale loc,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		String ret = "";
 		if (partnerDto.getAnredeCNr() != null) {
 			AnredesprDto anredesprDto = null;
 			if (loc != null) {
-				anredesprDto = anredesprFindByAnredeCNrLocaleCNrOhneExc(
-						partnerDto.getAnredeCNr(), Helper.locale2String(loc));
+				anredesprDto = anredesprFindByAnredeCNrLocaleCNrOhneExc(partnerDto.getAnredeCNr(),
+						Helper.locale2String(loc));
 				if (anredesprDto != null) {
 					ret += anredesprDto.getCBez().trim();
 				}
@@ -5504,21 +4930,19 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			ret += " " + partnerDto.getCName1nachnamefirmazeile1().trim();
 		}
 		if (partnerDto.getCNtitel() != null) {
-			ret += " " + partnerDto.getCNtitel().trim();
+			// SP4286 "," vor nachgestelletem Titel in Adresskopf
+			ret += ", " + partnerDto.getCNtitel().trim();
 		}
 		return ret.trim();
 	}
 
-	public AnredesprDto anredesprFindByAnredeCNrLocaleCNr(String anredeCNr,
-			String localeCNr) throws EJBExceptionLP {
+	public AnredesprDto anredesprFindByAnredeCNrLocaleCNr(String anredeCNr, String localeCNr) throws EJBExceptionLP {
 		AnredesprDto anredesprDto = null;
 		try {
-			Query query = em
-					.createNamedQuery("AnredesprfindByAnredeCNrLocaleCNr");
+			Query query = em.createNamedQuery("AnredesprfindByAnredeCNrLocaleCNr");
 			query.setParameter(1, anredeCNr);
 			query.setParameter(2, localeCNr);
-			Anredespr anredespr = (com.lp.server.partner.ejb.Anredespr) query
-					.getSingleResult();
+			Anredespr anredespr = (com.lp.server.partner.ejb.Anredespr) query.getSingleResult();
 			anredesprDto = assembleAnredesprDto(anredespr);
 		} catch (NoResultException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
@@ -5526,16 +4950,13 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return anredesprDto;
 	}
 
-	public AnredesprDto anredesprFindByAnredeCNrLocaleCNrOhneExc(
-			String anredeCNr, String localeCNr) {
+	public AnredesprDto anredesprFindByAnredeCNrLocaleCNrOhneExc(String anredeCNr, String localeCNr) {
 		AnredesprDto anredesprDto = null;
 		try {
-			Query query = em
-					.createNamedQuery("AnredesprfindByAnredeCNrLocaleCNr");
+			Query query = em.createNamedQuery("AnredesprfindByAnredeCNrLocaleCNr");
 			query.setParameter(1, anredeCNr);
 			query.setParameter(2, localeCNr);
-			Anredespr anredespr = (com.lp.server.partner.ejb.Anredespr) query
-					.getSingleResult();
+			Anredespr anredespr = (com.lp.server.partner.ejb.Anredespr) query.getSingleResult();
 			anredesprDto = assembleAnredesprDto(anredespr);
 		} catch (NoResultException ex) {
 			// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
@@ -5553,8 +4974,7 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 			// Query query = createNamedQuery(
 			// em, Partner.QueryByUID, new QueryParam[] {new QueryParam("uid",
 			// UidNumber.trim())}) ;
-			Partner partner = (Partner) PartnerQuery.byUID(em, uidNummer)
-					.getSingleResult();
+			Partner partner = (Partner) PartnerQuery.byUID(em, uidNummer).getSingleResult();
 			partnerDto = assemblePartnerDto(partner);
 		} catch (NoResultException e) {
 		} catch (NonUniqueResultException e) {
@@ -5572,41 +4992,37 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 		return assemblePartnerDtos(partners);
 	}
 
-	public PartnerDto[] partnerFindByName1Lower(String sName1I)
-			throws EJBExceptionLP {
+	public PartnerDto[] partnerFindByName1Lower(String sName1I) throws EJBExceptionLP {
 		Query query = PartnerQuery.byLowerCName1(em, sName1I);
 		return assemblePartnerDtos(query.getResultList());
 	}
 
 	/**
-	 * Hat der Partner einen externen Versandweg - wie beispielsweise Clevercure
-	 * / EDI - definiert?</br>
+	 * Hat der Partner einen externen Versandweg - wie beispielsweise Clevercure /
+	 * EDI - definiert?</br>
 	 * 
 	 * @param partnerIId
 	 * @return true wenn fuer den Partner ein Versandweg definiert ist
 	 * @throws RemoteException
 	 */
-	public boolean hatPartnerVersandweg(Integer partnerIId)
-			throws RemoteException {
+	public boolean hatPartnerVersandweg(Integer partnerIId) throws RemoteException {
 		Partner partner = em.find(Partner.class, partnerIId);
 		if (partner == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		return partner.getVersandwegIId() != null;
 	}
 
 	/**
-	 * Hat der Partner einen externen Versandweg - wie beispielsweise Clevercure
-	 * / EDI - definiert?</br>
+	 * Hat der Partner einen externen Versandweg - wie beispielsweise Clevercure /
+	 * EDI - definiert?</br>
 	 * 
 	 * @param partnerDto
 	 * @return true wenn fuer den Partner ein Versandweg definiert ist
 	 * @throws RemoteException
 	 */
-	public boolean hatPartnerVersandweg(PartnerDto partnerDto)
-			throws RemoteException {
+	public boolean hatPartnerVersandweg(PartnerDto partnerDto) throws RemoteException {
 		return partnerDto.getVersandwegIId() != null;
 	}
 
@@ -5618,24 +5034,93 @@ public class PartnerFacBean extends Facade implements PartnerFac {
 	public Integer partnerIdFindByAnsprechpartnerId(Integer ansprechpartnerId) {
 		Validator.notNull(ansprechpartnerId, "ansprechpartnerId");
 
-		Ansprechpartner ansprechpartner = em.find(Ansprechpartner.class,
-				ansprechpartnerId);
+		Ansprechpartner ansprechpartner = em.find(Ansprechpartner.class, ansprechpartnerId);
 		return ansprechpartner == null ? null : ansprechpartner.getPartnerIId();
 	}
 
-	public PartnerDto partnerFindByAnsprechpartnerId(Integer ansprechpartnerId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PartnerDto partnerFindByAnsprechpartnerId(Integer ansprechpartnerId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		Validator.notNull(ansprechpartnerId, "ansprechpartnerId");
 
-		Ansprechpartner ansprechpartner = em.find(Ansprechpartner.class,
-				ansprechpartnerId);
+		Ansprechpartner ansprechpartner = em.find(Ansprechpartner.class, ansprechpartnerId);
 		if (ansprechpartner == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					ansprechpartnerId.toString());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ansprechpartnerId.toString());
 		}
 
-		return partnerFindByPrimaryKey(ansprechpartner.getPartnerIId(),
-				theClientDto);
+		return partnerFindByPrimaryKey(ansprechpartner.getPartnerIId(), theClientDto);
 	}
+
+	protected ModelMapper getMapper() {
+		if (mapper == null) {
+			mapper = new ModelMapper();
+		}
+		return mapper;
+	}
+
+	@Override
+	public Integer createGeodaten(GeodatenDto geodatenDto) {
+		Validator.dtoNotNull(geodatenDto, "geodatenDto");
+		Validator.notNull(geodatenDto.getPartnerIId(), "geodatenDto.getPartnerIId()");
+		Validator.notNull(geodatenDto.getLaengengrad(), "geodatenDto.getLaengengrad()");
+		Validator.notNull(geodatenDto.getBreitengrad(), "geodatenDto.getBreitengrad()");
+
+		Geodaten entity = GeodatenQuery.resultByPartnerIIdNoEx(geodatenDto.getPartnerIId(), em);
+		if (entity != null)
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("UK_PART_GEODATEN"));
+
+		entity = getMapper().map(geodatenDto, Geodaten.class);
+		em.persist(entity);
+		em.flush();
+
+		return entity.getIId();
+	}
+
+	@Override
+	public void removeGeodaten(Integer geodatenIId) {
+		Validator.pkFieldNotNull(geodatenIId, "geodatenIId");
+
+		Geodaten toRemove = em.find(Geodaten.class, geodatenIId);
+		if (toRemove == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, geodatenIId.toString());
+		}
+
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+	}
+
+	@Override
+	public void updateGeodaten(GeodatenDto geodatenDto) {
+		Validator.dtoNotNull(geodatenDto, "geodatenDto");
+		Validator.pkFieldNotNull(geodatenDto.getIId(), "geodatenDto.getIId()");
+
+		Geodaten entity = em.find(Geodaten.class, geodatenDto.getIId());
+		if (entity == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, geodatenDto.getIId().toString());
+		}
+
+		entity = getMapper().map(geodatenDto, Geodaten.class);
+		em.merge(entity);
+		em.flush();
+	}
+
+	@Override
+	public GeodatenDto geodatenFindByPartnerIIdOhneExc(Integer partnerIId) {
+		Validator.notNull(partnerIId, "geodatenDto.getPartnerIId()");
+
+		Geodaten entity = GeodatenQuery.resultByPartnerIIdNoEx(partnerIId, em);
+		return entity != null ? GeodatenDtoAssembler.createDto(entity) : null;
+	}
+
+	@Override
+	public void createGeodaten(List<GeodatenDto> createList) {
+		Validator.notNull(createList, "updateList");
+		for (GeodatenDto geodatenDto : createList) {
+			createGeodaten(geodatenDto);
+		}
+	}
+
 }

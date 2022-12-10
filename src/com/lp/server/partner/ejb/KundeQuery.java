@@ -32,27 +32,42 @@
  ******************************************************************************/
 package com.lp.server.partner.ejb;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import javax.persistence.EntityManager;
+
+import com.lp.server.util.KennungId;
 
 
 public class KundeQuery {
 	/**
 	 * Suche Kunden &uuml;ber seine Lieferantennummer im angegebenen Mandanten
 	 */
-	public final static String ByLieferantCnrMandantCnr = "KundefindByLieferantCnrMandantCnr" ;
+	public static final String ByLieferantCnrMandantCnr = "KundefindByLieferantCnrMandantCnr" ;
 
 	/**
 	 * Suche alle Kunden im angegebenen Mandanten
 	 */
-	public final static String ByMandantCnr = "KundefindByMandantCnr" ;
+	public static final String ByMandantCnr = "KundefindByMandantCnr" ;
 	
 	
-	public final static String ByMandantCnrTimestamp = "KundefindByMandantCnrTimestamp" ;
+	public static final String ByMandantCnrTimestamp = "KundefindByMandantCnrTimestamp" ;
 	
-	public final static String ByPartnerId = "KundefindByPartnerId" ;
-	public final static String ByCountPartnerId = "KundefindByCountPartnerId" ;
+	public static final String ByPartnerId = "KundefindByPartnerId" ;
+	public static final String ByCountPartnerId = "KundefindByCountPartnerId" ;
+	
+	/**
+	 * Sucht den Kunden &uuml;ber seine Kundennummer
+	 */
+	public static final String ByKundenummer = "KundefindByKundenummer" ;
+	public static final String BycFremdsystemnrcNrMandant = "KundefindBycFremdsystemnrcNrMandant";
+	public static final String MaxFremdsystemnr = "KundeMaxFremdsystemnr";
+	public static final String IIdsByPartnerIds = "KundeIIdsfindByPartnerIds" ;
+	
+	public static final String ByKennung = "KundefindByKennung";
+	
 	
 	public static HvTypedQuery<Kunde> byLieferantCnrMandantCnr(EntityManager em, String lieferantCnr, String mandantCnr) {
 		HvTypedQuery<Kunde> q = new HvTypedQuery<Kunde>(em.createNamedQuery(ByLieferantCnrMandantCnr)) ;
@@ -104,5 +119,57 @@ public class KundeQuery {
 	public static int countByPartnerId(EntityManager em, Integer partnerId) {
 		Integer count = byPartnerCountId(em, partnerId).getSingleResult() ;
 		return count == null ? 0 : count ; 
+	}
+	
+	public static HvTypedQuery<Kunde> byKundenummer(EntityManager em, Integer kundenummer) {
+		HvTypedQuery<Kunde> query = new HvTypedQuery<Kunde>(em.createNamedQuery(ByKundenummer)) ;
+		query.setParameter("kundenummer", kundenummer) ;
+		return query ;
+	}
+	
+	public static Kunde findByKundenummer(EntityManager em, Integer kundenummer) {
+		return byKundenummer(em, kundenummer).getSingleResultNoEx() ;
+	}
+	
+	public static HvTypedQuery<Kunde> byFremdsystemnummer(EntityManager em, String fremdsystemnummer, String mandantCnr) {
+		HvTypedQuery<Kunde> query = new HvTypedQuery<Kunde>(em.createNamedQuery(BycFremdsystemnrcNrMandant));
+		query.setParameter(1, fremdsystemnummer);
+		query.setParameter(2, mandantCnr);
+		return query;
+	}
+	
+	public static List<Kunde> listByFremdsystemnummer(EntityManager em, String fremdsystemnummer, String mandantCnr) {
+		return byFremdsystemnummer(em, fremdsystemnummer, mandantCnr).getResultList();
+	}
+
+	public static HvTypedQuery<Integer> maxFremdsystemnr(EntityManager em) {
+		HvTypedQuery<Integer> theQuery = new HvTypedQuery<Integer>(em.createNamedQuery(KundeQuery.MaxFremdsystemnr));
+		return theQuery;
+	}
+	
+	public static Integer resultMaxFremdsystemnr(EntityManager em) {
+		return maxFremdsystemnr(em).getSingleResultNoEx();
+	}
+	
+	public static HvTypedQuery<Integer> iIdsByPartnerIds(EntityManager em, Collection<Integer> partnerIds) {
+		HvTypedQuery<Integer> q = new HvTypedQuery<Integer>(em.createNamedQuery(IIdsByPartnerIds)) ;
+		q.setParameter("partnerIds", partnerIds) ;
+		return q;		
+	}
+	
+	public static List<Integer> listIIdsByIban(EntityManager em, String iban) {
+		List<Integer> partnerIds = PartnerbankQuery.listPartnerIIdsByIban(em, iban);
+		if (partnerIds.isEmpty()) return new ArrayList<Integer>();
+		
+		return iIdsByPartnerIds(em, partnerIds).getResultList();
+	}
+	
+	public static List<Kunde> listByKennung(
+			EntityManager em, KennungId kennungId, String value) {
+		return new HvTypedQuery<Kunde>(
+				em.createNamedQuery(KundeQuery.ByKennung))
+				.setParameter("kennungid", kennungId.id())
+				.setParameter("value", value)
+				.getResultList();
 	}
 }

@@ -47,9 +47,49 @@ public class LagerDto implements Serializable {
 	private Short bInternebestellung;
 	private Integer iLoslagersort;
 	private Short bVersteckt;
-	
-	private Short bKonsignationslager;
 
+   private Integer iSort;
+	
+	public Integer getISort() {
+		return this.iSort;
+	}
+
+	public void setISort(Integer iSort) {
+		this.iSort = iSort;
+	}
+
+	
+	private Short bLagerstandBei0Anzeigen;
+
+	public Short getBLagerstandBei0Anzeigen() {
+		return bLagerstandBei0Anzeigen;
+	}
+
+	public void setBLagerstandBei0Anzeigen(Short bLagerstandBei0Anzeigen) {
+		this.bLagerstandBei0Anzeigen = bLagerstandBei0Anzeigen;
+	}
+	
+	private Integer partnerIId;
+
+	public Integer getPartnerIId() {
+		return this.partnerIId;
+	}
+
+	public void setPartnerIId(Integer partnerIId) {
+		this.partnerIId = partnerIId;
+	}
+
+	private Integer partnerIIdStandort;
+
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
+
+	private Short bKonsignationslager;
 
 	public Short getBKonsignationslager() {
 		return bKonsignationslager;
@@ -58,7 +98,7 @@ public class LagerDto implements Serializable {
 	public void setBKonsignationslager(Short bKonsignationslager) {
 		this.bKonsignationslager = bKonsignationslager;
 	}
-	
+
 	public Short getBVersteckt() {
 		return bVersteckt;
 	}
@@ -90,7 +130,7 @@ public class LagerDto implements Serializable {
 	public void setBInternebestellung(Short bIinternebestellung) {
 		this.bInternebestellung = bIinternebestellung;
 	}
-	
+
 	public Integer getIId() {
 		return iId;
 	}

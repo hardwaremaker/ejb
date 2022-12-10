@@ -32,7 +32,9 @@
  ******************************************************************************/
 package com.lp.server.util.fastlanereader.service.query;
 
+import java.awt.Color;
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * This class holds use case specific information about the table to be
@@ -50,7 +52,6 @@ public class TableInfo implements Serializable {
 	/**
 	 * the types of the column's data.
 	 */
-	@SuppressWarnings("unchecked")
 	private Class[] columnClasses = null;
 
 	/**
@@ -67,14 +68,19 @@ public class TableInfo implements Serializable {
 	 */
 	private String[] dataBaseColumnNames = null;
 	
-	
+	/**
+	 * the tooltips of the columnheaders
+	 */
+	private String[] columnHeaderToolTips = null;
+
 	private boolean isNegativeWerteRoteinfaerben = false;
 
 	public boolean isNegativeWerteRoteinfaerben() {
 		return isNegativeWerteRoteinfaerben;
 	}
 
-	public void setNegativeWerteRoteinfaerben(boolean isNegativeWerteRoteinfaerben) {
+	public void setNegativeWerteRoteinfaerben(
+			boolean isNegativeWerteRoteinfaerben) {
 		this.isNegativeWerteRoteinfaerben = isNegativeWerteRoteinfaerben;
 	}
 
@@ -103,16 +109,67 @@ public class TableInfo implements Serializable {
 		this.columnClasses = columnClasses;
 		this.columnHeaderValues = columnHeaderValues;
 		this.dataBaseColumnNames = dataBaseColumnNames;
+		this.columnHeaderToolTips = new String[columnHeaderValues.length];
 	}
-
+	
 	public TableInfo(Class[] columnClasses, Object[] columnHeaderValues,
 			int[] columnHeaderWidth, String[] dataBaseColumnNames) {
 		this.columnClasses = columnClasses;
 		this.columnHeaderValues = columnHeaderValues;
 		this.columnHeaderWidth = columnHeaderWidth;
 		this.dataBaseColumnNames = dataBaseColumnNames;
+		this.columnHeaderToolTips = new String[columnHeaderValues.length];
 	}
 
+	public TableInfo(Class[] columnClasses, Object[] columnHeaderValues, int[] columnHeaderWidth,
+			String[] dataBaseColumnNames, String[] columnHeaderToolTips){
+		this(columnClasses, columnHeaderValues, columnHeaderWidth, dataBaseColumnNames);
+		this.columnHeaderToolTips = columnHeaderToolTips; 
+	}
+	
+	public void spalteHinzufuegen(Class columnClass, Object columnHeaderValue,
+			int iColumnHeaderWidth, String dataBaseColumnName) {
+		spalteHinzufuegen(columnClass, columnHeaderValue, iColumnHeaderWidth, dataBaseColumnName, null);
+
+	}
+
+	public void spalteHinzufuegen(Class columnClass, Object columnHeaderValue,
+			int iColumnHeaderWidth, String dataBaseColumnName, String columnHeaderToolTip) {
+
+		columnClasses = addElement(columnClasses, columnClass);
+		columnHeaderValues = addElement(columnHeaderValues, columnHeaderValue);
+		columnHeaderWidth = addElement(columnHeaderWidth, iColumnHeaderWidth);
+		dataBaseColumnNames = addElement(dataBaseColumnNames,
+				dataBaseColumnName);
+		columnHeaderToolTips = addElement(columnHeaderToolTips, columnHeaderToolTip);
+
+	}
+
+	private Object[] addElement(Object[] a, Object e) {
+		a = Arrays.copyOf(a, a.length + 1);
+		a[a.length - 1] = e;
+		return a;
+	}
+
+	private Class[] addElement(Class[] a, Class e) {
+		a = Arrays.copyOf(a, a.length + 1);
+		a[a.length - 1] = e;
+		return a;
+	}
+
+	private String[] addElement(String[] a, String e) {
+		a = Arrays.copyOf(a, a.length + 1);
+		a[a.length - 1] = e;
+		return a;
+	}
+
+	private int[] addElement(int[] a, int e) {
+		a = Arrays.copyOf(a, a.length + 1);
+		a[a.length - 1] = e;
+		return a;
+	}
+
+	
 	/**
 	 * @return Returns the columnClasses.
 	 */
@@ -128,8 +185,8 @@ public class TableInfo implements Serializable {
 	}
 
 	/**
-	 * Die Spalten&uuml;berschriften k&ouml;nnen durch eine &UUml;bersetzung &uuml;berschrieben
-	 * werden.
+	 * Die Spalten&uuml;berschriften k&ouml;nnen durch eine &UUml;bersetzung
+	 * &uuml;berschrieben werden.
 	 * 
 	 * @param pValues
 	 *            Object[]
@@ -158,5 +215,21 @@ public class TableInfo implements Serializable {
 					: columnHeaderWidth[i]);
 		}
 		return iW;
+	}
+	
+	public void farbspalteHinzufuegen() { 
+		columnClasses = addElement(columnClasses, Color.class);
+		columnHeaderValues = addElement(columnHeaderValues, "");
+		columnHeaderWidth = addElement(columnHeaderWidth, -1);
+		dataBaseColumnNames = addElement(dataBaseColumnNames, "");
+		columnHeaderToolTips = addElement(columnHeaderToolTips, null);
+	}
+
+	public String[] getColumnHeaderToolTips(){
+		return columnHeaderToolTips;
+	}
+	
+	public void setColumnHeaderToolTips(String[] columnHeaderToolTips){
+		this.columnHeaderToolTips = columnHeaderToolTips;
 	}
 }

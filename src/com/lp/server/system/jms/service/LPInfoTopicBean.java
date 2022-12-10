@@ -58,6 +58,9 @@ public class LPInfoTopicBean implements MessageListener{
 	private ConnectionFactory connectionFactory = null;
 
 	public final static String DESTINATION_INFOTOPIC_NAME = "topic/InfoTopic";
+	
+	public final static String NACHRICHTEN_AKTUALISIEREN = "NACHRICHTEN_AKTUALISIEREN";
+	
 
 	public LPInfoTopicBean() {
 		try {

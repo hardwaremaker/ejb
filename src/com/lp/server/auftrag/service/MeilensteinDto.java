@@ -88,5 +88,15 @@ public class MeilensteinDto implements Serializable {
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
 	}
+	
+	private Integer iSort;
+
+	public Integer getISort() {
+		return iSort;
+	}
+
+	public void setISort(Integer iSort) {
+		this.iSort = iSort;
+	}
 
 }

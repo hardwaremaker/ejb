@@ -44,17 +44,23 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+import com.lp.server.util.ICNr;
+
 @NamedQueries( {
 		@NamedQuery(name = "LosfindByCNrMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "LosfindByCProjektMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.cProjekt=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "LosfindByAuftragIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.auftragIId=?1"),
 		@NamedQuery(name = "LosfindByAuftragIIdStuecklisteIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.auftragIId=?1 ANd o.stuecklisteIId=?2"),
 		@NamedQuery(name = "LosfindByStuecklisteIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.stuecklisteIId=?1"),
 		@NamedQuery(name = "LosfindByAuftragpositionIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.auftragpositionIId=?1"),
 		@NamedQuery(name = "LosfindByFertigungsortpartnerIIdMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.partnerIIdFertigungsort=?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = "LosfindWiederholendeloseIIdTProduktionsbeginnMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.wiederholendeloseIId=?1 AND o.tProduktionsbeginn=?2 AND o.mandantCNr=?3") })
+		@NamedQuery(name = "LosfindWiederholendeloseIIdTProduktionsbeginnMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.wiederholendeloseIId=?1 AND o.tProduktionsbeginn=?2 AND o.mandantCNr=?3"),
+		@NamedQuery(name = LosQuery.ByForecastpositionIId, query = "SELECT OBJECT (o) FROM Los o WHERE o.forecastpositionIId=:id"),
+		@NamedQuery(name = LosQuery.ByStuecklisteIIdFertigungsgruppeIIdStatusCnr, query = "SELECT OBJECT (o) FROM Los o WHERE o.stuecklisteIId=:id AND o.fertigungsgruppeIId=:fertigungsgruppeId AND o.statusCNr IN (:stati)") })
 @Entity
-@Table(name = "FERT_LOS")
-public class Los implements Serializable {
+@Table(name = ITablenames.FERT_LOS)
+public class Los implements Serializable, ICNr {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -65,6 +71,41 @@ public class Los implements Serializable {
 	@Column(name = "C_KOMMENTAR")
 	private String cKommentar;
 
+	@Column(name = "C_ABPOSNR")
+	private String cAbposnr;
+	
+	public String getCAbposnr() {
+		return cAbposnr;
+	}
+
+	public void setCAbposnr(String cAbposnr) {
+		this.cAbposnr = cAbposnr;
+	}
+
+	@Column(name = "C_SCHACHTELPLAN")
+	private String cSchachtelplan;
+
+	
+	public String getCSchachtelplan() {
+		return cSchachtelplan;
+	}
+
+	public void setCSchachtelplan(String cSchachtelplan) {
+		this.cSchachtelplan = cSchachtelplan;
+	}
+
+	@Column(name = "LAGERPLATZ_I_ID")
+	private Integer lagerplatzIId;
+	public Integer getLagerplatzIId() {
+		return this.lagerplatzIId;
+	}
+
+	public void setLagerplatzIId(Integer lagerplatzIId) {
+		this.lagerplatzIId = lagerplatzIId;
+	}
+
+	
+	
 	@Column(name = "C_PROJEKT")
 	private String cProjekt;
 
@@ -73,6 +114,9 @@ public class Los implements Serializable {
 
 	@Column(name = "T_PRODUKTIONSENDE")
 	private Date tProduktionsende;
+	
+	@Column(name = "T_NACHTRAEGLICH_GEOEFFNET")
+	private Date tNachtraeglichGeoeffnet;
 
 	@Column(name = "T_PRODUKTIONSBEGINN")
 	private Date tProduktionsbeginn;
@@ -91,6 +135,18 @@ public class Los implements Serializable {
 
 	@Column(name = "T_AKTUALISIERUNGARBEITSZEIT")
 	private Timestamp tAktualisierungarbeitszeit;
+
+	@Column(name = "T_VP_ETIKETTENGEDRUCKT")
+	private Timestamp tVpEtikettengedruckt;
+
+	
+	public Timestamp getTVpEtikettengedruckt() {
+		return tVpEtikettengedruckt;
+	}
+
+	public void setTVpEtikettengedruckt(Timestamp tVpEtikettengedruckt) {
+		this.tVpEtikettengedruckt = tVpEtikettengedruckt;
+	}
 
 	@Column(name = "T_ANLEGEN")
 	private Timestamp tAnlegen;
@@ -169,6 +225,26 @@ public class Los implements Serializable {
 
 	@Column(name = "PARTNER_I_ID_FERTIGUNGSORT")
 	private Integer partnerIIdFertigungsort;
+	
+	@Column(name = "PERSONAL_I_ID_NACHTRAEGLICH_GEOEFFNET")
+	private Integer personalIIdNachtraeglichGeoeffnet;
+
+	public Date getTNachtraeglichGeoeffnet() {
+		return tNachtraeglichGeoeffnet;
+	}
+
+	public void setTNachtraeglichGeoeffnet(Date tNachtraeglichGeoeffnet) {
+		this.tNachtraeglichGeoeffnet = tNachtraeglichGeoeffnet;
+	}
+
+	public Integer getPersonalIIdNachtraeglichGeoeffnet() {
+		return personalIIdNachtraeglichGeoeffnet;
+	}
+
+	public void setPersonalIIdNachtraeglichGeoeffnet(
+			Integer personalIIdNachtraeglichGeoeffnet) {
+		this.personalIIdNachtraeglichGeoeffnet = personalIIdNachtraeglichGeoeffnet;
+	}
 
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
@@ -190,6 +266,18 @@ public class Los implements Serializable {
 
 	@Column(name = "PERSONAL_I_ID_PRODUKTIONSSTOP")
 	private Integer personalIIdProduktionsstop;
+	
+	@Column(name = "PERSONAL_I_ID_VP_ETIKETTENGEDRUCKT")
+	private Integer personalIIdVpEtikettengedruckt;
+
+	public Integer getPersonalIIdVpEtikettengedruckt() {
+		return personalIIdVpEtikettengedruckt;
+	}
+
+	public void setPersonalIIdVpEtikettengedruckt(
+			Integer personalIIdVpEtikettengedruckt) {
+		this.personalIIdVpEtikettengedruckt = personalIIdVpEtikettengedruckt;
+	}
 
 	@Column(name = "PERSONAL_I_ID_TECHNIKER")
 	private Integer personalIIdTechniker;
@@ -200,7 +288,18 @@ public class Los implements Serializable {
 	@Column(name = "STUECKLISTE_I_ID")
 	private Integer stuecklisteIId;
 
+	@Column(name = "FORECASTPOSITION_I_ID")
+	private Integer forecastpositionIId;
 
+	public Integer getForecastpositionIId() {
+		return forecastpositionIId;
+	}
+
+	public void setForecastpositionIId(Integer forecastpositionIId) {
+		this.forecastpositionIId = forecastpositionIId;
+	}
+
+	
 	@Column(name = "PERSONAL_I_ID_MATERIAL_VOLLSTAENDIG")
 	private Integer personalIIdMaterialvollstaendig;
 	

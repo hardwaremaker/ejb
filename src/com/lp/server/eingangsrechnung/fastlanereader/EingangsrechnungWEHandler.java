@@ -46,6 +46,7 @@ import com.lp.server.bestellung.fastlanereader.generated.FLRWareneingang;
 import com.lp.server.bestellung.service.BestellungFac;
 import com.lp.server.bestellung.service.WareneingangFac;
 import com.lp.server.bestellung.service.WareneingangspositionDto;
+import com.lp.server.system.service.ParameterFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -121,6 +122,13 @@ public class EingangsrechnungWEHandler extends UseCaseHandler {
 						.berechneWertDesWareneingangsInBestellungswaehrung(
 								wareneingang.getI_id(), theClientDto);
 
+				boolean b = getWareneingangFac()
+						.allePreiseFuerWareneingangErfasst(
+								wareneingang.getI_id());
+				if (b == false) {
+					rows[row][col++] = Color.RED;
+				}
+
 				row++;
 				col = 0;
 			}
@@ -186,8 +194,34 @@ public class EingangsrechnungWEHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(buildWhereClausePart("wareneingang.",
-							filterKriterien[i]));
+
+					if (filterKriterien[i].kritName.equals("flrbestellung.c_nr")) {
+						try {
+							String sValue = super
+									.buildWhereBelegnummer(
+											filterKriterien[i],
+											false,
+											ParameterFac.KATEGORIE_BESTELLUNG,
+											ParameterFac.PARAMETER_BESTELLUNG_BELEGNUMMERSTARTWERT);
+							// Belegnummernsuche auch in "altem" Jahr, wenn im
+							// neuen noch keines vorhanden ist
+							if (!istBelegnummernInJahr("FLRBestellung", sValue)) {
+								sValue = super.buildWhereBelegnummer(
+										filterKriterien[i], true);
+							}
+							where.append(" wareneingang."
+									+ filterKriterien[i].kritName);
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + sValue);
+						} catch (Throwable ex) {
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
+									new Exception(ex));
+						}
+					} else {
+
+						where.append(buildWhereClausePart("wareneingang.",
+								filterKriterien[i]));
+					}
 				}
 			}
 			if (filterAdded) {
@@ -331,7 +365,7 @@ public class EingangsrechnungWEHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
 					String.class, String.class, java.sql.Timestamp.class,
-					java.sql.Timestamp.class, BigDecimal.class },
+					java.sql.Timestamp.class, BigDecimal.class, Color.class },
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("bes.bestnr",
@@ -347,7 +381,7 @@ public class EingangsrechnungWEHandler extends UseCaseHandler {
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()),
 							getTextRespectUISpr(
-									"bes.nettogesamtpreisminusrabatte",
+									"er.wareneingaenge.nettowert",
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()) }, new int[] {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,

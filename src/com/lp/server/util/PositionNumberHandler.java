@@ -47,10 +47,24 @@ public class PositionNumberHandler {
 	}
 	
 	protected boolean isIdent(PositionNumberAdapter adapter) {
-		return LocaleFac.POSITIONSART_IDENT.equals(adapter.getPositionartCNr()) && 
+//		return LocaleFac.POSITIONSART_IDENT.equals(adapter.getPositionartCNr()) && 
+//				adapter.getPositionIIdArtikelset() == null  ;	
+		boolean ident = LocaleFac.POSITIONSART_IDENT.equals(adapter.getPositionartCNr()) && 
 				adapter.getPositionIIdArtikelset() == null  ;	
+		return ident && adapter.isIdent();
 	}
 	
+	protected Iterator<?> getPositionsIteratorForHeadId(
+			Integer headId, PositionNumberAdapter adapter) {
+		return adapter.getPositionsListForHeadIId(headId).iterator() ; 
+	}
+	
+	protected Iterator<?> getPositionsIteratorForAnyPosition(
+			Integer positionId, PositionNumberAdapter adapter) {
+		Integer headId = adapter.getHeadIIdFromPosition(positionId);
+		return getPositionsIteratorForHeadId(headId, adapter);
+	}
+
 	public boolean hasPositionNummer(PositionNumberAdapter adapter) {
 		if(isPositionBegin(adapter)) return true ;
 		
@@ -69,7 +83,8 @@ public class PositionNumberHandler {
 
 	public Integer getPositionNummer(Integer reposIId, PositionNumberAdapter adapter) {
 		Integer nr = 0 ;
-		Iterator<?> iterator = adapter.getPositionsIteratorForAnyPosition(reposIId) ;
+//		Iterator<?> iterator = adapter.getPositionsIteratorForAnyPosition(reposIId) ;
+		Iterator<?> iterator = getPositionsIteratorForAnyPosition(reposIId, adapter) ;
 		if(null == iterator) return null ;
 		
 		while (iterator.hasNext()) {
@@ -100,7 +115,9 @@ public class PositionNumberHandler {
 	 */
 	public Integer getLastPositionNummer(Integer reposIId, PositionNumberAdapter adapter) {
 		Integer nr = 0 ;
-		Iterator<?> iterator = adapter.getPositionsIteratorForAnyPosition(reposIId) ;
+//		Iterator<?> iterator = adapter.getPositionsIteratorForAnyPosition(reposIId) ;
+		Iterator<?> iterator = getPositionsIteratorForAnyPosition(reposIId, adapter) ;
+		
 		if(null == iterator) return null ;
 		
 		while (iterator.hasNext()) {
@@ -130,7 +147,8 @@ public class PositionNumberHandler {
 	public Integer getPositionIIdFromPositionNummer(Integer rechnungIId, Integer position, PositionNumberAdapter adapter) {
 		Integer foundPosition = 0 ;
 		
-		Iterator<?> iterator = adapter.getPositionsIteratorForHeadIId(rechnungIId) ;
+//		Iterator<?> iterator = adapter.getPositionsIteratorForHeadIId(rechnungIId) ;
+		Iterator<?> iterator = getPositionsIteratorForHeadId(rechnungIId, adapter);
 		if(null == iterator) return null ;
 			
 		while (iterator.hasNext()) {

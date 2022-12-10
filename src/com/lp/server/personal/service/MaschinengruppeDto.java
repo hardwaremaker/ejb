@@ -35,14 +35,22 @@ package com.lp.server.personal.service;
 import java.io.Serializable;
 
 public class MaschinengruppeDto implements Serializable {
-
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-
+	private static final long serialVersionUID = -2835704761230742644L;
 	private Integer iId;
 	private String cBez;
+	private Short bAuslastungsanzeige;
+	private Integer fertigungsgruppeIId;
+	private String mandantCNr;
+
+	private Integer iSort;
+
+	public Integer getISort() {
+		return this.iSort;
+	}
+
+	public void setISort(Integer iSort) {
+		this.iSort = iSort;
+	}
 
 	public Integer getIId() {
 		return iId;
@@ -60,6 +68,40 @@ public class MaschinengruppeDto implements Serializable {
 		this.cBez = cBez;
 	}
 
+	private String cKbez;
+
+	public String getCKbez() {
+		return cKbez;
+	}
+
+	public void setCKbez(String cKbez) {
+		this.cKbez = cKbez;
+	}
+	
+	public Short getBAuslastungsanzeige() {
+		return bAuslastungsanzeige;
+	}
+
+	public void setBAuslastungsanzeige(Short bAuslastungsanzeige) {
+		this.bAuslastungsanzeige = bAuslastungsanzeige;
+	}
+
+	public Integer getFertigungsgruppeIId() {
+		return fertigungsgruppeIId;
+	}
+
+	public void setFertigungsgruppeIId(Integer fertigungsgruppeIId) {
+		this.fertigungsgruppeIId = fertigungsgruppeIId;
+	}
+
+	public String getMandantCNr() {
+		return mandantCNr;
+	}
+
+	public void setMandantCNr(String mandantCNr) {
+		this.mandantCNr = mandantCNr;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -71,6 +113,15 @@ public class MaschinengruppeDto implements Serializable {
 		if (!(that.cBez == null ? this.cBez == null : that.cBez
 				.equals(this.cBez)))
 			return false;
+		if (!(that.mandantCNr == null ? this.mandantCNr == null
+				: that.mandantCNr.equals(this.mandantCNr)))
+			return false;
+		if (!(that.bAuslastungsanzeige == null ? this.bAuslastungsanzeige == null
+				: that.bAuslastungsanzeige.equals(this.bAuslastungsanzeige)))
+			return false;
+		if (!(that.fertigungsgruppeIId == null ? this.fertigungsgruppeIId == null
+				: that.fertigungsgruppeIId.equals(this.fertigungsgruppeIId)))
+			return false;
 		return true;
 	}
 
@@ -78,6 +129,9 @@ public class MaschinengruppeDto implements Serializable {
 		int result = 17;
 		result = 37 * result + this.iId.hashCode();
 		result = 37 * result + this.cBez.hashCode();
+		result = 37 * result + this.bAuslastungsanzeige.hashCode();
+		result = 37 * result + this.mandantCNr.hashCode();
+		result = 37 * result + this.fertigungsgruppeIId.hashCode();
 		return result;
 	}
 
@@ -85,6 +139,7 @@ public class MaschinengruppeDto implements Serializable {
 		StringBuffer returnStringBuffer = new StringBuffer(64);
 		returnStringBuffer.append("[");
 		returnStringBuffer.append("iId:").append(iId);
+		returnStringBuffer.append("mandantCnr:").append(mandantCNr);
 		returnStringBuffer.append("cBez:").append(cBez);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();

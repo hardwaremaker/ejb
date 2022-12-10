@@ -65,13 +65,21 @@ public class MwstsatzReportDto implements Serializable {
 	/** Die Summe der Mwstbetraege der Positionen, die den Mwstsatz haben. */
 	private BigDecimal nSummeMwstbetrag = null;
 
+	private Integer mwstsatzId;
+	
 	public MwstsatzReportDto() {
 		initialize();
 	}
 
-	public void initialize() {
-		nSummePositionsbetrag = new BigDecimal(0);
-		nSummeMwstbetrag = new BigDecimal(0);
+	public MwstsatzReportDto(Integer mwstsatzId) {
+		initialize();
+		this.mwstsatzId = mwstsatzId;
+	}
+	
+	private void initialize() {
+		nSummePositionsbetrag = BigDecimal.ZERO;
+		nSummeMwstbetrag = BigDecimal.ZERO;
+		mwstsatzId = null;
 	}
 
 	public BigDecimal getNSummePositionsbetrag() {
@@ -91,15 +99,17 @@ public class MwstsatzReportDto implements Serializable {
 	}
 	
 	public BigDecimal getNSummePositionsbetragMinusRabatte(Double dAllgemeinerRabattSatz, Double dProjektRabattSatz){
-		BigDecimal bdAllgemeinerRabatt = new BigDecimal(0);
+		BigDecimal bdAllgemeinerRabatt = BigDecimal.ZERO;
 		nSummePositionsbetrag = Helper.rundeKaufmaennisch(nSummePositionsbetrag, 2);
 		if(dAllgemeinerRabattSatz!=null){
 			bdAllgemeinerRabatt = nSummePositionsbetrag.multiply(new BigDecimal(dAllgemeinerRabattSatz.doubleValue())).movePointLeft(2);
+			bdAllgemeinerRabatt = Helper.rundeGeldbetrag(bdAllgemeinerRabatt);
 		}
-        BigDecimal toReturn =nSummePositionsbetrag.subtract(bdAllgemeinerRabatt);
-        BigDecimal bdProjektRabatt = new BigDecimal(0);
+        BigDecimal toReturn = nSummePositionsbetrag.subtract(bdAllgemeinerRabatt);
+        BigDecimal bdProjektRabatt = BigDecimal.ZERO;
         if(dProjektRabattSatz!=null){
         	bdProjektRabatt = toReturn.multiply(new BigDecimal(dProjektRabattSatz.doubleValue())).movePointLeft(2);
+        	bdProjektRabatt = Helper.rundeGeldbetrag(bdProjektRabatt);
         }
         toReturn = toReturn.subtract(bdProjektRabatt);
         return toReturn;
@@ -107,13 +117,23 @@ public class MwstsatzReportDto implements Serializable {
 	
 	public BigDecimal getNSummeMWSTbetragMinusRabatte(Double dAllgemeinerRabattSatz, Double dProjektRabattSatz, Double fMwstsatz){
 		BigDecimal bdSummePosition = getNSummePositionsbetragMinusRabatte(dAllgemeinerRabattSatz, dProjektRabattSatz);
-		BigDecimal toReturn = new BigDecimal(0);
+		BigDecimal toReturn = BigDecimal.ZERO;
 		if(fMwstsatz!=null){
-			BigDecimal bdMwstSatz = new BigDecimal(fMwstsatz.doubleValue()).movePointLeft(2);
+			// SP5778 Double(7.7) != 7.7 sondern 7.70000000000000017763568394002504646778106689453125
+			BigDecimal bdMwstSatz = Helper.rundeKaufmaennisch(
+					new BigDecimal(fMwstsatz.doubleValue()), 2).movePointLeft(2);
 			toReturn = Helper.rundeGeldbetrag(bdSummePosition).multiply(bdMwstSatz); 
 			toReturn = Helper.rundeGeldbetrag(toReturn);
 		}
 		return toReturn;
 		
+	}
+
+	public Integer getMwstsatzId() {
+		return mwstsatzId;
+	}
+
+	public void setMwstsatzId(Integer mwstsatzId) {
+		this.mwstsatzId = mwstsatzId;
 	}
 }

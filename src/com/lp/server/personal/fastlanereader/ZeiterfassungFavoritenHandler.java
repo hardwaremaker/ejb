@@ -45,17 +45,23 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import com.lp.server.angebot.fastlanereader.generated.FLRAngebot;
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.fertigung.service.LossollarbeitsplanDto;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdaten;
 import com.lp.server.personal.service.PersonalDto;
+import com.lp.server.personal.service.ZeiterfassungFavoritenDto;
 import com.lp.server.projekt.service.ProjektVerlaufHelperDto;
+import com.lp.server.projekt.service.ProjekttaetigkeitDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungartDto;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
@@ -103,46 +109,40 @@ public class ZeiterfassungFavoritenHandler extends UseCaseHandlerTabelle {
 		if (tableInfo == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			tableInfo = new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class, String.class,
-					String.class },
+			tableInfo = new TableInfo(
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class, String.class,
+							String.class, String.class },
 					// die Spaltenueberschriften werden durch die Kriterien
 					// bestimmt
-					new String[] {
-							" ",
-							getTextRespectUISpr("lp.belegart", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.belegnummer", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.partner", mandantCNr, locUI),
-							getTextRespectUISpr("auft.projektbestellnummer",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.bemerkung", mandantCNr,
-									locUI) },
+					new String[] { " ", getTextRespectUISpr("lp.partner", mandantCNr, locUI),
+							getTextRespectUISpr("auft.projektbestellnummer", mandantCNr, locUI),
+							
+							getTextRespectUISpr("lp.belegart", mandantCNr, locUI),
+							getTextRespectUISpr("lp.belegnummer", mandantCNr, locUI),
+							getTextRespectUISpr("lp.taetigkeit", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bemerkung", mandantCNr, locUI) },
 					// die Breite der Spalten festlegen
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
 
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_XM, QueryParameters.FLR_BREITE_XM, QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_XM, QueryParameters.FLR_BREITE_XM, QueryParameters.FLR_BREITE_XM,
 							QueryParameters.FLR_BREITE_M }, // hidden
-					new String[] { "", "", "", "", "", "", });
+					new String[] { "", "", "",
+							"", "", "",
+							"", "", });
 		}
 
 		return tableInfo;
 	}
 
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
 	 * 
-	 * @param rowIndex
-	 *            Zeilenindex
+	 * @param rowIndex Zeilenindex
 	 * @return QueryResult Ergebnis
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -161,8 +161,7 @@ public class ZeiterfassungFavoritenHandler extends UseCaseHandlerTabelle {
 				rows[row] = hmDaten.get(row);
 
 			}
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0);
+			result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0);
 		} catch (Throwable t) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
 		}
@@ -182,8 +181,7 @@ public class ZeiterfassungFavoritenHandler extends UseCaseHandlerTabelle {
 				throw (EJBExceptionLP) t.getCause();
 			} else {
 
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-						new Exception(t));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(t));
 			}
 		}
 		return getAnzahlZeilen();
@@ -192,13 +190,18 @@ public class ZeiterfassungFavoritenHandler extends UseCaseHandlerTabelle {
 	/**
 	 * Diese Methode setzt die Anzahl der Zeilen in der Tabelle und den Inhalt.
 	 * 
-	 * @throws RemoteException
-	 *             Ausnahme
+	 * @throws RemoteException Ausnahme
 	 */
 
 	public void setInhalt() throws RemoteException {
 		hmDaten = new ArrayList<Object[]>();
 		hmDatenBereitsVerwendet = new LinkedHashMap();
+
+		ParametermandantDto parameterint = (ParametermandantDto) getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_PROJEKT,
+				ParameterFac.PARAMETER_PROJEKT_MIT_TAETIGKEIT);
+
+		boolean bProjektMitTaetigkeit = ((Boolean) parameterint.getCWertAsObject());
 
 		// die aktuellen Filter Kriterien bestimmen
 		getFilterKriterien();
@@ -206,113 +209,123 @@ public class ZeiterfassungFavoritenHandler extends UseCaseHandlerTabelle {
 
 		// Alle Angebote holen, die ein Projekt hinterlegt haben
 		Session session = FLRSessionFactory.getFactory().openSession();
-		Query query = session
-				.createQuery("SELECT z FROM FLRZeitdaten z WHERE z.personal_i_id="
-						+ personalIId
-						+ " AND z.i_belegartid!=null  ORDER BY z.t_zeit DESC");
+		Query query = session.createQuery("SELECT z FROM FLRZeitdaten z WHERE z.personal_i_id=" + personalIId
+				+ " AND z.i_belegartid!=null  ORDER BY z.t_zeit DESC");
 		query.setMaxResults(50);
 		List<?> resultListAG = query.list();
 		Iterator<?> resultListIteratorAG = resultListAG.iterator();
+
+		int iSpaltePartner = 1;
+		int iSpalteProjekt = 2;
+
+		int iSpalteBelegart = 3;
+		int iSpalteBelegnummer = 4;
+		int iSpalteTaetigkeit = 5;
+		int iSpalteTaetigkeitBezeichnung = 6;
+		int iSpalteBemerkung = 7;
+		int iAnzahlSpalten = 8;
+
 		while (resultListIteratorAG.hasNext()) {
-			FLRZeitdaten flrZeitdaten = (FLRZeitdaten) resultListIteratorAG
-					.next();
-			String key = flrZeitdaten.getC_belegartnr()
-					+ flrZeitdaten.getI_belegartid();
+			FLRZeitdaten flrZeitdaten = (FLRZeitdaten) resultListIteratorAG.next();
+
+			String key = null;
+			if (bProjektMitTaetigkeit) {
+				key = flrZeitdaten.getC_belegartnr() + flrZeitdaten.getI_belegartid() + ""
+						+ flrZeitdaten.getArtikel_i_id();
+			} else {
+				key = flrZeitdaten.getC_belegartnr() + flrZeitdaten.getI_belegartid();
+			}
 
 			if (!hmDatenBereitsVerwendet.containsKey(key)) {
 
-				Object[] oZeile = new Object[6];
+				Object[] oZeile = new Object[iAnzahlSpalten];
 
-				oZeile[0] = flrZeitdaten.getI_id();
-				oZeile[1] = flrZeitdaten.getC_belegartnr();
+				oZeile[iSpalteBemerkung] = flrZeitdaten.getC_bemerkungzubelegart();
+				ZeiterfassungFavoritenDto zfDto = new ZeiterfassungFavoritenDto(flrZeitdaten.getI_id(), null);
 
-				if (flrZeitdaten.getC_belegartnr().equals(
-						LocaleFac.BELEGART_AUFTRAG)) {
+				if (flrZeitdaten.getFlrartikel() != null) {
+					oZeile[iSpalteTaetigkeit] = flrZeitdaten.getFlrartikel().getC_nr();
+
+					oZeile[iSpalteTaetigkeitBezeichnung] = getArtikelFac()
+							.artikelFindByPrimaryKeySmall(flrZeitdaten.getFlrartikel().getI_id(), theClientDto)
+							.formatBezeichnung();
+
+				}
+
+				oZeile[iSpalteBelegart] = flrZeitdaten.getC_belegartnr();
+
+				if (flrZeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_AUFTRAG)) {
 
 					com.lp.server.auftrag.service.AuftragDto auftragDto = getAuftragFac()
-							.auftragFindByPrimaryKey(
-									flrZeitdaten.getI_belegartid());
+							.auftragFindByPrimaryKey(flrZeitdaten.getI_belegartid());
 
-					oZeile[2] = auftragDto.getCNr();
+					oZeile[iSpalteBelegnummer] = auftragDto.getCNr();
 					if (auftragDto.getCBezProjektbezeichnung() != null) {
-						oZeile[4] = auftragDto.getCBezProjektbezeichnung();
+						oZeile[iSpalteProjekt] = auftragDto.getCBezProjektbezeichnung();
 					}
 
-					oZeile[3] = getKundeFac()
-							.kundeFindByPrimaryKey(
-									auftragDto.getKundeIIdAuftragsadresse(),
-									theClientDto).getPartnerDto()
-							.formatFixName1Name2();
+					oZeile[iSpaltePartner] = getKundeFac()
+							.kundeFindByPrimaryKey(auftragDto.getKundeIIdAuftragsadresse(), theClientDto)
+							.getPartnerDto().formatFixName1Name2();
 
-				} else if (flrZeitdaten.getC_belegartnr().equals(
-						LocaleFac.BELEGART_LOS)) {
+				} else if (flrZeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_LOS)) {
 					try {
 						com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
-								.losFindByPrimaryKey(
-										flrZeitdaten.getI_belegartid());
+								.losFindByPrimaryKey(flrZeitdaten.getI_belegartid());
 
-						oZeile[2] = losDto.getCNr();
+						oZeile[iSpalteBelegnummer] = losDto.getCNr();
 						if (losDto.getCProjekt() != null) {
-							oZeile[4] = losDto.getCProjekt();
+							oZeile[iSpalteProjekt] = losDto.getCProjekt();
 						}
 						if (losDto.getKundeIId() != null) {
-							oZeile[3] = getKundeFac()
-									.kundeFindByPrimaryKey(
-											losDto.getKundeIId(), theClientDto)
-									.getPartnerDto().formatFixName1Name2();
+							oZeile[iSpaltePartner] = getKundeFac()
+									.kundeFindByPrimaryKey(losDto.getKundeIId(), theClientDto).getPartnerDto()
+									.formatFixName1Name2();
 						} else {
-							if(losDto.getAuftragIId()!=null){
+							if (losDto.getAuftragIId() != null) {
 								com.lp.server.auftrag.service.AuftragDto auftragDto = getAuftragFac()
-										.auftragFindByPrimaryKey(
-												losDto.getAuftragIId());
-								oZeile[3] = getKundeFac()
-										.kundeFindByPrimaryKey(
-												auftragDto.getKundeIIdAuftragsadresse(), theClientDto)
+										.auftragFindByPrimaryKey(losDto.getAuftragIId());
+								oZeile[iSpaltePartner] = getKundeFac()
+										.kundeFindByPrimaryKey(auftragDto.getKundeIIdAuftragsadresse(), theClientDto)
 										.getPartnerDto().formatFixName1Name2();
-								oZeile[4] = auftragDto.getCBezProjektbezeichnung();
+								oZeile[iSpalteProjekt] = auftragDto.getCBezProjektbezeichnung();
 							}
 						}
 					} catch (RemoteException ex) {
 						throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 					}
-				} else if (flrZeitdaten.getC_belegartnr().equals(
-						LocaleFac.BELEGART_PROJEKT)) {
+				} else if (flrZeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_PROJEKT)) {
 
 					com.lp.server.projekt.service.ProjektDto projektDto = null;
 					try {
-						projektDto = getProjektFac().projektFindByPrimaryKey(
-								flrZeitdaten.getI_belegartid());
+						projektDto = getProjektFac().projektFindByPrimaryKey(flrZeitdaten.getI_belegartid());
+
 					} catch (RemoteException e) {
 						throwEJBExceptionLPRespectOld(e);
 					}
 
-					oZeile[2] = projektDto.getCNr();
+					oZeile[iSpalteBelegnummer] = projektDto.getCNr();
 					if (projektDto.getCTitel() != null) {
-						oZeile[4] = projektDto.getCTitel();
+						oZeile[iSpalteProjekt] = projektDto.getCTitel();
 					}
 
-					oZeile[3] = getPartnerFac()
-							.partnerFindByPrimaryKey(
-									projektDto.getPartnerIId(), theClientDto).formatFixName1Name2();
-				} else if (flrZeitdaten.getC_belegartnr().equals(
-						LocaleFac.BELEGART_ANGEBOT)) {
+					oZeile[iSpaltePartner] = getPartnerFac()
+							.partnerFindByPrimaryKey(projektDto.getPartnerIId(), theClientDto).formatFixName1Name2();
+
+				} else if (flrZeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_ANGEBOT)) {
 					try {
 						com.lp.server.angebot.service.AngebotDto angebot = getAngebotFac()
-								.angebotFindByPrimaryKey(
-										flrZeitdaten.getI_belegartid(),
-										theClientDto);
+								.angebotFindByPrimaryKey(flrZeitdaten.getI_belegartid(), theClientDto);
 
-						oZeile[2] = angebot.getCNr();
+						oZeile[iSpalteBelegnummer] = angebot.getCNr();
 						if (angebot.getCBez() != null) {
-							oZeile[4] = angebot.getCBez();
+							oZeile[iSpalteProjekt] = angebot.getCBez();
 						}
-						
-						
-						oZeile[3] = getKundeFac()
-								.kundeFindByPrimaryKey(
-										angebot.getKundeIIdAngebotsadresse(), theClientDto)
+
+						oZeile[iSpaltePartner] = getKundeFac()
+								.kundeFindByPrimaryKey(angebot.getKundeIIdAngebotsadresse(), theClientDto)
 								.getPartnerDto().formatFixName1Name2();
-						
+
 					} catch (RemoteException ex) {
 						throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 					}
@@ -320,7 +333,7 @@ public class ZeiterfassungFavoritenHandler extends UseCaseHandlerTabelle {
 
 				// Belegspezifisch
 
-				oZeile[5] = flrZeitdaten.getC_bemerkungzubelegart();
+				oZeile[0] = zfDto;
 
 				hmDaten.add(oZeile);
 			}
@@ -336,5 +349,4 @@ public class ZeiterfassungFavoritenHandler extends UseCaseHandlerTabelle {
 		setAnzahlZeilen(iAnzahlZeilen);
 
 	}
-
 }

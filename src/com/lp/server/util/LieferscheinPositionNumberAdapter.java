@@ -34,24 +34,17 @@ package com.lp.server.util;
 
 import java.io.Serializable;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
 import com.lp.server.lieferschein.ejb.Lieferscheinposition;
 
-public class LieferscheinPositionNumberAdapter extends PositionNumberAdapter implements Serializable {
-
-	/**
-	 * 
-	 */
+public class LieferscheinPositionNumberAdapter extends PositionNumberCachingAdapter implements Serializable {
 	private static final long serialVersionUID = -165178433144854538L;
 
-	@PersistenceContext
 	private EntityManager em;
-
 	private Lieferscheinposition lieferscheinPos ;
 
 	public LieferscheinPositionNumberAdapter(EntityManager em) {
@@ -63,6 +56,11 @@ public class LieferscheinPositionNumberAdapter extends PositionNumberAdapter imp
 		lieferscheinPos = (Lieferscheinposition) adaptee ;
 	}
 
+	@Override
+	public Object getAdaptee() {
+		return lieferscheinPos;
+	}
+	
 	@Override
 	public Integer getIId() {
 		return lieferscheinPos.getIId() ;
@@ -112,18 +110,36 @@ public class LieferscheinPositionNumberAdapter extends PositionNumberAdapter imp
 		return getPositionsIteratorForHeadIId(getHeadIIdFromPosition(anyPosIId)) ; 
 	}
 
-	@Override
-	public Iterator<?> getPositionsIteratorForHeadIId(Integer headIId) {
-		if(headIId == null) return null ;
-		
-		try {
-			Query query = em.createNamedQuery("LieferscheinpositionfindByLieferschein");
-			query.setParameter(1, headIId);
-			return query.getResultList().iterator(); 
-		} catch(NoResultException e) {	
-		}
-		
-		return null ;
-	}
+//	@Override
+//	public Iterator<?> getPositionsIteratorForHeadIId(Integer headIId) {
+//		if(headIId == null) return null ;
+//		
+//		return getPositionsListForHeadIId(headIId).iterator();
+////		try {
+////			Query query = em.createNamedQuery("LieferscheinpositionfindByLieferschein");
+////			query.setParameter(1, headIId);
+////			return query.getResultList().iterator(); 
+////		} catch(NoResultException e) {	
+////		}
+////		
+////		return null ;
+//	}
 
+	@Override
+	protected Iterator<?> getPositionsIteratorForHeadIIdImpl(
+			Integer headIIdNotNull) {
+		return getPositionsListForHeadIIdImpl(headIIdNotNull).iterator();
+	}
+	
+	@Override
+	protected List<?> getPositionsListForHeadIIdImpl(Integer headIId) {
+		Query query = em.createNamedQuery("LieferscheinpositionfindByLieferschein");
+		query.setParameter(1, headIId);
+		return query.getResultList(); 
+	}
+	
+	@Override
+	public List<?> getPositionsListForHeadIId(Integer headIId) {
+		return getPositionsListForHeadIIdImpl(headIId);
+	}	
 }

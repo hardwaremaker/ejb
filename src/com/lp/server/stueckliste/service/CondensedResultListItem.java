@@ -151,7 +151,9 @@ public class CondensedResultListItem implements IStklImportResult {
 	@Override
 	public void setValues(Map<String, String> values) {
 		for(IStklImportResult res : list) {
+			String menge = res.getValues().get(StklImportSpezifikation.MENGE);
 			res.setValues(new HashMap<String, String>(values));
+			res.getValues().put(StklImportSpezifikation.MENGE, menge);
 		}
 	}
 
@@ -188,15 +190,15 @@ public class CondensedResultListItem implements IStklImportResult {
 	}
 
 	@Override
-	public void setSokoUpdate(boolean sokoUpdate) {
+	public void setUpdateArtikelnummerMapping(boolean updateArtikelnummerMapping) {
 		for(IStklImportResult res : list) {
-			res.setSokoUpdate(sokoUpdate);
+			res.setUpdateArtikelnummerMapping(updateArtikelnummerMapping);
 		}
 	}
 
 	@Override
-	public boolean getSokoUpdate() {
-		return getFirstItem().getSokoUpdate();
+	public boolean isUpdateArtikelnummerMapping() {
+		return getFirstItem().isUpdateArtikelnummerMapping();
 	}
 
 	@Override
@@ -210,4 +212,17 @@ public class CondensedResultListItem implements IStklImportResult {
 	public boolean foundTooManyArticles() {
 		return getFirstItem().foundTooManyArticles();
 	}
+
+	@Override
+	public boolean uebernehmeLiefPreisInBestellung() {
+		return getFirstItem().uebernehmeLiefPreisInBestellung();
+	}
+
+	@Override
+	public void setUebernehmeLiefPreisInBestellung(boolean uebernehmen) {
+		for(IStklImportResult res : list) {
+			res.setUebernehmeLiefPreisInBestellung(uebernehmen);
+		}
+	}
+	
 }

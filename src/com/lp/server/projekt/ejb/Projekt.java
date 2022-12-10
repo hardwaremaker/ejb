@@ -45,6 +45,8 @@ import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 
 @NamedQueries( {
 		@NamedQuery(name = "ProjektfindByPartnerIIdMandantCNr", query = "SELECT OBJECT (O) FROM Projekt o WHERE o.partnerIId=?1 AND o.mandantCNr=?2"),
@@ -52,9 +54,10 @@ import javax.persistence.Table;
 		@NamedQuery(name = "ProjektfindByPersonalIIdMandantCNrISort", query = "SELECT OBJECT (O) FROM Projekt AS o WHERE o.personalIIdZugewiesener=?1 AND o.mandantCNr=?2 AND NOT o.iSort IS NULL"),
 		@NamedQuery(name = "ProjektfindByProjektIIdNachfolger", query = "SELECT OBJECT (O) FROM Projekt AS o WHERE o.projektIIdNachfolger=?1 ORDER BY o.cNr"),
 		@NamedQuery(name = "ProjektfindByAnsprechpartnerIIdMandantCNr", query = "SELECT OBJECT (O) FROM Projekt o WHERE o.ansprechpartnerIId=?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = "ProjektfindByCNrMandantCNr", query = "SELECT OBJECT (O) FROM Projekt AS o WHERE o.cNr=?1 AND o.mandantCNr=?2") })		
+		@NamedQuery(name = "ProjektfindByCNrMandantCNr", query = "SELECT OBJECT (O) FROM Projekt AS o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "ProjektfindByBereichIIdArtikelIId", query = "SELECT OBJECT (O) FROM Projekt o WHERE o.bereichIId=?1 AND o.artikelIId=?2")})		
 @Entity
-@Table(name = "PROJ_PROJEKT")
+@Table(name = ITablenames.PROJ_PROJEKT)
 public class Projekt implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -66,6 +69,29 @@ public class Projekt implements Serializable {
 	@Column(name = "I_PRIO")
 	private Integer iPrio;
 	
+	
+	@Column(name = "ARTIKEL_I_ID")
+	private Integer artikelIId;
+	
+	public Integer getArtikelIId() {
+		return artikelIId;
+	}
+
+	public void setArtikelIId(Integer artikelIId) {
+		this.artikelIId = artikelIId;
+	}
+
+	@Column(name = "VKFORTSCHRITT_I_ID")
+	private Integer vkfortschrittIId;
+	
+	public Integer getVkfortschrittIId() {
+		return vkfortschrittIId;
+	}
+
+	public void setVkfortschrittIId(Integer vkfortschrittIId) {
+		this.vkfortschrittIId = vkfortschrittIId;
+	}
+
 	@Column(name = "BEREICH_I_ID")
 	private Integer bereichIId;
 
@@ -108,8 +134,8 @@ public class Projekt implements Serializable {
 	@Column(name = "T_ZIELWUNSCHDATUM")
 	private Timestamp tZielwunschdatum;
 
-	@Column(name = "B_VERRECHENBAR")
-	private Short bVerrechenbar;
+	@Column(name = "I_VERRECHENBAR")
+	private Integer iVerrechenbar;
 
 	@Column(name = "T_ANLEGEN")
 	private Timestamp tAnlegen;
@@ -125,6 +151,17 @@ public class Projekt implements Serializable {
 
 	@Column(name = "T_ERLEDIGT")
 	private Timestamp tErledigt;
+	
+	@Column(name = "T_REALISIERUNG")
+	private Timestamp tRealisierung;
+
+	public Timestamp getTRealisierung() {
+		return tRealisierung;
+	}
+
+	public void setTRealisierung(Timestamp tRealisierung) {
+		this.tRealisierung = tRealisierung;
+	}
 
 	@Column(name = "PERSONAL_I_ID_ERLEDIGER")
 	private Integer personalIIdErlediger;
@@ -160,9 +197,32 @@ public class Projekt implements Serializable {
 
 	@Column(name = "ANSPRECHPARTNER_I_ID")
 	private Integer ansprechpartnerIId;
+	
+	@Column(name = "ANSPRECHPARTNER_I_ID_BETREIBER")
+	private Integer ansprechpartnerIIdBetreiber;
+
+	public Integer getAnsprechpartnerIIdBetreiber() {
+		return ansprechpartnerIIdBetreiber;
+	}
+
+	public void setAnsprechpartnerIIdBetreiber(Integer ansprechpartnerIIdBetreiber) {
+		this.ansprechpartnerIIdBetreiber = ansprechpartnerIIdBetreiber;
+	}
 
 	@Column(name = "PARTNER_I_ID")
 	private Integer partnerIId;
+
+	@Column(name = "PARTNER_I_ID_BETREIBER")
+	private Integer partnerIIdBetreiber;
+
+	
+	public Integer getPartnerIIdBetreiber() {
+		return partnerIIdBetreiber;
+	}
+
+	public void setPartnerIIdBetreiber(Integer partnerIIdBetreiber) {
+		this.partnerIIdBetreiber = partnerIIdBetreiber;
+	}
 
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
@@ -243,7 +303,10 @@ public class Projekt implements Serializable {
 
 	@Column(name = "T_INTERNERLEDIGT")
 	private Timestamp  tInternerledigt;
-	
+
+	@Column(name = "EDITORCONTENT_I_ID")
+	private Integer editorContentIId;
+
 	private static final long serialVersionUID = 1L;
 
 	public Projekt() {
@@ -258,7 +321,7 @@ public class Projekt implements Serializable {
 			Integer iPrio,
 			Timestamp tZielwunschdatum,
 			Integer partnerIId,
-			Short bVerrechenbar,
+			Integer iVerrechenbar,
 			Integer personalIIdAnlegen,
 			Integer personalIIdAendern,
 			String statusCNr,
@@ -281,7 +344,7 @@ public class Projekt implements Serializable {
 		setProjProjektstatusCNr(statusCNr);
 		setTZielwunschdatum(tZielwunschdatum);
 		setPartnerIId(partnerIId);
-		setBVerrechenbar(bVerrechenbar);
+		setIVerrechenbar(iVerrechenbar);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
 		setBFreigegeben(bFreigegeben);
@@ -340,12 +403,12 @@ public class Projekt implements Serializable {
 		this.tZielwunschdatum = tZielwunschdatum;
 	}
 
-	public Short getBVerrechenbar() {
-		return this.bVerrechenbar;
+	public Integer getIVerrechenbar() {
+		return this.iVerrechenbar;
 	}
 
-	public void setBVerrechenbar(Short bVerrechenbar) {
-		this.bVerrechenbar = bVerrechenbar;
+	public void setIVerrechenbar(Integer iVerrechenbar) {
+		this.iVerrechenbar = iVerrechenbar;
 	}
 
 	public Timestamp getTAnlegen() {
@@ -524,4 +587,11 @@ public class Projekt implements Serializable {
 		this.historyCollection = historyCollection;
 	}
 
+	public Integer getEditorContentIId() {
+		return editorContentIId;
+	}
+	
+	public void setEditorContentIId(Integer contentId) {
+		this.editorContentIId = contentId;
+	}
 }

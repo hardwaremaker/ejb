@@ -34,17 +34,15 @@ package com.lp.server.artikel.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Timestamp;
 
 public class SeriennrChargennrAufLagerDto implements Serializable {
-	/**
-	 * 
-	 */
-
-	private Long keyFuerSortierung = null;
-
-	public Long getKeyFuerSortierung() {
-
+	private BigInteger keyFuerSortierung = null;
+	// Dieser "MaxBigInteger" korrespondiert mit der maximalen Laenge einer Seriennr
+	private static BigInteger maxSnrBigInteger = new BigInteger("99999999999999999999999999999999999999999999999999") ;
+	
+	public BigInteger getKeyFuerSortierung() {
 		if (keyFuerSortierung == null) {
 
 			// Nachsehen, ob Ziffernteil vorhanden
@@ -74,14 +72,13 @@ public class SeriennrChargennrAufLagerDto implements Serializable {
 
 				}
 			}
-			// Nun als Integer konvertieren
+			
 			if (iBeginn > -1 && iEnde > -1) {
-				keyFuerSortierung = new Long(getCSeriennrChargennr().substring(
+				keyFuerSortierung = new BigInteger(getCSeriennrChargennr().substring(
 						iBeginn, iEnde + 1));
 			} else {
-				keyFuerSortierung = 999999999999999999L;
+				keyFuerSortierung = maxSnrBigInteger ;
 			}
-
 		}
 
 		return keyFuerSortierung;
@@ -91,6 +88,36 @@ public class SeriennrChargennrAufLagerDto implements Serializable {
 	private BigDecimal nMenge;
 	private Short bSeriennr;
 	private String cSeriennrChargennr;
+	
+	private String sGebinde;
+	private BigDecimal bdGebindemenge;
+	
+	private Integer lagerIId;
+	
+	public Integer getLagerIId() {
+		return lagerIId;
+	}
+
+	public void setLagerIId(Integer lagerIId) {
+		this.lagerIId = lagerIId;
+	}
+
+	public String getSGebinde() {
+		return sGebinde;
+	}
+
+	public void setSGebinde(String sGebinde) {
+		this.sGebinde = sGebinde;
+	}
+
+	public BigDecimal getBdGebindemenge() {
+		return bdGebindemenge;
+	}
+
+	public void setBdGebindemenge(BigDecimal bdGebindemenge) {
+		this.bdGebindemenge = bdGebindemenge;
+	}
+
 	private String cVersion;
 	public String getCVersion() {
 		return cVersion;

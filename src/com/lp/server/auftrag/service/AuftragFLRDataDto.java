@@ -42,6 +42,13 @@ public class AuftragFLRDataDto implements IAuftragFLRData, Serializable {
 	private Boolean internerKommentar ;
 	private Boolean externerKommentar ;
 	private IAddressContact addressContact ;
+	private String externerKommentarText;
+	private String internerKommentarText;
+	private Integer kundeIIdAuftragsadresse;
+	private Integer kundeIIdRechnungsadresse;
+	private Integer kundeIIdLieferadresse;
+	private String vertreterKurzzeichen;
+	private String statusCnr;
 	
 	@Override
 	public Boolean hasInternerKommentar() {
@@ -71,5 +78,71 @@ public class AuftragFLRDataDto implements IAuftragFLRData, Serializable {
 	@Override
 	public void setAddressContact(IAddressContact addressContact) {
 		this.addressContact = addressContact ;
+	}
+
+	public String getExternerKommentarText() {
+		return externerKommentarText;
+	}
+
+	public void setExternerKommentarText(String externerKommentarText) {
+		this.externerKommentarText = externerKommentarText;
+	}
+
+	public String getInternerKommentarText() {
+		return internerKommentarText;
+	}
+
+	public void setInternerKommentarText(String internerKommentarText) {
+		this.internerKommentarText = internerKommentarText;
+	}
+
+	@Override
+	public Integer getKundeIIdAuftragsadresse() {
+		return kundeIIdAuftragsadresse;
+	}
+
+	@Override
+	public void setKundeIIdAuftragsadresse(Integer kundeIId) {
+		this.kundeIIdAuftragsadresse = kundeIId;
+	}
+
+	@Override
+	public Integer getKundeIIdRechnungsadresse() {
+		return kundeIIdRechnungsadresse;
+	}
+
+	@Override
+	public void setKundeIIdRechnungsadresse(Integer kundeIId) {
+		this.kundeIIdRechnungsadresse = kundeIId;
+	}
+
+	@Override
+	public Integer getKundeIIdLieferadresse() {
+		return kundeIIdLieferadresse;
+	}
+
+	@Override
+	public void setKundeIIdLieferadresse(Integer kundeIId) {
+		this.kundeIIdLieferadresse = kundeIId;
+	}
+	
+	@Override
+	public String getVertreterKurzzeichen() {
+		return vertreterKurzzeichen;
+	}
+	
+	@Override
+	public void setVertreterKurzzeichen(String vertreterKurzzeichen) {
+		this.vertreterKurzzeichen = vertreterKurzzeichen;
+	}
+
+	@Override
+	public String getStatusCnr() {
+		return statusCnr;
+	}
+
+	@Override
+	public void setStatusCnr(String statusCnr) {
+		this.statusCnr = statusCnr;
 	}
 }

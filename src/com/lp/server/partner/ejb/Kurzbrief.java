@@ -42,7 +42,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+@NamedQueries({
 		@NamedQuery(name = "KurzbrieffindByPartnerIId", query = "SELECT OBJECT(C) FROM Kurzbrief c WHERE c.partnerIId = ?1"),
 		@NamedQuery(name = "KurzbrieffindByAnsprechpartnerIId", query = "SELECT OBJECT(C) FROM Kurzbrief c WHERE c.ansprechpartnerIId = ?1") })
 @Entity
@@ -69,6 +69,9 @@ public class Kurzbrief implements Serializable {
 	@Column(name = "X_TEXT")
 	private String xText;
 
+	@Column(name = "MANDANT_C_NR")
+	private String mandantCNr;
+
 	@Column(name = "BELEGART_C_NR")
 	private String belegartCNr;
 
@@ -85,14 +88,20 @@ public class Kurzbrief implements Serializable {
 	private Integer personalIIdAnlegen;
 
 	@Column(name = "B_HTML")
-	private Short bHtml ;
+	private Short bHtml;
 
-	public Kurzbrief(Integer iId, 
-			Integer partnerIId,
-			Integer ansprechpartnerIId,
-			Integer personalIIdAnlegen, 
-			Integer personalIIdAendern, 
-			String belegartCNr, Short b_html) {
+	public String getMandantCNr() {
+		return this.mandantCNr;
+	}
+
+	public void setMandantCNr(String mandantCNr) {
+		this.mandantCNr = mandantCNr;
+	}
+
+	public Kurzbrief(Integer iId, Integer partnerIId,
+			Integer ansprechpartnerIId, Integer personalIIdAnlegen,
+			Integer personalIIdAendern, String belegartCNr, Short b_html,
+			String mandantCNr) {
 		setIId(iId);
 		setPartnerIId(partnerIId);
 		setAnsprechpartnerIId(ansprechpartnerIId);
@@ -102,14 +111,13 @@ public class Kurzbrief implements Serializable {
 		setTAendern(t);
 		setPersonalIIdAendern(personalIIdAendern);
 		setBelegartCNr(belegartCNr);
-		setBHtml(b_html) ;
+		setBHtml(b_html);
+		setMandantCNr(mandantCNr);
 	}
-	
-	public Kurzbrief(Integer iId, 
-			Integer partnerIId,
-			Integer personalIIdAnlegen, 
-			Integer personalIIdAendern, 
-			String belegartCNr, Short b_html) {
+
+	public Kurzbrief(Integer iId, Integer partnerIId,
+			Integer personalIIdAnlegen, Integer personalIIdAendern,
+			String belegartCNr, Short b_html, String mandantCNr) {
 		setIId(iId);
 		setPartnerIId(partnerIId);
 		Timestamp t = new Timestamp(System.currentTimeMillis());
@@ -118,7 +126,8 @@ public class Kurzbrief implements Serializable {
 		setTAendern(t);
 		setPersonalIIdAendern(personalIIdAendern);
 		setBelegartCNr(belegartCNr);
-		setBHtml(b_html) ;
+		setBHtml(b_html);
+		setMandantCNr(mandantCNr);
 	}
 
 	public Integer getIId() {
@@ -184,7 +193,7 @@ public class Kurzbrief implements Serializable {
 	public void setPartnerIId(Integer partner) {
 		this.partnerIId = partner;
 	}
-	
+
 	public Integer getPersonalIIdAendern() {
 		return this.personalIIdAendern;
 	}
@@ -200,7 +209,7 @@ public class Kurzbrief implements Serializable {
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
 	}
-	
+
 	public Short getBHtml() {
 		return bHtml;
 	}

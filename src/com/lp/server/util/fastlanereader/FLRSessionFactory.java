@@ -37,6 +37,7 @@ import javax.naming.InitialContext;
 
 import org.hibernate.SessionFactory;
 
+import com.lp.server.util.FacadeBeauftragter;
 import com.lp.util.EJBExceptionLP;
 
 /**
@@ -50,23 +51,45 @@ public class FLRSessionFactory {
 	private static SessionFactory factory;
 
 	/**
-	 * gets an instance of the SessionFactory interface. There's only one
-	 * instance (Singleton).
+	 * gets an instance of the SessionFactory interface. There's only one instance
+	 * (Singleton).
 	 * 
 	 * @return the SessionFactory.
 	 * @throws EJBExceptionLP
 	 */
 	public static SessionFactory getFactory() {
 		if (factory == null) {
-			try {
-				Context ctx = new InitialContext();
-				factory = (SessionFactory) ctx
-						.lookup("java:/hibernate/HibernateFactory");
-			} catch (Exception e) {
-				System.out.println("HibernateFactory not found");
-			}
+				FacadeBeauftragter f = new FacadeBeauftragter();
+				factory = f.getBenutzerServicesFac().getSessionFactory();
 		}
 		return factory;
+	}
+
+	public static boolean isPostgres() {
+		try {
+			Object dialect = org.apache.commons.beanutils.PropertyUtils.getProperty(factory, "dialect");
+
+			if (dialect instanceof org.hibernate.dialect.PostgreSQLDialect) {
+				return true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return false;
+	}
+	public static boolean isMSSQL() {
+		try {
+			Object dialect = org.apache.commons.beanutils.PropertyUtils.getProperty(factory, "dialect");
+
+			if (dialect instanceof org.hibernate.dialect.SQLServerDialect) {
+				return true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return false;
 	}
 
 }

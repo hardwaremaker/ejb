@@ -52,6 +52,10 @@ public class LagerDtoAssembler {
 			lagerDto.setBVersteckt(lager.getBVersteckt());
 			lagerDto.setILoslagersort(lager.getILoslagersort());
 			lagerDto.setBKonsignationslager(lager.getBKonsignationslager());
+			lagerDto.setPartnerIIdStandort(lager.getPartnerIIdStandort());
+			lagerDto.setPartnerIId(lager.getPartnerIId());
+			lagerDto.setISort(lager.getISort());
+			lagerDto.setBLagerstandBei0Anzeigen(lager.getBLagerstandBei0Anzeigen());
 		}
 		return lagerDto;
 	}

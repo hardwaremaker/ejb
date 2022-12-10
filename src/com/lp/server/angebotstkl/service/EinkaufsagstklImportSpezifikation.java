@@ -32,11 +32,11 @@
  ******************************************************************************/
 package com.lp.server.angebotstkl.service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 
+import com.lp.service.IReader;
+import com.lp.service.JsonWriter;
 import com.lp.service.StklImportSpezifikation;
 
 public class EinkaufsagstklImportSpezifikation extends
@@ -47,12 +47,16 @@ public class EinkaufsagstklImportSpezifikation extends
 	}
 
 	@Override
-	protected void readIndividualValues(BufferedReader br) throws IOException {
+	protected void readIndividualValues(IReader reader) throws IOException {
 		
 	}
 
 	@Override
-	protected void writeIndividualValues(StringWriter sw) {
+	protected void readIndividualValuesJson(IReader reader) throws IOException {
+	}
+
+	@Override
+	protected void writeIndividualValues(JsonWriter writer) {
 		
 	}
 
@@ -65,9 +69,9 @@ public class EinkaufsagstklImportSpezifikation extends
 	protected void setAvailableColumnTypes() {
 		availableColumnTypes = new ArrayList<String>();
 		
+		availableColumnTypes.add(ARTIKELNUMMER);
 		availableColumnTypes.add(KUNDENARTIKELNUMMER);
 		availableColumnTypes.add(HERSTELLERARTIKELNUMMER);
-		availableColumnTypes.add(ARTIKELNUMMER);
 		availableColumnTypes.add(HERSTELLERBEZ);
 		availableColumnTypes.add(SI_WERT);
 		availableColumnTypes.add(BEZEICHNUNG);
@@ -77,6 +81,24 @@ public class EinkaufsagstklImportSpezifikation extends
 		availableColumnTypes.add(BAUFORM);
 		availableColumnTypes.add(MENGE);
 		availableColumnTypes.add(POSITION);
-		availableColumnTypes.add(REFERENZBEMERKUNG);
+		availableColumnTypes.add(REFERENZBEZEICHNUNG);
+		availableColumnTypes.add(INTERNE_BEMERKUNG);
+		availableColumnTypes.add(HERSTELLER);
+		availableColumnTypes.add(LAUFENDE_NUMMER);
 	}
+
+	@Override
+	public void removeMappingColumnType() {
+		availableColumnTypes.remove(KUNDENARTIKELNUMMER);
+		int index = columnTypes.indexOf(KUNDENARTIKELNUMMER);
+		if(index >= 0) {
+			columnTypes.set(index, UNDEFINED);
+		}
+	}
+	
+	@Override
+	public boolean isStuecklisteMitBezugVerkauf() {
+		return true;
+	}
+	
 }

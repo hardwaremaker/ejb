@@ -37,29 +37,60 @@ import java.io.Serializable;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.personal.service.PersonalDto;
 
-public class ReportMandantDto implements Serializable{
+public class ReportMandantDto implements Serializable {
 
 	private static final long serialVersionUID = 4222380484150741478L;
-	
-	public String getAktuellenBenutzer(){
-		String sAktuellerBenutzer="";
-		if(personalDto_AktuellerBenutzer!=null && personalDto_AktuellerBenutzer.getPartnerDto()!=null){
+
+	public String getAktuellenBenutzer() {
+		String sAktuellerBenutzer = "";
+		if(aktuellerBenutzerAnredeInLocale != null) {
+			return aktuellerBenutzerAnredeInLocale;
+		}
+		if (personalDto_AktuellerBenutzer != null && personalDto_AktuellerBenutzer.getPartnerDto() != null) {
 			sAktuellerBenutzer = personalDto_AktuellerBenutzer.formatAnrede();
 		}
 		return sAktuellerBenutzer;
 	}
-	
+
+	private String hauptmandant;
+
+	public String getHauptmandant() {
+		return hauptmandant;
+	}
+
+	public void setHauptmandant(String hauptmandant) {
+		this.hauptmandant = hauptmandant;
+	}
+
 	private TheClientDto clientDto;
 	private MandantDto mandantDto;
 	private PersonalDto personalDto_AktuellerBenutzer;
+	private String signatur_AktuellerBenutzer;
+	private String zessionstext;
+	private boolean bParametermandantArtikelgewichtGrammStattKilo = false;
+	// SP9089 Anrede von Benutzer muss uebersetzt werden. Das Dto hat aber keinen
+	// Zugriff auf Sprachinfo und die benoetigte Server-Methode, also wird die
+	// Anrede zusaetzlich uebergeben, wenn Sprache bekannt
+	private String aktuellerBenutzerAnredeInLocale;
+
+	public boolean isBParametermandantArtikelgewichtGrammStattKilo() {
+		return bParametermandantArtikelgewichtGrammStattKilo;
+	}
+
+	public String getZessionstext() {
+		return zessionstext;
+	}
 
 	public final static String EMPTY_FIELD_VALUE = "";
 
 	protected ReportMandantDto() {
 		// TODO Auto-generated constructor stub
 	}
-	
-	public ReportMandantDto(TheClientDto theClientDto, MandantDto mandantDto, PersonalDto personalDto_AktuellerBenutzer) {
+
+	public ReportMandantDto(TheClientDto theClientDto, MandantDto mandantDto, PersonalDto personalDto_AktuellerBenutzer,
+			String signatur_AktuellerBenutzer, String sZessionstext,
+			boolean bParametermandantArtikelgewichtGrammStattKilo, String hauptmandant,
+			String aktBenutzerAnredeInLocale) {
 		if (null == theClientDto)
 			throw new IllegalArgumentException("theClientDto == null");
 		if (null == mandantDto)
@@ -67,7 +98,12 @@ public class ReportMandantDto implements Serializable{
 
 		this.clientDto = theClientDto;
 		this.mandantDto = mandantDto;
-		this.personalDto_AktuellerBenutzer=personalDto_AktuellerBenutzer;
+		this.personalDto_AktuellerBenutzer = personalDto_AktuellerBenutzer;
+		this.signatur_AktuellerBenutzer = signatur_AktuellerBenutzer;
+		this.zessionstext = sZessionstext;
+		this.bParametermandantArtikelgewichtGrammStattKilo = bParametermandantArtikelgewichtGrammStattKilo;
+		this.hauptmandant = hauptmandant;
+		this.aktuellerBenutzerAnredeInLocale = aktBenutzerAnredeInLocale;
 	}
 
 	public TheClientDto getTheClientDto() {
@@ -85,7 +121,7 @@ public class ReportMandantDto implements Serializable{
 	public String getMandantCNr() {
 		return getReportString(clientDto.getMandant());
 	}
-	
+
 	public String getKurzbezeichnung() {
 		return getReportString(getMandantDto().getCKbez());
 	}
@@ -119,12 +155,116 @@ public class ReportMandantDto implements Serializable{
 	}
 
 	public String getLkz() {
-		return isLandDefined() ? getReportString(getPartnerDto()
-				.getLandplzortDto().getLandDto().getCLkz()) : EMPTY_FIELD_VALUE;
+		return isLandDefined() ? getReportString(getPartnerDto().getLandplzortDto().getLandDto().getCLkz())
+				: EMPTY_FIELD_VALUE;
 	}
 
 	private boolean isPartnerDefined() {
 		return getPartnerDto() != null;
+	}
+
+	public String getAktuellerBenutzerVorname() {
+		if (personalDto_AktuellerBenutzer != null && personalDto_AktuellerBenutzer.getPartnerDto() != null) {
+			return personalDto_AktuellerBenutzer.getPartnerDto().getCName2vornamefirmazeile2();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerNachname() {
+		if (personalDto_AktuellerBenutzer != null && personalDto_AktuellerBenutzer.getPartnerDto() != null) {
+			return personalDto_AktuellerBenutzer.getPartnerDto().getCName1nachnamefirmazeile1();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerVorname2() {
+		if (personalDto_AktuellerBenutzer != null && personalDto_AktuellerBenutzer.getPartnerDto() != null) {
+			return personalDto_AktuellerBenutzer.getPartnerDto().getCName3vorname2abteilung();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerTitel() {
+		if (personalDto_AktuellerBenutzer != null && personalDto_AktuellerBenutzer.getPartnerDto() != null) {
+			return personalDto_AktuellerBenutzer.getPartnerDto().getCTitel();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerNTitel() {
+		if (personalDto_AktuellerBenutzer != null && personalDto_AktuellerBenutzer.getPartnerDto() != null) {
+			return personalDto_AktuellerBenutzer.getPartnerDto().getCNtitel();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerUnterschriftsfunktion() {
+		if (personalDto_AktuellerBenutzer != null) {
+			return personalDto_AktuellerBenutzer.getCUnterschriftsfunktion();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerUnterschriftstext() {
+		if (personalDto_AktuellerBenutzer != null) {
+			return personalDto_AktuellerBenutzer.getCUnterschriftstext();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerEmail() {
+		if (personalDto_AktuellerBenutzer != null) {
+			return personalDto_AktuellerBenutzer.getCEmail();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerTelDW() {
+		if (personalDto_AktuellerBenutzer != null) {
+			return personalDto_AktuellerBenutzer.getCTelefon();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerHandy() {
+		if (personalDto_AktuellerBenutzer != null) {
+			return personalDto_AktuellerBenutzer.getCHandy();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerFaxDW() {
+		if (personalDto_AktuellerBenutzer != null) {
+			return personalDto_AktuellerBenutzer.getCFax();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerDirektfax() {
+		if (personalDto_AktuellerBenutzer != null) {
+			return personalDto_AktuellerBenutzer.getCDirektfax();
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
+	}
+
+	public String getAktuellerBenutzerSignatur() {
+		if (signatur_AktuellerBenutzer != null) {
+			return signatur_AktuellerBenutzer;
+		} else {
+			return EMPTY_FIELD_VALUE;
+		}
 	}
 
 	private boolean isLandplzortDefined() {
@@ -132,47 +272,43 @@ public class ReportMandantDto implements Serializable{
 	}
 
 	private boolean isLandDefined() {
-		return isLandplzortDefined()
-				&& getPartnerDto().getLandplzortDto().getLandDto() != null;
+		return isLandplzortDefined() && getPartnerDto().getLandplzortDto().getLandDto() != null;
+	}
+
+	public String getUID() {
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCUid()) : EMPTY_FIELD_VALUE;
 	}
 
 	public String getName1() {
-		return isPartnerDefined() ? getReportString(getPartnerDto()
-				.getCName1nachnamefirmazeile1()) : EMPTY_FIELD_VALUE;
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCName1nachnamefirmazeile1()) : EMPTY_FIELD_VALUE;
 	}
 
 	public String getName2() {
-		return isPartnerDefined() ? getReportString(getPartnerDto()
-				.getCName2vornamefirmazeile2()) : EMPTY_FIELD_VALUE;
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCName2vornamefirmazeile2()) : EMPTY_FIELD_VALUE;
 	}
 
 	public String getName3() {
-		return isPartnerDefined() ? getReportString(getPartnerDto()
-				.getCName3vorname2abteilung()) : EMPTY_FIELD_VALUE;
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCName3vorname2abteilung()) : EMPTY_FIELD_VALUE;
 	}
 
 	public String getPLZ() {
-		return isLandplzortDefined() ? getReportString(getPartnerDto()
-				.getLandplzortDto().getCPlz()) : EMPTY_FIELD_VALUE;
+		return isLandplzortDefined() ? getReportString(getPartnerDto().getLandplzortDto().getCPlz())
+				: EMPTY_FIELD_VALUE;
 	}
 
 	public String getTelefon() {
-		return isPartnerDefined() ? getReportString(getPartnerDto()
-				.getCTelefon()) : EMPTY_FIELD_VALUE;
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCTelefon()) : EMPTY_FIELD_VALUE;
 	}
 
 	public String getFax() {
-		return isPartnerDefined() ? getReportString(getPartnerDto()
-				.getCFax()) : EMPTY_FIELD_VALUE;
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCFax()) : EMPTY_FIELD_VALUE;
 	}
 
 	public String getEmail() {
-		return isPartnerDefined() ? getReportString(getPartnerDto()
-				.getCEmail()) : EMPTY_FIELD_VALUE;
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCEmail()) : EMPTY_FIELD_VALUE;
 	}
 
 	public String getHomepage() {
-		return isPartnerDefined() ? getReportString(getPartnerDto()
-				.getCHomepage()) : EMPTY_FIELD_VALUE;
+		return isPartnerDefined() ? getReportString(getPartnerDto().getCHomepage()) : EMPTY_FIELD_VALUE;
 	}
 }

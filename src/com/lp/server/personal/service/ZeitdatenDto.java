@@ -34,6 +34,7 @@ package com.lp.server.personal.service;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 
 import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.system.service.HvDtoLogClass;
@@ -63,8 +64,76 @@ public class ZeitdatenDto implements Serializable, IIId {
 	private Timestamp tAendern;
 	private String cBelegartnr;
 	private String cWowurdegebucht;
-	
-	private Integer zeitdatenIId_BisZeit=null;
+	private Integer personalIIdErledigt;
+	private Timestamp tErledigt;
+	private Double fVerrechenbar;
+
+	private Double fDauerUebersteuert;
+
+	public Double getFDauerUebersteuert() {
+		return fDauerUebersteuert;
+	}
+
+	public void setFDauerUebersteuert(Double fDauerUebersteuert) {
+		this.fDauerUebersteuert = fDauerUebersteuert;
+	}
+
+	private String xKommentarIntern;
+
+	public String getXKommentarIntern() {
+		return xKommentarIntern;
+	}
+
+	public void setXKommentarIntern(String xKommentarIntern) {
+		this.xKommentarIntern = xKommentarIntern;
+	}
+
+	private Integer maschineIId;
+
+	public Integer getMaschineIId() {
+		return this.maschineIId;
+	}
+
+	public void setMaschineIId(Integer maschineIId) {
+		this.maschineIId = maschineIId;
+	}
+
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
+
+	private ArrayList<Integer> losIIdsFuerZeitverteilung = null;
+
+	public ArrayList<Integer> getLosIIdsFuerZeitverteilung() {
+		return losIIdsFuerZeitverteilung;
+	}
+
+	public void setLosIIdsFuerZeitverteilung(ArrayList<Integer> losIIdsFuerZeitverteilung) {
+		this.losIIdsFuerZeitverteilung = losIIdsFuerZeitverteilung;
+	}
+
+	private Integer zeitdatenIId_BisZeit = null;
+
 	public Integer getZeitdatenIId_BisZeit() {
 		return zeitdatenIId_BisZeit;
 	}
@@ -81,10 +150,10 @@ public class ZeitdatenDto implements Serializable, IIId {
 		this.tZeit_Bis = tZeit_Bis;
 	}
 
-	private Timestamp tZeit_Bis=null;
-	
-	//Wird nur fuer Stifzeiterfassung F630 verwendet
-	public boolean bFertigFuerLossollarbeitsplan=false;
+	private Timestamp tZeit_Bis = null;
+
+	// Wird nur fuer Stifzeiterfassung F630 verwendet
+	public boolean bFertigFuerLossollarbeitsplan = false;
 
 	public Integer getIId() {
 		return iId;
@@ -221,7 +290,6 @@ public class ZeitdatenDto implements Serializable, IIId {
 		this.bTaetigkeitgeaendert = bTaetigkeitgeaendert;
 	}
 
-	
 	public void setBAutomatikbuchung(Short bAutomatikbuchung) {
 		this.bAutomatikbuchung = bAutomatikbuchung;
 	}
@@ -242,66 +310,55 @@ public class ZeitdatenDto implements Serializable, IIId {
 		ZeitdatenDto that = (ZeitdatenDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.personalIId == null ? this.personalIId == null
-				: that.personalIId.equals(this.personalIId)))
+		if (!(that.personalIId == null ? this.personalIId == null : that.personalIId.equals(this.personalIId)))
 			return false;
-		if (!(that.tZeit == null ? this.tZeit == null : that.tZeit
-				.equals(this.tZeit)))
+		if (!(that.tZeit == null ? this.tZeit == null : that.tZeit.equals(this.tZeit)))
 			return false;
-		if (!(that.taetigkeitIId == null ? this.taetigkeitIId == null
-				: that.taetigkeitIId.equals(this.taetigkeitIId)))
+		if (!(that.taetigkeitIId == null ? this.taetigkeitIId == null : that.taetigkeitIId.equals(this.taetigkeitIId)))
 			return false;
-		if (!(that.hardwareIId == null ? this.hardwareIId == null
-				: that.hardwareIId.equals(this.hardwareIId)))
+		if (!(that.hardwareIId == null ? this.hardwareIId == null : that.hardwareIId.equals(this.hardwareIId)))
 			return false;
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen)))
 			return false;
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen)))
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		return true;
 	}
 
-	
 	public static ZeitdatenDto[] kopiereArrayUndVerschiebeAnfangsZeitNachSpaeter(ZeitdatenDto[] daten, long neueZeit) {
-		ZeitdatenDto[] kopie=kopiereArray(daten);
-		
+		ZeitdatenDto[] kopie = kopiereArray(daten);
+
 		for (int o = 0; o < kopie.length; o++) {
 			ZeitdatenDto zeitdatenDto_Aktuell = kopie[o];
-			if (zeitdatenDto_Aktuell.getTZeit().before(
-					new Timestamp(neueZeit))) {
-				zeitdatenDto_Aktuell
-						.setTZeit(new Timestamp(neueZeit));
+			if (zeitdatenDto_Aktuell.getTZeit().before(new Timestamp(neueZeit))) {
+				zeitdatenDto_Aktuell.setTZeit(new Timestamp(neueZeit));
 				kopie[o] = zeitdatenDto_Aktuell;
 			}
 		}
-		
+
 		return kopie;
 	}
-	
+
 	public static ZeitdatenDto[] kopiereArrayUndVerschiebeEndZeitNachFrueher(ZeitdatenDto[] daten, long neueZeit) {
-		ZeitdatenDto[] kopie=kopiereArray(daten);
-		
+		ZeitdatenDto[] kopie = kopiereArray(daten);
+
 		for (int o = 0; o < kopie.length; o++) {
 			ZeitdatenDto zeitdatenDto_Aktuell = kopie[o];
-			if (zeitdatenDto_Aktuell.getTZeit().after(
-					new Timestamp(neueZeit))) {
-				zeitdatenDto_Aktuell
-						.setTZeit(new Timestamp(neueZeit));
+			if (zeitdatenDto_Aktuell.getTZeit().after(new Timestamp(neueZeit))) {
+				zeitdatenDto_Aktuell.setTZeit(new Timestamp(neueZeit));
 				kopie[o] = zeitdatenDto_Aktuell;
 			}
 		}
-		
+
 		return kopie;
 	}
-	
+
 	public static ZeitdatenDto[] kopiereArray(ZeitdatenDto[] daten) {
 
 		if (daten != null) {

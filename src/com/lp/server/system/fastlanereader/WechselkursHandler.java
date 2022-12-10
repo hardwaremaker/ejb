@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.system.fastlanereader;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -54,6 +56,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
+import com.lp.util.BigDecimal13;
 import com.lp.util.BigDecimal6;
 import com.lp.util.EJBExceptionLP;
 
@@ -94,8 +97,8 @@ public class WechselkursHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = this.getTableInfo().getColumnClasses().length;
-			int pageSize = PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit();
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -131,21 +134,25 @@ public class WechselkursHandler extends UseCaseHandler {
 						rows[row][col++] = kurs.getId_comp()
 								.getWaehrung_c_nr_zu();
 						rows[row][col++] = kurs.getId_comp().getT_datum();
-						rows[row][col++] = new BigDecimal6(kurs.getN_kurs()
-								.floatValue());
+//						rows[row][col++] = new BigDecimal6(kurs.getN_kurs()
+//								.floatValue());
+						rows[row][col++] = new BigDecimal13(kurs.getN_kurs());
 					} else {
 						rows[row][col++] = kurs.getId_comp()
 								.getWaehrung_c_nr_von();
 						rows[row][col++] = kurs.getId_comp().getT_datum();
 						// hier den kurs invertieren
-						rows[row][col++] = new BigDecimal6(1.0).divide(new BigDecimal6(kurs
-								.getN_kurs().floatValue()));
+//						rows[row][col++] = new BigDecimal6(1.0).divide(new BigDecimal6(kurs
+//								.getN_kurs().floatValue()));
+						rows[row][col++] = new BigDecimal13(BigDecimal.ONE
+								.divide(kurs.getN_kurs(), 13, RoundingMode.HALF_EVEN));
 					}
 				} else {
 					rows[row][col++] = kurs.getId_comp().getWaehrung_c_nr_zu();
 					rows[row][col++] = kurs.getId_comp().getT_datum();
-					rows[row][col++] = new BigDecimal6(kurs.getN_kurs()
-							.floatValue());
+//					rows[row][col++] = new BigDecimal6(kurs.getN_kurs()
+//							.floatValue());
+					rows[row][col++] = new BigDecimal13(kurs.getN_kurs());
 				}
 				row++;
 				col = 0;
@@ -155,11 +162,7 @@ public class WechselkursHandler extends UseCaseHandler {
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
@@ -180,13 +183,7 @@ public class WechselkursHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
-			}
+			closeSession(session);
 		}
 		return rowCount;
 	}
@@ -315,8 +312,8 @@ public class WechselkursHandler extends UseCaseHandler {
 				}
 				orderBy.append("kurs."
 						+ SystemFac.FLR_WECHSELKURS_WAEHRUNG_C_NR_ZU + " ASC "
-						+ "kurs." + SystemFac.FLR_WECHSELKURS_T_DATUM
-						+ " DESC " + ", ");
+						+ ", kurs." + SystemFac.FLR_WECHSELKURS_T_DATUM
+						+ " DESC " + " ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf("kurs."
@@ -388,11 +385,7 @@ public class WechselkursHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-				}
+				closeSession(session);
 			}
 		}
 
@@ -412,7 +405,7 @@ public class WechselkursHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Object.class, String.class, Date.class,
-							BigDecimal6.class },
+							BigDecimal13.class },
 					new String[] {
 							"pk",
 							getTextRespectUISpr("lp.waehrung", mandantCNr,

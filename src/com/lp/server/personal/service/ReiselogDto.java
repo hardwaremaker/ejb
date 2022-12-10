@@ -62,7 +62,6 @@ public class ReiselogDto implements Serializable {
 	private Integer fahrzeugIId;
 	private Integer iBelegartid;
 	private String belegartCNr;
-	private Double fFaktor;
 	
 	public Integer getFahrzeugIId() {
 		return fahrzeugIId;
@@ -86,14 +85,6 @@ public class ReiselogDto implements Serializable {
 
 	public void setBelegartCNr(String belegartCNr) {
 		this.belegartCNr = belegartCNr;
-	}
-
-	public Double getFFaktor() {
-		return fFaktor;
-	}
-
-	public void setFFaktor(Double fFaktor) {
-		this.fFaktor = fFaktor;
 	}
 	public Integer getIId() {
 		return iId;

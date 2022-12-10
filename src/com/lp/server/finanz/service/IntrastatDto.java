@@ -70,7 +70,7 @@ public class IntrastatDto implements Serializable {
 	private BigDecimal statistischerWert = null;
 	private BigDecimal wert = null;
 	private String verfahren = null;
-	private int verkehrszweig = FinanzReportFac.INTRASTAT_VERKEHRSZWEIG;
+	private String verkehrszweig = null;
 	private PartnerDto partnerDto = null;
 	private ArtikelDto artikelDto = null;
 	private String belegart = null;
@@ -129,7 +129,7 @@ public class IntrastatDto implements Serializable {
 		return verfahren;
 	}
 
-	public int getVerkehrszweig() {
+	public String getVerkehrszweig() {
 		return verkehrszweig;
 	}
 
@@ -204,5 +204,9 @@ public class IntrastatDto implements Serializable {
 
 	public void setEinzelpreis(BigDecimal einzelpreis) {
 		this.einzelpreis = einzelpreis;
+	}
+	
+	public void setVerkehrszweig(String verkehrszweig) {
+		this.verkehrszweig = verkehrszweig;
 	}
 }

@@ -64,6 +64,16 @@ public class SonderzeitenDto implements Serializable {
 		this.iId = iId;
 	}
 
+	private Short bAutomatik;
+
+	public Short getBAutomatik() {
+		return bAutomatik;
+	}
+
+	public void setBAutomatik(Short bAutomatik) {
+		this.bAutomatik = bAutomatik;
+	}
+	
 	public Integer getPersonalIId() {
 		return personalIId;
 	}

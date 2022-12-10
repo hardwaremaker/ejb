@@ -37,9 +37,13 @@ import java.rmi.RemoteException;
 
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
+import com.lp.server.partner.service.LieferantDto;
+import com.lp.server.partner.service.LieferantFac;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
@@ -61,8 +65,12 @@ public class CoinRoundingHelper {
 	private ParameterFac parameterFac ;
 	private ArtikelFac artikelFac ;
 	private MandantFac mandantFac ;
-		
-	public CoinRoundingHelper(RechnungFac rechnungFac, KundeFac kundeFac, ArtikelFac artikelFac, ParameterFac parameterFac, MandantFac mandantFac) {
+	private LieferantFac lieferantFac;
+	
+	public CoinRoundingHelper(
+			RechnungFac rechnungFac,
+			KundeFac kundeFac, ArtikelFac artikelFac, 
+			ParameterFac parameterFac, MandantFac mandantFac) {
 		this.rechnungFac = rechnungFac ;
 		this.kundeFac = kundeFac ;
 		this.artikelFac = artikelFac ;
@@ -70,6 +78,14 @@ public class CoinRoundingHelper {
 		this.mandantFac = mandantFac ;
 	}
 	
+	public CoinRoundingHelper(LieferantFac lieferantFac, 
+			ParameterFac parameterFac, MandantFac mandantFac) {
+		this.lieferantFac = lieferantFac;
+		this.parameterFac = parameterFac;
+		this.mandantFac = mandantFac;
+	}
+	
+
 	/**
 	 * Stellt fest, ob das Runden des Endbetrags notwendig ist.
 	 * 
@@ -78,9 +94,14 @@ public class CoinRoundingHelper {
 	 * @return true wenn die Rundungsroutine durchgefuehrt werden soll, ansonsten false 
 	 */
 	public boolean isRoundingNeeded(RechnungDto rechnungDto, TheClientDto theClientDto) {
+		if(rechnungDto.isAnzahlungsRechnung()) return false;
 		return getMuenzRundung(rechnungDto, theClientDto) != null ;
 	}
-	
+
+	public boolean isRoundingNeeded(EingangsrechnungDto erDto, TheClientDto theClientDto) {
+		return getMuenzRundung(erDto, theClientDto) != null;
+	}
+
 	/**
 	 * Liefert den Betrag (in Landesw&auml;hrung) auf den gerundet werden soll
 	 * 
@@ -104,18 +125,27 @@ public class CoinRoundingHelper {
 	protected BigDecimal getMuenzRundung(RechnungDto rechnungDto,
 			TheClientDto theClientDto) {
 		Integer kundeIId = rechnungDto.getKundeIId() ;
-		KundeDto kundeDto = kundeFac.kundeFindByPrimaryKey(kundeIId, theClientDto) ;
-//		LandDto landDto = kundeDto.getPartnerDto().getLandplzortDto().getLandDto() ;
-		LandplzortDto landplzOrtDto = kundeDto.getPartnerDto().getLandplzortDto() ;
+		KundeDto kundeDto = kundeFac.kundeFindByPrimaryKey(kundeIId, theClientDto);
+		return getMuenzRundung(kundeDto.getPartnerDto(), rechnungDto.getWaehrungCNr());
+	}
+	
+	protected BigDecimal getMuenzRundung(EingangsrechnungDto erDto, TheClientDto theClientDto) {
+		Integer lieferantId = erDto.getLieferantIId();
+		LieferantDto lieferantDto = lieferantFac.lieferantFindByPrimaryKey(lieferantId, theClientDto);
+		return getMuenzRundung(lieferantDto.getPartnerDto(), erDto.getWaehrungCNr());
+	}
+	
+	protected BigDecimal getMuenzRundung(PartnerDto partnerDto, String belegWaehrungCnr) {
+		LandplzortDto landplzOrtDto = partnerDto.getLandplzortDto() ;
 		if(null == landplzOrtDto) return null ;
 
 		LandDto landDto = landplzOrtDto.getLandDto() ;
-		if(!rechnungDto.getWaehrungCNr().equals(landDto.getWaehrungCNr())) return null ;
+		if(!belegWaehrungCnr.equals(landDto.getWaehrungCNr())) return null ;
 		
-		return landDto.getNMuenzRundung() ;
+		return landDto.getNMuenzRundung();
 	}
-	
-	
+
+
 	public ArtikelDto getItemIIdForRounding(TheClientDto theClientDto) throws RemoteException {
 		try {
 			ParametermandantDto parameterDto = parameterFac.getMandantparameter(
@@ -205,7 +235,11 @@ public class CoinRoundingHelper {
 			belegDto.setBMwstsatzuebersteuert(Helper.getShortFalse()) ;
 			belegDto.setBRabattsatzuebersteuert(Helper.getShortFalse()) ;
 			belegDto.setBelegIId(rechnungDto.getIId()) ;
-			belegDto.setEinheitCNr(artikelDto.getEinheitCNr()) ;
+			belegDto.setEinheitCNr(artikelDto.getEinheitCNr());
+			if(artikelDto.getMwstsatzbezIId() == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_RUNDUNGSARTIKEL_KEIN_MWSTSATZ_DEFINIERT, "Artikel '" + artikelDto.getCNr() + "' hat keinen Mwstsatz definiert");
+			}
+			
 			MwstsatzDto mwstsatzDto = mandantFac.mwstsatzFindZuDatum(artikelDto.getMwstsatzbezIId(), rechnungDto.getTBelegdatum()) ;
 			belegDto.setMwstsatzIId(mwstsatzDto.getIId()) ;
 			

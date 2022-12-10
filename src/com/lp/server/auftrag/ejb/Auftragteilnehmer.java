@@ -74,6 +74,17 @@ public class Auftragteilnehmer implements Serializable {
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
 
+	@Column(name = "KOSTENSTELLE_I_ID")
+	private Integer kostenstelleIId;
+
+	public Integer getKostenstelleIId() {
+		return this.kostenstelleIId;
+	}
+
+	public void setKostenstelleIId(Integer kostenstelleIId) {
+		this.kostenstelleIId = kostenstelleIId;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public Auftragteilnehmer(Integer iId, 

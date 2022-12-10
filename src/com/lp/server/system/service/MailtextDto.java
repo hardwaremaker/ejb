@@ -36,7 +36,6 @@ import java.sql.Date;
 import java.util.Locale;
 
 import com.lp.server.personal.service.PersonalDto;
-import com.lp.util.report.PersonRpt;
 
 /**
  * <p>
@@ -76,9 +75,16 @@ public class MailtextDto implements java.io.Serializable {
 	private String mailText = null;
 	private String paramModul = null;
 	private String paramMandantCNr = null;
-	
+
 	private String rekla_kndreklanr = null;
 	private String rekla_kndlsnr = null;
+
+	private Integer projektIId = null;
+	private String angebotAnfragenummer = null;
+	private Integer belegVersion = null;
+	private String rechnungsart = null;
+	private String mailKopftext = null;
+
 	public String getRekla_kndreklanr() {
 		return rekla_kndreklanr;
 	}
@@ -97,11 +103,20 @@ public class MailtextDto implements java.io.Serializable {
 
 	private String rekla_lieferschein = null;
 	private String rekla_rechnung = null;
-	private String rekla_we_lsnr= null;
-	private String rekla_we_datum= null;
-	private String rekla_we_lsdatum= null;
+	private String rekla_we_lsnr = null;
+	private String rekla_we_datum = null;
+	private String rekla_we_lsdatum = null;
 
 	
+	private java.sql.Date bisDatum=null;
+	
+	public java.sql.Date getBisDatum() {
+		return bisDatum;
+	}
+
+	public void setBisDatum(java.sql.Date bisDatum) {
+		this.bisDatum = bisDatum;
+	}
 
 	public String getRekla_lieferschein() {
 		return rekla_lieferschein;
@@ -151,10 +166,152 @@ public class MailtextDto implements java.io.Serializable {
 		this.kundenbestellnummer = kundenbestellnummer;
 	}
 
+	private String person_anrede = null;
+
+	public String getPerson_anrede() {
+		return person_anrede;
+	}
+
+	public void setPerson_anrede(String person_anrede) {
+		this.person_anrede = person_anrede;
+	}
+
+	public String getPerson_personalnummer() {
+		return person_personalnummer;
+	}
+
+	public void setPerson_personalnummer(String person_personalnummer) {
+		this.person_personalnummer = person_personalnummer;
+	}
+
+	public String getPerson_titel() {
+		return person_titel;
+	}
+
+	public void setPerson_titel(String person_titel) {
+		this.person_titel = person_titel;
+	}
+
+	public String getPerson_vorname1() {
+		return person_vorname1;
+	}
+
+	public void setPerson_vorname1(String person_vorname1) {
+		this.person_vorname1 = person_vorname1;
+	}
+
+	public String getPerson_vorname2() {
+		return person_vorname2;
+	}
+
+	public void setPerson_vorname2(String person_vorname2) {
+		this.person_vorname2 = person_vorname2;
+	}
+
+	public String getPerson_nachname() {
+		return person_nachname;
+	}
+
+	public void setPerson_nachname(String person_nachname) {
+		this.person_nachname = person_nachname;
+	}
+
+	public String getPerson_ntitel() {
+		return person_ntitel;
+	}
+
+	public void setPerson_ntitel(String person_ntitel) {
+		this.person_ntitel = person_ntitel;
+	}
+
+	private String person_personalnummer = null;
+	private String person_titel = null;
+	private String person_vorname1 = null;
+	private String person_vorname2 = null;
+	private String person_nachname = null;
+	private String person_ntitel = null;
+
+	private String xlsmailversand_projekt = null;
+	public String getXlsmailversand_projekt() {
+		return xlsmailversand_projekt;
+	}
+
+	public void setXlsmailversand_projekt(String xlsmailversand_projekt) {
+		this.xlsmailversand_projekt = xlsmailversand_projekt;
+	}
+
+	public String getXlsmailversand_endkunde() {
+		return xlsmailversand_endkunde;
+	}
+
+	public void setXlsmailversand_endkunde(String xlsmailversand_endkunde) {
+		this.xlsmailversand_endkunde = xlsmailversand_endkunde;
+	}
+
+	public java.util.Date getXlsmailversand_abgabetermin() {
+		return xlsmailversand_abgabetermin;
+	}
+
+	public void setXlsmailversand_abgabetermin(java.util.Date xlsmailversand_abgabetermin) {
+		this.xlsmailversand_abgabetermin = xlsmailversand_abgabetermin;
+	}
+
+	private String xlsmailversand_endkunde = null;
+	private java.util.Date xlsmailversand_abgabetermin = null;
+	private java.util.Date xlsmailversand_geplanterfertigungstermin = null;
+
+	public java.util.Date getXlsmailversand_geplanterfertigungstermin() {
+		return xlsmailversand_geplanterfertigungstermin;
+	}
+
+	public void setXlsmailversand_geplanterfertigungstermin(java.util.Date xlsmailversand_geplanterfertigungstermin) {
+		this.xlsmailversand_geplanterfertigungstermin = xlsmailversand_geplanterfertigungstermin;
+	}
+
 	private String paramXslFile = null;
 	private Locale paramLocale = null;
 	private String kundenbestellnummer = null;
 	private String abnummer = null;
+	private Integer anwesenheitsLfdnr;
+	
+	private String ls_spediteur_name = null;
+		public String getLs_spediteur_name() {
+		return ls_spediteur_name;
+	}
+
+	public void setLs_spediteur_name(String ls_spediteur_name) {
+		this.ls_spediteur_name = ls_spediteur_name;
+	}
+
+	public String getLs_spediteur_website() {
+		return ls_spediteur_website;
+	}
+
+	public void setLs_spediteur_website(String ls_spediteur_website) {
+		this.ls_spediteur_website = ls_spediteur_website;
+	}
+
+		private String ls_spediteur_website = null;
+	
+	private String ls_versandnummer = null;
+	public String getLs_versandnummer() {
+		return ls_versandnummer;
+	}
+
+	public void setLs_versandnummer(String ls_versandnummer) {
+		this.ls_versandnummer = ls_versandnummer;
+	}
+
+	public String getLs_versandnummer2() {
+		return ls_versandnummer2;
+	}
+
+	public void setLs_versandnummer2(String ls_versandnummer2) {
+		this.ls_versandnummer2 = ls_versandnummer2;
+	}
+
+	private String ls_versandnummer2 = null;
+	
 
 	public String getAbnummer() {
 		return abnummer;
@@ -282,5 +439,53 @@ public class MailtextDto implements java.io.Serializable {
 
 	public void setParamXslFile(String paramXslFile) {
 		this.paramXslFile = paramXslFile;
+	}
+
+	public Integer getProjektIId() {
+		return projektIId;
+	}
+
+	public void setProjektIId(Integer projektIId) {
+		this.projektIId = projektIId;
+	}
+
+	public void setAngebotAnfragenummer(String angebotAnfragenummer) {
+		this.angebotAnfragenummer = angebotAnfragenummer;
+	}
+
+	public String getAngebotAnfragenummer() {
+		return angebotAnfragenummer;
+	}
+
+	public void setAnwesenheitsLfdnr(Integer iLfdnr) {
+		this.anwesenheitsLfdnr = iLfdnr;
+	}
+
+	public Integer getAnwesenheitsLfdnr() {
+		return anwesenheitsLfdnr;
+	}
+	
+	public Integer getBelegVersion() {
+		return belegVersion;
+	}
+	
+	public void setBelegVersion(Integer belegVersion) {
+		this.belegVersion = belegVersion;
+	}
+	
+	public void setRechnungsart(String rechnungsart) {
+		this.rechnungsart = rechnungsart;
+	}
+	
+	public String getRechnungsart() {
+		return rechnungsart;
+	}
+	
+	public void setMailKopftext(String mailKopftext) {
+		this.mailKopftext = mailKopftext;
+	}
+	
+	public String getMailKopftext() {
+		return mailKopftext;
 	}
 }

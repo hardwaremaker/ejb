@@ -52,6 +52,8 @@ public class DatevExportBuchungFormatter extends DatevExportZeileFormatter {
 	public static final String BUCHUNGSTEXT = "Buchungstext";
 	public static final String UID = "UID";
 	public static final String EU_STEUERSATZ = "EU-Steuersatz";
+	public static final String BELEGFELD3 = "Belegfeld 3";
+	public static final String BELEGFELD4 = "Belegfeld 4";
 	
 	public DatevExportBuchungFormatter(BuchungsjournalExportDatevBuchung buchung) {
 		super(41);
@@ -68,10 +70,13 @@ public class DatevExportBuchungFormatter extends DatevExportZeileFormatter {
 		fields.put(KONTO, 			new ExportDatevField(7, true, false, 9, buchung.getKonto()));
 		fields.put(GEGENKONTO, 		new ExportDatevField(8, true, false, 9, buchung.getGegenkonto()));
 		fields.put(BU_SCHLUESSEL,	new ExportDatevField(9, false, 2, buchung.getBuSchluessel()));
-		fields.put(BELEGDATUM, 		new ExportDatevField(10, true, false, 4, Helper.formatMMTT(buchung.getBelegdatum().getTime())));
+//		fields.put(BELEGDATUM, 		new ExportDatevField(10, true, false, 4, Helper.formatMMTT(buchung.getBelegdatum().getTime())));
+		fields.put(BELEGDATUM, 		new ExportDatevField(10, true, false, 4, Helper.formatTTMM(buchung.getBelegdatum().getTime())));
 		fields.put(BELEGFELD1, 		new ExportDatevField(11, false, 12, buchung.getBeleg()));
 		fields.put(BUCHUNGSTEXT, 	new ExportDatevField(14, false, 60, buchung.getBuchungstext()));
 		fields.put(UID, 			new ExportDatevField(15, false, 15, buchung.getUid() == null ? null : buchung.getUid().replaceAll(" ", "")));
+		fields.put(BELEGFELD3,		new ExportDatevField(22, false, true, 80, buchung.getBelegInfo1()));
+		fields.put(BELEGFELD4,		new ExportDatevField(24, false, true, 80, buchung.getBelegInfo2()));
 		fields.put(EU_STEUERSATZ, 	new ExportDatevField(40, false, false, 16, buchung.getEuSteuersatz() == null ? null : df.format(buchung.getEuSteuersatz())));
 	}
 	

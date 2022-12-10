@@ -47,8 +47,12 @@ import org.hibernate.SessionFactory;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.fertigung.service.LosgutschlechtDto;
 import com.lp.server.fertigung.service.LossollarbeitsplanDto;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdaten;
+import com.lp.server.personal.service.TelefonzeitenDto;
 import com.lp.server.personal.service.ZeiterfassungFac;
+import com.lp.server.projekt.service.BereichDto;
+import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.Facade;
@@ -65,8 +69,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Zeitdaten implementiert. Pro UseCase
- * gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Zeitdaten implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur GmbH (c) 2004
@@ -99,8 +103,7 @@ public class ZeitdatenHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -112,25 +115,28 @@ public class ZeitdatenHandler extends UseCaseHandler {
 			Date letzte_zeit = null;
 			String sLetzteTaetigkeit = null;
 			boolean bEnde = false;
+
+			FLRZeitdaten flrZeitdatenVorgaenger = null;
+
 			while (resultListIterator.hasNext()) {
 
-				Object[] o=(Object[])resultListIterator
-						.next();
-				FLRZeitdaten zeitdaten =(FLRZeitdaten) o[0]; 
+				Object[] o = (Object[]) resultListIterator.next();
+				FLRZeitdaten zeitdaten = (FLRZeitdaten) o[0];
 				String dauer = null;
-
 
 				if (letzte_zeit != null) {
 
-					long l_zeitdec = zeitdaten.getT_zeit().getTime()
-							- letzte_zeit.getTime();
+					if (zeitdaten.getFlrtaetigkeit() != null
+							&& zeitdaten.getFlrtaetigkeit().getC_nr().equals(ZeiterfassungFac.TAETIGKEIT_KOMMT)) {
+						// PJ 19944 Bei Kommt Dauer auslassen
+					} else {
+						long l_zeitdec = zeitdaten.getT_zeit().getTime() - letzte_zeit.getTime();
 
-					Double d = Helper.time2Double(new java.sql.Time(
-							l_zeitdec - 3600000));
+						Double d = Helper.time2Double(new java.sql.Time(l_zeitdec - 3600000));
 
-					java.text.DecimalFormat df = new java.text.DecimalFormat(
-							"00.00");
-					dauer = df.format(d.doubleValue()).toString();
+						java.text.DecimalFormat df = new java.text.DecimalFormat("00.00");
+						dauer = df.format(d.doubleValue()).toString();
+					}
 				} else {
 					dauer = null;
 				}
@@ -140,42 +146,120 @@ public class ZeitdatenHandler extends UseCaseHandler {
 				if (zeitdaten.getFlrtaetigkeit() != null) {
 					try {
 						rows[row][col++] = getZeiterfassungFac()
-								.taetigkeitFindByPrimaryKey(
-										zeitdaten.getFlrtaetigkeit().getI_id(),
-										theClientDto).getBezeichnung();
+								.taetigkeitFindByPrimaryKey(zeitdaten.getFlrtaetigkeit().getI_id(), theClientDto)
+								.getBezeichnung();
 					} catch (RemoteException ex1) {
 						throwEJBExceptionLPRespectOld(ex1);
 					}
 				} else {
-					rows[row][col++] = zeitdaten.getFlrartikel().getC_nr();
+
+					if (zeitdaten.getFlrartikel() != null) {
+
+						rows[row][col++] = zeitdaten.getFlrartikel().getC_nr();
+					} else {
+						rows[row][col++] = null;
+					}
 				}
 
 				String sZusatz = null;
 
+				Integer partnerIId = null;
+				Integer kundeIId = null;
+
 				if (bEnde == false) {
 
-					if (sLetzteTaetigkeit != null
-							&& zeitdaten.getFlrtaetigkeit() != null) {
-						if (sLetzteTaetigkeit.equals(zeitdaten
-								.getFlrtaetigkeit().getC_nr())
-								&& zeitdaten
-										.getFlrtaetigkeit()
-										.getTaetigkeitart_c_nr()
+					if (sLetzteTaetigkeit != null && zeitdaten.getFlrtaetigkeit() != null) {
+						if (sLetzteTaetigkeit.equals(zeitdaten.getFlrtaetigkeit().getC_nr())
+								&& zeitdaten.getFlrtaetigkeit().getTaetigkeitart_c_nr()
 										.equals(ZeiterfassungFac.TAETIGKEITART_SONDERTAETIGKEIT)) {
-							if (zeitdaten.getFlrtaetigkeit().getC_nr()
-									.equals(ZeiterfassungFac.TAETIGKEIT_KOMMT)
-									|| zeitdaten
-											.getFlrtaetigkeit()
-											.getC_nr()
-											.equals(ZeiterfassungFac.TAETIGKEIT_GEHT)
-									|| zeitdaten
-											.getFlrtaetigkeit()
-											.getC_nr()
+							if (zeitdaten.getFlrtaetigkeit().getC_nr().equals(ZeiterfassungFac.TAETIGKEIT_KOMMT)
+									|| zeitdaten.getFlrtaetigkeit().getC_nr().equals(ZeiterfassungFac.TAETIGKEIT_GEHT)
+									|| zeitdaten.getFlrtaetigkeit().getC_nr()
 											.equals(ZeiterfassungFac.TAETIGKEIT_ENDE)) {
 							} else {
 								sZusatz = "Ende";
-								rows[row - 1][col] = "Beginn";
+
 								bEnde = true;
+
+								// PJ20931
+								String projektZusatz = " ";
+								if (zeitdaten.getFlrtaetigkeit().getC_nr()
+										.equals(ZeiterfassungFac.TAETIGKEIT_TELEFON)) {
+									try {
+										TelefonzeitenDto telefonzeitenDto = getZeiterfassungFac()
+												.telefonzeitenFindByPersonalIIdTVon(zeitdaten.getPersonal_i_id(),
+														new java.sql.Timestamp(
+																flrZeitdatenVorgaenger.getT_zeit().getTime()));
+
+										partnerIId=telefonzeitenDto.getPartnerIId();
+										
+										if (telefonzeitenDto.getProjektIId() != null) {
+											ProjektDto pjDto = getProjektFac()
+													.projektFindByPrimaryKey(telefonzeitenDto.getProjektIId());
+
+											partnerIId = pjDto.getPartnerIId();
+
+											// PJ21601
+											String bemerkung = "";
+											if (telefonzeitenDto.getXKommentarint() != null) {
+												bemerkung = " "
+														+ Helper.strippHTML(telefonzeitenDto.getXKommentarint());
+											}
+
+											BereichDto bereichDto = getProjektServiceFac()
+													.bereichFindByPrimaryKey(pjDto.getBereichIId());
+
+											projektZusatz = bemerkung + " " + bereichDto.getCBez() + " "
+													+ pjDto.getCNr() + " " + pjDto.getCTitel();
+
+										} else if (telefonzeitenDto.getAngebotIId() != null) {
+											com.lp.server.angebot.service.AngebotDto angebot = getAngebotFac()
+													.angebotFindByPrimaryKey(telefonzeitenDto.getAngebotIId(),
+															theClientDto);
+
+											kundeIId = angebot.getKundeIIdAngebotsadresse();
+
+											projektZusatz += " AG" + angebot.getCNr();
+											if (angebot.getCBez() != null) {
+												projektZusatz = projektZusatz + "," + angebot.getCBez();
+											}
+										} else if (telefonzeitenDto.getAuftragIId() != null) {
+											com.lp.server.auftrag.service.AuftragDto auftragDto = getAuftragFac()
+													.auftragFindByPrimaryKeyOhneExc(telefonzeitenDto.getAuftragIId());
+
+											kundeIId = auftragDto.getKundeIIdAuftragsadresse();
+
+											if (auftragDto != null) {
+												projektZusatz += " AB" + auftragDto.getCNr();
+												if (auftragDto.getCBezProjektbezeichnung() != null) {
+													projektZusatz = projektZusatz + "," + auftragDto.getCBezProjektbezeichnung();
+												}
+											}
+										}
+
+									} catch (Throwable e) {
+										// throwEJBExceptionLPRespectOld(e);
+									}
+
+								}
+
+								rows[row - 1][col+1] = "Beginn" + projektZusatz;
+								
+								if (partnerIId != null || kundeIId != null) {
+
+									PartnerDto partnerDto = null;
+
+									if (kundeIId != null) {
+										partnerDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto).getPartnerDto();
+									} else {
+										partnerDto = getPartnerFac().partnerFindByPrimaryKey(partnerIId, theClientDto);
+									}
+
+									rows[row - 1][col] = partnerDto.formatFixName1Name2();
+
+								} 
+								partnerIId=null;
+								kundeIId=null;
 
 							}
 						}
@@ -186,158 +270,147 @@ public class ZeitdatenHandler extends UseCaseHandler {
 				}
 
 				if (zeitdaten.getArtikel_i_id() != null) {
-					if (zeitdaten.getC_belegartnr() != null
-							&& zeitdaten.getI_belegartid() != null) {
-						if (zeitdaten.getC_belegartnr().equals(
-								LocaleFac.BELEGART_AUFTRAG)) {
+					if (zeitdaten.getC_belegartnr() != null && zeitdaten.getI_belegartid() != null) {
+						if (zeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_AUFTRAG)) {
 
 							com.lp.server.auftrag.service.AuftragDto auftragDto = getAuftragFac()
-									.auftragFindByPrimaryKey(
-											zeitdaten.getI_belegartid());
+									.auftragFindByPrimaryKeyOhneExc(zeitdaten.getI_belegartid());
 
-							sZusatz = "AB" + auftragDto.getCNr();
-							if (auftragDto.getCBezProjektbezeichnung() != null) {
-								sZusatz = sZusatz
-										+ ","
-										+ auftragDto
-												.getCBezProjektbezeichnung();
+							if (auftragDto != null) {
+
+								kundeIId = auftragDto.getKundeIIdAuftragsadresse();
+
+								sZusatz = "AB" + auftragDto.getCNr();
+								if (auftragDto.getCBezProjektbezeichnung() != null) {
+									sZusatz = sZusatz + "," + auftragDto.getCBezProjektbezeichnung();
+								}
 							}
 
-						} else if (zeitdaten.getC_belegartnr().equals(
-								LocaleFac.BELEGART_LOS)) {
+						} else if (zeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_LOS)) {
 							try {
 								com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
-										.losFindByPrimaryKey(
-												zeitdaten.getI_belegartid());
+										.losFindByPrimaryKey(zeitdaten.getI_belegartid());
 
 								sZusatz = "LO" + losDto.getCNr();
-								
-								
-								//PJ18515
-								if(losDto.getStuecklisteIId()!=null){
-									StuecklisteDto stklDto=getStuecklisteFac().stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theClientDto);
-									if(stklDto.getArtikelDto()!=null && stklDto.getArtikelDto().getArtikelsprDto()!=null){
-										sZusatz +=","+stklDto.getArtikelDto().getArtikelsprDto().getCBez();
-									}
-								}
-								
-								
-								if (losDto.getCProjekt() != null) {
-									sZusatz = sZusatz + ","
-											+ losDto.getCProjekt()+", ";
+
+								if (losDto.getKundeIId() != null) {
+									kundeIId = losDto.getKundeIId();
+								} else if (losDto.getAuftragIId() != null) {
+									com.lp.server.auftrag.service.AuftragDto auftragDto = getAuftragFac()
+											.auftragFindByPrimaryKey(losDto.getAuftragIId());
+									kundeIId = auftragDto.getKundeIIdAuftragsadresse();
 								}
 
-								
-							
-								
-								
+								// PJ18515
+								if (losDto.getStuecklisteIId() != null) {
+									StuecklisteDto stklDto = getStuecklisteFac()
+											.stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theClientDto);
+									if (stklDto.getArtikelDto() != null
+											&& stklDto.getArtikelDto().getArtikelsprDto() != null) {
+										sZusatz += "," + stklDto.getArtikelDto().getArtikelsprDto().getCBez();
+									}
+								}
+
+								if (losDto.getCProjekt() != null) {
+									sZusatz = sZusatz + "," + losDto.getCProjekt() + ", ";
+								}
+
 								// PJ16029
 								if (zeitdaten.getI_belegartpositionid() != null) {
 									LossollarbeitsplanDto soapDto = getFertigungFac()
 											.lossollarbeitsplanFindByPrimaryKeyOhneExc(
-													zeitdaten
-															.getI_belegartpositionid());
+													zeitdaten.getI_belegartpositionid());
 
 									if (soapDto != null) {
-										sZusatz += " AG:"
-												+ soapDto
-														.getIArbeitsgangnummer();
+										sZusatz += " AG:" + soapDto.getIArbeitsgangnummer();
 										if (soapDto.getIUnterarbeitsgang() != null) {
-											sZusatz += " UAG:"
-													+ soapDto
-															.getIUnterarbeitsgang();
+											sZusatz += " UAG:" + soapDto.getIUnterarbeitsgang();
 										}
 									}
 
 								}
 
 							} catch (RemoteException ex) {
-								throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
-										ex);
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 							}
-						} else if (zeitdaten.getC_belegartnr().equals(
-								LocaleFac.BELEGART_PROJEKT)) {
+						} else if (zeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_PROJEKT)) {
 
 							com.lp.server.projekt.service.ProjektDto projektDto = null;
 							try {
-								projektDto = getProjektFac()
-										.projektFindByPrimaryKey(
-												zeitdaten.getI_belegartid());
+								projektDto = getProjektFac().projektFindByPrimaryKey(zeitdaten.getI_belegartid());
+
+								partnerIId = projektDto.getPartnerIId();
+
 							} catch (RemoteException e) {
 								throwEJBExceptionLPRespectOld(e);
 							}
 
 							sZusatz = "PJ" + projektDto.getCNr();
 							if (projektDto.getCTitel() != null) {
-								sZusatz = sZusatz + ", "
-										+ projektDto.getCTitel();
+								sZusatz = sZusatz + ", " + projektDto.getCTitel();
 							}
 
-						} else if (zeitdaten.getC_belegartnr().equals(
-								LocaleFac.BELEGART_ANGEBOT)) {
+						} else if (zeitdaten.getC_belegartnr().equals(LocaleFac.BELEGART_ANGEBOT)) {
 							try {
 								com.lp.server.angebot.service.AngebotDto angebot = getAngebotFac()
-										.angebotFindByPrimaryKey(
-												zeitdaten.getI_belegartid(),
-												theClientDto);
+										.angebotFindByPrimaryKey(zeitdaten.getI_belegartid(), theClientDto);
+
+								kundeIId = angebot.getKundeIIdAngebotsadresse();
 
 								sZusatz = "AG" + angebot.getCNr();
 								if (angebot.getCBez() != null) {
 									sZusatz = sZusatz + "," + angebot.getCBez();
 								}
 							} catch (RemoteException ex) {
-								throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
-										ex);
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 							}
 						}
 
 					}
 				}
 
-				
-				
-				//PJ17866
-				LosgutschlechtDto[] lgsDtos = getFertigungFac()
-						.losgutschlechtFindByZeitdatenIId(zeitdaten.getI_id());
+				// PJ17866
+				LosgutschlechtDto[] lgsDtos = getFertigungFac().losgutschlechtFindByZeitdatenIId(zeitdaten.getI_id());
 				if (lgsDtos.length > 0) {
-					if(sZusatz!=null && sZusatz.length()>0){
-						sZusatz+="; ";
-					} 
-					if(sZusatz==null){
-						sZusatz="";
+					if (sZusatz != null && sZusatz.length() > 0) {
+						sZusatz += "; ";
 					}
-					
+					if (sZusatz == null) {
+						sZusatz = "";
+					}
+
 					for (int u = 0; u < lgsDtos.length; u++) {
 						try {
 							LossollarbeitsplanDto lossollaDto = getFertigungFac()
-									.lossollarbeitsplanFindByPrimaryKey(
-											lgsDtos[u]
-													.getLossollarbeitsplanIId());
+									.lossollarbeitsplanFindByPrimaryKey(lgsDtos[u].getLossollarbeitsplanIId());
 
 							com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
 									.losFindByPrimaryKey(lossollaDto.getLosIId());
-							sZusatz += "LO" + losDto.getCNr()+",";
-							
-							if(losDto.getStuecklisteIId()!=null){
-								StuecklisteDto stklDto=getStuecklisteFac().stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theClientDto);
-								ArtikelDto artikelDto=getArtikelFac().artikelFindByPrimaryKeySmall(stklDto.getArtikelIId(), theClientDto);
-								
-								sZusatz += artikelDto.getCNr()+", ";
-								
-							}
-							
-							if(lossollaDto.getIArbeitsgangnummer()!=null){
-								sZusatz += " AG:"+lossollaDto.getIArbeitsgangnummer();
-							}
-							if(lossollaDto.getIUnterarbeitsgang()!=null){
-								sZusatz += " UAG:"+lossollaDto.getIUnterarbeitsgang();
-							}
-							
+							sZusatz += "LO" + losDto.getCNr() + ",";
 
-							sZusatz += ", G:"+Helper.formatZahl(lgsDtos[u].getNGut(),0, theClientDto.getLocUi());
-							sZusatz += ", S:"+Helper.formatZahl(lgsDtos[u].getNSchlecht(),0, theClientDto.getLocUi());
-							sZusatz += ", I:"+Helper.formatZahl(lgsDtos[u].getNInarbeit(),0, theClientDto.getLocUi());
-							
+							if (losDto.getStuecklisteIId() != null) {
+								StuecklisteDto stklDto = getStuecklisteFac()
+										.stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theClientDto);
+								ArtikelDto artikelDto = getArtikelFac()
+										.artikelFindByPrimaryKeySmall(stklDto.getArtikelIId(), theClientDto);
+
+								sZusatz += artikelDto.getCNr() + ", ";
+
+							}
+
+							if (lossollaDto.getIArbeitsgangnummer() != null) {
+								sZusatz += " AG:" + lossollaDto.getIArbeitsgangnummer();
+							}
+							if (lossollaDto.getIUnterarbeitsgang() != null) {
+								sZusatz += " UAG:" + lossollaDto.getIUnterarbeitsgang();
+							}
+
+							sZusatz += ", G:" + Helper.formatZahl(lgsDtos[u].getNGut(), 0, theClientDto.getLocUi());
+							sZusatz += ", S:"
+									+ Helper.formatZahl(lgsDtos[u].getNSchlecht(), 0, theClientDto.getLocUi());
+							sZusatz += ", I:"
+									+ Helper.formatZahl(lgsDtos[u].getNInarbeit(), 0, theClientDto.getLocUi());
+
 							sZusatz += "; ";
 						} catch (RemoteException ex) {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
@@ -346,9 +419,24 @@ public class ZeitdatenHandler extends UseCaseHandler {
 
 				}
 
+				if (partnerIId != null || kundeIId != null) {
+
+					PartnerDto partnerDto = null;
+
+					if (kundeIId != null) {
+						partnerDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto).getPartnerDto();
+					} else {
+						partnerDto = getPartnerFac().partnerFindByPrimaryKey(partnerIId, theClientDto);
+					}
+
+					rows[row][col++] = partnerDto.formatFixName1Name2();
+
+				} else {
+					rows[row][col++] = null;
+				}
+
 				rows[row][col++] = sZusatz;
-				rows[row][col++] = new java.sql.Time(zeitdaten.getT_zeit()
-						.getTime()).toString();
+				rows[row][col++] = new java.sql.Time(zeitdaten.getT_zeit().getTime()).toString();
 
 				// Damit Dauer eines vorher steht
 				if (row > 0) {
@@ -367,10 +455,8 @@ public class ZeitdatenHandler extends UseCaseHandler {
 					sAutomatikbuchung = " A";
 				}
 
-				rows[row][col++] = istBuchungManipuliert(zeitdaten.getT_zeit(),
-						zeitdaten.getT_aendern())
-						+ sNurTaetigkeitGeaendert
-						+ sAutomatikbuchung;
+				rows[row][col++] = istBuchungManipuliert(zeitdaten.getT_zeit(), zeitdaten.getT_aendern())
+						+ sNurTaetigkeitGeaendert + sAutomatikbuchung;
 
 				rows[row++][col++] = zeitdaten.getC_wowurdegebucht();
 
@@ -381,10 +467,11 @@ public class ZeitdatenHandler extends UseCaseHandler {
 					sLetzteTaetigkeit = null;
 				}
 
+				flrZeitdatenVorgaenger = zeitdaten;
+
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -397,12 +484,10 @@ public class ZeitdatenHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public static String istBuchungManipuliert(Date t1, Date t2)
-			throws EJBExceptionLP {
+	public static String istBuchungManipuliert(Date t1, Date t2) throws EJBExceptionLP {
 		String sManipuliert = "";
 
-		if ((t1.getTime() - t2.getTime()) > 180000
-				|| (t1.getTime() - t2.getTime()) < -180000) {
+		if ((t1.getTime() - t2.getTime()) > 180000 || (t1.getTime() - t2.getTime()) < -180000) {
 			sManipuliert = "H";
 		}
 
@@ -416,8 +501,7 @@ public class ZeitdatenHandler extends UseCaseHandler {
 		try {
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -436,8 +520,8 @@ public class ZeitdatenHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -448,8 +532,7 @@ public class ZeitdatenHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -460,17 +543,14 @@ public class ZeitdatenHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper("
-								+ filterKriterien[i].kritName + ")");
+						where.append(" upper(" + filterKriterien[i].kritName + ")");
 					} else {
-						where.append(" "
-								+ filterKriterien[i].kritName);
+						where.append(" " + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -499,8 +579,7 @@ public class ZeitdatenHandler extends UseCaseHandler {
 				for (int i = 0; i < kriterien.length; i++) {
 					// nodbfeld: 2: Hier alle Spaltennamen, die mit X enden beim
 					// sortieren ignorieren.
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -517,12 +596,10 @@ public class ZeitdatenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("zeitdaten."
-						+ ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT + " ASC ");
+				orderBy.append("zeitdaten." + ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT + " ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("zeitdaten."
-					+ ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT) < 0) {
+			if (orderBy.indexOf("zeitdaten." + ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -531,8 +608,7 @@ public class ZeitdatenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" zeitdaten."
-						+ ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT + " ");
+				orderBy.append(" zeitdaten." + ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -551,15 +627,13 @@ public class ZeitdatenHandler extends UseCaseHandler {
 		return "from FLRZeitdaten zeitdaten LEFT OUTER JOIN zeitdaten.flrartikel.artikelsprset AS aspr ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
 		int rowNumber = 0;
 
-		if (selectedId != null && selectedId instanceof Integer
-				&& ((Integer) selectedId).intValue() >= 0) {
+		if (selectedId != null && selectedId instanceof Integer && ((Integer) selectedId).intValue() >= 0) {
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			Session session = null;
 
@@ -605,31 +679,28 @@ public class ZeitdatenHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class, String.class,
-					String.class, String.class }, new String[] { "Id",
-					getTextRespectUISpr("lp.taetigkeit", mandantCNr, locUI),
-					getTextRespectUISpr("lp.zusatz", mandantCNr, locUI),
-					getTextRespectUISpr("lp.zeit", mandantCNr, locUI),
-					getTextRespectUISpr("lp.dauer", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bem", mandantCNr, locUI),
-					getTextRespectUISpr("lp.quelle", mandantCNr, locUI), },
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_L,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M, 8,
-							QueryParameters.FLR_BREITE_L }, new String[] {
-							"i_id",
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class, String.class,
+							String.class, String.class },
+					new String[] { "Id", getTextRespectUISpr("lp.taetigkeit", mandantCNr, locUI),
+							getTextRespectUISpr("lp.firma", mandantCNr, locUI),
+							getTextRespectUISpr("lp.zusatz", mandantCNr, locUI),
+							getTextRespectUISpr("lp.zeit", mandantCNr, locUI),
+							getTextRespectUISpr("lp.dauer", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bem", mandantCNr, locUI),
+							getTextRespectUISpr("lp.quelle", mandantCNr, locUI), },
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_L, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_M, 8, QueryParameters.FLR_BREITE_L },
+					new String[] { "i_id",
 							// nodbfeld: 1: Hier an jede Spalte, die nicht
 							// sortiert werden kann ein Facade.NICHT_SORTIERBAR
 							// anfuegen, damit
 							// damit am Client das Symbol 'nosort.png' im
 							// TabelHeader angezeigt wird
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
+							ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT, Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
 							ZeiterfassungFac.FLR_ZEITDATEN_C_WOWURDEGEBUCHT }));
 
 		}

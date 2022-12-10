@@ -119,7 +119,7 @@ public interface VkPreisfindungFac {
 
 	public void pflegeVkpreise(Integer artikelgruppeIId,
 			Integer vkpfartikelpreislisteIId, Date tGueltigab,
-			BigDecimal prozent, TheClientDto theClientDto)
+			BigDecimal prozent, String cBegruendung, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public VkPreisfindungEinzelverkaufspreisDto einzelverkaufspreisFindByPrimaryKey(
@@ -276,7 +276,7 @@ public interface VkPreisfindungFac {
 			String waehrungCNrZielwaehrung,
 			boolean bMitMaterialzuschlagImNettopreis, TheClientDto theClientDto);
 
-	public VkpreisfindungDto verkaufspreisfindungStufe1(ArtikelDto artikelDtoI,
+	public VkpreisfindungDto verkaufspreisfindungStufe1(Integer artikelIId,
 			Date tGueltigkeitsdatumI, Integer iIdPreislisteI,
 			VkpreisfindungDto vkpreisfindungDtoI, Integer iIdMwstsatzI,
 			BigDecimal nMengeI, String waehrungCNrZielwaehrung,
@@ -296,11 +296,12 @@ public interface VkPreisfindungFac {
 			TheClientDto theClientDto) throws RemoteException;
 
 	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI,
-			Double dRabattsatzI) throws EJBExceptionLP, RemoteException;
+			Double dRabattsatzI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI,
-			Double dRabattsatzI, BigDecimal nMaterialzuschlag)
-			throws EJBExceptionLP, RemoteException;
+			Double dRabattsatzI, BigDecimal nMaterialzuschlag,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI,
 			BigDecimal nFixpreisI, BigDecimal nMaterialzuschlag);
@@ -335,26 +336,38 @@ public interface VkPreisfindungFac {
 			Integer artikelIId, Date tGueltigab, TheClientDto theClientDto);
 
 	/**
-	 * Die Verkaufspreisfindung f&uuml;r das Web ber&uuml;cksichtigt einen eventuell nicht
-	 * vorhandenen Kunden (iIdKundeI == null) und l&auml;&szlig;t in diesem Falle die
-	 * Ermittlung der vkStufe3 aus.
+	 * Die Verkaufspreisfindung f&uuml;r das Web ber&uuml;cksichtigt einen
+	 * eventuell nicht vorhandenen Kunden (iIdKundeI == null) und
+	 * l&auml;&szlig;t in diesem Falle die Ermittlung der vkStufe3 aus.
 	 * 
 	 * @param iIdArtikelI
 	 * @param iIdKundeI
 	 * @param nMengeI
 	 * @param datGueltigkeitsdatumI
 	 * @param iIdPreislisteI
-	 * @param iIdMwstsatzI
+	 * @param iIdMwstsatzBezI
 	 * @param waehrungCNrZielwaehrung
 	 * @param theClientDto
-	 * @return die Preisinfo 
+	 * @return die Preisinfo
 	 */
 	public VkpreisfindungDto verkaufspreisfindungWeb(Integer iIdArtikelI,
 			Integer iIdKundeI, BigDecimal nMengeI, Date datGueltigkeitsdatumI,
-			Integer iIdPreislisteI, Integer iIdMwstsatzI,
+			Integer iIdPreislisteI, Integer iIdMwstsatzBezI,
 			String waehrungCNrZielwaehrung, TheClientDto theClientDto)
 			throws RemoteException;
+
 	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdFuerVKPreisentwicklung(
 			Integer iIdArtikelI, TheClientDto theClientDto);
 
+	public void fixpreiseAllerMengenstaffelnEinesArtikelErhoehen(
+			Integer artikelIId, Date tGueltigab, BigDecimal nProzent,
+			TheClientDto theClientDto);
+
+	public VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisfindByPrimaryKey(
+			Integer iId, TheClientDto theClientDto);
+	
+	public VkpreisfindungDto verkaufspreisfindungOhneExc(Integer iIdArtikelI, Integer iIdKundeI, BigDecimal nMengeI,
+			Date datGueltigkeitsdatumI, Integer iIdPreislisteI, Integer iIdMwstsatzI, String waehrungCNrZielwaehrung,
+			TheClientDto theClientDto);
+	
 }

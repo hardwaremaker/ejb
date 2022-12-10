@@ -34,8 +34,11 @@ package com.lp.server.lieferschein.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.HashSet;
+import java.util.Locale;
 
 import javax.ejb.Remote;
+import javax.naming.NamingException;
 
 import com.lp.server.system.service.ReportJournalKriterienDto;
 import com.lp.server.system.service.TheClientDto;
@@ -49,10 +52,16 @@ public interface LieferscheinReportFac {
 	public final static String REPORT_LIEFERSCHEIN = "ls_lieferschein2.jasper";
 	public final static String REPORT_LIEFERSCHEIN_ETIKETT = "ls_lieferschein_etikett.jasper";
 	public final static String REPORT_LIEFERSCHEIN_OFFENE = "ls_lieferschein_offene.jasper";
+	public final static String REPORT_LIEFERSCHEIN_OFFENE_RUECKGABEN = "ls_lieferschein_offene_rueckgaben.jasper";
 	public final static String REPORT_LIEFERSCHEIN_ANGELEGTE = "ls_lieferschein_angelegte.jasper";
 	public final static String REPORT_LIEFERSCHEIN_WA_ETIKETT = "ls_lieferschein_wa_etikett.jasper";
 	public final static String REPORT_LIEFERSCHEIN_ALLE = "ls_lieferschein_alle.jasper";
 	public final static String REPORT_LIEFERSCHEIN_VERSANDETIKETTEN = "ls_versandetiketten.jasper";
+	public final static String REPORT_LIEFERSCHEIN_PACKSTUECKE = "ls_packstuecke.jasper";
+	public final static String REPORT_LIEFERSCHEIN_PLC_VERSANDETIKETTEN = "ls_plc_versandetiketten.jasper";
+	public final static String REPORT_LIEFERSCHEIN_EMAIL = "ls_lieferschein2_email";
+	public final static String REPORT_LIEFERSCHEIN_UNTERSCHRIFT = "ls_lieferschein2_unterschrift.jasper";
+	public final static String REPORT_LIEFERSCHEIN_SIGNATURE = "ls_lieferschein2_unterschrift.png";
 
 	// Spalten der Datenmatrix
 	public final static int REPORT_LIEFERSCHEIN_ADRESSETIKETT = 0;
@@ -141,7 +150,28 @@ public interface LieferscheinReportFac {
 	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_PROJEKT = 81;
 	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_BESTELLNUMMER = 82;
 	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_KOMMISSION = 83;
-	public final static int REPORT_LIEFERSCHEIN_ANZAHL_ZEILEN = 84 ;
+	public final static int REPORT_LIEFERSCHEIN_FORECAST_NR = 84;
+	public final static int REPORT_LIEFERSCHEIN_FORECAST_PROJEKT = 85;
+	public final static int REPORT_LIEFERSCHEIN_FORECAST_BEMERKUNG = 86;
+	public final static int REPORT_LIEFERSCHEIN_FORECAST_BESTELLNUMMER = 87;
+	public final static int REPORT_LIEFERSCHEIN_VERPACKUNGSMITTEL_KENNUNG = 88;
+	public final static int REPORT_LIEFERSCHEIN_VERPACKUNGSMITTEL_BEZEICHNUNG = 89;
+	public final static int REPORT_LIEFERSCHEIN_VERPACKUNGSMITTEL_GEWICHT_IN_KG = 90;
+	public final static int REPORT_LIEFERSCHEIN_VERPACKUNGSMITTELMENGE = 91;
+	public final static int REPORT_LIEFERSCHEIN_ARTIKEL_MATERIAL_AUS_KUNDEMATERIAL = 92;
+	public final static int REPORT_LIEFERSCHEIN_ARTIKEL_MATERIALBASIS_AUS_KUNDEMATERIAL = 93;
+	public final static int REPORT_LIEFERSCHEIN_ARTIKEL_AUFSCHLAG_BETRAG = 94;
+	public final static int REPORT_LIEFERSCHEIN_ARTIKEL_AUFSCHLAG_PROZENT = 95;
+	public final static int REPORT_LIEFERSCHEIN_UEBERLIEFERT = 96;
+	public final static int REPORT_LIEFERSCHEIN_ARTIKEL_ECCN = 97;
+	public final static int REPORT_LIEFERSCHEIN_ZWSNETTOSUMMEN = 98;
+	public final static int REPORT_LIEFERSCHEIN_ZWSTEXTE = 99;
+	public final static int REPORT_LIEFERSCHEIN_AUFTRAG_AENDERUNGSAUFTRAG_VERSION = 100;
+	public final static int REPORT_LIEFERSCHEIN_ARTIKEL_PRAEFERENZBEGUENSTIGT = 101;
+	public final static int REPORT_LIEFERSCHEIN_AUFTRAG_KOMMISSION = 102;
+	public final static int REPORT_LIEFERSCHEIN_KUNDEARTIKELBEZEICHNUNG = 103;
+	public final static int REPORT_LIEFERSCHEIN_KUNDEARTIKELBEZEICHNUNG_LIEFERADRESSE = 104;
+	public final static int REPORT_LIEFERSCHEIN_ANZAHL_ZEILEN = 105;
 
 	public final static int REPORT_LIEFERSCHEIN_OFFENE_LIEFERSCHEINCNR = 0;
 	public final static int REPORT_LIEFERSCHEIN_OFFENE_LIEFERSCHEINKUNDE = 1;
@@ -169,7 +199,13 @@ public interface LieferscheinReportFac {
 	public final static int REPORT_LIEFERSCHEIN_OFFENE_VERRECHENBAR = 22;
 	public final static int REPORT_LIEFERSCHEIN_OFFENE_SPEDITEUR = 23;
 	public static final int REPORT_LIEFERSCHEIN_OFFENE_TEXTEINGABE = 24;
-	public final static int REPORT_LIEFERSCHEIN_OFFENE_ANZAHL_ZEILEN = 25;
+	public final static int REPORT_LIEFERSCHEIN_OFFENE_LIEFERTERMIN_POSITION = 25;
+	public final static int REPORT_LIEFERSCHEIN_OFFENE_RUECKGABETERMIN = 26;
+	public final static int REPORT_LIEFERSCHEIN_OFFENE_STATUS = 27;
+	public final static int REPORT_LIEFERSCHEIN_OFFENE_LIEFERSCHEINART = 28;
+	public final static int REPORT_LIEFERSCHEIN_OFFENE_KOMMISSION = 29;
+	public final static int REPORT_LIEFERSCHEIN_OFFENE_SETARTIKEL_TYP = 30;
+	public final static int REPORT_LIEFERSCHEIN_OFFENE_ANZAHL_ZEILEN = 31;
 
 	public final static int REPORT_LIEFERSCHEIN_ANGELEGTE_NUMMER = 0;
 	public final static int REPORT_LIEFERSCHEIN_ANGELEGTE_KUNDE = 1;
@@ -196,37 +232,78 @@ public interface LieferscheinReportFac {
 	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_INDEX = 16;
 	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_REVISION = 17;
 	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_SUBREPORT_SNRCHNR = 18;
-	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ANZAHL_SPALTEN = 19;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_VERPACKUNGSMITTEL_KENNUNG = 19;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_VERPACKUNGSMITTEL_BEZEICHNUNG = 20;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_VERPACKUNGSMITTEL_GEWICHT_IN_KG = 21;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_VERPACKUNGSMITTELMENGE = 22;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_FORECAST_NR = 23;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_FORECAST_PROJEKT = 24;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_FORECAST_BEMERKUNG = 25;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_FORECAST_BESTELLNUMMER = 26;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_FORECAST_FORECASTPOSITION_I_ID = 27;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_AUFTRAG_BESTELLNUMMER = 28;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_AUFTRAG_NUMMER = 29;
+	
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_BEZ_KUNDE_SPR = 30;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_ZBEZ_KUNDE_SPR = 31;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_ZBEZ2_KUNDE_SPR = 32;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_KBEZ_KUNDE_SPR = 33;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_KUNDENARTIKELBEZEICHNUNG = 34;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ANZAHL_SPALTEN = 35;
 
 	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ANLIEFERMENGE = 0;
 	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_IDENT = 1;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_SERIENCHARGENR = 2;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_BESTELLNUMMER = 3;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_CNR = 4;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_BEZ = 5;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_ZBEZ = 6;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_ZBEZ2 = 7;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_EINHEIT = 8;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_GEWICHT = 9;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_REFERENZNUMMER = 10;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_KUNDENARTIKELNUMMER = 11;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_TEXTEINGABE = 12;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_WE_REFERENZ = 13;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_KBEZ = 14;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_INDEX = 15;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_REVISION = 16;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_SUBREPORT_SNRCHNR = 17;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_PAKETMENGE = 18;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_AKTUELLESPAKET = 19;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMENGE = 20;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_POSITION = 21;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ANZAHL_SPALTEN = 22;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_BESTELLNUMMER = 2;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_CNR = 3;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_BEZ = 4;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_ZBEZ = 5;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_ZBEZ2 = 6;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_EINHEIT = 7;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_GEWICHT = 8;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_REFERENZNUMMER = 9;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_KUNDENARTIKELNUMMER = 10;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_TEXTEINGABE = 11;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_WE_REFERENZ = 12;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_KBEZ = 13;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_INDEX = 14;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_REVISION = 15;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_PAKETMENGE = 16;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_AKTUELLESPAKET = 17;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMENGE = 18;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_POSITION = 19;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMITTEL_KENNUNG = 20;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMITTEL_BEZEICHNUNG = 21;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMITTEL_GEWICHT_IN_KG = 22;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMITTELMENGE = 23;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_BESTELLDATUM = 24;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_PACKSTUECKNUMMER = 25;
+	
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_FORECAST_NR = 26;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_FORECAST_PROJEKT = 27;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_FORECAST_BEMERKUNG = 28;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_FORECAST_BESTELLNUMMER = 29;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_FORECAST_FORECASTPOSITION_I_ID = 30;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_WE_REFERENZ_BELEGART = 31;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_WE_REFERENZ_BELEGNUMMER = 32;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_WE_REFERENZ_BELEGDATUM = 33;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_KUNDENARTIKELBEZEICHNUNG = 34;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ANZAHL_SPALTEN = 35;
+	
+	
+	public final static int REPORT_PACKSTUECKE_NUMMER = 0;
+	public final static int REPORT_PACKSTUECKE_LIEFERSCHEIN = 1;
+	public final static int REPORT_PACKSTUECKE_LOS = 2;
+	public final static int REPORT_PACKSTUECKE_ARTIKEL = 3;
+	public final static int REPORT_PACKSTUECKE_BEZEICHNUNG = 4;
+	public final static int REPORT_PACKSTUECKE_ANZAHL_SPALTEN = 5;
+	
 
 	public JasperPrintLP[] printLieferschein(Integer iIdLieferscheinI,
 			Integer iAnzahlKopienI, Boolean bMitLogo, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public Object[][] getLieferscheinReportData(Integer lieferscheinIId,
+			Locale locDruckUebersteuert,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printLieferscheinEtikett(Integer iIdLieferscheinI,
@@ -238,7 +315,7 @@ public interface LieferscheinReportFac {
 
 	public JasperPrintLP printLieferscheinOffene(
 			ReportJournalKriterienDto reportJournalKriterienDtoI, Integer iArt,
-			boolean bMitDetails, TheClientDto theClientDto)
+			boolean bMitDetails,boolean bNurRueckgaben, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printLieferscheinAlle(
@@ -254,6 +331,33 @@ public interface LieferscheinReportFac {
 
 	public JasperPrintLP printLieferscheinWAEtikett(Integer iIdLieferscheinI,
 			Integer iPaketnummer, Integer iIdLieferscheinPositionI,
-			BigDecimal bdHandmenge, Integer iExemplare,TheClientDto theClientDto)
+			BigDecimal bdHandmenge, Integer iExemplare,TheClientDto theClientDto, Double gewichtUebersteuert,
+			java.sql.Timestamp tsLieferterminUebersteuert,
+			Integer iAnzahlPaketeUebersteuert,
+			String versandnummerUebersteuert, String versandnummer2Uebersteuert, boolean versandinfosSpeichern)
 			throws EJBExceptionLP, RemoteException;
+	
+	JasperPrintLP[] printLieferscheinOnServer(
+			Integer lieferscheinId, TheClientDto theClientDto) throws RemoteException ;
+	
+	HelperSubreportLieferscheinData createSubreportOffeneABPositionen(
+			Integer auftragId, Integer statusTeillieferung, LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws NamingException, RemoteException ;
+	
+	public JasperPrintLP printPackstuecke(String filter, TheClientDto theClientDto);
+	
+	public HashSet<Integer> getGesamtAnzahlAnAuftraegen(
+			LieferscheinDto lieferscheinDto);
+
+	JasperPrintLP printVersandetikettOnServer(Integer lieferscheinIId,
+			TheClientDto theClientDto) throws RemoteException;
+
+	JasperPrintLP printLieferscheinWAEtikettOnServer(Integer lieferscheinIId,
+			TheClientDto theClientDto) throws RemoteException;
+	String getArtikelsetType(LieferscheinpositionDto lsposDto);
+
+	JasperPrintLP printPostVersandetikett(Integer iIdLieferscheinI, byte[] pdf, TheClientDto theClientDto);
+
+	JasperPrintLP[] printLieferschein(
+			PrintLieferscheinAttribute attributs, TheClientDto theClientDto);
 }
+

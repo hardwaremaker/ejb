@@ -41,6 +41,7 @@ import com.lp.server.util.PositionNumberAdapter;
 
 public class FLRAngebotpositionNumberAdapter extends PositionNumberAdapter
 		implements Serializable {
+	private static final long serialVersionUID = -2062920428641096720L;
 
 	private List<FLRAngebotposition> positions ;
 	private FLRAngebotposition flrPosition ;
@@ -52,6 +53,11 @@ public class FLRAngebotpositionNumberAdapter extends PositionNumberAdapter
 	@Override
 	public void setAdaptee(Object adaptee) {
 		flrPosition = (FLRAngebotposition) adaptee ;
+	}
+
+	@Override
+	public Object getAdaptee() {
+		return flrPosition ;
 	}
 
 	@Override
@@ -102,5 +108,10 @@ public class FLRAngebotpositionNumberAdapter extends PositionNumberAdapter
 	@Override
 	public Iterator<?> getPositionsIteratorForHeadIId(Integer headIId) {
 		return positions.iterator() ;
+	}
+	
+	@Override
+	public List<?> getPositionsListForHeadIId(Integer headIId) {
+		return positions;
 	}
 }

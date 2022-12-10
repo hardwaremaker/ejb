@@ -56,8 +56,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die kolllektive implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die kolllektive implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -103,8 +103,7 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -114,19 +113,28 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRBenutzermandantsystemrolle kollektiv = (FLRBenutzermandantsystemrolle) resultListIterator
-						.next();
+				Object[] o = (Object[]) resultListIterator.next();
+				FLRBenutzermandantsystemrolle kollektiv = (FLRBenutzermandantsystemrolle)o[0];
 				rows[row][col++] = kollektiv.getI_id();
-				rows[row][col++] = kollektiv.getFlrbenutzer()
-						.getC_benutzerkennung();
-				rows[row][col++] = kollektiv.getFlrmandant().getC_nr() + " - "
-						+ kollektiv.getFlrmandant().getC_kbez();
-				rows[row++][col++] = kollektiv.getFlrsystemrolle().getC_bez();
+				rows[row][col++] = kollektiv.getFlrbenutzer().getC_benutzerkennung();
+				rows[row][col++] = kollektiv.getFlrmandant().getC_nr() + " - " + kollektiv.getFlrmandant().getC_kbez();
+				rows[row][col++] = kollektiv.getFlrsystemrolle().getC_bez();
+
+				if (kollektiv.getFlrsystemrolle_restapi() != null) {
+					rows[row][col++] = kollektiv.getFlrsystemrolle_restapi().getC_bez();
+				} else {
+					rows[row][col++] = null;
+				}
+				if (kollektiv.getFlrsystemrolle_hvma() != null) {
+					rows[row][col++] = kollektiv.getFlrsystemrolle_hvma().getC_bez();
+				} else {
+					rows[row][col++] = null;
+				}
+				row++;
 
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -145,8 +153,7 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -165,8 +172,8 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -177,8 +184,7 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -189,16 +195,13 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(benutzermandantsystemrolle."
-								+ filterKriterien[i].kritName + ")");
+						where.append(" upper(benutzermandantsystemrolle." + filterKriterien[i].kritName + ")");
 					} else {
-						where.append(" benutzermandantsystemrolle."
-								+ filterKriterien[i].kritName);
+						where.append(" benutzermandantsystemrolle." + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -230,8 +233,7 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("benutzermandantsystemrolle."
-								+ kriterien[i].kritName);
+						orderBy.append("benutzermandantsystemrolle." + kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -241,16 +243,11 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy
-						.append("benutzermandantsystemrolle."
-								+ BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER
-								+ "."
-								+ BenutzerFac.FLR_BENUTZER_C_BENUTZERKENNUNG
-								+ " ASC ");
+				orderBy.append("benutzermandantsystemrolle." + BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER
+						+ "." + BenutzerFac.FLR_BENUTZER_C_BENUTZERKENNUNG + " ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("benutzermandantsystemrolle."
-					+ BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER
+			if (orderBy.indexOf("benutzermandantsystemrolle." + BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER
 					+ "." + BenutzerFac.FLR_BENUTZER_C_BENUTZERKENNUNG) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
@@ -260,12 +257,8 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy
-						.append(" benutzermandantsystemrolle."
-								+ BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER
-								+ "."
-								+ BenutzerFac.FLR_BENUTZER_C_BENUTZERKENNUNG
-								+ " ");
+				orderBy.append(" benutzermandantsystemrolle." + BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER
+						+ "." + BenutzerFac.FLR_BENUTZER_C_BENUTZERKENNUNG + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -281,11 +274,10 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRBenutzermandantsystemrolle benutzermandantsystemrolle ";
+		return "from FLRBenutzermandantsystemrolle benutzermandantsystemrolle left join benutzermandantsystemrolle.flrsystemrolle_restapi as flrsystemrolle_restapi left join benutzermandantsystemrolle.flrsystemrolle_hvma as flrsystemrolle_hvma ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -337,32 +329,27 @@ public class BenutzermandantsystemrolleHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.benutzerkennung",
-									mandantCNr, locUI),
-							getTextRespectUISpr("report.mandant", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.systemrolle", mandantCNr,
-									locUI) },
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class, String.class },
+					new String[] { "Id", getTextRespectUISpr("lp.benutzerkennung", mandantCNr, locUI),
+							getTextRespectUISpr("report.mandant", mandantCNr, locUI),
+							getTextRespectUISpr("lp.systemrolle", mandantCNr, locUI),
 
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							getTextRespectUISpr("lp.systemrolle.restapi", mandantCNr, locUI),
+							getTextRespectUISpr("lp.systemrolle.hvma", mandantCNr, locUI) },
+
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
-					new String[] {
-							"i_id",
-							BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER
-									+ "."
+					new String[] { "i_id",
+							BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRBENUTZER + "."
 									+ BenutzerFac.FLR_BENUTZER_C_BENUTZERKENNUNG,
-							BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRMANDANT
-									+ "." + "c_nr",
-							BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRSYSTEMROLLE
-									+ "." + BenutzerFac.FLR_SYSTEMROLLE_C_BEZ }));
+							BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRMANDANT + "." + "c_nr",
+							BenutzerFac.FLR_BENUTZERMANDANTSYSTEMROLLE_FLRSYSTEMROLLE + "."
+									+ BenutzerFac.FLR_SYSTEMROLLE_C_BEZ,
+							"flrsystemrolle_restapi." + BenutzerFac.FLR_SYSTEMROLLE_C_BEZ,
+							"flrsystemrolle_hvma." + BenutzerFac.FLR_SYSTEMROLLE_C_BEZ }));
 
 		}
 		return super.getTableInfo();

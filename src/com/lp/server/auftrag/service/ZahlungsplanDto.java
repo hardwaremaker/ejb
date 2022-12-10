@@ -43,9 +43,20 @@ public class ZahlungsplanDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
 	private Integer auftragIId;
-	private Integer iTageVorLiefertermin;
+	private java.sql.Timestamp tTermin;
 	private BigDecimal nBetrag;
 	private BigDecimal nBetragUrsprung;
+
+	private ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto;
+
+	public ZahlungsplanmeilensteinDto getZahlungsplanmeilensteinDto() {
+		return zahlungsplanmeilensteinDto;
+	}
+
+	public void setZahlungsplanmeilensteinDto(
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto) {
+		this.zahlungsplanmeilensteinDto = zahlungsplanmeilensteinDto;
+	}
 
 	public Integer getAuftragIId() {
 		return auftragIId;
@@ -55,12 +66,12 @@ public class ZahlungsplanDto implements Serializable {
 		this.auftragIId = auftragIId;
 	}
 
-	public Integer getITageVorLiefertermin() {
-		return iTageVorLiefertermin;
+	public java.sql.Timestamp getTTermin() {
+		return tTermin;
 	}
 
-	public void setITageVorLiefertermin(Integer iTageVorLiefertermin) {
-		this.iTageVorLiefertermin = iTageVorLiefertermin;
+	public void setTTermin(java.sql.Timestamp tTermin) {
+		this.tTermin = tTermin;
 	}
 
 	public BigDecimal getNBetrag() {

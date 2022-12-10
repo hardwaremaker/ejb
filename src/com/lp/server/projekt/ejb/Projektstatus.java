@@ -62,12 +62,24 @@ public class Projektstatus implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	public Projektstatus( Integer iSort,String mandantCNr,String cNr,Short bAenderungprotokollieren,Short bErledigt) {
+	public Projektstatus( Integer iSort,String mandantCNr,String cNr,Short bAenderungprotokollieren,Short bErledigt,Short bGesperrt) {
 		ProjektstatusPK pk = new ProjektstatusPK(cNr, mandantCNr);
 		setPk(pk);
 		setBAenderungprotokollieren(bAenderungprotokollieren);
 		setBErledigt(bErledigt);
+		setBGesperrt(bGesperrt);
 		setISort(iSort);
+	}
+
+	@Column(name = "B_GESPERRT")
+	private Short bGesperrt;
+	
+	public Short getBGesperrt() {
+		return bGesperrt;
+	}
+
+	public void setBGesperrt(Short bGesperrt) {
+		this.bGesperrt = bGesperrt;
 	}
 
 	@Column(name = "B_AENDERUNGPROTOKOLLIEREN")

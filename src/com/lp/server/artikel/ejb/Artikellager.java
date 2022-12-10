@@ -42,7 +42,11 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "ArtikellagerfindByArtikelIId", query = "SELECT OBJECT(C) FROM Artikellager c WHERE c.pk.artikelIId = ?1") })
+@NamedQueries({
+		@NamedQuery(name = "ArtikellagerfindByArtikelIId", query = "SELECT OBJECT(C) FROM Artikellager c WHERE c.pk.artikelIId = ?1"),
+		@NamedQuery(name = "ArtikellagerfindByArtikelIIdLagerIId", query = "SELECT OBJECT(C) FROM Artikellager c WHERE c.pk.artikelIId = ?1 AND c.pk.lagerIId = ?2"),
+		@NamedQuery(name = "ArtikellagerfindByLagerIId", query = "SELECT OBJECT(C) FROM Artikellager c WHERE c.pk.lagerIId = ?1")
+})
 @Entity
 @Table(name = "WW_ARTIKELLAGER")
 public class Artikellager implements Serializable {
@@ -58,37 +62,38 @@ public class Artikellager implements Serializable {
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
 
+	@Column(name = "F_LAGERMINDEST")
+	private Double fLagermindest;
+
+	@Column(name = "F_LAGERSOLL")
+	private Double fLagersoll;
+
 	private static final long serialVersionUID = 1L;
 
 	public Artikellager() {
 		super();
 	}
 
-	public Artikellager(Integer artikelIId,
-			Integer lagerIId,
-			String mandant2) {
+	public Artikellager(Integer artikelIId, Integer lagerIId, String mandant2) {
 		setPk(new ArtikellagerPK(artikelIId, lagerIId));
 		setNLagerstand(new BigDecimal(0));
 		setNGestehungspreis(new BigDecimal(0));
 		setMandantCNr(mandant2);
 	}
-	
-	public Artikellager(Integer artikelIId,
-			Integer lagerIId,
-			BigDecimal gestehungspreis,
-			BigDecimal lagerstand,
-			String mandant2) {
+
+	public Artikellager(Integer artikelIId, Integer lagerIId,
+			BigDecimal gestehungspreis, BigDecimal lagerstand, String mandant2) {
 		setPk(new ArtikellagerPK(artikelIId, lagerIId));
 		setNLagerstand(lagerstand);
 		setNGestehungspreis(gestehungspreis);
 		setMandantCNr(mandant2);
 	}
-	
-	public Artikellager(ArtikellagerPK artikellagerPK,String mandandtCnr){
+
+	public Artikellager(ArtikellagerPK artikellagerPK, String mandandtCnr) {
 		setPk(artikellagerPK);
 		setMandantCNr(mandandtCnr);
 		setNLagerstand(new BigDecimal(0));
-	    setNGestehungspreis(new BigDecimal(0));
+		setNGestehungspreis(new BigDecimal(0));
 	}
 
 	public ArtikellagerPK getPk() {
@@ -121,6 +126,22 @@ public class Artikellager implements Serializable {
 
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
+	}
+
+	public Double getFLagermindest() {
+		return this.fLagermindest;
+	}
+
+	public void setFLagermindest(Double fLagermindest) {
+		this.fLagermindest = fLagermindest;
+	}
+
+	public Double getFLagersoll() {
+		return this.fLagersoll;
+	}
+
+	public void setFLagersoll(Double fLagersoll) {
+		this.fLagersoll = fLagersoll;
 	}
 
 }

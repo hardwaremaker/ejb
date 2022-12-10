@@ -59,6 +59,17 @@ public class ExtralisteRueckgabeTabelleDto implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	private int[] columnWidths=null;
+	
+	public int[] getColumnWidths() {
+		return columnWidths;
+	}
+
+	public void setColumnWidths(int[] columnWidths) {
+		this.columnWidths = columnWidths;
+	}
+
 	private String[] columnNames;
 	private Class[] columnClasses;
 	public Class[] getColumnClasses() {

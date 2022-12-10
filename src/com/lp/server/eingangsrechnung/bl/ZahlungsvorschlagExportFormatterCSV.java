@@ -34,17 +34,20 @@ package com.lp.server.eingangsrechnung.bl;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungReportFac;
+import com.lp.server.eingangsrechnung.service.ErZahlungsempfaenger;
 import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagDto;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagExportException;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagExportResult;
 import com.lp.server.eingangsrechnung.service.ZahlungsvorschlaglaufDto;
 import com.lp.server.finanz.service.BankverbindungDto;
 import com.lp.server.partner.service.BankDto;
-import com.lp.server.partner.service.LieferantDto;
-import com.lp.server.partner.service.PartnerbankDto;
 import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.EingangsrechnungId;
 import com.lp.server.util.report.LpMailText;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
@@ -89,18 +92,21 @@ public class ZahlungsvorschlagExportFormatterCSV extends
 	private final static String AUFTRAGGEBERNAME2 = "auftraggebername2";
 	private final static String KURZVERWENDUNG = "kurzverwendung";
 	private final static String KUNDENDATEN = "kundendaten";
-
+	
 	protected ZahlungsvorschlagExportFormatterCSV(TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		super(theClientDto);
 	}
 
-	public String exportiereDaten(ZahlungsvorschlaglaufDto laufDto,
+	public ZahlungsvorschlagExportResult exportiereDaten(ZahlungsvorschlaglaufDto laufDto,
 			ZahlungsvorschlagDto[] zahlungsvorschlagDtos,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		StringBuffer sb = new StringBuffer();
+		List<ZahlungsvorschlagExportException> exportErrors = 
+				new ArrayList<ZahlungsvorschlagExportException>();
+
 		// Ueberschrift mit exportieren
-		sb.append(exportiereUeberschrift() + Helper.CR_LF);
+		String header = exportiereUeberschrift() + Helper.CR_LF;
+		StringBuilder data = new StringBuilder();
 		try {
 
 			BankverbindungDto bvDto = getFinanzFac()
@@ -114,213 +120,214 @@ public class ZahlungsvorschlagExportFormatterCSV extends
 			LpMailText mt = new LpMailText();
 			for (int i = 0; i < zahlungsvorschlagDtos.length; i++) {
 				// nur wenn bezahlen = true
-				if (Helper.short2Boolean(zahlungsvorschlagDtos[i]
-						.getBBezahlen())) {
-					EingangsrechnungDto erDto = getEingangsrechnungFac()
-							.eingangsrechnungFindByPrimaryKey(
-									zahlungsvorschlagDtos[i]
-											.getEingangsrechnungIId());
-					LieferantDto lfDto = getLieferantFac()
-							.lieferantFindByPrimaryKey(erDto.getLieferantIId(),
-									theClientDto);
-					// BV des LF holen
-					PartnerbankDto[] bvLF = getBankFac()
-							.partnerbankFindByPartnerIId(lfDto.getPartnerIId(),
-									theClientDto);
-					if (bvLF == null || bvLF.length == 0) {
-						ArrayList<Object> info = new ArrayList<Object>();
-						info.addAll(getAllInfoForTheClient(erDto));
-						info.addAll(getAllInfoForTheClient(lfDto
-								.getPartnerDto()));
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_FINANZ_ZVEXPORT_LF_HAT_KEINE_BANKVERBINDUNG,
-								info, new Exception(""));
-					}
-					// ich nehm die erste
-					BankDto bankDtoLieferant = getBankFac()
-							.bankFindByPrimaryKey(bvLF[0].getBankPartnerIId(),
-									theClientDto);
-					// nur wann die Bank des LF in Oesterreich ist
-					if (bankDtoLieferant.getPartnerDto().getLandplzortDto() == null) {
-						ArrayList<Object> info = new ArrayList<Object>();
-						info.addAll(getAllInfoForTheClient(erDto));
-						info.addAll(getAllInfoForTheClient(bankDtoLieferant
-								.getPartnerDto()));
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_FINANZ_ZVEXPORT_BANK_HAT_KEINEN_ORT,
-								info, new Exception(""));
-					}
-					// PJ 17200 alle SEPA-Teilnehmer
-					if (Helper.short2boolean(bankDtoLieferant.getPartnerDto()
-							.getLandplzortDto().getLandDto().getBSepa()) == true) {
-						//------------------------------------------------------
-						// ----------
-						// Empfaenger BLZ
-						//------------------------------------------------------
-						// ----------
-
-						boolean bIbanUndBicVorhanden = false;
-
-						if (bankDtoLieferant.getCBic() != null
-								&& bvLF[0].getCIban() != null) {
-							bIbanUndBicVorhanden = true;
-						}
-
-						if (bIbanUndBicVorhanden == true) {
-							mt.addParameter(BLZ_EMPFAENGER, Helper.cutString(
-									"", 7));
-						} else {
-							mt.addParameter(BLZ_EMPFAENGER, Helper.cutString(
-									bankDtoLieferant.getCBlz(), 7));
-							
-						}
-						mt.addParameter(BIC_EMPFAENGER, Helper.cutString(
-								bankDtoLieferant.getCBic(), 11));
-
-						//------------------------------------------------------
-						// ----------
-						// Empfaenger Konto
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(IBAN_EMPFAENGER,
-								cutStringRemoveLeerzeichen(bvLF[0].getCIban(),
-										40));
-
-						if (bIbanUndBicVorhanden == true) {
-							mt.addParameter(KONTO_EMPFAENGER, Helper.cutString(
-									"", 11));
-						} else {
-							String sKontoEmpf = Helper
-									.befreieNummerVonSonderzeichen(bvLF[0]
-											.getCKtonr());
-							mt.addParameter(KONTO_EMPFAENGER, Helper.cutString(
-									sKontoEmpf, 11));
-						}
-
-						//------------------------------------------------------
-						// ----------
-						// Empfaenger name 1
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(EMPFAENGERNAME1, Helper.cutString(
-								lfDto.getPartnerDto()
-										.getCName1nachnamefirmazeile1(), 35));
-						//------------------------------------------------------
-						// ----------
-						// Empfaenger name 2
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(EMPFAENGERNAME2, Helper.cutString(lfDto
-								.getPartnerDto().getCName2vornamefirmazeile2(),
-								35));
-						//------------------------------------------------------
-						// ----------
-						// offener Betrag
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(BETRAG, super
-								.formatNumber(zahlungsvorschlagDtos[i]
-										.getNZahlbetrag()));
-						//------------------------------------------------------
-						// ----------
-						// Waehrung der ER
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(WAEHRUNG, Helper.cutString(erDto
-								.getWaehrungCNr(), 3));
-						//------------------------------------------------------
-						// ----------
-						// eigene BLZ
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(BLZ_AUFTRAGGEBER, Helper.cutString(
-								bankDto.getCBlz(), 5));
-						mt.addParameter(BIC_AUFTRAGGEBER, Helper.cutString(
-								bankDto.getCBic(), 11));
-						//------------------------------------------------------
-						// ----------
-						// Auftraggeber Konto
-						//------------------------------------------------------
-						// ----------
-						mt
-								.addParameter(IBAN_AUFTRAGGEBER,
-										cutStringRemoveLeerzeichen(bvDto
-												.getCIban(), 40));
-						String sKontoAuft = Helper
-								.befreieNummerVonSonderzeichen(bvDto
-										.getCKontonummer());
-						mt.addParameter(KONTO_AUFTRAGGEBER, Helper.cutString(
-								sKontoAuft, 11));
-
-						//------------------------------------------------------
-						// ----------
-						// Auftraggeber Waehrung ist die Mandantenwaehrung
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(WAEHRUNG_KONTO_AUFTRAGGEBER,
-								Helper.cutString(theClientDto
-										.getSMandantenwaehrung(), 3));
-						//------------------------------------------------------
-						// ----------
-						// Auftraggeber name 1
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(AUFTRAGGEBERNAME1, Helper.cutString(
-								mandantDto.getPartnerDto()
-										.getCName1nachnamefirmazeile1(), 35));
-						//------------------------------------------------------
-						// ----------
-						// Auftraggeber name 2
-						//------------------------------------------------------
-						// ----------
-						mt.addParameter(AUFTRAGGEBERNAME2, Helper.cutString(
-								mandantDto.getPartnerDto()
-										.getCName2vornamefirmazeile2(), 35));
-						//------------------------------------------------------
-						// ----------
-						// Kurzverwendung
-						//------------------------------------------------------
-						// ----------
-						String sKurzverwendung;
-						if (erDto.getCLieferantenrechnungsnummer() != null) {
-							sKurzverwendung = erDto
-									.getCLieferantenrechnungsnummer()
-									+ "|";
-						} else {
-							sKurzverwendung = "";
-						}
-						sKurzverwendung = sKurzverwendung + erDto.getCNr();
-						mt.addParameter(KURZVERWENDUNG, Helper.cutString(
-								sKurzverwendung, 28));
-						//------------------------------------------------------
-						// ----------
-						// Kundendaten
-						//------------------------------------------------------
-						// ----------
-						String sKundendaten;
-						if (erDto.getCKundendaten() != null) {
-							sKundendaten = Helper
-									.befreieNummerVonSonderzeichen(erDto
-											.getCKundendaten());
-						} else {
-							sKundendaten = "";
-						}
-						mt.addParameter(KUNDENDATEN, Helper.cutString(
-								sKundendaten, 12));
-						//------------------------------------------------------
-						// ----------
-						String sZeile = mt.transformText(
-								EingangsrechnungReportFac.REPORT_MODUL,
-								theClientDto.getMandant(), getXSLFile(),
-								theClientDto.getLocMandant(), theClientDto);
-						sb.append(sZeile + Helper.CR_LF);
-					}
+				if (!Helper.short2Boolean(zahlungsvorschlagDtos[i].getBBezahlen())) {
+					continue;
 				}
+				
+				EingangsrechnungDto erDto = getEingangsrechnungFac()
+						.eingangsrechnungFindByPrimaryKey(
+								zahlungsvorschlagDtos[i]
+										.getEingangsrechnungIId());
+
+				ErZahlungsempfaenger erBv = getErBankverbindung(erDto, theClientDto, exportErrors);
+				if (erBv == null) {
+					continue;
+				}
+				// ich nehm die erste
+				BankDto bankDtoLieferant = getBankFac()
+						.bankFindByPrimaryKey(erBv.getPartnerbankDto().getBankPartnerIId(),
+								theClientDto);
+				// nur wann die Bank des LF in Oesterreich ist
+				if (bankDtoLieferant.getPartnerDto().getLandplzortDto() == null) {
+					exportErrors.add(new ZahlungsvorschlagExportException(erDto, erBv.getPartnerDto(), 
+							EJBExceptionLP.FEHLER_FINANZ_ZVEXPORT_BANK_HAT_KEINEN_ORT,
+							ZahlungsvorschlagExportException.SEVERITY_ERROR));
+					continue;
+				}
+				// PJ 17200 alle SEPA-Teilnehmer
+				if (!Helper.short2boolean(bankDtoLieferant.getPartnerDto()
+						.getLandplzortDto().getLandDto().getBSepa())) {
+					exportErrors.add(new ZahlungsvorschlagExportException(erDto, erBv.getPartnerDto(), 
+							EJBExceptionLP.FEHLER_FINANZ_ZVEXPORT_BANK_AUS_NICHT_SEPA_LAND,
+							ZahlungsvorschlagExportException.SEVERITY_WARNING));
+					continue;
+				}
+				//------------------------------------------------------
+				// ----------
+				// Empfaenger BLZ
+				//------------------------------------------------------
+				// ----------
+
+				boolean bIbanUndBicVorhanden = false;
+
+				if (bankDtoLieferant.getCBic() != null
+						&& erBv.getPartnerbankDto().getCIban() != null) {
+					bIbanUndBicVorhanden = true;
+				}
+
+				if (bIbanUndBicVorhanden == true) {
+					mt.addParameter(BLZ_EMPFAENGER, Helper.cutString(
+							"", 7));
+				} else {
+					mt.addParameter(BLZ_EMPFAENGER, Helper.cutString(
+							bankDtoLieferant.getCBlz(), 7));
+					
+				}
+				mt.addParameter(BIC_EMPFAENGER, Helper.cutString(
+						bankDtoLieferant.getCBic(), 11));
+
+				//------------------------------------------------------
+				// ----------
+				// Empfaenger Konto
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(IBAN_EMPFAENGER,
+						cutStringRemoveLeerzeichen(erBv.getPartnerbankDto().getCIban(),
+								40));
+
+				if (bIbanUndBicVorhanden == true) {
+					mt.addParameter(KONTO_EMPFAENGER, Helper.cutString(
+							"", 11));
+				} else {
+					String sKontoEmpf = Helper
+							.befreieNummerVonSonderzeichen(erBv.getPartnerbankDto().getCKtonr());
+					mt.addParameter(KONTO_EMPFAENGER, Helper.cutString(
+							sKontoEmpf, 11));
+				}
+
+				//------------------------------------------------------
+				// ----------
+				// Empfaenger name 1
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(EMPFAENGERNAME1, Helper.cutString(
+						erBv.getPartnerDto()
+								.getCName1nachnamefirmazeile1(), 35));
+				//------------------------------------------------------
+				// ----------
+				// Empfaenger name 2
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(EMPFAENGERNAME2, Helper.cutString(erBv
+						.getPartnerDto().getCName2vornamefirmazeile2(),
+						35));
+				//------------------------------------------------------
+				// ----------
+				// offener Betrag
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(BETRAG, super
+						.formatNumber(zahlungsvorschlagDtos[i]
+								.getNZahlbetrag()));
+				//------------------------------------------------------
+				// ----------
+				// Waehrung der ER
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(WAEHRUNG, Helper.cutString(erDto
+						.getWaehrungCNr(), 3));
+				//------------------------------------------------------
+				// ----------
+				// eigene BLZ
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(BLZ_AUFTRAGGEBER, Helper.cutString(
+						bankDto.getCBlz(), 5));
+				mt.addParameter(BIC_AUFTRAGGEBER, Helper.cutString(
+						bankDto.getCBic(), 11));
+				//------------------------------------------------------
+				// ----------
+				// Auftraggeber Konto
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(IBAN_AUFTRAGGEBER,
+								cutStringRemoveLeerzeichen(bvDto
+										.getCIban(), 40));
+				String sKontoAuft = Helper
+						.befreieNummerVonSonderzeichen(bvDto
+								.getCKontonummer());
+				mt.addParameter(KONTO_AUFTRAGGEBER, Helper.cutString(
+						sKontoAuft, 11));
+
+				//------------------------------------------------------
+				// ----------
+				// Auftraggeber Waehrung ist die Mandantenwaehrung
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(WAEHRUNG_KONTO_AUFTRAGGEBER,
+						Helper.cutString(theClientDto
+								.getSMandantenwaehrung(), 3));
+				//------------------------------------------------------
+				// ----------
+				// Auftraggeber name 1
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(AUFTRAGGEBERNAME1, Helper.cutString(
+						mandantDto.getPartnerDto()
+								.getCName1nachnamefirmazeile1(), 35));
+				//------------------------------------------------------
+				// ----------
+				// Auftraggeber name 2
+				//------------------------------------------------------
+				// ----------
+				mt.addParameter(AUFTRAGGEBERNAME2, Helper.cutString(
+						mandantDto.getPartnerDto()
+								.getCName2vornamefirmazeile2(), 35));
+				//------------------------------------------------------
+				// ----------
+				// Kurzverwendung
+				//------------------------------------------------------
+				// ----------
+				String sKurzverwendung;
+				if (erDto.getCLieferantenrechnungsnummer() != null) {
+					sKurzverwendung = erDto
+							.getCLieferantenrechnungsnummer()
+							+ "|";
+				} else {
+					sKurzverwendung = "";
+				}
+				sKurzverwendung = sKurzverwendung + erDto.getCNr();
+				mt.addParameter(KURZVERWENDUNG, Helper.cutString(
+						sKurzverwendung, 28));
+				//------------------------------------------------------
+				// ----------
+				// Kundendaten
+				//------------------------------------------------------
+				// ----------
+				String sKundendaten;
+				if (erDto.getCKundendaten() != null) {
+					sKundendaten = Helper
+							.befreieNummerVonSonderzeichen(erDto
+									.getCKundendaten());
+				} else {
+					sKundendaten = "";
+				}
+				mt.addParameter(KUNDENDATEN, Helper.cutString(
+						sKundendaten, 12));
+				//------------------------------------------------------
+				// ----------
+				String sZeile = mt.transformText(
+						EingangsrechnungReportFac.REPORT_MODUL,
+						theClientDto.getMandant(), getXSLFile(),
+						theClientDto.getLocMandant(), theClientDto);
+				data.append(sZeile + Helper.CR_LF);
+				
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
-		return sb.toString();
+		
+		if (data.toString().isEmpty()) {
+			exportErrors.add(new ZahlungsvorschlagExportException(
+					EJBExceptionLP.FEHLER_FINANZ_ZVEXPORT_KEINE_BELEGE_ZU_EXPORTIEREN, 
+					ZahlungsvorschlagExportException.SEVERITY_ERROR));
+			return new ZahlungsvorschlagExportResult(null, exportErrors);
+		}
+		
+		StringBuilder allData = new StringBuilder();
+		allData.append(header).append(data.toString());
+		
+		return new ZahlungsvorschlagExportResult(allData.toString(), exportErrors);
 	}
 
 	protected String exportiereUeberschrift() throws EJBExceptionLP {
@@ -354,5 +361,28 @@ public class ZahlungsvorschlagExportFormatterCSV extends
 
 	protected String getXSLFile() {
 		return XSL_FILE_CSV;
+	}
+
+	protected ErZahlungsempfaenger getErBankverbindung(EingangsrechnungDto erDto, TheClientDto theClientDto, List<ZahlungsvorschlagExportException> exportErrors) {
+		try {
+			ErZahlungsempfaenger erBv = getEingangsrechnungFac().getErZahlungsempfaenger(
+					new EingangsrechnungId(erDto.getIId()), theClientDto);
+			if (erBv.isAbweichend() && !erBv.exists()) {
+				exportErrors.add(new ZahlungsvorschlagExportException(erDto, erBv.getPartnerDto(), 
+						EJBExceptionLP.FEHLER_FINANZ_ZVEXPORT_ER_MIT_ABWEICHENDER_BANKVERBINDUNG_HAT_KEINE,
+						ZahlungsvorschlagExportException.SEVERITY_ERROR));
+				return null;
+			} else if (!erBv.exists()) {
+				exportErrors.add(new ZahlungsvorschlagExportException(erDto, erBv.getPartnerDto(), 
+						EJBExceptionLP.FEHLER_FINANZ_ZVEXPORT_LF_HAT_KEINE_BANKVERBINDUNG,
+						ZahlungsvorschlagExportException.SEVERITY_ERROR));
+				return null;
+			}
+			return erBv;
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		
+		return null;
 	}
 }

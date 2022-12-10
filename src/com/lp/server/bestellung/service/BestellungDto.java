@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.bestellung.service;
@@ -37,14 +37,15 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-import com.lp.server.anfrage.service.AnfrageDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
+import com.lp.server.util.IVersionable;
 import com.lp.service.BelegDto;
 
-public class BestellungDto extends BelegDto implements Serializable {
+@HvDtoLogClass(name = HvDtoLogClass.BESTELLUNG)
+public class BestellungDto extends BelegDto implements Serializable, IIId, IVersionable {
 
-
-	
 	private static final long serialVersionUID = 1L;
 	private String bestellungartCNr;
 	private Date dBelegdatum;
@@ -76,9 +77,56 @@ public class BestellungDto extends BelegDto implements Serializable {
 	private Timestamp tAenderungsbestellung;
 	private Timestamp tVersandzeitpunkt;
 	private Integer ansprechpartnerIIdLieferadresse;
-	
-	
-	
+	private Integer iAenderungsbestellungVersion;
+
+	private Integer personalIIdInterneranforderer;
+
+	public Integer getPersonalIIdInterneranforderer() {
+		return personalIIdInterneranforderer;
+	}
+
+	public void setPersonalIIdInterneranforderer(Integer personalIIdInterneranforderer) {
+		this.personalIIdInterneranforderer = personalIIdInterneranforderer;
+	}
+
+	private Timestamp tVollstaendigGeliefert;
+
+	public Timestamp getTVollstaendigGeliefert() {
+		return tVollstaendigGeliefert;
+	}
+
+	public void setTTVollstaendigGeliefert(Timestamp tVollstaendigGeliefert) {
+		this.tVollstaendigGeliefert = tVollstaendigGeliefert;
+	}
+
+	private Timestamp tKommissionierungGeplant;
+	private Timestamp tKommissionierungDurchgefuehrt;
+	private Timestamp tUebergabeTechnik;
+
+	public Timestamp getTKommissionierungGeplant() {
+		return tKommissionierungGeplant;
+	}
+
+	public void setTKommissionierungGeplant(Timestamp tKommissionierungGeplant) {
+		this.tKommissionierungGeplant = tKommissionierungGeplant;
+	}
+
+	public Timestamp getTKommissionierungDurchgefuehrt() {
+		return tKommissionierungDurchgefuehrt;
+	}
+
+	public void setTKommissionierungDurchgefuehrt(Timestamp tKommissionierungDurchgefuehrt) {
+		this.tKommissionierungDurchgefuehrt = tKommissionierungDurchgefuehrt;
+	}
+
+	public Timestamp getTUebergabeTechnik() {
+		return tUebergabeTechnik;
+	}
+
+	public void setTUebergabeTechnik(Timestamp tUebergabeTechnik) {
+		this.tUebergabeTechnik = tUebergabeTechnik;
+	}
+
 	private String cLieferantenangebot;
 
 	public String getCLieferantenangebot() {
@@ -88,7 +136,17 @@ public class BestellungDto extends BelegDto implements Serializable {
 	public void setCLieferantenangebot(String cLieferantenangebot) {
 		this.cLieferantenangebot = cLieferantenangebot;
 	}
-	
+
+	private BigDecimal nKorrekturbetrag;
+
+	public BigDecimal getNKorrekturbetrag() {
+		return nKorrekturbetrag;
+	}
+
+	public void setNKorrekturbetrag(BigDecimal nKorrekturbetrag) {
+		this.nKorrekturbetrag = nKorrekturbetrag;
+	}
+
 	public Short getBPoenale() {
 		return bPoenale;
 	}
@@ -99,6 +157,7 @@ public class BestellungDto extends BelegDto implements Serializable {
 
 	private Integer partnerIIdAbholadresse;
 	private Short bPoenale;
+
 	public Integer getPartnerIIdAbholadresse() {
 		return partnerIIdAbholadresse;
 	}
@@ -111,13 +170,11 @@ public class BestellungDto extends BelegDto implements Serializable {
 		return ansprechpartnerIIdAbholadresse;
 	}
 
-	public void setAnsprechpartnerIIdAbholadresse(
-			Integer ansprechpartnerIIdAbholadresse) {
+	public void setAnsprechpartnerIIdAbholadresse(Integer ansprechpartnerIIdAbholadresse) {
 		this.ansprechpartnerIIdAbholadresse = ansprechpartnerIIdAbholadresse;
 	}
 
 	private Integer ansprechpartnerIIdAbholadresse;
-	
 
 	public Date getTMahnsperreBis() {
 		return tMahnsperreBis;
@@ -147,12 +204,9 @@ public class BestellungDto extends BelegDto implements Serializable {
 		return iBestellungIIdRahmenbestellung;
 	}
 
-	public void setIBestellungIIdRahmenbestellung(
-			Integer iBestellungIIdRahmenbestellung) {
+	public void setIBestellungIIdRahmenbestellung(Integer iBestellungIIdRahmenbestellung) {
 		this.iBestellungIIdRahmenbestellung = iBestellungIIdRahmenbestellung;
 	}
-
-
 
 	public String getBestellungartCNr() {
 		return bestellungartCNr;
@@ -161,7 +215,6 @@ public class BestellungDto extends BelegDto implements Serializable {
 	public void setBestellungartCNr(String bestellungartCNr) {
 		this.bestellungartCNr = bestellungartCNr;
 	}
-
 
 	public Date getDBelegdatum() {
 		return dBelegdatum;
@@ -199,12 +252,9 @@ public class BestellungDto extends BelegDto implements Serializable {
 		return lieferantIIdRechnungsadresse;
 	}
 
-	public void setLieferantIIdRechnungsadresse(
-			Integer lieferantIIdRechnungsadresse) {
+	public void setLieferantIIdRechnungsadresse(Integer lieferantIIdRechnungsadresse) {
 		this.lieferantIIdRechnungsadresse = lieferantIIdRechnungsadresse;
 	}
-
-
 
 	public Timestamp getDLiefertermin() {
 		return dLiefertermin;
@@ -213,8 +263,6 @@ public class BestellungDto extends BelegDto implements Serializable {
 	public void setDLiefertermin(Timestamp dLiefertermin) {
 		this.dLiefertermin = dLiefertermin;
 	}
-
-
 
 	public Short getBTeillieferungMoeglich() {
 		return bTeillieferungMoeglich;
@@ -234,6 +282,16 @@ public class BestellungDto extends BelegDto implements Serializable {
 
 	public BigDecimal getNBestellwert() {
 		return nBestellwert;
+	}
+
+	private BigDecimal nTransportkosten;
+
+	public BigDecimal getNTransportkosten() {
+		return nTransportkosten;
+	}
+
+	public void setNTransportkosten(BigDecimal nTransportkosten) {
+		this.nTransportkosten = nTransportkosten;
 	}
 
 	public void setNBestellwert(BigDecimal nBestellwert) {
@@ -296,7 +354,6 @@ public class BestellungDto extends BelegDto implements Serializable {
 		this.tStorniert = tStorniert;
 	}
 
-
 	public Integer getPartnerIIdLieferadresse() {
 		return partnerIIdLieferadresse;
 	}
@@ -325,8 +382,7 @@ public class BestellungDto extends BelegDto implements Serializable {
 		return iPersonalIIdManuellGeliefert;
 	}
 
-	public void setIPersonalIIdManuellGeliefert(
-			Integer iPersonalIIdManuellGeliefert) {
+	public void setIPersonalIIdManuellGeliefert(Integer iPersonalIIdManuellGeliefert) {
 		this.iPersonalIIdManuellGeliefert = iPersonalIIdManuellGeliefert;
 	}
 
@@ -337,12 +393,12 @@ public class BestellungDto extends BelegDto implements Serializable {
 	public void setTManuellGeliefert(Timestamp tManuellGeliefert) {
 		this.tManuellGeliefert = tManuellGeliefert;
 	}
-	
-	public Integer getIMahnstufeIId(){
+
+	public Integer getIMahnstufeIId() {
 		return this.iMahnstufeIId;
 	}
-	
-	public void setIMahnstufeIId(Integer iMahnstufeIId){
+
+	public void setIMahnstufeIId(Integer iMahnstufeIId) {
 		this.iMahnstufeIId = iMahnstufeIId;
 	}
 
@@ -353,7 +409,7 @@ public class BestellungDto extends BelegDto implements Serializable {
 	public void setTAenderungsbestellung(Timestamp tAenderungsbestellung) {
 		this.tAenderungsbestellung = tAenderungsbestellung;
 	}
-	
+
 	public Timestamp getTVersandzeitpunkt() {
 		return this.tVersandzeitpunkt;
 	}
@@ -366,13 +422,12 @@ public class BestellungDto extends BelegDto implements Serializable {
 		return ansprechpartnerIIdLieferadresse;
 	}
 
-	public void setAnsprechpartnerIIdLieferadresse(
-			Integer ansprechpartnerIIdLieferadresse) {
+	public void setAnsprechpartnerIIdLieferadresse(Integer ansprechpartnerIIdLieferadresse) {
 		this.ansprechpartnerIIdLieferadresse = ansprechpartnerIIdLieferadresse;
 	}
+
 	private String cLieferartort;
-	
-	
+
 	public String getCLieferartort() {
 		return cLieferartort;
 	}
@@ -380,14 +435,19 @@ public class BestellungDto extends BelegDto implements Serializable {
 	public void setCLieferartort(String cLieferartort) {
 		this.cLieferartort = cLieferartort;
 	}
-	
-	
+
+	public Integer getIVersion() {
+		return iAenderungsbestellungVersion;
+	}
+
+	public void setIVersion(Integer iVersion) {
+		this.iAenderungsbestellungVersion = iVersion;
+	}
 
 	public String toString() {
-		
+
 		String returnString = super.toString();
-		
-		
+
 		returnString += ", " + bestellungartCNr;
 		returnString += ", " + dBelegdatum;
 		returnString += ", " + lieferantIIdBestelladresse;
@@ -424,7 +484,7 @@ public class BestellungDto extends BelegDto implements Serializable {
 
 	public Object clone() {
 		BestellungDto bestellungDto = (BestellungDto) cloneAsBelegDto(new BestellungDto());
-		
+
 		// iId, cNr null
 		bestellungDto.bestellungartCNr = this.bestellungartCNr;
 		bestellungDto.dBelegdatum = this.dBelegdatum;
@@ -441,12 +501,13 @@ public class BestellungDto extends BelegDto implements Serializable {
 		bestellungDto.xExternerKommentar = this.xExternerKommentar;
 		bestellungDto.tMahnsperreBis = this.tMahnsperreBis;
 		bestellungDto.fWechselkursmandantwaehrungzubelegwaehrung = this.fWechselkursmandantwaehrungzubelegwaehrung;
-		//PJ 16719 bestellungDto.iMahnstufeIId = this.iMahnstufeIId;
+		// PJ 16719 bestellungDto.iMahnstufeIId = this.iMahnstufeIId;
 		bestellungDto.tAenderungsbestellung = this.tAenderungsbestellung;
 		bestellungDto.tVersandzeitpunkt = this.tVersandzeitpunkt;
 		bestellungDto.ansprechpartnerIIdLieferadresse = this.ansprechpartnerIIdLieferadresse;
 		bestellungDto.bPoenale = this.bPoenale;
-		bestellungDto.iBestellungIIdRahmenbestellung=this.iBestellungIIdRahmenbestellung;
+		bestellungDto.iBestellungIIdRahmenbestellung = this.iBestellungIIdRahmenbestellung;
+		bestellungDto.nTransportkosten = this.nTransportkosten;
 		// Bestellwert, Kopftext, Fusstext null
 		// tGedruckt, Anlegen, Aendern, Stornieren, Manuell erledigen null
 		// kein Bezug auf Rahmenbestellung oder Anfrage oder Auftrag
@@ -457,20 +518,43 @@ public class BestellungDto extends BelegDto implements Serializable {
 	public EingangsrechnungDto cloneAsEingangsrechnungDto() {
 		EingangsrechnungDto eingangsrechnungDto = new EingangsrechnungDto();
 		eingangsrechnungDto.setMandantCNr(this.getMandantCNr());
-		eingangsrechnungDto.setLieferantIId(this
-				.getLieferantIIdBestelladresse());
+		eingangsrechnungDto.setLieferantIId(this.getLieferantIIdBestelladresse());
 		BigDecimal bdBetrag = this.getNBestellwert();
-		if(bdBetrag == null) {
-			bdBetrag = BigDecimal.ZERO ;
+		if (bdBetrag == null) {
+			bdBetrag = BigDecimal.ZERO;
 		}
 		eingangsrechnungDto.setNBetrag(bdBetrag);
-		BigDecimal bdBetragFw = bdBetrag.multiply(new BigDecimal(this
-				.getFWechselkursmandantwaehrungzubelegwaehrung()));
+		BigDecimal bdBetragFw = bdBetrag.multiply(new BigDecimal(this.getFWechselkursmandantwaehrungzubelegwaehrung()));
 		eingangsrechnungDto.setNBetragfw(bdBetragFw);
-		eingangsrechnungDto.setNKurs(new BigDecimal(this
-				.getFWechselkursmandantwaehrungzubelegwaehrung()));
-		eingangsrechnungDto.setWaehrungCNr(this
-				.getWaehrungCNr());
+		eingangsrechnungDto.setNKurs(new BigDecimal(this.getFWechselkursmandantwaehrungzubelegwaehrung()));
+		eingangsrechnungDto.setWaehrungCNr(this.getWaehrungCNr());
 		return eingangsrechnungDto;
+	}
+
+	public boolean isErledigt() {
+		return BestellungFac.BESTELLSTATUS_ERLEDIGT.equals(getStatusCNr());
+	}
+
+	public boolean isGeliefert() {
+		return BestellungFac.BESTELLSTATUS_GELIEFERT.equals(getStatusCNr());
+	}
+
+	public boolean isStorniert() {
+		return BestellungFac.BESTELLSTATUS_STORNIERT.equals(getStatusCNr());
+	}
+	
+	@Override
+	public boolean hasVersion() {
+		return getIVersion() != null;
+	}
+
+	@Override
+	public Timestamp getTVersion() {
+		return getTAenderungsbestellung();
+	}
+
+	@Override
+	public void setTVersion(Timestamp tVersion) {
+		setTAenderungsbestellung(tVersion);
 	}
 }

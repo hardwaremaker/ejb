@@ -1,38 +1,6 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.angebotstkl.fastlanereader.generated;
 
-import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -78,6 +46,12 @@ public class FLREinkaufsangebotposition implements Serializable {
     private String c_bez;
 
     /** nullable persistent field */
+    private String c_zbez;
+
+    /** nullable persistent field */
+    private String c_artikelnrhersteller;
+
+    /** nullable persistent field */
     private String c_position;
 
     /** nullable persistent field */
@@ -96,10 +70,10 @@ public class FLREinkaufsangebotposition implements Serializable {
     private com.lp.server.angebotstkl.fastlanereader.generated.FLREinkaufsangebot flreinkaufsangebot;
 
     /** nullable persistent field */
-    private FLRArtikel flrartikel;
+    private FLRArtikelliste flrartikel;
 
     /** full constructor */
-    public FLREinkaufsangebotposition(Integer i_sort, Integer einkaufsangebot_i_id, String agstklpositionsart_c_nr, BigDecimal n_menge, BigDecimal n_preis1, BigDecimal n_preis2, BigDecimal n_preis3, BigDecimal n_preis4, BigDecimal n_preis5, String einheit_c_nr, String c_bez, String c_position, String c_bemerkung, Short b_mitdrucken, String c_kommentar1, String c_kommentar2, com.lp.server.angebotstkl.fastlanereader.generated.FLREinkaufsangebot flreinkaufsangebot, FLRArtikel flrartikel) {
+    public FLREinkaufsangebotposition(Integer i_sort, Integer einkaufsangebot_i_id, String agstklpositionsart_c_nr, BigDecimal n_menge, BigDecimal n_preis1, BigDecimal n_preis2, BigDecimal n_preis3, BigDecimal n_preis4, BigDecimal n_preis5, String einheit_c_nr, String c_bez, String c_zbez, String c_artikelnrhersteller, String c_position, String c_bemerkung, Short b_mitdrucken, String c_kommentar1, String c_kommentar2, com.lp.server.angebotstkl.fastlanereader.generated.FLREinkaufsangebot flreinkaufsangebot, FLRArtikelliste flrartikel) {
         this.i_sort = i_sort;
         this.einkaufsangebot_i_id = einkaufsangebot_i_id;
         this.agstklpositionsart_c_nr = agstklpositionsart_c_nr;
@@ -111,6 +85,8 @@ public class FLREinkaufsangebotposition implements Serializable {
         this.n_preis5 = n_preis5;
         this.einheit_c_nr = einheit_c_nr;
         this.c_bez = c_bez;
+        this.c_zbez = c_zbez;
+        this.c_artikelnrhersteller = c_artikelnrhersteller;
         this.c_position = c_position;
         this.c_bemerkung = c_bemerkung;
         this.b_mitdrucken = b_mitdrucken;
@@ -220,6 +196,22 @@ public class FLREinkaufsangebotposition implements Serializable {
         this.c_bez = c_bez;
     }
 
+    public String getC_zbez() {
+        return this.c_zbez;
+    }
+
+    public void setC_zbez(String c_zbez) {
+        this.c_zbez = c_zbez;
+    }
+
+    public String getC_artikelnrhersteller() {
+        return this.c_artikelnrhersteller;
+    }
+
+    public void setC_artikelnrhersteller(String c_artikelnrhersteller) {
+        this.c_artikelnrhersteller = c_artikelnrhersteller;
+    }
+
     public String getC_position() {
         return this.c_position;
     }
@@ -268,11 +260,11 @@ public class FLREinkaufsangebotposition implements Serializable {
         this.flreinkaufsangebot = flreinkaufsangebot;
     }
 
-    public FLRArtikel getFlrartikel() {
+    public FLRArtikelliste getFlrartikel() {
         return this.flrartikel;
     }
 
-    public void setFlrartikel(FLRArtikel flrartikel) {
+    public void setFlrartikel(FLRArtikelliste flrartikel) {
         this.flrartikel = flrartikel;
     }
 

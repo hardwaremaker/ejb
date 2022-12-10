@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader.generated;
@@ -35,6 +35,7 @@ package com.lp.server.finanz.fastlanereader.generated;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -67,9 +68,9 @@ public class FLRFinanzBuchungDetail implements Serializable {
 
     /** nullable persistent field */
     private Integer i_ausziffern;
-    
+
     /** nullable persistent field */
-    private String kommentar;
+    private String c_kommentar;
 
     /** nullable persistent field */
     private com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchung flrbuchung;
@@ -80,6 +81,8 @@ public class FLRFinanzBuchungDetail implements Serializable {
     /** nullable persistent field */
     private com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrgegenkonto;
 
+    private Integer konto_i_id_gegenkonto ;
+    
     /** full constructor */
     public FLRFinanzBuchungDetail(Integer buchung_i_id, Integer konto_i_id, BigDecimal n_betrag, BigDecimal n_ust, Integer i_auszug, Date t_anlegen, String buchungdetailart_c_nr, Integer i_ausziffern, com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchung flrbuchung, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkonto, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrgegenkonto) {
         this.buchung_i_id = buchung_i_id;
@@ -200,13 +203,21 @@ public class FLRFinanzBuchungDetail implements Serializable {
 	public Integer getI_ausziffern() {
 		return i_ausziffern;
 	}
-	
-	public void setKommentar(String kommentar) {
-		this.kommentar = kommentar;
+
+	public void setC_kommentar(String c_kommentar) {
+		this.c_kommentar = c_kommentar;
 	}
-	
-	public String getKommentar() {
-		return kommentar;
+
+	public String getC_kommentar() {
+		return c_kommentar;
+	}
+
+	public Integer getKonto_i_id_gegenkonto() {
+		return konto_i_id_gegenkonto;
+	}
+
+	public void setKonto_i_id_gegenkonto(Integer konto_i_id_gegenkonto) {
+		this.konto_i_id_gegenkonto = konto_i_id_gegenkonto;
 	}
 
 }

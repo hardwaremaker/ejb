@@ -36,6 +36,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.HashMap;
 
 import com.lp.util.LPDatenSubreport;
 
@@ -51,6 +52,29 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 	private String sTag;
 	private Time tVon;
 	
+	boolean halberFeiertag=false;
+	
+	public boolean isHalberFeiertag() {
+		return halberFeiertag;
+	}
+
+	public void setHalberFeiertag(boolean halberFeiertag) {
+		this.halberFeiertag = halberFeiertag;
+	}
+
+
+	private BetriebsvereinbarungADto betriebsvereinbarungADto=null;
+	
+	public BetriebsvereinbarungADto getBetriebsvereinbarungADto() {
+		return betriebsvereinbarungADto;
+	}
+
+	public void setBetriebsvereinbarungADto(
+			BetriebsvereinbarungADto betriebsvereinbarungADto) {
+		this.betriebsvereinbarungADto = betriebsvereinbarungADto;
+	}
+
+
 	private BigDecimal bdQualifikationsfaktor;
 	
 	public BigDecimal getBdQualifikationsfaktor() {
@@ -59,6 +83,16 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 
 	public void setBdQualifikationsfaktor(BigDecimal bdQualifikationsfaktor) {
 		this.bdQualifikationsfaktor = bdQualifikationsfaktor;
+	}
+
+	private HashMap<Integer,BigDecimal>  hmSchichtzeitenFuerExport;
+
+	public HashMap<Integer,BigDecimal>  getHMSchichtzeitenFuerExport() {
+		return hmSchichtzeitenFuerExport;
+	}
+
+	public void setHMSchichtzeitenFuerExport(HashMap<Integer,BigDecimal> hmSchichtzeitenFuerExport) {
+		this.hmSchichtzeitenFuerExport = hmSchichtzeitenFuerExport;
 	}
 
 
@@ -70,8 +104,17 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 	public void setBdUestd200(BigDecimal bdUestd200) {
 		this.bdUestd200 = bdUestd200;
 	}
-
+	private LPDatenSubreport subreportSchichtzeiten;
 	
+	public LPDatenSubreport getSubreportSchichtzeiten() {
+		return subreportSchichtzeiten;
+	}
+
+	public void setSubreportSchichtzeiten(LPDatenSubreport subreportSchichtzeiten) {
+		this.subreportSchichtzeiten = subreportSchichtzeiten;
+	}
+
+
 	private LPDatenSubreport subreportZulagen;
 	
 	public LPDatenSubreport getSubreportZulagen() {
@@ -92,6 +135,37 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 	private BigDecimal bdIst;
 	private BigDecimal bdUestd50Tageweise;
 	private BigDecimal bdDiff;
+	private BigDecimal bdGutschriftKommt = BigDecimal.ZERO;
+	public BigDecimal getBdGutschriftKommt() {
+		return bdGutschriftKommt;
+	}
+
+	public void setBdGutschriftKommt(BigDecimal bdGutschriftKommt) {
+		this.bdGutschriftKommt = bdGutschriftKommt;
+	}
+
+	public BigDecimal getBdGutschriftGeht() {
+		return bdGutschriftGeht;
+	}
+
+	public void setBdGutschriftGeht(BigDecimal bdGutschriftGeht) {
+		this.bdGutschriftGeht = bdGutschriftGeht;
+	}
+
+
+	private BigDecimal bdGutschriftGeht = BigDecimal.ZERO;
+	
+	private Integer zeitmodellIId;
+	
+	public Integer getZeitmodellIId() {
+		return zeitmodellIId;
+	}
+
+	public void setZeitmodellIId(Integer zeitmodellIId) {
+		this.zeitmodellIId = zeitmodellIId;
+	}
+
+
 	private String sBemerkung;
 	private String sZeitmodell;
 	public String getSZeitmodell() {
@@ -111,8 +185,19 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 		this.sTagesart = sTagesart;
 	}
 
+	HashMap<Integer, BigDecimal> hmSonstigeTaetigkeiten;
+	
+	public HashMap<Integer, BigDecimal> getHmSonstigeTaetigkeiten() {
+		return hmSonstigeTaetigkeiten;
+	}
+
+	public void setHmSonstigeTaetigkeiten(HashMap<Integer, BigDecimal> hmSonstigeTaetigkeiten) {
+		this.hmSonstigeTaetigkeiten = hmSonstigeTaetigkeiten;
+	}
+
+
 	private BigDecimal bdZA;
-	private BigDecimal bdFeiertag;
+	private BigDecimal bdFeiertag=BigDecimal.ZERO;
 	private BigDecimal bdArzt;
 	private BigDecimal bdBehoerde;
 	private BigDecimal bdKrank;
@@ -127,9 +212,30 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 		this.bdKindkrank = bdKindkrank;
 	}
 
+	private BigDecimal bdReisePassiv;
+	
+	public BigDecimal getBdReisePassiv() {
+		return bdReisePassiv;
+	}
+
+	public void setBdReisePassiv(BigDecimal bdReisePassiv) {
+		this.bdReisePassiv = bdReisePassiv;
+	}
+
+
 	private BigDecimal bdUrlaubTage;
 	private BigDecimal bdReise;
 	private BigDecimal bdUrlaubStunden;
+	private Boolean bUrlaubAutomatik=Boolean.FALSE;
+	public Boolean getbUrlaubAutomatik() {
+		return bUrlaubAutomatik;
+	}
+
+	public void setbUrlaubAutomatik(Boolean bUrlaubAutomatik) {
+		this.bUrlaubAutomatik = bUrlaubAutomatik;
+	}
+
+
 	private String sZusatzbezeichnung;
 	private Timestamp tDatum;
 	private Integer iJahr;

@@ -42,11 +42,13 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
-		@NamedQuery(name = "ZeitverteilungfindByPersonalIId", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.personalIId = ?1 ORDER BY o.tZeit ASC"),
-		@NamedQuery(name = "ZeitverteilungfindByPersonalIIdLosIIdTZeit", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.personalIId = ?1 AND o.losIId = ?2 AND o.tZeit = ?3"),
-		@NamedQuery(name = "ZeitverteilungfindByPersonalIIdTZeitVonTZeitBis", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.personalIId = ?1 AND o.tZeit >= ?2 AND o.tZeit < ?3"),
-		@NamedQuery(name = "ZeitverteilungfindByPersonalIIdLosIIdTZeitVonTZeitBis", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.personalIId = ?1 AND  o.losIId = ?2 AND o.tZeit >= ?3 AND o.tZeit < ?4")})
+@NamedQueries({
+		@NamedQuery(name = "ZeitverteilungfindByPersonalIId", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.personalIId = ?1 AND o.bVerteilt=0 ORDER BY o.tZeit ASC"),
+		@NamedQuery(name = "ZeitverteilungfindByLossollarbeitsplanIId", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.lossollarbeitsplanIId = ?1"),
+		@NamedQuery(name = "ZeitverteilungfindByZeitdatenIIdUmgewandelt", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.zeitdatenIIdUmgewandelt = ?1 AND o.bVerteilt=1"),
+		@NamedQuery(name = "ZeitverteilungfindByIIdBlock", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.bVerteilt=1 AND o.iIdBlock = ?1"),
+		@NamedQuery(name = "ZeitverteilungfindByPersonalIIdTZeitVonTZeitBis", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.personalIId = ?1 AND o.tZeit >= ?2 AND o.tZeit < ?3 AND o.bVerteilt=0"),
+		@NamedQuery(name = "ZeitverteilungfindByPersonalIIdLosIIdTZeitVonTZeitBis", query = "SELECT OBJECT(o) FROM Zeitverteilung o WHERE o.personalIId = ?1 AND  o.losIId = ?2 AND o.tZeit >= ?3 AND o.tZeit < ?4 AND o.bVerteilt=0") })
 @Entity
 @Table(name = "PERS_ZEITVERTEILUNG")
 public class Zeitverteilung implements Serializable {
@@ -66,6 +68,63 @@ public class Zeitverteilung implements Serializable {
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
 
+	@Column(name = "MASCHINE_I_ID")
+	private Integer maschineIId;
+
+	@Column(name = "B_VERTEILT")
+	private Short bVerteilt;
+
+	@Column(name = "ZEITDATEN_I_ID_UMGEWANDELT")
+	private Integer zeitdatenIIdUmgewandelt;
+	
+	
+	public Integer getZeitdatenIIdUmgewandelt() {
+		return zeitdatenIIdUmgewandelt;
+	}
+
+	public void setZeitdatenIIdUmgewandelt(Integer zeitdatenIIdUmgewandelt) {
+		this.zeitdatenIIdUmgewandelt = zeitdatenIIdUmgewandelt;
+	}
+
+	@Column(name = "I_ID_BLOCK")
+	private Integer iIdBlock;
+
+	
+	public Integer getIIdBlock() {
+		return iIdBlock;
+	}
+
+	public void setIIdBlock(Integer iIdBlock) {
+		this.iIdBlock = iIdBlock;
+	}
+
+	public Short getBVerteilt() {
+		return bVerteilt;
+	}
+
+	public void setBVerteilt(Short bVerteilt) {
+		this.bVerteilt = bVerteilt;
+	}
+
+	public Integer getMaschineIId() {
+		return this.maschineIId;
+	}
+
+	public void setMaschineIId(Integer maschineIId) {
+		this.maschineIId = maschineIId;
+	}
+
+	@Column(name = "LOSSOLLARBEITSPLAN_I_ID")
+	private Integer lossollarbeitsplanIId;
+
+	public Integer getLossollarbeitsplanIId() {
+		return lossollarbeitsplanIId;
+	}
+
+	public void setLossollarbeitsplanIId(Integer lossollarbeitsplanIId) {
+		this.lossollarbeitsplanIId = lossollarbeitsplanIId;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Zeitverteilung() {
@@ -73,11 +132,12 @@ public class Zeitverteilung implements Serializable {
 	}
 
 	public Zeitverteilung(Integer id, Integer personalIId, Timestamp zeit,
-			Integer losIId) {
+			Integer losIId, Short bVerteilt) {
 		setIId(id);
 		setPersonalIId(personalIId);
 		setLosIId(losIId);
 		setTZeit(zeit);
+		setBVerteilt(bVerteilt);
 
 	}
 

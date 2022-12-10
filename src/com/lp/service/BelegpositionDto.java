@@ -65,8 +65,7 @@ import com.lp.server.util.IIId;
  * 
  * @version not attributable Date $Date: 2012/05/04 13:16:10 $
  */
-public abstract class BelegpositionDto extends DefaultHandler implements
-		Serializable, IIId {
+public abstract class BelegpositionDto extends DefaultHandler implements Serializable, IIId {
 
 	/**
 	 * 
@@ -77,6 +76,37 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 
 	public final static int COPY_PASTE_MODUS_NORMAL = 0;
 	public final static int COPY_PASTE_MODUS_IST_PREIS_AUS_LOS = 1;
+
+	private Short bInitial;
+
+	public Short getBInitial() {
+
+		return bInitial;
+	}
+
+	public void setBInitial(Short bInitial) {
+		this.bInitial = bInitial;
+	}
+
+	private Integer usecaseIIdQuelle = null;
+
+	public Integer getUsecaseIIdQuelle() {
+		return usecaseIIdQuelle;
+	}
+
+	public void setUsecaseIIdQuelle(Integer usecaseIIdQuelle) {
+		this.usecaseIIdQuelle = usecaseIIdQuelle;
+	}
+
+	public Integer getIKeyQuelle() {
+		return iKeyQuelle;
+	}
+
+	public void setIKeyQuelle(Integer iKeyQuelle) {
+		this.iKeyQuelle = iKeyQuelle;
+	}
+
+	private Integer iKeyQuelle = null;
 
 	private Integer iId = null;
 	private Integer belegIId = null;
@@ -91,10 +121,8 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 	private BigDecimal nMenge = null;
 	private String einheitCNr = null;
 	private Integer positioniIdArtikelset;
-	
-	
+
 	protected Short bNettopreisuebersteuert;
-	
 
 	public final Short getBNettopreisuebersteuert() {
 		return bNettopreisuebersteuert;
@@ -103,15 +131,14 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 	public final void setBNettopreisuebersteuert(Short bNettopreisuebersteuert) {
 		this.bNettopreisuebersteuert = bNettopreisuebersteuert;
 	}
+
 	private List<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge = null;
-	
 
 	public List<SeriennrChargennrMitMengeDto> getSeriennrChargennrMitMenge() {
 		return alSeriennrChargennrMitMenge;
 	}
 
-	public void setSeriennrChargennrMitMenge(
-			List<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge) {
+	public void setSeriennrChargennrMitMenge(List<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge) {
 		this.alSeriennrChargennrMitMenge = alSeriennrChargennrMitMenge;
 	}
 
@@ -165,7 +192,7 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 		this.positionsartCNr = positionsartCNr;
 	}
 
-	@HvDtoLogIdCnr(entityClass=Artikel.class)
+	@HvDtoLogIdCnr(entityClass = Artikel.class)
 	public final Integer getArtikelIId() {
 		return artikelIId;
 	}
@@ -194,8 +221,7 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 		return this.bArtikelbezeichnunguebersteuert;
 	}
 
-	public final void setBArtikelbezeichnunguebersteuert(
-			Short bArtikelbezeichnunguebersteuert) {
+	public final void setBArtikelbezeichnunguebersteuert(Short bArtikelbezeichnunguebersteuert) {
 		this.bArtikelbezeichnunguebersteuert = bArtikelbezeichnunguebersteuert;
 	}
 
@@ -250,8 +276,7 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 		returnString += ", artikelIId: " + artikelIId;
 		returnString += ", cBez: " + cBez;
 		returnString += ", cZusatzbez: " + cZusatzbez;
-		returnString += ", bArtikelbezeichnunguebersteuert: "
-				+ bArtikelbezeichnunguebersteuert;
+		returnString += ", bArtikelbezeichnunguebersteuert: " + bArtikelbezeichnunguebersteuert;
 		returnString += ", xTextinhalt: " + xTextinhalt;
 		returnString += ", mediastandardIId: " + mediastandardIId;
 		returnString += ", nMenge: " + nMenge;
@@ -263,8 +288,7 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 	/**
 	 * @deprecated MB: das gehoert in die BelegkonvertierungFacBaen
 	 * 
-	 * @param belegpositionDtoI
-	 *            BelegpositionDto
+	 * @param belegpositionDtoI BelegpositionDto
 	 * @return Object
 	 */
 	public Object cloneAsBelegpositionDto(BelegpositionDto belegpositionDtoI) {
@@ -289,8 +313,7 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 		return belegpositionDtoI;
 	}
 
-	public void fillWithXML(String sKeyI, String sValueI)
-			throws NumberFormatException {
+	public void fillWithXML(String sKeyI, String sValueI) throws NumberFormatException {
 		// HV eigene (Feature-)Daten.
 		// iId
 		if (sKeyI.equals(SystemFac.SCHEMA_HV_FEATURE_I_ID)) {
@@ -313,8 +336,7 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 			setCZusatzbez(sValueI);
 		}
 		// Artikelbezeichnunguebersteuert
-		else if (sKeyI
-				.equals(SystemFac.SCHEMA_HV_FEATURE_ARTIKELBEZEICHNUNGUEBERSTEUERT)) {
+		else if (sKeyI.equals(SystemFac.SCHEMA_HV_FEATURE_ARTIKELBEZEICHNUNGUEBERSTEUERT)) {
 			setBArtikelbezeichnunguebersteuert(Short.valueOf(sValueI));
 		}
 		// xTextinhalt
@@ -341,46 +363,24 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime
-				* result
-				+ ((alSeriennrChargennrMitMenge == null) ? 0
-						: alSeriennrChargennrMitMenge.hashCode());
+		result = prime * result + ((alSeriennrChargennrMitMenge == null) ? 0 : alSeriennrChargennrMitMenge.hashCode());
+		result = prime * result + ((artikelIId == null) ? 0 : artikelIId.hashCode());
 		result = prime * result
-				+ ((artikelIId == null) ? 0 : artikelIId.hashCode());
-		result = prime
-				* result
-				+ ((bArtikelbezeichnunguebersteuert == null) ? 0
-						: bArtikelbezeichnunguebersteuert.hashCode());
-		result = prime
-				* result
-				+ ((bNettopreisuebersteuert == null) ? 0
-						: bNettopreisuebersteuert.hashCode());
-		result = prime * result
-				+ ((belegIId == null) ? 0 : belegIId.hashCode());
+				+ ((bArtikelbezeichnunguebersteuert == null) ? 0 : bArtikelbezeichnunguebersteuert.hashCode());
+		result = prime * result + ((bNettopreisuebersteuert == null) ? 0 : bNettopreisuebersteuert.hashCode());
+		result = prime * result + ((belegIId == null) ? 0 : belegIId.hashCode());
 		result = prime * result + ((cBez == null) ? 0 : cBez.hashCode());
-		result = prime * result
-				+ ((cZusatzbez == null) ? 0 : cZusatzbez.hashCode());
-		result = prime * result
-				+ ((einheitCNr == null) ? 0 : einheitCNr.hashCode());
+		result = prime * result + ((cZusatzbez == null) ? 0 : cZusatzbez.hashCode());
+		result = prime * result + ((einheitCNr == null) ? 0 : einheitCNr.hashCode());
 		result = prime * result + iCopyPasteModus;
 		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
 		result = prime * result + ((iSort == null) ? 0 : iSort.hashCode());
-		result = prime
-				* result
-				+ ((mediastandardIId == null) ? 0 : mediastandardIId.hashCode());
-		result = prime
-				* result
-				+ ((nMaterialzuschlag == null) ? 0 : nMaterialzuschlag
-						.hashCode());
+		result = prime * result + ((mediastandardIId == null) ? 0 : mediastandardIId.hashCode());
+		result = prime * result + ((nMaterialzuschlag == null) ? 0 : nMaterialzuschlag.hashCode());
 		result = prime * result + ((nMenge == null) ? 0 : nMenge.hashCode());
-		result = prime
-				* result
-				+ ((positioniIdArtikelset == null) ? 0 : positioniIdArtikelset
-						.hashCode());
-		result = prime * result
-				+ ((positionsartCNr == null) ? 0 : positionsartCNr.hashCode());
-		result = prime * result
-				+ ((xTextinhalt == null) ? 0 : xTextinhalt.hashCode());
+		result = prime * result + ((positioniIdArtikelset == null) ? 0 : positioniIdArtikelset.hashCode());
+		result = prime * result + ((positionsartCNr == null) ? 0 : positionsartCNr.hashCode());
+		result = prime * result + ((xTextinhalt == null) ? 0 : xTextinhalt.hashCode());
 		return result;
 	}
 
@@ -396,8 +396,7 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 		if (alSeriennrChargennrMitMenge == null) {
 			if (other.alSeriennrChargennrMitMenge != null)
 				return false;
-		} else if (!alSeriennrChargennrMitMenge
-				.equals(other.alSeriennrChargennrMitMenge))
+		} else if (!alSeriennrChargennrMitMenge.equals(other.alSeriennrChargennrMitMenge))
 			return false;
 		if (artikelIId == null) {
 			if (other.artikelIId != null)
@@ -407,14 +406,12 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 		if (bArtikelbezeichnunguebersteuert == null) {
 			if (other.bArtikelbezeichnunguebersteuert != null)
 				return false;
-		} else if (!bArtikelbezeichnunguebersteuert
-				.equals(other.bArtikelbezeichnunguebersteuert))
+		} else if (!bArtikelbezeichnunguebersteuert.equals(other.bArtikelbezeichnunguebersteuert))
 			return false;
 		if (bNettopreisuebersteuert == null) {
 			if (other.bNettopreisuebersteuert != null)
 				return false;
-		} else if (!bNettopreisuebersteuert
-				.equals(other.bNettopreisuebersteuert))
+		} else if (!bNettopreisuebersteuert.equals(other.bNettopreisuebersteuert))
 			return false;
 		if (belegIId == null) {
 			if (other.belegIId != null)
@@ -480,6 +477,5 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 			return false;
 		return true;
 	}
-	
-	
+
 }

@@ -46,6 +46,16 @@ public class HistoryartDto implements Serializable {
 	private Integer iGruen;
 	private Integer iBlau;
 
+	private Short bInAuswahllisteAnzeigen;
+
+	public Short getBInAuswahllisteAnzeigen() {
+		return bInAuswahllisteAnzeigen;
+	}
+
+	public void setBInAuswahllisteAnzeigen(Short bInAuswahllisteAnzeigen) {
+		this.bInAuswahllisteAnzeigen = bInAuswahllisteAnzeigen;
+	}
+
 	private Short bAktualisierezieltermin;
 
 	public Short getBAktualisierezieltermin() {
@@ -55,7 +65,7 @@ public class HistoryartDto implements Serializable {
 	public void setBAktualisierezieltermin(Short bAktualisierezieltermin) {
 		this.bAktualisierezieltermin = bAktualisierezieltermin;
 	}
-	
+
 	public Integer getIRot() {
 		return iRot;
 	}

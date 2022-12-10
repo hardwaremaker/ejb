@@ -46,7 +46,9 @@ import com.lp.server.util.ICNr;
 @NamedQueries( {
 		@NamedQuery(name = "ArtklafindByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Artkla o WHERE o.cNr = ?1 AND o.mandantCNr = ?2"),
 		@NamedQuery(name = "ArtklafindAll", query = "SELECT OBJECT(o) FROM Artkla o ORDER BY o.cNr"),
-		@NamedQuery(name = "ArtklafindByMandantCNr", query = "SELECT OBJECT(o) FROM Artkla o WHERE o.mandantCNr = ?1 ORDER BY o.cNr") })
+		@NamedQuery(name = "ArtklafindByMandantCNr", query = "SELECT OBJECT(o) FROM Artkla o WHERE o.mandantCNr = ?1 ORDER BY o.cNr"),
+		@NamedQuery(name = ArtklaQuery.AllTopsByMandantCNr, query = "SELECT OBJECT(o) FROM Artkla o WHERE o.bTops = 1 AND o.mandantCNr = :mandant ORDER BY o.cNr")
+})
 @Entity
 @Table(name = "WW_ARTKLA")
 public class Artkla implements Serializable, ICNr {

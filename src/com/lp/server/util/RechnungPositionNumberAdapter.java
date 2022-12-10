@@ -35,9 +35,9 @@ package com.lp.server.util;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
@@ -66,6 +66,11 @@ public class RechnungPositionNumberAdapter extends PositionNumberAdapter impleme
 	
 	public void setAdaptee(Object adaptee) {
 		rechnungPos = (Rechnungposition) adaptee ;
+	}
+	
+	@Override
+	public Object getAdaptee() {
+		return rechnungPos ;
 	}
 	
 	@Override
@@ -122,13 +127,23 @@ public class RechnungPositionNumberAdapter extends PositionNumberAdapter impleme
 	@Override
 	public Iterator<?> getPositionsIteratorForHeadIId(Integer rechnungIId) {
 		if(null == rechnungIId) return new ArrayList().iterator();
-		try {
-			Query query = em.createNamedQuery("RechnungPositionfindByRechnungIId");
-			query.setParameter(1, rechnungIId);
-			return query.getResultList().iterator(); 
-		} catch(NoResultException e) {	
-		}
-		
-		return new ArrayList().iterator() ;
+		return getPositionsListForHeadIId(rechnungIId).iterator();
+//		
+//		try {
+//			Query query = em.createNamedQuery("RechnungPositionfindByRechnungIId");
+//			query.setParameter(1, rechnungIId);
+//			return query.getResultList().iterator(); 
+//		} catch(NoResultException e) {	
+//		}
+//		
+//		return new ArrayList().iterator() ;
 	}
+
+	@Override
+	public List<?> getPositionsListForHeadIId(Integer headIId) {
+		if(null == headIId) return new ArrayList() ;
+		Query query = em.createNamedQuery("RechnungPositionfindByRechnungIId");
+		query.setParameter(1, headIId);
+		return query.getResultList(); 
+	}	
 }

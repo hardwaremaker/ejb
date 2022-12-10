@@ -63,6 +63,29 @@ public class AnfragepositionDto extends BelegpositionDto implements Cloneable {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+
+	private Integer anfragepositionIdZugehoerig;
+
+	public Integer getAnfragepositionIdZugehoerig() {
+		return anfragepositionIdZugehoerig;
+	}
+
+	public void setAnfragepositionIdZugehoerig(
+			Integer anfragepositionIdZugehoerig) {
+		this.anfragepositionIdZugehoerig = anfragepositionIdZugehoerig;
+	}
+
+	
+	private Integer lossollmaterialIId;
+
+	public Integer getLossollmaterialIId() {
+		return lossollmaterialIId;
+	}
+
+	public void setLossollmaterialIId(Integer lossollmaterialIId) {
+		this.lossollmaterialIId = lossollmaterialIId;
+	}
+	
 	private BigDecimal nRichtpreis;
 
 	public BigDecimal getNRichtpreis() {
@@ -83,6 +106,8 @@ public class AnfragepositionDto extends BelegpositionDto implements Cloneable {
 		AnfragepositionDto anfragepositionDto = new AnfragepositionDto();
 		anfragepositionDto = (AnfragepositionDto) cloneAsBelegpositionDto(new AnfragepositionDto());
 		anfragepositionDto.setNRichtpreis(this.getNRichtpreis());
+		anfragepositionDto.setAnfragepositionIdZugehoerig(this.getAnfragepositionIdZugehoerig());
+		anfragepositionDto.setLossollmaterialIId(this.getLossollmaterialIId());
 		return anfragepositionDto;
 	}
 

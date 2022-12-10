@@ -34,7 +34,6 @@ package com.lp.server.rechnung.service;
 
 import java.io.Serializable;
 
-import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.service.BelegpositionVerkaufDto;
 
 public class RechnungPositionDto extends BelegpositionVerkaufDto implements

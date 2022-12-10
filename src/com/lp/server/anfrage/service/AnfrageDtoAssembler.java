@@ -50,54 +50,51 @@ public class AnfrageDtoAssembler {
 			anfrageDto.setStatusCNr(anfrage.getAnfragestatusCNr());
 			anfrageDto.setBelegartCNr(anfrage.getBelegartCNr());
 			anfrageDto.setTBelegdatum(anfrage.getTBelegdatum());
-			anfrageDto.setLieferantIIdAnfrageadresse(anfrage
-					.getLieferantIIdAnfrageadresse());
-			anfrageDto.setAnsprechpartnerIIdLieferant(anfrage
-					.getAnsprechpartnerIIdLieferant());
+			anfrageDto.setLieferantIIdAnfrageadresse(anfrage.getLieferantIIdAnfrageadresse());
+			anfrageDto.setAnsprechpartnerIIdLieferant(anfrage.getAnsprechpartnerIIdLieferant());
 			anfrageDto.setLiefergruppeIId(anfrage.getLfliefergruppeIId());
 			anfrageDto.setCBez(anfrage.getCBez());
 			anfrageDto.setCAngebotnummer(anfrage.getCAngebotnummer());
 			anfrageDto.setWaehrungCNr(anfrage.getWaehrungCNrAnfragewaehrung());
-			anfrageDto.setFWechselkursmandantwaehrungzubelegwaehrung(anfrage
-					.getFWechselkursmandantwaehrungzuanfragewaehrung());
+			anfrageDto.setFWechselkursmandantwaehrungzubelegwaehrung(
+					anfrage.getFWechselkursmandantwaehrungzuanfragewaehrung());
 			anfrageDto.setTAnliefertermin(anfrage.getTAnliefertermin());
 			anfrageDto.setTAngebotdatum(anfrage.getTAngebotdatum());
 			anfrageDto.setTAngebotgueltigbis(anfrage.getTAngebotgueltigbis());
 			anfrageDto.setKostenstelleIId(anfrage.getKostenstelleIId());
-			anfrageDto.setFAllgemeinerRabattsatz(anfrage
-					.getFAllgemeinerrabattsatz());
+			anfrageDto.setFAllgemeinerRabattsatz(anfrage.getFAllgemeinerrabattsatz());
 			anfrageDto.setLieferartIId(anfrage.getLieferartIId());
 			anfrageDto.setZahlungszielIId(anfrage.getZahlungszielIId());
 			anfrageDto.setSpediteurIId(anfrage.getSpediteurIId());
-			anfrageDto.setNGesamtwertinbelegwaehrung(anfrage
-					.getNGesamtanfragewertinanfragewaehrung());
-			anfrageDto.setNTransportkosteninanfragewaehrung(anfrage
-					.getNTransportkosteninanfragewaehrung());
-			anfrageDto.setBelegtextIIdKopftext(anfrage
-					.getAnfragetextIIdKopftext());
-			anfrageDto.setXKopftextuebersteuert(anfrage
-					.getXKopftextuebersteuert());
-			anfrageDto.setBelegtextIIdFusstext(anfrage
-					.getAnfragetextIIdFusstext());
-			anfrageDto.setXFusstextuebersteuert(anfrage
-					.getXFusstextuebersteuert());
+			anfrageDto.setNGesamtwertinbelegwaehrung(anfrage.getNGesamtanfragewertinanfragewaehrung());
+			anfrageDto.setNTransportkosteninanfragewaehrung(anfrage.getNTransportkosteninanfragewaehrung());
+			anfrageDto.setBelegtextIIdKopftext(anfrage.getAnfragetextIIdKopftext());
+			anfrageDto.setXKopftextuebersteuert(anfrage.getXKopftextuebersteuert());
+			anfrageDto.setBelegtextIIdFusstext(anfrage.getAnfragetextIIdFusstext());
+			anfrageDto.setXFusstextuebersteuert(anfrage.getXFusstextuebersteuert());
 			anfrageDto.setTGedruckt(anfrage.getTGedruckt());
-			anfrageDto.setPersonalIIdStorniert(anfrage
-					.getPersonalIIdStorniert());
+			anfrageDto.setPersonalIIdStorniert(anfrage.getPersonalIIdStorniert());
 			anfrageDto.setTStorniert(anfrage.getTStorniert());
 			anfrageDto.setPersonalIIdAnlegen(anfrage.getPersonalIIdAnlegen());
 			anfrageDto.setTAnlegen(anfrage.getTAnlegen());
 			anfrageDto.setPersonalIIdAendern(anfrage.getPersonalIIdAendern());
 			anfrageDto.setTAendern(anfrage.getTAendern());
-			anfrageDto.setPersonalIIdManuellerledigt(anfrage
-					.getPersonalIIdManuellerledigt());
+			anfrageDto.setPersonalIIdManuellerledigt(anfrage.getPersonalIIdManuellerledigt());
 			anfrageDto.setTManuellerledigt(anfrage.getTManuellerledigt());
-			anfrageDto.setAnfrageIIdLiefergruppenanfrage(anfrage
-					.getAnfrageIIdLiefergruppenanfrage());
+			anfrageDto.setAnfrageIIdLiefergruppenanfrage(anfrage.getAnfrageIIdLiefergruppenanfrage());
 			anfrageDto.setCLieferartort(anfrage.getCLieferartort());
 			anfrageDto.setProjektIId(anfrage.getProjektIId());
-			anfrageDto.setAnfrageerledigungsgrundIId(anfrage
-					.getAnfrageerledigungsgrundIId());
+			anfrageDto.setAnfrageerledigungsgrundIId(anfrage.getAnfrageerledigungsgrundIId());
+
+			anfrageDto.setPartnerIIdLieferadresse(anfrage.getPartnerIIdLieferadresse());
+			anfrageDto.setAnsprechpartnerIIdLieferadresse(anfrage.getAnsprechpartnerIIdLieferadresse());
+			anfrageDto.setTAbgabetermin(anfrage.getTAbgabetermin());
+
+			anfrageDto.setNBankspeseninanfragewaehrung(anfrage.getNBankspeseninanfragewaehrung());
+			anfrageDto.setNZollkosteninanfragewaehrung(anfrage.getNZollkosteninanfragewaehrung());
+			anfrageDto.setNSonstigespeseninanfragewaehrung(anfrage.getNSonstigespeseninanfragewaehrung());
+			anfrageDto.setPersonalIIdAnfrager(anfrage.getPersonalIIdAnfrager());
+			anfrageDto.setTPreisgueltigab(anfrage.getTPreisgueltigab());
 		}
 		return anfrageDto;
 	}

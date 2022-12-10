@@ -34,12 +34,14 @@ package com.lp.server.angebotstkl.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+
+import javax.persistence.Column;
 
 import com.lp.service.BelegpositionDto;
 import com.lp.util.Helper;
 
-public class EinkaufsangebotpositionDto extends BelegpositionDto implements
-		Serializable {
+public class EinkaufsangebotpositionDto extends BelegpositionDto implements Serializable {
 	/**
 	 * 
 	 */
@@ -55,8 +57,132 @@ public class EinkaufsangebotpositionDto extends BelegpositionDto implements
 	private Double fMindestbestellmenge;
 	private String cPosition;
 	private String cInternebemerkung;
+	private Integer herstellerIId;
+	private Integer lieferantIId;
+	private Timestamp tLetztewebabfrage;
+	private String cBuyerurl;
+
+	private Integer iLfdnummer;
+
+	public Integer getILfdnummer() {
+		return this.iLfdnummer;
+	}
+
+	public void setILfdnummer(Integer iLfdnummer) {
+		this.iLfdnummer = iLfdnummer;
+	}
+
+	private String cZbez2;
+
+	public String getCZbez2() {
+		return cZbez2;
+	}
+
+	public void setCZbez2(String cZbez2) {
+		this.cZbez2 = cZbez2;
+	}
+
+	private String cArtikelbezhersteller;
+
+	public String getCArtikelbezhersteller() {
+		return this.cArtikelbezhersteller;
+	}
+
+	public void setCArtikelbezhersteller(String cArtikelbezhersteller) {
+		this.cArtikelbezhersteller = cArtikelbezhersteller;
+	}
+
+	private Integer positionlieferantIIdUebersteuertMenge1;
+
+	public Integer getPositionlieferantIIdUebersteuertMenge1() {
+		return positionlieferantIIdUebersteuertMenge1;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge1(Integer positionlieferantIIdUebersteuertMenge1) {
+		this.positionlieferantIIdUebersteuertMenge1 = positionlieferantIIdUebersteuertMenge1;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge2() {
+		return positionlieferantIIdUebersteuertMenge2;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge2(Integer positionlieferantIIdUebersteuertMenge2) {
+		this.positionlieferantIIdUebersteuertMenge2 = positionlieferantIIdUebersteuertMenge2;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge3() {
+		return positionlieferantIIdUebersteuertMenge3;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge3(Integer positionlieferantIIdUebersteuertMenge3) {
+		this.positionlieferantIIdUebersteuertMenge3 = positionlieferantIIdUebersteuertMenge3;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge4() {
+		return positionlieferantIIdUebersteuertMenge4;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge4(Integer positionlieferantIIdUebersteuertMenge4) {
+		this.positionlieferantIIdUebersteuertMenge4 = positionlieferantIIdUebersteuertMenge4;
+	}
+
+	public Integer getPositionlieferantIIdUebersteuertMenge5() {
+		return positionlieferantIIdUebersteuertMenge5;
+	}
+
+	public void setPositionlieferantIIdUebersteuertMenge5(Integer positionlieferantIIdUebersteuertMenge5) {
+		this.positionlieferantIIdUebersteuertMenge5 = positionlieferantIIdUebersteuertMenge5;
+	}
+
+	private Integer positionlieferantIIdUebersteuertMenge2;
+	private Integer positionlieferantIIdUebersteuertMenge3;
+	private Integer positionlieferantIIdUebersteuertMenge4;
+	private Integer positionlieferantIIdUebersteuertMenge5;
+
+	public Integer getHerstellerIId() {
+		return herstellerIId;
+	}
+
+	public void setHerstellerIId(Integer herstellerIId) {
+		this.herstellerIId = herstellerIId;
+	}
+
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
+	}
+
+	public Timestamp getTLetztewebabfrage() {
+		return tLetztewebabfrage;
+	}
+
+	public void setTLetztewebabfrage(Timestamp tLetztewebabfrage) {
+		this.tLetztewebabfrage = tLetztewebabfrage;
+	}
+
+	public String getCBuyerurl() {
+		return cBuyerurl;
+	}
+
+	public void setCBuyerurl(String cBuyerurl) {
+		this.cBuyerurl = cBuyerurl;
+	}
+
+	private String cArtikelnrhersteller;
+
+	public String getCArtikelnrhersteller() {
+		return cArtikelnrhersteller;
+	}
+
+	public void setCArtikelnrhersteller(String cArtikelnrhersteller) {
+		this.cArtikelnrhersteller = cArtikelnrhersteller;
+	}
 
 	private String cKommentar1;
+
 	public String getCKommentar1() {
 		return cKommentar1;
 	}
@@ -74,9 +200,9 @@ public class EinkaufsangebotpositionDto extends BelegpositionDto implements
 	}
 
 	private String cKommentar2;
-	
+
 	private Short bMitdrucken;
-	
+
 	public Short getBMitdrucken() {
 		return bMitdrucken;
 	}
@@ -179,20 +305,15 @@ public class EinkaufsangebotpositionDto extends BelegpositionDto implements
 		if (!(obj instanceof EinkaufsangebotpositionDto))
 			return false;
 		EinkaufsangebotpositionDto that = (EinkaufsangebotpositionDto) obj;
-		if (!(that.nPreis1 == null ? this.nPreis1 == null : that.nPreis1
-				.equals(this.nPreis1)))
+		if (!(that.nPreis1 == null ? this.nPreis1 == null : that.nPreis1.equals(this.nPreis1)))
 			return false;
-		if (!(that.nPreis2 == null ? this.nPreis2 == null : that.nPreis2
-				.equals(this.nPreis2)))
+		if (!(that.nPreis2 == null ? this.nPreis2 == null : that.nPreis2.equals(this.nPreis2)))
 			return false;
-		if (!(that.nPreis3 == null ? this.nPreis3 == null : that.nPreis3
-				.equals(this.nPreis3)))
+		if (!(that.nPreis3 == null ? this.nPreis3 == null : that.nPreis3.equals(this.nPreis3)))
 			return false;
-		if (!(that.nPreis4 == null ? this.nPreis4 == null : that.nPreis4
-				.equals(this.nPreis4)))
+		if (!(that.nPreis4 == null ? this.nPreis4 == null : that.nPreis4.equals(this.nPreis4)))
 			return false;
-		if (!(that.nPreis5 == null ? this.nPreis5 == null : that.nPreis5
-				.equals(this.nPreis5)))
+		if (!(that.nPreis5 == null ? this.nPreis5 == null : that.nPreis5.equals(this.nPreis5)))
 			return false;
 		return true;
 	}

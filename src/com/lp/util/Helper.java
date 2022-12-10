@@ -32,6 +32,10 @@
  ******************************************************************************/
 package com.lp.util;
 
+import java.awt.AlphaComposite;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.RenderedImage;
@@ -43,9 +47,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.security.MessageDigest;
@@ -62,6 +69,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -69,16 +77,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.StringTokenizer;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.imageio.IIOException;
 import javax.imageio.ImageIO;
+import javax.mail.internet.InternetAddress;
 
-import net.sf.jasperreports.engine.JRPrintPage;
-import net.sf.jasperreports.engine.JasperPrint;
-
+import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.xml.serialize.OutputFormat;
@@ -88,14 +97,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
-
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.benutzer.service.LogonFac;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.personal.fastlanereader.generated.FLRMaschine;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.system.jcr.service.JCRDocDto;
 import com.lp.server.system.service.LandplzortDto;
@@ -103,14 +110,19 @@ import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
-import com.lp.server.util.ServerConfiguration;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.logger.ILPLogger;
+import com.lp.server.util.logger.LPLogService;
 import com.lp.server.util.report.JasperPrintLP;
 import com.sun.media.jai.codec.ByteArraySeekableStream;
 import com.sun.media.jai.codec.ImageCodec;
 import com.sun.media.jai.codec.ImageDecoder;
 import com.sun.media.jai.codec.ImageEncoder;
 import com.sun.media.jai.codec.TIFFEncodeParam;
+
+import net.sf.jasperreports.engine.JRPrintPage;
+import net.sf.jasperreports.engine.JasperPrint;
 
 /**
  * <p>
@@ -133,6 +145,7 @@ import com.sun.media.jai.codec.TIFFEncodeParam;
  */
 
 public final class Helper {
+	protected final static ILPLogger myLogger = LPLogService.getInstance().getLogger(Helper.class);
 	// Sortierung
 	public final static int SORTIERUNG_AUFSTEIGEND = 1;
 	public final static int SORTIERUNG_ABSTEIGEND = 2;
@@ -149,13 +162,22 @@ public final class Helper {
 	public final static int SORTIERUNG_NACH_ARBEITSGANG = 10;
 	public final static int SORTIERUNG_NACH_BELEGNR = 11;
 	public final static int SORTIERUNG_NACH_ARTIKELBEZEICHNUNG = 12;
+	public final static int SORTIERUNG_NACH_WIE_ERFASST = 13;
 
 	public final static String CR_LF = "" + (char) 0x0d + (char) 0x0a;
 	public final static String LINE_SEPARATOR = "\n";
 
 	public final static Object NO_VALUE_AND_THATS_OK = new Object();
 
+	public static final BigDecimal MINUTE_IN_MS = new BigDecimal(60 * 1000);
+
+	public static final BigDecimal STUNDE_IN_MS = new BigDecimal(60 * 60 * 1000);
+	/**
+	 * AxD: ACHTUNG ist nicht anzahl ms pro Tag, sondern 1h + 1ms!
+	 */
 	public final static BigDecimal DAY_IN_MS = new BigDecimal(3600000l);
+
+	public final static Timestamp FIBU_GUELTIG_AB = new Timestamp(70, 0, 1, 0, 0, 0, 0);
 
 	/**
 	 * MB: Instantiierung dieser Klasse verhindern.
@@ -167,17 +189,14 @@ public final class Helper {
 	/**
 	 * ersetzt Strich durch Punkt in einem String
 	 * 
-	 * @param stringBuffer
-	 *            String
+	 * @param stringBuffer String
 	 * @return String
 	 */
-	public static String replaceStrichDurchPunktInStringBuffer(
-			StringBuffer stringBuffer) {
+	public static String replaceStrichDurchPunktInStringBuffer(StringBuffer stringBuffer) {
 
 		for (int i = 0; i < stringBuffer.length(); i++) {
 			if (stringBuffer.indexOf("-") != -1) {
-				stringBuffer.replace(stringBuffer.indexOf("-"),
-						stringBuffer.indexOf("-") + 1, ".");
+				stringBuffer.replace(stringBuffer.indexOf("-"), stringBuffer.indexOf("-") + 1, ".");
 			}
 		}
 
@@ -232,8 +251,7 @@ public final class Helper {
 
 		for (int i = 0; i < list.size(); i++) {
 
-			weReferenz += list.get(i).getBelegart() + "|"
-					+ list.get(i).getBelegnummer() + "|";
+			weReferenz += list.get(i).getBelegart() + "|" + list.get(i).getBelegnummer() + "|";
 
 			if (list.get(i).getZusatz() != null) {
 				weReferenz += list.get(i).getZusatz() + "|";
@@ -241,8 +259,7 @@ public final class Helper {
 				weReferenz += "|";
 			}
 			if (list.get(i).getTBelegdatum() != null) {
-				weReferenz += Helper.formatDatum(list.get(i).getTBelegdatum(),
-						Locale.GERMAN) + "|";
+				weReferenz += Helper.formatDatum(list.get(i).getTBelegdatum(), Locale.GERMAN) + "|";
 			} else {
 				weReferenz += "|";
 			}
@@ -292,8 +309,7 @@ public final class Helper {
 
 	}
 
-	public static String fitString2Length(String string2Fit, int newLength,
-			char fillUpChar) {
+	public static String fitString2Length(String string2Fit, int newLength, char fillUpChar) {
 		if (string2Fit == null || string2Fit.length() == newLength) {
 			return string2Fit;
 		}
@@ -312,14 +328,36 @@ public final class Helper {
 		return retVal;
 	}
 
-	public static String fitString2LengthHTMLBefuelltMitLeerzeichen(
-			String string2Fit, int newLength) {
-		return fitString2LengthHTMLBefuelltMitLeerzeichen(string2Fit,
-				newLength, false);
+	public static String fitString2LengthAuchNull(String string2Fit, int newLength, char fillUpChar) {
+
+		if (string2Fit == null) {
+			string2Fit = "";
+		}
+
+		if (string2Fit.length() == newLength) {
+			return string2Fit;
+		}
+
+		String retVal = null;
+		if (string2Fit.length() > newLength) {
+			retVal = string2Fit.substring(0, newLength);
+		} else {
+			StringBuffer sb = new StringBuffer(string2Fit);
+			while (sb.length() < newLength) {
+				sb.append(fillUpChar);
+			}
+
+			retVal = sb.toString();
+		}
+		return retVal;
 	}
 
-	public static String fitString2LengthHTMLBefuelltMitLeerzeichen(
-			String string2Fit, int newLength, boolean rechtsbuendig) {
+	public static String fitString2LengthHTMLBefuelltMitLeerzeichen(String string2Fit, int newLength) {
+		return fitString2LengthHTMLBefuelltMitLeerzeichen(string2Fit, newLength, false);
+	}
+
+	public static String fitString2LengthHTMLBefuelltMitLeerzeichen(String string2Fit, int newLength,
+			boolean rechtsbuendig) {
 
 		if (string2Fit == null) {
 			string2Fit = "";
@@ -355,8 +393,7 @@ public final class Helper {
 	/**
 	 * Ermittelt die Bezeichnung eines Tages (Montag, Dienstag...)
 	 * 
-	 * @param tag
-	 *            IntegerWert
+	 * @param tag IntegerWert
 	 * @return Bezeichnung des Tages
 	 * @exception RemoteException
 	 * @exception Exception
@@ -399,8 +436,7 @@ public final class Helper {
 	/**
 	 * Holt die Dateiendung aus dem Dateinamen
 	 * 
-	 * @param filename
-	 *            zB.: "Beispiel.txt"
+	 * @param filename zB.: "Beispiel.txt"
 	 * @return den Mimetype, zB.: ".txt"
 	 */
 	public static String getMime(String filename) {
@@ -411,13 +447,40 @@ public final class Helper {
 	/**
 	 * Holt den Namen der Datei ohne Dateiendung
 	 * 
-	 * @param filename
-	 *            zB.: "Beispiel.txt"
+	 * @param filename zB.: "Beispiel.txt"
 	 * @return zB.: "Beispiel"
 	 */
 	public static String getName(String filename) {
 		int dot = filename.lastIndexOf(".");
 		return dot == -1 ? filename : filename.substring(0, dot);
+	}
+
+	public static String verschluesslePasswortFuerLoginReport(String user, String password) {
+
+		int j = 0;
+		String s = new String();
+		for (int i = 0; i < password.length(); i++) {
+
+			s += new String(xorWithKey(password.substring(i, i + 1).getBytes(), user.substring(j, j + 1).getBytes()));
+
+			j = j + 1;
+
+			if (j >= user.length()) {
+				j = 0;
+			}
+		}
+
+		String toHex = "";
+		byte[] bytes = s.getBytes();
+		for (int i = 0; i < bytes.length; i++) {
+
+			String hexAddress = String.format("%1$02X", bytes[i]);
+
+			toHex += hexAddress;
+
+		}
+
+		return toHex;
 	}
 
 	public static String konvertiereDatum2StelligAuf4Stellig(String jahr2stellig) {
@@ -446,8 +509,7 @@ public final class Helper {
 		}
 	}
 
-	public static String fitString2LengthAlignRight(String string2Fit,
-			int newLength, char fillUpChar) {
+	public static String fitString2LengthAlignRight(String string2Fit, int newLength, char fillUpChar) {
 		if (string2Fit == null || string2Fit.length() == newLength) {
 			return string2Fit;
 		}
@@ -466,11 +528,10 @@ public final class Helper {
 	}
 
 	/**
-	 * rechnet Tage (Integer) in Millisekunden zur&uuml;ck und gibt eine long
-	 * wert zurueck
+	 * rechnet Tage (Integer) in Millisekunden zur&uuml;ck und gibt eine long wert
+	 * zurueck
 	 * 
-	 * @param value
-	 *            Integer
+	 * @param value Integer
 	 * @return long
 	 */
 	public static long calculateDaysBackIntoMilliseconds(Integer value) {
@@ -480,23 +541,18 @@ public final class Helper {
 	/**
 	 * berechnet das prozentuelle verhaeltnis von 2 Zahlen
 	 * 
-	 * @param numberA
-	 *            BigDecimal
-	 * @param numberB
-	 *            BigDecimal
+	 * @param numberA BigDecimal
+	 * @param numberB BigDecimal
 	 * @return BigDecimal
 	 */
-	public static BigDecimal calculateRatioInDecimal(BigDecimal numberA,
-			BigDecimal numberB) {
+	public static BigDecimal calculateRatioInDecimal(BigDecimal numberA, BigDecimal numberB) {
 		BigDecimal result = null;
 		if (numberA.compareTo(numberB) < 0) {
-			result = new BigDecimal(1).subtract(numberA.divide(numberB,
-					BigDecimal.ROUND_HALF_EVEN));
+			result = new BigDecimal(1).subtract(numberA.divide(numberB, BigDecimal.ROUND_HALF_EVEN));
 		} else if (numberA.compareTo(numberB) == 0) {
 			result = new BigDecimal(0);
 		} else {
-			result = new BigDecimal(1).subtract(numberB.divide(numberA,
-					BigDecimal.ROUND_HALF_EVEN));
+			result = new BigDecimal(1).subtract(numberB.divide(numberA, BigDecimal.ROUND_HALF_EVEN));
 		}
 		return result.multiply(new BigDecimal(100.0));
 	}
@@ -505,8 +561,7 @@ public final class Helper {
 		List list = new LinkedList(map.entrySet());
 		Collections.sort(list, new Comparator() {
 			public int compare(Object o1, Object o2) {
-				return ((Comparable) ((Map.Entry) (o1)).getValue())
-						.compareTo(((Map.Entry) (o2)).getValue());
+				return ((Comparable) ((Map.Entry) (o1)).getValue()).compareTo(((Map.Entry) (o2)).getValue());
 			}
 		});
 		// logger.info(list);
@@ -521,10 +576,8 @@ public final class Helper {
 	/**
 	 * key auffuellen
 	 * 
-	 * @param sI
-	 *            String
-	 * @param iFillToI
-	 *            int
+	 * @param sI       String
+	 * @param iFillToI int
 	 * @return String
 	 */
 	public static String fillStringWithBlankRight(String sI, int iFillToI) {
@@ -544,8 +597,7 @@ public final class Helper {
 		return sI;
 	}
 
-	public static byte[] konvertierePDFFileInMultipageTiff(byte[] bai,
-			int resolution) {
+	public static byte[] konvertierePDFFileInMultipageTiff(byte[] bai, int resolution) {
 		byte[] out = null;
 		try {
 
@@ -575,8 +627,7 @@ public final class Helper {
 				param.setLittleEndian(true);
 				param.setWriteTiled(false);
 
-				ImageEncoder encoder = com.sun.media.jai.codec.ImageCodec
-						.createImageEncoder("tiff", baos, param);
+				ImageEncoder encoder = com.sun.media.jai.codec.ImageCodec.createImageEncoder("tiff", baos, param);
 				Vector vector = new Vector();
 				for (int i = 1; i < image.length; i++) {
 					vector.add(image[i]);
@@ -599,8 +650,7 @@ public final class Helper {
 						document.close();
 					} catch (IOException e) {
 						e.printStackTrace();
-						throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
-								e.getMessage());
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e.getMessage());
 
 					}
 				}
@@ -617,8 +667,7 @@ public final class Helper {
 	/**
 	 * Java boolean in Java Short konvertieren.
 	 * 
-	 * @param pBool
-	 *            boolean
+	 * @param pBool boolean
 	 * @return Short
 	 */
 	public static final Short boolean2Short(boolean pBool) {
@@ -646,8 +695,7 @@ public final class Helper {
 	/**
 	 * Java Short in Java boolean konvertieren.
 	 * 
-	 * @param pShort
-	 *            Short
+	 * @param pShort Short
 	 * @return boolean
 	 */
 	public static final boolean short2boolean(Short pShort) {
@@ -659,8 +707,7 @@ public final class Helper {
 	/**
 	 * Java Short in Java boolean konvertieren.
 	 * 
-	 * @param pShort
-	 *            Short
+	 * @param pShort Short
 	 * @return boolean
 	 */
 	public static final boolean short2boolean(short pShort) {
@@ -670,8 +717,7 @@ public final class Helper {
 	/**
 	 * Java Short in Java boolean konvertieren.
 	 * 
-	 * @param pShort
-	 *            Short
+	 * @param pShort Short
 	 * @return boolean
 	 */
 	public static final Boolean short2Boolean(Short pShort) {
@@ -683,8 +729,7 @@ public final class Helper {
 	/**
 	 * Java Short in Java boolean konvertieren.
 	 * 
-	 * @param pShort
-	 *            Short
+	 * @param pShort Short
 	 * @return boolean
 	 */
 	public static final Boolean short2Boolean(short pShort) {
@@ -699,36 +744,29 @@ public final class Helper {
 	/**
 	 * kaufmaennisch runden.
 	 * 
-	 * @param bigDecimal
-	 *            BigDecimal
-	 * @param stellen
-	 *            int
+	 * @param bigDecimal BigDecimal
+	 * @param stellen    int
 	 * @return BigDecimal
 	 */
-	public static final BigDecimal rundeKaufmaennisch(BigDecimal bigDecimal,
-			int stellen) {
+	public static final BigDecimal rundeKaufmaennisch(BigDecimal bigDecimal, int stellen) {
 		// return rundeKaufmaennisch(bigDecimal, new Integer(stellen));
-		return bigDecimal == null ? null : bigDecimal.setScale(stellen,
-				BigDecimal.ROUND_HALF_EVEN);
+		return bigDecimal == null ? null : bigDecimal.setScale(stellen, BigDecimal.ROUND_HALF_EVEN);
 	}
 
 	/**
 	 * kaufmaennisch runden.
 	 * 
-	 * @param bigDecimal
-	 *            BigDecimal
-	 * @param stellen
-	 *            int
+	 * @param bigDecimal BigDecimal
+	 * @param stellen    int
 	 * @return BigDecimal
 	 */
-	public static final BigDecimal rundeKaufmaennisch(BigDecimal bigDecimal,
-			Integer stellen) {
+	public static final BigDecimal rundeKaufmaennisch(BigDecimal bigDecimal, Integer stellen) {
 		return rundeKaufmaennisch(bigDecimal, stellen.intValue());
 
 		/*
-		 * Wir haben meist den rundeKaufmaennisch(.., int). Der wird auf einen
-		 * new Integer(int) aufgeblasen, um dann hier wieder auf einen int
-		 * zurueckgewandelt zu werden? Das ist doch Bloedsinn.
+		 * Wir haben meist den rundeKaufmaennisch(.., int). Der wird auf einen new
+		 * Integer(int) aufgeblasen, um dann hier wieder auf einen int zurueckgewandelt
+		 * zu werden? Das ist doch Bloedsinn.
 		 */
 		// if (bigDecimal != null) {
 		// return bigDecimal.setScale(stellen.intValue(),
@@ -743,29 +781,25 @@ public final class Helper {
 	}
 
 	/**
-	 * Parst eine mit Komma oder Punkt als Dezimaltrennzeichen formatierte Zahl
-	 * zu einem BigDecimal
+	 * Parst eine mit Komma oder Punkt als Dezimaltrennzeichen formatierte Zahl zu
+	 * einem BigDecimal
 	 * 
 	 * @param commaFormatted
 	 * @return den geparsten BigDecimal Wert
 	 */
 	public static BigDecimal toBigDecimal(String commaFormatted) {
-		return new BigDecimal(commaFormatted
-				.replaceAll("\\.(?=[\\d\\.]*,)", "").replaceAll(",", "."));
+		return new BigDecimal(commaFormatted.replaceAll("\\.(?=[\\d\\.]*,)", "").replaceAll(",", "."));
 	}
 
 	/**
-	 * Prueft ob ein Datum gleich oder spaeter als eine bestimmte Untergrenze
-	 * liegt. Das Datum darf nicht unter der Untergrenze liegen.
+	 * Prueft ob ein Datum gleich oder spaeter als eine bestimmte Untergrenze liegt.
+	 * Das Datum darf nicht unter der Untergrenze liegen.
 	 * 
-	 * @param pDatum
-	 *            Date
-	 * @param pUntergrenze
-	 *            Date
+	 * @param pDatum       Date
+	 * @param pUntergrenze Date
 	 * @return boolean
 	 */
-	public static boolean datumGueltigInbezugAufUntergrenze(
-			java.sql.Date pDatum, java.sql.Date pUntergrenze) {
+	public static boolean datumGueltigInbezugAufUntergrenze(java.sql.Date pDatum, java.sql.Date pUntergrenze) {
 		boolean gueltig = false;
 
 		if (pDatum.equals(pUntergrenze) || (pDatum.after(pUntergrenze))) {
@@ -776,17 +810,14 @@ public final class Helper {
 	}
 
 	/**
-	 * Prueft ob ein Datum gleich oder vor einer bestimmten Obergrenze liegt.
-	 * Das Datum darf nicht ueber der Obergrenze liegen.
+	 * Prueft ob ein Datum gleich oder vor einer bestimmten Obergrenze liegt. Das
+	 * Datum darf nicht ueber der Obergrenze liegen.
 	 * 
-	 * @param pDatum
-	 *            Date
-	 * @param pObergrenze
-	 *            Date
+	 * @param pDatum      Date
+	 * @param pObergrenze Date
 	 * @return boolean
 	 */
-	public static boolean datumGueltigInbezugAufObergrenze(
-			java.sql.Date pDatum, java.sql.Date pObergrenze) {
+	public static boolean datumGueltigInbezugAufObergrenze(java.sql.Date pDatum, java.sql.Date pObergrenze) {
 		boolean gueltig = false;
 
 		if (pDatum.before(pObergrenze) || pDatum.equals(pObergrenze)) {
@@ -799,8 +830,7 @@ public final class Helper {
 	/**
 	 * Wandelt einen String in ein Locale um
 	 * 
-	 * @param s
-	 *            String
+	 * @param s String
 	 * @throws Exception
 	 * @return Locale
 	 */
@@ -810,16 +840,14 @@ public final class Helper {
 		} else if (s.length() != 10) {
 			throw new IllegalArgumentException("s.length() != 10");
 		} else {
-			return new Locale(s.substring(0, 2), s.substring(2, 4), s
-					.substring(4, 10).trim());
+			return new Locale(s.substring(0, 2), s.substring(2, 4), s.substring(4, 10).trim());
 		}
 	}
 
 	/**
 	 * Wandelt einen Locale in einen String um
 	 * 
-	 * @param l
-	 *            Locale
+	 * @param l Locale
 	 * @throws Exception
 	 * @return String
 	 */
@@ -827,33 +855,43 @@ public final class Helper {
 		if (l == null) {
 			return null;
 		}
-		String s = l.getLanguage() + l.getCountry() + l.getVariant()
-				+ "          ";
+		String s = l.getLanguage() + l.getCountry() + l.getVariant() + "          ";
 		return s.substring(0, 10);
 	}
 
 	/**
 	 * extractDate
 	 * 
-	 * @param ts
-	 *            Timestamp
+	 * @param ts Timestamp
 	 * @throws EJBExceptionLP
 	 * @return Date
 	 */
-	public static java.sql.Date extractDate(java.sql.Timestamp ts)
-			throws EJBExceptionLP {
+	public static java.sql.Date extractDate(java.sql.Timestamp ts) throws EJBExceptionLP {
 		if (ts == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("ts == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("ts == null"));
 		}
 		return new java.sql.Date(ts.getTime());
+	}
+
+	public static java.sql.Date asDate(Timestamp ts) {
+		Validator.notNull(ts, "ts");
+		return new java.sql.Date(ts.getTime());
+	}
+
+	public static Timestamp asTimestamp(java.sql.Date date) {
+		Validator.notNull(date, "date");
+		return new Timestamp(date.getTime());
+	}
+
+	public static Timestamp asTimestamp(java.util.Date date) {
+		Validator.notNull(date, "date");
+		return new Timestamp(date.getTime());
 	}
 
 	/**
 	 * Setzt Stunde/Minute/Millisekunde eines Timestamps auf 0
 	 * 
-	 * @param ts
-	 *            Timestamp
+	 * @param ts Timestamp
 	 * @return Timestamp
 	 */
 	public static java.sql.Timestamp cutTimestamp(java.sql.Timestamp ts) {
@@ -870,11 +908,39 @@ public final class Helper {
 		}
 	}
 
+	/**
+	 * Liefert den aktuellen Tag mit Stunde/Minute/Sekunde/Millisekunde auf 0 als
+	 * Timestamp</br>
+	 * 
+	 * @return Heute als Timestamp
+	 */
+	public static java.sql.Timestamp cut() {
+		Calendar cal = Calendar.getInstance();
+		cal.set(Calendar.MILLISECOND, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		return new java.sql.Timestamp(cal.getTimeInMillis());
+	}
+
+	public static java.sql.Timestamp cutTimestampAddDays(java.sql.Timestamp ts, int days) {
+		Validator.notNull(ts, "ts");
+
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(ts.getTime());
+		cal.set(Calendar.MILLISECOND, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.add(Calendar.DAY_OF_MONTH, days);
+		return new java.sql.Timestamp(cal.getTimeInMillis());
+	}
+
 	public static String cutString(String s, int length) {
 		if (s == null)
 			return null;
 		s = s.trim();
-		return s.trim().length() > length ? s.substring(0, length) : s;
+		return s.length() > length ? s.substring(0, length) : s;
 	}
 
 	public static String getAllStartCharacters(String str) {
@@ -887,7 +953,11 @@ public final class Helper {
 			c = str.charAt(i);
 
 			if (Character.isLetter(c)) {
-				strBuff.append(c);
+				if (i < 2) {
+					strBuff.append(c);
+				} else {
+					break;
+				}
 			} else {
 				break;
 			}
@@ -912,8 +982,7 @@ public final class Helper {
 	/**
 	 * Setzt Stunde/Minute/Millisekunde eines Dates auf 0
 	 * 
-	 * @param dDate
-	 *            Date
+	 * @param dDate Date
 	 * @return Date
 	 */
 	public static java.sql.Date cutDate(java.sql.Date dDate) {
@@ -925,6 +994,14 @@ public final class Helper {
 			cal.set(Calendar.SECOND, 0);
 			cal.set(Calendar.HOUR_OF_DAY, 0);
 			return new java.sql.Date(cal.getTimeInMillis());
+		} else {
+			return null;
+		}
+	}
+
+	public static byte[] xor(byte[] a) {
+		if (a != null) {
+			return xorWithKey(a, "HELIUMV".getBytes());
 		} else {
 			return null;
 		}
@@ -955,44 +1032,40 @@ public final class Helper {
 	}
 
 	private static String base64Encode(byte[] bytes) {
-		BASE64Encoder enc = new BASE64Encoder();
-		return enc.encode(bytes).replaceAll("\\s", "");
+		return new String(Base64.encodeBase64(bytes)).replaceAll("\\s", "");
+		// BASE64Encoder enc = new BASE64Encoder();
+		// return enc.encode(bytes).replaceAll("\\s", "");
 
 	}
 
 	private static byte[] base64Decode(String s) {
-		try {
-			BASE64Decoder d = new BASE64Decoder();
-			return d.decodeBuffer(s);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+
+		return Base64.decodeBase64(s.getBytes());
+
+		/*
+		 * try { BASE64Decoder d = new BASE64Decoder(); return d.decodeBuffer(s); }
+		 * catch (IOException e) { throw new RuntimeException(e); }
+		 */
 	}
 
-	public static VerkaufspreisDto getVkpreisBerechnet(
-			VkpreisfindungDto vkpreisfindungDtoI) {
+	public static VerkaufspreisDto getVkpreisBerechnet(VkpreisfindungDto vkpreisfindungDtoI) {
 		VerkaufspreisDto verkaufspreisDto = null;
 
 		if (vkpreisfindungDtoI.getVkpreisberechnetStufe() != null) {
 
-			if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(
-					VkpreisfindungDto.VKPFPREISBASIS)) {
+			if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(VkpreisfindungDto.VKPFPREISBASIS)) {
 				verkaufspreisDto = vkpreisfindungDtoI.getVkpPreisbasis();
-			} else if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(
-					VkpreisfindungDto.VKPFSTUFE1)) {
+			} else if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(VkpreisfindungDto.VKPFSTUFE1)) {
 				verkaufspreisDto = vkpreisfindungDtoI.getVkpStufe1();
-			} else if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(
-					VkpreisfindungDto.VKPFSTUFE2)) {
+			} else if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(VkpreisfindungDto.VKPFSTUFE2)) {
 				verkaufspreisDto = vkpreisfindungDtoI.getVkpStufe2();
-			} else if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(
-					VkpreisfindungDto.VKPFSTUFE3)) {
+			} else if (vkpreisfindungDtoI.getVkpreisberechnetStufe().equals(VkpreisfindungDto.VKPFSTUFE3)) {
 				verkaufspreisDto = vkpreisfindungDtoI.getVkpStufe3();
 			}
 		}
 
 		if (verkaufspreisDto != null) {
-			verkaufspreisDto.bdMaterialzuschlag = vkpreisfindungDtoI
-					.getNMaterialzuschlag();
+			verkaufspreisDto.bdMaterialzuschlag = vkpreisfindungDtoI.getNMaterialzuschlag();
 		}
 
 		return verkaufspreisDto;
@@ -1001,8 +1074,7 @@ public final class Helper {
 	/**
 	 * Setzt Stunde/Minute/Sekunde/Millisekunde eines Calendar auf 00:00:00 000.
 	 * 
-	 * @param calI
-	 *            das Datum
+	 * @param calI das Datum
 	 * @return Calendar
 	 */
 	public static Calendar cutCalendar(Calendar calI) {
@@ -1023,8 +1095,7 @@ public final class Helper {
 	/**
 	 * Setzt Stunde/Minute/Sekunde/Millisekunde eines Calendar auf 23:59:59 999.
 	 * 
-	 * @param calI
-	 *            das Datum
+	 * @param calI das Datum
 	 * @return Calendar
 	 */
 	public static Calendar fillCalendar(Calendar calI) {
@@ -1045,8 +1116,7 @@ public final class Helper {
 	/**
 	 * Formatier Datum mit "/" getrennt
 	 * 
-	 * @param date
-	 *            java.sql.Date
+	 * @param date java.sql.Date
 	 * @return String
 	 */
 	public static String formatDateWithSlashes(java.sql.Date date) {
@@ -1056,8 +1126,7 @@ public final class Helper {
 
 			String s = "";
 			int iMonat = cal.get(Calendar.MONTH) + 1;
-			s = cal.get(Calendar.DAY_OF_MONTH) + "/" + iMonat + "/"
-					+ cal.get(Calendar.YEAR);
+			s = cal.get(Calendar.DAY_OF_MONTH) + "/" + iMonat + "/" + cal.get(Calendar.YEAR);
 
 			return s;
 		} else {
@@ -1065,28 +1134,16 @@ public final class Helper {
 		}
 	}
 
-	public static String formatTimestampWithSlashes(
-			java.sql.Timestamp tsZeitpunkt) {
+	public static String formatTimestampWithSlashes(java.sql.Timestamp tsZeitpunkt) {
 		if (tsZeitpunkt != null) {
 			Calendar cal = Calendar.getInstance();
 			cal.setTimeInMillis(tsZeitpunkt.getTime());
 
 			String s = "";
 			int iMonat = cal.get(Calendar.MONTH) + 1;
-			s = cal.get(Calendar.DAY_OF_MONTH)
-					+ "/"
-					+ iMonat
-					+ "/"
-					+ cal.get(Calendar.YEAR)
-					+ " "
-					+ cal.get(Calendar.HOUR_OF_DAY)
-					+ ":"
-					+ cal.get(Calendar.MINUTE)
-					+ ":"
-					+ cal.get(Calendar.SECOND)
-					+ "."
-					+ fitString2LengthAlignRight(cal.get(Calendar.MILLISECOND)
-							+ "", 3, '0');
+			s = cal.get(Calendar.DAY_OF_MONTH) + "/" + iMonat + "/" + cal.get(Calendar.YEAR) + " "
+					+ cal.get(Calendar.HOUR_OF_DAY) + ":" + cal.get(Calendar.MINUTE) + ":" + cal.get(Calendar.SECOND)
+					+ "." + fitString2LengthAlignRight(cal.get(Calendar.MILLISECOND) + "", 3, '0');
 
 			return s;
 		} else {
@@ -1097,8 +1154,7 @@ public final class Helper {
 	/**
 	 * Hole das zugehoerige Datepattern zu locale.<BR>
 	 * 
-	 * @param locale
-	 *            Locale
+	 * @param locale Locale
 	 * @return The datepattern value
 	 */
 	public static String getDatepattern(java.util.Locale locale) {
@@ -1129,48 +1185,37 @@ public final class Helper {
 	 * Den Wert eines Prozentsatzes einer Zahl berechnen, kaufmaennisch auf n
 	 * Nachkommastellen gerundet.
 	 * 
-	 * @param zahl
-	 *            BigDecimal
-	 * @param prozentsatz
-	 *            Double
-	 * @param nachkommastellen
-	 *            int
+	 * @param zahl             BigDecimal
+	 * @param prozentsatz      Double
+	 * @param nachkommastellen int
 	 * @return BigDecimal
 	 */
-	public static BigDecimal getProzentWert(BigDecimal zahl,
-			BigDecimal prozentsatz, int nachkommastellen) {
+	public static BigDecimal getProzentWert(BigDecimal zahl, BigDecimal prozentsatz, int nachkommastellen) {
 		// Prozentsatz gleich durch 100 dividieren.
 		BigDecimal prozentsatz2 = prozentsatz.movePointLeft(2);
 		BigDecimal result = zahl.multiply(prozentsatz2);
 		return rundeKaufmaennisch(result, nachkommastellen);
 	}
 
-	public static BigDecimal getWertPlusProzent(BigDecimal zahl,
-			BigDecimal prozentsatz, int nachkommastellen) {
-		BigDecimal result = zahl.subtract(getProzentWert(zahl, prozentsatz,
-				nachkommastellen));
+	public static BigDecimal getWertPlusProzent(BigDecimal zahl, BigDecimal prozentsatz, int nachkommastellen) {
+		BigDecimal result = zahl.subtract(getProzentWert(zahl, prozentsatz, nachkommastellen));
 		return rundeKaufmaennisch(result, nachkommastellen);
 	}
 
 	/**
 	 * Prozentsatz aus 2 BigDecimals berechnen.
 	 * 
-	 * @param b1
-	 *            Gesamtwert
-	 * @param b2
-	 *            Wert (Prozent vom gesamtwert)
-	 * @param nachkommastellen
-	 *            int
+	 * @param b1               Gesamtwert
+	 * @param b2               Wert (Prozent vom gesamtwert)
+	 * @param nachkommastellen int
 	 * @return Double Prozentsatz
 	 * 
 	 *         rechnet nicht BigDecimal genau
 	 */
 	@Deprecated
-	public static Double getProzentsatz(BigDecimal b1, BigDecimal b2,
-			int nachkommastellen) {
+	public static Double getProzentsatz(BigDecimal b1, BigDecimal b2, int nachkommastellen) {
 		if (b1.doubleValue() != 0.0) {
-			return new Double(b2.divide(b1, nachkommastellen,
-					BigDecimal.ROUND_HALF_EVEN).doubleValue() * 100.0);
+			return new Double(b2.divide(b1, nachkommastellen, BigDecimal.ROUND_HALF_EVEN).doubleValue() * 100.0);
 		} else {
 			return new Double(0);
 		}
@@ -1179,38 +1224,27 @@ public final class Helper {
 	/**
 	 * Prozentsatz aus 2 BigDecimals berechnen.
 	 * 
-	 * @param b1
-	 *            Gesamtwert
-	 * @param b2
-	 *            Wert (Prozent vom gesamtwert)
-	 * @param nachkommastellen
-	 *            int
+	 * @param b1               Gesamtwert
+	 * @param b2               Wert (Prozent vom gesamtwert)
+	 * @param nachkommastellen int
 	 * @return BigDecimal Prozentsatz
 	 */
-	public static BigDecimal getProzentsatzBD(BigDecimal b1, BigDecimal b2,
-			int nachkommastellen) {
-		return b1.signum() != 0 ? b2.divide(b1, nachkommastellen + 2,
-				BigDecimal.ROUND_HALF_EVEN).movePointRight(2) : BigDecimal.ZERO
-				.setScale(nachkommastellen);
+	public static BigDecimal getProzentsatzBD(BigDecimal b1, BigDecimal b2, int nachkommastellen) {
+		return b1.signum() != 0 ? b2.divide(b1, nachkommastellen + 2, BigDecimal.ROUND_HALF_EVEN).movePointRight(2)
+				: BigDecimal.ZERO.setScale(nachkommastellen);
 	}
 
 	/**
 	 * Prozentsatz aus 2 BigDecimals berechnen. (b1 - b2)/b1 * 100
 	 * 
-	 * @param b1
-	 *            Gesamtwert
-	 * @param b2
-	 *            Wert (Prozent vom gesamtwert)
-	 * @param nachkommastellen
-	 *            int
+	 * @param b1               Gesamtwert
+	 * @param b2               Wert (Prozent vom gesamtwert)
+	 * @param nachkommastellen int
 	 * @return BigDecimal Prozentsatz
 	 */
-	public static BigDecimal getReduktionProzent(BigDecimal b1, BigDecimal b2,
-			int nachkommastellen) {
+	public static BigDecimal getReduktionProzent(BigDecimal b1, BigDecimal b2, int nachkommastellen) {
 		if (b1.doubleValue() != 0.0) {
-			return b1.subtract(b2)
-					.divide(b1, nachkommastellen, BigDecimal.ROUND_HALF_EVEN)
-					.movePointLeft(2);
+			return b1.subtract(b2).divide(b1, nachkommastellen, BigDecimal.ROUND_HALF_EVEN).movePointLeft(2);
 		} else {
 			return new BigDecimal(0);
 		}
@@ -1219,20 +1253,14 @@ public final class Helper {
 	/**
 	 * Prozentsatz aus 2 BigDecimals berechnen. (b1 - b2)/b2 * 100
 	 * 
-	 * @param b1
-	 *            Gesamtwert
-	 * @param b2
-	 *            Wert (Prozent vom gesamtwert)
-	 * @param nachkommastellen
-	 *            int
+	 * @param b1               Gesamtwert
+	 * @param b2               Wert (Prozent vom gesamtwert)
+	 * @param nachkommastellen int
 	 * @return BigDecimal Prozentsatz
 	 */
-	public static BigDecimal getAufschlagProzent(BigDecimal b1, BigDecimal b2,
-			int nachkommastellen) {
+	public static BigDecimal getAufschlagProzent(BigDecimal b1, BigDecimal b2, int nachkommastellen) {
 		if (b1.doubleValue() != 0.0) {
-			return b1.subtract(b2)
-					.divide(b2, nachkommastellen, BigDecimal.ROUND_HALF_EVEN)
-					.movePointLeft(2);
+			return b1.subtract(b2).divide(b2, nachkommastellen, BigDecimal.ROUND_HALF_EVEN).movePointLeft(2);
 		} else {
 			return new BigDecimal(0);
 		}
@@ -1242,16 +1270,12 @@ public final class Helper {
 	 * Ein BigDecimal anhand eines Prozentsatzes aufteilen, kaufmaennisch auf n
 	 * Nachkommastellen genau gerundet.
 	 * 
-	 * @param zahl
-	 *            BigDecimal
-	 * @param prozentsatz
-	 *            Double
-	 * @param nachkommastellen
-	 *            int
+	 * @param zahl             BigDecimal
+	 * @param prozentsatz      Double
+	 * @param nachkommastellen int
 	 * @return BigDecimal[] [0]=zahl * (1-prozentsatz), [1]=zahl * prozentsatz
 	 */
-	public static BigDecimal[] teileBigDecimal(BigDecimal zahl,
-			Double prozentsatz, int nachkommastellen) {
+	public static BigDecimal[] teileBigDecimal(BigDecimal zahl, Double prozentsatz, int nachkommastellen) {
 		BigDecimal[] result = new BigDecimal[2];
 		BigDecimal prozentsatz2 = new BigDecimal(prozentsatz.doubleValue());
 		prozentsatz2 = prozentsatz2.movePointLeft(2);
@@ -1265,14 +1289,11 @@ public final class Helper {
 	/**
 	 * Fuer Druck die Kurzzeichenkombination zum Andrucken zusammenbauen.
 	 * 
-	 * @param benAngelegt
-	 *            dieser Benutzer hat den Datensatz angelegt
-	 * @param benDrucken
-	 *            dieser Benutzer druckt den Beleg
+	 * @param benAngelegt dieser Benutzer hat den Datensatz angelegt
+	 * @param benDrucken  dieser Benutzer druckt den Beleg
 	 * @return String
 	 */
-	public static String getKurzzeichenkombi(String benAngelegt,
-			String benDrucken) {
+	public static String getKurzzeichenkombi(String benAngelegt, String benDrucken) {
 		StringBuffer buff = new StringBuffer("");
 
 		if (benAngelegt != null) {
@@ -1293,20 +1314,16 @@ public final class Helper {
 	}
 
 	/**
-	 * Die Differenz in Tagen zwischen 2 Datum's berechnen. liefert positive
-	 * werte, wenn das Vergleichsdatum nach dem Bezugsdaum liegt.
+	 * Die Differenz in Tagen zwischen 2 Datum's berechnen. liefert positive werte,
+	 * wenn das Vergleichsdatum nach dem Bezugsdaum liegt.
 	 * 
-	 * @param daBezugsdatum
-	 *            Date
-	 * @param daVergleichsdatum
-	 *            Date
+	 * @param daBezugsdatum     Date
+	 * @param daVergleichsdatum Date
 	 * @return int
 	 */
-	public static int getDifferenzInTagen(java.util.Date daBezugsdatum,
-			java.util.Date daVergleichsdatum) {
+	public static int getDifferenzInTagen(java.util.Date daBezugsdatum, java.util.Date daVergleichsdatum) {
 		if (daBezugsdatum == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("daBezugsdatum == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("daBezugsdatum == null"));
 		}
 		if (daVergleichsdatum == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
@@ -1331,17 +1348,13 @@ public final class Helper {
 	/**
 	 * Eine Anzahl von Tagen zu einem Datum addieren.
 	 * 
-	 * @param datum
-	 *            Date
-	 * @param tage
-	 *            int
+	 * @param datum Date
+	 * @param tage  int
 	 * @return Date
 	 */
-	public static java.sql.Date addiereTageZuDatum(java.util.Date datum,
-			int tage) {
+	public static java.sql.Date addiereTageZuDatum(java.util.Date datum, int tage) {
 		if (datum == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("datum == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("datum == null"));
 		}
 		GregorianCalendar gc = new GregorianCalendar();
 		gc.setTime(datum);
@@ -1349,11 +1362,9 @@ public final class Helper {
 		return new java.sql.Date(gc.getTime().getTime());
 	}
 
-	public static java.sql.Timestamp addiereTageZuTimestamp(
-			java.sql.Timestamp datum, int tage) {
+	public static java.sql.Timestamp addiereTageZuTimestamp(java.sql.Timestamp datum, int tage) {
 		if (datum == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("datum == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("datum == null"));
 		}
 		GregorianCalendar gc = new GregorianCalendar();
 		gc.setTime(datum);
@@ -1365,14 +1376,11 @@ public final class Helper {
 	 * Einen Mehrwertsteuerbetrag ausgehend vom Bruttobetrag ( 100+x % des
 	 * nettobetrags) und dem Mehrwertsteuerprozentsatz (x) berechnen.
 	 * 
-	 * @param bdBrutto
-	 *            BigDecimal
-	 * @param dMwstsatz
-	 *            double
+	 * @param bdBrutto  BigDecimal
+	 * @param dMwstsatz double
 	 * @return BigDecimal
 	 */
-	public static BigDecimal getMehrwertsteuerBetrag(BigDecimal bdBrutto,
-			double dMwstsatz) {
+	public static BigDecimal getMehrwertsteuerBetrag(BigDecimal bdBrutto, double dMwstsatz) {
 		BigDecimal bdMwstSatz = new BigDecimal(dMwstsatz).movePointLeft(2);
 		if (bdBrutto != null) {
 			// BigDecimal bdBetragBasis = bdBrutto.divide(new BigDecimal(1)
@@ -1381,22 +1389,19 @@ public final class Helper {
 			// return
 			// Helper.rundeKaufmaennisch(bdBetragBasis.multiply(bdMwstSatz),
 			// FinanzFac.NACHKOMMASTELLEN);
-			BigDecimal bdBetragBasis = bdBrutto.divide(
-					new BigDecimal(1).add(bdMwstSatz),
-					FinanzFac.NACHKOMMASTELLEN, BigDecimal.ROUND_HALF_EVEN);
-			return Helper.rundeKaufmaennisch(bdBrutto.subtract(bdBetragBasis),
-					FinanzFac.NACHKOMMASTELLEN);
+			BigDecimal bdBetragBasis = bdBrutto.divide(new BigDecimal(1).add(bdMwstSatz), FinanzFac.NACHKOMMASTELLEN,
+					BigDecimal.ROUND_HALF_EVEN);
+			return Helper.rundeKaufmaennisch(bdBrutto.subtract(bdBetragBasis), FinanzFac.NACHKOMMASTELLEN);
 		} else {
 			return null;
 		}
 	}
 
 	/**
-	 * Die durchschnittliche Breite eines Textes in Pixel anhand der Anzahl
-	 * seiner Buchstaben ermitteln. Vorsicht: das ist nur ein Durchschnittswert.
+	 * Die durchschnittliche Breite eines Textes in Pixel anhand der Anzahl seiner
+	 * Buchstaben ermitteln. Vorsicht: das ist nur ein Durchschnittswert.
 	 * 
-	 * @param iAnzahlBuchstaben
-	 *            int
+	 * @param iAnzahlBuchstaben int
 	 * @return int
 	 */
 	public static int getBreiteInPixel(int iAnzahlBuchstaben) {
@@ -1404,12 +1409,10 @@ public final class Helper {
 	}
 
 	/**
-	 * Helper Methode fuer das Drucken von Positionen in verschiedenen
-	 * Belegarten.
+	 * Helper Methode fuer das Drucken von Positionen in verschiedenen Belegarten.
 	 * 
-	 * @param iNummerI
-	 *            die Nummer wird als String mit drei Stellen zurueckgegeben,
-	 *            vorne wird mit Nullen aufgefuellt
+	 * @param iNummerI die Nummer wird als String mit drei Stellen zurueckgegeben,
+	 *                 vorne wird mit Nullen aufgefuellt
 	 * @return String die Nummer als dreistelliger String
 	 */
 	public static String formatPositionsnummer(int iNummerI) {
@@ -1430,15 +1433,12 @@ public final class Helper {
 	/**
 	 * Einen Betrag localeabhaengig formatieren.
 	 * 
-	 * @param bdBetrag
-	 *            BigDecimal
-	 * @param locale
-	 *            Locale
+	 * @param bdBetrag BigDecimal
+	 * @param locale   Locale
 	 * @return String
 	 */
 	public static String formatBetrag(BigDecimal bdBetrag, Locale locale) {
-		return NumberFormat.getCurrencyInstance(locale).format(
-				bdBetrag.doubleValue());
+		return NumberFormat.getCurrencyInstance(locale).format(bdBetrag.doubleValue());
 	}
 
 	/**
@@ -1448,18 +1448,15 @@ public final class Helper {
 	 * 
 	 * ACHTUNG: Numbers vom Typ Integer werden ignoriert MB 21.3.05
 	 * 
-	 * @param nZahl
-	 *            Number
-	 * @param locale
-	 *            Locale
+	 * @param nZahl  Number
+	 * @param locale Locale
 	 * @return String
 	 */
 	public static String formatZahl(Number nZahl, Locale locale) {
 		if (nZahl instanceof Integer) {
 			return nZahl.toString();
 		}
-		return NumberFormat.getNumberInstance(locale).format(
-				nZahl.doubleValue());
+		return NumberFormat.getNumberInstance(locale).format(nZahl.doubleValue());
 	}
 
 	/**
@@ -1469,16 +1466,12 @@ public final class Helper {
 	 * 
 	 * ACHTUNG: Numbers vom Typ Integer werden ignoriert MB 21.3.05
 	 * 
-	 * @param nZahl
-	 *            Number
-	 * @param iNachkommastellen
-	 *            int
-	 * @param locale
-	 *            Locale
+	 * @param nZahl             Number
+	 * @param iNachkommastellen int
+	 * @param locale            Locale
 	 * @return String
 	 */
-	public static String formatZahl(Number nZahl, int iNachkommastellen,
-			Locale locale) {
+	public static String formatZahl(Number nZahl, int iNachkommastellen, Locale locale) {
 		if (nZahl instanceof Integer) {
 			return nZahl.toString();
 		}
@@ -1488,8 +1481,7 @@ public final class Helper {
 		return nf.format(nZahl.doubleValue());
 	}
 
-	public static String formatZahlWennUngleichNull(Number nZahl,
-			int iNachkommastellen, Locale locale) {
+	public static String formatZahlWennUngleichNull(Number nZahl, int iNachkommastellen, Locale locale) {
 		if (nZahl != null && nZahl.doubleValue() == 0) {
 			return "";
 		}
@@ -1521,16 +1513,13 @@ public final class Helper {
 	/**
 	 * Ein Datum localeabhaengig formatieren.
 	 * 
-	 * @param date
-	 *            Date
-	 * @param locale
-	 *            Locale
+	 * @param date   Date
+	 * @param locale Locale
 	 * @return String
 	 */
 	public static String formatDatum(Date date, Locale locale) {
 		if (date != null) {
-			return DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
-					.format(date);
+			return DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(date);
 		} else {
 			return "";
 		}
@@ -1539,19 +1528,14 @@ public final class Helper {
 	/**
 	 * Ein Datum/Zeit localeabhaengig formatieren.
 	 * 
-	 * @param date
-	 *            Date
-	 * @param locale
-	 *            Locale
+	 * @param date   Date
+	 * @param locale Locale
 	 * @return String
 	 */
 	public static String formatDatumZeit(Date date, Locale locale) {
 		if (date != null) {
-			return DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
-					.format(date)
-					+ " "
-					+ DateFormat.getTimeInstance(DateFormat.MEDIUM, locale)
-							.format(date);
+			return DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(date) + " "
+					+ DateFormat.getTimeInstance(DateFormat.MEDIUM, locale).format(date);
 		} else {
 			return "";
 		}
@@ -1575,10 +1559,8 @@ public final class Helper {
 	/**
 	 * Einen Timestamp localeabhaengig formatieren.
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param locale
-	 *            Locale
+	 * @param ts     Timestamp
+	 * @param locale Locale
 	 * @return String
 	 */
 	public static String formatTimestamp(Timestamp ts, Locale locale) {
@@ -1588,29 +1570,21 @@ public final class Helper {
 	/**
 	 * Einen Timestamp localeabhaengig formatieren.
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param dateStyle
-	 *            Konstante aus Klasse DateFormat
-	 * @param timeStyle
-	 *            Konstante aus Klasse DateFormat
-	 * @param locale
-	 *            Locale
+	 * @param ts        Timestamp
+	 * @param dateStyle Konstante aus Klasse DateFormat
+	 * @param timeStyle Konstante aus Klasse DateFormat
+	 * @param locale    Locale
 	 * @return String
 	 */
-	public static String formatTimestamp(Timestamp ts, int dateStyle,
-			int timeStyle, Locale locale) {
-		return DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale)
-				.format(ts);
+	public static String formatTimestamp(Timestamp ts, int dateStyle, int timeStyle, Locale locale) {
+		return DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale).format(ts);
 	}
 
 	/**
 	 * Aus einem Timestampt die Zeit Locale abhaengig herausholen.
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param locale
-	 *            Locale
+	 * @param ts     Timestamp
+	 * @param locale Locale
 	 * @return String
 	 */
 	public static String formatTime(Timestamp ts, Locale locale) {
@@ -1618,184 +1592,69 @@ public final class Helper {
 	}
 
 	/**
-	 * Einen String in einem bestimmten Format nach einem bestimmten Schema in
-	 * ein Array von Strings umwandeln. Wird verwendet fuer das Lesen einer SNR
-	 * oder Chargennummereingabe.
+	 * Einen String in einem bestimmten Format nach einem bestimmten Schema in ein
+	 * Array von Strings umwandeln. Wird verwendet fuer das Lesen einer SNR oder
+	 * Chargennummereingabe.
 	 * 
-	 * @param sStringI
-	 *            ein String im Format "aa, ab, ac"
+	 * @param sStringI ein String im Format "aa, ab, ac"
 	 * @return String[]
 	 * @throws EJBExceptionLP
 	 */
-	public static String[] erzeugeStringArrayAusString(String sStringI)
-			throws EJBExceptionLP {
+	public static String[] erzeugeStringArrayAusString(String sStringI) throws EJBExceptionLP {
 		if (sStringI == null || sStringI.trim().length() == 0) {
 			// leerer String
 			return new String[0];
 		}
-		int iAnzahl = 1;
-
-		for (int i = 0; i < sStringI.length(); i++) {
-			char c = sStringI.charAt(i);
-
-			// ','
-			if (c == 44) {
-				iAnzahl++;
-			}
-		}
-
-		if (sStringI.charAt(0) == 44
-				|| sStringI.charAt(sStringI.length() - 1) == 44) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_SONDERZEICHEN_AN_FALSCHER_STELLE,
+		if (sStringI.charAt(0) == ',' || sStringI.charAt(sStringI.length() - 1) == ',') {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SONDERZEICHEN_AN_FALSCHER_STELLE,
 					new Exception("FEHLER_SONDERZEICHEN_AN_FALSCHER_STELLE"));
 
 		}
 
-		String[] sSeriennummernZerlegt = new String[iAnzahl];
-		int iLetztePosition = 0;
-		int sNRs = 0;
-
-		for (int i = 0; i < sStringI.length(); i++) {
-			char c = sStringI.charAt(i);
-
-			// ','
-			if (c == 44) {
-				sSeriennummernZerlegt[sNRs] = sStringI.substring(
-						iLetztePosition, i);
-				sNRs++;
-				iLetztePosition = i + 1;
-			}
-
-			if (i == sStringI.length() - 1) {
-				sSeriennummernZerlegt[iAnzahl - 1] = sStringI.substring(
-						iLetztePosition, sStringI.length());
-			}
-		}
-
-		return sSeriennummernZerlegt;
+		return sStringI.split(",");
 	}
 
 	/**
-	 * Erzeugt aus einem String einzelne Serienummer und pr&uuml;ft die
-	 * erzeugten Strings mit der Menge gegen, wenn angegeben
+	 * Erzeugt aus einem String einzelne Serienummer und pr&uuml;ft die erzeugten
+	 * Strings mit der Menge gegen, wenn angegeben
 	 * 
-	 * @param eingabe
-	 *            String
-	 * @param menge
-	 *            BigDecimal
-	 * @param bPruefeMenge
-	 *            boolean
+	 * Trennt Seriennummern, die mit Kommas getrennt sind, mit einem '-' werden
+	 * Bereiche markiert. Wenn ein '-' in einer Seriennummer vorkommt muss diese in
+	 * "" gesetzt sein
+	 * 
+	 * @param eingabe      String
+	 * @param menge        BigDecimal
+	 * @param bPruefeMenge boolean
 	 * @return String[]
 	 */
-	public static String[] erzeugeSeriennummernArray(String eingabe,
-			java.math.BigDecimal menge, boolean bPruefeMenge) {
+	public static String[] erzeugeSeriennummernArray(String eingabe, java.math.BigDecimal menge, boolean bPruefeMenge) {
+		return erzeugeSeriennummernArray(eingabe, menge, bPruefeMenge, true);
+	}
+
+	public static String[] erzeugeSeriennummernArray(String eingabe, java.math.BigDecimal menge, boolean bPruefeMenge,
+			boolean anhandKommasTrennen) {
 		if (eingabe == null) {
 			return null;
 		}
 		eingabe = eingabe.replaceAll(" ", "");
 		ArrayList<String> snrs = new ArrayList<String>();
-
-		String[] getrennt = erzeugeStringArrayAusString(eingabe);
+		String[] getrennt = null;
+		if (anhandKommasTrennen) {
+			getrennt = erzeugeStringArrayAusString(eingabe);
+		} else {
+			getrennt = new String[] { eingabe };
+		}
 
 		for (int i = 0; i < getrennt.length; i++) {
-			int minus = getrennt[i].indexOf(45);
-			if (minus > 0) {
+			int minus = getrennt[i].indexOf('-');
+			boolean isEscaped = getrennt[i].charAt(0) == '"' && getrennt[i].charAt(getrennt[i].length() - 1) == '"';
+
+			if (isEscaped) {
+				snrs.add(getrennt[i].substring(1, getrennt[i].length() - 1));
+			} else if (minus > 0) {
 				String von = getrennt[i].substring(0, minus);
 				String bis = getrennt[i].substring(minus + 1);
-				int ziffernteil_laenge_von = 0;
-				for (int j = von.length(); j > 0; j--) {
-
-					char c = von.charAt(j - 1);
-
-					if (c == '0' || c == '1' || c == '2' || c == '3'
-							|| c == '4' || c == '5' || c == '6' || c == '7'
-							|| c == '8' || c == '9') {
-						ziffernteil_laenge_von++;
-					} else {
-						break;
-					}
-				}
-				int ziffernteil_laenge_bis = 0;
-				for (int j = bis.length(); j > 0; j--) {
-
-					char c = bis.charAt(j - 1);
-
-					if (c == '0' || c == '1' || c == '2' || c == '3'
-							|| c == '4' || c == '5' || c == '6' || c == '7'
-							|| c == '8' || c == '9') {
-						ziffernteil_laenge_bis++;
-					} else {
-						break;
-					}
-
-				}
-				if ((ziffernteil_laenge_von == ziffernteil_laenge_bis)) {
-
-					if (ziffernteil_laenge_von == 0
-							|| ziffernteil_laenge_bis == 0) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_MUSS_MIT_ZIFFERNTEIL_ENDEN,
-								new Exception(
-										"ziffernteil_laenge_von == 0 || ziffernteil_laenge_bis == 0"));
-
-					}
-
-					int iVon = new Integer(von.substring(von.length()
-							- ziffernteil_laenge_von)).intValue();
-					int iBis = new Integer(bis.substring(bis.length()
-							- ziffernteil_laenge_bis)).intValue();
-					int iPrefixLaenge = von.length() - ziffernteil_laenge_von;
-
-					String preFixVon = von.substring(0, von.length()
-							- ziffernteil_laenge_von);
-					String preFixBis = bis.substring(0, bis.length()
-							- ziffernteil_laenge_bis);
-					if (!preFixVon.equals(preFixBis)) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_VON_BIS_PREFIX_UNGLEICH,
-								new Exception("!preFixVon.equals(preFixBis)"));
-					}
-
-					if (iVon < iBis) {
-						for (int z = iVon; z <= iBis; z++) {
-							String nummer = z + "";
-
-							StringBuffer s = new StringBuffer(von.substring(0,
-									iPrefixLaenge));
-							int iMitNullenFuellen = ziffernteil_laenge_von
-									- nummer.length();
-							for (int n = 0; n < iMitNullenFuellen; n++) {
-								s.append("0");
-							}
-
-							s.append(z);
-							snrs.add(s.toString());
-						}
-					} else {
-						for (int z = iBis; z <= iVon; z++) {
-							String nummer = z + "";
-
-							StringBuffer s = new StringBuffer(von.substring(0,
-									iPrefixLaenge));
-							int iMitNullenFuellen = ziffernteil_laenge_von
-									- nummer.length();
-							for (int n = 0; n < iMitNullenFuellen; n++) {
-								s.append("0");
-							}
-
-							s.append(z);
-							snrs.add(s.toString());
-						}
-
-					}
-				} else {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_VON_BIS_ZIFFERNTEIL_UNGLEICH,
-							new Exception(
-									"ziffernteil_laenge_von != ziffernteil_laenge_bis"));
-				}
-
+				snrs.addAll(doErzeugeSeriennummernBereich(von, bis));
 			} else {
 				snrs.add(getrennt[i]);
 			}
@@ -1807,22 +1666,144 @@ public final class Helper {
 		}
 
 		if (bPruefeMenge == true) {
-			if (new Integer(snrs.size()).doubleValue() != menge.doubleValue()) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_MENGE_UNGLEICH,
-						new Exception(
-								"new Integer(snrs.size()).doubleValue() != menge.doubleValue()"));
+			if (snrs.size() != menge.intValueExact()) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_MENGE_UNGLEICH,
+						new Exception("snrs.size() != menge.intValueExact()"));
 
 			}
 		}
 		return ergebnis;
 	}
 
+	public static String[] erzeugeSeriennummernAnhandAnzahl(String von, int anzahl) {
+		if (von == null) {
+			return null;
+		}
+
+		List<String> snrs = new ArrayList<String>();
+
+		try {
+			Integer iStart = new Integer(von);
+
+			snrs.add(iStart + "");
+
+			for (int j = 0; j < anzahl-1; j++) {
+
+				iStart++;
+
+				snrs.add(iStart + "");
+			}
+
+		} catch (NumberFormatException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SERIENNUMMER_ENTHAELT_NICHT_NUMERISCHE_ZEICHEN,
+					new Exception("von"));
+		}
+
+		return snrs.toArray(new String[snrs.size()]);
+	}
+
+	/**
+	 * Erzeuge Seriennummern Array aus von bis Bereich
+	 */
+	public static String[] erzeugeSeriennummernArrayBereich(String von, String bis, int menge, boolean bPruefeMenge) {
+		if (von == null || bis == null) {
+			return null;
+		}
+
+		List<String> snrs = doErzeugeSeriennummernBereich(von, bis);
+		if (bPruefeMenge == true) {
+			if (snrs.size() != menge) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_MENGE_UNGLEICH,
+						new Exception("snrs.size() != menge.intValueExact()"));
+
+			}
+		}
+		return snrs.toArray(new String[snrs.size()]);
+	}
+
+	private static List<String> doErzeugeSeriennummernBereich(String von, String bis) {
+		List<String> snrs = new ArrayList<String>();
+		int ziffernteil_laenge_von = 0;
+		for (int j = von.length(); j > 0; j--) {
+
+			char c = von.charAt(j - 1);
+
+			if (Character.isDigit(c)) {
+				ziffernteil_laenge_von++;
+			} else {
+				break;
+			}
+		}
+		int ziffernteil_laenge_bis = 0;
+		for (int j = bis.length(); j > 0; j--) {
+
+			char c = bis.charAt(j - 1);
+
+			if (Character.isDigit(c)) {
+				ziffernteil_laenge_bis++;
+			} else {
+				break;
+			}
+
+		}
+		if ((ziffernteil_laenge_von == ziffernteil_laenge_bis)) {
+
+			if (ziffernteil_laenge_von == 0 || ziffernteil_laenge_bis == 0) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_MUSS_MIT_ZIFFERNTEIL_ENDEN,
+						new Exception("ziffernteil_laenge_von == 0 || ziffernteil_laenge_bis == 0"));
+
+			}
+
+			int iVon = new Integer(von.substring(von.length() - ziffernteil_laenge_von)).intValue();
+			int iBis = new Integer(bis.substring(bis.length() - ziffernteil_laenge_bis)).intValue();
+			int iPrefixLaenge = von.length() - ziffernteil_laenge_von;
+
+			String preFixVon = von.substring(0, von.length() - ziffernteil_laenge_von);
+			String preFixBis = bis.substring(0, bis.length() - ziffernteil_laenge_bis);
+			if (!preFixVon.equals(preFixBis)) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_VON_BIS_PREFIX_UNGLEICH,
+						new Exception("!preFixVon.equals(preFixBis)"));
+			}
+
+			if (iVon < iBis) {
+				for (int z = iVon; z <= iBis; z++) {
+					String nummer = z + "";
+
+					StringBuffer s = new StringBuffer(von.substring(0, iPrefixLaenge));
+					int iMitNullenFuellen = ziffernteil_laenge_von - nummer.length();
+					for (int n = 0; n < iMitNullenFuellen; n++) {
+						s.append("0");
+					}
+
+					s.append(z);
+					snrs.add(s.toString());
+				}
+			} else {
+				for (int z = iBis; z <= iVon; z++) {
+					String nummer = z + "";
+
+					StringBuffer s = new StringBuffer(von.substring(0, iPrefixLaenge));
+					int iMitNullenFuellen = ziffernteil_laenge_von - nummer.length();
+					for (int n = 0; n < iMitNullenFuellen; n++) {
+						s.append("0");
+					}
+
+					s.append(z);
+					snrs.add(s.toString());
+				}
+
+			}
+		} else {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_ARTIKEL_SERIENNUMMER_VON_BIS_ZIFFERNTEIL_UNGLEICH,
+					new Exception("ziffernteil_laenge_von != ziffernteil_laenge_bis"));
+		}
+		return snrs;
+	}
+
 	/**
 	 * Aus einem String[] einen String im Format 'aa,ab,ac' erzeugen
 	 * 
-	 * @param aStringI
-	 *            das Array
+	 * @param aStringI das Array
 	 * @return String der String
 	 */
 	public static String erzeugeStringAusStringArray(String[] aStringI) {
@@ -1844,14 +1825,11 @@ public final class Helper {
 	/**
 	 * Einen bestimmten String aus einem String Array entfernen.
 	 * 
-	 * @param aString
-	 *            das String Array
-	 * @param sString
-	 *            der zu entfernende String
+	 * @param aString das String Array
+	 * @param sString der zu entfernende String
 	 * @return String[]
 	 */
-	public static String[] entferneStringAusStringArray(String[] aString,
-			String sString) {
+	public static String[] entferneStringAusStringArray(String[] aString, String sString) {
 		ArrayList<String> alCopy = new ArrayList<String>();
 
 		for (int i = 0; i < aString.length; i++) {
@@ -1869,8 +1847,7 @@ public final class Helper {
 		return aCopy;
 	}
 
-	public static String[] hinzufuegenStringZuStringArray(String[] aString,
-			String sString) {
+	public static String[] hinzufuegenStringZuStringArray(String[] aString, String sString) {
 		String[] aCopy = new String[aString.length + 1];
 
 		aCopy[aString.length + 1] = sString;
@@ -1878,8 +1855,7 @@ public final class Helper {
 		return aCopy;
 	}
 
-	public static boolean enthaeltStringArrayString(String[] aString,
-			String sString) {
+	public static boolean enthaeltStringArrayString(String[] aString, String sString) {
 		boolean bEnthalten = false;
 
 		if (aString != null && aString.length > 0) {
@@ -1893,8 +1869,7 @@ public final class Helper {
 		return bEnthalten;
 	}
 
-	public static int ermittleTageEinesZeitraumes(java.sql.Date tVon,
-			java.sql.Date tBis) {
+	public static int ermittleTageEinesZeitraumes(java.sql.Date tVon, java.sql.Date tBis) {
 		int iTage = 0;
 
 		tVon = cutDate(tVon);
@@ -1919,8 +1894,7 @@ public final class Helper {
 		return iTage;
 	}
 
-	public static int ermittleTageEinesZeitraumes(java.sql.Timestamp tVon,
-			java.sql.Date tBis) {
+	public static int ermittleTageEinesZeitraumes(java.sql.Timestamp tVon, java.sql.Date tBis) {
 		int iTage = 0;
 
 		if (tVon != null && tBis != null) {
@@ -1949,15 +1923,12 @@ public final class Helper {
 	/**
 	 * Berechnet die Anzahl der Tage eines Monats
 	 * 
-	 * @param iJahr
-	 *            Jahr
-	 * @param iMonat
-	 *            Monat
+	 * @param iJahr  Jahr
+	 * @param iMonat Monat
 	 * @return Anzahl der Tage eines Monats, zB 31 f&uuml;r Oktober
 	 */
 	@SuppressWarnings("static-access")
-	public static int ermittleAnzahlTageEinesMonats(Integer iJahr,
-			Integer iMonat) {
+	public static int ermittleAnzahlTageEinesMonats(Integer iJahr, Integer iMonat) {
 
 		GregorianCalendar cal = new GregorianCalendar();
 
@@ -1971,8 +1942,7 @@ public final class Helper {
 	/**
 	 * Rechnet eine Zeit (08:30) dezimal um: 8,5
 	 * 
-	 * @param time
-	 *            Time
+	 * @param time Time
 	 * @return Double
 	 */
 	public static Double time2Double(java.sql.Time time) {
@@ -1980,6 +1950,9 @@ public final class Helper {
 
 			Calendar c = Calendar.getInstance();
 			c.setTimeInMillis(time.getTime());
+
+			double tageInStunden = (c.get(Calendar.DATE) - 1) * 24;
+
 			double hour = c.get(Calendar.HOUR_OF_DAY);
 			double minuten = c.get(Calendar.MINUTE);
 			double sekunden = c.get(Calendar.SECOND);
@@ -1988,7 +1961,7 @@ public final class Helper {
 			double sekundendecimal = sekunden / 3600;
 			// minutendecimal = Math.round((minutendecimal+sekundendecimal) *
 			// 100) / 100f;
-			double fBeginn = hour + minutendecimal + sekundendecimal;
+			double fBeginn = tageInStunden + hour + minutendecimal + sekundendecimal;
 
 			return new Double(fBeginn);
 		} else {
@@ -1996,18 +1969,32 @@ public final class Helper {
 		}
 	}
 
+	public static Double timeInMillis2Double(long timeInMillis) {
+
+		return (double) timeInMillis / (double) 3600000;
+
+	}
+
 	/**
 	 * Ein Image aus einem byte-Array (BLOB) erzeugen
 	 * 
-	 * @param imagebytes
-	 *            byte[]
+	 * @param imagebytes byte[]
 	 * @return BufferedImage
 	 */
 	public static BufferedImage byteArrayToImage(byte[] imagebytes) {
 		try {
 			if (imagebytes != null && (imagebytes.length > 0)) {
-				BufferedImage im = ImageIO.read(new ByteArrayInputStream(
-						imagebytes));
+				BufferedImage im = ImageIO.read(new ByteArrayInputStream(imagebytes));
+				if (im == null) {
+					BufferedImage[] images = tiffToImageArray(imagebytes);
+					if (images == null)
+						return null;
+					if (images.length > 1) {
+						myLogger.warn(
+								"Als Tiff-Image erkannt und hat mehr als 1 Bild. " + "Nur erstes wird verwendet.");
+					}
+					return images[0];
+				}
 				return im;
 			}
 			return null;
@@ -2035,8 +2022,7 @@ public final class Helper {
 				WritableRaster wr = null;
 				wr = image[i].copyData(wr);
 				ColorModel colorModel = image[i].getColorModel();
-				BufferedImage bi = new BufferedImage(colorModel, wr,
-						colorModel.isAlphaPremultiplied(), null);
+				BufferedImage bi = new BufferedImage(colorModel, wr, colorModel.isAlphaPremultiplied(), null);
 				images[i] = bi;
 
 			}
@@ -2052,29 +2038,25 @@ public final class Helper {
 		if (theClientDto != null) {
 			String benutzername = theClientDto.getBenutzername();
 			if (benutzername != null) {
-				benutzername = benutzername.trim().substring(0,
-						benutzername.indexOf("|"));
+				benutzername = benutzername.trim().substring(0, benutzername.indexOf("|"));
 				isLPAdmin = benutzername.equalsIgnoreCase("abbot");
 			}
 		}
 		return isLPAdmin;
 	}
 
-	public static BufferedImage bildUm90GradDrehenWennNoetig(
-			BufferedImage inputImage) {
+	public static BufferedImage bildUm90GradDrehenWennNoetig(BufferedImage inputImage) {
 
 		int width = inputImage.getWidth();
 		int height = inputImage.getHeight();
 
 		if (width > height) {
 
-			BufferedImage returnImage = new BufferedImage(height, width,
-					BufferedImage.TYPE_INT_RGB);
+			BufferedImage returnImage = new BufferedImage(height, width, BufferedImage.TYPE_INT_RGB);
 
 			for (int x = 0; x < width; x++) {
 				for (int y = 0; y < height; y++) {
-					returnImage.setRGB(y, width - x - 1,
-							inputImage.getRGB(x, y));
+					returnImage.setRGB(y, width - x - 1, inputImage.getRGB(x, y));
 					// Again check the Picture for better understanding
 				}
 			}
@@ -2088,37 +2070,102 @@ public final class Helper {
 	/**
 	 * Ein byte-Array (BLOB) aus einem Image erzeugen
 	 * 
-	 * @param o
-	 *            BufferedImage
+	 * @param o BufferedImage
 	 * @return byte[]
+	 * @deprecated {@link Helper#imageToByteArrayWithType(BufferedImage, String)}
+	 *             benutzen
 	 */
 	public static byte[] imageToByteArray(BufferedImage o) {
-		if (o != null) {
-			BufferedImage image = (BufferedImage) o;
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			try {
-				boolean converted = ImageIO.write(image, "jpeg", baos);
-				if (!converted) {
-
-				}
-				byte[] b = baos.toByteArray();
-				return b;
-			} catch (IOException e) {
-				throw new IllegalStateException(e.toString());
-			} finally {
-				closeIgnoreIOEx(baos);
-			}
-		}
-		return new byte[0];
+		return imageToByteArrayWithType(o, "jpeg");
 	}
 
-	public static BigDecimal[] teileBetragAnteiligAuf(BigDecimal[] bdWerte,
-			BigDecimal[] bdGewichtung, BigDecimal bdAufzuteilenderBetrag,
-			int iNachkommastellen) throws EJBExceptionLP {
+	/**
+	 * Konvertiert ein beliebiges Image zu BufferedImage. Falls das image noch kein
+	 * BufferedImage ist und force false ist, wird ein neues mit Typ
+	 * {@link BufferedImage#TYPE_INT_RGB} erzeugt
+	 * 
+	 * @param img
+	 * @param force Wenn true, dann wird immer ein neues BufferedImage erzeugt
+	 * @return
+	 */
+	public static BufferedImage imageToBufferedImage(Image img, int imageType, boolean force) {
+		if (!force && img instanceof BufferedImage)
+			return (BufferedImage) img;
+
+		BufferedImage image = new BufferedImage(img.getWidth(null), img.getHeight(null), imageType);
+		Graphics2D g = image.createGraphics();
+		if (!image.getColorModel().hasAlpha()) {
+			// Wenn neues image kein alpha, dann auf wei�em Hintergrund zeichnen
+			g.setColor(Color.white);
+			g.fillRect(0, 0, image.getWidth(), image.getHeight());
+			g.setComposite(AlphaComposite.SrcOver);
+		}
+		g.drawImage(img, 0, 0, null);
+		g.dispose();
+		return image;
+	}
+
+	/**
+	 * Konvertiert ein beliebiges Image zu BufferedImage. Falls das image noch kein
+	 * BufferedImage ist, wird ein neues mit Typ {@link BufferedImage#TYPE_INT_RGB}
+	 * erzeugt
+	 * 
+	 * @param img
+	 * @return
+	 */
+	public static BufferedImage imageToBufferedImage(Image img) {
+		return imageToBufferedImage(img, BufferedImage.TYPE_INT_ARGB, false);
+	}
+
+	/**
+	 * Konvertiert ein Image zu einem byte-array blob. Diese Funktion beachtet den
+	 * Typen des Image, diser kann einer der von
+	 * {@link ImageIO#write(RenderedImage, String, IOStream)} definierten Typen sein
+	 * 
+	 * @param img  Das Image, falls img == null, dann wird ein leeres byte[]
+	 *             returned
+	 * @param type Der Typ des Image, falls dieser null oder "" ist, wird ein leeres
+	 *             byte[] returned
+	 * @return
+	 */
+	public static byte[] imageToByteArrayWithType(BufferedImage img, String type) throws IllegalStateException {
+		if (img == null || type == null || type == "")
+			return new byte[0];
+		if ("jpeg".equals(type) && img.getTransparency() == BufferedImage.TRANSLUCENT) {
+			img = imageToBufferedImage(img, BufferedImage.TYPE_INT_RGB, true);
+		}
+		try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+			boolean converted = ImageIO.write(img, type, baos);
+			if (!converted) {
+				return tryImageToBArrayWithConversion(img, type);
+			}
+			return baos.toByteArray();
+		} catch (IIOException iioEx) {
+			// Colorspace Problems can throw IIOException
+			return tryImageToBArrayWithConversion(img, type);
+		} catch (IOException e) {
+			throw new IllegalArgumentException(e);
+		}
+	}
+
+	private static byte[] tryImageToBArrayWithConversion(BufferedImage img, String type) {
+		try (ByteArrayOutputStream baos2 = new ByteArrayOutputStream()) {
+			BufferedImage convImg = imageToBufferedImage(img, BufferedImage.TYPE_INT_RGB, true);
+			boolean conv = ImageIO.write(convImg, type, baos2);
+			if (!conv) {
+				throw new IllegalArgumentException("Kann Datei nicht in Format: " + type + " umwandeln");
+			}
+			return baos2.toByteArray();
+		} catch (IOException e) {
+			throw new IllegalArgumentException(e);
+		}
+	}
+
+	public static BigDecimal[] teileBetragAnteiligAuf(BigDecimal[] bdWerte, BigDecimal[] bdGewichtung,
+			BigDecimal bdAufzuteilenderBetrag, int iNachkommastellen) throws EJBExceptionLP {
 		// Arrays muessen gleich gross sein
 		if (bdWerte.length != bdGewichtung.length) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"bdWerte.length != bdGewichtung.length"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("bdWerte.length != bdGewichtung.length"));
 		}
 		if (bdWerte.length <= 0) {
 			// ???
@@ -2141,8 +2188,7 @@ public final class Helper {
 		// josefanmartin:
 		BigDecimal bdFaktor = null;
 		if (!(bdSumme.compareTo(new BigDecimal(0.0000)) == 0)) {
-			bdFaktor = bdAufzuteilenderBetrag.divide(bdSumme, nks,
-					BigDecimal.ROUND_HALF_EVEN);
+			bdFaktor = bdAufzuteilenderBetrag.divide(bdSumme, nks, BigDecimal.ROUND_HALF_EVEN);
 		} else {
 			// nichts aufzuteilen, da alle Werte 0 sind
 			bdFaktor = new BigDecimal(0);
@@ -2161,8 +2207,7 @@ public final class Helper {
 		// "clone"
 		BigDecimal bdRestbetrag = bdAufzuteilenderBetrag;
 		for (int i = 0; i < bdResult.length; i++) {
-			bdRestbetrag = bdRestbetrag.subtract(bdResult[i]
-					.multiply(bdGewichtung[i]));
+			bdRestbetrag = bdRestbetrag.subtract(bdResult[i].multiply(bdGewichtung[i]));
 		}
 
 		/**
@@ -2173,10 +2218,9 @@ public final class Helper {
 		 * dazurechnen // und zwar auf die wertmaessig groesste position int
 		 * iMaxIndex=0; BigDecimal bdMax=new BigDecimal(0); for (int i = 0; i <
 		 * bdResult.length; i++) { BigDecimal
-		 * bdWert=bdWerte[i].multiply(bdGewichtung[i]);
-		 * if(bdWert.compareTo(bdMax)>=1) { bdMax=bdWert; iMaxIndex=i; } } //
-		 * jetzt hab ich den groessten wert an der stelle i
-		 * bdResult[i]=bdResult[i].add
+		 * bdWert=bdWerte[i].multiply(bdGewichtung[i]); if(bdWert.compareTo(bdMax)>=1) {
+		 * bdMax=bdWert; iMaxIndex=i; } } // jetzt hab ich den groessten wert an der
+		 * stelle i bdResult[i]=bdResult[i].add
 		 * 
 		 * 
 		 * }
@@ -2226,13 +2270,10 @@ public final class Helper {
 	}
 
 	/**
-	 * Pruefen, ob ein String im Format x,x eine bestimmte Anzahl von x
-	 * entahelt.
+	 * Pruefen, ob ein String im Format x,x eine bestimmte Anzahl von x entahelt.
 	 * 
-	 * @param stringI
-	 *            das Array
-	 * @param iAnzahlI
-	 *            die Laenge
+	 * @param stringI  das Array
+	 * @param iAnzahlI die Laenge
 	 * @return boolean true, wenn das Array die gewuenschte Laenge hat
 	 */
 	public static boolean pruefeLaengeStringArray(String stringI, int iAnzahlI) {
@@ -2254,14 +2295,11 @@ public final class Helper {
 	/**
 	 * Fuegt die Seiten eines Reports zu einem vorhandenen Report hinzu
 	 * 
-	 * @param vorhandenerReport
-	 *            JasperPrint
-	 * @param hinzuzufuegenderReport
-	 *            JasperPrint
+	 * @param vorhandenerReport      JasperPrint
+	 * @param hinzuzufuegenderReport JasperPrint
 	 * @return JasperPrint
 	 */
-	public static JasperPrint addReport2Report(JasperPrint vorhandenerReport,
-			JasperPrint hinzuzufuegenderReport) {
+	public static JasperPrint addReport2Report(JasperPrint vorhandenerReport, JasperPrint hinzuzufuegenderReport) {
 
 		if (hinzuzufuegenderReport.getPages() != null) {
 			Iterator<?> iterator = hinzuzufuegenderReport.getPages().iterator();
@@ -2274,8 +2312,7 @@ public final class Helper {
 		return vorhandenerReport;
 	}
 
-	public static long verfuegbarkeitvonStundenEinesTagesNachLong(
-			BigDecimal bdStunden) {
+	public static long verfuegbarkeitvonStundenEinesTagesNachLong(BigDecimal bdStunden) {
 		return bdStunden.multiply(DAY_IN_MS).longValue();
 		// return (long) (3600000 * bdStunden.doubleValue());
 	}
@@ -2289,21 +2326,26 @@ public final class Helper {
 		// return new BigDecimal(d);
 	}
 
+	public static JasperPrintLP addReport2Report(JasperPrintLP vorhandenerReport,
+			JasperPrintLP hinzuzufuegenderReport) {
+		if (hinzuzufuegenderReport != null && hinzuzufuegenderReport.getPrint().getPages() != null) {
+			JasperPrint print = addReport2Report(vorhandenerReport.getPrint(), hinzuzufuegenderReport.getPrint());
+			vorhandenerReport.setPrintLP(print);
+		}
+		return vorhandenerReport;
+	}
+
 	/**
 	 * Fuegt die Seiten eines Reports zu einem vorhandenen Report hinzu
 	 * 
-	 * @param vorhandenerReport
-	 *            JasperPrint
-	 * @param hinzuzufuegenderReport
-	 *            JasperPrint
+	 * @param vorhandenerReport      JasperPrint
+	 * @param hinzuzufuegenderReport JasperPrint
 	 * @return JasperPrint
 	 */
-	public static JasperPrintLP addReport2Report(
-			JasperPrintLP vorhandenerReport, JasperPrint hinzuzufuegenderReport) {
+	public static JasperPrintLP addReport2Report(JasperPrintLP vorhandenerReport, JasperPrint hinzuzufuegenderReport) {
 		if (hinzuzufuegenderReport.getPages() != null) {
-			JasperPrint print = addReport2Report(vorhandenerReport.getPrint(),
-					hinzuzufuegenderReport);
-			vorhandenerReport.setPrint(print);
+			JasperPrint print = addReport2Report(vorhandenerReport.getPrint(), hinzuzufuegenderReport);
+			vorhandenerReport.setPrintLP(print);
 		}
 		return vorhandenerReport;
 	}
@@ -2376,8 +2418,7 @@ public final class Helper {
 		return result;
 	}
 
-	public static Double berechneRabattsatzMehrererRabatte(Double dRabatt,
-			Double dZusatzrabatt, Double dNachlass) {
+	public static Double berechneRabattsatzMehrererRabatte(Double dRabatt, Double dZusatzrabatt, Double dNachlass) {
 
 		double dRabattsatz = 100.0;
 		if (dRabatt != null) {
@@ -2395,27 +2436,36 @@ public final class Helper {
 		return new Double(100.0 - dRabattsatz);
 	}
 
-	public static BigDecimal berechneGesamtzeitInStunden(Long lRuestzeit,
-			Long lStueckzeit, BigDecimal bdLosgroesse,
-			Integer iErfassungsfaktor, Integer iAufspannung) {
+	public static BigDecimal long2StundenBigDecimal(long l) {
+		return new BigDecimal(l).divide(STUNDE_IN_MS, FertigungFac.NACHKOMMASTELLEN_ARBEITSPLAN,
+				BigDecimal.ROUND_HALF_EVEN);
+	}
+
+	public static BigDecimal long2MinutenBigDecimal(long l) {
+		return new BigDecimal(l).divide(MINUTE_IN_MS, FertigungFac.NACHKOMMASTELLEN_ARBEITSPLAN,
+				BigDecimal.ROUND_HALF_EVEN);
+	}
+
+	public static BigDecimal berechneGesamtzeitInStunden(Long lRuestzeit, Long lStueckzeit, BigDecimal bdLosgroesse,
+			BigDecimal nErfassungsfaktor, Integer iAufspannung) {
 
 		if (iAufspannung != null && iAufspannung >= 1) {
+			// aufgrund von SP7363 auf naechstgroesseres Vielfaches aufrunden
+			int iLosgroesseFuerAufspannung = (int) (iAufspannung
+					* (Math.ceil(Math.abs(bdLosgroesse.doubleValue() / iAufspannung))));
+			bdLosgroesse = new BigDecimal(iLosgroesseFuerAufspannung);
 			lStueckzeit = lStueckzeit / iAufspannung;
+
 		}
 
-		if (iErfassungsfaktor != null && iErfassungsfaktor != 0
-				&& iErfassungsfaktor != 1) {
-			double d = (bdLosgroesse.doubleValue() / iErfassungsfaktor)
-					* lStueckzeit;
+		if (nErfassungsfaktor != null && nErfassungsfaktor.doubleValue() != 0 && nErfassungsfaktor.doubleValue() != 1) {
+			double d = (double) (lStueckzeit / nErfassungsfaktor.doubleValue());
 			lStueckzeit = (long) d;
 		}
 
-		double lGesamtzeit = lRuestzeit.doubleValue()
-				+ lStueckzeit.doubleValue() * bdLosgroesse.doubleValue();
+		double lGesamtzeit = lRuestzeit.doubleValue() + lStueckzeit.doubleValue() * bdLosgroesse.doubleValue();
 		BigDecimal bdGesamtzeit = new BigDecimal(lGesamtzeit);
-		return bdGesamtzeit.divide(new BigDecimal(60 * 60 * 1000),
-				FertigungFac.NACHKOMMASTELLEN_ARBEITSPLAN,
-				BigDecimal.ROUND_HALF_EVEN);
+		return bdGesamtzeit.divide(STUNDE_IN_MS, FertigungFac.NACHKOMMASTELLEN_ARBEITSPLAN, BigDecimal.ROUND_HALF_EVEN);
 	}
 
 	public static String strippHTML(String sI) {
@@ -2438,6 +2488,7 @@ public final class Helper {
 		result = result.replaceAll("&quot;", "\"");
 		result = result.replaceAll("&lt;", "<");
 		result = result.replaceAll("&gt;", ">");
+		result = result.replaceAll("&nbsp;", " ");
 
 		return result;
 	}
@@ -2450,13 +2501,12 @@ public final class Helper {
 	 * </p>
 	 * 
 	 * <p>
-	 * New lines will be separated by the system property line separator. Very
-	 * long words, such as URLs will <i>not</i> be wrapped.
+	 * New lines will be separated by the system property line separator. Very long
+	 * words, such as URLs will <i>not</i> be wrapped.
 	 * </p>
 	 * 
 	 * <p>
-	 * Leading spaces on a new line are stripped. Trailing spaces are not
-	 * stripped.
+	 * Leading spaces on a new line are stripped. Trailing spaces are not stripped.
 	 * </p>
 	 * 
 	 * <pre>
@@ -2464,10 +2514,9 @@ public final class Helper {
 	 * WordUtils.wrap(&quot;&quot;, *) = &quot;&quot;
 	 * </pre>
 	 * 
-	 * @param str
-	 *            the String to be word wrapped, may be null
-	 * @param wrapLength
-	 *            the column to wrap the words at, less than 1 is treated as 1
+	 * @param str        the String to be word wrapped, may be null
+	 * @param wrapLength the column to wrap the words at, less than 1 is treated as
+	 *                   1
 	 * @return a line with newlines inserted, <code>null</code> if null input
 	 */
 	public static String wrap(String str, int wrapLength) {
@@ -2480,8 +2529,7 @@ public final class Helper {
 	 * </p>
 	 * 
 	 * <p>
-	 * Leading spaces on a new line are stripped. Trailing spaces are not
-	 * stripped.
+	 * Leading spaces on a new line are stripped. Trailing spaces are not stripped.
 	 * </p>
 	 * 
 	 * <pre>
@@ -2489,19 +2537,15 @@ public final class Helper {
 	 * WordUtils.wrap(&quot;&quot;, *, *, *) = &quot;&quot;
 	 * </pre>
 	 * 
-	 * @param str
-	 *            the String to be word wrapped, may be null
-	 * @param wrapLength
-	 *            the column to wrap the words at, less than 1 is treated as 1
-	 * @param newLineStr
-	 *            the string to insert for a new line, <code>null</code> uses
-	 *            the system property line separator
-	 * @param wrapLongWords
-	 *            true if long words (such as URLs) should be wrapped
+	 * @param str           the String to be word wrapped, may be null
+	 * @param wrapLength    the column to wrap the words at, less than 1 is treated
+	 *                      as 1
+	 * @param newLineStr    the string to insert for a new line, <code>null</code>
+	 *                      uses the system property line separator
+	 * @param wrapLongWords true if long words (such as URLs) should be wrapped
 	 * @return a line with newlines inserted, <code>null</code> if null input
 	 */
-	public static String wrap(String str, int wrapLength, String newLineStr,
-			boolean wrapLongWords) {
+	public static String wrap(String str, int wrapLength, String newLineStr, boolean wrapLongWords) {
 		if (str == null) {
 			return null;
 		}
@@ -2532,16 +2576,14 @@ public final class Helper {
 				// really long word or URL
 				if (wrapLongWords) {
 					// wrap really long word one line at a time
-					wrappedLine.append(str.substring(offset, wrapLength
-							+ offset));
+					wrappedLine.append(str.substring(offset, wrapLength + offset));
 					wrappedLine.append(newLineStr);
 					offset += wrapLength;
 				} else {
 					// do not wrap really long word, just extend beyond limit
 					spaceToWrapAt = str.indexOf(' ', wrapLength + offset);
 					if (spaceToWrapAt >= 0) {
-						wrappedLine
-								.append(str.substring(offset, spaceToWrapAt));
+						wrappedLine.append(str.substring(offset, spaceToWrapAt));
 						wrappedLine.append(newLineStr);
 						offset = spaceToWrapAt + 1;
 					} else {
@@ -2589,8 +2631,7 @@ public final class Helper {
 
 			}
 			if (stelle == iban.length() - 1) {
-				ibanFormatted += iban
-						.substring(iletzte4erStelle, iban.length());
+				ibanFormatted += iban.substring(iletzte4erStelle, iban.length());
 				break;
 			}
 
@@ -2600,23 +2641,36 @@ public final class Helper {
 		return ibanFormatted;
 	}
 
+	public static BigDecimal aufVielfachesAufrunden(BigDecimal bdMenge, BigDecimal bdBasis) {
+
+		if (bdMenge != null && bdBasis != null) {
+
+			double rest = bdMenge.doubleValue() % bdBasis.doubleValue();
+
+			if (rest > 0) {
+				bdMenge = new BigDecimal((bdMenge.doubleValue() - rest) + bdBasis.doubleValue());
+				return bdMenge;
+			} else {
+				return bdMenge;
+			}
+
+		} else {
+			return bdMenge;
+		}
+
+	}
+
 	/**
 	 * Berechnet Menge inklusive Verschnitt,Wichtig: ERGEBNIS IST NICHT GERUNDET
 	 * 
-	 * @param bdAusgangsmenge
-	 *            BigDecimal
-	 * @param dVerschnittfaktor
-	 *            Double
-	 * @param dVerschnittbasis
-	 *            Double
-	 * @param losgroesse
-	 *            BigDecimal
+	 * @param bdAusgangsmenge   BigDecimal
+	 * @param dVerschnittfaktor Double
+	 * @param dVerschnittbasis  Double
+	 * @param losgroesse        BigDecimal
 	 * @return BigDecimal
 	 */
-	public static BigDecimal berechneMengeInklusiveVerschnitt(
-			BigDecimal bdAusgangsmenge, Double dVerschnittfaktor,
-			Double dVerschnittbasis, BigDecimal losgroesse,
-			Double dFertigungs_vpe) {
+	public static BigDecimal berechneMengeInklusiveVerschnitt(BigDecimal bdAusgangsmenge, Double dVerschnittfaktor,
+			Double dVerschnittbasis, BigDecimal losgroesse, Double dFertigungs_vpe) {
 
 		BigDecimal bdMengeInklusiveVerschnitt = null;
 		if (bdAusgangsmenge == null) {
@@ -2628,11 +2682,10 @@ public final class Helper {
 			dVerschnittfaktor = new Double(0);
 		}
 
-		if (dVerschnittbasis == null
-				|| (dVerschnittbasis != null && dVerschnittbasis.doubleValue() == 0)) {
-			bdMengeInklusiveVerschnitt = bdAusgangsmenge.add(bdAusgangsmenge
-					.multiply(new BigDecimal(
-							dVerschnittfaktor.doubleValue() / 100)));
+		if (dVerschnittbasis == null || (dVerschnittbasis != null && dVerschnittbasis.doubleValue() == 0)) {
+			bdMengeInklusiveVerschnitt = bdAusgangsmenge
+					.add(bdAusgangsmenge.multiply(new BigDecimal(dVerschnittfaktor.doubleValue() / 100)));
+
 		} else {
 			if (losgroesse == null) {
 				losgroesse = new BigDecimal(1);
@@ -2641,8 +2694,7 @@ public final class Helper {
 				losgroesse = new BigDecimal(1);
 			}
 
-			double d = dVerschnittbasis.doubleValue()
-					/ bdAusgangsmenge.doubleValue();
+			double d = dVerschnittbasis.doubleValue() / bdAusgangsmenge.doubleValue();
 			int i = (int) d;
 
 			double dAnzahl = 0;
@@ -2655,29 +2707,98 @@ public final class Helper {
 				}
 				dAnzahl = (int) dAnzahl;
 			}
-			bdMengeInklusiveVerschnitt = new BigDecimal(dAnzahl
-					/ losgroesse.doubleValue() * dVerschnittbasis.doubleValue());
+			bdMengeInklusiveVerschnitt = new BigDecimal(
+					dAnzahl / losgroesse.doubleValue() * dVerschnittbasis.doubleValue());
 		}
 
 		// PJ18585
 		if (dFertigungs_vpe != null && dFertigungs_vpe.doubleValue() != 0) {
 
-			
-			BigDecimal bdFertigungsmenge= new BigDecimal( bdMengeInklusiveVerschnitt.doubleValue()*losgroesse.doubleValue());
-			
+			BigDecimal bdFertigungsmenge = new BigDecimal(
+					bdMengeInklusiveVerschnitt.doubleValue() * losgroesse.doubleValue());
+
 			if (bdFertigungsmenge.doubleValue() % dFertigungs_vpe > 0) {
-				
-				
-				
-				double dRest = bdFertigungsmenge.doubleValue()
-						% dFertigungs_vpe;
-				bdMengeInklusiveVerschnitt = (bdFertigungsmenge
-						.add(new BigDecimal(dFertigungs_vpe - dRest))).divide(losgroesse, 12, BigDecimal.ROUND_HALF_EVEN);
+
+				double dRest = bdFertigungsmenge.doubleValue() % dFertigungs_vpe;
+				bdMengeInklusiveVerschnitt = (bdFertigungsmenge.add(new BigDecimal(dFertigungs_vpe - dRest)))
+						.divide(losgroesse, 12, BigDecimal.ROUND_HALF_EVEN);
 			}
 
 		}
 
 		return bdMengeInklusiveVerschnitt;
+	}
+
+	/**
+	 * Berechnet wie viel eines Artikels mit Laenge (Kantl, Rohr, etc.) benoetigt
+	 * werden, um eine Anzahl an Teilen anderer Laenge herzustellen. Die Rueckgabe
+	 * ist die Laenge pro Teil
+	 * 
+	 * @param ziellaenge
+	 * @param artikelLaenge
+	 * @param nLosgroesse
+	 * @return
+	 */
+	public static BigDecimal berechneBenoetigteMenge1D(BigDecimal ziellaenge, BigDecimal artikelLaenge,
+			BigDecimal nAnzahl, BigDecimal nLosgroesse) {
+		BigDecimal nGesAnzahl = nAnzahl.multiply(nLosgroesse);
+		// Falls ziel > artikel
+		BigDecimal stueckProArtikel = artikelLaenge.divideToIntegralValue(ziellaenge);
+		if (stueckProArtikel.compareTo(BigDecimal.ZERO) == 0) {
+			// Ziel > Artikel
+			BigDecimal artikelProStueck = ziellaenge.divideToIntegralValue(artikelLaenge);
+			return artikelProStueck.multiply(artikelLaenge);
+		}
+		BigDecimal benoetigteArtikel = nGesAnzahl.divide(stueckProArtikel, 0, RoundingMode.UP);
+		return benoetigteArtikel.divide(nLosgroesse, 12, RoundingMode.HALF_UP).multiply(artikelLaenge);
+	}
+
+	/**
+	 * Berechnet wie viel Flaeche (Einheit ist egal, muss nur bei allen Parametern
+	 * gleich sein) eines Artikels mit Laenge und Breite (Platte, Brett, etc.)
+	 * benoetigt werden, um eine Anzahl an Stueck anderer groesse herzustellen
+	 * 
+	 * @param ziellaenge
+	 * @param artikelLaenge
+	 * @param nLosgroesse
+	 * @return
+	 */
+	public static BigDecimal berechneBenoetigteMenge2D(BigDecimal ziellaenge, BigDecimal zielbreite,
+			BigDecimal artikelLaenge, BigDecimal artikelBreite, BigDecimal nAnzahl, BigDecimal nLosgroesse) {
+		BigDecimal nGesAnzahl = nAnzahl.multiply(nLosgroesse);
+		// Falls ziel > artikel
+		BigDecimal stueckProArtikel = berechneAnzahlDerMoeglichenRechteckigenTeileAufEinerRechteckigenPlatte(zielbreite,
+				ziellaenge, artikelBreite, artikelLaenge);
+		if (stueckProArtikel.compareTo(BigDecimal.ZERO) == 0) {
+			// Teil zu gross fuer Platte, berechne nur flaeche
+			BigDecimal flaeche = ziellaenge.multiply(zielbreite);
+			return flaeche;
+		}
+		BigDecimal anzahlBenoetigterPlatten = nGesAnzahl.divide(stueckProArtikel, 0, RoundingMode.UP);
+		// rechne um zu flaeche
+		return anzahlBenoetigterPlatten.divide(nLosgroesse, 12, RoundingMode.HALF_UP).multiply(artikelBreite)
+				.multiply(artikelLaenge);
+	}
+
+	public static HashMap entferneNichtSerialisierbareEintraege(HashMap m) {
+		if (m != null) {
+			HashMap mNew = new HashMap();
+
+			Iterator it = m.keySet().iterator();
+			while (it.hasNext()) {
+				Object key = it.next();
+
+				Object value = m.get(key);
+				if (value instanceof Serializable) {
+					mNew.put(key, value);
+				}
+
+			}
+
+			return mNew;
+		} else {
+			return null;
+		}
 	}
 
 	public static String formatString(String sI) {
@@ -2687,14 +2808,11 @@ public final class Helper {
 	/**
 	 * prueft ob 2 Timestamps das gleiche Datum haben
 	 * 
-	 * @param t1
-	 *            BewegungsvorschauDto
-	 * @param t2
-	 *            BewegungsvorschauDto
+	 * @param t1 BewegungsvorschauDto
+	 * @param t2 BewegungsvorschauDto
 	 * @return boolean
 	 */
-	public static boolean vergleicheTimestampsInBezugAufDatum(Timestamp t1,
-			Timestamp t2) {
+	public static boolean vergleicheTimestampsInBezugAufDatum(Timestamp t1, Timestamp t2) {
 		boolean datechanged = false;
 		java.sql.Date date1 = null;
 		java.sql.Date date2 = null;
@@ -2704,8 +2822,7 @@ public final class Helper {
 		} catch (Exception ex) {
 		}
 		if (!(date1.equals(date2))) {
-			datechanged = Helper
-					.datumGueltigInbezugAufUntergrenze(date1, date2);
+			datechanged = Helper.datumGueltigInbezugAufUntergrenze(date1, date2);
 		}
 		return datechanged;
 	}
@@ -2713,17 +2830,14 @@ public final class Helper {
 	/**
 	 * Den Kehrwert eines BigDecimal's berechnen. Hier wird NICHT gerundet.
 	 * 
-	 * @param bdI
-	 *            Zu invertierende Zahl
+	 * @param bdI Zu invertierende Zahl
 	 * @return BigDecimal der Reziprokwert von bdI
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	@Deprecated
 	public static BigDecimal getKehrwert(BigDecimal bdI) throws EJBExceptionLP {
 		if (bdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("bdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("bdI == null"));
 		}
 		return new BigDecimal(1).divide(bdI, 100, BigDecimal.ROUND_HALF_EVEN);
 	}
@@ -2788,8 +2902,7 @@ public final class Helper {
 			} else {
 				ArrayList<String> al = new ArrayList<String>();
 				al.add(typ);
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_UNBEKANNTER_DATENTYP,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_UNBEKANNTER_DATENTYP,
 						new Exception("UNBEKANNTER DATENTYP"));
 
 			}
@@ -2817,24 +2930,33 @@ public final class Helper {
 		return s;
 	}
 
-	public static boolean validateEmailadresse(String sEmail)
-			throws EJBExceptionLP {
-		boolean bValid = false;
-		if (sEmail != null) {
-			int iIndexAt = sEmail.indexOf("@");
-			int iIndexLetzterPunkt = sEmail.lastIndexOf(".");
-			if (iIndexAt > 0 && // ein @ muss drin sein
-					iIndexLetzterPunkt > 0 && // ein punkt muss auch drin sein
-					iIndexAt < iIndexLetzterPunkt) { // und das @ muss vor dem
-				// letzten punkt kommen
-				bValid = true;
+	public static boolean validateEmailadresse(String sEmail) throws EJBExceptionLP {
+		if (sEmail == null)
+			return false;
+
+		try {
+			String[] recipients = sEmail.split(";");
+			for (String recipient : recipients) {
+				InternetAddress address = new InternetAddress(recipient.trim(), true);
+				address.validate();
+				// ana: das folgende noch dringelassen, sonst waere ab@mail auch gueltig
+				int iIndexAt = sEmail.indexOf("@");
+				int iIndexLetzterPunkt = sEmail.lastIndexOf(".");
+				if (!(iIndexAt > 0 && // ein @ muss drin sein
+						iIndexLetzterPunkt > 0 && // ein punkt muss auch drin sein
+						iIndexAt < iIndexLetzterPunkt)) { // und das @ muss vor dem
+					// letzten punkt kommen
+					return false;
+				}
 			}
+		} catch (Throwable e) {
+			myLogger.error("Ungueltige Mailadresse: " + sEmail, e);
+			return false;
 		}
-		return bValid;
+		return true;
 	}
 
-	public static boolean validateFaxnummer(String sFaxnummer)
-			throws EJBExceptionLP {
+	public static boolean validateFaxnummer(String sFaxnummer) throws EJBExceptionLP {
 		boolean bValid = false;
 		if (sFaxnummer != null) {
 			bValid = true;
@@ -2845,10 +2967,8 @@ public final class Helper {
 				 */
 				// MB 03.07.06: sind folgende zeichen zulaessig: (keine
 				// sonderzeichen mehr)
-				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2'
-						&& cArray[i] != '3' && cArray[i] != '4'
-						&& cArray[i] != '5' && cArray[i] != '6'
-						&& cArray[i] != '7' && cArray[i] != '8'
+				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2' && cArray[i] != '3' && cArray[i] != '4'
+						&& cArray[i] != '5' && cArray[i] != '6' && cArray[i] != '7' && cArray[i] != '8'
 						&& cArray[i] != '9' && cArray[i] != ' ') {
 					bValid = false;
 				}
@@ -2857,8 +2977,45 @@ public final class Helper {
 		return bValid;
 	}
 
-	public static String befreieFaxnummerVonSonderzeichen(String sFaxnummer)
-			throws EJBExceptionLP {
+	public static int berechneAnzahlDerMoeglichenRechteckigenTeileAufEinerRechteckigenPlatte(double dBreiteTeil,
+			double dHoeheTeil, double dBreitePlatte, double dHoehePlatte) {
+		// Anzahl der moeglichen Teile berechnen
+		int iAnzahlDerMoeglichenTeile = 0;
+
+		int iAnzahl_1 = 0;
+		int iAnzahl_2 = 0;
+		double materialLaenge = dHoehePlatte;
+		double materialBreite = dBreitePlatte;
+
+		iAnzahl_1 = (int) (materialLaenge / dHoeheTeil) * (int) (materialBreite / dBreiteTeil);
+		iAnzahl_2 = (int) (materialLaenge / dBreiteTeil) * (int) (materialBreite / dHoeheTeil);
+
+		if (iAnzahl_1 > iAnzahl_2) {
+			iAnzahlDerMoeglichenTeile = iAnzahl_1;
+		} else {
+			iAnzahlDerMoeglichenTeile = iAnzahl_2;
+		}
+
+		return iAnzahlDerMoeglichenTeile;
+
+	}
+
+	public static BigDecimal berechneAnzahlDerMoeglichenRechteckigenTeileAufEinerRechteckigenPlatte(
+			BigDecimal breiteTeil, BigDecimal hoeheTeil, BigDecimal breitePlatte, BigDecimal hoehePlatte) {
+
+		BigDecimal inBreite1 = breitePlatte.divideToIntegralValue(breiteTeil);
+		BigDecimal inHoehe1 = hoehePlatte.divideToIntegralValue(hoeheTeil);
+
+		BigDecimal inBreite2 = breitePlatte.divideToIntegralValue(hoeheTeil);
+		BigDecimal inHoehe2 = hoehePlatte.divideToIntegralValue(breiteTeil);
+
+		BigDecimal anzahl1 = inBreite1.multiply(inHoehe1);
+		BigDecimal anzahl2 = inBreite2.multiply(inHoehe2);
+
+		return anzahl1.max(anzahl2);
+	}
+
+	public static String befreieFaxnummerVonSonderzeichen(String sFaxnummer) throws EJBExceptionLP {
 		StringBuffer sKorrigierteFaxnummer = new StringBuffer();
 		if (sFaxnummer != null) {
 			char[] cArray = sFaxnummer.toCharArray();
@@ -2868,10 +3025,8 @@ public final class Helper {
 				 */
 				// MB 03.07.06: sind folgende zeichen zulaessig: (keine
 				// sonderzeichen mehr)
-				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2'
-						&& cArray[i] != '3' && cArray[i] != '4'
-						&& cArray[i] != '5' && cArray[i] != '6'
-						&& cArray[i] != '7' && cArray[i] != '8'
+				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2' && cArray[i] != '3' && cArray[i] != '4'
+						&& cArray[i] != '5' && cArray[i] != '6' && cArray[i] != '7' && cArray[i] != '8'
 						&& cArray[i] != '9' && cArray[i] != ' ') {
 					sKorrigierteFaxnummer.append(" ");
 				} else {
@@ -2882,8 +3037,7 @@ public final class Helper {
 		return sKorrigierteFaxnummer.toString();
 	}
 
-	public static String befreieNummerVonSonderzeichen(String sNummer)
-			throws EJBExceptionLP {
+	public static String befreieNummerVonSonderzeichen(String sNummer) throws EJBExceptionLP {
 		StringBuffer sKorrigierteNummer = new StringBuffer();
 		if (sNummer != null) {
 			char[] cArray = sNummer.toCharArray();
@@ -2893,10 +3047,8 @@ public final class Helper {
 				 */
 				// MB 03.07.06: sind folgende zeichen zulaessig: (keine
 				// sonderzeichen mehr)
-				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2'
-						&& cArray[i] != '3' && cArray[i] != '4'
-						&& cArray[i] != '5' && cArray[i] != '6'
-						&& cArray[i] != '7' && cArray[i] != '8'
+				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2' && cArray[i] != '3' && cArray[i] != '4'
+						&& cArray[i] != '5' && cArray[i] != '6' && cArray[i] != '7' && cArray[i] != '8'
 						&& cArray[i] != '9' && cArray[i] != ' ') {
 					// do nothing
 				} else {
@@ -2907,8 +3059,7 @@ public final class Helper {
 		return sKorrigierteNummer.toString();
 	}
 
-	public static String befreieNummerVonSonderzeichenInklisiveLeerzeichen(
-			String sNummer) throws EJBExceptionLP {
+	public static String befreieNummerVonSonderzeichenInklisiveLeerzeichen(String sNummer) throws EJBExceptionLP {
 		StringBuffer sKorrigierteNummer = new StringBuffer();
 		if (sNummer != null) {
 			char[] cArray = sNummer.toCharArray();
@@ -2918,10 +3069,8 @@ public final class Helper {
 				 */
 				// MB 03.07.06: sind folgende zeichen zulaessig: (keine
 				// sonderzeichen mehr)
-				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2'
-						&& cArray[i] != '3' && cArray[i] != '4'
-						&& cArray[i] != '5' && cArray[i] != '6'
-						&& cArray[i] != '7' && cArray[i] != '8'
+				if (cArray[i] != '0' && cArray[i] != '1' && cArray[i] != '2' && cArray[i] != '3' && cArray[i] != '4'
+						&& cArray[i] != '5' && cArray[i] != '6' && cArray[i] != '7' && cArray[i] != '8'
 						&& cArray[i] != '9') {
 					// do nothing
 				} else {
@@ -2948,8 +3097,8 @@ public final class Helper {
 		return w.toString();
 	}
 
-	static final public void addHVFeature(Node nodeFeaturesI, Document docI,
-			String sDescrI, Object sValueI) throws DOMException {
+	static final public void addHVFeature(Node nodeFeaturesI, Document docI, String sDescrI, Object sValueI)
+			throws DOMException {
 
 		if (nodeFeaturesI == null) {
 			throw new IllegalArgumentException("nodeFeaturesI == null");
@@ -2964,8 +3113,7 @@ public final class Helper {
 		Node nodeFeature = null;
 		if (sValueI != null && !sValueI.equals("")) {
 			nodeFeature = docI.createElement(SystemFac.SCHEMA_OF_FEATURE);
-			Node node = docI
-					.createElement(SystemFac.SCHEMA_OF_FEATURE_DESCRIPTION);
+			Node node = docI.createElement(SystemFac.SCHEMA_OF_FEATURE_DESCRIPTION);
 			node.appendChild(docI.createTextNode(sDescrI));
 			nodeFeature.appendChild(node);
 			node = docI.createElement(SystemFac.SCHEMA_OF_FEATURE_VALUE);
@@ -2983,8 +3131,8 @@ public final class Helper {
 		return eFoundException;
 	}
 
-	static final public void addOFElement(Node nodeWhere2AddI, Document docI,
-			Object oValue, String sElementI) throws DOMException {
+	static final public void addOFElement(Node nodeWhere2AddI, Document docI, Object oValue, String sElementI)
+			throws DOMException {
 
 		if (nodeWhere2AddI == null) {
 			throw new IllegalArgumentException("nodeWhere2AddI == null");
@@ -3006,8 +3154,7 @@ public final class Helper {
 	/**
 	 * Echtes Klonen von Original.
 	 * 
-	 * @param sOriginal
-	 *            String
+	 * @param sOriginal String
 	 * @return String
 	 */
 	public static String cloneString(String sOriginal) {
@@ -3033,8 +3180,7 @@ public final class Helper {
 	/**
 	 * Echtes Klonen von BigDecimals.
 	 * 
-	 * @param bdOriginal
-	 *            Original
+	 * @param bdOriginal Original
 	 * @return String
 	 */
 	public static BigDecimal cloneBigDecimal(BigDecimal bdOriginal) {
@@ -3050,8 +3196,7 @@ public final class Helper {
 	/**
 	 * Echtes Klonen von Integer.
 	 * 
-	 * @param iOriginal
-	 *            Original
+	 * @param iOriginal Original
 	 * @return String
 	 */
 	public static Integer cloneInteger(Integer iOriginal) {
@@ -3067,8 +3212,7 @@ public final class Helper {
 	/**
 	 * Echtes Klonen von Short.
 	 * 
-	 * @param sOriginal
-	 *            String
+	 * @param sOriginal String
 	 * @return String
 	 */
 	public static Short cloneShort(Short sOriginal) {
@@ -3084,8 +3228,7 @@ public final class Helper {
 	/**
 	 * Echtes Klonen von Double.
 	 * 
-	 * @param dOriginal
-	 *            String
+	 * @param dOriginal String
 	 * @return String
 	 */
 	public static Double cloneDouble(Double dOriginal) {
@@ -3101,8 +3244,7 @@ public final class Helper {
 	/**
 	 * Echtes Klonen von Float.
 	 * 
-	 * @param fOriginal
-	 *            String
+	 * @param fOriginal String
 	 * @return String
 	 */
 	public static Float cloneFloat(Float fOriginal) {
@@ -3116,11 +3258,10 @@ public final class Helper {
 	}
 
 	/**
-	 * puefen, ob eine Warenverkehrsnummer das richtige Format hat. zulaessig
-	 * sind 4, 6, oder 8 stellige ziffernfolgen: 0000, 0000 00, 0000 00 00
+	 * puefen, ob eine Warenverkehrsnummer das richtige Format hat. zulaessig sind
+	 * 4, 6, oder 8 stellige ziffernfolgen: 0000, 0000 00, 0000 00 00
 	 * 
-	 * @param cWarenverkehrsnummer
-	 *            String
+	 * @param cWarenverkehrsnummer String
 	 * @return boolean
 	 */
 	public static boolean checkWarenverkehrsnummer(String cWarenverkehrsnummer) {
@@ -3130,8 +3271,7 @@ public final class Helper {
 			String s2Ziffern = "\\d{2}";
 			String sWVK6Stellig = s4Ziffern + " " + s2Ziffern;
 			String sWVK8Stellig = sWVK6Stellig + " " + s2Ziffern;
-			Pattern p = Pattern.compile(s4Ziffern + "|" + sWVK6Stellig + "|"
-					+ sWVK8Stellig);
+			Pattern p = Pattern.compile(s4Ziffern + "|" + sWVK6Stellig + "|" + sWVK8Stellig);
 			Matcher m = p.matcher(cWarenverkehrsnummer);
 			bMatch = m.matches();
 		}
@@ -3184,8 +3324,7 @@ public final class Helper {
 
 		while (sText.length() > 0) {
 			int iIndexOfFirstStyleBeginTag = sText.indexOf("<style");
-			int iIndexOfFirstStyleEndTag = sText.indexOf("</style>",
-					iIndexOfFirstStyleBeginTag);
+			int iIndexOfFirstStyleEndTag = sText.indexOf("</style>", iIndexOfFirstStyleBeginTag);
 			// alle Zeichen vor Style Begin tag direkt uebernehmen
 			// nur Zeilenumbrueche nach Begin des <style Tags beachten
 			if (iIndexOfFirstStyleBeginTag == -1) {
@@ -3195,8 +3334,7 @@ public final class Helper {
 				result += sText.substring(0, iIndexOfFirstStyleBeginTag);
 			}
 			aktstyle = "";
-			s = sText.substring(iIndexOfFirstStyleBeginTag,
-					iIndexOfFirstStyleEndTag + 8);
+			s = sText.substring(iIndexOfFirstStyleBeginTag, iIndexOfFirstStyleEndTag + 8);
 			sText = sText.substring(iIndexOfFirstStyleEndTag + 8);
 			if (s.indexOf("\n") != -1) {
 				// styledtext mit zeilenumbruch, hier muessen die \n ausserhalb
@@ -3212,8 +3350,7 @@ public final class Helper {
 						result += temp;
 						// endstyle nur anhaengen wenn nicht schon vorhanden
 						if ((result.length() >= 8)
-								&& (result.substring(result.length() - 8)
-										.compareTo("</style>") == 0)) {
+								&& (result.substring(result.length() - 8).compareTo("</style>") == 0)) {
 						} else {
 							result += "</style>";
 						}
@@ -3221,11 +3358,9 @@ public final class Helper {
 						if (i == -1) {
 							// aktstyle = "";
 						} else {
-							aktstyle = temp.substring(i,
-									temp.indexOf(">", i) + 1);
+							aktstyle = temp.substring(i, temp.indexOf(">", i) + 1);
 						}
-						while (s.length() > 0
-								&& s.substring(0, 1).compareTo("\n") == 0) {
+						while (s.length() > 0 && s.substring(0, 1).compareTo("\n") == 0) {
 							result += "\n";
 							s = s.substring(1);
 						}
@@ -3291,19 +3426,16 @@ public final class Helper {
 
 	public static String getFullUsername(String in) {
 		try {
-			return in + LogonFac.USERNAMEDELIMITER
-					+ java.net.InetAddress.getLocalHost().getHostName();
+			return in + LogonFac.USERNAMEDELIMITER + java.net.InetAddress.getLocalHost().getHostName();
 		} catch (UnknownHostException e) {
 			return in;
 		}
 	}
 
 	/**
-	 * Helper f&uuml;r KDC100 Konvertiert KDC100 Timestamp auf
-	 * java.sql.Timestamp
+	 * Helper f&uuml;r KDC100 Konvertiert KDC100 Timestamp auf java.sql.Timestamp
 	 * 
-	 * @param in
-	 *            short[4]
+	 * @param in short[4]
 	 * @return Datum/Zeit als java.sql.Timestamp
 	 */
 	public static Timestamp getKDCTStoTimestamp(short[] in) {
@@ -3315,8 +3447,7 @@ public final class Helper {
 	/**
 	 * Helper f&uuml;r KDC100 Konvertiert KDC100 Timestamp auf String
 	 * 
-	 * @param in
-	 *            short[4]
+	 * @param in short[4]
 	 * @return Datum/Zeit als String
 	 */
 	public static String getKDCTStoString(short[] in) {
@@ -3326,39 +3457,31 @@ public final class Helper {
 	/**
 	 * Helper f&uuml;r KDC100 Konvertiert KDC100 Timestamp auf Calendar
 	 * 
-	 * @param in
-	 *            short[4]
+	 * @param in short[4]
 	 * @return Datum/Zeit als Calendar
 	 */
 	public static Calendar getKDCTStoCal(short[] in) {
 		Calendar c = Calendar.getInstance();
-		c.set((in[0] >> 2) + 2000, ((in[0] & 3) << 2) + (in[1] >> 6) - 1,
-				(in[1] & 63) >> 1, (in[1] & 1) == 1 ? 12 + (in[2] >> 4)
-						: in[2] >> 4, ((in[2] & 15) << 2) + (in[3] >> 6),
-				in[3] & 63);
+		c.set((in[0] >> 2) + 2000, ((in[0] & 3) << 2) + (in[1] >> 6) - 1, (in[1] & 63) >> 1,
+				(in[1] & 1) == 1 ? 12 + (in[2] >> 4) : in[2] >> 4, ((in[2] & 15) << 2) + (in[3] >> 6), in[3] & 63);
 		return c;
 	}
 
 	/**
-	 * Helper f&uuml;r KDC100 Konvertiert Calendar auf KDC100 Timestamp als
-	 * short[4]
+	 * Helper f&uuml;r KDC100 Konvertiert Calendar auf KDC100 Timestamp als short[4]
 	 * 
-	 * @param c
-	 *            Datum/Zeit als Calendar
+	 * @param c Datum/Zeit als Calendar
 	 * @return short[4]
 	 */
 	public static short[] getKDCCaltoShort(Calendar c) {
 		short[] sa = new short[4];
 
-		sa[0] = new Integer(((c.get(Calendar.YEAR) - 2000) << 2)
-				+ ((c.get(Calendar.MONTH) + 1) >> 2)).shortValue();
-		sa[1] = new Integer((((c.get(Calendar.MONTH) + 1) & 3) << 6)
-				+ (c.get(Calendar.DAY_OF_MONTH) << 1) + c.get(Calendar.AM_PM))
-				.shortValue();
-		sa[2] = new Integer((c.get(Calendar.HOUR) << 4)
-				+ (c.get(Calendar.MINUTE) >> 2)).shortValue();
-		sa[3] = new Integer(((c.get(Calendar.MINUTE) & 3) << 6)
-				+ (c.get(Calendar.SECOND))).shortValue();
+		sa[0] = new Integer(((c.get(Calendar.YEAR) - 2000) << 2) + ((c.get(Calendar.MONTH) + 1) >> 2)).shortValue();
+		sa[1] = new Integer(
+				(((c.get(Calendar.MONTH) + 1) & 3) << 6) + (c.get(Calendar.DAY_OF_MONTH) << 1) + c.get(Calendar.AM_PM))
+						.shortValue();
+		sa[2] = new Integer((c.get(Calendar.HOUR) << 4) + (c.get(Calendar.MINUTE) >> 2)).shortValue();
+		sa[3] = new Integer(((c.get(Calendar.MINUTE) & 3) << 6) + (c.get(Calendar.SECOND))).shortValue();
 		return sa;
 	}
 
@@ -3366,8 +3489,7 @@ public final class Helper {
 		return parseString2Date(s, new SimpleDateFormat("dd.MM.yyyy"));
 	}
 
-	public static java.sql.Date parseString2Date(String s,
-			SimpleDateFormat format) {
+	public static java.sql.Date parseString2Date(String s, SimpleDateFormat format) {
 		java.sql.Date date = null;
 		try {
 			date = new java.sql.Date(format.parse(s).getTime());
@@ -3377,8 +3499,7 @@ public final class Helper {
 		return date;
 	}
 
-	public static String[] monatsnamenBereich(String[] monate,
-			Timestamp[] tVonBis) {
+	public static String[] monatsnamenBereich(String[] monate, Timestamp[] tVonBis) {
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(tVonBis[0]);
 		int monatvon = cal.get(Calendar.MONTH) + 1;
@@ -3450,65 +3571,56 @@ public final class Helper {
 	}
 
 	public static boolean istKennwortParameter(String parameter) {
-		return parameter.equals(ParameterFac.PARAMETER_SMTPSERVER_KENNWORT)
-				|| parameter
-						.equals(ParameterFac.PARAMETER_IMAPSERVER_ADMIN_KENNWORT)
-				|| parameter
-						.equals(ParameterFac.PARAMETER_SMTPSERVER_XPIRIO_KENNWORT);
+		return ParameterFac.PARAMETER_SMTPSERVER_KENNWORT.equals(parameter)
+				|| ParameterFac.PARAMETER_IMAPSERVER_ADMIN_KENNWORT.equals(parameter)
+				|| ParameterFac.PARAMETER_SMTPSERVER_XPIRIO_KENNWORT.equals(parameter)
+				|| ParameterFac.PARAMETER_PRO_FIRST_DBPASSWORD.equals(parameter)
+				|| ParameterFac.PARAMETER_FINDCHIPS_APIKEY.equals(parameter)
+				|| ParameterFac.PARAMETER_GOOGLE_APIKEY.equals(parameter);
 	}
 
-	public static BigDecimal getMehrwertsteuerBetrag(BigDecimal bdBrutto,
-			BigDecimal bdMwstSatz) {
+	public static BigDecimal getMehrwertsteuerBetrag(BigDecimal bdBrutto, BigDecimal bdMwstSatz) {
 		if (bdBrutto == null)
 			return null;
 
 		bdMwstSatz = bdMwstSatz.movePointLeft(2);
-		BigDecimal bdBetragBasis = bdBrutto.divide(
-				BigDecimal.ONE.add(bdMwstSatz), FinanzFac.NACHKOMMASTELLEN,
+		BigDecimal bdBetragBasis = bdBrutto.divide(BigDecimal.ONE.add(bdMwstSatz), FinanzFac.NACHKOMMASTELLEN,
 				BigDecimal.ROUND_HALF_EVEN);
-		return Helper.rundeKaufmaennisch(bdBrutto.subtract(bdBetragBasis),
-				FinanzFac.NACHKOMMASTELLEN);
+		return Helper.rundeKaufmaennisch(bdBrutto.subtract(bdBetragBasis), FinanzFac.NACHKOMMASTELLEN);
 	}
 
 	/**
 	 * Ermittelt den Mehrwertsteuerbetrag f&uuml;r den gegebenen Nettobetrag und
 	 * Satz
 	 * 
-	 * @param bdNetto
-	 *            ist der Nettobetrag
-	 * @param bdMwstSatz
-	 *            der Prozentsatz
+	 * @param bdNetto    ist der Nettobetrag
+	 * @param bdMwstSatz der Prozentsatz
 	 * @return den f&uuml;r Finanz passend gerundeten Mwstbetrag
 	 */
-	public static BigDecimal getMehrwertsteuerBetragFuerNetto(
-			BigDecimal bdNetto, BigDecimal bdMwstSatz) {
+	public static BigDecimal getMehrwertsteuerBetragFuerNetto(BigDecimal bdNetto, BigDecimal bdMwstSatz) {
 		if (bdNetto == null)
 			return null;
 
 		bdMwstSatz = bdMwstSatz.movePointLeft(2);
 		BigDecimal bdBetragBasis = bdNetto.multiply(bdMwstSatz);
-		return Helper.rundeKaufmaennisch(bdBetragBasis,
-				FinanzFac.NACHKOMMASTELLEN);
+		return Helper.rundeKaufmaennisch(bdBetragBasis, FinanzFac.NACHKOMMASTELLEN);
 	}
 
 	/**
 	 * Ein neues FilterKriterium Array erzeugen, welches um additionalItems mehr
 	 * Eintraege Platz hat
 	 * 
-	 * @param baseArray
-	 *            ist das zu kopierende Array
-	 * @param additionalItems
-	 *            die Anzahl der zusaetzlichen (am Ende befindlichen) Eintraege
+	 * @param baseArray       ist das zu kopierende Array
+	 * @param additionalItems die Anzahl der zusaetzlichen (am Ende befindlichen)
+	 *                        Eintraege
 	 * @return das neue Array das die Daten von baseArray enthaelt und um
 	 *         additionalItems Eintraege mehr Platz hat
 	 */
-	public static FilterKriterium[] copyFilterKriterium(
-			FilterKriterium[] baseArray, int additionalItems) {
+	public static FilterKriterium[] copyFilterKriterium(FilterKriterium[] baseArray, int additionalItems) {
 		if (null == baseArray)
 			throw new IllegalArgumentException("baseArray");
 
-		FilterKriterium[] newArray = new FilterKriterium[baseArray.length
-				+ additionalItems];
+		FilterKriterium[] newArray = new FilterKriterium[baseArray.length + additionalItems];
 		for (int i = 0; i < baseArray.length; i++) {
 			newArray[i] = baseArray[i];
 		}
@@ -3526,7 +3638,7 @@ public final class Helper {
 		if (null == many)
 			return false;
 		for (String element : many) {
-			if (source.equals(element))
+			if (element.equals(source))
 				return true;
 		}
 		return false;
@@ -3543,8 +3655,31 @@ public final class Helper {
 		return false;
 	}
 
-	public static void setJcrDocBinaryData(JCRDocDto jcrDocDto,
-			JasperPrint jasperPrint) {
+	public static <T> boolean isOneOf(T source, Collection<T> many) {
+		if (null == many)
+			return false;
+
+		for (T element : many) {
+			if (element.equals(source)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static <T> boolean isOneOf(T source, T... many) {
+		if (null == many)
+			return false;
+
+		for (T element : many) {
+			if (element.equals(source)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static void setJcrDocBinaryData(JCRDocDto jcrDocDto, JasperPrint jasperPrint) {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(100000);
 		ObjectOutputStream oos = null;
 		try {
@@ -3622,6 +3757,12 @@ public final class Helper {
 
 			}
 
+		} else if (iKW == 53 || iKW == 52) {
+			// SP3887
+
+			if (c.get(Calendar.MONTH) == Calendar.JANUARY) {
+				iJahr = iJahr - 1;
+			}
 		}
 
 		return iJahr;
@@ -3642,10 +3783,9 @@ public final class Helper {
 	 * 
 	 * Ein String ist nicht leer, wenn er getrimmed eine L&auml;nge > 0 hat
 	 * 
-	 * @param value
-	 *            der zu pruefende String
-	 * @return false wenn der String null oder eine L&auml;nge von 0 hat,
-	 *         ansonsten true
+	 * @param value der zu pruefende String
+	 * @return true wenn der String null oder eine L&auml;nge von 0 hat, ansonsten
+	 *         false
 	 */
 	public static boolean isStringEmpty(String value) {
 		if (null == value)
@@ -3654,12 +3794,11 @@ public final class Helper {
 	}
 
 	/**
-	 * Erzeugt aus einem String Array einen String, welcher dem SQL Operator
-	 * 'IN' &uuml;bergeben werden kann. <br>
+	 * Erzeugt aus einem String Array einen String, welcher dem SQL Operator 'IN'
+	 * &uuml;bergeben werden kann. <br>
 	 * <br>
 	 * 
-	 * @param values
-	 *            ["Angelegt"]["Offen"]["Storniert"]
+	 * @param values ["Angelegt"]["Offen"]["Storniert"]
 	 * @return "('Angelegt','Offen','Storniert')" ohne die doppelten
 	 *         Anf&uuml;hrungszeichen.
 	 */
@@ -3673,12 +3812,11 @@ public final class Helper {
 	}
 
 	/**
-	 * Erzeugt aus einer Integer Collection einen String, welcher dem SQL
-	 * Operator 'IN' &uuml;bergeben werden kann. <br>
+	 * Erzeugt aus einer Integer Collection einen String, welcher dem SQL Operator
+	 * 'IN' &uuml;bergeben werden kann. <br>
 	 * <br>
 	 * 
-	 * @param values
-	 *            [1, 2, 4]
+	 * @param values [1, 2, 4]
 	 * @return "(1,2,4)" ohne die doppelten Anf&uuml;hrungszeichen.
 	 */
 	public static String arrayToSqlInList(Collection<Integer> values) {
@@ -3688,5 +3826,223 @@ public final class Helper {
 		}
 		return s.substring(0, s.length() - 1) + ")";
 
+	}
+
+	/**
+	 * Ein nullf&auml;higer equals Liefert true wenn beide null sind, oder
+	 * Object.equals(otherObject)
+	 * 
+	 * @param a Integer a
+	 * @param b Integer b
+	 * @return true wenn a und b null sind, oder a.equals(b) bzw. b.equals(a)
+	 */
+	public static boolean equalsNull(Integer a, Integer b) {
+		if (a == null && b == null)
+			return true;
+		if (a != null)
+			return a.equals(b);
+		return b.equals(a);
+	}
+
+	/**
+	 * Ermittelt die naechste Seriennr aus einer rein numerischen Seriennummer
+	 * 
+	 * @throws NumberFormatException wenn die Seriennummer nicht rein numerisch ist
+	 * @return die naechsthoehere Seriennummer
+	 */
+	public static String naechsteSeriennr(String seriennr) {
+		BigInteger snr = new BigInteger(seriennr);
+		snr = snr.add(BigInteger.ONE);
+		return snr.toString();
+	}
+
+	/**
+	 * Ermittelt die naechste Seriennr aus einer rein numerischen Seriennummer unter
+	 * Beruecksichtigung der Anzahl der Exemplare dieser Seriennummer
+	 * 
+	 * @throws NumberFormatException wenn die Seriennummer nicht rein numerisch ist
+	 * @return die naechsthoehere Seriennummer
+	 */
+	public static String naechsteSeriennr(String seriennr, int exemplare) {
+		BigInteger snr = new BigInteger(seriennr);
+		snr = snr.add(new BigInteger("" + exemplare));
+		return snr.toString();
+	}
+
+	public static boolean isTrue(Short value) {
+		return value != null ? value.compareTo(getShortTrue()) == 0 : false;
+	}
+
+	public static boolean isTrue(short value) {
+		return value == 1;
+	}
+
+	public static boolean isFalse(Short value) {
+		return value != null ? value.compareTo(getShortFalse()) == 0 : true;
+	}
+
+	public static boolean isFalse(short value) {
+		return value == 0;
+	}
+
+	/**
+	 * Liefert eine Calendar-Instanz gesetzt mit dem letzten Tag des
+	 * &uuml;bergebenen Monats und Jahres und 00:00:00 Uhr
+	 * 
+	 * @param month Monat des Jahres: 0 = Januar, 1 = Februar...
+	 * @param year  Jahr
+	 * @return letzten Tag eines Monats als Calendar
+	 */
+	public static Calendar getCalendarLastDayOfMonth(int month, int year) {
+		Calendar cal = Calendar.getInstance();
+		// SP5394, um Ueberlauf zu vermeiden
+		cal.set(Calendar.DAY_OF_MONTH, cal.getActualMinimum(Calendar.DAY_OF_MONTH));
+		cal.set(Calendar.MONTH, month);
+		cal.set(Calendar.YEAR, year);
+		cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		return cal;
+	}
+
+	/**
+	 * Liefert eine Calendar-Instanz gesetzt mit dem ersten Tag des &uuml;bergebenen
+	 * Monats und Jahres und 00:00:00 Uhr
+	 * 
+	 * @param month Monat des Jahres: 0 = Januar, 1 = Februar...
+	 * @param year  Jahr
+	 * @return erster Tag eines Monats als Calendar
+	 */
+	public static Calendar getCalendarFirstDayOfMonth(int month, int year) {
+		Calendar cal = Calendar.getInstance();
+		cal.set(Calendar.DAY_OF_MONTH, 1);
+		cal.set(Calendar.MONTH, month);
+		cal.set(Calendar.YEAR, year);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		return cal;
+	}
+
+	/**
+	 * Prueft ob ein <code>Comparable</code>-Objekt zwischen zweien liegt, inklusive
+	 * Start und Ende
+	 * 
+	 * @param value
+	 * @param start
+	 * @param end
+	 * @return
+	 */
+	public static <T extends Comparable<T>> boolean isBetween(T value, T start, T end) {
+		return value.compareTo(start) >= 0 && value.compareTo(end) <= 0;
+	}
+
+	/**
+	 * Prueft ob ein <code>Comparable</code>-Objekt zwischen zweien liegt, wobei der
+	 * Start ausgenommen ist.
+	 * 
+	 * @param value
+	 * @param start
+	 * @param end
+	 * @return
+	 */
+	public static <T extends Comparable<T>> boolean isBetweenStartExcluded(T value, T start, T end) {
+		return value.compareTo(start) > 0 && value.compareTo(end) <= 0;
+	}
+
+	/**
+	 * Sind alle &uuml;bergebenen Strings leer/null?
+	 * 
+	 * Ein String ist nicht leer, wenn er getrimmed eine L&auml;nge > 0 hat
+	 * 
+	 * @param values die zu pruefenden Strings
+	 * @return true wenn alle Strings null oder eine L&auml;nge von 0 haben,
+	 *         ansonsten false
+	 */
+	public static boolean areStringsEmpty(String... values) {
+		for (String val : values) {
+			if (!Helper.isStringEmpty(val))
+				return false;
+		}
+		return true;
+	}
+
+	public static String entferneWhitespaceVonEmailadresse(String mailadresse) {
+		if (mailadresse == null)
+			return null;
+		if (mailadresse.equals(""))
+			return "";
+		String[] parts = mailadresse.split(";");
+		StringBuilder sb = new StringBuilder();
+		for (String p : parts) {
+			if (sb.length() > 0) {
+				sb.append(";");
+			}
+			sb.append(p.trim());
+		}
+		return sb.toString();
+	}
+
+	public static String getMaschinenbezeichnung(FLRMaschine maschine) {
+		StringBuilder back = new StringBuilder();
+		if (maschine.getC_identifikationsnr() != null) {
+			back.append(maschine.getC_identifikationsnr());
+		}
+		if (maschine.getC_inventarnummer() != null) {
+			back.append(" ");
+			back.append(maschine.getC_inventarnummer());
+		}
+		if (maschine.getC_bez() != null) {
+			back.append(" ");
+			back.append(maschine.getC_bez());
+		}
+		return back.toString();
+	}
+
+	/**
+	 * Hole erstes Element der Collection als Optional. Wenn die Collection null
+	 * oder leer ist wird ein empty Optional zur�ckgegeben
+	 * 
+	 * @param <T>
+	 * @param collection
+	 * @return
+	 * 
+	 * @throws NullPointerException Wenn das erste Element null ist
+	 */
+	public static <T> Optional<T> getFirst(Collection<T> collection) {
+		if (collection.isEmpty() || collection.size() == 0) {
+			return Optional.empty();
+		}
+		return Optional.of(collection.iterator().next());
+	}
+
+	/**
+	 * Return value wenn != null, wenn value == null return defValue
+	 */
+	public static <T> T getOrDefault(T value, T defValue) {
+		if (value == null) {
+			return defValue;
+		}
+		return value;
+	}
+
+	public static String reverseString(String text) {
+		return new StringBuilder(text).reverse().toString();
+	}
+
+	/**
+	 * Einen getrimmten String liefern. Kann damit umgehen, dass null uebergeben
+	 * wird, liefert dann "".
+	 * 
+	 * @param value
+	 * @return
+	 */
+	public static String emptyString(String value) {
+		if (value == null)
+			return "";
+		return value.trim();
 	}
 }

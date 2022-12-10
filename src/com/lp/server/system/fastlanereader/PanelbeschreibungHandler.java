@@ -94,8 +94,7 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -106,24 +105,56 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 
+			String eigenschaftskennung = this.defaultFiltersForTableInfo[0].value.replace("'", "");
+
 			while (resultListIterator.hasNext()) {
-				FLRPanelbeschreibung mandant = (FLRPanelbeschreibung) resultListIterator
-						.next();
+				FLRPanelbeschreibung mandant = (FLRPanelbeschreibung) resultListIterator.next();
 				rows[row][col++] = mandant.getI_id();
 				rows[row][col++] = mandant.getC_name();
 				rows[row][col++] = mandant.getC_typ();
 				rows[row][col++] = mandant.getI_gridx();
 				rows[row][col++] = mandant.getI_gridy();
-				if(mandant.getArtgru_i_id() != null){
-					rows[row++][col++] = getArtikelFac().artgruFindByPrimaryKey(mandant.getArtgru_i_id(), theClientDto).getBezeichnung(); //mandant.getArtgru_i_id();
-				} else {
-					rows[row++][col++] = "";
+
+				if (PanelFac.PANEL_ARTIKELEIGENSCHAFTEN.equals(eigenschaftskennung)
+						|| PanelFac.PANEL_CHARGENEIGENSCHAFTEN.equals(eigenschaftskennung)
+						|| PanelFac.PANEL_ARTIKELTECHNIK.equals(eigenschaftskennung)) {
+
+					if (mandant.getArtgru_i_id() != null) {
+						rows[row][col++] = getArtikelFac()
+								.artgruFindByPrimaryKey(mandant.getArtgru_i_id(), theClientDto).getBezeichnung(); // mandant.getArtgru_i_id();
+					}
+
+				} else if (PanelFac.PANEL_KUNDENEIGENSCHAFTEN.equals(eigenschaftskennung)) {
+
+					if (mandant.getPartnerklasse_i_id() != null) {
+						rows[row][col++] = getPartnerFac()
+								.partnerklasseFindByPrimaryKey(mandant.getPartnerklasse_i_id(), theClientDto)
+								.getBezeichnung();
+					}
+
+				} else if (PanelFac.PANEL_AUFTRAGSEIGENSCHAFTEN.equals(eigenschaftskennung)) {
+					if (mandant.getKostenstelle_i_id() != null) {
+						rows[row][col++] = getSystemFac().kostenstelleFindByPrimaryKey(mandant.getKostenstelle_i_id())
+								.getCBez();
+					} else {
+						rows[row][col++] = null;
+					}
+					rows[row][col++] = mandant.getProjekttyp_c_nr();
+				} else if (PanelFac.PANEL_PROJEKTEIGENSCHAFTEN.equals(eigenschaftskennung)) {
+					if (mandant.getBereich_i_id() != null) {
+						rows[row][col++] = getProjektServiceFac().bereichFindByPrimaryKey(mandant.getBereich_i_id())
+								.getCBez();
+					} else {
+						rows[row][col++] = null;
+					}
+					rows[row][col++] = mandant.getProjekttyp_c_nr();
 				}
-				
+
+				row++;
+
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -137,8 +168,8 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -149,22 +180,30 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
 			for (int i = 0; i < filterKriterien.length; i++) {
+
 				if (filterKriterien[i].isKrit) {
 					if (filterAdded) {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" panelbeschreibung."
-							+ filterKriterien[i].kritName);
+					if (filterKriterien[i].isBIgnoreCase()) {
+						where.append(" lower( panelbeschreibung." + filterKriterien[i].kritName + ")");
+					} else {
+						where.append(" panelbeschreibung." + filterKriterien[i].kritName);
+					}
 					where.append(" " + filterKriterien[i].operator);
-					where.append(" " + filterKriterien[i].value);
+					if (filterKriterien[i].isBIgnoreCase()) {
+						where.append(" " + filterKriterien[i].value.toLowerCase());
+					} else {
+						where.append(" " + filterKriterien[i].value);
+					}
 				}
+
 			}
 			if (filterAdded) {
 				where.insert(0, " WHERE");
@@ -187,15 +226,13 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("panelbeschreibung."
-									+ kriterien[i].kritName);
+							orderBy.append("panelbeschreibung." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -206,12 +243,10 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy
-						.append("panelbeschreibung.i_gridy,panelbeschreibung.i_gridx ASC ");
+				orderBy.append("panelbeschreibung.i_gridx ASC ");
 				sortAdded = true;
 			}
-			if (orderBy
-					.indexOf("panelbeschreibung.i_gridy,panelbeschreibung.i_gridx") < 0) {
+			if (orderBy.indexOf("panelbeschreibung.i_gridx") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -220,8 +255,19 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy
-						.append(" panelbeschreibung.i_gridy,panelbeschreibung.i_gridx ");
+				orderBy.append(" panelbeschreibung.i_gridx ");
+				sortAdded = true;
+			}
+			if (orderBy.indexOf("panelbeschreibung.i_gridy ") < 0) {
+				// unique sort required because otherwise rowNumber of
+				// selectedId
+				// within sort() method may be different from the position of
+				// selectedId
+				// as returned in the page of getPageAt().
+				if (sortAdded) {
+					orderBy.append(", ");
+				}
+				orderBy.append(" panelbeschreibung.i_gridy ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -237,8 +283,7 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -263,26 +308,42 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, Integer.class, Integer.class , String.class},
-					new String[] { "i_id",
-							getTextRespectUISpr("lp.name", mandantCNr, locUI),
+
+			TableInfo tableinfo = new TableInfo(
+					new Class[] { Integer.class, String.class, String.class, Integer.class, Integer.class },
+					new String[] { "i_id", getTextRespectUISpr("lp.name", mandantCNr, locUI),
 							getTextRespectUISpr("lp.typ", mandantCNr, locUI),
-							getTextRespectUISpr("lp.spalte", mandantCNr, locUI), 
-							getTextRespectUISpr("lp.zeile", mandantCNr, locUI),
-							getTextRespectUISpr("lp.artikelgruppe", mandantCNr, locUI)}, new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_L,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M, 
-							QueryParameters.FLR_BREITE_L }, new String[] {
-							"i_id", PanelFac.FLR_PANELBESCHREIBUNG_C_NAME,
-							PanelFac.FLR_PANELBESCHREIBUNG_C_TYP,
-							PanelFac.FLR_PANELBESCHREIBUNG_I_GRIDX,
-							PanelFac.FLR_PANELBESCHREIBUNG_I_GRIDY,
-							PanelFac.FLR_PANELBESCHREIBUNG_ARTGRU_I_ID}));
+							getTextRespectUISpr("lp.spalte", mandantCNr, locUI),
+							getTextRespectUISpr("lp.zeile", mandantCNr, locUI) },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_L, QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_M },
+					new String[] { "i_id", PanelFac.FLR_PANELBESCHREIBUNG_C_NAME, PanelFac.FLR_PANELBESCHREIBUNG_C_TYP,
+							PanelFac.FLR_PANELBESCHREIBUNG_I_GRIDX, PanelFac.FLR_PANELBESCHREIBUNG_I_GRIDY });
+
+			String eigenschaftskennung = this.defaultFiltersForTableInfo[0].value.replace("'", "");
+
+			if (PanelFac.PANEL_ARTIKELEIGENSCHAFTEN.equals(eigenschaftskennung)
+					|| PanelFac.PANEL_CHARGENEIGENSCHAFTEN.equals(eigenschaftskennung)|| PanelFac.PANEL_ARTIKELTECHNIK.equals(eigenschaftskennung)) {
+				tableinfo.spalteHinzufuegen(String.class, getTextRespectUISpr("lp.artikelgruppe", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_L, PanelFac.FLR_PANELBESCHREIBUNG_ARTGRU_I_ID);
+			} else if (PanelFac.PANEL_KUNDENEIGENSCHAFTEN.equals(eigenschaftskennung)) {
+				tableinfo.spalteHinzufuegen(String.class, getTextRespectUISpr("lp.partnerklasse", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_L, PanelFac.FLR_PANELBESCHREIBUNG_PARTNERKLASSE_I_ID);
+			} else if (PanelFac.PANEL_AUFTRAGSEIGENSCHAFTEN.equals(eigenschaftskennung)) {
+				tableinfo.spalteHinzufuegen(String.class, getTextRespectUISpr("lp.kostenstelle", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_L, PanelFac.FLR_PANELBESCHREIBUNG_KOSTENSTELLE_I_ID);
+				tableinfo.spalteHinzufuegen(String.class, getTextRespectUISpr("lp.panel.projekttyp", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_L, PanelFac.FLR_PANELBESCHREIBUNG_PROJEKTTYP_C_NR);
+			} else if (PanelFac.PANEL_PROJEKTEIGENSCHAFTEN.equals(eigenschaftskennung)) {
+				tableinfo.spalteHinzufuegen(String.class, getTextRespectUISpr("lp.bereich", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_L, PanelFac.FLR_PANELBESCHREIBUNG_BEREICH_I_ID);
+				tableinfo.spalteHinzufuegen(String.class, getTextRespectUISpr("lp.panel.projekttyp", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_L, PanelFac.FLR_PANELBESCHREIBUNG_PROJEKTTYP_C_NR);
+			}
+
+			setTableInfo(tableinfo);
 		}
+
 		return super.getTableInfo();
 	}
 
@@ -295,8 +356,7 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 		return "from FLRPanelbeschreibung panelbeschreibung ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		this.getQuery().setSortKrit(sortierKriterien);
 
@@ -310,8 +370,8 @@ public class PanelbeschreibungHandler extends UseCaseHandler {
 			try {
 				session = factory.openSession();
 				String queryString = "select panelbeschreibung." + "i_id"
-						+ " from FLRPanelbeschreibung panelbeschreibung "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+						+ " from FLRPanelbeschreibung panelbeschreibung " + this.buildWhereClause()
+						+ this.buildOrderByClause();
 
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();

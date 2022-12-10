@@ -32,7 +32,6 @@
  ******************************************************************************/
 package com.lp.service;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Externalizable;
@@ -41,10 +40,7 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,14 +55,16 @@ public abstract class StklImportSpezifikation implements Externalizable {
 	private String mandant_cnr;
 	private boolean fixedWidth;
 	private List<Integer> widths;
-	private List<String> columnTypes;
+	protected List<String> columnTypes;
 	private String separator;
 	private int fromRow = 1;
+	private boolean withHiddenArticles;
 	private int stklIId;
 	protected List<String> availableColumnTypes;
 	
 	public static final String UNDEFINED = "<undefined>";
 	public static final String KUNDENARTIKELNUMMER = "Kundenartikelnummer";
+	public static final String LIEFERANTENARTIKELNUMMER = "Lieferantenartikelnummer";
 	public static final String HERSTELLERARTIKELNUMMER = "Herstellerartikelnummer";
 	public static final String HERSTELLERBEZ = "Herstellerbezeichnung";
 	public static final String BEZEICHNUNG = "Bezeichnung";
@@ -79,7 +77,15 @@ public abstract class StklImportSpezifikation implements Externalizable {
 	public static final String POSITION = "Position";
 	public static final String SI_WERT = "SI-Wert";
 	public static final String BAUFORM = "Bauform";
-	public static final String REFERENZBEMERKUNG = "Referenzbemerkung";
+	public static final String REFERENZBEZEICHNUNG = "Referenzbezeichnung";
+	public static final String BESTELLPREIS = "Importpreis";
+	public static final String INTERNE_BEMERKUNG = "Interne Bemerkung";
+	public static final String HERSTELLER = "Hersteller";
+	public static final String LIEFPREIS = "Lieferantenpreis";
+	public static final String DIM_BREITE = "Breite";
+	public static final String DIM_HOEHE = "H\u00f6he";
+	public static final String DIM_TIEFE = "Tiefe";
+	public static final String LAUFENDE_NUMMER = "Lfd. Nummer";
 	
 	protected static final String EXT_SEPARATOR = "\r" ;
 	
@@ -87,6 +93,20 @@ public abstract class StklImportSpezifikation implements Externalizable {
 		public static final int FERTIGUNGSSTKL_SPEZ = 1;
 		public static final int ANGEBOTSSTKL_SPEZ = 2;
 		public static final int EINKAUFSANGEBOTSSTKL_SPEZ = 3;
+		public static final int BESTELLUNGSTKL_SPEZ = 4;
+	}
+	
+	public static class JsonProperties {
+		public static final String NAME = "name";
+		public static final String MANDANT_CNR = "mandant";
+		public static final String FIXED_WIDTH = "fixedWidth";
+		public static final String WIDTHS = "widths";
+		public static final String COLUMN_TYPES = "columnTypes";
+		public static final String SEPARATOR = "separator";
+		public static final String FROM_ROW = "fromRow";
+		public static final String WITH_HIDDEN_ARTICLES = "withHiddenArticles";
+		public static final String STKL_IID = "stklIId";
+		public static final String MONTAGEART_IID = "montageartIId";
 	}
 	
 	private static Map<Integer, String> keyValueCGruppe = new HashMap<Integer, String>() {
@@ -95,6 +115,7 @@ public abstract class StklImportSpezifikation implements Externalizable {
 			put(SpezifikationsTyp.FERTIGUNGSSTKL_SPEZ, SystemServicesFac.KEYVALUE_STKL_IMPORT_SPEZ);
 			put(SpezifikationsTyp.ANGEBOTSSTKL_SPEZ, SystemServicesFac.KEYVALUE_AGSTKL_IMPORT_SPEZ);
 			put(SpezifikationsTyp.EINKAUFSANGEBOTSSTKL_SPEZ, SystemServicesFac.KEYVALUE_EINKAUFSAGSTKL_IMPORT_SPEZ);
+			put(SpezifikationsTyp.BESTELLUNGSTKL_SPEZ, SystemServicesFac.KEYVALUE_BESTELLUNGSTKL_IMPORT_SPEZ);
 		}
 	};
 
@@ -127,6 +148,14 @@ public abstract class StklImportSpezifikation implements Externalizable {
 
 	public void setFixedWidth(boolean fixedWidth) {
 		this.fixedWidth = fixedWidth;
+	}
+
+	public boolean isWithHiddenArticles() {
+		return withHiddenArticles;
+	}
+
+	public void setWithHiddenArticles(boolean withHiddenArticles) {
+		this.withHiddenArticles = withHiddenArticles;
 	}
 
 	public List<Integer> getWidths() {
@@ -186,158 +215,141 @@ public abstract class StklImportSpezifikation implements Externalizable {
 	protected abstract void setAvailableColumnTypes();
 
 	@Override
-	public void readExternal(ObjectInput in) throws IOException,
-			ClassNotFoundException {
-		BufferedReader br = new BufferedReader(new StringReader(in.readUTF()));
-		readString(br);
+	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		IReader reader = new JsonReader(in.readUTF());
+		readString(reader);
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-		StringWriter sw = new StringWriter();
-		writeString(sw);
-		out.writeUTF(sw.toString());
+		out.writeUTF(writeString());
 	}
 
 	/**
 	 * Holt die Spezifikation aus dem BufferedReader und setzt die Variablen
 	 * 
-	 * @param br
+	 * @param reader
 	 * @throws IOException
 	 */
-	public void readString(BufferedReader br) throws IOException {
-		readCommonValues(br);
-		readIndividualValues(br);
-		readColumnTypes(br);
+	public void readString(IReader reader) throws IOException {
+		if (reader instanceof DefaultReader) {
+			readCommonValues(reader);
+			readIndividualValues(reader);
+			readColumnTypes(reader);
+		} else if (reader instanceof JsonReader) {
+			readCommonValuesJson(reader);
+			readIndividualValuesJson(reader);
+			readColumnTypesJson(reader);
+		}
 	}
 
 	/**
 	 * Liest spezifikationsartspezifische Variablen aus der Spezifikation
 	 * 
-	 * @param br
+	 * @param reader
 	 * @throws IOException
 	 */
-	protected abstract void readIndividualValues(BufferedReader br) throws IOException;
+	protected abstract void readIndividualValues(IReader reader) throws IOException;
 
+	protected abstract void readIndividualValuesJson(IReader reader) throws IOException;
+	
 	/**
 	 * @param br
 	 * @throws IOException
 	 */
-	private void readColumnTypes(BufferedReader br) throws IOException {
-		int size = extGetInteger(br);
+	private void readColumnTypes(IReader reader) throws IOException {
+		int size = reader.getInteger();
 		setColumnTypes(new ArrayList<String>());
 		for(int i = 0; i < size; i++) {
-			getColumnTypes().add(extGetString(br));
+			getColumnTypes().add(reader.getString());
 		}
-		size = extGetInteger(br);
+		size = reader.getInteger();
 		setWidths(new ArrayList<Integer>());
 		for(int i = 0; i < size; i++) {
-			getWidths().add(extGetInteger(br));
+			getWidths().add(reader.getInteger());
 		}
 	}
 
+	private void readColumnTypesJson(IReader reader) throws IOException {
+		setColumnTypes(reader.<String>getList(JsonProperties.COLUMN_TYPES));
+		setWidths(reader.<Integer>getList(JsonProperties.WIDTHS));
+	}
+
 	/**
-	 * @param br
+	 * @param reader
 	 * @throws IOException
 	 */
-	private void readCommonValues(BufferedReader br) throws IOException {
-		String firstRow = extGetString(br);
+	private void readCommonValues(IReader reader) throws IOException {
+		String firstRow = reader.getString();
 		int separatorIndex = firstRow.lastIndexOf(',');
 		setName(firstRow.substring(0, separatorIndex));
 		setMandantCnr(firstRow.substring(separatorIndex + 1).trim());
-		setFixedWidth(extGetBoolean(br));
-		setSeparator(extGetString(br));
-		setFromRow(extGetInteger(br));
-		setStklIId(extGetInteger(br));
+		setFixedWidth(reader.getBoolean());
+		setSeparator(reader.getString());
+		setFromRow(reader.getInteger());
+		setStklIId(reader.getInteger());
 	}
 	
 	/**
+	 * @param reader
+	 * @throws IOException
+	 */
+	private void readCommonValuesJson(IReader reader) throws IOException {
+		setName(reader.getString(JsonProperties.NAME));
+		setMandantCnr(reader.getString(JsonProperties.MANDANT_CNR));
+		setFixedWidth(reader.getBoolean(JsonProperties.FIXED_WIDTH));
+		setSeparator(reader.getString(JsonProperties.SEPARATOR));
+		setFromRow(reader.getInteger(JsonProperties.FROM_ROW));
+		setStklIId(reader.getInteger(JsonProperties.STKL_IID));
+		setWithHiddenArticles(reader.getBoolean(JsonProperties.WITH_HIDDEN_ARTICLES));
+	}
+
+	/**
 	 * Schreibt die Spezifikation in den StringWriter
 	 * 
-	 * @param sw
+	 * @return JsonString
+	 * @throws IOException 
 	 */
-	public void writeString(StringWriter sw) {
-		writeCommonValues(sw);
-		writeIndividualValues(sw);
-		writeColumnsTypes(sw);
+	public String writeString() throws IOException {
+		JsonWriter writer = new JsonWriter();
+		writeCommonValues(writer);
+		writeIndividualValues(writer);
+		writeColumnsTypes(writer);
+		
+		return writer.getJsonString();
 	}
 
 	/**
 	 * Schreibt spezifikationsartspezifische Variablen in die Spezifikation
 	 * 
-	 * @param sw
+	 * @param writer
 	 */
-	protected abstract void writeIndividualValues(StringWriter sw);
+	protected abstract void writeIndividualValues(JsonWriter writer);
 
 	/**
 	 * @param sw
 	 */
-	private void writeColumnsTypes(StringWriter sw) {
-		extPutSize(getColumnTypes(), sw);
-		if(getColumnTypes() != null) {
-			for(String type : getColumnTypes()) {
-				extPut(type, sw);
-			}
-		}
-		
-		extPutSize(getWidths(), sw);
-		if(getWidths() != null) {
-			for(Integer width : getWidths()) {
-				extPut(width, sw) ;
-			}
-		}
+	private void writeColumnsTypes(JsonWriter writer) {
+		writer.putList(JsonProperties.COLUMN_TYPES, getColumnTypes());
+		writer.putList(JsonProperties.WIDTHS, getWidths());
 	}
 
 	/**
 	 * @param sw
 	 */
-	private void writeCommonValues(StringWriter sw) {
-		extPut(getKeyValueCKey(), sw) ;
-		extPut(isFixedWidth(), sw) ;
-		extPut(getSeparator(), sw) ;
-		extPut(getFromRow(), sw);
-		extPut(getStklIId(), sw);
-	}
-
-	protected String extGetString(BufferedReader br) throws IOException {
-		return br.readLine();
-	}
-
-	protected Integer extGetInteger(BufferedReader br) throws IOException {
-		return Integer.parseInt(br.readLine());
-	}
-	
-	protected boolean extGetBoolean(BufferedReader br) throws IOException {
-		return "1".equals(br.readLine());
-	}
-	
-	protected void newLine(StringWriter sw) {
-		sw.write(EXT_SEPARATOR);
-	}
-	
-	protected void extPut(String value, StringWriter sw) {
-		sw.write(value == null ? "" : value) ;
-		newLine(sw) ;
-	}
-
-	protected void extPut(Integer value, StringWriter sw) {
-		sw.write(value == null ? "0" : value.toString()) ;
-		newLine(sw);
-	}
-
-	protected void extPut(boolean value, StringWriter sw) {
-		sw.write(value ? "1" : "0") ;
-		newLine(sw);
-	}
-	
-	protected void extPutSize(Collection<?> c, StringWriter sw) {
-		extPut(c == null ? 0 : c.size(), sw) ;
+	private void writeCommonValues(JsonWriter writer) {
+		writer.putString(JsonProperties.NAME, getName());
+		writer.putString(JsonProperties.MANDANT_CNR, getMandantCnr());
+		writer.putBoolean(JsonProperties.FIXED_WIDTH, isFixedWidth());
+		writer.putString(JsonProperties.SEPARATOR, getSeparator());
+		writer.putInteger(JsonProperties.FROM_ROW, getFromRow());
+		writer.putInteger(JsonProperties.STKL_IID, getStklIId());
+		writer.putBoolean(JsonProperties.WITH_HIDDEN_ARTICLES, isWithHiddenArticles());
 	}
 
 	public StklImportSpezifikation getDeepCopy() {
 		
-		ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream(
-						5 * 1024);
+		ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream(5 * 1024);
 		ObjectOutputStream objectOutStream = null;
 		ByteArrayInputStream byteInStream = null;
 		ObjectInputStream objectInStream = null;
@@ -403,16 +415,19 @@ public abstract class StklImportSpezifikation implements Externalizable {
 	}
 
 	/**
-	 * L&ouml;scht die Kundenartikelnummer-Spalte von den f&uuml;r das
-	 * Mapping der Spalten verf&uuml;gbaren ColumnTypes.
-	 * Wird angewendet, wenn kein Kunde f&uuml;r die St&uuml;ckliste
+	 * L&ouml;scht die f&uuml;r das Mapping der Artikel zu Kunden- oder 
+	 * Lieferantenartikelnummern verwendete Spalte. Wird angewendet, wenn 
+	 * kein Kunde oder Lieferant f&uuml;r die verwendete St&uuml;ckliste
 	 * definiert ist.
 	 */
-	public void removeKundenartikelnrColumnType() {
-		availableColumnTypes.remove(KUNDENARTIKELNUMMER);
-		int index = columnTypes.indexOf(KUNDENARTIKELNUMMER);
-		if(index >= 0) {
-			columnTypes.set(index, UNDEFINED);
-		}
-	}
+	public abstract void removeMappingColumnType();
+	
+	/**
+	 * Gibt Info, ob die St&uuml;ckliste einen Einkaufs- oder Verkaufsbezug
+	 * hat.
+	 * 
+	 * @return true, wenn die St&uuml;ckliste einen Einkaufsbezug (Lieferant) 
+	 * hat und false, wenn die St&uuml;ckliste einen Verkaufsbezug (Kunde) hat.
+	 */
+	public abstract boolean isStuecklisteMitBezugVerkauf();
 }

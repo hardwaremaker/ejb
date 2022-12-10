@@ -43,11 +43,13 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries({
 		@NamedQuery(name = "EinkaufsangebotfindByAnsprechpartnerIId", query = "SELECT OBJECT (o) FROM Einkaufsangebot o WHERE o.ansprechpartnerIId=?1"),
 		@NamedQuery(name = "EinkaufsangebotfindByKundeIId", query = "SELECT OBJECT (o) FROM Einkaufsangebot o WHERE o.kundeIId=?1") })
 @Entity
-@Table(name = "AS_EINKAUFSANGEBOT")
+@Table(name = ITablenames.AS_EINKAUFSANGEBOT)
 public class Einkaufsangebot implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -56,8 +58,31 @@ public class Einkaufsangebot implements Serializable {
 	@Column(name = "C_NR")
 	private String cNr;
 
+	@Column(name = "C_KOMMENTAR")
+	private String cKommentar;
+
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
+	public void setCKommentar(String kommentar) {
+		cKommentar = kommentar;
+	}
+	
 	@Column(name = "T_BELEGDATUM")
 	private Timestamp tBelegdatum;
+	
+
+	@Column(name = "T_FERTIGUNGSTERMIN")
+	private Timestamp tFertigungstermin;
+
+	public Timestamp getTFertigungstermin() {
+		return tFertigungstermin;
+	}
+
+	public void setTFertigungstermin(Timestamp tFertigungstermin) {
+		this.tFertigungstermin = tFertigungstermin;
+	}
 
 	@Column(name = "C_PROJEKT")
 	private String cProjekt;
@@ -83,6 +108,106 @@ public class Einkaufsangebot implements Serializable {
 	@Column(name = "T_AENDERN")
 	private Timestamp tAendern;
 
+	@Column(name = "B_KUNDE_EXPORTIEREN")
+	private Short bKundeExportieren;
+
+	public Short getBKundeExportieren() {
+		return bKundeExportieren;
+	}
+
+	public void setBKundeExportieren(Short bKundeExportieren) {
+		this.bKundeExportieren = bKundeExportieren;
+	}
+
+	@Column(name = "T_LIEFERTERMIN")
+	private Timestamp tLiefertermin;
+
+	@Column(name = "I_OPTIMIEREN_LIEFERZEIT")
+	private Integer iOptimierenLieferzeit;
+
+	@Column(name = "I_SORTIERUNG")
+	private Integer iSortierung;
+	
+	
+	public Integer getISortierung() {
+		return iSortierung;
+	}
+
+	public void setISortierung(Integer iSortierung) {
+		this.iSortierung = iSortierung;
+	}
+
+	@Column(name = "I_OPTIMIEREN_MENGE")
+	private Integer iOptimierenMenge;
+	
+	public Integer getIOptimierenMenge() {
+		return iOptimierenMenge;
+	}
+
+	public void setIOptimierenMenge(Integer iOptimierenMenge) {
+		this.iOptimierenMenge = iOptimierenMenge;
+	}
+
+	public Integer getIOptimierenLieferzeit() {
+		return iOptimierenLieferzeit;
+	}
+
+	public void setIOptimierenLieferzeit(Integer iOptimierenLieferzeit) {
+		this.iOptimierenLieferzeit = iOptimierenLieferzeit;
+	}
+
+	@Column(name = "I_ANZAHLWEBABFRAGEN")
+	private Integer iAnzahlwebabfragen;
+
+	public Integer getIAnzahlwebabfragen() {
+		return iAnzahlwebabfragen;
+	}
+
+	public void setIAnzahlwebabfragen(Integer iAnzahlwebabfragen) {
+		this.iAnzahlwebabfragen = iAnzahlwebabfragen;
+	}
+
+	public Timestamp getTLiefertermin() {
+		return tLiefertermin;
+	}
+
+	public void setTLiefertermin(Timestamp tLiefertermin) {
+		this.tLiefertermin = tLiefertermin;
+	}
+
+	@Column(name = "B_OPTIMIEREN_MINMENGE")
+	private Short bOptimierenMinmenge;
+
+	public Short getBOptimierenMinmenge() {
+		return bOptimierenMinmenge;
+	}
+
+	public void setBOptimierenMinmenge(Short bOptimierenMinmenge) {
+		this.bOptimierenMinmenge = bOptimierenMinmenge;
+	}
+
+	public Short getBOptimierenVerpackungseinheit() {
+		return bOptimierenVerpackungseinheit;
+	}
+
+	public void setBOptimierenVerpackungseinheit(Short bOptimierenVerpackungseinheit) {
+		this.bOptimierenVerpackungseinheit = bOptimierenVerpackungseinheit;
+	}
+
+	@Column(name = "B_OPTIMIEREN_VERPACKUNGSEINHEIT")
+	private Short bOptimierenVerpackungseinheit;
+
+	@Column(name = "B_ROHS")
+	private Short bRoHs;
+
+	public Short getBRoHs() {
+		return this.bRoHs;
+	}
+
+	public void setBRoHs(Short bRoHs) {
+		this.bRoHs = bRoHs;
+	}
+
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
 
@@ -104,11 +229,10 @@ public class Einkaufsangebot implements Serializable {
 		super();
 	}
 
-	public Einkaufsangebot(Integer id, java.lang.String mandantCNr,
-			java.lang.String nr, Timestamp belegdatum, Integer kundeIId,
-			BigDecimal menge1, BigDecimal menge2, BigDecimal menge3,
-			BigDecimal menge4, BigDecimal menge5, Integer personalIIdAnlegen2,
-			Integer personalIIdAendern2) {
+	public Einkaufsangebot(Integer id, java.lang.String mandantCNr, java.lang.String nr, Timestamp belegdatum,
+			Integer kundeIId, BigDecimal menge1, BigDecimal menge2, BigDecimal menge3, BigDecimal menge4,
+			BigDecimal menge5, Integer personalIIdAnlegen2, Integer personalIIdAendern2, Short bRohs,
+			Short bKundeExportieren, Short bOptimierenMinmenge, Short bOptimierenVerpackungseinheit) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setCNr(nr);
@@ -124,6 +248,10 @@ public class Einkaufsangebot implements Serializable {
 		setTAnlegen(t);
 		setPersonalIIdAendern(personalIIdAendern2);
 		setTAendern(t);
+		setBRoHs(bRohs);
+		setBKundeExportieren(bKundeExportieren);
+		setBOptimierenMinmenge(bOptimierenMinmenge);
+		setBOptimierenVerpackungseinheit(bOptimierenVerpackungseinheit);
 	}
 
 	public Integer getIId() {

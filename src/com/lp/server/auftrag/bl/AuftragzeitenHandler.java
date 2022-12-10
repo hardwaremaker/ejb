@@ -39,6 +39,7 @@ import java.util.Locale;
 
 import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.auftrag.service.AuftragzeitenDto;
+import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
@@ -305,16 +306,13 @@ public class AuftragzeitenHandler extends UseCaseHandlerTabelle {
 			aAuftragzeitenDtos = getZeiterfassungFac()
 					.getAllZeitenEinesBeleges(LocaleFac.BELEGART_AUFTRAG,
 							new Integer(Integer.parseInt(fkAuftrag.value)),
-							null, null, null, null, false, // order by
-							// artikelcnr
-							true, // order by personal
+							null, null, null, null, ZeiterfassungFac.SORTIERUNG_ZEITDATEN_PERSONAL, // order by personal
 							theClientDto);
 		} else if (fkAuswertung.kritName.equals(AuftragFac.KRIT_IDENT)) {
 			aAuftragzeitenDtos = getZeiterfassungFac()
 					.getAllZeitenEinesBeleges(LocaleFac.BELEGART_AUFTRAG,
 							new Integer(Integer.parseInt(fkAuftrag.value)),
-							null, null, null, null, true, // order by artikelcnr
-							false, // order by personal
+							null, null, null, null, ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL, // order by personal
 							theClientDto);
 		}
 

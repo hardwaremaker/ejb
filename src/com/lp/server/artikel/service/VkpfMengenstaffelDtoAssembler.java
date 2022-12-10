@@ -63,6 +63,7 @@ public class VkpfMengenstaffelDtoAssembler {
 			vkpfMengenstaffelDto.setVkpfartikelpreislisteIId(vkpfMengenstaffel
 					.getVkpfartikelpreislisteIId());
 			vkpfMengenstaffelDto.setBAllepreislisten(vkpfMengenstaffel.getBAllepreislisten());
+			vkpfMengenstaffelDto.setCBemerkung(vkpfMengenstaffel.getCBemerkung());
 		}
 		return vkpfMengenstaffelDto;
 	}

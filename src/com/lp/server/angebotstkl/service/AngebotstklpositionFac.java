@@ -34,6 +34,8 @@ package com.lp.server.angebotstkl.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import javax.ejb.Remote;
@@ -70,6 +72,9 @@ public interface AngebotstklpositionFac {
 	public void updateAgstklposition(AgstklpositionDto agstklpositionDtoI,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
 
+	public void updateAgstpositionenOptionen(Integer angebotstklIId, boolean bAufBelegMitdrucken, boolean bMitPreisen,
+			ArrayList<Integer> selectedIds, TheClientDto theClientDto);
+	
 	public AgstklpositionDto agstklpositionFindByPrimaryKey(
 			Integer iIdAgstklpositionI, TheClientDto theClientDto)
 			throws RemoteException, EJBExceptionLP;
@@ -112,7 +117,8 @@ public interface AngebotstklpositionFac {
 
 	public void vertauscheAgstklpositionen(Integer idPosition1I,
 			Integer idPosition2I) throws EJBExceptionLP, RemoteException;
-	public void preiseGemaessKalkulationsartUpdaten(Integer agstklIId,TheClientDto theClientDto);
+	public void preiseGemaessKalkulationsartUpdaten(Integer agstklIId,TheClientDto theClientDto) 
+			throws EJBExceptionLP, RemoteException;
 
 	/**
 	 * Liefert die Bean als PositionImporter zur&uuml;ck, um auf die Methoden
@@ -129,4 +135,16 @@ public interface AngebotstklpositionFac {
 	 * @return this
 	 */
 	public IImportHead asHeadImporter();
+	
+	void kopiereAgstklPositionenMitPreisUpdate(Integer agstklIId_Quelle,
+			Integer agstklIId_Ziel, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	
+	public void sortiereNachArtikelnummer(Integer agstklIId, TheClientDto theClientDto);
+	
+	public Integer createAgstklmaterial(AgstklmaterialDto dto, TheClientDto theClientDto);
+	public void updateAgstklmaterial(AgstklmaterialDto dto, TheClientDto theClientDto);
+	public AgstklmaterialDto agstklmaterialFindByPrimaryKey(Integer agstklmaterialIId, TheClientDto theClientDto);
+	public void removeAgstklmaterial(AgstklmaterialDto dto, TheClientDto theClientDto);
+	public ArrayList<AgstklmaterialDto> agstklmaterialFindByAgstklIId(Integer iIdAgstklI, TheClientDto theClientDto);
+	
 }

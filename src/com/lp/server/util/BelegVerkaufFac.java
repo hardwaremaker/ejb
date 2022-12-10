@@ -33,7 +33,11 @@
 package com.lp.server.util;
 
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +46,7 @@ import java.util.Set;
 import javax.ejb.Local;
 
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
+import com.lp.server.partner.service.KundeDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.MwstsatzReportDto;
 import com.lp.service.BelegVerkaufDto;
@@ -77,12 +82,6 @@ public interface BelegVerkaufFac {
 	public BelegpositionVerkaufDto getBelegpositionVerkaufReport(
 			BelegpositionVerkaufDto belegpositionVerkaufDto, BelegVerkaufDto belegVerkaufDto,Integer iNachkommastellenPreis);
 
-
-	public BigDecimal berechneGesamtwertBelegProKundeProZeitintervall(
-			Integer	iIdKundeI, 
-			Date datVonI, 
-			Date datBisI, 
-			String belegartCNr);
 	
 	public BigDecimal getWertPoisitionsartPosition(Integer iIdPositionI, String belegartCNr,TheClientDto theClientDto);
 	    
@@ -96,7 +95,7 @@ public interface BelegVerkaufFac {
 	 public Object[] getMwstTabelle(
 			 LinkedHashMap<Integer, MwstsatzReportDto> mwstMap,
 			 BelegVerkaufDto belegVerkaufDto
-			 ,Locale locDruck,
+			 ,Locale locDruck,String waehrungCNrZusaetzlich,
 			 TheClientDto theClientDto);
 	 
 	 /**
@@ -153,7 +152,7 @@ public interface BelegVerkaufFac {
 	 * 
 	 * @param positionDtos
 	 */
-	Set<Integer> prepareIntZwsPositions(BelegpositionVerkaufDto[] positionDtos) ;	
+	Set<Integer> prepareIntZwsPositions(BelegpositionVerkaufDto[] positionDtos, BelegVerkaufDto belegVerkaufDto) ;	
 	
 	BelegpositionVerkaufDto berechneBelegpositionVerkauf(
 			BigDecimal zwsRabatt, 
@@ -161,5 +160,102 @@ public interface BelegVerkaufFac {
 
 	BelegpositionVerkaufDto berechneBelegpositionVerkauf(
 			BelegpositionVerkaufDto belegpositionVerkaufDto,
-			BelegVerkaufDto belegVerkaufDto, BelegpositionVerkaufDto[] allePositionenDto, Set<Integer> modifiedPositions) ; 
+			BelegVerkaufDto belegVerkaufDto, BelegpositionVerkaufDto[] allePositionenDto, Set<Integer> modifiedPositions) ;
+
+	<T extends IBelegVerkaufEntity> void saveIntZwsPositions(BelegpositionVerkaufDto[] dtos, Set<Integer> modifiedPosIndex, Class<T> entityClass);
+
+//	LinkedHashMap<Integer, MwstsatzReportDto> getMwstSumme(BelegpositionVerkaufDto[] belegpositionVerkaufDtos,
+//			BelegVerkaufDto belegVerkaufDto, TheClientDto theClientDto);
+	
+	/**
+	 * Ermittlung des Steuerbetrags<br>
+	 * <p>Es werden der Allgemeine Rabatt und der Projektierungsrabatt
+	 * ber&uuml;cksichtigt.</p>
+	 * 
+	 * @param belegpositionVerkaufDtos
+	 * @param belegVerkaufDto
+	 * @param iNachkommastellenPreis
+	 * @param theClientDto
+	 * @return Die jeweils kummulierten Steuerbetr&auml;ge eines Satzes
+	 */
+	BelegSteuerDto getNettoGesamtWertUSTInfo(
+			BelegpositionVerkaufDto[] belegpositionVerkaufDtos,
+			BelegVerkaufDto belegVerkaufDto, Integer iNachkommastellenPreis,
+			TheClientDto theClientDto);
+
+//	void preiseEinesArtikelsetsUpdaten(Collection<IBelegVerkaufEntity> setPositions, BigDecimal kopfMenge,
+//			BigDecimal kopfNetto, KundeDto kundeDto, MwstsatzbezId bezId, String waehrungCnr, TheClientDto theClientDto)
+//			throws RemoteException;
+
+	void preiseEinesArtikelsetsUpdaten(Collection<IBelegVerkaufEntity> setPositions, BigDecimal kopfMenge,
+			BigDecimal kopfNetto, KundeDto kundeDto, MwstsatzbezId bezId, String waehrungCnr,
+			IArtikelsetPreisUpdate setPreisUpdate, TheClientDto theClientDto) throws RemoteException;
+
+	BigDecimal getBdBruttoeinzelpreis(BelegpositionVerkaufDto belegpositionVerkaufDto, Integer iNachkommastellenPreis,
+			TheClientDto theClientDto);
+
+	void setupChangePositionWithIdentities(boolean zubuchen, BelegpositionDto posDto,
+			List<SeriennrChargennrMitMengeDto> notyetUsedIdentities, TheClientDto theClientDto);
+
+
+	/**
+	 * Sind alle mengenbehafteten Positionen Teil einer Zwischensumme?</br>
+	 * 
+	 * <p>Beim Angebotsdruck mit aktivierter Zusammenfassung geht der Druck davon
+	 * aus, dass alle mengenbehafteten Positionen in Zwischensummen auf 
+	 * der ersten Ebene enthalten sind. Dies wird hier &uuml;berpr&uuml;ft.</p>
+	 * 
+	 * <p>Implementierungsdetail: Es gibt keine Ueberpruefung der Ebene, weil 
+	 * eine Belegposition einer inneren Zwischensumme automatisch in der 
+	 * aeusseren Zwischensumme enthalten sein muss. Das koennte nur sein, 
+	 * wenn die Zwischensumme unvollstaendig definiert ist. Dies wird erkannt,
+	 * weil dann die Belegpositionsnummer des von/bis Index nicht ermittelt
+	 * werden kann.</p>
+	 * 
+	 * @param positionDtos
+	 * @return Ein (leeres) Set von Positions-IId die nicht in einer 
+	 *   Zwischensumme enthalten sind.
+	 */
+	Set<Integer> calculatePositionsNotInZws(BelegpositionVerkaufDto[] positionDtos);
+	
+	ArrayList<BelegpositionVerkaufDto> getIntZwsPositions(BelegpositionVerkaufDto belegpositionVerkaufDtoZWS,
+			BelegpositionVerkaufDto[] belegpositionVerkaufDtos);
+
+	/**
+	 * Die Belegposition neu berechnen</br>
+	 * <p>Es wird auch der in der position vorhandene Mwstsatz auf Basis
+	 * des Belegdatums neu bestimmt</p>
+	 * 
+	 * @param posDto
+	 * @param kundeId
+	 * @param belegDatum
+	 * @param theClientDto
+	 * @return
+	 */
+	BelegpositionVerkaufDto berechneNeu(BelegpositionVerkaufDto posDto, KundeId kundeId, Timestamp belegDatum,
+			TheClientDto theClientDto);
+	
+	BelegpositionVerkaufDto erstelleVerpackungskostenpositionAnhandNettowert(Integer kundeIIdRechnungsadresse,
+			BelegpositionVerkaufDto[] belegpositionVerkaufDtos, BelegVerkaufDto belegVerkaufDto,BelegpositionVerkaufDto positionFuerRueckgabe, TheClientDto theClientDto);
+
+
+	/**
+	 * Pr&uuml;ft und wirft im Falle von ungleichen Mwsts&auml;tzen eine EJBException</br>
+	 * Alle Mengen/Artikelpositionen auf gleichen MwstsatzId in Zwischensumme pr&uuml;fen</br>
+	 * 
+	 * <p>Gibt es in der Zwischensumme die angegebene Positionsnummer nicht, wird eine
+	 * Exception geliefert.</p>
+	 * 
+	 * <p>Fuer alle Zwischensummenpositionen die sich in positionDtos befinden,
+	 *  wird ueberpr&uuml;ft, ob die Positionen die sich innerhald der von der Zwsposition
+	 *  angegebenen "VonPosId" und "BisPosId" befinden die gleichen MwstsatzId haben 
+	 *  und die identisch mit der MwstsatzId ist, die in der Zwsposition enthalten ist.
+	 *  Falls nicht, wird die erste abweichende Zwspos-Id (die Id der Zwsposition) 
+	 *  zur&uuml;ckgeliefert.
+	 *  </p> 
+	 * 
+	 * @param dtos  positionDtos die (und nur die) Positionen die eine Menge und/oder eine Artikelposition
+	 *   enthalten. In ISort aufsteigender Reihenfolge
+	 */
+	void validiereZwsAufGleichenMwstSatzThrow(BelegpositionVerkaufDto[] dtos);
 }

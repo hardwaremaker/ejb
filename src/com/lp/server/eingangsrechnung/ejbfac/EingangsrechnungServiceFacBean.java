@@ -34,8 +34,16 @@ package com.lp.server.eingangsrechnung.ejbfac;
 
 import java.util.*;
 
+import com.lp.server.eingangsrechnung.assembler.EingangsrechnungartDtoAssembler;
+import com.lp.server.eingangsrechnung.assembler.EingangsrechnungartsprDtoAssembler;
+import com.lp.server.eingangsrechnung.assembler.EingangsrechnungstatusDtoAssembler;
+import com.lp.server.eingangsrechnung.assembler.EingangsrechnungtextDtoAssembler;
 import com.lp.server.eingangsrechnung.ejb.*;
 import com.lp.server.eingangsrechnung.service.*;
+import com.lp.server.rechnung.ejb.Rechnungtext;
+import com.lp.server.rechnung.service.RechnungtextDto;
+import com.lp.server.rechnung.service.RechnungtextDtoAssembler;
+import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.service.*;
 import com.lp.server.util.*;
 import com.lp.util.*;
@@ -43,6 +51,8 @@ import com.lp.util.*;
 import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
+import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
@@ -432,6 +442,151 @@ public class EingangsrechnungServiceFacBean extends Facade implements
 		em.flush();
 	}
 
+	private EingangsrechnungtextDto assembleEingangsrechnungtextDto(Eingangsrechnungtext text) {
+		return EingangsrechnungtextDtoAssembler.createDto(text);
+	}
+	
+	private void setEingangsrechnungtextFromEingangsrechnungtextDto(Eingangsrechnungtext text,
+			EingangsrechnungtextDto dto) {
+		text.setMandantCNr(dto.getMandantCNr());
+		text.setLocaleCNr(dto.getLocaleCNr());
+		text.setCNr(dto.getCNr());
+		text.setXTextinhalt(dto.getCTextinhalt());
+		em.merge(text);
+		em.flush();
+	}
+	
+	public Integer createEingangsrechnungtext(EingangsrechnungtextDto textDto,
+			TheClientDto theClientDto)  {
+		
+		textDto.setIId(getPKGeneratorObj().getNextPrimaryKey(
+				PKConst.PK_EINGANGSRECHNUNGTEXT));
+		try {
+			Eingangsrechnungtext bean = new Eingangsrechnungtext(
+					textDto.getIId(), textDto.getMandantCNr(),
+					textDto.getLocaleCNr(), textDto.getCNr(),
+					textDto.getCTextinhalt());
+			em.persist(bean);
+			em.flush();
+			setEingangsrechnungtextFromEingangsrechnungtextDto(bean, textDto);
+			return textDto.getIId();
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+	
+	public EingangsrechnungtextDto createDefaultEingangsRechnungtext(String sMediaartI,
+			String sTextinhaltI, String localeCNr, TheClientDto theClientDto) {
+		
+		if (sMediaartI == null || sTextinhaltI == null || localeCNr == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
+					new Exception(
+							"sMediaartI == null || sTextinhaltI == null || localeCNr == null"));
+		}
+		EingangsrechnungtextDto textDto = new EingangsrechnungtextDto();
+		textDto.setCNr(sMediaartI);
+		textDto.setLocaleCNr(localeCNr);
+		textDto.setMandantCNr(theClientDto.getMandant());
+		textDto.setCTextinhalt(sTextinhaltI);
+		textDto.setIId(createEingangsrechnungtext(textDto,
+				theClientDto));
+
+		return textDto;
+	}
+	
+	public EingangsrechnungtextDto eingangsrechnungtextFindByMandantLocaleCNr(String pMandant,
+			String pSprache, String pText) {
+		if (pMandant == null || pSprache == null || pText == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
+					new Exception(
+							"pMandant == null || pSprache == null || pText == null"));
+		}
+		try {
+			Query query = em
+					.createNamedQuery("EingangsrechnungtextfindByMandantLocaleCNr");
+			query.setParameter(1, pMandant);
+			query.setParameter(2, pSprache);
+			query.setParameter(3, pText);
+			Eingangsrechnungtext text = (Eingangsrechnungtext) query.getSingleResult();
+			if (text == null) {
+				return null;
+			}
+			return assembleEingangsrechnungtextDto(text);
+		} catch (NoResultException e) {
+			return null;
+		} catch (NonUniqueResultException ex1) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
+					ex1);
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
+		}
+
+	}
+	
+	public EingangsrechnungtextDto eingangsrechnungtextFindByPrimaryKey(Integer iId) {
+		if (iId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
+					new Exception("iId == null"));
+		}
+		try {
+			Eingangsrechnungtext text = em.find(Eingangsrechnungtext.class, iId);
+			if (text == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+			return assembleEingangsrechnungtextDto(text);
+		} catch (Exception e) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
+		}
+	}
+	
+	public void removeEingangsrechnungtext(EingangsrechnungtextDto textDto,
+			TheClientDto theClientDto) {
+		if (textDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+					new Exception("rechnungtextDto == null"));
+		}
+		try {
+			if (textDto != null) {
+				Integer iId = textDto.getIId();
+				Eingangsrechnungtext toRemove = em.find(Eingangsrechnungtext.class, iId);
+				if (toRemove == null) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				}
+				try {
+					em.remove(toRemove);
+					em.flush();
+				} catch (EntityExistsException er) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+				}
+			}
+		} catch (Exception ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+	}
+	public void updateEingangsrechnungtext(EingangsrechnungtextDto textDto,
+			TheClientDto theClientDto) {
+		if (textDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+					new Exception("textDto == null"));
+		}
+		if (textDto != null) {
+			Integer iId = textDto.getIId();
+			try {
+				Eingangsrechnungtext text = em.find(Eingangsrechnungtext.class, iId);
+				setEingangsrechnungtextFromEingangsrechnungtextDto(text,
+						textDto);
+			} catch (Exception e) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, e);
+			}
+		}
+	}
+	
 	private EingangsrechnungstatusDto assembleEingangsrechnungstatusDto(
 			Eingangsrechnungstatus eingangsrechnungstatus) {
 		return EingangsrechnungstatusDtoAssembler

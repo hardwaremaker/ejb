@@ -42,12 +42,15 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "LoslagerentnahmefindByLosIId", query = "SELECT OBJECT(o) FROM Loslagerentnahme o WHERE o.losIId=?1 ORDER BY o.iSort ASC"),
+import com.lp.server.system.service.ITablenames;
+
+@NamedQueries( { 
+	@NamedQuery(name = LoslagerentnahmeQuery.ByLosIId, query = "SELECT OBJECT(o) FROM Loslagerentnahme o WHERE o.losIId=?1 ORDER BY o.iSort ASC"),
 	@NamedQuery(name = "LoslagerentnahmefindByLosIIdLagerIId", query = "SELECT o FROM Loslagerentnahme AS o WHERE o.losIId = ?1 AND o.lagerIId = ?2"),
 	@NamedQuery(name = "LoslagerentnahmeejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Loslagerentnahme AS o WHERE o.losIId = ?1")
 	})
 @Entity
-@Table(name = "FERT_LOSLAGERENTNAHME")
+@Table(name = ITablenames.FERT_LOSLAGERENTNAHME)
 public class Loslagerentnahme implements Serializable {
 	@Id
 	@Column(name = "I_ID")

@@ -37,6 +37,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 
+import com.lp.server.system.fastlanereader.generated.FLRStatusspr;
+
 /** @author Hibernate CodeGenerator */
 public class FLRAuftragstatus implements Serializable {
 
@@ -52,10 +54,10 @@ public class FLRAuftragstatus implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> auftragstatus_statusspr_set;
+	private Set<FLRStatusspr> auftragstatus_statusspr_set;
 
 	/** full constructor */
-	public FLRAuftragstatus(Integer i_sort, Set<?> auftragstatus_statusspr_set) {
+	public FLRAuftragstatus(Integer i_sort, Set<FLRStatusspr> auftragstatus_statusspr_set) {
 		this.i_sort = i_sort;
 		this.auftragstatus_statusspr_set = auftragstatus_statusspr_set;
 	}
@@ -65,7 +67,7 @@ public class FLRAuftragstatus implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRAuftragstatus(Set<?> auftragstatus_statusspr_set) {
+	public FLRAuftragstatus(Set<FLRStatusspr> auftragstatus_statusspr_set) {
 		this.auftragstatus_statusspr_set = auftragstatus_statusspr_set;
 	}
 
@@ -85,11 +87,11 @@ public class FLRAuftragstatus implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getAuftragstatus_statusspr_set() {
+	public Set<FLRStatusspr> getAuftragstatus_statusspr_set() {
 		return this.auftragstatus_statusspr_set;
 	}
 
-	public void setAuftragstatus_statusspr_set(Set<?> auftragstatus_statusspr_set) {
+	public void setAuftragstatus_statusspr_set(Set<FLRStatusspr> auftragstatus_statusspr_set) {
 		this.auftragstatus_statusspr_set = auftragstatus_statusspr_set;
 	}
 

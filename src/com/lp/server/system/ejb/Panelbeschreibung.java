@@ -43,7 +43,9 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 		@NamedQuery(name = "PanelbeschreibungfindByPanelCNrMandantCNr", query = "SELECT OBJECT (o) FROM Panelbeschreibung o WHERE o.panelCNr=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = "PanelbeschreibungfindByPanelCNrMandantCNrArtgruIId", query = "SELECT OBJECT (o) FROM Panelbeschreibung o WHERE o.panelCNr=?1 AND o.mandantCNr=?2 AND o.artgruIId=?3"),
 		@NamedQuery(name = "PanelbeschreibungfindByPanelCNrMandantCNrCName", query = "SELECT OBJECT (o) FROM Panelbeschreibung o WHERE o.panelCNr=?1 AND o.mandantCNr=?2 AND  o.cName=?3"),
+		@NamedQuery(name = "PanelbeschreibungfindByPanelCNrMandantCNrCDruckname", query = "SELECT OBJECT (o) FROM Panelbeschreibung o WHERE o.panelCNr=?1 AND o.mandantCNr=?2 AND  o.cDruckname=?3"),
 		@NamedQuery(name = "PanelbeschreibungfindByPanelCNrMandantCNrIGridy", query = "SELECT OBJECT (o) FROM Panelbeschreibung o WHERE o.panelCNr=?1 AND o.mandantCNr=?2 AND  o.iGridy>=?3") })
 @Entity
 @Table(name = "LP_PANELBESCHREIBUNG")
@@ -78,6 +80,17 @@ public class Panelbeschreibung implements Serializable {
 
 	@Column(name = "C_ANCHOR")
 	private String cAnchor;
+	
+	@Column(name = "PROJEKTTYP_C_NR")
+	private String projekttypCNr;
+
+	public String getProjekttypCNr() {
+		return projekttypCNr;
+	}
+
+	public void setProjekttypCNr(String projekttypCNr) {
+		this.projekttypCNr = projekttypCNr;
+	}
 
 	@Column(name = "I_INSETSLEFT")
 	private Integer iInsetsleft;
@@ -102,6 +115,17 @@ public class Panelbeschreibung implements Serializable {
 
 	@Column(name = "B_MANDATORY")
 	private Short bMandatory;
+	
+	@Column(name = "B_UEBERSCHRIFT")
+	private Short bUeberschrift;
+
+	public Short getBUeberschrift() {
+		return bUeberschrift;
+	}
+
+	public void setBUeberschrift(Short bUeberschrift) {
+		this.bUeberschrift = bUeberschrift;
+	}
 
 	@Column(name = "F_WEIGHTX")
 	private Double fWeightx;
@@ -120,6 +144,28 @@ public class Panelbeschreibung implements Serializable {
 	
 	@Column(name = "PARTNERKLASSE_I_ID")
 	private Integer partnerklasseIId;
+	
+	@Column(name = "BEREICH_I_ID")
+	private Integer bereichIId;
+	
+	public Integer getBereichIId() {
+		return bereichIId;
+	}
+
+	public void setBereichIId(Integer bereichIId) {
+		this.bereichIId = bereichIId;
+	}
+
+	@Column(name = "KOSTENSTELLE_I_ID")
+	private Integer kostenstelleIId;
+	
+	public Integer getKostenstelleIId() {
+		return this.kostenstelleIId;
+	}
+
+	public void setKostenstelleIId(Integer kostenstelle) {
+		this.kostenstelleIId = kostenstelle;
+	}
 	
 	@Column(name = "C_DEFAULT")
 	private String cDefault;
@@ -151,7 +197,7 @@ public class Panelbeschreibung implements Serializable {
 			String typ, Integer gridx, Integer gridy, Integer gridwidth,
 			Integer gridheigth, String fill, String anchor, Integer insetsleft,
 			Integer insetsright, Integer insetstop, Integer insetsbottom,
-			Integer ipadx, Integer ipady,Short mandatory, Double weighty, Double weightx , String Druckname, Integer artgruIId) {
+			Integer ipadx, Integer ipady,Short mandatory, Double weighty, Double weightx , String Druckname, Integer artgruIId, Short bUeberschrift) {
 		setIId(id);
 		setCName(name);
 		setPanelCNr(panelCNr);
@@ -174,6 +220,7 @@ public class Panelbeschreibung implements Serializable {
 		setFWeighty(weightx);
 		setCDruckname(Druckname);
 		setArtgruIId(artgruIId);
+		setBUeberschrift(bUeberschrift);
 	}
 
 	public Integer getIId() {

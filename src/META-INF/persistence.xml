@@ -19,10 +19,12 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<persistence version="1.0"
-	xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_1_0.xsd">
+<persistence version="2.0"
+	xmlns="http://java.sun.com/xml/ns/persistence"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
 	<persistence-unit name="ejb" transaction-type="JTA">
+
 		<jta-data-source>java:/LPDS</jta-data-source>
 		<class>
 		com.lp.server.anfrage.ejb.Anfrage</class>
@@ -87,6 +89,8 @@
 		com.lp.server.artikel.ejb.Artgru</class>
 		<class>
 		com.lp.server.artikel.ejb.Artgruspr</class>
+		<class>
+		com.lp.server.artikel.ejb.Ersatztypen</class>
 		<class>
 		com.lp.server.artikel.ejb.ArtgrusprPK</class>
 		<class>
@@ -572,8 +576,6 @@
 		com.lp.server.partner.ejb.Lieferant</class>
 		<class>
 		com.lp.server.partner.ejb.Lieferantbeurteilung</class>
-		<class>
-		com.lp.server.partner.ejb.PASelektionPK</class>
 		<class>
 		com.lp.server.partner.ejb.Partner</class>
 		<class>
@@ -1137,7 +1139,260 @@
 		com.lp.server.system.ejb.Parametermandantgueltigab</class>
 		<class>
 		com.lp.server.system.ejb.ParametermandantgueltigabPK</class>
+		<class>
+		com.lp.server.personal.ejb.Zahltag</class>
+		<class>
+		com.lp.server.auftrag.ejb.Zeitplantyp</class>
+		<class>
+		com.lp.server.auftrag.ejb.Zeitplantypdetail</class>
+		<class>
+		com.lp.server.bestellung.ejb.BSZahlungsplan</class>
+		<class>
+		com.lp.server.personal.ejb.Schicht</class>
+		<class>
+		com.lp.server.personal.ejb.Schichtzuschlag</class>
+		<class>
+		com.lp.server.personal.ejb.Schichtzeit</class>
+		<class>
+		com.lp.server.artikel.ejb.Gebinde</class>
+		<class>
+		com.lp.server.projekt.ejb.Projekttechniker</class>
+		<class>
+		com.lp.server.projekt.ejb.Projekttaetigkeit</class>
+		<class>
+		com.lp.server.eingangsrechnung.ejb.Eingangsrechnungtext</class>
+		<class>
+		com.lp.server.partner.ejb.Newslettergrund</class>
+		<class>
+		com.lp.server.angebotstkl.ejb.Weblieferant</class>
+		<class>
+		com.lp.server.angebotstkl.ejb.Ekweblieferant</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Apkommentar</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Apkommentarspr</class>
+		<class>
+		com.lp.server.stueckliste.ejb.ApkommentarsprPK</class>
+		<class>
+		com.lp.server.artikel.ejb.Werkzeug</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Pruefkombination</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Stklpruefplan</class>
+		<class>
+		com.lp.server.fertigung.ejb.Lospruefplan</class>
+		<class>
+		com.lp.server.fertigung.ejb.Pruefergebnis</class>
+		<class>
+		com.lp.server.artikel.ejb.Verschleissteil</class>
+		<class>
+		com.lp.server.artikel.ejb.Verschleissteilwerkzeug</class>
+		<class>
+		com.lp.server.artikel.ejb.Artikelsnrchnr</class>
+		<class>
+		com.lp.server.artikel.ejb.Fasession</class>
+		<class>
+		com.lp.server.artikel.ejb.Fasessioneintrag</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Pruefart</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Pruefartspr</class>
+		<class>
+		com.lp.server.stueckliste.ejb.PruefartsprPK</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Pruefkombinationspr</class>
+		<class>
+		com.lp.server.stueckliste.ejb.PruefkombinationsprPK</class>
+		<class>
+		com.lp.server.personal.ejb.Artikelzuschlag</class>
+		<class>com.lp.server.projekt.ejb.Projektgruppe</class>
+		<class>
+		com.lp.server.projekt.ejb.Vkfortschritt</class>
+		<class>
+		com.lp.server.projekt.ejb.Vkfortschrittspr</class>
+		<class>
+		com.lp.server.projekt.ejb.VkfortschrittsprPK</class>
+		<class>
+		com.lp.server.forecast.ejb.Forecast</class>
+		<class>
+		com.lp.server.forecast.ejb.Forecastauftrag</class>
+		<class>
+		com.lp.server.forecast.ejb.Forecastposition</class>
+
+
+		<class>
+		com.lp.server.forecast.ejb.Forecastart</class>
+		<class>
+		com.lp.server.forecast.ejb.Forecastartspr</class>
+		<class>
+		com.lp.server.forecast.ejb.ForecastartsprPK</class>
+		<class>
+		com.lp.server.lieferschein.ejb.Ausliefervorschlag</class>
+		<class>
+		com.lp.server.artikel.ejb.Verpackungsmittel</class>
+		<class>
+		com.lp.server.artikel.ejb.Verpackungsmittelspr</class>
+		<class>
+		com.lp.server.forecast.ejb.Linienabruf</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Profirstignore</class>
+		<class>
+		com.lp.server.personal.ejb.Zeitgutschrift</class>
+
+		<class>
+		com.lp.server.forecast.ejb.Importdef</class>
+		<class>
+		com.lp.server.forecast.ejb.Importdefspr</class>
+		<class>
+		com.lp.server.forecast.ejb.ImportdefsprPk</class>
+		<class>
+		com.lp.server.lieferschein.ejb.Packstueck</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Alternativmaschine</class>
+		<class>
+		com.lp.server.forecast.ejb.Fclieferadresse</class>
+		<class>
+		com.lp.server.partner.ejb.Kundematerial</class>
+		<class>
+		com.lp.server.partner.ejb.Liefermengen</class>
+		<class>
+		com.lp.server.projekt.ejb.Leadstatus</class>
+		<class>
+		com.lp.server.auftrag.ejb.IndexanpassungLog</class>
+		<class>
+		com.lp.server.benutzer.ejb.Artgrurolle</class>
+		<class>
+		com.lp.server.auftrag.ejb.Verrechenbar</class>
+		<class>
+		com.lp.server.personal.ejb.Nachrichtenart</class>
+		<class>
+		com.lp.server.personal.ejb.Nachrichtenartspr</class>
+		<class>
+		com.lp.server.personal.ejb.NachrichtenartsprPK</class>
+		<class>
+		com.lp.server.personal.ejb.Nachrichtengruppe</class>
+		<class>
+		com.lp.server.personal.ejb.Nachrichtenabo</class>
+		<class>
+		com.lp.server.personal.ejb.Nachrichtengruppeteilnehmer</class>
+		<class>
+		com.lp.server.personal.ejb.Nachrichten</class>
+		<class>
+		com.lp.server.personal.ejb.Nachrichtenempfaenger</class>
+		<class>
+		com.lp.server.forecast.ejb.Kommdrucker</class>
+		<class>
+		com.lp.server.artikel.ejb.Artgrumandant</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Stklparameter</class>
+		<class>
+		com.lp.server.stueckliste.ejb.Stklparameterspr</class>
+		<class>
+		com.lp.server.stueckliste.ejb.StklparametersprPK</class>
+		<class>com.lp.server.reklamation.ejb.Schwerespr</class>
+		<class>com.lp.server.reklamation.ejb.SchweresprPK</class>
+		<class>com.lp.server.reklamation.ejb.Behandlungspr</class>
+		<class>com.lp.server.reklamation.ejb.BehandlungsprPK</class>
+		<class>com.lp.server.partner.ejb.Identifikation</class>
+		<class>com.lp.server.partner.ejb.Identifikationspr</class>
+		<class>com.lp.server.partner.ejb.IdentifikationsprPK</class>
+		<class>com.lp.server.partner.ejb.Beauskunftung</class>
+		<class>com.lp.server.system.ejb.Landspr</class>
+		<class>com.lp.server.system.ejb.LandsprPK</class>
+		<class>com.lp.server.auftrag.ejb.Auftragkostenstelle</class>
+		<class>com.lp.server.personal.ejb.UebertragBVA</class>
+		<class>com.lp.server.personal.ejb.KollektivUestdBVA</class>
+		<class>com.lp.server.personal.ejb.AuszahlungBVA</class>
+		<class>com.lp.server.partner.ejb.Dsgvokategorie</class>
+		<class>com.lp.server.partner.ejb.Dsgvokategoriespr</class>
+		<class>com.lp.server.partner.ejb.DsgvokategoriesprPK</class>
+		<class>com.lp.server.partner.ejb.Dsgvotext</class>
+		<class>com.lp.server.personal.ejb.Abwesenheitsart</class>
+		<class>com.lp.server.personal.ejb.Abwesenheitsartspr</class>
+		<class>com.lp.server.personal.ejb.AbwesenheitsartsprPK</class>
+		<class>com.lp.server.fertigung.ejb.Bedarfsuebernahme</class>
+
+		<class>com.lp.server.personal.ejb.Hvmarecht</class>
+		<class>com.lp.server.personal.ejb.Hvmarolle</class>
+		<class>com.lp.server.personal.ejb.Hvmabenutzer</class>
+		<class>com.lp.server.personal.ejb.Hvmalizenz</class>
+		<class>com.lp.server.rechnung.ejb.Abrechnungsvorschlag</class>
+
+		<class>com.lp.server.personal.ejb.Zeitdatenverrechnet</class>
+		<class>com.lp.server.personal.ejb.Maschinenzeitdatenverrechnet</class>
+		<class>com.lp.server.personal.ejb.Telefonzeitenverrechnet</class>
+		<class>com.lp.server.personal.ejb.Reiseverrechnet</class>
+		<class>com.lp.server.eingangsrechnung.ejb.Auftragszuordnungverrechnet</class>
+		<class>com.lp.server.rechnung.ejb.Verrechnungsmodell</class>
+		<class>com.lp.server.rechnung.ejb.Verrechnungsmodelltag</class>
+		<class>com.lp.server.personal.ejb.Anwesenheitsbestaetigung</class>
+		<class>com.lp.server.personal.ejb.Hvmasync</class>
+		<class>com.lp.server.angebotstkl.ejb.Ekgruppe</class>
+		<class>com.lp.server.angebotstkl.ejb.Ekgruppelieferant</class>
+		<class>com.lp.server.angebotstkl.ejb.Ekaglieferant</class>
+		<class>com.lp.server.angebotstkl.ejb.Positionlieferant</class>
+		<class>
+		com.lp.server.system.ejb.AutoLoseerledigen</class>
+		<class>com.lp.server.rechnung.ejb.Mmz</class>
+		<class>com.lp.server.auftrag.ejb.Lieferstatus</class>
+		<class>com.lp.server.rechnung.ejb.Vorkasseposition</class>
+		<class>com.lp.server.system.ejb.Mandantagbspr</class>
+		<class>com.lp.server.angebot.ejb.Akquisestatus</class>
+		<class>com.lp.server.personal.ejb.Reisespesen</class>
+		<class>com.lp.server.partner.ejb.Telefonnummer</class>
+		<class>com.lp.server.personal.ejb.Zeitdatenverrechnetzeitraum</class>
+		<class>com.lp.server.system.ejb.Panelsperren</class>
+		<class>com.lp.server.personal.ejb.Passivereise</class>
+		<class>com.lp.server.partner.ejb.Partnerbild</class>
+		<class>com.lp.server.artikel.ejb.Dateiverweis</class>
+		<class>com.lp.server.partner.ejb.Kundespediteur</class>
+		<class>com.lp.server.personal.ejb.Personalterminal</class>
+		<class>com.lp.server.personal.ejb.Personalfahrzeug</class>
+
+		<class>com.lp.server.artikel.ejb.Waffenkaliber</class>
+		<class>com.lp.server.artikel.ejb.Waffenausfuehrung</class>
+		<class>com.lp.server.artikel.ejb.Waffentyp</class>
+		<class>com.lp.server.artikel.ejb.WaffentypFein</class>
+		<class>com.lp.server.artikel.ejb.Waffenkategorie</class>
+		<class>com.lp.server.artikel.ejb.Waffenzusatz</class>
+		<class>com.lp.server.angebot.ejb.Angebotauftrag</class>
+
+		<class>com.lp.server.personal.ejb.Projektzeiten</class>
+
+		<class>com.lp.server.partner.ejb.Partneradressbuch</class>
+		<class>com.lp.server.partner.ejb.Ansprechpartneradressbuch</class>
+
+		<class>
+		com.lp.server.system.ejb.AutoMonatsabrechnungversandAbteilungen</class>
+		<class>
+		com.lp.server.system.ejb.AutoMonatsabrechnungversand</class>
+		<class>com.lp.server.system.ejb.Belegartmedia</class>
+
+		<class>com.lp.server.angebotstkl.ejb.Agstklmaterial</class>
+		<class>com.lp.server.artikel.ejb.Materialpreis</class>
+		<class>com.lp.server.artikel.ejb.Laseroberflaeche</class>
+
+		<class>com.lp.server.angebotstkl.ejb.AgstklmengenstaffelSchnellerfassung</class>
+
+		<class>com.lp.server.personal.ejb.Maschineleistungsfaktor</class>
+
+		<class>
+		com.lp.server.system.ejb.AutoLumiquote</class>
+
+		<!-- <shared-cache-mode>DISABLE_SELECTIVE</shared-cache-mode> -->
+
+
+
+		<properties>
+
+			<!-- <property name="hibernate.show_sql" value="true" /> -->
+			<property name="hibernate.id.new_generator_mappings"
+				value="false" />
+			<!-- <property name="hibernate.cache.use_second_level_cache" value="true" 
+				/> <property name="hibernate.cache.use_query_cache" value="true" /> -->
+		</properties>
 	</persistence-unit>
 </persistence>
+
 
 

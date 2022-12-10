@@ -56,12 +56,12 @@ public class DocNodeLagerstandsliste extends DocNodeBase {
 	}
 	
 	@Override
-	protected void applyPropertiesSub(Node node) throws RepositoryException {
+	protected void loadFromImpl(Node node) throws RepositoryException {
 		mandantCNr = node.getProperty(NODEPROPERTY_MANDANTCNR).toString();
 	}
 
 	@Override
-	protected void persistSub(Node node) throws RepositoryException {
+	protected void persistToImpl(Node node) throws RepositoryException {
 		node.setProperty(NODEPROPERTY_MANDANTCNR, mandantCNr);
 		
 	}

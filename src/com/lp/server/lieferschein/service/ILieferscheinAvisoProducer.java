@@ -41,9 +41,14 @@ import com.lp.util.EJBExceptionLP;
 
 public interface ILieferscheinAvisoProducer {
 	boolean isDummy() ;
+	Integer versandwegId();
+	Integer receiverKundeId();
+
+	ILieferscheinAviso createAviso(LieferscheinDto lieferscheinDto,
+			TheClientDto theClientDto) throws RemoteException, NamingException, EJBExceptionLP ;
 	
-	ILieferscheinAviso createAviso(LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException, NamingException, EJBExceptionLP ;
-	
-	String toString(ILieferscheinAviso aviso) ;
-	void postAviso(ILieferscheinAviso aviso) ;
+	String toString(ILieferscheinAviso aviso, TheClientDto theClientDto) ;
+	void postAviso(ILieferscheinAviso aviso, TheClientDto theClientDto) ;
+
+	void archiveAviso(ILieferscheinAviso aviso, TheClientDto theClientDto);
 }

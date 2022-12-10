@@ -63,6 +63,17 @@ public class Artikelkommentarart implements Serializable {
 	@Column(name = "B_TOOLTIP")
 	private Short bTooltip;
 	
+	@Column(name = "B_DETAIL")
+	private Short bDetail;
+	
+
+	public Short getBDetail() {
+		return bDetail;
+	}
+
+	public void setBDetail(Short bDetail) {
+		this.bDetail = bDetail;
+	}
 
 	public Short getBWebshop() {
 		return this.bWebshop;
@@ -86,11 +97,12 @@ public class Artikelkommentarart implements Serializable {
 		super();
 	}
 
-	public Artikelkommentarart(Integer id, String nr, Short bWebshop, Short bTooltip) {
+	public Artikelkommentarart(Integer id, String nr, Short bWebshop, Short bTooltip, Short bDetail) {
 		setIId(id);
 		setCNr(nr);
 		setBWebshop(bWebshop);
 		setBTooltip(bTooltip);
+		setBDetail(bDetail);
 	}
 
 	public Short getBTooltip() {

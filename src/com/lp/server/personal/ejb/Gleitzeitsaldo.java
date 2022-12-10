@@ -86,6 +86,18 @@ public class Gleitzeitsaldo implements Serializable {
 	@Column(name = "N_SALDO")
 	private BigDecimal nSaldo;
 
+	@Column(name = "N_GZ_SALDO_MIT_UESTD_IN_NORMALSTUNDEN")
+	private BigDecimal nGzSaldoMitUestdInNormalstunden;
+	
+
+	public BigDecimal getNGzSaldoMitUestdInNormalstunden() {
+		return nGzSaldoMitUestdInNormalstunden;
+	}
+
+	public void setNGzSaldoMitUestdInNormalstunden(BigDecimal nGzSaldoMitUestdInNormalstunden) {
+		this.nGzSaldoMitUestdInNormalstunden = nGzSaldoMitUestdInNormalstunden;
+	}
+
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
@@ -129,6 +141,7 @@ public class Gleitzeitsaldo implements Serializable {
 		setNSaldouest200(new BigDecimal(0));
 		setBGesperrt(new Short((short) 0));
 		setNSaldo(saldo);
+		setNGzSaldoMitUestdInNormalstunden(new BigDecimal(0));
 	}
 	
 	public Integer getIId() {

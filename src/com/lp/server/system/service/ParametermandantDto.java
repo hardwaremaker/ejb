@@ -40,7 +40,6 @@ import java.util.TreeMap;
 
 import javax.persistence.Transient;
 
-import com.lp.server.personal.service.ZeitdatenDto;
 import com.lp.server.util.IMultipleKeyfields;
 import com.lp.util.EJBExceptionLP;
 
@@ -220,6 +219,15 @@ public class ParametermandantDto implements Serializable, IMultipleKeyfields {
 				new Exception());
 	}
 
+	public BigDecimal asBigDecimal() {
+		if("java.math.BigDecimal".equals(getCDatentyp())) {
+			return new BigDecimal(getCWert());
+		}
+
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
+				new Exception());
+	}
+	
 	public void setCWert(String cWert) {
 		this.cWert = cWert;
 	}
@@ -339,5 +347,20 @@ public class ParametermandantDto implements Serializable, IMultipleKeyfields {
 	@Transient
 	public String[] getMKValue() {
 		return new String[] { getCNr(), getCKategorie(), getMandantCMandant() };
+	}
+	
+	/**
+	 * Den CWert als Double zur&uuml;ckliefern, sofern der Parameter vom Typ
+	 * Double ist.
+	 * 
+	 * @return den Double-Wert sofern parseable und Datentyp java.lang.Double
+	 */
+	public Double asDouble() {
+		if ("java.lang.Double".equals(getCDatentyp()) || "java.lang.Integer".equals(getCDatentyp())) {
+			return new Double(getCWert());
+		}
+
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
+				new Exception());
 	}
 }

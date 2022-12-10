@@ -94,8 +94,8 @@ public class KommunikationsartHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = getFromClause() + buildWhereClause()
-					+ buildOrderByClause();
+			session = setFilter(session);
+			String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -111,8 +111,7 @@ public class KommunikationsartHandler extends UseCaseHandler {
 				Object o[] = (Object[]) resultListIterator.next();
 				FLRKommunikationsart kommunikationart = (FLRKommunikationsart) o[0];
 
-				Iterator<?> sprsetIterator = kommunikationart
-						.getKommunikationsart_kommunikationsartspr_set()
+				Iterator<?> sprsetIterator = kommunikationart.getKommunikationsart_kommunikationsartspr_set()
 						.iterator();
 
 				Object[] rowToAddCandidate = new Object[colCount];
@@ -120,21 +119,11 @@ public class KommunikationsartHandler extends UseCaseHandler {
 				rowToAddCandidate[1] = kommunikationart.getC_nr();
 				rowToAddCandidate[2] = findSpr(sLocUI, sprsetIterator);
 
-				int idx = -1;
-				if ((idx = findRowidx(rows, row, kommunikationart.getC_nr(),
-						findSpr(sLocUI, sprsetIterator))) > -1) {
-					if (idx < row) {
-						// ueberschreiben
-						rows[idx] = rowToAddCandidate;
-					} else {
-						// hinten anfuegen
-						rows[idx] = rowToAddCandidate;
-						row++;
-					}
-				}
+				rows[row] = rowToAddCandidate;
+				row++;
+
 			}
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0);
+			result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 		} finally {
@@ -153,8 +142,8 @@ public class KommunikationsartHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "SELECT COUNT(*) FROM FLRKommunikationsart AS kommunikation"
-					+ buildWhereClause();
+			session = setFilter(session);
+			String queryString = "SELECT COUNT(*) FROM FLRKommunikationsart AS kommunikation" + buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -191,8 +180,7 @@ public class KommunikationsartHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" kommunikation."
-							+ filterKriterien[i].kritName);
+					where.append(" kommunikation." + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -259,8 +247,7 @@ public class KommunikationsartHandler extends UseCaseHandler {
 				+ " LEFT JOIN kommunikation.kommunikationsart_kommunikationsartspr_set AS kommunikationsart_kommunikationsartspr_set ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		getQuery().setSortKrit(sortierKriterien);
 
@@ -273,15 +260,14 @@ public class KommunikationsartHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = getFromClause() + buildWhereClause()
-						+ buildOrderByClause();
+				session = setFilter(session);
+				String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
-						FLRKommunikationsart kommunikationsart = (FLRKommunikationsart) scrollableResult
-								.get(0);
+						FLRKommunikationsart kommunikationsart = (FLRKommunikationsart) scrollableResult.get(0);
 						String cNr = kommunikationsart.getC_nr();
 						if (selectedId.equals(cNr)) {
 							rowNumber = scrollableResult.getRowNumber();
@@ -314,18 +300,12 @@ public class KommunikationsartHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { String.class, String.class, String.class },
-					new String[] {
-							"c_nr",
-							getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI), },
+			setTableInfo(new TableInfo(new Class[] { String.class, String.class, String.class },
+					new String[] { "c_nr", getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI), },
 					new int[] { -1, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
-					new String[] {
-							"c_nr",
-							"kommunikation.c_nr",
+					new String[] { "c_nr", "kommunikation.c_nr",
 							"kommunikationsart_kommunikationsartspr_set.locale, kommunikationsart_kommunikationsartspr_set.c_bez" }));
 		}
 		return super.getTableInfo();
@@ -334,19 +314,17 @@ public class KommunikationsartHandler extends UseCaseHandler {
 	/**
 	 * Suche in sprsetIterator nach sLocUI.
 	 * 
-	 * @param sLocaleI
-	 *            String
-	 * @param iterUebersetzungenI
-	 *            FLRAnsprechpartnerfunktion
-	 * @return String <br/> uebersetzung, fuer sLocUI <br/> null, wenn nicht
-	 *         uebersetzt oder gar nicht da
+	 * @param sLocaleI            String
+	 * @param iterUebersetzungenI FLRAnsprechpartnerfunktion
+	 * @return String <br/>
+	 *         uebersetzung, fuer sLocUI <br/>
+	 *         null, wenn nicht uebersetzt oder gar nicht da
 	 */
 	private String findSpr(String sLocaleI, Iterator<?> iterUebersetzungenI) {
 
 		String sUebersetzung = null;
 		while (iterUebersetzungenI.hasNext()) {
-			FLRKommunikationsartspr kommunikationsartspr = (FLRKommunikationsartspr) iterUebersetzungenI
-					.next();
+			FLRKommunikationsartspr kommunikationsartspr = (FLRKommunikationsartspr) iterUebersetzungenI.next();
 			if (kommunikationsartspr.getLocale().getC_nr().compareTo(sLocaleI) == 0) {
 				sUebersetzung = kommunikationsartspr.getC_bez();
 				break;

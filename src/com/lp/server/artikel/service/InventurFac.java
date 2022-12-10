@@ -86,10 +86,20 @@ public interface InventurFac {
 	public final static int REPORT_INVENTURSTAND_SORTIERUNG_ARTIKELGRUPPE = 1;
 	public final static int REPORT_INVENTURSTAND_SORTIERUNG_ARTIKELKLASSE = 2;
 	public final static int REPORT_INVENTURSTAND_SORTIERUNG_LAGERPLATZ = 3;
+	public final static int REPORT_INVENTURSTAND_SORTIERUNG_REFERENZNUMMER = 4;
 	
 	public final static int REPORT_INVENTURLISTE_SORTIERUNG_ARTIKELNR = 0;
-	public final static int REPORT_INVENTURLISTE_SORTIERUNG_PERSON_ARTIKEL = 1;
-	public final static int REPORT_INVENTURLISTE_SORTIERUNG_PERSON_DATUM = 2;
+	public final static int REPORT_INVENTURLISTE_SORTIERUNG_REFERENZNUMMER = 1;
+	public final static int REPORT_INVENTURLISTE_SORTIERUNG_PERSON_ARTIKEL = 2;
+	public final static int REPORT_INVENTURLISTE_SORTIERUNG_PERSON_DATUM = 3;
+	
+	public final static int REPORT_INVENTURPROTOKOLL_SORTIERUNG_ARTIKELNR = 0;
+	public final static int REPORT_INVENTURPROTOKOLL_SORTIERUNG_LAGERPLATZ = 1;
+	public final static int REPORT_INVENTURPROTOKOLL_SORTIERUNG_REFERENZNUMMER = 2;
+	
+	public final static int REPORT_NICHT_ERFASSTE_ARTIKEL_SORTIERUNG_ARTIKELNR = 0;
+	public final static int REPORT_NICHT_ERFASSTE_ARTIKEL_SORTIERUNG_LAGERPLATZ = 1;
+	public final static int REPORT_NICHT_ERFASSTE_ARTIKEL_SORTIERUNG_REFERENZNUMMER = 2;
 	
 
 	public Integer createInventur(InventurDto inventurDto,
@@ -142,7 +152,7 @@ public interface InventurFac {
 			throws RemoteException, EJBExceptionLP;
 
 	public JasperPrintLP printInventurprotokoll(Integer inventurIId,
-			Integer lagerIId, boolean bSortiertNachLagerplatz, String lagerplatzVon,
+			Integer lagerIId, int iSortierung, String lagerplatzVon,
 			String lagerplatzBis, TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printInventurstand(Integer inventurIId,
@@ -155,8 +165,8 @@ public interface InventurFac {
 
 	public JasperPrintLP printNichterfassteartikel(Integer inventurIId,
 			Integer lagerIId, boolean bNurArtikelMitLagerstand,
-			boolean bSortiertNachLagerplatz, String lagerplatzVon,
-			String lagerplatzBis, boolean bMitVersteckten, TheClientDto theClientDto)
+			 int iSortierung, String lagerplatzVon,
+			String lagerplatzBis, boolean bMitVersteckten, boolean nurInInventurlisteEnthalteneArtikel, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public InventurlisteDto[] inventurlisteFindByInventurIIdArtikelIId(
@@ -187,7 +197,6 @@ public interface InventurFac {
 			throws RemoteException, EJBExceptionLP;
 
 	public void inventurDurchfuehren(Integer inventurIId,
-			boolean bNichtInventierteArtikelAufNullSetzen,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal getInventurstand(Integer artikelIId, Integer lagerIId,
@@ -212,6 +221,9 @@ public interface InventurFac {
 	public InventurstandDto inventurstandFindByPrimaryKey(Integer iId)
 			throws RemoteException, EJBExceptionLP;
 
+	public void eintandspreisEinerInventurbuchungAendern(Integer inventurlisteIId, BigDecimal nEinstandpreisNeu,
+			TheClientDto theClientDto);
+	
 	public void inventurpreiseAktualisieren(Integer inventurIId,
 			boolean bAufGestpreisZumInventurdatumAktualisieren,
 			TheClientDto theClientDto) throws RemoteException;
@@ -231,7 +243,7 @@ public interface InventurFac {
 	public void invturprotokollZumStichtagZuruecknehmen(Integer inventurIId,
 			java.sql.Date tAbStichtag, TheClientDto theClientDto);
 
-	public String importiereInventurliste(Integer inventurIId,
+	public InventurlisteImportResult importiereInventurliste(Integer inventurIId,
 			ArrayList<InvenurlisteImportDto> alImportdaten,
 			TheClientDto theClientDto);
 
@@ -243,4 +255,12 @@ public interface InventurFac {
 			InventurlisteDto inventurlisteDto, String[] snrs,
 			TheClientDto theClientDto);
 
+	public void removeInventurlisteUndNimmProtokolleintraegeZurueck(InventurlisteDto inventurlisteDto,
+			TheClientDto theClientDto);
+	public InventurlisteDto[] inventurlisteFindByInventurIIdLagerIIdArtikelIIdCSeriennrchargennrOhneExc(
+			Integer inventurIId, Integer artikelIId, Integer lagerIId,
+			String cSeriennrchargennr, TheClientDto theClientDto)
+			throws EJBExceptionLP ;
+	public InventurlisteDto inventurlisteFindByPrimaryKeyOhneExc(Integer iId,
+			TheClientDto theClientDto);
 }

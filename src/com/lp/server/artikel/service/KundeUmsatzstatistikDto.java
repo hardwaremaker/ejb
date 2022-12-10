@@ -35,6 +35,9 @@ package com.lp.server.artikel.service;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+import com.lp.server.partner.service.KundeDto;
+import com.lp.util.Helper;
+
 public class KundeUmsatzstatistikDto implements Serializable {
 	/**
 	 * 
@@ -44,6 +47,48 @@ public class KundeUmsatzstatistikDto implements Serializable {
 	private boolean bErstumsatz = false;
 	private String sKundengruppierung = "";
 
+	private double maxDouble=999999999999999D;
+	
+	private java.util.Date dLetztumsatz = null;
+
+	public java.util.Date getDLetztumsatz() {
+		return dLetztumsatz;
+	}
+
+	public void setDLetztumsatz(java.util.Date dLetztumsatz) {
+		this.dLetztumsatz = dLetztumsatz;
+	}
+
+	private String sProvisionsempfaengerName = "";
+
+	public String getSProvisionsempfaengerName() {
+		return sProvisionsempfaengerName;
+	}
+
+	public void setSProvisionsempfaengerName(String sProvisionsempfaengerName) {
+		this.sProvisionsempfaengerName = sProvisionsempfaengerName;
+	}
+
+	public String getSProvisionsempfaengerKurzzeichen() {
+		return sProvisionsempfaengerKurzzeichen;
+	}
+
+	public void setSProvisionsempfaengerKurzzeichen(String sProvisionsempfaengerKurzzeichen) {
+		this.sProvisionsempfaengerKurzzeichen = sProvisionsempfaengerKurzzeichen;
+	}
+
+	private String sProvisionsempfaengerKurzzeichen = "";
+
+	private java.util.Date dErstumsatz = null;
+
+	public java.util.Date getDErstumsatz() {
+		return dErstumsatz;
+	}
+
+	public void setDErstumsatz(java.util.Date dErstumsatz) {
+		this.dErstumsatz = dErstumsatz;
+	}
+
 	public String getSKunde() {
 		return sKunde;
 	}
@@ -52,6 +97,38 @@ public class KundeUmsatzstatistikDto implements Serializable {
 		this.sKunde = sKunde;
 	}
 
+	public String getProvisionsempfaengerUndKunde() {
+		String gesamt = Helper.fitString2LengthAuchNull(sProvisionsempfaengerKurzzeichen, 10, ' ');
+		gesamt += Helper.fitString2LengthAuchNull(sProvisionsempfaengerName, 60, ' ');
+		gesamt += sKunde;
+		return gesamt;
+	}
+	
+	public String getProvisionsempfaengerUndLkz() {
+		String gesamt = Helper.fitString2LengthAuchNull(sProvisionsempfaengerKurzzeichen, 10, ' ');
+		gesamt += Helper.fitString2LengthAuchNull(sProvisionsempfaengerName, 60, ' ');
+		
+		gesamt += Helper.fitString2LengthAuchNull(sLkz, 10, ' ');
+		gesamt += Helper.fitString2LengthAuchNull(sPlz, 10, ' ');
+		return gesamt;
+	}
+	
+	public String getProvisionsempfaengerUndUmsatz(double d) {
+		String gesamt = Helper.fitString2LengthAuchNull(sProvisionsempfaengerKurzzeichen, 10, ' ');
+		gesamt += Helper.fitString2LengthAuchNull(sProvisionsempfaengerName, 60, ' ');
+		
+		gesamt += Helper.fitString2LengthAlignRight(Helper.rundeKaufmaennisch(new BigDecimal(maxDouble-d), 2)+"", 20, '9');
+		
+		return gesamt;
+	}
+	public String getProvisionsempfaengerUndDB(double d) {
+		String gesamt = Helper.fitString2LengthAuchNull(sProvisionsempfaengerKurzzeichen, 10, ' ');
+		gesamt += Helper.fitString2LengthAuchNull(sProvisionsempfaengerName, 60, ' ');
+		
+		gesamt += Helper.fitString2LengthAlignRight(Helper.rundeKaufmaennisch(new BigDecimal(maxDouble-d), 2)+"", 20, '9');
+		
+		return gesamt;
+	}
 	private Integer iGruppierung = null;
 
 	public void setIGruppierung(Integer iGruppierung) {
@@ -83,10 +160,11 @@ public class KundeUmsatzstatistikDto implements Serializable {
 	public void setBdDeckungsbeitrag(BigDecimal bdDeckungsbeitrag) {
 		this.bdDeckungsbeitrag = bdDeckungsbeitrag;
 	}
-	
+
 	public void setBdKreditlimit(BigDecimal bdKreditlimit) {
 		this.bdKreditlimit = bdKreditlimit;
 	}
+
 	public BigDecimal getBdKreditlimit() {
 		return bdKreditlimit;
 	}
@@ -106,11 +184,29 @@ public class KundeUmsatzstatistikDto implements Serializable {
 	private BigDecimal bdDeckungsbeitrag = new BigDecimal(0);
 	private BigDecimal bdKreditlimit = null;
 
-	private Integer iKundennummer=0;
-	private String sLkz="";
-	private String sPlz="";
+	private KundeDto kundeDto = null;
 
-	
+	public KundeDto getKundeDto() {
+		return kundeDto;
+	}
+
+	public void setKundeDto(KundeDto kundeDto) {
+		this.kundeDto = kundeDto;
+	}
+
+	private Integer iKundennummer = 0;
+	private String sLkz = "";
+	private String sPlz = "";
+	private String sOrt = "";
+
+	public String getSOrt() {
+		return sOrt;
+	}
+
+	public void setSOrt(String sOrt) {
+		this.sOrt = sOrt;
+	}
+
 	public Integer getIKundennummer() {
 		return iKundennummer;
 	}
@@ -173,15 +269,25 @@ public class KundeUmsatzstatistikDto implements Serializable {
 			subSummeDeckungsbeitrag[i] = new BigDecimal(0);
 		}
 	}
-	
+
 	private Integer iZahlungsziel = null;
 
 	public void setIZahlungsziel(Integer iZahlungsziel) {
 		this.iZahlungsziel = iZahlungsziel;
 	}
-	
+
 	public Integer getIZahlungsziel() {
 		return iZahlungsziel;
+	}
+
+	private Integer lieferantIId = null;
+
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
 	}
 
 	private Integer iLieferart = null;
@@ -189,16 +295,17 @@ public class KundeUmsatzstatistikDto implements Serializable {
 	public void setILieferart(Integer iLieferart) {
 		this.iLieferart = iLieferart;
 	}
-	
+
 	public Integer getILieferart() {
 		return iLieferart;
 	}
+
 	private Integer iSpediteur = null;
 
 	public void setISpediteur(Integer iSpediteur) {
 		this.iSpediteur = iSpediteur;
 	}
-	
+
 	public Integer getISpediteur() {
 		return iSpediteur;
 	}

@@ -34,6 +34,7 @@ package com.lp.server.artikel.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
 
@@ -82,11 +83,14 @@ public interface ArtikelbestelltFac {
 	public BigDecimal getAnzahlBestellt(Integer artikelIId)
 			throws EJBExceptionLP, RemoteException;
 
-	public void aktualisiereBestelltListe(Integer bestellungIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public BigDecimal getAnzahlBestellt(Integer artikelIId,
+			Integer partnerIIdStandort) throws EJBExceptionLP, RemoteException;
 
-	public void pruefeBestelltliste(TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public void aktualisiereBestelltListe(Integer bestellungIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void pruefeBestelltliste(TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public ArtikelbestelltDto artikelbestelltFindByBelegartCNrBelegartPositionIIdOhneExc(
 			String belegartCNr, Integer belegartpositionIId)
@@ -106,8 +110,8 @@ public interface ArtikelbestelltFac {
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	public Hashtable<?, ?> getAnzahlRahmenbestellt(Integer artikelIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public Hashtable<?, ?> getAnzahlRahmenbestellt(Integer artikelIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	/**
 	 * getArtikelbestellt gibt eine List vom FLRArtikelbestellt zurueck. Achtung
@@ -126,5 +130,20 @@ public interface ArtikelbestelltFac {
 	public Collection<?> getArtikelbestellt(Integer artikelIId,
 			java.sql.Date dVon, java.sql.Date dBis) throws EJBExceptionLP,
 			RemoteException;
+	
+	public BigDecimal getAnzahlBestelltEinesMandanten(Integer artikelIId,
+			String mandantCNr);
+	public BigDecimal getWareUnterwegsEinerBestellposition(
+			Integer bestellpositionIId, TheClientDto theClientDto);
+	
+	public BigDecimal getAnzahlInternBestellt(Integer artikelIId);
+	
+	public BigDecimal getWareUnterwegsEinesArtikels(
+			Integer artikelIId, TheClientDto theClientDto);
+	public boolean gibtEsPositiveArtikelbestelltNachStichtag(
+			Integer artikelIId, java.sql.Date dLiefertermin);
 
+	
+	public ArrayList<ArtikelbestelltDto> getArtikelbestelltDtos(Integer artikelIId);
+	
 }

@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
@@ -42,7 +41,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "MeilensteinFindByCNrMandantCNr", query = "SELECT OBJECT (O) FROM Meilenstein o WHERE o.cNr=?1 AND o.mandantCNr = ?2") })
+@NamedQueries({
+		@NamedQuery(name = "MeilensteinFindByCNrMandantCNr", query = "SELECT OBJECT (O) FROM Meilenstein o WHERE o.cNr=?1 AND o.mandantCNr = ?2"),
+		@NamedQuery(name = "MeilensteinejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Meilenstein o WHERE o.mandantCNr = ?1") })
 @Entity
 @Table(name = "AUFT_MEILENSTEIN")
 public class Meilenstein implements Serializable {
@@ -64,16 +65,28 @@ public class Meilenstein implements Serializable {
 		this.mandantCNr = mandantCNr;
 	}
 
+	@Column(name = "I_SORT")
+	private Integer iSort;
+
+	public Integer getISort() {
+		return iSort;
+	}
+
+	public void setISort(Integer iSort) {
+		this.iSort = iSort;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Meilenstein() {
 		super();
 	}
 
-	public Meilenstein(Integer id, String nr, String mandantCNr) {
+	public Meilenstein(Integer id, String nr, String mandantCNr, Integer iSort) {
 		setIId(id);
 		setCNr(nr);
 		setMandantCNr(mandantCNr);
+		setISort(iSort);
 	}
 
 	public Integer getIId() {
@@ -91,7 +104,5 @@ public class Meilenstein implements Serializable {
 	public void setCNr(String cNr) {
 		this.cNr = cNr;
 	}
-
-
 
 }

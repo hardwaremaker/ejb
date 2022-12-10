@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.artikel.fastlanereader;
 
+import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -44,6 +45,7 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRMaterial;
 import com.lp.server.artikel.fastlanereader.generated.FLRMaterialspr;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -91,8 +93,7 @@ public class MaterialHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 			session = setFilter(session);
@@ -112,18 +113,21 @@ public class MaterialHandler extends UseCaseHandler {
 				Object o[] = (Object[]) resultListIterator.next();
 				FLRMaterial material = (FLRMaterial) o[0];
 
-				Iterator<?> sprsetIterator = material.getMaterialsprset()
-						.iterator();
+				Iterator<?> sprsetIterator = material.getMaterialsprset().iterator();
 
 				rows[row][col++] = material.getI_id();
 				rows[row][col++] = material.getC_nr();
 				rows[row][col++] = findSpr(sLocUI, sprsetIterator);
+				rows[row][col++] = material.getN_gewicht_in_kg();
+
+				rows[row][col++] = getMaterialFac().getMaterialpreisInZielwaehrung(material.getI_id(),
+						new java.sql.Date(System.currentTimeMillis()), theClientDto.getSMandantenwaehrung(),
+						theClientDto);
 
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		}
 
 		catch (HibernateException e) {
@@ -142,8 +146,7 @@ public class MaterialHandler extends UseCaseHandler {
 
 		String sUebersetzung = null;
 		while (iterUebersetzungenI.hasNext()) {
-			FLRMaterialspr materialspr = (FLRMaterialspr) iterUebersetzungenI
-					.next();
+			FLRMaterialspr materialspr = (FLRMaterialspr) iterUebersetzungenI.next();
 			if (materialspr.getLocale().getC_nr().compareTo(sLocaleI) == 0) {
 				sUebersetzung = materialspr.getC_bez();
 				break;
@@ -161,8 +164,7 @@ public class MaterialHandler extends UseCaseHandler {
 			session = setFilter(session);
 
 			String queryString = "SELECT COUNT(*) FROM FLRMaterial AS material"
-					+ " LEFT JOIN material.materialsprset AS materialsprset "
-					+ buildWhereClause();
+					+ " LEFT JOIN material.materialsprset AS materialsprset " + buildWhereClause();
 
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -184,8 +186,8 @@ public class MaterialHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -196,8 +198,7 @@ public class MaterialHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -208,16 +209,14 @@ public class MaterialHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper("
-								+ filterKriterien[i].kritName + ")");
+						where.append(" upper(" + filterKriterien[i].kritName + ")");
 					} else {
 						where.append(" " + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -289,12 +288,10 @@ public class MaterialHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return " FROM FLRMaterial AS material"
-				+ " LEFT JOIN material.materialsprset AS materialsprset";
+		return " FROM FLRMaterial AS material" + " LEFT JOIN material.materialsprset AS materialsprset";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -307,16 +304,14 @@ public class MaterialHandler extends UseCaseHandler {
 			try {
 				session = factory.openSession();
 				session = setFilter(session);
-				String queryString = getFromClause() + buildWhereClause()
-						+ buildOrderByClause();
+				String queryString = getFromClause() + buildWhereClause() + buildOrderByClause();
 
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
-						FLRMaterial material = (FLRMaterial) scrollableResult
-								.get(0);
+						FLRMaterial material = (FLRMaterial) scrollableResult.get(0);
 						Integer iId = material.getI_id();
 						if (selectedId.equals(iId)) {
 							rowNumber = scrollableResult.getRowNumber();
@@ -349,31 +344,20 @@ public class MaterialHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] {
-							Integer.class,
-							String.class,
-							String.class
-					},
-					
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)
-					},
-					
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST
-					},
-					
-					new String[] {
-							"material.i_id",
-							"material.c_nr",
-							"materialsprset.c_bez"
-					})
-			);
+			setTableInfo(new TableInfo(new Class[] { Integer.class, String.class, String.class, BigDecimal.class, BigDecimal.class },
+
+					new String[] { "Id", getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("artikel.material.spezifischesgewicht", mandantCNr, locUI),
+							getTextRespectUISpr("artikel.materialpreis.preisprokg", mandantCNr, locUI) + " / "
+									+ theClientDto.getSMandantenwaehrung() },
+
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+					new String[] { "material.i_id", "material.c_nr", "materialsprset.c_bez", "material.n_gewicht_in_kg",
+							Facade.NICHT_SORTIERBAR }));
 		}
 		return super.getTableInfo();
 	}

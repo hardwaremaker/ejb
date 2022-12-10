@@ -87,8 +87,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 	/**
 	 * The information needed for the kundes table.
 	 * 
-	 * @param rowIndex
-	 *            Integer
+	 * @param rowIndex Integer
 	 * @throws EJBExceptionLP
 	 * @return QueryResult
 	 */
@@ -104,8 +103,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 
@@ -119,20 +117,14 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 			int col = 0;
 			String locale = theClientDto.getLocUiAsString();
 			while (resultListIterator.hasNext()) {
-				FLRArtikelkommentarspr artikelkommentar = (FLRArtikelkommentarspr) resultListIterator
-						.next();
-				rows[row][col++] = artikelkommentar.getArtikelkommentar()
-						.getArtikel_i_id();
-				rows[row][col++] = artikelkommentar.getArtikelkommentar()
-						.getFlrartikel().getC_nr();
-				rows[row][col++] = artikelkommentar.getArtikelkommentar()
-						.getFlrartikelkommentarart().getC_nr();
-				rows[row][col++] = artikelkommentar.getArtikelkommentar()
-						.getDatenformat_c_nr();
+				FLRArtikelkommentarspr artikelkommentar = (FLRArtikelkommentarspr) resultListIterator.next();
+				rows[row][col++] = artikelkommentar.getArtikelkommentar().getArtikel_i_id();
+				rows[row][col++] = artikelkommentar.getArtikelkommentar().getFlrartikel().getC_nr();
+				rows[row][col++] = artikelkommentar.getArtikelkommentar().getFlrartikelkommentarart().getC_nr();
+				rows[row][col++] = artikelkommentar.getArtikelkommentar().getDatenformat_c_nr();
 
 				if (artikelkommentar.getX_kommentar() != null) {
-					rows[row][col++] = Helper.strippHTML(artikelkommentar
-							.getX_kommentar());
+					rows[row][col++] = Helper.strippHTML(artikelkommentar.getX_kommentar());
 				} else {
 					rows[row][col++] = null;
 				}
@@ -140,9 +132,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 				rows[row][col++] = artikelkommentar.getLocale().getC_nr();
 
 				if (artikelkommentar.getX_kommentar() != null) {
-					String text = "<b>"
-							+ artikelkommentar.getArtikelkommentar()
-									.getFlrartikel().getC_nr() + ":</b>\n"
+					String text = "<b>" + artikelkommentar.getArtikelkommentar().getFlrartikel().getC_nr() + ":</b>\n"
 							+ artikelkommentar.getX_kommentar();
 					text = text.replaceAll("\n", "<br>");
 					text = "<html>" + text + "</html>";
@@ -152,8 +142,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0, tooltipData);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0, tooltipData);
 		}
 
 		catch (HibernateException e) {
@@ -174,8 +163,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -194,8 +182,8 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -206,8 +194,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -219,11 +206,17 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 					filterAdded = true;
 
 					if (filterKriterien[i].kritName.equals("x_kommentar")) {
-						
-						String suchstring = "lower(coalesce(cast(flrartikelkommentarspr.x_kommentar as string),''))";
 
-						String[] teile = filterKriterien[i].value.toLowerCase()
-								.split(" ");
+						String suchstring = "";
+						// MSSQL
+						if (FLRSessionFactory.isMSSQL()) {
+							suchstring = "lower(coalesce(convert( nvarchar(3000), flrartikelkommentarspr.x_kommentar),''))";
+						} else {
+							// PSQL
+							suchstring = "lower(coalesce(cast(flrartikelkommentarspr.x_kommentar as text),''))";
+						}
+
+						String[] teile = filterKriterien[i].value.toLowerCase().split(" ");
 						where.append("(");
 
 						for (int p = 0; p < teile.length; p++) {
@@ -235,8 +228,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 
 							}
 
-							where.append("lower(" + suchstring + ") like '%"
-									+ teile[p].toLowerCase() + "%'");
+							where.append("lower(" + suchstring + ") like '%" + teile[p].toLowerCase() + "%'");
 							if (p < teile.length - 1) {
 								where.append(" AND ");
 							}
@@ -246,16 +238,13 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 
 					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" upper(flrartikelkommentarspr."
-									+ filterKriterien[i].kritName + ")");
+							where.append(" upper(flrartikelkommentarspr." + filterKriterien[i].kritName + ")");
 						} else {
-							where.append(" flrartikelkommentarspr."
-									+ filterKriterien[i].kritName);
+							where.append(" flrartikelkommentarspr." + filterKriterien[i].kritName);
 						}
 						where.append(" " + filterKriterien[i].operator);
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toUpperCase());
+							where.append(" " + filterKriterien[i].value.toUpperCase());
 						} else {
 							where.append(" " + filterKriterien[i].value);
 						}
@@ -263,7 +252,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 				}
 			}
 			if (filterAdded) {
-				where.insert(0, " WHERE");
+				where.insert(0, " WHERE ");
 			}
 		}
 
@@ -283,15 +272,13 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("flrartikelkommentarspr."
-									+ kriterien[i].kritName);
+							orderBy.append("flrartikelkommentarspr." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -338,8 +325,7 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 		return "from FLRArtikelkommentarspr as flrartikelkommentarspr ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -395,42 +381,23 @@ public class ArtikelkommentarSucheHandler extends UseCaseHandler {
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, String.class },
-					new String[] {
-							"i_id",
-							getTextRespectUISpr("artikel.artikelnummerlang",
-									theClientDto.getMandant(),
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class, String.class },
+					new String[] { "i_id",
+							getTextRespectUISpr("artikel.artikelnummerlang", theClientDto.getMandant(),
 									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.kommentarart",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.datenformat",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.kommentar",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.sprache",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()) },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XM },
-					new String[] {
-							"i_id",
-							"artikelkommentar.flrartikel.c_nr",
+							getTextRespectUISpr("lp.kommentarart", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.datenformat", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.kommentar", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.sprache", theClientDto.getMandant(), theClientDto.getLocUi()) },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_XM, QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_XM },
+					new String[] { "i_id", "artikelkommentar.flrartikel.c_nr",
 
-							"artikelkommentar."
-									+ ArtikelkommentarFac.FLR_ARTIKELKOMMENTAR_FLRARTIKELKOMMENTARART
+							"artikelkommentar." + ArtikelkommentarFac.FLR_ARTIKELKOMMENTAR_FLRARTIKELKOMMENTARART
 									+ ".c_nr",
-							"artikelkommentar."
-									+ ArtikelkommentarFac.FLR_ARTIKELKOMMENTAR_DATENFORMAT_C_NR,
-							"x_kommentar",
-							"locale.c_nr" }));
+							"artikelkommentar." + ArtikelkommentarFac.FLR_ARTIKELKOMMENTAR_DATENFORMAT_C_NR,
+							"x_kommentar", "locale.c_nr" }));
 
 		}
 		return super.getTableInfo();

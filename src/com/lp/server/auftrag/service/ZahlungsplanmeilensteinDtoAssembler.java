@@ -51,6 +51,7 @@ public class ZahlungsplanmeilensteinDtoAssembler {
 			dto.setPersonalIIdErledigt(bean.getPersonalIIdErledigt());
 			dto.setCKommentar(bean.getCKommentar());
 			dto.setXText(bean.getXText());
+			dto.setISort(bean.getISort());
 		}
 		return dto;
 	}

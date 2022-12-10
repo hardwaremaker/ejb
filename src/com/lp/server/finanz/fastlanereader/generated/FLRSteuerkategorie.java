@@ -33,6 +33,7 @@
 package com.lp.server.finanz.fastlanereader.generated;
 
 import java.io.Serializable;
+
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -66,8 +67,10 @@ public class FLRSteuerkategorie implements Serializable {
     /** nullable persistent field */
     private Integer konto_i_id_forderungen;
 
+    private Integer reversechargeart_i_id ;
+    
     /** full constructor */
-    public FLRSteuerkategorie(String mandant_c_nr, String c_bez, String c_nr, Short b_reversecharge, Integer i_sort, Integer finanzamt_i_id, Integer konto_i_id_verbindlichkeiten, Integer konto_i_id_forderungen) {
+    public FLRSteuerkategorie(String mandant_c_nr, String c_bez, String c_nr, Short b_reversecharge, Integer i_sort, Integer finanzamt_i_id, Integer konto_i_id_verbindlichkeiten, Integer konto_i_id_forderungen, Integer reversechargeart_i_id) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_bez = c_bez;
         this.c_nr = c_nr;
@@ -76,6 +79,7 @@ public class FLRSteuerkategorie implements Serializable {
         this.finanzamt_i_id = finanzamt_i_id;
         this.konto_i_id_verbindlichkeiten = konto_i_id_verbindlichkeiten;
         this.konto_i_id_forderungen = konto_i_id_forderungen;
+        this.reversechargeart_i_id = reversechargeart_i_id ;
     }
 
     /** default constructor */
@@ -159,5 +163,13 @@ public class FLRSteuerkategorie implements Serializable {
             .append("i_id", getI_id())
             .toString();
     }
+
+	public Integer getReversechargeart_i_id() {
+		return reversechargeart_i_id;
+	}
+
+	public void setReversechargeart_i_id(Integer reversechargeart_i_id) {
+		this.reversechargeart_i_id = reversechargeart_i_id;
+	}
 
 }

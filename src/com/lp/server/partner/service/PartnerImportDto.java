@@ -119,6 +119,22 @@ public class PartnerImportDto implements Serializable {
 	
 	private String kontonummer="";
 	
+	private String newslettergrund="";
+	public String getNewslettergrund() {
+		return newslettergrund;
+	}
+	public void setNewslettergrund(String newslettergrund) {
+		this.newslettergrund = newslettergrund;
+	}
+	public String getAnsprechpartnernewslettergrund() {
+		return ansprechpartnernewslettergrund;
+	}
+	public void setAnsprechpartnernewslettergrund(
+			String ansprechpartnernewslettergrund) {
+		this.ansprechpartnernewslettergrund = ansprechpartnernewslettergrund;
+	}
+	private String ansprechpartnernewslettergrund="";
+	
 	
 	
 	public String getKontonummer() {

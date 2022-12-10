@@ -84,7 +84,7 @@ public class AutomatikjobBestellvorschlagverdichtung extends AutomatikjobBasis {
 				boolean bProjektklammer=getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_PROJEKTKLAMMER, theClientDto.getMandant());
 				
 				getBestellvorschlagFac().verdichteBestellvorschlag(
-						Long.parseLong(parametermandantDto.getCWert()), true,bProjektklammer,
+						Long.parseLong(parametermandantDto.getCWert()), true,bProjektklammer,true,
 						theClientDto);
 			}
 			try {

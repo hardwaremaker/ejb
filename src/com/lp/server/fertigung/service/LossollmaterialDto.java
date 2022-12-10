@@ -56,6 +56,88 @@ public class LossollmaterialDto extends BelegpositionDto implements
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
 	private BigDecimal nSollpreis;
+	private BigDecimal nMengeStklPos;
+	private String einheitCnrStklPos;
+	private Timestamp tExportBeginn;
+	private Timestamp tExportEnde;
+	private String cFehlercode;
+	private String cFehlertext;
+	
+	private String snrChnr_NOT_IN_DB;
+	public String getSnrChnr_NOT_IN_DB() {
+		return snrChnr_NOT_IN_DB;
+	}
+
+	public void setSnrChnr_NOT_IN_DB(String snrChnr_NOT_IN_DB) {
+		this.snrChnr_NOT_IN_DB = snrChnr_NOT_IN_DB;
+	}
+
+	
+	private BigDecimal nZuVerbrauchendenMenge_NOT_IN_DB;
+	
+	public BigDecimal getNZuVerbrauchendenMenge_NOT_IN_DB() {
+		return nZuVerbrauchendenMenge_NOT_IN_DB;
+	}
+
+	public void setNZuVerbrauchendenMenge_NOT_IN_DB(BigDecimal nZuVerbrauchendenMenge_NOT_IN_DB) {
+		this.nZuVerbrauchendenMenge_NOT_IN_DB = nZuVerbrauchendenMenge_NOT_IN_DB;
+	}
+
+
+	private LosDto losDto_NOT_IN_DB;
+	private BigDecimal nOffeneMenge_NOT_IN_DB;
+
+	public BigDecimal getNOffeneMenge_NOT_IN_DB() {
+		return nOffeneMenge_NOT_IN_DB;
+	}
+
+	public void setNOffeneMenge_NOT_IN_DB(BigDecimal nOffeneMenge_NOT_IN_DB) {
+		this.nOffeneMenge_NOT_IN_DB = nOffeneMenge_NOT_IN_DB;
+	}
+
+	public LosDto getLosDto_NOT_IN_DB() {
+		return losDto_NOT_IN_DB;
+	}
+
+	public void setLosDto_NOT_IN_DB(LosDto losDto_NOT_IN_DB) {
+		this.losDto_NOT_IN_DB = losDto_NOT_IN_DB;
+	}
+
+	private Short bDringend;
+	/**
+	 * Menge fuer ein Los, nicht auf VPE gerundet.
+	 */
+	private BigDecimal nMengeProLos;
+
+	public LossollmaterialDto() {
+	}
+	
+	public BigDecimal getnMengeProLos() {
+		return nMengeProLos;
+	}
+
+	public void setNMengeProLos(BigDecimal nMengeProLos) {
+		this.nMengeProLos = nMengeProLos;
+	}
+
+	public Short getBDringend() {
+		return bDringend;
+	}
+
+	public void setBDringend(Short bDringend) {
+		this.bDringend = bDringend;
+	}
+
+	private Short bRuestmenge;
+
+	public Short getBRuestmenge() {
+		return bRuestmenge;
+	}
+
+	public void setBRuestmenge(Short bRuestmenge) {
+		this.bRuestmenge = bRuestmenge;
+	}
+
 	private Integer iBeginnterminoffset;
 
 	public Integer getIBeginnterminoffset() {
@@ -65,9 +147,9 @@ public class LossollmaterialDto extends BelegpositionDto implements
 	public void setIBeginnterminoffset(Integer iBeginnterminoffset) {
 		this.iBeginnterminoffset = iBeginnterminoffset;
 	}
-	
+
 	private Integer lossollmaterialIIdOriginal;
-	
+
 	public Integer getLossollmaterialIIdOriginal() {
 		return lossollmaterialIIdOriginal;
 	}
@@ -172,6 +254,16 @@ public class LossollmaterialDto extends BelegpositionDto implements
 		this.nSollpreis = nSollpreis;
 	}
 
+	private LosistmaterialDto[] istmaterialDtos=null;
+	
+	public LosistmaterialDto[] getIstmaterialDtos() {
+		return istmaterialDtos;
+	}
+
+	public void setIstmaterialDtos(LosistmaterialDto[] istmaterialDtos) {
+		this.istmaterialDtos = istmaterialDtos;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -211,6 +303,13 @@ public class LossollmaterialDto extends BelegpositionDto implements
 		if (!(that.nSollpreis == null ? this.nSollpreis == null
 				: that.nSollpreis.equals(this.nSollpreis)))
 			return false;
+		if (!(that.getNMengeStklPos() == null ? getNMengeStklPos() == null
+				: that.getNMengeStklPos().equals(getNMengeStklPos())))
+			return false;
+		if (!(that.getEinheitCNrStklPos() == null ? getEinheitCNrStklPos() == null
+				: that.getEinheitCNrStklPos().equals(getEinheitCNr())))
+			return false;
+
 		return true;
 	}
 
@@ -226,6 +325,8 @@ public class LossollmaterialDto extends BelegpositionDto implements
 		result = 37 * result + this.bNachtraeglich.hashCode();
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
+		result = 37 * result + this.nSollpreis.hashCode();
+		result = 37 * result + this.nMengeStklPos.hashCode();
 		result = 37 * result + this.nSollpreis.hashCode();
 		return result;
 	}
@@ -243,6 +344,8 @@ public class LossollmaterialDto extends BelegpositionDto implements
 		returnString += ", " + tAendern;
 		returnString += ", " + personalIIdAendern;
 		returnString += ", " + nSollpreis;
+		returnString += ", " + nMengeStklPos;
+		returnString += ", " + einheitCnrStklPos;
 		return returnString;
 	}
 
@@ -262,5 +365,49 @@ public class LossollmaterialDto extends BelegpositionDto implements
 		// hier aber trotzdem mit 4, sonst vierlier ich genauigkeit
 		setNMenge(Helper.rundeKaufmaennisch(getNMenge(), iStellenMenge));
 		setNSollpreis(Helper.rundeKaufmaennisch(getNSollpreis(), iStellenPreis));
+	}
+
+	public BigDecimal getNMengeStklPos() {
+		return nMengeStklPos;
+	}
+
+	public void setNMengeStklPos(BigDecimal nMengeStklPos) {
+		this.nMengeStklPos = nMengeStklPos;
+	}
+
+	public String getEinheitCNrStklPos() {
+		return einheitCnrStklPos;
+	}
+
+	public void setEinheitCNrStklPos(String einheitCnrStklPos) {
+		this.einheitCnrStklPos = einheitCnrStklPos;
+	}
+
+	public void setTExportBeginn(Timestamp tExportBeginn) {
+		this.tExportBeginn = tExportBeginn;
+	}
+	public Timestamp getTExportBeginn() {
+		return tExportBeginn;
+	}
+	
+	public void setTExportEnde(Timestamp tExportEnde) {
+		this.tExportEnde = tExportEnde;
+	}
+	public Timestamp getTExportEnde() {
+		return tExportEnde;
+	}
+	
+	public void setCFehlertext(String cFehlertext) {
+		this.cFehlertext = cFehlertext;
+	}
+	public String getCFehlertext() {
+		return cFehlertext;
+	}
+	
+	public void setCFehlercode(String cFehlercode) {
+		this.cFehlercode = cFehlercode;
+	}
+	public String getCFehlercode() {
+		return cFehlercode;
 	}
 }

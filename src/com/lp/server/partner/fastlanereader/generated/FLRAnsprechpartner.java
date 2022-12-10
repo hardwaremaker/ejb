@@ -1,38 +1,7 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.partner.fastlanereader.generated;
 
 import java.io.Serializable;
+import java.util.Date;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -58,7 +27,13 @@ public class FLRAnsprechpartner implements Serializable {
     private Short b_versteckt;
 
     /** nullable persistent field */
+    private Short b_durchwahl;
+
+    /** nullable persistent field */
     private String x_bemerkung;
+
+    /** nullable persistent field */
+    private String c_abteilung;
 
     /** nullable persistent field */
     private String c_email;
@@ -76,47 +51,53 @@ public class FLRAnsprechpartner implements Serializable {
     private String c_direktfax;
 
     /** nullable persistent field */
+    private Date t_aendern;
+
+    /** nullable persistent field */
+    private String c_exchangeid;
+
+    /** nullable persistent field */
+    private Date t_zuletzt_exportiert;
+
+    /** nullable persistent field */
     private com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartneransprechpartner;
+
+    /** nullable persistent field */
+    private com.lp.server.partner.fastlanereader.generated.FLRNewslettergrund flrnewslettergrund;
 
     /** nullable persistent field */
     private com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner;
 
     /** nullable persistent field */
     private com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartnerfunktion flransprechpartnerfunktion;
-    
-    /** nullable persistent field */
-    private Short b_newsletter_empfaenger;
 
     /** full constructor */
-    public FLRAnsprechpartner(Integer partner_i_id, Integer partner_i_id_ansprechpartner, Integer i_sort, Integer ansprechpartnerfunktion_i_id, Short b_versteckt, String x_bemerkung, String c_email, String c_fax, String c_telefon, String c_handy, String c_direktfax, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartneransprechpartner, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner, com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartnerfunktion flransprechpartnerfunktion, Short b_newsletter_empfaenger) {
+    public FLRAnsprechpartner(Integer partner_i_id, Integer partner_i_id_ansprechpartner, Integer i_sort, Integer ansprechpartnerfunktion_i_id, Short b_versteckt, Short b_durchwahl, String x_bemerkung, String c_abteilung, String c_email, String c_fax, String c_telefon, String c_handy, String c_direktfax, Date t_aendern, String c_exchangeid, Date t_zuletzt_exportiert, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartneransprechpartner, com.lp.server.partner.fastlanereader.generated.FLRNewslettergrund flrnewslettergrund, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner, com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartnerfunktion flransprechpartnerfunktion) {
         this.partner_i_id = partner_i_id;
         this.partner_i_id_ansprechpartner = partner_i_id_ansprechpartner;
         this.i_sort = i_sort;
         this.ansprechpartnerfunktion_i_id = ansprechpartnerfunktion_i_id;
         this.b_versteckt = b_versteckt;
+        this.b_durchwahl = b_durchwahl;
         this.x_bemerkung = x_bemerkung;
+        this.c_abteilung = c_abteilung;
         this.c_email = c_email;
         this.c_fax = c_fax;
         this.c_telefon = c_telefon;
         this.c_handy = c_handy;
         this.c_direktfax = c_direktfax;
+        this.t_aendern = t_aendern;
+        this.c_exchangeid = c_exchangeid;
+        this.t_zuletzt_exportiert = t_zuletzt_exportiert;
         this.flrpartneransprechpartner = flrpartneransprechpartner;
+        this.flrnewslettergrund = flrnewslettergrund;
         this.flrpartner = flrpartner;
         this.flransprechpartnerfunktion = flransprechpartnerfunktion;
-        this.b_newsletter_empfaenger = b_newsletter_empfaenger;
     }
 
     /** default constructor */
     public FLRAnsprechpartner() {
     }
-    
-    public Short getB_newsletter_empfaenger() {
-		return b_newsletter_empfaenger;
-	}
-    
-    public void setB_newsletter_empfaenger(Short b_newsletter_empfaenger) {
-		this.b_newsletter_empfaenger = b_newsletter_empfaenger;
-	}
 
     public Integer getI_id() {
         return this.i_id;
@@ -166,12 +147,28 @@ public class FLRAnsprechpartner implements Serializable {
         this.b_versteckt = b_versteckt;
     }
 
+    public Short getB_durchwahl() {
+        return this.b_durchwahl;
+    }
+
+    public void setB_durchwahl(Short b_durchwahl) {
+        this.b_durchwahl = b_durchwahl;
+    }
+
     public String getX_bemerkung() {
         return this.x_bemerkung;
     }
 
     public void setX_bemerkung(String x_bemerkung) {
         this.x_bemerkung = x_bemerkung;
+    }
+
+    public String getC_abteilung() {
+        return this.c_abteilung;
+    }
+
+    public void setC_abteilung(String c_abteilung) {
+        this.c_abteilung = c_abteilung;
     }
 
     public String getC_email() {
@@ -214,12 +211,44 @@ public class FLRAnsprechpartner implements Serializable {
         this.c_direktfax = c_direktfax;
     }
 
+    public Date getT_aendern() {
+        return this.t_aendern;
+    }
+
+    public void setT_aendern(Date t_aendern) {
+        this.t_aendern = t_aendern;
+    }
+
+    public String getC_exchangeid() {
+        return this.c_exchangeid;
+    }
+
+    public void setC_exchangeid(String c_exchangeid) {
+        this.c_exchangeid = c_exchangeid;
+    }
+
+    public Date getT_zuletzt_exportiert() {
+        return this.t_zuletzt_exportiert;
+    }
+
+    public void setT_zuletzt_exportiert(Date t_zuletzt_exportiert) {
+        this.t_zuletzt_exportiert = t_zuletzt_exportiert;
+    }
+
     public com.lp.server.partner.fastlanereader.generated.FLRPartner getFlrpartneransprechpartner() {
         return this.flrpartneransprechpartner;
     }
 
     public void setFlrpartneransprechpartner(com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartneransprechpartner) {
         this.flrpartneransprechpartner = flrpartneransprechpartner;
+    }
+
+    public com.lp.server.partner.fastlanereader.generated.FLRNewslettergrund getFlrnewslettergrund() {
+        return this.flrnewslettergrund;
+    }
+
+    public void setFlrnewslettergrund(com.lp.server.partner.fastlanereader.generated.FLRNewslettergrund flrnewslettergrund) {
+        this.flrnewslettergrund = flrnewslettergrund;
     }
 
     public com.lp.server.partner.fastlanereader.generated.FLRPartner getFlrpartner() {

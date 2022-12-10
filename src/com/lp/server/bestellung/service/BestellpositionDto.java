@@ -37,10 +37,12 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
 import com.lp.service.BelegpositionDto;
 
-public class BestellpositionDto extends BelegpositionDto implements
-		Serializable {
+@HvDtoLogClass(name = HvDtoLogClass.BESTELLPOSITION)
+public class BestellpositionDto extends BelegpositionDto implements Serializable, IIId {
 
 	/**
 	 * 
@@ -53,21 +55,49 @@ public class BestellpositionDto extends BelegpositionDto implements
 	private Integer mwstsatzIId;
 	private Short bMwstsatzUebersteuert;
 
+	private Short bWepinfoAnAnforderer;
+
+	public Short getBWepinfoAnAnforderer() {
+		return bWepinfoAnAnforderer;
+	}
+
+	public void setBWepinfoAnAnforderer(Short bWepinfoAnAnforderer) {
+		this.bWepinfoAnAnforderer = bWepinfoAnAnforderer;
+	}
+
 	private BigDecimal nNettoeinzelpreis;
 	private BigDecimal nRabattbetrag;
 	private BigDecimal nNettogesamtpreis;
 	private BigDecimal nNettogesamtPreisminusRabatte;
 
-	
 	private Integer lieferantIIdWennCopyInBestellvorschlag;
-	
+
 	public Integer getLieferantIIdWennCopyInBestellvorschlag() {
 		return lieferantIIdWennCopyInBestellvorschlag;
 	}
 
-	public void setLieferantIIdWennCopyInBestellvorschlag(
-			Integer lieferantIIdWennCopyInBestellvorschlag) {
+	public void setLieferantIIdWennCopyInBestellvorschlag(Integer lieferantIIdWennCopyInBestellvorschlag) {
 		this.lieferantIIdWennCopyInBestellvorschlag = lieferantIIdWennCopyInBestellvorschlag;
+	}
+
+	private BigDecimal nAnzahlgebinde;
+
+	public BigDecimal getNAnzahlgebinde() {
+		return nAnzahlgebinde;
+	}
+
+	public void setNAnzahlgebinde(BigDecimal nAnzahlgebinde) {
+		this.nAnzahlgebinde = nAnzahlgebinde;
+	}
+
+	private Integer gebindeIId;
+
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
 	}
 
 	private Timestamp tUebersteuerterLiefertermin;
@@ -75,6 +105,17 @@ public class BestellpositionDto extends BelegpositionDto implements
 	private Integer iBestellpositionIIdRahmenposition;
 	private String cABKommentar;
 	private String cABNummer;
+	
+	private Date tAbBelegdatum;
+
+	public Date getTAbBelegdatum() {
+		return tAbBelegdatum;
+	}
+
+	public void setTAbBelegdatum(Date tAbBelegdatum) {
+		this.tAbBelegdatum = tAbBelegdatum;
+	}
+	
 	private Date tAuftragsbestaetigungstermin;
 
 	private BigDecimal nFixkosten;
@@ -89,14 +130,23 @@ public class BestellpositionDto extends BelegpositionDto implements
 	private Timestamp tLieferterminbestaetigt;
 	private Integer lossollmaterialIId;
 
+	private BigDecimal bdZeilenummeOhneMaterialzuschlag_NOT_IN_DB;
 	
+	public BigDecimal getBdZeilensummeOhneMaterialzuschlag_NOT_IN_DB() {
+		return bdZeilenummeOhneMaterialzuschlag_NOT_IN_DB;
+	}
+
+	public void setBdZeilensummeOhneMaterialzuschlag_NOT_IN_DB(BigDecimal bdZeilenummeOhneMaterialzuschlag_NOT_IN_DB) {
+		this.bdZeilenummeOhneMaterialzuschlag_NOT_IN_DB = bdZeilenummeOhneMaterialzuschlag_NOT_IN_DB;
+	}
+
 	private Double fMindestbestellmenge_NOT_IN_DB;
+
 	public Double getfMindestbestellmenge_NOT_IN_DB() {
 		return fMindestbestellmenge_NOT_IN_DB;
 	}
 
-	public void setfMindestbestellmenge_NOT_IN_DB(
-			Double fMindestbestellmenge_NOT_IN_DB) {
+	public void setfMindestbestellmenge_NOT_IN_DB(Double fMindestbestellmenge_NOT_IN_DB) {
 		this.fMindestbestellmenge_NOT_IN_DB = fMindestbestellmenge_NOT_IN_DB;
 	}
 
@@ -104,13 +154,12 @@ public class BestellpositionDto extends BelegpositionDto implements
 		return nVerpackungseinheit_NOT_IN_DB;
 	}
 
-	public void setnVerpackungseinheit_NOT_IN_DB(
-			BigDecimal nVerpackungseinheit_NOT_IN_DB) {
+	public void setnVerpackungseinheit_NOT_IN_DB(BigDecimal nVerpackungseinheit_NOT_IN_DB) {
 		this.nVerpackungseinheit_NOT_IN_DB = nVerpackungseinheit_NOT_IN_DB;
 	}
 
 	private BigDecimal nVerpackungseinheit_NOT_IN_DB;
-	
+
 	public Integer getLossollmaterialIId() {
 		return lossollmaterialIId;
 	}
@@ -123,8 +172,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		return personalIIdLieferterminbestaetigt;
 	}
 
-	public void setPersonalIIdLieferterminbestaetigt(
-			Integer personalIIdLieferterminbestaetigt) {
+	public void setPersonalIIdLieferterminbestaetigt(Integer personalIIdLieferterminbestaetigt) {
 		this.personalIIdLieferterminbestaetigt = personalIIdLieferterminbestaetigt;
 	}
 
@@ -176,8 +224,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		return cABKommentar;
 	}
 
-	public void setTAuftragsbestaetigungstermin(
-			Date tAuftragsbestaetigungstermin) {
+	public void setTAuftragsbestaetigungstermin(Date tAuftragsbestaetigungstermin) {
 		this.tAuftragsbestaetigungstermin = tAuftragsbestaetigungstermin;
 	}
 
@@ -189,8 +236,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		return super.getBelegIId();
 	}
 
-	public void setIBestellpositionIIdRahmenposition(
-			Integer iBestellpositionIIdRahmenposition) {
+	public void setIBestellpositionIIdRahmenposition(Integer iBestellpositionIIdRahmenposition) {
 		this.iBestellpositionIIdRahmenposition = iBestellpositionIIdRahmenposition;
 	}
 
@@ -204,12 +250,11 @@ public class BestellpositionDto extends BelegpositionDto implements
 
 	/**
 	 * @deprecated bitte {@link #getPositionsartCNr()} benutzen
-	 */	
+	 */
 	public String getBestellpositionartCNr() {
 		return super.getPositionsartCNr();
 	}
 
-	
 	/**
 	 * @deprecated bitte {@link #setPositionsartCNr(String)} benutzen
 	 * @param bestellpositionartCNr
@@ -294,8 +339,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		return tUebersteuerterLiefertermin;
 	}
 
-	public void setTUebersteuerterLiefertermin(
-			Timestamp tUebersteuerterLiefertermin) {
+	public void setTUebersteuerterLiefertermin(Timestamp tUebersteuerterLiefertermin) {
 		this.tUebersteuerterLiefertermin = tUebersteuerterLiefertermin;
 	}
 
@@ -303,8 +347,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		return tManuellvollstaendiggeliefert;
 	}
 
-	public void setTManuellvollstaendiggeliefert(
-			Timestamp tManuellvollstaendiggeliefert) {
+	public void setTManuellvollstaendiggeliefert(Timestamp tManuellvollstaendiggeliefert) {
 		this.tManuellvollstaendiggeliefert = tManuellvollstaendiggeliefert;
 	}
 
@@ -320,8 +363,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		return nNettogesamtPreisminusRabatte;
 	}
 
-	public void setNNettogesamtPreisminusRabatte(
-			BigDecimal nNettogesamtPreisminusRabatte) {
+	public void setNNettogesamtPreisminusRabatte(BigDecimal nNettogesamtPreisminusRabatte) {
 		this.nNettogesamtPreisminusRabatte = nNettogesamtPreisminusRabatte;
 	}
 
@@ -373,16 +415,14 @@ public class BestellpositionDto extends BelegpositionDto implements
 			return false;
 		}
 		BestellpositionDto that = (BestellpositionDto) obj;
-		if (!(that.getIId() == null ? this.getIId() == null : that.getIId()
-				.equals(this.getIId()))) {
+		if (!(that.getIId() == null ? this.getIId() == null : that.getIId().equals(this.getIId()))) {
 			return false;
 		}
-		if (!(that.getBelegIId() == null ? this.getBelegIId() == null : that
-				.getBelegIId().equals(this.getBelegIId()))) {
+		if (!(that.getBelegIId() == null ? this.getBelegIId() == null
+				: that.getBelegIId().equals(this.getBelegIId()))) {
 			return false;
 		}
-		if (!(that.getISort() == null ? this.getISort() == null : that
-				.getISort().equals(this.getISort()))) {
+		if (!(that.getISort() == null ? this.getISort() == null : that.getISort().equals(this.getISort()))) {
 			return false;
 		}
 		if (!(that.getPositionsartCNr() == null ? this.getPositionsartCNr() == null
@@ -390,55 +430,46 @@ public class BestellpositionDto extends BelegpositionDto implements
 			return false;
 		}
 		if (!(that.bestellpositionstatusCNr == null ? this.bestellpositionstatusCNr == null
-				: that.bestellpositionstatusCNr
-						.equals(this.bestellpositionstatusCNr))) {
+				: that.bestellpositionstatusCNr.equals(this.bestellpositionstatusCNr))) {
 			return false;
 		}
 		if (!(that.getArtikelIId() == null ? this.getArtikelIId() == null
 				: that.getArtikelIId().equals(this.getArtikelIId()))) {
 			return false;
 		}
-		if (!(that.getCBez() == null ? this.getCBez() == null : that.getCBez()
-				.equals(this.getCBez()))) {
+		if (!(that.getCBez() == null ? this.getCBez() == null : that.getCBez().equals(this.getCBez()))) {
 			return false;
 		}
 		if (!(that.getCZusatzbez() == null ? this.getCZusatzbez() == null
 				: that.getCZusatzbez().equals(this.getCZusatzbez()))) {
 			return false;
 		}
-		if (!(that.getBArtikelbezeichnunguebersteuert() == null ? this
-				.getBArtikelbezeichnunguebersteuert() == null : that
-				.getBArtikelbezeichnunguebersteuert().equals(
-						this.getBArtikelbezeichnunguebersteuert()))) {
+		if (!(that.getBArtikelbezeichnunguebersteuert() == null ? this.getBArtikelbezeichnunguebersteuert() == null
+				: that.getBArtikelbezeichnunguebersteuert().equals(this.getBArtikelbezeichnunguebersteuert()))) {
 			return false;
 		}
 		if (!(that.getXTextinhalt() == null ? this.getXTextinhalt() == null
 				: that.getXTextinhalt().equals(this.getXTextinhalt()))) {
 			return false;
 		}
-		if (!(that.nOffeneMenge == null ? this.nOffeneMenge == null
-				: that.nOffeneMenge.equals(this.nOffeneMenge))) {
+		if (!(that.nOffeneMenge == null ? this.nOffeneMenge == null : that.nOffeneMenge.equals(this.nOffeneMenge))) {
 			return false;
 		}
-		if (!(that.getNMenge() == null ? this.getNMenge() == null : that
-				.getNMenge().equals(this.getNMenge()))) {
+		if (!(that.getNMenge() == null ? this.getNMenge() == null : that.getNMenge().equals(this.getNMenge()))) {
 			return false;
 		}
 		if (!(that.getEinheitCNr() == null ? this.getEinheitCNr() == null
 				: that.getEinheitCNr().equals(this.getEinheitCNr()))) {
 			return false;
 		}
-		if (!(that.dRabattsatz == null ? this.dRabattsatz == null
-				: that.dRabattsatz.equals(this.dRabattsatz))) {
+		if (!(that.dRabattsatz == null ? this.dRabattsatz == null : that.dRabattsatz.equals(this.dRabattsatz))) {
 			return false;
 		}
 		if (!(that.bRabattsatzUebersteuert == null ? this.bRabattsatzUebersteuert == null
-				: that.bRabattsatzUebersteuert
-						.equals(this.bRabattsatzUebersteuert))) {
+				: that.bRabattsatzUebersteuert.equals(this.bRabattsatzUebersteuert))) {
 			return false;
 		}
-		if (!(that.mwstsatzIId == null ? this.mwstsatzIId == null
-				: that.mwstsatzIId.equals(this.mwstsatzIId))) {
+		if (!(that.mwstsatzIId == null ? this.mwstsatzIId == null : that.mwstsatzIId.equals(this.mwstsatzIId))) {
 			return false;
 		}
 		if (!(that.bMwstsatzUebersteuert == null ? this.bMwstsatzUebersteuert == null
@@ -458,30 +489,24 @@ public class BestellpositionDto extends BelegpositionDto implements
 			return false;
 		}
 		if (!(that.tUebersteuerterLiefertermin == null ? this.tUebersteuerterLiefertermin == null
-				: that.tUebersteuerterLiefertermin
-						.equals(this.tUebersteuerterLiefertermin))) {
+				: that.tUebersteuerterLiefertermin.equals(this.tUebersteuerterLiefertermin))) {
 			return false;
 		}
-		if (!(that.bDrucken == null ? this.bDrucken == null : that.bDrucken
-				.equals(this.bDrucken))) {
+		if (!(that.bDrucken == null ? this.bDrucken == null : that.bDrucken.equals(this.bDrucken))) {
 			return false;
 		}
 		if (!(that.iBestellpositionIIdRahmenposition == null ? this.iBestellpositionIIdRahmenposition == null
-				: that.iBestellpositionIIdRahmenposition
-						.equals(this.iBestellpositionIIdRahmenposition))) {
+				: that.iBestellpositionIIdRahmenposition.equals(this.iBestellpositionIIdRahmenposition))) {
 			return false;
 		}
 		if (!(that.tAuftragsbestaetigungstermin == null ? this.tAuftragsbestaetigungstermin == null
-				: that.tAuftragsbestaetigungstermin
-						.equals(this.tAuftragsbestaetigungstermin))) {
+				: that.tAuftragsbestaetigungstermin.equals(this.tAuftragsbestaetigungstermin))) {
 			return false;
 		}
-		if (!(that.cABKommentar == null ? this.cABKommentar == null
-				: that.cABKommentar.equals(this.cABKommentar))) {
+		if (!(that.cABKommentar == null ? this.cABKommentar == null : that.cABKommentar.equals(this.cABKommentar))) {
 			return false;
 		}
-		if (!(that.cABNummer == null ? this.cABNummer == null : that.cABNummer
-				.equals(this.cABNummer))) {
+		if (!(that.cABNummer == null ? this.cABNummer == null : that.cABNummer.equals(this.cABNummer))) {
 			return false;
 		}
 
@@ -491,8 +516,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		}
 
 		if (!(that.personalIIdAbterminAendern == null ? this.personalIIdAbterminAendern == null
-				: that.personalIIdAbterminAendern
-						.equals(this.personalIIdAbterminAendern))) {
+				: that.personalIIdAbterminAendern.equals(this.personalIIdAbterminAendern))) {
 			return false;
 		}
 
@@ -514,8 +538,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		result = 37 * result + this.getArtikelIId().hashCode();
 		result = 37 * result + this.getCBez().hashCode();
 		result = 37 * result + this.getCZusatzbez().hashCode();
-		result = 37 * result
-				+ this.getBArtikelbezeichnunguebersteuert().hashCode();
+		result = 37 * result + this.getBArtikelbezeichnunguebersteuert().hashCode();
 		result = 37 * result + this.getXTextinhalt().hashCode();
 		result = 37 * result + this.nOffeneMenge.hashCode();
 		result = 37 * result + this.getNMenge().hashCode();
@@ -529,8 +552,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 		result = 37 * result + this.nNettogesamtpreis.hashCode();
 		result = 37 * result + this.tUebersteuerterLiefertermin.hashCode();
 		result = 37 * result + this.bDrucken.hashCode();
-		result = 37 * result
-				+ this.iBestellpositionIIdRahmenposition.hashCode();
+		result = 37 * result + this.iBestellpositionIIdRahmenposition.hashCode();
 		result = 37 * result + this.tAuftragsbestaetigungstermin.hashCode();
 		result = 37 * result + this.cABKommentar.hashCode();
 		result = 37 * result + this.cABNummer.hashCode();
@@ -544,8 +566,7 @@ public class BestellpositionDto extends BelegpositionDto implements
 
 		String returnString = super.toString();
 
-		returnString += ", bestellpositionstatusCNr: "
-				+ bestellpositionstatusCNr;
+		returnString += ", bestellpositionstatusCNr: " + bestellpositionstatusCNr;
 		returnString += ", nOffeneMenge: " + nOffeneMenge;
 		returnString += ", dRabattsatz: " + dRabattsatz;
 		returnString += ", bRabattsatzUebersteuert: " + bRabattsatzUebersteuert;
@@ -554,18 +575,14 @@ public class BestellpositionDto extends BelegpositionDto implements
 		returnString += ", nNettoeinzelpreis: " + nNettoeinzelpreis;
 		returnString += ", nRabattbetrag: " + nRabattbetrag;
 		returnString += ", nNettogesamtpreis: " + nNettogesamtpreis;
-		returnString += ", tUebersteuerterLiefertermin: "
-				+ tUebersteuerterLiefertermin;
+		returnString += ", tUebersteuerterLiefertermin: " + tUebersteuerterLiefertermin;
 		returnString += ", bDrucken: " + bDrucken;
-		returnString += ", iBestellpositionIIdRahmenposition: "
-				+ iBestellpositionIIdRahmenposition;
-		returnString += ", tAuftragsbestaetigungstermin: "
-				+ tAuftragsbestaetigungstermin;
+		returnString += ", iBestellpositionIIdRahmenposition: " + iBestellpositionIIdRahmenposition;
+		returnString += ", tAuftragsbestaetigungstermin: " + tAuftragsbestaetigungstermin;
 		returnString += ", cABKommentar: " + cABKommentar;
 		returnString += ", cABNummer: " + cABNummer;
 		returnString += ", tAbTerminAendern: " + tAbterminAendern;
-		returnString += ", personalIIdAbTerminAendern: "
-				+ personalIIdAbterminAendern;
+		returnString += ", personalIIdAbTerminAendern: " + personalIIdAbterminAendern;
 		returnString += ", tAbursprungstermin: " + tAbursprungstermin;
 		return returnString;
 	}
@@ -580,14 +597,12 @@ public class BestellpositionDto extends BelegpositionDto implements
 		// iId, Bezug auf Bestellung, Rahmenposition null
 		bestellpositionDto.setISort(this.getISort());
 		bestellpositionDto.setPositionsartCNr(this.getPositionsartCNr());
-		bestellpositionDto.setBestellpositionstatusCNr(this
-				.getBestellpositionstatusCNr());
+		bestellpositionDto.setBestellpositionstatusCNr(this.getBestellpositionstatusCNr());
 
 		// bestellpositionstatus wird nicht verwendet
 		bestellpositionDto.setArtikelIId(this.getArtikelIId());
 		bestellpositionDto.setCBez(this.getCBez());
-		bestellpositionDto.setBArtikelbezeichnunguebersteuert(this
-				.getBArtikelbezeichnunguebersteuert());
+		bestellpositionDto.setBArtikelbezeichnunguebersteuert(this.getBArtikelbezeichnunguebersteuert());
 		bestellpositionDto.setXTextinhalt(this.getXTextinhalt());
 		bestellpositionDto.setMediastandardIId(this.getMediastandardIId());
 		bestellpositionDto.setCZusatzbez(this.getCZusatzbez());
@@ -617,6 +632,9 @@ public class BestellpositionDto extends BelegpositionDto implements
 		bestellpositionDto.tAbterminAendern = this.tAbterminAendern;
 		bestellpositionDto.personalIIdAbterminAendern = this.personalIIdAbterminAendern;
 		bestellpositionDto.tAbursprungstermin = this.tAbursprungstermin;
+
+		bestellpositionDto.gebindeIId = this.gebindeIId;
+		bestellpositionDto.nAnzahlgebinde = this.nAnzahlgebinde;
 
 		return bestellpositionDto;
 	}

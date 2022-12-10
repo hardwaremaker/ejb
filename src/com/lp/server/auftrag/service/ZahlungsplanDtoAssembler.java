@@ -46,7 +46,7 @@ public class ZahlungsplanDtoAssembler {
 		if (bean != null) {
 			dto.setIId(bean.getIId());
 			dto.setAuftragIId(bean.getAuftragIId());
-			dto.setITageVorLiefertermin(bean.getITageVorLiefertermin());
+			dto.setTTermin(bean.getTTermin());
 			dto.setNBetrag(bean.getNBetrag());
 			dto.setNBetragUrsprung(bean.getNBetragUrsprung());
 		}

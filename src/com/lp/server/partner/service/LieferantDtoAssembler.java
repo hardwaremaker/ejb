@@ -90,11 +90,18 @@ public class LieferantDtoAssembler {
 			lieferantDto.setPersonalIIdFreigabe(lieferant
 					.getPersonalIIdFreigabe());
 			lieferantDto.setTPersonalFreigabe(lieferant.getTPersonalFreigabe());
-			lieferantDto.setBReversecharge(lieferant.getBReversecharge());
+//			lieferantDto.setBReversecharge(lieferant.getBReversecharge());
+//			lieferantDto.setBReversecharge(Helper.getShortFalse()) ;
 			lieferantDto.setBIgErwerb(lieferant.getBIgErwerb());
 			lieferantDto.setLagerIIdZubuchungslager(lieferant
 					.getLagerIIdZubuchungslager());
 			lieferantDto.setBZollimportpapier(lieferant.getBZollimportpapier());
+			lieferantDto.setBVersteckterkunde(lieferant.getBVersteckterkunde());
+			lieferantDto.setReversechargeartId(lieferant.getReversechargeartId());
+			lieferantDto.setCFremdsystemnr(lieferant.getCFremdsystemnr());
+			lieferantDto.setBZuschlagInklusive(lieferant.getBZuschlagInklusive());
+			lieferantDto.setILiefertag(lieferant.getILiefertag());
+			lieferantDto.setPartnerIIdLieferadresse(lieferant.getPartnerIIdLieferadresse());
 		}
 		return lieferantDto;
 	}

@@ -34,7 +34,10 @@ package com.lp.server.benutzer.service;
 
 import java.io.Serializable;
 
-public class FertigungsgrupperolleDto implements Serializable {
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
+@HvDtoLogClass(name = HvDtoLogClass.FERTIGUNGSGRUPPEROLLE)
+public class FertigungsgrupperolleDto implements Serializable,IIId{
 
 	/**
 	 * 

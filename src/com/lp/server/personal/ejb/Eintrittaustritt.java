@@ -42,9 +42,10 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+@NamedQueries({
 		@NamedQuery(name = "EintrittaustrittfindByPersonalIIdTEintritt", query = "SELECT OBJECT(C) FROM Eintrittaustritt c WHERE c.personalIId = ?1 AND c.tEintritt = ?2"),
 		@NamedQuery(name = "EintrittaustrittfindLetztenEintrittBisDatum", query = "SELECT OBJECT(C) FROM Eintrittaustritt c WHERE c.personalIId = ?1 AND c.tEintritt <= ?2 ORDER BY c.tEintritt DESC"),
+		@NamedQuery(name = "EintrittaustrittfindNaechstenEintrittAbDatum", query = "SELECT OBJECT(C) FROM Eintrittaustritt c WHERE c.personalIId = ?1 AND c.tEintritt > ?2 ORDER BY c.tEintritt ASC"),
 		@NamedQuery(name = "EintrittaustrittfindByPersonalIId", query = "SELECT OBJECT(C) FROM Eintrittaustritt c WHERE c.personalIId = ?1") })
 @Entity
 @Table(name = "PERS_EINTRITTAUSTRITT")
@@ -65,16 +66,30 @@ public class Eintrittaustritt implements Serializable {
 	@Column(name = "PERSONAL_I_ID")
 	private Integer personalIId;
 
+	@Column(name = "B_WIEDEREINTRITT")
+	private Short bWiedereintritt;
+	
+	public Short getBWiedereintritt() {
+		return bWiedereintritt;
+	}
+
+	public void setBWiedereintritt(Short bWiedereintritt) {
+		this.bWiedereintritt = bWiedereintritt;
+	}
+
+	
 	private static final long serialVersionUID = 1L;
 
 	public Eintrittaustritt() {
 		super();
 	}
 
-	public Eintrittaustritt(Integer id, Integer personalIId, Timestamp eintritt) {
+	public Eintrittaustritt(Integer id, Integer personalIId, Timestamp eintritt, Short bWiedereintritt) {
 		setIId(id);
 		setPersonalIId(personalIId);
 		setTEintritt(eintritt);
+		setBWiedereintritt(bWiedereintritt);
+
 	}
 
 	public Integer getIId() {

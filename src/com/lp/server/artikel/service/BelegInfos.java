@@ -71,9 +71,48 @@ public class BelegInfos implements Serializable, Cloneable {
 		this.verleihtage = verleihtage;
 	}
 
+	private String zusatz;
+	
+	public String getZusatz() {
+		return zusatz;
+	}
+
+	public void setZusatz(String zusatz) {
+		this.zusatz = zusatz;
+	}
+
+	private Integer belegartpositionIId;
+	
+	public Integer getBelegartpositionIId() {
+		return belegartpositionIId;
+	}
+
+	public void setBelegartpositionIId(Integer belegartpositionIId) {
+		this.belegartpositionIId = belegartpositionIId;
+	}
+
+	private String belegart;
+	public String getBelegart() {
+		return belegart;
+	}
+
+	public void setBelegart(String belegart) {
+		this.belegart = belegart;
+	}
+
 	private String belegnummer;
 	private String kundeLieferant;
 	private String Belegbezeichnung;
+
+	private String mandantCNr;
+	
+	public String getMandantCNr() {
+		return mandantCNr;
+	}
+
+	public void setMandantCNr(String mandantCNr) {
+		this.mandantCNr = mandantCNr;
+	}
 
 	public String getBelegnummer() {
 		return belegnummer;

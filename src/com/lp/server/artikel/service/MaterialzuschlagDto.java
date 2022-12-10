@@ -36,9 +36,14 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import com.lp.server.artikel.ejb.Material;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.util.IIId;
 import com.lp.util.Helper;
 
-public class MaterialzuschlagDto implements Serializable {
+@HvDtoLogClass(name = HvDtoLogClass.MATERIALZUSCHLAG)
+public class MaterialzuschlagDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
@@ -49,6 +54,11 @@ public class MaterialzuschlagDto implements Serializable {
 	private BigDecimal nZuschlag;
 	private Integer iId;
 
+	
+	public BigDecimal nMaterialbasisWennMaterialAusKundematerial=null;
+	public Integer materialIIdWennMaterialAusKundematerial=null;
+	
+	@HvDtoLogIdCnr(entityClass = Material.class)
 	public Integer getMaterialIId() {
 		return materialIId;
 	}

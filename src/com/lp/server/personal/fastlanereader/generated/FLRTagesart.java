@@ -56,10 +56,10 @@ public class FLRTagesart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> tagesartsprset;
+	private Set<FLRTagesartspr> tagesartsprset;
 
 	/** full constructor */
-	public FLRTagesart(String c_nr, Integer i_sort, Set<?> tagesartsprset) {
+	public FLRTagesart(String c_nr, Integer i_sort, Set<FLRTagesartspr> tagesartsprset) {
 		this.c_nr = c_nr;
 		this.i_sort = i_sort;
 		this.tagesartsprset = tagesartsprset;
@@ -70,7 +70,7 @@ public class FLRTagesart implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRTagesart(Set<?> tagesartsprset) {
+	public FLRTagesart(Set<FLRTagesartspr> tagesartsprset) {
 		this.tagesartsprset = tagesartsprset;
 	}
 
@@ -98,11 +98,11 @@ public class FLRTagesart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getTagesartsprset() {
+	public Set<FLRTagesartspr> getTagesartsprset() {
 		return this.tagesartsprset;
 	}
 
-	public void setTagesartsprset(Set<?> tagesartsprset) {
+	public void setTagesartsprset(Set<FLRTagesartspr> tagesartsprset) {
 		this.tagesartsprset = tagesartsprset;
 	}
 

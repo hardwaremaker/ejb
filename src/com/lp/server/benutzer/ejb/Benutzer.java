@@ -42,9 +42,11 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries( { @NamedQuery(name = "BenutzerfindByCBenutzerkennung", query = "SELECT OBJECT(C) FROM Benutzer c WHERE c.cBenutzerkennung = ?1") })
 @Entity
-@Table(name = "PERS_BENUTZER")
+@Table(name = ITablenames.PERS_BENUTZER)
 public class Benutzer implements Serializable {
 	@Id
 	@Column(name = "I_ID")

@@ -50,6 +50,16 @@ public class EintrittaustrittDto implements Serializable {
 	private Timestamp tAustritt;
 	private String cAustrittsgrund;
 
+	private Short bWiedereintritt;
+
+	public Short getBWiedereintritt() {
+		return bWiedereintritt;
+	}
+
+	public void setBWiedereintritt(Short bWiedereintritt) {
+		this.bWiedereintritt = bWiedereintritt;
+	}
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -101,16 +111,13 @@ public class EintrittaustrittDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.personalIId == null ? this.personalIId == null
-				: that.personalIId.equals(this.personalIId))) {
+		if (!(that.personalIId == null ? this.personalIId == null : that.personalIId.equals(this.personalIId))) {
 			return false;
 		}
-		if (!(that.tEintritt == null ? this.tEintritt == null : that.tEintritt
-				.equals(this.tEintritt))) {
+		if (!(that.tEintritt == null ? this.tEintritt == null : that.tEintritt.equals(this.tEintritt))) {
 			return false;
 		}
-		if (!(that.tAustritt == null ? this.tAustritt == null : that.tAustritt
-				.equals(this.tAustritt))) {
+		if (!(that.tAustritt == null ? this.tAustritt == null : that.tAustritt.equals(this.tAustritt))) {
 			return false;
 		}
 		if (!(that.cAustrittsgrund == null ? this.cAustrittsgrund == null

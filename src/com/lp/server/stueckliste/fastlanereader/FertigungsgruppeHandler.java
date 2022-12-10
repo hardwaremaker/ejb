@@ -54,20 +54,26 @@ import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
 
 public class FertigungsgruppeHandler extends UseCaseHandler {
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
-
+	private boolean showMandant = false;
+	
+	public FertigungsgruppeHandler() {
+		super();
+	}
+	
+	public FertigungsgruppeHandler(boolean showMandant) {
+		super();
+		this.showMandant = showMandant;
+	}
+	
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit();
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -81,13 +87,17 @@ public class FertigungsgruppeHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
+
 			while (resultListIterator.hasNext()) {
 				FLRFertigungsgruppe fertigungsgruppe = (FLRFertigungsgruppe) resultListIterator
 						.next();
 				rows[row][col++] = fertigungsgruppe.getI_id();
 				rows[row][col++] = fertigungsgruppe.getC_bez();
-				rows[row++][col++] = fertigungsgruppe.getI_sort();
-
+				rows[row][col++] = fertigungsgruppe.getI_sort();
+				if(showMandant) {
+					rows[row][col++] = fertigungsgruppe.getMandant_c_nr();
+				}
+				row++;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -95,38 +105,15 @@ public class FertigungsgruppeHandler extends UseCaseHandler {
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			sessionClose(session);
 		}
 		return result;
 	}
 
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
-		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
-		}
-		return rowCount;
+		String queryString = "select count(*) " + this.getFromClause()
+				+ this.buildWhereClause();
+		return getRowCountFromDataBaseByQuery(queryString);
 	}
 
 	/**
@@ -268,11 +255,7 @@ public class FertigungsgruppeHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-				}
+				sessionClose(session);
 			}
 		}
 
@@ -290,55 +273,69 @@ public class FertigungsgruppeHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] {
-							Integer.class,
-							String.class,
-							Integer.class
-					},
-					
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
-							getTextRespectUISpr("lp.sort", mandantCNr, locUI)
-					},
-					
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST
-					},
-					
-					new String[] {
-							"id",
-							"c_bez",
-							"i_sort"
-					})
-			);
+			setTableInfo(showMandant
+					? createTableInfoMandant(mandantCNr, locUI)
+					: createTableInfo(mandantCNr, locUI));
 		}
 
 		return super.getTableInfo();
 	}
+
+	private TableInfo createTableInfo(String mandantCnr, Locale locale) {
+		return new TableInfo(
+				new Class[] {
+						Integer.class,
+						String.class,
+						Integer.class
+				},
+				
+				new String[] {
+						"Id",
+						getTextRespectUISpr("lp.bezeichnung", mandantCnr, locale),
+						getTextRespectUISpr("lp.sort", mandantCnr, locale)						
+				},
+				
+				new int[] {
+						-1, // diese Spalte wird ausgeblendet
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST
+				},
+				
+				new String[] {
+						"id",
+						"c_bez",
+						"i_sort"
+				});	
+	}
+	
+	private TableInfo createTableInfoMandant(String mandantCnr, Locale locale) {
+		return new TableInfo(
+				new Class[] {
+						Integer.class,
+						String.class,
+						Integer.class,
+						String.class
+				},
+				
+				new String[] {
+						"Id",
+						getTextRespectUISpr("lp.bezeichnung", mandantCnr, locale),
+						getTextRespectUISpr("lp.sort", mandantCnr, locale),
+						getTextRespectUISpr("lp.mandant", mandantCnr, locale)						
+				},
+				
+				new int[] {
+						-1, // diese Spalte wird ausgeblendet
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_M
+				},
+				
+				new String[] {
+						"id",
+						"c_bez",
+						"i_sort",
+						"mandant_c_nr"
+				});	
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

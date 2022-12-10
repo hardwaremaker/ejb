@@ -40,7 +40,10 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "LagerzugangursprungfindIIdBuchungsursprungByILagerbewegungid", query = "SELECT OBJECT(C) FROM Lagerzugangursprung c WHERE c.pk.iLagerbewegungid = ?1") })
+@NamedQueries( { 
+	@NamedQuery(name = "LagerzugangursprungfindIIdBuchungsursprungByILagerbewegungid", query = "SELECT OBJECT(C) FROM Lagerzugangursprung c WHERE c.pk.iLagerbewegungid = ?1"),
+	@NamedQuery(name = LagerzugangursprungQuery.CountEntries, query = "SELECT COUNT(c.pk.iLagerbewegungid) FROM Lagerzugangursprung c")
+})
 @Entity
 @Table(name = "WW_LAGERZUGANGURSPRUNG")
 public class Lagerzugangursprung implements Serializable {

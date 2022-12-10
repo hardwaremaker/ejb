@@ -36,7 +36,16 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-public class AnsprechpartnerDto implements Serializable {
+import com.lp.server.partner.ejb.Newslettergrund;
+import com.lp.server.partner.ejb.Partner;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCBez;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.system.service.HvDtoLogIgnore;
+import com.lp.server.util.IIId;
+
+@HvDtoLogClass(name = HvDtoLogClass.ANSPRECHPARTNER)
+public class AnsprechpartnerDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
@@ -50,7 +59,7 @@ public class AnsprechpartnerDto implements Serializable {
 	private Integer iSort;
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
-	private boolean newsletterEmpfaenger;
+	private Integer newslettergrundIId;
 
 	private String cFax;
 	private String cTelefon;
@@ -69,12 +78,23 @@ public class AnsprechpartnerDto implements Serializable {
 		this.cAbteilung = cAbteilung;
 	}
 
-	public boolean isNewsletterEmpfaenger() {
-		return newsletterEmpfaenger;
+	private Short bDurchwahl;
+
+	public Short getBDurchwahl() {
+		return bDurchwahl;
 	}
 
-	public void setNewsletterEmpfaenger(boolean newsletterEmpfaenger) {
-		this.newsletterEmpfaenger = newsletterEmpfaenger;
+	public void setBDurchwahl(Short bDurchwahl) {
+		this.bDurchwahl = bDurchwahl;
+	}
+
+	@HvDtoLogIdCBez(entityClass = Newslettergrund.class)
+	public Integer getNewslettergrundIId() {
+		return newslettergrundIId;
+	}
+
+	public void setNewslettergrundIId(Integer newslettergrundIId) {
+		this.newslettergrundIId = newslettergrundIId;
 	}
 
 	public String getCFax() {
@@ -136,6 +156,7 @@ public class AnsprechpartnerDto implements Serializable {
 		this.partnerIId = partnerIId;
 	}
 
+	@HvDtoLogIdCBez(entityClass = Partner.class)
 	public Integer getPartnerIIdAnsprechpartner() {
 		return partnerIIdAnsprechpartner;
 	}
@@ -182,8 +203,19 @@ public class AnsprechpartnerDto implements Serializable {
 		return personalIIdAendern;
 	}
 
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerDto() {
 		return partnerDto;
+	}
+
+	// lt. SP7876
+	public String formatFixTitelVornameNachnameNTitel() {
+		if (partnerDto != null) {
+			return getPartnerDto().formatFixTitelVornameNachnameNTitel();
+		} else {
+			return null;
+		}
+
 	}
 
 	public Integer getAnsprechpartnerfunktionIId() {
@@ -231,34 +263,27 @@ public class AnsprechpartnerDto implements Serializable {
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
 			return false;
 		}
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId))) {
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId))) {
 			return false;
 		}
 		if (!(that.partnerIIdAnsprechpartner == null ? this.partnerIIdAnsprechpartner == null
-				: that.partnerIIdAnsprechpartner
-						.equals(this.partnerIIdAnsprechpartner))) {
+				: that.partnerIIdAnsprechpartner.equals(this.partnerIIdAnsprechpartner))) {
 			return false;
 		}
-		if (!(that.dGueltigab == null ? this.dGueltigab == null
-				: that.dGueltigab.equals(this.dGueltigab))) {
+		if (!(that.dGueltigab == null ? this.dGueltigab == null : that.dGueltigab.equals(this.dGueltigab))) {
 			return false;
 		}
-		if (!(that.iSort == null ? this.iSort == null : that.iSort
-				.equals(this.iSort))) {
+		if (!(that.iSort == null ? this.iSort == null : that.iSort.equals(this.iSort))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern))) {
 			return false;
 		}
-		if (that.newsletterEmpfaenger != this.newsletterEmpfaenger) {
-			return false;
-		}
+
 		return true;
 	}
 

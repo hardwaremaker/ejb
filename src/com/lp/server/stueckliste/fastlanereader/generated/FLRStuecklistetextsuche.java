@@ -39,7 +39,12 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 /** @author Hibernate CodeGenerator */
 public class FLRStuecklistetextsuche implements Serializable {
 
-    /** identifier field */
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	/** identifier field */
     private String i_id;
 
     /** nullable persistent field */

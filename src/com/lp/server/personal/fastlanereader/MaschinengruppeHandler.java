@@ -53,6 +53,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -103,8 +104,11 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 				FLRMaschinengruppe maschinengruppe = (FLRMaschinengruppe) resultListIterator
 						.next();
 				rows[row][col++] = maschinengruppe.getI_id();
-				rows[row++][col++] = maschinengruppe.getC_bez();
-
+				rows[row][col++] = maschinengruppe.getC_kbez();
+				rows[row][col++] = maschinengruppe.getC_bez();
+				rows[row][col++] = maschinengruppe.getFlrfertigungsgruppe().getC_bez();
+				rows[row][col++] = Helper.short2Boolean(maschinengruppe.getB_auslastungsanzeige());
+				++row;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -112,11 +116,7 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			sessionClose(session);
 		}
 		return result;
 	}
@@ -137,11 +137,7 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			sessionClose(session);
 		}
 		return rowCount;
 	}
@@ -170,6 +166,11 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
+					if("b_auslastungsanzeige".equals(filterKriterien[i].kritName)) {
+						where.append(" maschinengruppe.b_auslastungsanzeige = 1");
+						continue;
+					}
+					
 					if (filterKriterien[i].isBIgnoreCase()) {
 						where.append(" upper(maschinengruppe."
 								+ filterKriterien[i].kritName + ")");
@@ -223,12 +224,10 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("maschinengruppe."
-						+ PersonalFac.FLR_PENDLERPAUSCHALE_C_BEZ + " ASC ");
+				orderBy.append("maschinengruppe.i_sort ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("maschinengruppe."
-					+ PersonalFac.FLR_PENDLERPAUSCHALE_C_BEZ) < 0) {
+			if (orderBy.indexOf("maschinengruppe.i_sort") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -237,8 +236,7 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" maschinengruppe."
-						+ PersonalFac.FLR_PENDLERPAUSCHALE_C_BEZ + " ");
+				orderBy.append(" maschinengruppe.i_sort ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -290,11 +288,7 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-				}
+				sessionClose(session);
 			}
 		}
 
@@ -307,22 +301,30 @@ public class MaschinengruppeHandler extends UseCaseHandler {
 
 		return result;
 	}
-
+	
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class }, new String[] { "Id",
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-					
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class, String.class, String.class, String.class, Boolean.class }, 
+					new String[] { "Id",
+							getTextRespectUISpr("maschinengruppe.kurzbezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.fertigungsgruppe", mandantCNr, locUI),
+							getTextRespectUISpr("lp.mg.anzeigen", mandantCNr, locUI)},
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
-					
+							QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_S},
 					new String[] { "i_id",
-							PersonalFac.FLR_PENDLERPAUSCHALE_C_BEZ }));
-
+							"c_kbez",
+							PersonalFac.FLR_PENDLERPAUSCHALE_C_BEZ,
+							"flrfertigungsgruppe.c_bez", 
+							"b_auslastungsanzeige"}));
 		}
 
 		return super.getTableInfo();

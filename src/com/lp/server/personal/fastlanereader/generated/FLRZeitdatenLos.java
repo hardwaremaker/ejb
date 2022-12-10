@@ -1,40 +1,9 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan;
 import java.io.Serializable;
+import java.sql.Timestamp;
 import java.util.Date;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
@@ -46,7 +15,7 @@ public class FLRZeitdatenLos implements Serializable {
     private Integer i_id;
 
     /** nullable persistent field */
-    private Date t_zeit;
+    private Timestamp t_zeit;
 
     /** nullable persistent field */
     private String c_belegartnr;
@@ -70,6 +39,15 @@ public class FLRZeitdatenLos implements Serializable {
     private Integer artikel_i_id;
 
     /** nullable persistent field */
+    private Double f_verrechenbar;
+
+    /** nullable persistent field */
+    private Date t_erledigt;
+
+    /** nullable persistent field */
+    private com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt;
+
+    /** nullable persistent field */
     private com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit flrtaetigkeit;
 
     /** nullable persistent field */
@@ -81,8 +59,11 @@ public class FLRZeitdatenLos implements Serializable {
     /** nullable persistent field */
     private FLRLossollarbeitsplan flrlossollarbeitsplan;
 
+    /** nullable persistent field */
+    private com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine;
+
     /** full constructor */
-    public FLRZeitdatenLos(Date t_zeit, String c_belegartnr, Short b_taetigkeitgeaendert, Integer i_belegartid, Integer i_belegartpositionid, Date t_aendern, Integer personal_i_id, Integer artikel_i_id, com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit flrtaetigkeit, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal, FLRArtikel flrartikel, FLRLossollarbeitsplan flrlossollarbeitsplan) {
+    public FLRZeitdatenLos(Timestamp t_zeit, String c_belegartnr, Short b_taetigkeitgeaendert, Integer i_belegartid, Integer i_belegartpositionid, Date t_aendern, Integer personal_i_id, Integer artikel_i_id, Double f_verrechenbar, Date t_erledigt, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt, com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit flrtaetigkeit, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal, FLRArtikel flrartikel, FLRLossollarbeitsplan flrlossollarbeitsplan, com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine) {
         this.t_zeit = t_zeit;
         this.c_belegartnr = c_belegartnr;
         this.b_taetigkeitgeaendert = b_taetigkeitgeaendert;
@@ -91,10 +72,14 @@ public class FLRZeitdatenLos implements Serializable {
         this.t_aendern = t_aendern;
         this.personal_i_id = personal_i_id;
         this.artikel_i_id = artikel_i_id;
+        this.f_verrechenbar = f_verrechenbar;
+        this.t_erledigt = t_erledigt;
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
         this.flrtaetigkeit = flrtaetigkeit;
         this.flrpersonal = flrpersonal;
         this.flrartikel = flrartikel;
         this.flrlossollarbeitsplan = flrlossollarbeitsplan;
+        this.flrmaschine = flrmaschine;
     }
 
     /** default constructor */
@@ -109,11 +94,11 @@ public class FLRZeitdatenLos implements Serializable {
         this.i_id = i_id;
     }
 
-    public Date getT_zeit() {
+    public Timestamp getT_zeit() {
         return this.t_zeit;
     }
 
-    public void setT_zeit(Date t_zeit) {
+    public void setT_zeit(Timestamp t_zeit) {
         this.t_zeit = t_zeit;
     }
 
@@ -173,6 +158,30 @@ public class FLRZeitdatenLos implements Serializable {
         this.artikel_i_id = artikel_i_id;
     }
 
+    public Double getF_verrechenbar() {
+        return this.f_verrechenbar;
+    }
+
+    public void setF_verrechenbar(Double f_verrechenbar) {
+        this.f_verrechenbar = f_verrechenbar;
+    }
+
+    public Date getT_erledigt() {
+        return this.t_erledigt;
+    }
+
+    public void setT_erledigt(Date t_erledigt) {
+        this.t_erledigt = t_erledigt;
+    }
+
+    public com.lp.server.personal.fastlanereader.generated.FLRPersonal getFlrpersonal_erledigt() {
+        return this.flrpersonal_erledigt;
+    }
+
+    public void setFlrpersonal_erledigt(com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt) {
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
+    }
+
     public com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit getFlrtaetigkeit() {
         return this.flrtaetigkeit;
     }
@@ -203,6 +212,14 @@ public class FLRZeitdatenLos implements Serializable {
 
     public void setFlrlossollarbeitsplan(FLRLossollarbeitsplan flrlossollarbeitsplan) {
         this.flrlossollarbeitsplan = flrlossollarbeitsplan;
+    }
+
+    public com.lp.server.personal.fastlanereader.generated.FLRMaschine getFlrmaschine() {
+        return this.flrmaschine;
+    }
+
+    public void setFlrmaschine(com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine) {
+        this.flrmaschine = flrmaschine;
     }
 
     public String toString() {

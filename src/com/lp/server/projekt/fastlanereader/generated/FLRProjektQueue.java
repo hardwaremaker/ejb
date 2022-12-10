@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.projekt.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
@@ -37,18 +5,14 @@ import com.lp.server.partner.fastlanereader.generated.FLRPartner;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
 /** @author Hibernate CodeGenerator */
 public class FLRProjektQueue implements Serializable {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-
-	/** identifier field */
+    /** identifier field */
     private Integer i_id;
 
     /** nullable persistent field */
@@ -94,7 +58,7 @@ public class FLRProjektQueue implements Serializable {
     private Integer ansprechpartner_i_id;
 
     /** nullable persistent field */
-    private Short b_verrechenbar;
+    private Integer i_verrechenbar;
 
     /** nullable persistent field */
     private Date t_anlegen;
@@ -132,8 +96,11 @@ public class FLRProjektQueue implements Serializable {
     /** nullable persistent field */
     private com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche;
 
+    /** persistent field */
+    private Set technikerset;
+
     /** full constructor */
-    public FLRProjektQueue(String c_nr, String kategorie_c_nr, String c_titel, Integer personal_i_id_erzeuger, Integer personal_i_id_zugewiesener, Integer personal_i_id_erlediger, Integer partner_i_id, String typ_c_nr, Integer i_prio, String status_c_nr, String mandant_c_nr, String kontaktart_c_nr, Date t_zielwunschdatum, String x_freetext, Integer ansprechpartner_i_id, Short b_verrechenbar, Date t_anlegen, Date t_aendern, Double d_dauer, Date t_zeit, Date t_erledigungsdatum, Integer i_sort, FLRPersonal flrpersonalZugewiesener, FLRPersonal flrpersonalErzeuger, FLRPersonal flrpersonalErlediger, FLRAnsprechpartner flransprechpartner, FLRPartner flrpartner, com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche) {
+    public FLRProjektQueue(String c_nr, String kategorie_c_nr, String c_titel, Integer personal_i_id_erzeuger, Integer personal_i_id_zugewiesener, Integer personal_i_id_erlediger, Integer partner_i_id, String typ_c_nr, Integer i_prio, String status_c_nr, String mandant_c_nr, Date t_zielwunschdatum, String x_freetext, Integer ansprechpartner_i_id, Short b_verrechenbar, Date t_anlegen, Date t_aendern, Double d_dauer, Date t_zeit, Date t_erledigungsdatum, Integer i_sort, FLRPersonal flrpersonalZugewiesener, FLRPersonal flrpersonalErzeuger, FLRPersonal flrpersonalErlediger, FLRAnsprechpartner flransprechpartner, FLRPartner flrpartner, com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche, Set technikerset) {
         this.c_nr = c_nr;
         this.kategorie_c_nr = kategorie_c_nr;
         this.c_titel = c_titel;
@@ -148,7 +115,7 @@ public class FLRProjektQueue implements Serializable {
         this.t_zielwunschdatum = t_zielwunschdatum;
         this.x_freetext = x_freetext;
         this.ansprechpartner_i_id = ansprechpartner_i_id;
-        this.b_verrechenbar = b_verrechenbar;
+        this.i_verrechenbar = i_verrechenbar;
         this.t_anlegen = t_anlegen;
         this.t_aendern = t_aendern;
         this.d_dauer = d_dauer;
@@ -161,10 +128,16 @@ public class FLRProjektQueue implements Serializable {
         this.flransprechpartner = flransprechpartner;
         this.flrpartner = flrpartner;
         this.flrprojekttextsuche = flrprojekttextsuche;
+        this.technikerset = technikerset;
     }
 
     /** default constructor */
     public FLRProjektQueue() {
+    }
+
+    /** minimal constructor */
+    public FLRProjektQueue(Set technikerset) {
+        this.technikerset = technikerset;
     }
 
     public Integer getI_id() {
@@ -287,12 +260,12 @@ public class FLRProjektQueue implements Serializable {
         this.ansprechpartner_i_id = ansprechpartner_i_id;
     }
 
-    public Short getB_verrechenbar() {
-        return this.b_verrechenbar;
+    public Integer getI_verrechenbar() {
+        return this.i_verrechenbar;
     }
 
-    public void setB_verrechenbar(Short b_verrechenbar) {
-        this.b_verrechenbar = b_verrechenbar;
+    public void setI_verrechenbar(Integer i_verrechenbar) {
+        this.i_verrechenbar = i_verrechenbar;
     }
 
     public Date getT_anlegen() {
@@ -389,6 +362,14 @@ public class FLRProjektQueue implements Serializable {
 
     public void setFlrprojekttextsuche(com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche) {
         this.flrprojekttextsuche = flrprojekttextsuche;
+    }
+
+    public Set getTechnikerset() {
+        return this.technikerset;
+    }
+
+    public void setTechnikerset(Set technikerset) {
+        this.technikerset = technikerset;
     }
 
     public String toString() {

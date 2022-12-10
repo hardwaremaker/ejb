@@ -44,6 +44,7 @@ import java.util.Set;
 
 import org.jdom.Element;
 
+import com.lp.server.system.ejbfac.EJBExcFactory;
 import com.lp.server.system.ejbfac.SystemServicesFacBean;
 import com.lp.server.system.service.MailtextDto;
 import com.lp.server.system.service.TheClientDto;
@@ -79,8 +80,8 @@ public class LpMailText {
 	}
 
 	protected String getReportDir(String modul, String mandant, String xslFile, Locale sprache, TheClientDto theClientDto) {
-		String reportdir = getReportDirImpl(modul, 
-				xslFile.replaceAll(".jasper", ""), mandant, sprache, theClientDto);
+		String reportname = xslFile.replaceAll(".jasper", "");
+		String reportdir = getReportDirImpl(modul, reportname, mandant, sprache, theClientDto);
 
 		if (reportdir == null) {
 			reportdir = getReportDirImpl(modul, "mail", mandant, sprache, theClientDto);
@@ -92,9 +93,10 @@ public class LpMailText {
 		}
 
 		if (reportdir == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
-					"Es konnte kein Reportdir gefunden werden. mandantcnr: " + mandant + " sprache " + sprache);
+			throw EJBExcFactory.mailtextvorlageNichtGefunden(modul, mandant, reportname, sprache);
+//			throw new EJBExceptionLP(
+//					EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
+//					"Es konnte kein Reportdir gefunden werden. mandantcnr: " + mandant + " sprache " + sprache);
 		}
 		
 		return reportdir ;
@@ -123,7 +125,6 @@ public class LpMailText {
 	
 
 	public String transformText(MailtextDto mailtextDto, TheClientDto theClientDto) {
-
 		String modul = mailtextDto.getParamModul();
 		String mandantCNr = mailtextDto.getParamMandantCNr();
 		String xslFile = mailtextDto.getParamXslFile();
@@ -131,6 +132,7 @@ public class LpMailText {
 		return transformText(modul, mandantCNr, xslFile, sprache, theClientDto);
 	}
 		
+	
 //	public String transformText(String modul, String mandantCNr, String xslFile, Locale sprache, TheClientDto theClientDto) {
 //
 //		String reportdir = SystemServicesFacBean.getPathFromLPDir(modul,
@@ -153,20 +155,28 @@ public class LpMailText {
 //	
 
 	public String transformBetreff(MailtextDto mailtextDto, TheClientDto theClientDto) {
-
+		return transformMailPartImpl("betreff", mailtextDto, theClientDto);
+	}
+	
+	public String transformAbsender(MailtextDto mailtextDto, TheClientDto theClientDto) {
+		return transformMailPartImpl("absender", mailtextDto, theClientDto);
+	}
+	
+	public String transformAnhang(MailtextDto mailtextDto, TheClientDto theClientDto) {
+		return transformMailPartImpl("anhang", mailtextDto, theClientDto);
+	}
+	
+	private String transformMailPartImpl(String xslPrefix, MailtextDto mailtextDto, TheClientDto theClientDto) {
 		String modul = mailtextDto.getParamModul();
 		String mandantCNr = mailtextDto.getParamMandantCNr();
 		String xslFile = mailtextDto.getParamXslFile();
 		Locale sprache = mailtextDto.getParamLocale();
 		
-		String reportdir = SystemServicesFacBean.getPathFromLPDir(modul,
-				xslFile.replaceAll(".jasper", "") + "_betreff.xsl", mandantCNr,
-				sprache, null, theClientDto);
+		String reportdir = getReportDirImpl(modul, xslFile.replaceAll(".jasper", "") + "_" + xslPrefix, mandantCNr, sprache, theClientDto);
 
 		if (reportdir == null) {
 			// wenn kein xsl fuer modul gefunden, das allgemeine holen
-			reportdir = SystemServicesFacBean.getPathFromLPDir("allgemein",
-					"betreff.xsl", mandantCNr, sprache, null, theClientDto);
+			reportdir = getReportDirImpl("allgemein", xslPrefix, mandantCNr, sprache, theClientDto);
 			if (reportdir == null) {
 				return null;
 			}

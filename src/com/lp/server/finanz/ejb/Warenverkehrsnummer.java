@@ -49,6 +49,9 @@ public class Warenverkehrsnummer implements Serializable {
 	@Column(name = "C_BEZ")
 	private String cBez;
 
+	@Column(name = "C_BM")
+	private String cBM;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Warenverkehrsnummer() {
@@ -58,6 +61,12 @@ public class Warenverkehrsnummer implements Serializable {
 	public Warenverkehrsnummer(String nr, String bez) {
 		setCNr(nr);
 		setCBez(bez);
+	}
+
+	public Warenverkehrsnummer(String nr, String bez, String besondereMasseinheit) {
+		setCNr(nr);
+		setCBez(bez);
+		setCBM(besondereMasseinheit);
 	}
 
 	public String getCNr() {
@@ -76,4 +85,11 @@ public class Warenverkehrsnummer implements Serializable {
 		this.cBez = cBez;
 	}
 
+	public String getCBM() {
+		return this.cBM;
+	}
+
+	public void setCBM(String cBM) {
+		this.cBM = cBM;
+	}	
 }

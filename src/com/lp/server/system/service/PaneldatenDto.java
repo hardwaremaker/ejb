@@ -34,7 +34,10 @@ package com.lp.server.system.service;
 
 import java.io.Serializable;
 
-public class PaneldatenDto implements Serializable {
+import com.lp.server.util.IIId;
+
+@HvDtoLogClass(name = HvDtoLogClass.PANELDATEN)
+public class PaneldatenDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
@@ -125,6 +128,10 @@ public class PaneldatenDto implements Serializable {
 			return false;
 		if (that.oInhalt != this.oInhalt)
 			return false;
+		if (!(that.xInhalt == null ? this.xInhalt == null : that.xInhalt
+				.equals(this.xInhalt)))
+			return false;
+		
 		return true;
 	}
 

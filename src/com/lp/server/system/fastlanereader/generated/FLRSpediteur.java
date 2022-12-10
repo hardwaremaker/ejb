@@ -57,6 +57,8 @@ public class FLRSpediteur implements Serializable {
 	/** nullable persistent field */
 	private Short b_versteckt;
 
+	private String c_verkehrszweig;
+	
 	/** full constructor */
 	public FLRSpediteur(String mandant_c_nr, String c_namedesspediteurs,
 			Short b_versteckt) {
@@ -107,6 +109,14 @@ public class FLRSpediteur implements Serializable {
 		this.b_versteckt = b_versteckt;
 	}
 
+	public String getC_verkehrszweig() {
+		return this.c_verkehrszweig;
+	}
+	
+	public void setC_verkehrszweig(String c_verkehrszweig) {
+		this.c_verkehrszweig = c_verkehrszweig;
+	}
+	
 	public String toString() {
 		return new ToStringBuilder(this).append("i_id", getI_id()).toString();
 	}

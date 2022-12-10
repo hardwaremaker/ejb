@@ -78,10 +78,31 @@ public class Benutzermandantsystemrolle implements Serializable {
 	@Column(name = "SYSTEMROLLE_I_ID")
 	private Integer systemrolleIId;
 
+	@Column(name = "SYSTEMROLLE_I_ID_RESTAPI")
+	private Integer systemrolleIIdRestapi;
+
+	public Integer getSystemrolleIIdRestapi() {
+		return systemrolleIIdRestapi;
+	}
+
+	public void setSystemrolleIIdRestapi(Integer systemrolleIIdRestapi) {
+		this.systemrolleIIdRestapi = systemrolleIIdRestapi;
+	}
+
+	public Integer getSystemrolleIIdHvma() {
+		return systemrolleIIdHvma;
+	}
+
+	public void setSystemrolleIIdHvma(Integer systemrolleIIdHvma) {
+		this.systemrolleIIdHvma = systemrolleIIdHvma;
+	}
+
+	@Column(name = "SYSTEMROLLE_I_ID_HVMA")
+	private Integer systemrolleIIdHvma;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Benutzermandantsystemrolle() {
-		super();
 	}
 
 	public Benutzermandantsystemrolle(Integer id, Integer benutzerIId,

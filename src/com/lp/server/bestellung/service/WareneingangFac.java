@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.ejb.Remote;
 
@@ -138,8 +139,8 @@ public interface WareneingangFac {
 			Integer wareneingangIIdI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public ArrayList<Object[]> uebernimmAlleWepsOhneBenutzerinteraktion(
-			Integer iIdWareneingangI, Integer iIdBestellungI,
+	public WEPBuchenReturnDto uebernimmAlleWepsOhneBenutzerinteraktion(
+			Integer iIdWareneingangI, Integer iIdBestellungI, ArrayList<Integer> bestellpositionIIds_selektiert, 
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public Integer[] erfasseAllePreiseOhneBenutzerinteraktion(
@@ -158,10 +159,40 @@ public interface WareneingangFac {
 			WareneingangspositionDto weposDtoI, boolean bLoescheBuchung,
 			TheClientDto theClientDto) throws EJBExceptionLP;
 
+	public String generiereAutomatischeChargennummerAnhandBestellnummerWEPNrPosnr(
+			Integer bsposIId, Integer wareneingangIId);
+	
 	public EinstandspreiseEinesWareneingangsDto getBerechnetenEinstandspreisEinerWareneingangsposition(
 			Integer wareneingangIId, TheClientDto theClientDto);
 
 	public void geliefertPreiseAllerWEPRueckpflegen(java.sql.Date dVon,
 			java.sql.Date dBis, TheClientDto theClientDto);
 
+	Integer createWareneingangsposition(WareneingangspositionDto weposDto,
+			boolean setartikelAufloesen, TheClientDto theClientDto);
+
+	void updateWareneingangsposition(WareneingangspositionDto weposDtoI,
+			boolean setartikelAufloesen, TheClientDto theClientDto)
+			throws EJBExceptionLP;
+
+	void removeWareneingangsposition(WareneingangspositionDto positionDto,
+			boolean setartikelAufloesen, TheClientDto theClientDto)
+			throws EJBExceptionLP;
+
+	public void wareUnterwegsZubuchen(Integer lieferscheinIId,ArrayList<String> wareunterwegsCNr,
+			TheClientDto theClientDto);
+
+	public Integer getLieferscheinIIdAusWareUnterwegs(String wareunterwegsCNr,
+			TheClientDto theClientDto);
+	
+	List<WareneingangDto> wareneingangFindByLieferscheinnummer(
+			Integer bestellungId, String lieferscheinnummer);
+	
+	public BigDecimal getWareneingangWertsumme(WareneingangDto wareneingangDto,
+			TheClientDto theClientDto);
+	public RueckgabeWEPMitReelIDDto wareneingangspositionMitReelIDBuchen(
+			Integer wareneingangIId, Integer bestellpositionIId,
+			BigDecimal nMenge, String datecode, String batch1,
+			TheClientDto theClientDto);
+	
 }

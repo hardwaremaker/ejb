@@ -36,6 +36,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
+import javax.swing.Icon;
+
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
@@ -43,7 +45,10 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRPosersatz;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -57,9 +62,9 @@ import com.lp.util.EJBExceptionLP;
 
 public class PosersatzHandler extends UseCaseHandler {
 
-	/**
-	 * 
-	 */
+	
+	boolean bArtikelfreigabe = false;
+	
 	private static final long serialVersionUID = 1L;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
@@ -82,19 +87,32 @@ public class PosersatzHandler extends UseCaseHandler {
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
-			int col = 0;
 			while (resultListIterator.hasNext()) {
 				FLRPosersatz montageart = (FLRPosersatz) resultListIterator
 						.next();
-				rows[row][col++] = montageart.getI_id();
-				rows[row][col++] = montageart.getFlrartikel().getC_nr();
+				
+				
+				Object[] rowToAddCandidate = new Object[colCount];
+				
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")]  = montageart.getI_id();
+				rowToAddCandidate[getTableColumnInformation()
+									.getViewIndex("artikel.artikelnummerlang")] = montageart.getFlrartikel().getC_nr();
 
 				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
 						montageart.getFlrartikel().getI_id(), theClientDto);
 
-				rows[row++][col++] = aDto.formatBezeichnung();
+				rowToAddCandidate[getTableColumnInformation()
+									.getViewIndex("lp.bezeichnung")] = aDto.formatBezeichnung();
 
-				col = 0;
+				
+				if (bArtikelfreigabe == true && montageart.getFlrartikel().getT_freigabe()!=null) {
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("IconFreigabe")] = FertigungFac.STATUS_ERLEDIGT;
+				}
+				rows[row] = rowToAddCandidate;
+				row++;
+				
+				
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
 					endIndex, 0);
@@ -292,36 +310,42 @@ public class PosersatzHandler extends UseCaseHandler {
 	}
 
 	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] {
-							Integer.class,
-							String.class,
-							String.class
-					},
-					
-					new String[] {
-							"Id",
-							getTextRespectUISpr("artikel.artikelnummerlang", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)
-					},
-					
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST
-					},
-					
-					new String[] {
-							"id",
-							"flrartikel.c_nr",
-							Facade.NICHT_SORTIERBAR
-					})
-			);
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ARTIKELFREIGABE,
+				theClientDto)) {
+			bArtikelfreigabe = true;
 		}
 
-		return super.getTableInfo();
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
+
 	}
+	
+	
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+
+		columns.add("i_id", Integer.class, "i_id", -1, "i_id");
+		columns.add("artikel.artikelnummerlang", String.class, getTextRespectUISpr("artikel.artikelnummerlang", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "flrartikel.c_nr");
+
+		columns.add("lp.bezeichnung", String.class,
+				getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+
+		if (bArtikelfreigabe == true) {
+			columns.add("IconFreigabe", Icon.class, getTextRespectUISpr("ww.freigabe", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, "flrartikel.t_freigabe");
+		}
+		return columns;
+	}
+	
 }

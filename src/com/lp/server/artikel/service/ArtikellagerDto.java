@@ -44,7 +44,9 @@ public class ArtikellagerDto implements Serializable {
 	private Integer lagerIId;
 	private BigDecimal nGestehungspreis;
 	private BigDecimal nLagerstand;
-
+	private Double fLagersoll;
+	private Double fLagermindest;
+	
 	public Integer getArtikelIId() {
 		return artikelIId;
 	}
@@ -87,6 +89,21 @@ public class ArtikellagerDto implements Serializable {
 		this.mandantCNr = mandantCNr;
 	}
 
+	public Double getFLagermindest() {
+		return this.fLagermindest;
+	}
+
+	public void setFLagermindest(Double fLagermindest) {
+		this.fLagermindest = fLagermindest;
+	}
+
+	public Double getFLagersoll() {
+		return this.fLagersoll;
+	}
+
+	public void setFLagersoll(Double fLagersoll) {
+		this.fLagersoll = fLagersoll;
+	}
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;

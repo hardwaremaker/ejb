@@ -52,53 +52,81 @@ import javax.persistence.Query;
 import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
+import com.lp.server.artikel.ejb.Artikelart;
+import com.lp.server.artikel.ejb.Artikelartspr;
+import com.lp.server.artikel.ejb.ArtikelartsprPK;
 import com.lp.server.artikel.ejb.Farbcode;
 import com.lp.server.artikel.ejb.Vorschlagstext;
 import com.lp.server.artikel.service.FarbcodeDto;
 import com.lp.server.artikel.service.VorschlagstextDto;
 import com.lp.server.artikel.service.VorschlagstextDtoAssembler;
+import com.lp.server.fertigung.ejb.Lostechniker;
+import com.lp.server.fertigung.service.LostechnikerDto;
 import com.lp.server.partner.ejb.Kontaktart;
 import com.lp.server.projekt.ejb.Projekterledigungsgrund;
 import com.lp.server.projekt.service.ProjekterledigungsgrundDto;
-import com.lp.server.projekt.service.ProjekterledigungsgrundDtoAssembler;
+import com.lp.server.projekt.assembler.BereichDtoAssembler;
+import com.lp.server.projekt.assembler.HistoryartDtoAssembler;
+import com.lp.server.projekt.assembler.KategorieDtoAssembler;
+import com.lp.server.projekt.assembler.KategoriesprDtoAssembler;
+import com.lp.server.projekt.assembler.ProjektStatusDtoAssembler;
+import com.lp.server.projekt.assembler.ProjekterledigungsgrundDtoAssembler;
+import com.lp.server.projekt.assembler.ProjektgruppeDtoAssembler;
+import com.lp.server.projekt.assembler.ProjekttaetigkeitDtoAssembler;
+import com.lp.server.projekt.assembler.ProjekttechnikerDtoAssembler;
+import com.lp.server.projekt.assembler.ProjekttypDtoAssembler;
+import com.lp.server.projekt.assembler.ProjekttypsprDtoAssembler;
+import com.lp.server.projekt.assembler.VkfortschrittDtoAssembler;
+import com.lp.server.projekt.assembler.VkfortschrittsprDtoAssembler;
 import com.lp.server.projekt.ejb.Bereich;
 import com.lp.server.projekt.ejb.Historyart;
 import com.lp.server.projekt.ejb.Kategorie;
 import com.lp.server.projekt.ejb.KategoriePK;
 import com.lp.server.projekt.ejb.Kategoriespr;
 import com.lp.server.projekt.ejb.KategoriesprPK;
+import com.lp.server.projekt.ejb.Leadstatus;
+import com.lp.server.projekt.ejb.Projekt;
+import com.lp.server.projekt.ejb.Projektgruppe;
 import com.lp.server.projekt.ejb.Projektstatus;
 import com.lp.server.projekt.ejb.ProjektstatusPK;
+import com.lp.server.projekt.ejb.Projekttaetigkeit;
+import com.lp.server.projekt.ejb.Projekttechniker;
 import com.lp.server.projekt.ejb.Projekttyp;
 import com.lp.server.projekt.ejb.ProjekttypPK;
 import com.lp.server.projekt.ejb.Projekttypspr;
 import com.lp.server.projekt.ejb.ProjekttypsprPK;
+import com.lp.server.projekt.ejb.Vkfortschritt;
+import com.lp.server.projekt.ejb.Vkfortschrittspr;
+import com.lp.server.projekt.ejb.VkfortschrittsprPK;
 import com.lp.server.projekt.fastlanereader.generated.FLRKategorie;
 import com.lp.server.projekt.fastlanereader.generated.FLRKategoriespr;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjektgruppe;
 import com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus;
 import com.lp.server.projekt.fastlanereader.generated.FLRTyp;
 import com.lp.server.projekt.fastlanereader.generated.FLRTypspr;
 import com.lp.server.projekt.service.BereichDto;
-import com.lp.server.projekt.service.BereichDtoAssembler;
 import com.lp.server.projekt.service.HistoryartDto;
-import com.lp.server.projekt.service.HistoryartDtoAssembler;
 import com.lp.server.projekt.service.KategorieDto;
-import com.lp.server.projekt.service.KategorieDtoAssembler;
 import com.lp.server.projekt.service.KategoriesprDto;
-import com.lp.server.projekt.service.KategoriesprDtoAssembler;
 import com.lp.server.projekt.service.ProjektFac;
 import com.lp.server.projekt.service.ProjektServiceFac;
 import com.lp.server.projekt.service.ProjektStatusDto;
-import com.lp.server.projekt.service.ProjektStatusDtoAssembler;
+import com.lp.server.projekt.service.ProjektgruppeDto;
+import com.lp.server.projekt.service.ProjekttaetigkeitDto;
+import com.lp.server.projekt.service.ProjekttechnikerDto;
 import com.lp.server.projekt.service.ProjekttypDto;
-import com.lp.server.projekt.service.ProjekttypDtoAssembler;
 import com.lp.server.projekt.service.ProjekttypsprDto;
-import com.lp.server.projekt.service.ProjekttypsprDtoAssembler;
+import com.lp.server.projekt.service.VkfortschrittDto;
+import com.lp.server.projekt.service.VkfortschrittsprDto;
+import com.lp.server.stueckliste.ejb.Montageart;
+import com.lp.server.stueckliste.ejb.Stueckliste;
 import com.lp.server.stueckliste.ejb.Stuecklisteart;
 import com.lp.server.stueckliste.ejb.Stuecklisteeigenschaftart;
+import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteposition;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.system.ejb.Status;
 import com.lp.server.system.pkgenerator.PKConst;
@@ -115,31 +143,26 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 	@PersistenceContext
 	private EntityManager em;
 
-	public String createKategorie(KategorieDto kategorieDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createKategorie(KategorieDto kategorieDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.entry();
 		checkKategorieDto(kategorieDto);
 		String cNrWieKey = null;
 		try {
-			Kategorie kategorie = new Kategorie(kategorieDto.getCNr(),
-					kategorieDto.getISort(), kategorieDto.getMandantCNr());
+			Kategorie kategorie = new Kategorie(kategorieDto.getCNr(), kategorieDto.getISort(),
+					kategorieDto.getMandantCNr());
 			em.persist(kategorie);
 			em.flush();
 			setKategorieFromKategorieDto(kategorie, kategorieDto);
-			KategoriePK pk = new KategoriePK(kategorieDto.getCNr(),
-					kategorieDto.getMandantCNr());
+			KategoriePK pk = new KategoriePK(kategorieDto.getCNr(), kategorieDto.getMandantCNr());
 			Kategorie tmpkategorie = em.find(Kategorie.class, pk);
 			if (tmpkategorie == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			cNrWieKey = tmpkategorie.getPk().getCNr();
 
 			if (kategorieDto.getKategoriesprDto() != null) {
-				kategorieDto.getKategoriesprDto().setKategorieCNr(
-						kategorieDto.getCNr());
-				kategorieDto.getKategoriesprDto().setMandantCNr(
-						kategorieDto.getMandantCNr());
+				kategorieDto.getKategoriesprDto().setKategorieCNr(kategorieDto.getCNr());
+				kategorieDto.getKategoriesprDto().setMandantCNr(kategorieDto.getMandantCNr());
 				createKategoriespr(kategorieDto.getKategoriesprDto());
 			}
 		} catch (EntityExistsException ex) {
@@ -149,9 +172,67 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 	}
 
+	public Integer createVkfortschritt(VkfortschrittDto dto, TheClientDto theClientDto) {
+
+		try {
+
+			try {
+				Query query = em.createNamedQuery("VkfortschrittFindByMandantCNrCNr");
+
+				query.setParameter(1, dto.getCNr());
+				query.setParameter(2, theClientDto.getMandant());
+				Vkfortschritt doppelt = (Vkfortschritt) query.getSingleResult();
+				if (doppelt != null) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+							new Exception("PROJ_VKFORTSCHRITT.UK"));
+				}
+			} catch (NoResultException ex1) {
+			} catch (NonUniqueResultException ex1) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
+			}
+
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_VKFORTSCHRITT);
+			dto.setIId(pk);
+
+			Integer i = null;
+			try {
+				Query querynext = em.createNamedQuery("VkfortschrittejbSelectNextReihung");
+				querynext.setParameter(1, theClientDto.getMandant());
+				i = (Integer) querynext.getSingleResult();
+			} catch (NoResultException ex) {
+				// nothing here
+			} catch (NonUniqueResultException ex1) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
+			}
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+			dto.setISort(i);
+			dto.setMandantCNr(theClientDto.getMandant());
+
+			Vkfortschritt vkfortschritt = new Vkfortschritt(dto.getIId(), dto.getCNr(), dto.getMandantCNr(),
+					dto.getISort());
+			em.persist(vkfortschritt);
+			em.flush();
+			setVkfortschrittFromVkfortschrittDto(vkfortschritt, dto);
+
+			if (dto.getVkfortschrittsprDto() != null) {
+				dto.getVkfortschrittsprDto().setVkfortschrittIId(dto.getIId());
+				dto.getVkfortschrittsprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+				createVkfortschrittspr(dto.getVkfortschrittsprDto());
+			}
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+		return dto.getIId();
+
+	}
+
 	public boolean sindErledigugnsgruendeVorhanden(TheClientDto theclientDto) {
-		Query query = em
-				.createNamedQuery("ProjekterledigungsgrundfindByMandantCnr");
+		Query query = em.createNamedQuery("ProjekterledigungsgrundfindByMandantCnr");
 		query.setParameter(1, theclientDto.getMandant());
 		int i = query.getResultList().size();
 		if (i > 0) {
@@ -169,11 +250,25 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 				query.setParameter(1, historyartDto.getCBez());
 				// @todo getSingleResult oder getResultList ?
 				Historyart doppelt = (Historyart) query.getSingleResult();
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PROJ_HISTORYART.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PROJ_HISTORYART.UK"));
 			} catch (NoResultException ex1) {
 				// nothing here
+			}
+
+			if (Helper.short2boolean(historyartDto.getBInAuswahllisteAnzeigen()) == true) {
+				try {
+					Query query = em.createNamedQuery("HistoryartFindAllBInAuswahllisteAnzeigen");
+					int iAnzahlBereitsVorhanden = query.getResultList().size();
+
+					if (iAnzahlBereitsVorhanden > 0) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_PROJEKT_HISTORYART_IN_AUSWAHLLISTE_ANZEIGEN_DARF_NUR_EINMAL_VORHANDEN_SEIN,
+								new Exception(
+										"FEHLER_PROJEKT_HISTORYART_IN_AUSWAHLLISTE_ANZEIGEN_DARF_NUR_EINMAL_VORHANDEN_SEIN"));
+					}
+				} catch (NoResultException ex1) {
+					// nothing here
+				}
 			}
 
 			// generieren von primary key
@@ -181,10 +276,9 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_HISTORYART);
 			historyartDto.setIId(pk);
 
-			Historyart historyart = new Historyart(historyartDto.getIId(),
-					historyartDto.getCBez(), historyartDto.getIRot(),
-					historyartDto.getIGruen(), historyartDto.getIBlau(),
-					historyartDto.getBAktualisierezieltermin());
+			Historyart historyart = new Historyart(historyartDto.getIId(), historyartDto.getCBez(),
+					historyartDto.getIRot(), historyartDto.getIGruen(), historyartDto.getIBlau(),
+					historyartDto.getBAktualisierezieltermin(), historyartDto.getBInAuswahllisteAnzeigen());
 			em.persist(historyart);
 			em.flush();
 			setHistoryartFromHistoryartDto(historyart, historyartDto);
@@ -195,19 +289,395 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 	}
 
-	public Integer createBereich(BereichDto bereichDto,
-			TheClientDto theClientDto) {
+	public Integer createProjekttechniker(ProjekttechnikerDto projekttechnikerDto, TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("ProjekttechnikerfindByProjektIIdPersonalIId");
+			query.setParameter(1, projekttechnikerDto.getProjektIId());
+			query.setParameter(2, projekttechnikerDto.getPersonalIId());
+			// @todo getSingleResult oder getResultList ?
+			Projekttechniker doppelt = (Projekttechniker) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PROJ_PROJEKTTECHNIKER.UK"));
+		} catch (NoResultException ex) {
+
+		}
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PROJEKTTECHNIKER);
+			projekttechnikerDto.setIId(pk);
+
+			Projekttechniker projekttechniker = new Projekttechniker(projekttechnikerDto.getIId(),
+					projekttechnikerDto.getProjektIId(), projekttechnikerDto.getPersonalIId());
+			em.persist(projekttechniker);
+			em.flush();
+			setProjekttechnikerFromProjekttechnikerDto(projekttechniker, projekttechnikerDto);
+
+			return projekttechnikerDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+
+	}
+
+	public Integer createProjektgruppe(ProjektgruppeDto projektgruppeDto, TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("ProjektgruppefindByProjektIIdVaterProjektIIdKind");
+			query.setParameter(1, projektgruppeDto.getProjektIIdVater());
+			query.setParameter(2, projektgruppeDto.getProjektIIdKind());
+			// @todo getSingleResult oder getResultList ?
+			Projektgruppe doppelt = (Projektgruppe) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PROJ_PROJEKTGRUPPE.UK"));
+		} catch (NoResultException ex) {
+
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PROJEKTGRUPPE);
+			projektgruppeDto.setIId(pk);
+
+			Projektgruppe projektgruppe = new Projektgruppe(projektgruppeDto.getIId(),
+					projektgruppeDto.getProjektIIdVater(), projektgruppeDto.getProjektIIdKind());
+			em.persist(projektgruppe);
+			em.flush();
+
+			if (pruefeObProjekInGruppenstukturSchonVorhanden(pk, projektgruppeDto.getProjektIIdVater(), theClientDto)
+					|| projektgruppeDto.getProjektIIdVater().equals(projektgruppeDto.getProjektIIdKind())) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PROJEKTGRUPPE_DEADLOCK,
+						new Exception("FEHLER_PROJEKTGRUPPE_DEADLOCK"));
+
+			}
+
+			return projektgruppeDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+
+	}
+
+	public Integer createProjekttaetigkeit(ProjekttaetigkeitDto projekttaetigkeitDto, TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("ProjekttaetigkeitfindByProjektIIdArtikelIId");
+			query.setParameter(1, projekttaetigkeitDto.getProjektIId());
+			query.setParameter(2, projekttaetigkeitDto.getArtikelIId());
+			// @todo getSingleResult oder getResultList ?
+			Projekttaetigkeit doppelt = (Projekttaetigkeit) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("PROJ_PROJEKTTAETIGKEIT.UK"));
+		} catch (NoResultException ex) {
+
+		}
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PROJEKTTAETIGKEIT);
+			projekttaetigkeitDto.setIId(pk);
+
+			Projekttaetigkeit projekttaetigkeit = new Projekttaetigkeit(projekttaetigkeitDto.getIId(),
+					projekttaetigkeitDto.getProjektIId(), projekttaetigkeitDto.getArtikelIId());
+			em.persist(projekttaetigkeit);
+			em.flush();
+			setProjekttaetigkeitFromProjekttaetigkeitDto(projekttaetigkeit, projekttaetigkeitDto);
+
+			return projekttaetigkeitDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+
+	}
+
+	public void updateProjekttechniker(ProjekttechnikerDto projekttechnikerDto, TheClientDto theClientDto) {
+
+		Integer iId = projekttechnikerDto.getIId();
+
+		Query query = em.createNamedQuery("ProjekttechnikerfindByProjektIIdPersonalIId");
+		query.setParameter(1, projekttechnikerDto.getProjektIId());
+		query.setParameter(2, projekttechnikerDto.getPersonalIId());
+		try {
+			Projekttechniker doppelt = (Projekttechniker) query.getSingleResult();
+			if (iId.equals(doppelt.getIId()) == false) {
+
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PROJ_PROJEKTTECHNIKER.UK"));
+			}
+		} catch (NoResultException e) {
+			//
+		}
+
+		Projekttechniker projekttechniker = em.find(Projekttechniker.class, iId);
+		if (projekttechniker == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		setProjekttechnikerFromProjekttechnikerDto(projekttechniker, projekttechnikerDto);
+
+	}
+
+	public void updateProjektgruppe(ProjektgruppeDto projektgruppeDto, TheClientDto theClientDto) {
+
+		Integer iId = projektgruppeDto.getIId();
+
+		Query query = em.createNamedQuery("ProjektgruppefindByProjektIIdVaterProjektIIdKind");
+		query.setParameter(1, projektgruppeDto.getProjektIIdVater());
+		query.setParameter(2, projektgruppeDto.getProjektIIdKind());
+		try {
+			Projektgruppe doppelt = (Projektgruppe) query.getSingleResult();
+			if (iId.equals(doppelt.getIId()) == false) {
+
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PROJ_PROJEKTGRUPPE.UK"));
+			}
+		} catch (NoResultException e) {
+			//
+		}
+
+		if (pruefeObProjekInGruppenstukturSchonVorhanden(iId, projektgruppeDto.getProjektIIdVater(), theClientDto)
+				|| projektgruppeDto.getProjektIIdVater().equals(projektgruppeDto.getProjektIIdKind())) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PROJEKTGRUPPE_DEADLOCK,
+					new Exception("FEHLER_PROJEKTGRUPPE_DEADLOCK"));
+
+		}
+
+		Projektgruppe projektgruppe = em.find(Projektgruppe.class, iId);
+		projektgruppe.setProjektIIdVater(projektgruppeDto.getProjektIIdVater());
+		projektgruppe.setProjektIIdKind(projektgruppeDto.getProjektIIdKind());
+
+	}
+
+	public void updateProjekttaetigkeit(ProjekttaetigkeitDto dto, TheClientDto theClientDto) {
+
+		Integer iId = dto.getIId();
+
+		Query query = em.createNamedQuery("ProjekttaetigkeitfindByProjektIIdArtikelIId");
+		query.setParameter(1, dto.getProjektIId());
+		query.setParameter(2, dto.getArtikelIId());
+		try {
+			Projekttaetigkeit doppelt = (Projekttaetigkeit) query.getSingleResult();
+			if (iId.equals(doppelt.getIId()) == false) {
+
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PROJ_PROJEKTTAETIGKEIT.UK"));
+			}
+		} catch (NoResultException e) {
+			//
+		}
+
+		Projekttaetigkeit projekttaetigkeit = em.find(Projekttaetigkeit.class, iId);
+		if (projekttaetigkeit == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		setProjekttaetigkeitFromProjekttaetigkeitDto(projekttaetigkeit, dto);
+
+	}
+
+	public void removeProjekttaetigkeit(ProjekttaetigkeitDto dto) {
+
+		Projekttaetigkeit toRemove = em.find(Projekttaetigkeit.class, dto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public boolean pruefeObProjekInGruppenstukturSchonVorhanden(Integer projektgruppeIId_IchSelbst,
+			Integer projektIId_Vater, TheClientDto theClientDto) throws EJBExceptionLP {
+
+		// Hole Alle Positionen der Wuzel
+		FLRProjektgruppe flrProjektgruppe = new FLRProjektgruppe();
+
+		flrProjektgruppe.setProjekt_i_id_kind(projektIId_Vater);
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Criteria crit = session.createCriteria(FLRProjektgruppe.class)
+				.add(Example.create(flrProjektgruppe));
+
+		List<?> results = crit.list();
+		FLRProjektgruppe[] returnArray = new FLRProjektgruppe[results.size()];
+		returnArray = (FLRProjektgruppe[]) results.toArray(returnArray);
+
+		// session.close();
+		for (int i = 0; i < returnArray.length; i++) {
+
+			if (returnArray[i].getI_id().equals(projektgruppeIId_IchSelbst)) {
+				return true;
+			} else {
+
+				boolean bDeadlock = pruefeObProjekInGruppenstukturSchonVorhanden(projektgruppeIId_IchSelbst,
+						returnArray[i].getProjekt_i_id_vater(), theClientDto);
+
+				if (bDeadlock == true) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public void removeProjekttechniker(ProjekttechnikerDto projekttechnikerDto) {
+
+		Projekttechniker toRemove = em.find(Projekttechniker.class, projekttechnikerDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public void removeProjektgruppe(ProjektgruppeDto projektgruppeDto) {
+
+		Projektgruppe toRemove = em.find(Projektgruppe.class, projektgruppeDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public int getAnzahlTechniker(Integer projektIId) {
+
+		int iAnzahl = 0;
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String queryString = "SELECT count(t.personal_i_id) FROM FLRProjekttechniker t WHERE t.projekt_i_id="
+				+ projektIId;
+		org.hibernate.Query query = session.createQuery(queryString);
+		List resultList = query.list();
+		Iterator resultListIterator = resultList.iterator();
+
+		if (resultListIterator.hasNext()) {
+			Long l = (Long) resultListIterator.next();
+			if (l != null) {
+				iAnzahl = l.intValue();
+			}
+
+		}
+
+		return iAnzahl;
+	}
+
+	public ProjekttechnikerDto projekttechnikerFindByPrimaryKey(Integer iId) {
+
+		Projekttechniker projekttechniker = em.find(Projekttechniker.class, iId);
+		if (projekttechniker == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return ProjekttechnikerDtoAssembler.createDto(projekttechniker);
+
+	}
+
+	public ProjektgruppeDto projektgruppeFindByPrimaryKey(Integer iId) {
+
+		Projektgruppe projektgruppe = em.find(Projektgruppe.class, iId);
+		if (projektgruppe == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return ProjektgruppeDtoAssembler.createDto(projektgruppe);
+
+	}
+
+	public ProjekttaetigkeitDto projekttaetigkeitFindByPrimaryKey(Integer iId) {
+
+		Projekttaetigkeit projekttaetigkeit = em.find(Projekttaetigkeit.class, iId);
+		if (projekttaetigkeit == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return ProjekttaetigkeitDtoAssembler.createDto(projekttaetigkeit);
+
+	}
+
+	public boolean istTaetigkeitBeiProjekthinterlegt(Integer projektIId, Integer artikelIId) {
+
+		try {
+			Query query = em.createNamedQuery("ProjekttaetigkeitfindByProjektIIdArtikelIId");
+			query.setParameter(1, projektIId);
+			query.setParameter(2, artikelIId);
+
+			Projekttaetigkeit doppelt = (Projekttaetigkeit) query.getSingleResult();
+			return true;
+		} catch (NoResultException ex) {
+			return false;
+		}
+
+	}
+
+	public boolean istMeinProjekt(Integer projektIId, Integer personalIId) {
+
+		try {
+			Query query = em.createNamedQuery("ProjekttechnikerfindByProjektIIdPersonalIId");
+			query.setParameter(1, projektIId);
+			query.setParameter(2, personalIId);
+
+			Projekttechniker doppelt = (Projekttechniker) query.getSingleResult();
+			return true;
+		} catch (NoResultException ex) {
+
+			Projekt pj = em.find(Projekt.class, projektIId);
+
+			if (pj.getPersonalIIdZugewiesener().equals(personalIId)) {
+				return true;
+			} else {
+				return false;
+			}
+
+		}
+
+	}
+
+	public ProjekttaetigkeitDto[] projekttaetigkeitFindByProjektIId(Integer projektIId) {
+
+		Query query = em.createNamedQuery("ProjekttaetigkeitfindByProjektIId");
+		query.setParameter(1, projektIId);
+
+		return ProjekttaetigkeitDtoAssembler.createDtos(query.getResultList());
+
+	}
+
+	private void setProjekttechnikerFromProjekttechnikerDto(Projekttechniker projekttechniker,
+			ProjekttechnikerDto projekttechnikerDto) {
+		projekttechniker.setProjektIId(projekttechnikerDto.getProjektIId());
+		projekttechniker.setPersonalIId(projekttechnikerDto.getPersonalIId());
+
+		em.merge(projekttechniker);
+		em.flush();
+	}
+
+	private void setProjekttaetigkeitFromProjekttaetigkeitDto(Projekttaetigkeit projekttaetigkeit,
+			ProjekttaetigkeitDto projekttaetigkeitDto) {
+		projekttaetigkeit.setProjektIId(projekttaetigkeitDto.getProjektIId());
+		projekttaetigkeit.setArtikelIId(projekttaetigkeitDto.getArtikelIId());
+
+		em.merge(projekttaetigkeit);
+		em.flush();
+	}
+
+	public Integer createBereich(BereichDto bereichDto, TheClientDto theClientDto) {
 		try {
 
 			try {
-				Query query = em
-						.createNamedQuery("BereichFindByMandantCNrCBez");
+				Query query = em.createNamedQuery("BereichFindByMandantCNrCBez");
 				query.setParameter(1, theClientDto.getMandant());
 				query.setParameter(2, bereichDto.getCBez());
 				Bereich doppelt = (Bereich) query.getSingleResult();
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PROJ_BEREICH.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PROJ_BEREICH.UK"));
 			} catch (NoResultException ex1) {
 				// nothing here
 			}
@@ -219,8 +689,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 			Integer i = null;
 			try {
-				Query querynext = em
-						.createNamedQuery("BereichejbSelectNextReihung");
+				Query querynext = em.createNamedQuery("BereichejbSelectNextReihung");
 				querynext.setParameter(1, theClientDto.getMandant());
 				i = (Integer) querynext.getSingleResult();
 
@@ -230,13 +699,14 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 				i = new Integer(i.intValue() + 1);
 
 			} catch (NonUniqueResultException ex1) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
 			}
 			bereichDto.setISort(i);
 
-			Bereich bereich = new Bereich(bereichDto.getIId(),
-					theClientDto.getMandant(), bereichDto.getCBez(),
+			Bereich bereich = new Bereich(bereichDto.getIId(), theClientDto.getMandant(), bereichDto.getCBez(),
+					bereichDto.getBProjektMitBetreiber(), bereichDto.getBProjektMitArtikel(),
+					bereichDto.getBProjektArtikeleindeutig(), bereichDto.getBProjektArtikelPflichtfeld(),
+					bereichDto.getBDurchgefuehrtVonInOffene(), bereichDto.getBDetailtextIstPflichtfeld(),
 					bereichDto.getISort());
 			em.persist(bereich);
 			em.flush();
@@ -246,6 +716,18 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 
+	}
+
+	public HistoryartDto getHistoryartInAuswahllisteAnzeigen(TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("HistoryartFindAllBInAuswahllisteAnzeigen");
+		Collection c = query.getResultList();
+
+		Iterator it = c.iterator();
+		while (it.hasNext()) {
+			Historyart h = (Historyart) it.next();
+			return HistoryartDtoAssembler.createDto(h);
+		}
+		return null;
 	}
 
 	public void updateHistoryart(HistoryartDto historyartDto) {
@@ -258,19 +740,43 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 				Query query = em.createNamedQuery("HistoryartFindByCBez");
 				query.setParameter(1, historyartDto.getCBez());
 				// @todo getSingleResult oder getResultList ?
-				Integer iIdVorhanden = ((Historyart) query.getSingleResult())
-						.getIId();
+				Integer iIdVorhanden = ((Historyart) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 							new Exception("PROJ_HISTORYART.UK"));
 				}
 			} catch (NoResultException ex) {
 
 			}
 
+			if (Helper.short2boolean(historyartDto.getBInAuswahllisteAnzeigen()) == true) {
+				try {
+					Query query = em.createNamedQuery("HistoryartFindAllBInAuswahllisteAnzeigen");
+					Collection c = query.getResultList();
+
+					Iterator it = c.iterator();
+					while (it.hasNext()) {
+						Historyart h = (Historyart) it.next();
+
+						if (!h.getIId().equals(historyartDto.getIId())) {
+
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_PROJEKT_HISTORYART_IN_AUSWAHLLISTE_ANZEIGEN_DARF_NUR_EINMAL_VORHANDEN_SEIN,
+									new Exception(
+											"FEHLER_PROJEKT_HISTORYART_IN_AUSWAHLLISTE_ANZEIGEN_DARF_NUR_EINMAL_VORHANDEN_SEIN"));
+						}
+
+					}
+
+				} catch (NoResultException ex1) {
+					// nothing here
+				}
+			}
+
 			setHistoryartFromHistoryartDto(historyart, historyartDto);
-		} catch (Exception e) {
+		} catch (
+
+		Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 		}
 
@@ -283,17 +789,13 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			Bereich bereich = em.find(Bereich.class, iId);
 
 			try {
-				Query query = em
-						.createNamedQuery("BereichFindByMandantCNrCBez");
+				Query query = em.createNamedQuery("BereichFindByMandantCNrCBez");
 				query.setParameter(1, theClientDto.getMandant());
 				query.setParameter(2, bereichDto.getCBez());
 				// @todo getSingleResult oder getResultList ?
-				Integer iIdVorhanden = ((Bereich) query.getSingleResult())
-						.getIId();
+				Integer iIdVorhanden = ((Bereich) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-							new Exception("PROJ_BEREICH.UK"));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PROJ_BEREICH.UK"));
 				}
 			} catch (NoResultException ex) {
 
@@ -306,14 +808,13 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 	}
 
-	private void setHistoryartFromHistoryartDto(Historyart historyart,
-			HistoryartDto historyartDto) {
+	private void setHistoryartFromHistoryartDto(Historyart historyart, HistoryartDto historyartDto) {
 		historyart.setCBez(historyartDto.getCBez());
 		historyart.setIBlau(historyartDto.getIBlau());
 		historyart.setIRot(historyartDto.getIRot());
 		historyart.setIGruen(historyartDto.getIGruen());
-		historyart.setBAktualisierezieltermin(historyartDto
-				.getBAktualisierezieltermin());
+		historyart.setBAktualisierezieltermin(historyartDto.getBAktualisierezieltermin());
+		historyart.setBInAuswahllisteAnzeigen(historyartDto.getBInAuswahllisteAnzeigen());
 		em.merge(historyart);
 		em.flush();
 	}
@@ -322,6 +823,12 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		bereich.setCBez(bereichDto.getCBez());
 		bereich.setISort(bereichDto.getISort());
 		bereich.setMandantCNr(bereichDto.getMandantCNr());
+		bereich.setBProjektMitBetreiber(bereichDto.getBProjektMitBetreiber());
+		bereich.setBProjektMitArtikel(bereichDto.getBProjektMitArtikel());
+		bereich.setBProjektArtikeleindeutig(bereichDto.getBProjektArtikeleindeutig());
+		bereich.setBProjektArtikelPflichtfeld(bereichDto.getBProjektArtikelPflichtfeld());
+		bereich.setBDurchgefuehrtVonInOffene(bereichDto.getBDurchgefuehrtVonInOffene());
+		bereich.setBDetailtextIstPflichtfeld(bereichDto.getBDetailtextIstPflichtfeld());
 		em.merge(bereich);
 		em.flush();
 	}
@@ -329,8 +836,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 	public void removeKategorie(String cNr) throws EJBExceptionLP {
 		Kategorie toRemove = em.find(Kategorie.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -340,14 +846,11 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void removeKategorie(KategorieDto kategorieDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeKategorie(KategorieDto kategorieDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkKategorieDto(kategorieDto);
 		try {
-			KategoriePK pk = new KategoriePK(kategorieDto.getCNr(),
-					kategorieDto.getMandantCNr());
-			Query query = em
-					.createNamedQuery("KategoriesprfindByKategorieCNrAndMandantCNr");
+			KategoriePK pk = new KategoriePK(kategorieDto.getCNr(), kategorieDto.getMandantCNr());
+			Query query = em.createNamedQuery("KategoriesprfindByKategorieCNrAndMandantCNr");
 			query.setParameter(1, kategorieDto.getCNr());
 			query.setParameter(2, kategorieDto.getMandantCNr());
 			Collection<?> c = query.getResultList();
@@ -358,8 +861,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			}
 			Kategorie kategorie = em.find(Kategorie.class, pk);
 			if (kategorie == null) { // @ToDo null Pruefung?
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(kategorie);
 			em.flush();
@@ -368,24 +870,40 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void updateKategorie(KategorieDto kategorieDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeVkfortschritt(VkfortschrittDto dto, TheClientDto theClientDto) {
+
+		try {
+
+			Query query = em.createNamedQuery("VkfortschrittsprByVkfortschrittIId");
+			query.setParameter(1, dto.getIId());
+			Collection<?> c = query.getResultList();
+			// Erst alle SPRs dazu loeschen.
+			for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
+				Vkfortschrittspr item = (Vkfortschrittspr) iter.next();
+				em.remove(item);
+			}
+			Vkfortschritt vkfortschritt = em.find(Vkfortschritt.class, dto.getIId());
+
+			em.remove(vkfortschritt);
+			em.flush();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+	}
+
+	public void updateKategorie(KategorieDto kategorieDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkKategorieDto(kategorieDto);
 		myLogger.logData(kategorieDto);
 		if (kategorieDto != null) {
 			try {
-				KategoriePK pk = new KategoriePK(kategorieDto.getCNr(),
-						kategorieDto.getMandantCNr());
+				KategoriePK pk = new KategoriePK(kategorieDto.getCNr(), kategorieDto.getMandantCNr());
 				Kategorie kategorie = em.find(Kategorie.class, pk);
 				setKategorieFromKategorieDto(kategorie, kategorieDto);
 				// sprache
 				if (kategorieDto.getKategoriesprDto() != null) {
-					kategorieDto.getKategoriesprDto().setKategorieCNr(
-							kategorieDto.getCNr());
-					kategorieDto.getKategoriesprDto().setLocaleCNr(
-							theClientDto.getLocUiAsString());
-					kategorieDto.getKategoriesprDto().setMandantCNr(
-							kategorieDto.getMandantCNr());
+					kategorieDto.getKategoriesprDto().setKategorieCNr(kategorieDto.getCNr());
+					kategorieDto.getKategoriesprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+					kategorieDto.getKategoriesprDto().setMandantCNr(kategorieDto.getMandantCNr());
 
 					updateKategoriespr(kategorieDto.getKategoriesprDto());
 				}
@@ -395,11 +913,45 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public KategorieDto kategorieFindByPrimaryKey(String cNrI,
-			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateVkfortschritt(VkfortschrittDto dto, TheClientDto theClientDto) {
+		if (dto != null) {
+			try {
+
+				Vkfortschritt vkfortschritt = em.find(Vkfortschritt.class, dto.getIId());
+
+				try {
+					Query query = em.createNamedQuery("VkfortschrittFindByMandantCNrCNr");
+
+					query.setParameter(1, dto.getCNr());
+					query.setParameter(2, theClientDto.getMandant());
+					Integer iIdVorhanden = ((Vkfortschritt) query.getSingleResult()).getIId();
+					if (vkfortschritt.getIId().equals(iIdVorhanden) == false) {
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+								new Exception("STKL_MONTAGEART.C_BEZ"));
+					}
+
+				} catch (NoResultException ex) {
+					// nix
+				}
+
+				setVkfortschrittFromVkfortschrittDto(vkfortschritt, dto);
+				// sprache
+				if (dto.getVkfortschrittsprDto() != null) {
+					dto.getVkfortschrittsprDto().setVkfortschrittIId(dto.getIId());
+					dto.getVkfortschrittsprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+
+					updateVkfortschrittspr(dto.getVkfortschrittsprDto());
+				}
+			} catch (Exception e) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, e);
+			}
+		}
+	}
+
+	public KategorieDto kategorieFindByPrimaryKey(String cNrI, String mandantCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrI == null"));
 		}
 
 		KategorieDto kategorieDto = null;
@@ -408,8 +960,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		KategoriePK pk = new KategoriePK(cNrI, mandantCNr);
 		Kategorie kategorie = em.find(Kategorie.class, pk);
 		if (kategorie == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		kategorieDto = assembleKategorieDto(kategorie);
 
@@ -417,11 +968,9 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		KategoriesprDto kategoriesprDto = null;
 
 		try {
-			KategoriesprPK kategoriesprPK = new KategoriesprPK(
-					kategorieDto.getCNr(), theClientDto.getLocUiAsString(),
+			KategoriesprPK kategoriesprPK = new KategoriesprPK(kategorieDto.getCNr(), theClientDto.getLocUiAsString(),
 					kategorieDto.getMandantCNr());
-			Kategoriespr kategoriespr = em.find(Kategoriespr.class,
-					kategoriesprPK);
+			Kategoriespr kategoriespr = em.find(Kategoriespr.class, kategoriesprPK);
 			if (kategoriespr != null) {
 				kategoriesprDto = assembleKategoriesprDto(kategoriespr);
 			}
@@ -469,11 +1018,20 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return BereichDtoAssembler.createDto(bereich);
 	}
 
-	private void setKategorieFromKategorieDto(Kategorie kategorie,
-			KategorieDto kategorieDto) {
+	private void setKategorieFromKategorieDto(Kategorie kategorie, KategorieDto kategorieDto) {
 		kategorie.setISort(kategorieDto.getISort());
 
 		em.merge(kategorie);
+		em.flush();
+	}
+
+	private void setVkfortschrittFromVkfortschrittDto(Vkfortschritt bean, VkfortschrittDto dto) {
+		bean.setCNr(dto.getCNr());
+		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setISort(dto.getISort());
+		bean.setLeadstatusIId(dto.getLeadstatusIId());
+
+		em.merge(bean);
 		em.flush();
 	}
 
@@ -490,7 +1048,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 	 */
 	public Map getAllBereich(TheClientDto theClientDto) {
 
-		TreeMap<Integer, String> tmArten = new TreeMap<Integer, String>();
+		LinkedHashMap<Integer, String> tmArten = new LinkedHashMap<Integer, String>();
 
 		Query query = em.createNamedQuery("BereichFindByMandantCNr");
 		query.setParameter(1, theClientDto.getMandant());
@@ -507,8 +1065,51 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return tmArten;
 	}
 
-	public Map getKategorie(Locale locale, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Map getAllLeadstatus(TheClientDto theClientDto) {
+
+		LinkedHashMap<Integer, String> tmArten = new LinkedHashMap<Integer, String>();
+
+		Query query = em.createNamedQuery("LeadstatusFindAll");
+		Collection<?> clArten = query.getResultList();
+
+		Iterator<?> itArten = clArten.iterator();
+
+		while (itArten.hasNext()) {
+			Leadstatus ls = (Leadstatus) itArten.next();
+
+			tmArten.put(ls.getIId(), ls.getCBez());
+		}
+
+		return tmArten;
+	}
+
+	public String getTextVerrechenbar(Integer iVerrechenbar,TheClientDto theClientDto) {
+		
+		if(iVerrechenbar==null) {
+			return null;
+		}
+		if(iVerrechenbar==ProjektServiceFac.PROJEKT_VERRECHENBAR_NICHT_DEFINIERT) {
+			return getTextRespectUISpr("proj.verrechenbar.nichtdefiniert", theClientDto.getMandant(), theClientDto.getLocUi());
+		}else if(iVerrechenbar==ProjektServiceFac.PROJEKT_VERRECHENBAR_VERRECHENBAR) {
+			return getTextRespectUISpr("proj.verrechenbar.verrechenbar", theClientDto.getMandant(), theClientDto.getLocUi());
+		}else {
+			return getTextRespectUISpr("proj.verrechenbar.nichtverrechenbar", theClientDto.getMandant(), theClientDto.getLocUi());
+		}
+	}
+	
+	public Map getAllVerrechenbar(TheClientDto theClientDto) {
+
+		LinkedHashMap<Integer, String> tmArten = new LinkedHashMap<Integer, String>();
+
+		
+		tmArten.put(ProjektServiceFac.PROJEKT_VERRECHENBAR_NICHT_DEFINIERT,getTextRespectUISpr("proj.verrechenbar.nichtdefiniert", theClientDto.getMandant(), theClientDto.getLocUi()));
+		tmArten.put(ProjektServiceFac.PROJEKT_VERRECHENBAR_VERRECHENBAR,getTextRespectUISpr("proj.verrechenbar.verrechenbar", theClientDto.getMandant(), theClientDto.getLocUi()));
+		tmArten.put(ProjektServiceFac.PROJEKT_VERRECHENBAR_NICHT_VERRECHENBAR,getTextRespectUISpr("proj.verrechenbar.nichtverrechenbar", theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		return tmArten;
+	}
+
+	public Map getKategorie(Locale locale, TheClientDto theClientDto) throws EJBExceptionLP {
 		final String METHOD_NAME = "getKategorie";
 		myLogger.entry();
 		Map<String, String> map = new LinkedHashMap<String, String>();
@@ -519,25 +1120,19 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			session = factory.openSession();
 			Criteria cKategorie = session.createCriteria(FLRKategorie.class);
 
-			cKategorie.add(Restrictions.eq("PK."
-					+ ProjektFac.FLR_PROJEKT_MANDANT_C_NR,
-					theClientDto.getMandant()));
+			cKategorie.add(Restrictions.eq("PK." + ProjektFac.FLR_PROJEKT_MANDANT_C_NR, theClientDto.getMandant()));
 			cKategorie.addOrder(Order.asc("i_sort"));
 			List<?> lKategorie = cKategorie.list();
 			for (Iterator<?> iter = lKategorie.iterator(); iter.hasNext();) {
 				FLRKategorie kategorie = (FLRKategorie) iter.next();
 
-				Iterator<?> sprsetIterator = kategorie
-						.getKategorie_kategorie_set().iterator();
+				Iterator<?> sprsetIterator = kategorie.getKategorie_kategorie_set().iterator();
 				if (sprsetIterator.hasNext()) {
 					// gibt es eine uebersetzung
 					while (sprsetIterator.hasNext()) {
-						FLRKategoriespr kategoriespr = (FLRKategoriespr) sprsetIterator
-								.next();
-						if (kategoriespr.getLocale_c_nr().trim()
-								.equals(sLocale.trim())) {
-							map.put(kategorie.getPK().getC_nr(),
-									kategoriespr.getC_bez());
+						FLRKategoriespr kategoriespr = (FLRKategoriespr) sprsetIterator.next();
+						if (kategoriespr.getLocale_c_nr().trim().equals(sLocale.trim())) {
+							map.put(kategorie.getPK().getC_nr(), kategoriespr.getC_bez());
 
 							break;
 						}
@@ -545,8 +1140,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 				} else {
 					// wenn nicht c_nr verwenden
-					map.put(kategorie.getPK().getC_nr(), kategorie.getPK()
-							.getC_nr());
+					map.put(kategorie.getPK().getC_nr(), kategorie.getPK().getC_nr());
 				}
 			}
 		} finally {
@@ -557,8 +1151,34 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return map;
 	}
 
-	public Map getProjektStatus(Locale locale, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Map getAllSprVkfortschritt(TheClientDto theClientDto) {
+		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
+		// try {
+		Query query = em.createNamedQuery("VkfortschrittfindAll");
+		query.setParameter(1, theClientDto.getMandant());
+		Collection<?> clArten = query.getResultList();
+
+		Iterator<?> itArten = clArten.iterator();
+		while (itArten.hasNext()) {
+			Vkfortschritt artikelartTemp = (Vkfortschritt) itArten.next();
+			Integer key = artikelartTemp.getIId();
+			Object value = null;
+			// try {
+			Vkfortschrittspr vkfortschrittspr = em.find(Vkfortschrittspr.class,
+					new VkfortschrittsprPK(theClientDto.getLocUiAsString(), key));
+			if (vkfortschrittspr == null || vkfortschrittspr.getCBez() == null) {
+				value = artikelartTemp.getCNr();
+			} else {
+				value = vkfortschrittspr.getCBez();
+			}
+
+			tmArten.put(key, value);
+		}
+
+		return tmArten;
+	}
+
+	public Map getProjektStatus(Locale locale, TheClientDto theClientDto) throws EJBExceptionLP {
 		final String METHOD_NAME = "getProjektStatus";
 		myLogger.entry();
 		Map<String, String> map = new LinkedHashMap<String, String>();
@@ -569,8 +1189,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			Criteria cStatus = session.createCriteria(FLRProjektstatus.class);
 			// session.enableFilter("filterLocale").setParameter("paramLocale",
 			// sLocale);
-			cStatus.add(Restrictions.eq(ProjektFac.FLR_PROJEKT_MANDANT_C_NR,
-					theClientDto.getMandant()));
+			cStatus.add(Restrictions.eq(ProjektFac.FLR_PROJEKT_MANDANT_C_NR, theClientDto.getMandant()));
 			cStatus.addOrder(Order.asc("i_sort"));
 			List<?> lStatus = cStatus.list();
 			for (Iterator<?> iter = lStatus.iterator(); iter.hasNext();) {
@@ -586,8 +1205,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return map;
 	}
 
-	public Map getTyp(Locale locale, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Map getTyp(Locale locale, TheClientDto theClientDto) throws EJBExceptionLP {
 		final String METHOD_NAME = "getTyp";
 		myLogger.entry();
 		Map<String, String> map = new LinkedHashMap<String, String>();
@@ -599,9 +1217,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			Criteria cTyp = session.createCriteria(FLRTyp.class);
 			// session.enableFilter("filterLocale").setParameter("paramLocale",
 			// sLocale);
-			cTyp.add(Restrictions.eq("PK."
-					+ ProjektFac.FLR_PROJEKT_MANDANT_C_NR,
-					theClientDto.getMandant()));
+			cTyp.add(Restrictions.eq("PK." + ProjektFac.FLR_PROJEKT_MANDANT_C_NR, theClientDto.getMandant()));
 			cTyp.addOrder(Order.asc("i_sort"));
 			List<?> lTyp = cTyp.list();
 			for (Iterator<?> iter = lTyp.iterator(); iter.hasNext();) {
@@ -634,14 +1250,11 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return map;
 	}
 
-	public void createKategoriespr(KategoriesprDto kategoriesprDto)
-			throws EJBExceptionLP {
+	public void createKategoriespr(KategoriesprDto kategoriesprDto) throws EJBExceptionLP {
 		checkKategoriesprDto(kategoriesprDto);
 		try {
-			Kategoriespr kategoriespr = new Kategoriespr(
-					kategoriesprDto.getKategorieCNr(),
-					kategoriesprDto.getCBez(), kategoriesprDto.getLocaleCNr(),
-					kategoriesprDto.getMandantCNr());
+			Kategoriespr kategoriespr = new Kategoriespr(kategoriesprDto.getKategorieCNr(), kategoriesprDto.getCBez(),
+					kategoriesprDto.getLocaleCNr(), kategoriesprDto.getMandantCNr());
 			em.persist(kategoriespr);
 			em.flush();
 			setKategoriesprFromKategoriesprDto(kategoriespr, kategoriesprDto);
@@ -650,15 +1263,27 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void removeKategoriespr(String kategorieCNr, String localeCNr)
-			throws EJBExceptionLP {
+	public void createVkfortschrittspr(VkfortschrittsprDto vkfortschrittsprDto) throws EJBExceptionLP {
+
+		try {
+			Vkfortschrittspr spr = new Vkfortschrittspr(vkfortschrittsprDto.getLocaleCNr(),
+
+					vkfortschrittsprDto.getCBez(), vkfortschrittsprDto.getVkfortschrittIId());
+			em.persist(spr);
+			em.flush();
+
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	public void removeKategoriespr(String kategorieCNr, String localeCNr) throws EJBExceptionLP {
 		KategoriesprPK kategoriesprPK = new KategoriesprPK();
 		kategoriesprPK.setKategorieCNr(kategorieCNr);
 		kategoriesprPK.setLocaleCNr(localeCNr);
 		Kategoriespr toRemove = em.find(Kategoriespr.class, kategoriesprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -668,8 +1293,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void removeKategoriespr(KategoriesprDto kategoriesprDto)
-			throws EJBExceptionLP {
+	public void removeKategoriespr(KategoriesprDto kategoriesprDto) throws EJBExceptionLP {
 		if (kategoriesprDto != null) {
 			String projektkategorieCNr = kategoriesprDto.getKategorieCNr();
 			String localeCNr = kategoriesprDto.getLocaleCNr();
@@ -677,8 +1301,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void updateKategoriespr(KategoriesprDto kategoriesprDto)
-			throws EJBExceptionLP {
+	public void updateKategoriespr(KategoriesprDto kategoriesprDto) throws EJBExceptionLP {
 		checkKategoriesprDto(kategoriesprDto);
 		myLogger.logData(kategoriesprDto);
 		if (kategoriesprDto != null) {
@@ -686,16 +1309,13 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			String localeCNr = kategoriesprDto.getLocaleCNr();
 			String mandantCNr = kategoriesprDto.getMandantCNr();
 			try {
-				KategoriesprPK kategoriesprPK = new KategoriesprPK(cNr,
-						localeCNr, mandantCNr);
-				Kategoriespr kategoriespr = em.find(Kategoriespr.class,
-						kategoriesprPK);
+				KategoriesprPK kategoriesprPK = new KategoriesprPK(cNr, localeCNr, mandantCNr);
+				Kategoriespr kategoriespr = em.find(Kategoriespr.class, kategoriesprPK);
 				if (kategoriespr == null) {
 					// diese Uebersetzung gibt es nocht nicht
 					createKategoriespr(kategoriesprDto);
 				} else {
-					setKategoriesprFromKategoriesprDto(kategoriespr,
-							kategoriesprDto);
+					setKategoriesprFromKategoriesprDto(kategoriespr, kategoriesprDto);
 				}
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, e);
@@ -703,8 +1323,26 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public Integer createProjekterledigungsgrund(
-			ProjekterledigungsgrundDto projekterledigungsgrundDto,
+	public void updateVkfortschrittspr(VkfortschrittsprDto sprDto) throws EJBExceptionLP {
+
+		if (sprDto != null) {
+
+			try {
+				VkfortschrittsprPK pk = new VkfortschrittsprPK(sprDto.getLocaleCNr(), sprDto.getVkfortschrittIId());
+				Vkfortschrittspr vkfortschrittspr = em.find(Vkfortschrittspr.class, pk);
+				if (vkfortschrittspr == null) {
+					// diese Uebersetzung gibt es nocht nicht
+					createVkfortschrittspr(sprDto);
+				} else {
+					vkfortschrittspr.setCBez(sprDto.getCBez());
+				}
+			} catch (Exception e) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, e);
+			}
+		}
+	}
+
+	public Integer createProjekterledigungsgrund(ProjekterledigungsgrundDto projekterledigungsgrundDto,
 			TheClientDto theClientDto) {
 
 		if (projekterledigungsgrundDto == null) {
@@ -713,38 +1351,32 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 		if (projekterledigungsgrundDto.getCBez() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"projekterledigungsgrundDto.getCBez() == null"));
+					new Exception("projekterledigungsgrundDto.getCBez() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("ProjekterledigungsgrundfindByMandantCnrCBez");
+			Query query = em.createNamedQuery("ProjekterledigungsgrundfindByMandantCnrCBez");
 			query.setParameter(1, projekterledigungsgrundDto.getMandantCNr());
 			query.setParameter(2, projekterledigungsgrundDto.getCBez());
-			Projekterledigungsgrund doppelt = (Projekterledigungsgrund) query
-					.getSingleResult();
+			Projekterledigungsgrund doppelt = (Projekterledigungsgrund) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PROJ_PROJEKTERLEDIGUNGSGRUND.C_BEZ"));
 		} catch (NoResultException ex1) {
 		}
 		// generieren von primary key
 		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
-		Integer pk = pkGen
-				.getNextPrimaryKey(PKConst.PK_PROJEKTERLEDIGUNGSGRUND);
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PROJEKTERLEDIGUNGSGRUND);
 		projekterledigungsgrundDto.setIId(pk);
 
 		try {
 			Projekterledigungsgrund projekterledigungsgrund = new Projekterledigungsgrund(
-					projekterledigungsgrundDto.getIId(),
-					projekterledigungsgrundDto.getMandantCNr(),
+					projekterledigungsgrundDto.getIId(), projekterledigungsgrundDto.getMandantCNr(),
 					projekterledigungsgrundDto.getCBez());
 			em.persist(projekterledigungsgrund);
 			em.flush();
-			setProjekterledigungsgrundFromProjekterledigungsgrundDto(
-					projekterledigungsgrund, projekterledigungsgrundDto);
+			setProjekterledigungsgrundFromProjekterledigungsgrundDto(projekterledigungsgrund,
+					projekterledigungsgrundDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return projekterledigungsgrundDto.getIId();
 	}
@@ -752,21 +1384,17 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 	/**
 	 * Entfernt eine vorhandene Projekterledigungsgrund
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 */
 	public void removeProjekterledigungsgrund(Integer iId) {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
-			Projekterledigungsgrund projekterledigungsgrund = em.find(
-					Projekterledigungsgrund.class, iId);
+			Projekterledigungsgrund projekterledigungsgrund = em.find(Projekterledigungsgrund.class, iId);
 			if (projekterledigungsgrund == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(projekterledigungsgrund);
 			em.flush();
@@ -778,50 +1406,39 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 	/**
 	 * Speichert &auml;nderungen einer Projekterledigungsgrund
 	 * 
-	 * @param projekterledigungsgrundDto
-	 *            ProjekterledigungsgrundDto
+	 * @param projekterledigungsgrundDto ProjekterledigungsgrundDto
 	 * @throws EJBExceptionLP
 	 */
-	public void updateProjekterledigungsgrund(
-			ProjekterledigungsgrundDto projekterledigungsgrundDto) {
+	public void updateProjekterledigungsgrund(ProjekterledigungsgrundDto projekterledigungsgrundDto) {
 		if (projekterledigungsgrundDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("projekterledigungsgrundDto == null"));
 		}
-		if (projekterledigungsgrundDto.getIId() == null
-				|| projekterledigungsgrundDto.getCBez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"projekterledigungsgrundDto.getIId() == null || projekterledigungsgrundDto.getCBez() == null"));
+		if (projekterledigungsgrundDto.getIId() == null || projekterledigungsgrundDto.getCBez() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"projekterledigungsgrundDto.getIId() == null || projekterledigungsgrundDto.getCBez() == null"));
 		}
 
 		Integer iId = projekterledigungsgrundDto.getIId();
 		// try {
-		Projekterledigungsgrund projekterledigungsgrund = em.find(
-				Projekterledigungsgrund.class, iId);
+		Projekterledigungsgrund projekterledigungsgrund = em.find(Projekterledigungsgrund.class, iId);
 		if (projekterledigungsgrund == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
-			Query query = em
-					.createNamedQuery("ProjekterledigungsgrundfindByMandantCnrCBez");
+			Query query = em.createNamedQuery("ProjekterledigungsgrundfindByMandantCnrCBez");
 			query.setParameter(1, projekterledigungsgrundDto.getMandantCNr());
 			query.setParameter(2, projekterledigungsgrundDto.getCBez());
-			Integer iIdVorhanden = ((Projekterledigungsgrund) query
-					.getSingleResult()).getIId();
+			Integer iIdVorhanden = ((Projekterledigungsgrund) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PROJ_PROJEKTERLEDIGUNGSGRUND.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PROJ_PROJEKTERLEDIGUNGSGRUND.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
 			//
 		}
-		setProjekterledigungsgrundFromProjekterledigungsgrundDto(
-				projekterledigungsgrund, projekterledigungsgrundDto);
+		setProjekterledigungsgrundFromProjekterledigungsgrundDto(projekterledigungsgrund, projekterledigungsgrundDto);
 		// }
 		// catch (FinderException ex) {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
@@ -833,35 +1450,28 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 	/**
 	 * Holt eine bestimmte Projekterledigungsgrund
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 * @return ProjekterledigungsgrundDto
 	 */
-	public ProjekterledigungsgrundDto projekterledigungsgrundFindByPrimaryKey(
-			Integer iId) {
+	public ProjekterledigungsgrundDto projekterledigungsgrundFindByPrimaryKey(Integer iId) {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		try {
-			Projekterledigungsgrund projekterledigungsgrund = em.find(
-					Projekterledigungsgrund.class, iId);
+			Projekterledigungsgrund projekterledigungsgrund = em.find(Projekterledigungsgrund.class, iId);
 			if (projekterledigungsgrund == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			return assembleProjekterledigungsgrundDto(projekterledigungsgrund);
 		} catch (Exception e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
 		}
 	}
 
 	private void setProjekterledigungsgrundFromProjekterledigungsgrundDto(
-			Projekterledigungsgrund projekterledigungsgrund,
-			ProjekterledigungsgrundDto projekterledigungsgrundDto) {
+			Projekterledigungsgrund projekterledigungsgrund, ProjekterledigungsgrundDto projekterledigungsgrundDto) {
 		projekterledigungsgrund.setCBez(projekterledigungsgrundDto.getCBez());
 		em.merge(projekterledigungsgrund);
 		em.flush();
@@ -869,12 +1479,10 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 	private ProjekterledigungsgrundDto assembleProjekterledigungsgrundDto(
 			Projekterledigungsgrund projekterledigungsgrund) {
-		return ProjekterledigungsgrundDtoAssembler
-				.createDto(projekterledigungsgrund);
+		return ProjekterledigungsgrundDtoAssembler.createDto(projekterledigungsgrund);
 	}
 
-	public void updateKategoriesprs(KategoriesprDto[] kategoriesprDtos)
-			throws EJBExceptionLP {
+	public void updateKategoriesprs(KategoriesprDto[] kategoriesprDtos) throws EJBExceptionLP {
 		if (kategoriesprDtos != null) {
 			for (int i = 0; i < kategoriesprDtos.length; i++) {
 				updateKategoriespr(kategoriesprDtos[i]);
@@ -882,21 +1490,19 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public KategoriesprDto kategoriesprFindByPrimaryKey(
-			String projektkategorieCNr, String localeCNr) throws EJBExceptionLP {
+	public KategoriesprDto kategoriesprFindByPrimaryKey(String projektkategorieCNr, String localeCNr)
+			throws EJBExceptionLP {
 		KategoriesprPK kategoriesprPK = new KategoriesprPK();
 		kategoriesprPK.setKategorieCNr(projektkategorieCNr);
 		kategoriesprPK.setLocaleCNr(localeCNr);
 		Kategoriespr kategoriespr = em.find(Kategoriespr.class, kategoriesprPK);
 		if (kategoriespr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleKategoriesprDto(kategoriespr);
 	}
 
-	private void setKategoriesprFromKategoriesprDto(Kategoriespr kategoriespr,
-			KategoriesprDto kategoriesprDto) {
+	private void setKategoriesprFromKategoriesprDto(Kategoriespr kategoriespr, KategoriesprDto kategoriesprDto) {
 		kategoriespr.setCBez(kategoriesprDto.getCBez());
 		em.merge(kategoriespr);
 		em.flush();
@@ -906,11 +1512,9 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return KategoriesprDtoAssembler.createDto(kategoriespr);
 	}
 
-	private void checkKategorieDto(KategorieDto kategorieDto)
-			throws EJBExceptionLP {
+	private void checkKategorieDto(KategorieDto kategorieDto) throws EJBExceptionLP {
 		if (kategorieDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kategorieDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kategorieDto == null"));
 		}
 		if (kategorieDto.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -923,11 +1527,9 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		myLogger.info("KategorieDto: " + kategorieDto.toString());
 	}
 
-	private void checkKategoriesprDto(KategoriesprDto kategoriesprDto)
-			throws EJBExceptionLP {
+	private void checkKategoriesprDto(KategoriesprDto kategoriesprDto) throws EJBExceptionLP {
 		if (kategoriesprDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kategoriesprDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kategoriesprDto == null"));
 		}
 		if (kategoriesprDto.getKategorieCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -944,11 +1546,9 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		myLogger.info("KategorieDto: " + kategoriesprDto.toString());
 	}
 
-	private void checkProjekttypDto(ProjekttypDto projekttypDto)
-			throws EJBExceptionLP {
+	private void checkProjekttypDto(ProjekttypDto projekttypDto) throws EJBExceptionLP {
 		if (projekttypDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("projekttypDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("projekttypDto == null"));
 		}
 		if (projekttypDto.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -961,11 +1561,49 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		myLogger.info("ProjekttypDto: " + projekttypDto.toString());
 	}
 
-	private void checkProjekttypsprDto(ProjekttypsprDto projekttypsprDto)
-			throws EJBExceptionLP {
+	public boolean esGibtMindestensEinenBereichMitBetreiber(TheClientDto theClientDto) {
+		boolean b = false;
+
+		Query query = em.createNamedQuery("BereichFindByMandantCNr");
+		query.setParameter(1, theClientDto.getMandant());
+		Collection<?> clArten = query.getResultList();
+
+		Iterator<?> itArten = clArten.iterator();
+
+		while (itArten.hasNext()) {
+			Bereich bereich = (Bereich) itArten.next();
+
+			if (Helper.short2boolean(bereich.getBProjektMitBetreiber())) {
+				return true;
+			}
+		}
+
+		return b;
+	}
+
+	public boolean esGibtMindestensEinenBereichMitArtikel(TheClientDto theClientDto) {
+		boolean b = false;
+
+		Query query = em.createNamedQuery("BereichFindByMandantCNr");
+		query.setParameter(1, theClientDto.getMandant());
+		Collection<?> clArten = query.getResultList();
+
+		Iterator<?> itArten = clArten.iterator();
+
+		while (itArten.hasNext()) {
+			Bereich bereich = (Bereich) itArten.next();
+
+			if (Helper.short2boolean(bereich.getBProjektMitArtikel())) {
+				return true;
+			}
+		}
+
+		return b;
+	}
+
+	private void checkProjekttypsprDto(ProjekttypsprDto projekttypsprDto) throws EJBExceptionLP {
 		if (projekttypsprDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kategoriesprDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kategoriesprDto == null"));
 		}
 		if (projekttypsprDto.getTypCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -982,14 +1620,12 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		myLogger.info("KategorieDto: " + projekttypsprDto.toString());
 	}
 
-	public String createProjekttyp(ProjekttypDto projekttypDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createProjekttyp(ProjekttypDto projekttypDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.entry();
 
 		// precondition.
 		if (projekttypDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("projekttypDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("projekttypDto == null"));
 		}
 
 		if (projekttypDto.getCNr() == null) {
@@ -999,25 +1635,21 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		String cNrWieKey = null;
 
 		try {
-			Projekttyp projekttyp = new Projekttyp(projekttypDto.getCNr(),
-					projekttypDto.getISort(), projekttypDto.getMandantCNr());
+			Projekttyp projekttyp = new Projekttyp(projekttypDto.getCNr(), projekttypDto.getISort(),
+					projekttypDto.getMandantCNr());
 			em.persist(projekttyp);
 			em.flush();
 			setProjekttypFromProjekttypDto(projekttyp, projekttypDto);
-			ProjekttypPK pk = new ProjekttypPK(projekttypDto.getCNr(),
-					projekttypDto.getMandantCNr());
+			ProjekttypPK pk = new ProjekttypPK(projekttypDto.getCNr(), projekttypDto.getMandantCNr());
 			Projekttyp tmpprojekttyp = em.find(Projekttyp.class, pk);
 			if (tmpprojekttyp == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			cNrWieKey = tmpprojekttyp.getPk().getCNr();
 
 			if (projekttypDto.getProjekttypsprDto() != null) {
-				projekttypDto.getProjekttypsprDto().setTypCNr(
-						projekttypDto.getCNr());
-				projekttypDto.getProjekttypsprDto().setMandantCNr(
-						projekttypDto.getMandantCNr());
+				projekttypDto.getProjekttypsprDto().setTypCNr(projekttypDto.getCNr());
+				projekttypDto.getProjekttypsprDto().setMandantCNr(projekttypDto.getMandantCNr());
 				createProjekttypspr(projekttypDto.getProjekttypsprDto());
 			}
 		} catch (EntityExistsException ex) {
@@ -1029,8 +1661,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 	public void removeProjekttyp(String cNr) throws EJBExceptionLP {
 		Projekttyp toRemove = em.find(Projekttyp.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1040,14 +1671,11 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void removeProjekttyp(ProjekttypDto projekttypDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeProjekttyp(ProjekttypDto projekttypDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkProjekttypDto(projekttypDto);
 		try {
-			ProjekttypPK pk = new ProjekttypPK(projekttypDto.getCNr(),
-					projekttypDto.getMandantCNr());
-			Query query = em
-					.createNamedQuery("ProjekttypsprfindByProjekttypCNrAndMandantCNr");
+			ProjekttypPK pk = new ProjekttypPK(projekttypDto.getCNr(), projekttypDto.getMandantCNr());
+			Query query = em.createNamedQuery("ProjekttypsprfindByProjekttypCNrAndMandantCNr");
 			query.setParameter(1, projekttypDto.getCNr());
 			query.setParameter(2, projekttypDto.getMandantCNr());
 			Collection<?> c = query.getResultList();
@@ -1058,8 +1686,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			}
 			Projekttyp projekttyp = em.find(Projekttyp.class, pk);
 			if (projekttyp == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(projekttyp);
 			em.flush();
@@ -1069,24 +1696,19 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void updateProjekttyp(ProjekttypDto projekttypDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateProjekttyp(ProjekttypDto projekttypDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkProjekttypDto(projekttypDto);
 		myLogger.logData(projekttypDto);
 		if (projekttypDto != null) {
 			try {
-				ProjekttypPK pk = new ProjekttypPK(projekttypDto.getCNr(),
-						projekttypDto.getMandantCNr());
+				ProjekttypPK pk = new ProjekttypPK(projekttypDto.getCNr(), projekttypDto.getMandantCNr());
 				Projekttyp projekttyp = em.find(Projekttyp.class, pk);
 				setProjekttypFromProjekttypDto(projekttyp, projekttypDto);
 				// sprache
 				if (projekttypDto.getProjekttypsprDto() != null) {
-					projekttypDto.getProjekttypsprDto().setTypCNr(
-							projekttypDto.getCNr());
-					projekttypDto.getProjekttypsprDto().setLocaleCNr(
-							theClientDto.getLocUiAsString());
-					projekttypDto.getProjekttypsprDto().setMandantCNr(
-							projekttypDto.getMandantCNr());
+					projekttypDto.getProjekttypsprDto().setTypCNr(projekttypDto.getCNr());
+					projekttypDto.getProjekttypsprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+					projekttypDto.getProjekttypsprDto().setMandantCNr(projekttypDto.getMandantCNr());
 
 					updateProjekttypspr(projekttypDto.getProjekttypsprDto());
 				}
@@ -1098,13 +1720,12 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 	}
 
-	public ProjekttypDto projekttypFindByPrimaryKey(String cNrI,
-			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
+	public ProjekttypDto projekttypFindByPrimaryKey(String cNrI, String mandantCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		// check2(cNrUserI);
 
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrI == null"));
 		}
 
 		ProjekttypDto projekttypDto = null;
@@ -1113,8 +1734,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		ProjekttypPK pk = new ProjekttypPK(cNrI, mandantCNr);
 		Projekttyp projekttyp = em.find(Projekttyp.class, pk);
 		if (projekttyp == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		projekttypDto = assembleProjekttypDto(projekttyp);
 
@@ -1122,11 +1742,9 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		ProjekttypsprDto projekttypsprDto = null;
 
 		try {
-			ProjekttypsprPK projekttypsprPK = new ProjekttypsprPK(
-					projekttypDto.getCNr(), theClientDto.getLocUiAsString(),
-					projekttypDto.getMandantCNr());
-			Projekttypspr projekttypspr = em.find(Projekttypspr.class,
-					projekttypsprPK);
+			ProjekttypsprPK projekttypsprPK = new ProjekttypsprPK(projekttypDto.getCNr(),
+					theClientDto.getLocUiAsString(), projekttypDto.getMandantCNr());
+			Projekttypspr projekttypspr = em.find(Projekttypspr.class, projekttypsprPK);
 			if (projekttypspr != null) {
 				projekttypsprDto = assembleProjekttypsprDto(projekttypspr);
 			}
@@ -1138,8 +1756,30 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return projekttypDto;
 	}
 
-	private void setProjekttypFromProjekttypDto(Projekttyp projekttyp,
-			ProjekttypDto projekttypDto) {
+	public VkfortschrittDto vkfortschrittFindByPrimaryKey(Integer iId, TheClientDto theClientDto) {
+
+		Vkfortschritt bean = em.find(Vkfortschritt.class, iId);
+
+		VkfortschrittDto projekttypDto = assembleVkfortschrittDto(bean);
+
+		// jetzt die Spr
+		VkfortschrittsprDto sprDto = null;
+
+		try {
+			VkfortschrittsprPK sprPK = new VkfortschrittsprPK(theClientDto.getLocUiAsString(), projekttypDto.getIId());
+			Vkfortschrittspr vkfortschrittspr = em.find(Vkfortschrittspr.class, sprPK);
+			if (vkfortschrittspr != null) {
+				sprDto = VkfortschrittsprDtoAssembler.createDto(vkfortschrittspr);
+			}
+		} catch (Throwable t) {
+			// ignore
+		}
+
+		projekttypDto.setVkfortschrittsprDto(sprDto);
+		return projekttypDto;
+	}
+
+	private void setProjekttypFromProjekttypDto(Projekttyp projekttyp, ProjekttypDto projekttypDto) {
 		projekttyp.setISort(projekttypDto.getISort());
 		em.merge(projekttyp);
 		em.flush();
@@ -1149,33 +1789,30 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		return ProjekttypDtoAssembler.createDto(projekttyp);
 	}
 
-	public void createProjekttypspr(ProjekttypsprDto projekttypsprDto)
-			throws EJBExceptionLP {
+	private VkfortschrittDto assembleVkfortschrittDto(Vkfortschritt vkfortschritt) {
+		return VkfortschrittDtoAssembler.createDto(vkfortschritt);
+	}
+
+	public void createProjekttypspr(ProjekttypsprDto projekttypsprDto) throws EJBExceptionLP {
 		checkProjekttypsprDto(projekttypsprDto);
 		try {
-			Projekttypspr projekttypspr = new Projekttypspr(
-					projekttypsprDto.getTypCNr(),
-					projekttypsprDto.getLocaleCNr(),
-					projekttypsprDto.getCBez(),
-					projekttypsprDto.getMandantCNr());
+			Projekttypspr projekttypspr = new Projekttypspr(projekttypsprDto.getTypCNr(),
+					projekttypsprDto.getLocaleCNr(), projekttypsprDto.getCBez(), projekttypsprDto.getMandantCNr());
 			em.persist(projekttypspr);
 			em.flush();
-			setProjekttypsprFromProjekttypsprDto(projekttypspr,
-					projekttypsprDto);
+			setProjekttypsprFromProjekttypsprDto(projekttypspr, projekttypsprDto);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
-	public void removeProjekttypspr(String typCNr, String localeCNr)
-			throws EJBExceptionLP {
+	public void removeProjekttypspr(String typCNr, String localeCNr) throws EJBExceptionLP {
 		ProjekttypsprPK projekttypsprPK = new ProjekttypsprPK();
 		projekttypsprPK.setProjekttypCNr(typCNr);
 		projekttypsprPK.setLocaleCNr(localeCNr);
 		Projekttypspr toRemove = em.find(Projekttypspr.class, projekttypsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1185,8 +1822,7 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void removeProjekttypspr(ProjekttypsprDto projekttypsprDto)
-			throws EJBExceptionLP {
+	public void removeProjekttypspr(ProjekttypsprDto projekttypsprDto) throws EJBExceptionLP {
 		if (projekttypsprDto != null) {
 			String typCNr = projekttypsprDto.getTypCNr();
 			String localeCNr = projekttypsprDto.getLocaleCNr();
@@ -1198,14 +1834,12 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 		Bereich o1 = em.find(Bereich.class, iId1I);
 		if (o1 == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		Bereich o2 = em.find(Bereich.class, iId2I);
 		if (o2 == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		Integer iSort1 = o1.getISort();
@@ -1218,74 +1852,86 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 	}
 
-	public void updateProjekttypspr(ProjekttypsprDto projekttypsprDto)
-			throws EJBExceptionLP {
+	public void vertauscheVkfortschritt(Integer iId1I, Integer iId2I) {
+
+		Vkfortschritt o1 = em.find(Vkfortschritt.class, iId1I);
+		if (o1 == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Vkfortschritt o2 = em.find(Vkfortschritt.class, iId2I);
+		if (o2 == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Integer iSort1 = o1.getISort();
+		Integer iSort2 = o2.getISort();
+
+		o2.setISort(new Integer(-1));
+
+		o1.setISort(iSort2);
+		o2.setISort(iSort1);
+
+	}
+
+	public void updateProjekttypspr(ProjekttypsprDto projekttypsprDto) throws EJBExceptionLP {
 		checkProjekttypsprDto(projekttypsprDto);
 		if (projekttypsprDto != null) {
 			String cNr = projekttypsprDto.getTypCNr();
 			String localeCNr = projekttypsprDto.getLocaleCNr();
 			String mandantCNr = projekttypsprDto.getMandantCNr();
-			ProjekttypsprPK projekttypsprPK = new ProjekttypsprPK(cNr,
-					localeCNr, mandantCNr);
-			Projekttypspr projekttypspr = em.find(Projekttypspr.class,
-					projekttypsprPK);
+			ProjekttypsprPK projekttypsprPK = new ProjekttypsprPK(cNr, localeCNr, mandantCNr);
+			Projekttypspr projekttypspr = em.find(Projekttypspr.class, projekttypsprPK);
 
 			if (projekttypspr == null) {
 				// diese Uebersetzung gibt es nocht nicht
 				createProjekttypspr(projekttypsprDto);
 			} else {
-				setProjekttypsprFromProjekttypsprDto(projekttypspr,
-						projekttypsprDto);
+				setProjekttypsprFromProjekttypsprDto(projekttypspr, projekttypsprDto);
 			}
 		}
 	}
 
-	public ProjekttypsprDto projekttypsprFindByPrimaryKey(String typCNr,
-			String localeCNr, String mandantCNr) throws EJBExceptionLP {
+	public ProjekttypsprDto projekttypsprFindByPrimaryKey(String typCNr, String localeCNr, String mandantCNr)
+			throws EJBExceptionLP {
 		ProjekttypsprPK projekttypsprPK = new ProjekttypsprPK();
 		projekttypsprPK.setProjekttypCNr(typCNr);
 		projekttypsprPK.setLocaleCNr(localeCNr);
 		projekttypsprPK.setMandantCNr(mandantCNr);
-		Projekttypspr projekttypspr = em.find(Projekttypspr.class,
-				projekttypsprPK);
+		Projekttypspr projekttypspr = em.find(Projekttypspr.class, projekttypsprPK);
 		if (projekttypspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleProjekttypsprDto(projekttypspr);
 	}
 
-	public ProjekttypsprDto projekttypsprFindByPrimaryKeyohneEx(String typCNr,
-			String localeCNr, String mandantCNr) throws EJBExceptionLP {
+	public ProjekttypsprDto projekttypsprFindByPrimaryKeyohneEx(String typCNr, String localeCNr, String mandantCNr)
+			throws EJBExceptionLP {
 		ProjekttypsprPK projekttypsprPK = new ProjekttypsprPK();
 		projekttypsprPK.setProjekttypCNr(typCNr);
 		projekttypsprPK.setLocaleCNr(localeCNr);
 		projekttypsprPK.setMandantCNr(mandantCNr);
-		Projekttypspr projekttypspr = em.find(Projekttypspr.class,
-				projekttypsprPK);
+		Projekttypspr projekttypspr = em.find(Projekttypspr.class, projekttypsprPK);
 		if (projekttypspr == null) {
 			return null;
 		}
 		return assembleProjekttypsprDto(projekttypspr);
 	}
 
-	private void setProjekttypsprFromProjekttypsprDto(
-			Projekttypspr projekttypspr, ProjekttypsprDto projekttypsprDto) {
+	private void setProjekttypsprFromProjekttypsprDto(Projekttypspr projekttypspr, ProjekttypsprDto projekttypsprDto) {
 		projekttypspr.setCBez(projekttypsprDto.getCBez());
 		em.merge(projekttypspr);
 		em.flush();
 	}
 
-	private ProjekttypsprDto assembleProjekttypsprDto(
-			Projekttypspr projekttypspr) {
+	private ProjekttypsprDto assembleProjekttypsprDto(Projekttypspr projekttypspr) {
 		return ProjekttypsprDtoAssembler.createDto(projekttypspr);
 	}
 
 	public void removeKontaktart(String cNr) throws EJBExceptionLP {
 		Kontaktart toRemove = em.find(Kontaktart.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1295,8 +1941,8 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public String createProjektStatus(ProjektStatusDto projektStatusDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createProjektStatus(ProjektStatusDto projektStatusDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		Status status = em.find(Status.class, projektStatusDto.getCNr());
 		if (status == null) {
@@ -1304,42 +1950,39 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 			try {
 				em.persist(status);
 			} catch (EntityExistsException e) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEIM_ANLEGEN_ENTITY_EXISTS, e);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN_ENTITY_EXISTS, e);
 			}
 		}
-		
-		if(projektStatusDto.getBErledigt()==null){
+
+		if (projektStatusDto.getBErledigt() == null) {
 			projektStatusDto.setBErledigt(Helper.boolean2Short(false));
 		}
-		
+		if (projektStatusDto.getBGesperrt() == null) {
+			projektStatusDto.setBGesperrt(Helper.boolean2Short(false));
+		}
+
 		String cNrWieKey = null;
-		Projektstatus projektStatus = new Projektstatus(
-				projektStatusDto.getISort(), projektStatusDto.getMandantCNr(),
-				projektStatusDto.getCNr(),
-				projektStatusDto.getBAenderungprotokollieren(),projektStatusDto.getBErledigt());
+		Projektstatus projektStatus = new Projektstatus(projektStatusDto.getISort(), projektStatusDto.getMandantCNr(),
+				projektStatusDto.getCNr(), projektStatusDto.getBAenderungprotokollieren(),
+				projektStatusDto.getBErledigt(), projektStatusDto.getBGesperrt());
 		em.persist(projektStatus);
 		em.flush();
 		setProjektStatusFromProjektStatusDto(projektStatus, projektStatusDto);
-		ProjektstatusPK pk = new ProjektstatusPK(projektStatusDto.getCNr(),
-				projektStatusDto.getMandantCNr());
+		ProjektstatusPK pk = new ProjektstatusPK(projektStatusDto.getCNr(), projektStatusDto.getMandantCNr());
 		Projektstatus projektstatus = em.find(Projektstatus.class, pk);
 		if (projektstatus == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		cNrWieKey = projektstatus.getPk().getCNr();
 
 		return cNrWieKey;
 	}
 
-	public void removeProjektStatus(String statusCNr, String mandantCNr)
-			throws EJBExceptionLP {
+	public void removeProjektStatus(String statusCNr, String mandantCNr) throws EJBExceptionLP {
 		ProjektstatusPK pk = new ProjektstatusPK(statusCNr, mandantCNr);
 		Projektstatus toRemove = em.find(Projektstatus.class, pk);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1349,43 +1992,36 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 		}
 	}
 
-	public void removeProjektStatus(ProjektStatusDto projektStatusDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeProjektStatus(ProjektStatusDto projektStatusDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (projektStatusDto != null) {
-			removeProjektStatus(projektStatusDto.getCNr(),
-					projektStatusDto.getMandantCNr());
+			removeProjektStatus(projektStatusDto.getCNr(), projektStatusDto.getMandantCNr());
 		}
 	}
 
-	public void updateProjektStatus(ProjektStatusDto projektStatusDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateProjektStatus(ProjektStatusDto projektStatusDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (projektStatusDto != null) {
-			ProjektstatusPK pk = new ProjektstatusPK(projektStatusDto.getCNr(),
-					projektStatusDto.getMandantCNr());
+			ProjektstatusPK pk = new ProjektstatusPK(projektStatusDto.getCNr(), projektStatusDto.getMandantCNr());
 			Projektstatus projektStatus = em.find(Projektstatus.class, pk);
 			if (projektStatus == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
-			setProjektStatusFromProjektStatusDto(projektStatus,
-					projektStatusDto);
+			setProjektStatusFromProjektStatusDto(projektStatus, projektStatusDto);
 		}
 	}
 
-	public ProjektStatusDto projektStatusFindByPrimaryKey(String statusCNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		ProjektstatusPK pk = new ProjektstatusPK(statusCNr,
-				theClientDto.getMandant());
+	public ProjektStatusDto projektStatusFindByPrimaryKey(String statusCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
+		ProjektstatusPK pk = new ProjektstatusPK(statusCNr, theClientDto.getMandant());
 		if (statusCNr == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrI == null"));
 		}
 
 		Projektstatus projektstatus = em.find(Projektstatus.class, pk);
 		if (projektstatus == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleProjektStatusDto(projektstatus);
 
@@ -1398,23 +2034,20 @@ public class ProjektServiceFacBean extends Facade implements ProjektServiceFac {
 
 	}
 
-	private void setProjektStatusFromProjektStatusDto(
-			Projektstatus projektStatus, ProjektStatusDto projektStatusDto) {
+	private void setProjektStatusFromProjektStatusDto(Projektstatus projektStatus, ProjektStatusDto projektStatusDto) {
 		projektStatus.setISort(projektStatusDto.getISort());
-		projektStatus.setBAenderungprotokollieren(projektStatusDto
-				.getBAenderungprotokollieren());
+		projektStatus.setBAenderungprotokollieren(projektStatusDto.getBAenderungprotokollieren());
 		projektStatus.setBErledigt(projektStatusDto.getBErledigt());
+		projektStatus.setBGesperrt(projektStatusDto.getBGesperrt());
 		em.merge(projektStatus);
 		em.flush();
 	}
 
-	private ProjektStatusDto assembleProjektStatusDto(
-			Projektstatus projektStatus) {
+	private ProjektStatusDto assembleProjektStatusDto(Projektstatus projektStatus) {
 		return ProjektStatusDtoAssembler.createDto(projektStatus);
 	}
 
-	private ProjektStatusDto[] assembleProjektStatusDtos(
-			Collection<?> projektStatuss) {
+	private ProjektStatusDto[] assembleProjektStatusDtos(Collection<?> projektStatuss) {
 		List<ProjektStatusDto> list = new ArrayList<ProjektStatusDto>();
 		if (projektStatuss != null) {
 			Iterator<?> iterator = projektStatuss.iterator();

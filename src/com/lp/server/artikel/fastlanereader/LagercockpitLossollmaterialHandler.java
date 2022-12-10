@@ -47,6 +47,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRLagercockpitumbuchung;
+import com.lp.server.artikel.service.ArtikelReportFac;
 import com.lp.server.artikel.service.ArtikelfehlmengeDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial;
@@ -235,19 +236,34 @@ public class LagercockpitLossollmaterialHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" LOWER(" + FLR_LOSMAT
-								+ filterKriterien[i].kritName + ")");
-					} else {
-						where.append(" " + filterKriterien[i].kritName);
-					}
+					if (filterKriterien[i].kritName.equals("OPTION")) {
 
-					where.append(" " + filterKriterien[i].operator);
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
+						if (filterKriterien[i].value
+								.equals(ArtikelReportFac.OPTION_LAGERCOCKPIT_MATERIAL_VERTEILUNGSVORSCHLAG_NUR_ARTIKEL_MIT_LAGERSTAND
+										+ "")) {
+							where.append(" " + FLR_LOSMAT + "lagerstand > 0");
+						} else if (filterKriterien[i].value
+								.equals(ArtikelReportFac.OPTION_LAGERCOCKPIT_MATERIAL_VERTEILUNGSVORSCHLAG_NUR_RUECKNAHMEN_AUS_FERTIGUNG
+										+ "")) {
+							where.append(" " + FLR_LOSMAT + "diff < 0 ");
+						}
+
 					} else {
-						where.append(" " + filterKriterien[i].value);
+
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" LOWER(" + FLR_LOSMAT
+									+ filterKriterien[i].kritName + ")");
+						} else {
+							where.append(" " + filterKriterien[i].kritName);
+						}
+
+						where.append(" " + filterKriterien[i].operator);
+						if (filterKriterien[i].isBIgnoreCase()) {
+							where.append(" "
+									+ filterKriterien[i].value.toLowerCase());
+						} else {
+							where.append(" " + filterKriterien[i].value);
+						}
 					}
 				}
 			}

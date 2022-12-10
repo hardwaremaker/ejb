@@ -32,14 +32,26 @@
  ******************************************************************************/
  package com.lp.server.stueckliste.ejbfac;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.lp.service.StklImportSpezifikation;
 
 public class ImportColumnQueryBuilderHerstellernummer implements IImportColumnQueryBuilder {
 	
-	private static final String QUERY = Artikel + ".c_artikelnrhersteller='{VALUE}'";
+	private static final String QUERY = // Artikel + ".c_artikelnrhersteller='{VALUE}'"
+			" (" + Artikel + ".c_artikelnrhersteller LIKE '{VALUE}|%'"
+			+ " OR " + Artikel + ".c_artikelnrhersteller LIKE '%|{VALUE}|%'"
+			+ " OR " + Artikel + ".c_artikelnrhersteller LIKE '%|{VALUE}'"
+			+ " OR " + Artikel + ".c_artikelnrhersteller ='{VALUE}')";
 
+	private static final List<String> deeperColumnQueryBuilders = new ArrayList<String>() {
+		private static final long serialVersionUID = 3944642808499717431L;
+		{
+			add(StklImportSpezifikation.HERSTELLER);
+		}
+	};
+	
 	@Override
 	public boolean isTotalMatch() {
 		return true;
@@ -47,7 +59,7 @@ public class ImportColumnQueryBuilderHerstellernummer implements IImportColumnQu
 
 	@Override
 	public List<String> getDeeperColumnQueryBuilders() {
-		return null;
+		return deeperColumnQueryBuilders;
 	}
 
 	@Override

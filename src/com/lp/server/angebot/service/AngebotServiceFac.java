@@ -241,11 +241,21 @@ public interface AngebotServiceFac {
 	public void checkAngebotIId(Integer iIdAngebotI) throws EJBExceptionLP,
 			RemoteException;
 
-	public Integer getLieferzeitInAngeboteinheit(Integer iIdAngebotI,
+	public Integer getLieferzeitInAngeboteinheit(Integer iIdAngebotI, Integer angebotpositionIId,
 			String cNrAngeboteinheitI, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
 	public Map<String, String> getAngebotpositionart(Locale locale1I,
 			Locale locale2I, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
+	
+	public AkquisestatusDto akquisestatusFindByPrimaryKey(Integer iId);
+	public void updateAkquisestatus(AkquisestatusDto akquisestatusDto, TheClientDto theClientDto);
+	public void removeAkquisestatus(AkquisestatusDto akquisestatusDto);
+	public Integer createAkquisestatus(AkquisestatusDto akquisestatusDto, TheClientDto theClientDto);
+	
+	public void vertauscheAkquisestatus(Integer iIdPosition1I,
+			Integer iIdPosition2I);
+	public AngebotauftragDto angebotauftragFindByPrimaryKey(Integer iId);
+	
 }

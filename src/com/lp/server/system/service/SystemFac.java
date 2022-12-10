@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.system.service;
@@ -35,18 +35,25 @@ package com.lp.server.system.service;
 import java.awt.Font;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import javax.ejb.Remote;
 
-import net.sf.jasperreports.engine.JasperReport;
-
 import com.lp.server.finanz.service.BelegbuchungDto;
+import com.lp.server.system.mail.service.MailPropertyDto;
+import com.lp.server.system.mail.service.MailPropertyEnum;
+import com.lp.server.util.HvOptional;
+import com.lp.server.util.KennungId;
 import com.lp.service.BelegVerkaufDto;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.barcode.HvBarcodeDecoder;
+
+import net.sf.jasperreports.engine.JasperReport;
 
 @Remote
 public interface SystemFac {
@@ -112,11 +119,16 @@ public interface SystemFac {
 	// </xs:sequence>
 	// </xs:complexType>
 	// </xs:element>
-	
+
 	public static class VersandwegType {
-		public final static String CleverCureVerkauf = "CC" ;
+		public static final String CleverCureVerkauf = "CC";
+		public static final String Edi4AllDesadv     = "EDI4ALL_DESADV";
+		public static final String Edi4AllInvoice    = "EDI4ALL_INVOIC";
+		public static final String Linienabruf       = "LINIENABRUF";
+		public static final String EdiOrderResponse  = "EDIFACT_ORDRSP";
+		public static final String EdiDesadv         = "EDIFACT_DESADV";
 	}
-	
+
 	public static final String SCHEMA_OF_POSITIONS = "Positions";
 	public static final String SCHEMA_OF_POSITION = "Position";
 	public static final String SCHEMA_OF_FEATURES = "Features";
@@ -438,16 +450,17 @@ public interface SystemFac {
 	public static final String FLR_KOSTENSTELLE_B_VERSTECKT = "b_versteckt";
 
 	public static final String FLR_C_NAMEDESSPEDITEURS = "c_namedesspediteurs";
-	
+
 	public static final String FLR_DOKUMENTENLINK_C_ORDNER = "c_ordner";
 	public static final String FLR_DOKUMENTENLINK_BELEGART_C_NR = "belegart_c_nr";
 	public static final String FLR_DOKUMENTENLINK_C_BASISPFAD = "c_basispfad";
 	public static final String FLR_DOKUMENTENLINK_C_MENUETEXT = "c_menuetext";
 	public static final String FLR_DOKUMENTENLINK_B_PFADABSOLUT = "b_pfadabsolut";
-	
+
 
 	public static final String FLR_SPEDITEUR_B_VERSTECKT = "b_versteckt";
 	public static final String FLR_LIEFERART_B_VERSTECKT = "b_versteckt";
+	public static final String FLR_ZAHLUNGSZIEL_I_ID = "id";
 	public static final String FLR_ZAHLUNGSZIEL_B_VERSTECKT = "b_versteckt";
 
 	public static final String FLR_LP_LANDID = "i_id";
@@ -495,6 +508,7 @@ public interface SystemFac {
 
 	public static final String FLR_ARBEITSPLATZ_C_PCNAME = "c_pcname";
 	public static final String FLR_ARBEITSPLATZ_C_STANDORT = "c_standort";
+	public static final String FLR_ARBEITSPLATZ_C_TYP = "c_typ";
 
 	public static final String FLR_PARAMETER_C_BEMERKUNG = "c_bemerkung";
 	public static final String FLR_PARAMETER_C_DATENTYP = "c_datentyp";
@@ -515,8 +529,8 @@ public interface SystemFac {
 	public static final int MAX_ORT = 40;
 	public static final int MAX_VORWAHL = 15;
 	public static final int MAX_WAEHRUNG = 3;
-	public static final int MAX_KOSTENSTELLE_CNR = 15;
-	public static final int MAX_KOSTENSTELLE_BEZEICHNUNG = 40;
+	public static final int MAX_KOSTENSTELLE_CNR = 40;
+	public static final int MAX_KOSTENSTELLE_BEZEICHNUNG = 80;
 	public static final double MIN_F_PROZENT = -999.99;
 	public static final double MAX_F_PROZENT = 999.99;
 	public static final double MIN_N_NUMBER = -99999999999.9999;
@@ -538,6 +552,7 @@ public interface SystemFac {
 	public static final String EINHEIT_MINUTE = "min            ";
 	public static final String EINHEIT_MILLIMETER = "mm             ";
 	public static final String EINHEIT_QUADRATMILLIMETER = "mm\u00B2            ";
+	public static final String EINHEIT_KUBIKMILLIMETER = "mm\u00B3            ";
 	public static final String EINHEIT_KILOMETER = "km             ";
 	public static final String EINHEIT_MONAT = "mon            ";
 	public static final String EINHEIT_SEKUNDE = "s              ";
@@ -560,7 +575,7 @@ public interface SystemFac {
 	public final static String PROTOKOLL_ART_WARNING = "WARNUNG";
 	public final static String PROTOKOLL_ART_FEHLER = "FEHLER";
 
-	
+
 	public final static String PROTOKOLL_TYP_KASSA_OSCAR = "KASSA_OSCAR";
 	public final static String PROTOKOLL_TYP_KASSA_ADS3000 = "KASSA_ADS3000";
 	public final static String PROTOKOLL_TYP_LAGER_ZU = "LAGER_ZU";
@@ -568,10 +583,10 @@ public interface SystemFac {
 	public final static String PROTOKOLL_TYP_UPDATE_GESTPREIS = "UPDATE_GESTPREIS";
 	public final static String PROTOKOLL_TYP_PRUEFE_RECHNUNGSWERT = "PRUEFE_RECHNUNGSWERT";
 	public final static String PROTOKOLL_TYP_BES = "BES" ;
-	
+
 	public final static String HARDWAREART_WIN_TERMINAL = "WIN-Terminal";
 	public final static String HARDWAREART_CE_TERMINAL = "CE-Terminal";
-	
+
 	/**
 	 * @todo uppercase und final
 	 */
@@ -588,10 +603,12 @@ public interface SystemFac {
 	public void removeLand(LandDto landDto) throws EJBExceptionLP,
 			RemoteException;
 
-	public void updateLand(LandDto landDto) throws EJBExceptionLP,
+	public void updateLand(LandDto landDto,TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
 	public LandDto landFindByPrimaryKey(Integer iIdI);
+
+	public LandDto landFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto);
 
 	public LandDto landFindByLkz(String cLkz) throws EJBExceptionLP,
 			RemoteException;
@@ -643,7 +660,7 @@ public interface SystemFac {
 
 	public EinheitDto einheitFindByPrimaryKeyOhneExc(String cNr,
 			TheClientDto theClientDtoI) throws EJBExceptionLP, RemoteException ;
-	
+
 	public EinheitDto[] einheitFindAll() throws EJBExceptionLP, RemoteException;
 
 	public JasperReport getDreispalter(TheClientDto theClientDto)
@@ -816,9 +833,9 @@ public interface SystemFac {
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public String getServerPathSeperator();
-	
+
 	public void erstelleProtokolleintrag(ProtokollDto protokollDto,TheClientDto theClientDto);
-	
+
 	public byte[] getHintergrundbild();
 
 	public 	Integer getPartnerLandIId(Integer partnerIId);
@@ -828,42 +845,41 @@ public interface SystemFac {
 	public void pruefeGeschaeftsjahrSperre(BelegbuchungDto belegBuchungDto, String mandantCnr);
 
 	public void pruefeGeschaeftsjahrSperre(Integer geschaeftsjahr, String mandantCnr);
-	
-	
+
+
 	public PingPacket ping(PingPacket pingPacket) ;
 
 	/**
 	 * Ermittelt die Locale & Timezone die am Server verwendet wird.
-	 * 
+	 *
 	 * @return die Locale&Timeinfo vom Server
 	 */
 	ServerLocaleInfo getLocaleInfo() ;
-	
-	
+
+
 	ServerJavaAndOSInfo getJavaAndOSInfo() ;
 
 	String getServerVersion() ;
-	
+
 	Integer getServerBuildNumber() ;
 
-	
+
 	public LandplzortDto landplzortFindByLandOrtPlzOhneExc(
 			String lkz, String ort, String plz)  throws RemoteException ;
-	
+
 	public LandplzortDto landplzortFindByLandOrtPlzOhneExc(
 			Integer landIId, Integer ortIId, String plz)  throws RemoteException ;
-	
+
 	public OrtDto ortFindByNameOhneExc(String cName) throws RemoteException ;
-	
+
 	/**
 	 * Den Versandweg (mit entsprechender Auspraegung) laden
-	 * 
+	 *
 	 * @param versandwegId
 	 * @return das VersandwegDto
 	 */
-	IVersandwegDto versandwegFindByPrimaryKey(Integer versandwegId) ;	
-	
-	IVersandwegPartnerDto versandwegPartnerFindByPrimaryKey(Integer versandwegId, Integer partnerId) ;
+	IVersandwegDto versandwegFindByPrimaryKey(Integer versandwegId) ;
+
 	public boolean enthaeltEinVKBelegUmsatzsteuerObwohlKundeSteuerfrei(
 			Integer kundeIId,
 			BelegpositionVerkaufDto[] belegpositionVerkaufDtos,
@@ -872,8 +888,22 @@ public interface SystemFac {
 			Integer kundeIId,
 			BelegpositionVerkaufDto[] belegpositionVerkaufDtos,
 			BelegVerkaufDto belegVerkaufDto, TheClientDto theClientDto) throws RemoteException;
-	
-	
+
+
+	/**
+	 * Den Script-Inhalt auslesen
+	 *
+	 * @param modulI das betreffende Modul "projekt", "stueckliste", ...  AnfrageReportFac.REPORT_MODUL;
+	 * @param filenameI der Dateiname
+	 * @param mandantCNrI der Mandant f&uuml;r den das Script geladen werden soll
+	 * @param spracheI die Locale
+	 * @param cSubdirectory ein optionales (null) Unterverzeichnis
+	 * @return liefert null bei Fehlern, ansonsten den Script-Inhalt
+	 * @throws EJBExceptionLP wenn ein Script mit dem angegebenen Namen nicht gefunden wird
+	 */
+	String getScriptContentFromLPDir(String modulI, String filenameI,
+			String mandantCNrI, Locale spracheI, String cSubdirectory) ;
+
 	/**
 	 * Den Script-Inhalt auslesen
 	 * 
@@ -882,17 +912,17 @@ public interface SystemFac {
 	 * @param mandantCNrI der Mandant f&uuml;r den das Script geladen werden soll
 	 * @param spracheI die Locale
 	 * @param cSubdirectory ein optionales (null) Unterverzeichnis
-	 * @return liefert null bei Fehlern, ansonsten den Script-Inhalt
+	 * @return liefert null bei Fehlern (zum Beispiel Script nicht gefunden), ansonsten den Script-Inhalt
 	 */
-	String getScriptContentFromLPDir(String modulI, String filenameI,
-			String mandantCNrI, Locale spracheI, String cSubdirectory) ; 	
-
+	String getOptionalScriptContentFromLPDir(String modulI, String filenameI,
+			String mandantCNrI, Locale spracheI, String cSubdirectory) ;
+	
 	/**
 	 * Liefert den http Port auf dem der JBoss seine Web-Dienste anbietet
 	 * @return den Port
 	 */
 	String getServerWebPort();
-	
+
 	/**
 	 *Liefert die Java Server Info
 	 *
@@ -900,4 +930,119 @@ public interface SystemFac {
 	 */
 	JavaInfoDto getServerJavaInfo();
 
+	/**
+	 * Berechnet und liefert Daten fuer ein Belegdatumsfeld (z.B. Minimumdatum)
+	 *
+	 * @param belegDatumClient Objekt mit Parametern fuer die Berechnung der Daten des Belegdatums
+	 * @param theClientDto der aktuelle Benutzer
+	 * @return Objekt mit den ermittelten Daten fuer das Belegdatumsfeld
+	 * @throws RemoteException
+	 * @throws EJBExceptionLP
+	 */
+	public BelegDateFieldDataDto getBelegDateFieldData(BelegDatumClient belegDatumClient, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP;
+
+	IVersandwegPartnerDto versandwegPartnerFindByPrimaryKey(Integer versandwegPartnerId);
+
+	IVersandwegPartnerDto versandwegPartnerFindByVersandwegIdPartnerId(
+			Integer versandwegId, Integer partnerId, String mandantCnr);
+	
+	IVersandwegPartnerDto versandwegPartnerFindByVersandwegCnrPartnerId(
+			String versandwegCnr, Integer partnerId, String mandantCnr);
+
+	boolean existsGeschaeftsjahr(Integer iGeschaeftsjahr, String mandantCnr) throws EJBExceptionLP;
+	
+	public LandDto landFindByPrimaryKey(Integer iIdI, String locale);
+
+	List<String> getServerSystemFonts();
+
+	List<String> getServerSystemReportFonts();
+
+	HvBarcodeDecoder createHvBarcodeDecoder(String mandantCnr);
+
+	/**
+	 * Pr&uuml;ft, ob ein Land zum aktuellen Datum EU-Mitglied ist.
+	 * 
+	 * @param landDto
+	 * @return true, wenn EU-Mitglied
+	 */
+	boolean isEUMitglied(LandDto landDto);
+
+	/**
+	 * Pr&uuml;ft, ob ein Land zu einem bestimmten Datum EU-Mitglied ist.
+	 * 
+	 * @param landDto
+	 * @param date Datum, zu dem die EU-Mitgliedschaft gepr&uuml;ft werden soll
+	 * @return true, wenn EU-Mitglied zu bestimmten Datum
+	 */
+	boolean isEUMitglied(LandDto landDto, java.util.Date date);
+
+	/**
+	 * Liefert alle gespeicherten MailProperties.
+	 * 
+	 * @param theClientDto
+	 * @return Liste aller gespeicherten MailProperties
+	 */
+	List<MailPropertyDto> getAllMailProperties(TheClientDto theClientDto);
+
+	/**
+	 * Liefert alle MailProperties aus der Datenbank, die auch in
+	 * {@link MailPropertyEnum} definiert sind.
+	 * 
+	 * @param theClientDto
+	 * @return eine Map mit {@link MailPropertyEnum} als Key und dem zugeh&ouml;rigen {@link MailPropertyDto} als Value
+	 * @throws RemoteException 
+	 * @throws EJBExceptionLP 
+	 */
+	Map<MailPropertyEnum, MailPropertyDto> getMapAllKnownMailProperties(TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	/**
+	 * Aktualisiert alle &uuml;bergebenen MailProperties. Ist eine Property mit ihrer
+	 * CNr nicht vorhanden wird sie erzeugt.
+	 * 
+	 * @param properties Liste der zu aktualisierenden (oder zu erzeugenden) MailProperties
+	 * @param theClientDto
+	 * @throws RemoteException 
+	 * @throws EJBExceptionLP 
+	 */
+	void updateOrCreateMailProperties(List<MailPropertyDto> properties, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	
+	MailPropertyDto createMailProperty(MailPropertyDto propertyDto, TheClientDto theClientDto);
+
+	MailPropertyDto updateMailProperty(MailPropertyDto propertyDto, TheClientDto theClientDto);
+	
+	/**
+	 * Setzt die MailProperty zur&uuml;ck, heisst aktuell der Wert wird <code>null</code>
+	 * und wird somit beim Mailversand nicht mehr ber&uuml;cksichtigt.
+	 * 
+	 * @param cNr Name der Property
+	 * @param theClientDto
+	 */
+	void resetMailProperty(String cNr, TheClientDto theClientDto);
+
+	MailPropertyDto mailpropertyFindByCnr(String cNr, TheClientDto theClientDto);
+	
+	EinheitDto einheitFindByPrimaryKeyOhneExc(String cNr,
+			String locDruck);
+
+	KennungDto kennungFindByPrimaryKey(KennungId kennungId);
+	HvOptional<KennungDto> kennungFindByPrimaryKeyOpt(KennungId kennungId);
+	HvOptional<KennungDto> kennungFindByType(KennungType kennung);
+	
+	Map getAllKostenstelle(TheClientDto theClientDto);
+
+	/** 
+	 * Alle noch offenen Geschaeftsjahre auflisten, nach aufsteigendem Beginnjahr
+	 * @param mandantCnr
+	 * @return eine Liste der offenen Geschaeftsjahre
+	 */
+	GeschaeftsjahrMandantDto[] getAllOffeneGeschaeftsjahre(String mandantCnr);
+
+	/**
+	 * Das &auml;lteste noch offene 
+	 * @param mandantCnr
+	 * @param date
+	 * @return
+	 */
+	Integer getAeltestesOffenesGeschaeftsjahr(String mandantCnr, Date date);
 }

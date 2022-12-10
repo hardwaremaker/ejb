@@ -61,6 +61,15 @@ import com.lp.server.artikel.service.ArtikellieferantDto;
 public class ReportAuftragVerfuegbarkeitDto {
 	private ArtikelDto artikelDto = null;
 	private String einheitCNr = null;
+	private String mandantCNr = null;
+	public String getMandantCNr() {
+		return mandantCNr;
+	}
+
+	public void setMandantCNr(String mandantCNr) {
+		this.mandantCNr = mandantCNr;
+	}
+
 	private BigDecimal bdMenge = null;
 	
 	private BigDecimal bdMenge2 = null;
@@ -76,6 +85,39 @@ public class ReportAuftragVerfuegbarkeitDto {
 	private BigDecimal bdMenge12 = null;
 	private BigDecimal bdMenge13 = null;
 	
+	
+	private BigDecimal bdNachfolgendeProduktionsdauer = null;
+	private BigDecimal bdMaximaleWBZDerEbene = null;
+	private BigDecimal bdDauerBisFertigstellungDerEbene = null;
+	private java.util.Date fruestmoeglicherLiefertermin =null;
+	
+	public BigDecimal getBdDauerBisFertigstellungDerEbene() {
+		return bdDauerBisFertigstellungDerEbene;
+	}
+
+	public void setBdDauerBisFertigstellungDerEbene(
+			BigDecimal bdDauerBisFertigstellungDerEbene) {
+		this.bdDauerBisFertigstellungDerEbene = bdDauerBisFertigstellungDerEbene;
+	}
+
+	public BigDecimal getBdMaximaleWBZDerEbene() {
+		return bdMaximaleWBZDerEbene;
+	}
+
+	public void setBdMaximaleWBZDerEbene(BigDecimal bdMaximaleWBZDerEbene) {
+		this.bdMaximaleWBZDerEbene = bdMaximaleWBZDerEbene;
+	}
+
+	public BigDecimal getBdNachfolgendeProduktionsdauer() {
+		return bdNachfolgendeProduktionsdauer;
+	}
+
+	public void setBdNachfolgendeProduktionsdauer(
+			BigDecimal bdNachfolgendeProduktionsdauer) {
+		this.bdNachfolgendeProduktionsdauer = bdNachfolgendeProduktionsdauer;
+	}
+
+
 	private String artikelsetType = null ;
 	
 	public BigDecimal getBdMenge2() {
@@ -180,16 +222,25 @@ public class ReportAuftragVerfuegbarkeitDto {
 	private boolean bLagernd = false;
 	private Integer belegpositionIId = null;
 	private Integer iEbene=null;
-	
-	private Double dGesamtWBZ = null;
+	private BigDecimal bdWBZInTagenAusArtikellieferant = null;
+	private BigDecimal bdLagerstand = null;
 	
 
-	public Double getDGesamtWBZ() {
-		return dGesamtWBZ;
+	public BigDecimal getBdLagerstand() {
+		return bdLagerstand;
 	}
 
-	public void setDGesamtWBZ(Double dGesamtWBZ) {
-		this.dGesamtWBZ = dGesamtWBZ;
+	public void setBdLagerstand(BigDecimal bdLagerstand) {
+		this.bdLagerstand = bdLagerstand;
+	}
+
+	public BigDecimal getBdWBZInTagenAusArtikellieferant() {
+		return bdWBZInTagenAusArtikellieferant;
+	}
+
+	public void setBdWBZInTagenAusArtikellieferant(
+			BigDecimal bdWBZInTagenAusArtikellieferant) {
+		this.bdWBZInTagenAusArtikellieferant = bdWBZInTagenAusArtikellieferant;
 	}
 
 	public Integer getIEbene() {
@@ -270,5 +321,14 @@ public class ReportAuftragVerfuegbarkeitDto {
 
 	public void setArtikelsetType(String artikelsetType) {
 		this.artikelsetType = artikelsetType;
+	}
+
+	public java.util.Date getDFruestmoeglicherLiefertermin() {
+		return fruestmoeglicherLiefertermin;
+	}
+
+	public void setDFruestmoeglicherLiefertermin(
+			java.util.Date fruestmoeglicherLiefertermin) {
+		this.fruestmoeglicherLiefertermin = fruestmoeglicherLiefertermin;
 	}
 }

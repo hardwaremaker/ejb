@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
@@ -75,7 +75,7 @@ import com.lp.util.EJBExceptionLP;
  * </p>
  * <p>
  * </p>
- * 
+ *
  * @author MB
  * @version 1.0
  */
@@ -83,7 +83,7 @@ import com.lp.util.EJBExceptionLP;
 public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
@@ -129,7 +129,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 				prozent = Helper.getProzentsatzBD(
 							buchungDetail.getN_betrag().subtract(buchungDetail.getN_ust()),
 							buchungDetail.getN_ust(), FinanzFac.NACHKOMMASTELLEN);
-				
+
 				rows[row][col++] = prozent; */
 				rows[row][col++] = buchungDetail.getN_ust();
 				rows[row][col++] = buchungDetail.getFlrbuchung().getC_text();
@@ -152,14 +152,14 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 
 	/**
 	 * gets the total number of rows represented by the current query.
-	 * 
+	 *
 	 * @see UseCaseHandler#getRowCountFromDataBase()
 	 * @return int
 	 */
 	protected long getRowCountFromDataBase() {
 		String query = "select count(*) " + getFromClause() + buildWhereClause() ;
 		return getRowCountFromDataBaseByQuery(query) ;
-		
+
 //		long rowCount = 0;
 //		SessionFactory factory = FLRSessionFactory.getFactory();
 //		Session session = null;
@@ -187,7 +187,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 	/**
 	 * builds the where clause of the HQL (Hibernate Query Language) statement
 	 * using the current query.
-	 * 
+	 *
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
@@ -209,24 +209,32 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" buchungdetail."
-							+ filterKriterien[i].kritName);
-					where.append(" " + filterKriterien[i].operator);
-					where.append(" " + filterKriterien[i].value);
+
+					if (filterKriterien[i].kritName.equals("TextBeleg")) {
+						where.append(" (lower(buchungdetail.flrbuchung.c_text)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase());
+						where.append(" OR lower(buchungdetail.flrbuchung.c_belegnummer)");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value.toLowerCase() + ")");
+					} else {
+						where.append(" buchungdetail." + filterKriterien[i].kritName);
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" " + filterKriterien[i].value);
+					}
 				}
 			}
 			if (filterAdded) {
 				where.insert(0, " WHERE");
 			}
 		}
-
 		return where.toString();
 	}
 
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 * 
+	 *
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
@@ -275,7 +283,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 * 
+	 *
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
@@ -285,7 +293,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 	/**
 	 * sorts the data described by the current query using the specified sort
 	 * criterias. The current query is also updated with the new sort criterias.
-	 * 
+	 *
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
 	 * @return QueryResult
@@ -329,7 +337,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 			}
 		}
 
-	
+
 		if (rowNumber < 0 || rowNumber >= this.getRowCount()) {
 			rowNumber = 0;
 		}
@@ -342,7 +350,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 
 	/**
 	 * gets information about the Kontentable.
-	 * 
+	 *
 	 * @return TableInfo
 	 */
 	public TableInfo getTableInfo() {
@@ -352,7 +360,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class,
 							java.util.Date.class, BigDecimal.class, BigDecimal.class,
-							BigDecimal.class, String.class }, 
+							BigDecimal.class, String.class },
 					new String[] { "Id",
 							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
 							getTextRespectUISpr("lp.ein", mandantCNr, locUI),
@@ -379,13 +387,13 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 		}
 		return super.getTableInfo();
 	}
-	
+
 	@Override
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
 		BuchungdetailDto detail = null;
 		BuchungDto buchung = null;
 		KontoDto konto = null;
-		
+
 		try {
 			detail = getBuchenFac().buchungdetailFindByPrimaryKey((Integer)key);
 			buchung = getBuchenFac().buchungFindByPrimaryKey(detail.getBuchungIId());
@@ -396,7 +404,7 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 		}
 		return new PrintInfoDto(new DocPath(new DocNodeBuchungdetail(detail, buchung, konto)), null, getSTable());
 	}
-	
+
 	public String getSTable() {
 		return "BUCHUNGDETAIL";
 	};

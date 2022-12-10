@@ -34,7 +34,6 @@ package com.lp.server.bestellung.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.bestellung.ejb.Bestellung;
@@ -123,20 +122,35 @@ public class BestellungDtoAssembler {
 					.getCLieferantenangebot());
 			bestellungDto.setCLieferartort(bestellung.getCLieferartort());
 			bestellungDto.setProjektIId(bestellung.getProjektIId());
-
+			bestellungDto.setNKorrekturbetrag(bestellung.getNKorrekturbetrag());
+			bestellungDto.setTKommissionierungDurchgefuehrt(bestellung
+					.getTKommissionierungDurchgefuehrt());
+			bestellungDto.setTKommissionierungGeplant(bestellung
+					.getTKommissionierungGeplant());
+			bestellungDto.setTUebergabeTechnik(bestellung
+					.getTUebergabeTechnik());
+			bestellungDto.setTTVollstaendigGeliefert(bestellung.getTVollstaendigGeliefert());
+			bestellungDto.setIVersion(bestellung.getIVersion());
+			bestellungDto.setNTransportkosten(bestellung.getNTransportkosten());
+			bestellungDto.setPersonalIIdInterneranforderer(bestellung.getPersonalIIdInterneranforderer());
 		}
 		return bestellungDto;
 	}
 
 	public static BestellungDto[] createDtos(Collection<?> bestellungs) {
-		List<BestellungDto> list = new ArrayList<BestellungDto>();
-		if (bestellungs != null) {
-			Iterator<?> iterator = bestellungs.iterator();
-			while (iterator.hasNext()) {
-				list.add(createDto((Bestellung) iterator.next()));
-			}
-		}
+		List<BestellungDto> list = createList((Collection<Bestellung>)bestellungs);
 		BestellungDto[] returnArray = new BestellungDto[list.size()];
 		return (BestellungDto[]) list.toArray(returnArray);
+	}
+	
+	public static List<BestellungDto> createList(Collection<Bestellung> bestellungs) {
+		List<BestellungDto> list = new ArrayList<BestellungDto>();
+		if (bestellungs != null) {
+			for (Bestellung bestellung : bestellungs) {
+				list.add(createDto(bestellung));				
+			}
+		}
+		
+		return list;
 	}
 }

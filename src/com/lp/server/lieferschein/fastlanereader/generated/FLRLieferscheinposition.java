@@ -1,40 +1,9 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.lieferschein.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
 import com.lp.server.artikel.fastlanereader.generated.FLRVerleih;
 import com.lp.server.auftrag.fastlanereader.generated.FLRPositionenSichtAuftrag;
+import com.lp.server.forecast.fastlanereader.generated.FLRForecastposition;
 import com.lp.server.system.fastlanereader.generated.FLRKostentraeger;
 import com.lp.server.system.fastlanereader.generated.FLRMediastandard;
 import com.lp.server.system.fastlanereader.generated.FLRMwstsatz;
@@ -60,6 +29,12 @@ public class FLRLieferscheinposition implements Serializable {
     private Integer auftragposition_i_id;
 
     /** nullable persistent field */
+    private Integer forecastposition_i_id;
+
+    /** nullable persistent field */
+    private Integer wareneingangsposition_i_id_anderermandant;
+
+    /** nullable persistent field */
     private BigDecimal n_menge;
 
     /** nullable persistent field */
@@ -73,6 +48,12 @@ public class FLRLieferscheinposition implements Serializable {
 
     /** nullable persistent field */
     private BigDecimal n_nettogesamtpreis;
+
+    /** nullable persistent field */
+    private BigDecimal n_nettoeinzelpreis;
+
+    /** nullable persistent field */
+    private BigDecimal n_nettoeinzelpreisplusversteckteraufschlag;
 
     /** nullable persistent field */
     private BigDecimal n_materialzuschlag;
@@ -114,7 +95,13 @@ public class FLRLieferscheinposition implements Serializable {
     private BigDecimal zwsnettosumme;
 
     /** nullable persistent field */
+    private Integer lieferschein_i_id;
+
+    /** nullable persistent field */
     private FLRPositionenSichtAuftrag flrpositionensichtauftrag;
+
+    /** nullable persistent field */
+    private FLRForecastposition flrforecastposition;
 
     /** nullable persistent field */
     private FLRArtikel flrartikel;
@@ -137,18 +124,20 @@ public class FLRLieferscheinposition implements Serializable {
     /** persistent field */
     private Set setartikel_set;
 
-    private Integer lieferschein_i_id ;
-    
-	/** full constructor */
-    public FLRLieferscheinposition(Integer i_sort, String positionsart_c_nr, Integer auftragposition_i_id, BigDecimal n_menge, String einheit_c_nr, String c_bez, String c_zbez, BigDecimal n_nettogesamtpreis, BigDecimal n_materialzuschlag, BigDecimal n_bruttogesamtpreis, BigDecimal n_nettogesamtpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatt, String c_textinhalt, Integer position_i_id, Integer position_i_id_artikelset, String typ_c_nr, Short b_artikelbezeichnunguebersteuert, String c_snrchnr_mig, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, FLRPositionenSichtAuftrag flrpositionensichtauftrag, FLRArtikel flrartikel, com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein flrlieferschein, FLRMediastandard flrmediastandard, FLRMwstsatz flrmwstsatz, FLRVerleih flrverleih, FLRKostentraeger flrkostentraeger, Set setartikel_set, Integer lieferschein_i_id) {
+    /** full constructor */
+    public FLRLieferscheinposition(Integer i_sort, String positionsart_c_nr, Integer auftragposition_i_id, Integer forecastposition_i_id, Integer wareneingangsposition_i_id_anderermandant, BigDecimal n_menge, String einheit_c_nr, String c_bez, String c_zbez, BigDecimal n_nettogesamtpreis, BigDecimal n_nettoeinzelpreis, BigDecimal n_nettoeinzelpreisplusversteckteraufschlag, BigDecimal n_materialzuschlag, BigDecimal n_bruttogesamtpreis, BigDecimal n_nettogesamtpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatt, String c_textinhalt, Integer position_i_id, Integer position_i_id_artikelset, String typ_c_nr, Short b_artikelbezeichnunguebersteuert, String c_snrchnr_mig, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, Integer lieferschein_i_id, FLRPositionenSichtAuftrag flrpositionensichtauftrag, FLRForecastposition flrforecastposition, FLRArtikel flrartikel, com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein flrlieferschein, FLRMediastandard flrmediastandard, FLRMwstsatz flrmwstsatz, FLRVerleih flrverleih, FLRKostentraeger flrkostentraeger, Set setartikel_set) {
         this.i_sort = i_sort;
         this.positionsart_c_nr = positionsart_c_nr;
         this.auftragposition_i_id = auftragposition_i_id;
+        this.forecastposition_i_id = forecastposition_i_id;
+        this.wareneingangsposition_i_id_anderermandant = wareneingangsposition_i_id_anderermandant;
         this.n_menge = n_menge;
         this.einheit_c_nr = einheit_c_nr;
         this.c_bez = c_bez;
         this.c_zbez = c_zbez;
         this.n_nettogesamtpreis = n_nettogesamtpreis;
+        this.n_nettoeinzelpreis = n_nettoeinzelpreis;
+        this.n_nettoeinzelpreisplusversteckteraufschlag = n_nettoeinzelpreisplusversteckteraufschlag;
         this.n_materialzuschlag = n_materialzuschlag;
         this.n_bruttogesamtpreis = n_bruttogesamtpreis;
         this.n_nettogesamtpreisplusversteckteraufschlag = n_nettogesamtpreisplusversteckteraufschlag;
@@ -162,7 +151,9 @@ public class FLRLieferscheinposition implements Serializable {
         this.zwsvonposition_i_id = zwsvonposition_i_id;
         this.zwsbisposition_i_id = zwsbisposition_i_id;
         this.zwsnettosumme = zwsnettosumme;
+        this.lieferschein_i_id = lieferschein_i_id;
         this.flrpositionensichtauftrag = flrpositionensichtauftrag;
+        this.flrforecastposition = flrforecastposition;
         this.flrartikel = flrartikel;
         this.flrlieferschein = flrlieferschein;
         this.flrmediastandard = flrmediastandard;
@@ -170,7 +161,6 @@ public class FLRLieferscheinposition implements Serializable {
         this.flrverleih = flrverleih;
         this.flrkostentraeger = flrkostentraeger;
         this.setartikel_set = setartikel_set;
-        this.lieferschein_i_id = lieferschein_i_id ;
     }
 
     /** default constructor */
@@ -214,6 +204,22 @@ public class FLRLieferscheinposition implements Serializable {
         this.auftragposition_i_id = auftragposition_i_id;
     }
 
+    public Integer getForecastposition_i_id() {
+        return this.forecastposition_i_id;
+    }
+
+    public void setForecastposition_i_id(Integer forecastposition_i_id) {
+        this.forecastposition_i_id = forecastposition_i_id;
+    }
+
+    public Integer getWareneingangsposition_i_id_anderermandant() {
+        return this.wareneingangsposition_i_id_anderermandant;
+    }
+
+    public void setWareneingangsposition_i_id_anderermandant(Integer wareneingangsposition_i_id_anderermandant) {
+        this.wareneingangsposition_i_id_anderermandant = wareneingangsposition_i_id_anderermandant;
+    }
+
     public BigDecimal getN_menge() {
         return this.n_menge;
     }
@@ -252,6 +258,22 @@ public class FLRLieferscheinposition implements Serializable {
 
     public void setN_nettogesamtpreis(BigDecimal n_nettogesamtpreis) {
         this.n_nettogesamtpreis = n_nettogesamtpreis;
+    }
+
+    public BigDecimal getN_nettoeinzelpreis() {
+        return this.n_nettoeinzelpreis;
+    }
+
+    public void setN_nettoeinzelpreis(BigDecimal n_nettoeinzelpreis) {
+        this.n_nettoeinzelpreis = n_nettoeinzelpreis;
+    }
+
+    public BigDecimal getN_nettoeinzelpreisplusversteckteraufschlag() {
+        return this.n_nettoeinzelpreisplusversteckteraufschlag;
+    }
+
+    public void setN_nettoeinzelpreisplusversteckteraufschlag(BigDecimal n_nettoeinzelpreisplusversteckteraufschlag) {
+        this.n_nettoeinzelpreisplusversteckteraufschlag = n_nettoeinzelpreisplusversteckteraufschlag;
     }
 
     public BigDecimal getN_materialzuschlag() {
@@ -358,12 +380,28 @@ public class FLRLieferscheinposition implements Serializable {
         this.zwsnettosumme = zwsnettosumme;
     }
 
+    public Integer getLieferschein_i_id() {
+        return this.lieferschein_i_id;
+    }
+
+    public void setLieferschein_i_id(Integer lieferschein_i_id) {
+        this.lieferschein_i_id = lieferschein_i_id;
+    }
+
     public FLRPositionenSichtAuftrag getFlrpositionensichtauftrag() {
         return this.flrpositionensichtauftrag;
     }
 
     public void setFlrpositionensichtauftrag(FLRPositionenSichtAuftrag flrpositionensichtauftrag) {
         this.flrpositionensichtauftrag = flrpositionensichtauftrag;
+    }
+
+    public FLRForecastposition getFlrforecastposition() {
+        return this.flrforecastposition;
+    }
+
+    public void setFlrforecastposition(FLRForecastposition flrforecastposition) {
+        this.flrforecastposition = flrforecastposition;
     }
 
     public FLRArtikel getFlrartikel() {
@@ -422,18 +460,10 @@ public class FLRLieferscheinposition implements Serializable {
         this.setartikel_set = setartikel_set;
     }
 
-    public Integer getLieferschein_i_id() {
-		return lieferschein_i_id;
-	}
-
-	public void setLieferschein_i_id(Integer lieferschein_i_id) {
-		this.lieferschein_i_id = lieferschein_i_id;
-	}
-
-    
     public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();
     }
+
 }

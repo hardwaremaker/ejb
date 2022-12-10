@@ -1,39 +1,8 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -50,6 +19,9 @@ public class FLRMaschine implements Serializable {
     private String c_inventarnummer;
 
     /** nullable persistent field */
+    private String c_seriennummer;
+
+    /** nullable persistent field */
     private String c_bez;
 
     /** nullable persistent field */
@@ -62,6 +34,9 @@ public class FLRMaschine implements Serializable {
     private Short b_autoendebeigeht;
 
     /** nullable persistent field */
+    private Short b_manuelle_bedienung;
+
+    /** nullable persistent field */
     private Date t_kaufdatum;
 
     /** nullable persistent field */
@@ -70,21 +45,32 @@ public class FLRMaschine implements Serializable {
     /** nullable persistent field */
     private com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe flrmaschinengruppe;
 
+    /** persistent field */
+    private Set maschinenzeitdatenset;
+
     /** full constructor */
-    public FLRMaschine(String mandant_c_nr, String c_inventarnummer, String c_bez, Short b_versteckt, String c_identifikationsnr, Short b_autoendebeigeht, Date t_kaufdatum, Integer maschinengruppe_i_id, com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe flrmaschinengruppe) {
+    public FLRMaschine(String mandant_c_nr, String c_inventarnummer, String c_seriennummer, String c_bez, Short b_versteckt, String c_identifikationsnr, Short b_autoendebeigeht, Short b_manuelle_bedienung, Date t_kaufdatum, Integer maschinengruppe_i_id, com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe flrmaschinengruppe, Set maschinenzeitdatenset) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_inventarnummer = c_inventarnummer;
+        this.c_seriennummer = c_seriennummer;
         this.c_bez = c_bez;
         this.b_versteckt = b_versteckt;
         this.c_identifikationsnr = c_identifikationsnr;
         this.b_autoendebeigeht = b_autoendebeigeht;
+        this.b_manuelle_bedienung = b_manuelle_bedienung;
         this.t_kaufdatum = t_kaufdatum;
         this.maschinengruppe_i_id = maschinengruppe_i_id;
         this.flrmaschinengruppe = flrmaschinengruppe;
+        this.maschinenzeitdatenset = maschinenzeitdatenset;
     }
 
     /** default constructor */
     public FLRMaschine() {
+    }
+
+    /** minimal constructor */
+    public FLRMaschine(Set maschinenzeitdatenset) {
+        this.maschinenzeitdatenset = maschinenzeitdatenset;
     }
 
     public Integer getI_id() {
@@ -109,6 +95,14 @@ public class FLRMaschine implements Serializable {
 
     public void setC_inventarnummer(String c_inventarnummer) {
         this.c_inventarnummer = c_inventarnummer;
+    }
+
+    public String getC_seriennummer() {
+        return this.c_seriennummer;
+    }
+
+    public void setC_seriennummer(String c_seriennummer) {
+        this.c_seriennummer = c_seriennummer;
     }
 
     public String getC_bez() {
@@ -143,6 +137,14 @@ public class FLRMaschine implements Serializable {
         this.b_autoendebeigeht = b_autoendebeigeht;
     }
 
+    public Short getB_manuelle_bedienung() {
+        return this.b_manuelle_bedienung;
+    }
+
+    public void setB_manuelle_bedienung(Short b_manuelle_bedienung) {
+        this.b_manuelle_bedienung = b_manuelle_bedienung;
+    }
+
     public Date getT_kaufdatum() {
         return this.t_kaufdatum;
     }
@@ -165,6 +167,14 @@ public class FLRMaschine implements Serializable {
 
     public void setFlrmaschinengruppe(com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe flrmaschinengruppe) {
         this.flrmaschinengruppe = flrmaschinengruppe;
+    }
+
+    public Set getMaschinenzeitdatenset() {
+        return this.maschinenzeitdatenset;
+    }
+
+    public void setMaschinenzeitdatenset(Set maschinenzeitdatenset) {
+        this.maschinenzeitdatenset = maschinenzeitdatenset;
     }
 
     public String toString() {

@@ -35,39 +35,65 @@ package com.lp.server.partner.ejb;
 import java.io.Serializable;
 
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-
-@NamedQueries( { @NamedQuery(name = "PASelektionfindByPartnerIId", query = "SELECT OBJECT(c) FROM Paselektion AS c WHERE c.pk.partnerIId = ?1") })
+@NamedQueries({
+		@NamedQuery(name = "PASelektionfindByPartnerIId", query = "SELECT OBJECT(c) FROM Paselektion AS c WHERE c.partnerIId = ?1"),
+		@NamedQuery(name = "PASelektionfindByPartnerIIdSelektionIId", query = "SELECT OBJECT(c) FROM Paselektion AS c WHERE c.partnerIId = ?1 AND  c.selektionIId = ?2") })
 @Entity
 @Table(name = "PART_PASELEKTION")
 public class Paselektion implements Serializable {
 	public Paselektion() {
-		// TODO Auto-generated constructor stub
+		super();
 	}
 
-	@EmbeddedId
-	private PASelektionPK pk;
+	@Id
+	@Column(name = "I_ID")
+	private Integer iId;
+
+	@Column(name = "PARTNER_I_ID")
+	private Integer partnerIId;
+
+	@Column(name = "SELEKTION_I_ID")
+	private Integer selektionIId;
+
+	public Integer getPartnerIId() {
+		return partnerIId;
+	}
+
+	public void setPartnerIId(Integer partnerIId) {
+		this.partnerIId = partnerIId;
+	}
+
+	public Integer getSelektionIId() {
+		return selektionIId;
+	}
+
+	public void setSelektionIId(Integer selektionIId) {
+		this.selektionIId = selektionIId;
+	}
 
 	@Column(name = "C_BEMERKUNG")
 	private String cBemerkung;
-	
+
 	private static final long serialVersionUID = 1L;
 
-	public Paselektion(Integer partnerIId, Integer selektionIId) {
-		pk=new PASelektionPK(partnerIId,selektionIId);
+	public Paselektion(Integer iId, Integer partnerIId, Integer selektionIId) {
+		setIId(iId);
+		setPartnerIId(partnerIId);
+		setSelektionIId(selektionIId);
 	}
 
-	public PASelektionPK getPk() {
-		return this.pk;
+	public Integer getIId() {
+		return this.iId;
 	}
 
-	public void setPk(PASelektionPK pk) {
-		this.pk = pk;
+	public void setIId(Integer iId) {
+		this.iId = iId;
 	}
 
 	public String getCBemerkung() {
@@ -77,6 +103,5 @@ public class Paselektion implements Serializable {
 	public void setCBemerkung(String cBemerkung) {
 		this.cBemerkung = cBemerkung;
 	}
-
 
 }

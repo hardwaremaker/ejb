@@ -79,18 +79,14 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 	/**
 	 * Einen neue Kundensonderkondition anlegen.
 	 * 
-	 * @param kundesokoDtoI
-	 *            die neue SOKO
-	 * @param defaultMengenstaffelDtoI
-	 *            die Default Mengenstaffel fuer diese Kundesoko
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param kundesokoDtoI            die neue SOKO
+	 * @param defaultMengenstaffelDtoI die Default Mengenstaffel fuer diese
+	 *                                 Kundesoko
+	 * @param theClientDto             der aktuelle Benutzer
 	 * @return Integer PK der neuen SOKO
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Integer createKundesoko(KundesokoDto kundesokoDtoI,
-			KundesokomengenstaffelDto defaultMengenstaffelDtoI,
+	public Integer createKundesoko(KundesokoDto kundesokoDtoI, KundesokomengenstaffelDto defaultMengenstaffelDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkKundesokoDto(kundesokoDtoI);
 		checkKundesokoMengenstaffelDto(defaultMengenstaffelDtoI);
@@ -98,21 +94,18 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		try {
 			// UK pruefen
 			if (kundesokoDtoI.getBWirktNichtFuerPreisfindung() == null) {
-				kundesokoDtoI.setBWirktNichtFuerPreisfindung(Helper
-						.boolean2Short(false));
+				kundesokoDtoI.setBWirktNichtFuerPreisfindung(Helper.boolean2Short(false));
 			}
 
 			if (kundesokoDtoI.getArtikelIId() != null) {
-				Query query = em
-						.createNamedQuery("KundesokofindByKundeIIdArtikelIIdTPreisgueltigab");
+				Query query = em.createNamedQuery("KundesokofindByKundeIIdArtikelIIdTPreisgueltigab");
 				query.setParameter(1, kundesokoDtoI.getKundeIId());
 				query.setParameter(2, kundesokoDtoI.getArtikelIId());
 				query.setParameter(3, kundesokoDtoI.getTPreisgueltigab());
 				// @todo getSingleResult oder getResultList ?
 				kundesoko = (Kundesoko) query.getSingleResult();
 			} else {
-				Query query = em
-						.createNamedQuery("KundesokofindByKundeIIdArtikelIIdTPreisgueltigab");
+				Query query = em.createNamedQuery("KundesokofindByKundeIIdArtikelIIdTPreisgueltigab");
 				query.setParameter(1, kundesokoDtoI.getKundeIId());
 				query.setParameter(2, kundesokoDtoI.getArtgruIId());
 				query.setParameter(3, kundesokoDtoI.getTPreisgueltigab());
@@ -125,8 +118,7 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 					kundesoko.getIId(), defaultMengenstaffelDtoI.getNMenge());
 
 			if (aMengenstaffelDtos != null && aMengenstaffelDtos.length > 0) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
 			}
 		} catch (NoResultException e) {
 			// keine Kundesoko fuer Artikel(gruppe) mit dieser Gueltigkeit oder
@@ -137,10 +129,8 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 
 		try {
 			// Daten normieren
-			kundesokoDtoI.setTPreisgueltigab(Helper.cutDate(kundesokoDtoI
-					.getTPreisgueltigab()));
-			kundesokoDtoI.setTPreisgueltigbis(Helper.cutDate(kundesokoDtoI
-					.getTPreisgueltigbis()));
+			kundesokoDtoI.setTPreisgueltigab(Helper.cutDate(kundesokoDtoI.getTPreisgueltigab()));
+			kundesokoDtoI.setTPreisgueltigbis(Helper.cutDate(kundesokoDtoI.getTPreisgueltigbis()));
 
 			// generieren von primary key
 			PKGeneratorObj pkGen = new PKGeneratorObj();
@@ -150,14 +140,15 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 			kundesokoDtoI.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			kundesokoDtoI.setTAendern(getTimestamp());
 
-			// Datumsbereich pruefen
-			checkKundesokoDto(kundesokoDtoI,
-					defaultMengenstaffelDtoI.getNMenge(), theClientDto);
+			if (kundesokoDtoI.getBKeineMengenstaffel() == null) {
+				kundesokoDtoI.setBKeineMengenstaffel(Helper.boolean2Short(false));
+			}
 
-			kundesoko = new Kundesoko(kundesokoDtoI.getIId(),
-					kundesokoDtoI.getKundeIId(),
-					kundesokoDtoI.getTPreisgueltigab(),
-					kundesokoDtoI.getPersonalIIdAendern());
+			// Datumsbereich pruefen
+			checkKundesokoDto(kundesokoDtoI, defaultMengenstaffelDtoI.getNMenge(), theClientDto);
+
+			kundesoko = new Kundesoko(kundesokoDtoI.getIId(), kundesokoDtoI.getKundeIId(),
+					kundesokoDtoI.getTPreisgueltigab(), kundesokoDtoI.getPersonalIIdAendern());
 			em.persist(kundesoko);
 			em.flush();
 
@@ -166,8 +157,7 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 			// die Default Mengenstaffel dazu anlegen
 			// generieren von primary key
 			pkGen = new PKGeneratorObj();
-			Integer iId = pkGen
-					.getNextPrimaryKey(PKConst.PK_KUNDESOKOMENGENSTAFFEL);
+			Integer iId = pkGen.getNextPrimaryKey(PKConst.PK_KUNDESOKOMENGENSTAFFEL);
 
 			defaultMengenstaffelDtoI.setIId(iId);
 			defaultMengenstaffelDtoI.setKundesokoIId(kundesokoIId);
@@ -181,35 +171,30 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 	}
 
 	/**
-	 * Kundensonderkonditionen duerfen datumsmaessig nicht ueberlappen. Wenn
-	 * eine Staffel an eine bestehende Staffel anschliesst, die kein bis-Datum
-	 * hat, wird dieses automatisch ergaenzt. Wenn eine Staffel vor eine
-	 * bestehende Staffel kommt und kein bis-Datum hat, dann wird dieses
-	 * automatisch ergaenzt. Jede Staffel wird in dieser Art eingereiht, sodass
-	 * lediglich die letzte erfasste Staffel ein offenes Ende haben kann.
+	 * Kundensonderkonditionen duerfen datumsmaessig nicht ueberlappen. Wenn eine
+	 * Staffel an eine bestehende Staffel anschliesst, die kein bis-Datum hat, wird
+	 * dieses automatisch ergaenzt. Wenn eine Staffel vor eine bestehende Staffel
+	 * kommt und kein bis-Datum hat, dann wird dieses automatisch ergaenzt. Jede
+	 * Staffel wird in dieser Art eingereiht, sodass lediglich die letzte erfasste
+	 * Staffel ein offenes Ende haben kann.
 	 * 
-	 * @param kundesokoDtoI
-	 *            die zu pruefende Kundesoko
-	 * @param nMengeI
-	 *            die Menge
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param kundesokoDtoI die zu pruefende Kundesoko
+	 * @param nMengeI       die Menge
+	 * @param theClientDto  der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private void checkKundesokoDto(KundesokoDto kundesokoDtoI,
-			BigDecimal nMengeI, TheClientDto theClientDto)
+	private void checkKundesokoDto(KundesokoDto kundesokoDtoI, BigDecimal nMengeI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		// Schritt 1: Alle bestehenden Mengenstaffeln zu einem Artikel bzw.
 		// einer Artikelgruppe holen
 		KundesokoDto[] bestehendeDtos = null;
 
 		if (kundesokoDtoI.getArtikelIId() != null) {
-			bestehendeDtos = kundesokoFindByKundeIIdArtikelIId(
-					kundesokoDtoI.getKundeIId(), kundesokoDtoI.getArtikelIId());
+			bestehendeDtos = kundesokoFindByKundeIIdArtikelIId(kundesokoDtoI.getKundeIId(),
+					kundesokoDtoI.getArtikelIId());
 		} else {
-			bestehendeDtos = kundesokoFindByKundeIIdArtgruIId(
-					kundesokoDtoI.getKundeIId(), kundesokoDtoI.getArtgruIId());
+			bestehendeDtos = kundesokoFindByKundeIIdArtgruIId(kundesokoDtoI.getKundeIId(),
+					kundesokoDtoI.getArtgruIId());
 		}
 
 		// Schritt 2: durch den vorhergegangen UK ist sichergestellt, dass
@@ -221,18 +206,13 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		int iIndex = 0;
 
 		while (!bEnthalten && iIndex < bestehendeDtos.length) {
-			if (kundesokoDtoI.getIId().intValue() != bestehendeDtos[iIndex]
-					.getIId().intValue()) {
-				bEnthalten = checkDatumInDatumsbereichEnthalten(
-						bestehendeDtos[iIndex].getTPreisgueltigab(),
-						bestehendeDtos[iIndex].getTPreisgueltigbis(),
-						kundesokoDtoI.getTPreisgueltigab());
+			if (kundesokoDtoI.getIId().intValue() != bestehendeDtos[iIndex].getIId().intValue()) {
+				bEnthalten = checkDatumInDatumsbereichEnthalten(bestehendeDtos[iIndex].getTPreisgueltigab(),
+						bestehendeDtos[iIndex].getTPreisgueltigbis(), kundesokoDtoI.getTPreisgueltigab());
 
 				if (kundesokoDtoI.getTPreisgueltigbis() != null && !bEnthalten) {
-					bEnthalten = checkDatumInDatumsbereichEnthalten(
-							bestehendeDtos[iIndex].getTPreisgueltigab(),
-							bestehendeDtos[iIndex].getTPreisgueltigbis(),
-							kundesokoDtoI.getTPreisgueltigbis());
+					bEnthalten = checkDatumInDatumsbereichEnthalten(bestehendeDtos[iIndex].getTPreisgueltigab(),
+							bestehendeDtos[iIndex].getTPreisgueltigbis(), kundesokoDtoI.getTPreisgueltigbis());
 				}
 			}
 
@@ -240,16 +220,10 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		}
 
 		if (bEnthalten) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
-					new Exception("ArtikelIId="
-							+ kundesokoDtoI.getArtikelIId()
-							+ ", Menge="
-							+ nMengeI
-							+ ", gueltig bis="
-							+ Helper.formatDatum(
-									kundesokoDtoI.getTPreisgueltigab(),
-									theClientDto.getLocUi())));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
+					new Exception(
+							"ArtikelIId=" + kundesokoDtoI.getArtikelIId() + ", Menge=" + nMengeI + ", gueltig bis="
+									+ Helper.formatDatum(kundesokoDtoI.getTPreisgueltigab(), theClientDto.getLocUi())));
 		}
 
 		// Schritt 3: Den Vorgaenger und den Nachfolger der neuen Staffel
@@ -260,22 +234,15 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 
 		if (bestehendeDtos != null && bestehendeDtos.length > 0) {
 			while (nachfolgerDto == null && iIndex < bestehendeDtos.length) {
-				if (kundesokoDtoI.getIId().intValue() != bestehendeDtos[iIndex]
-						.getIId().intValue()) {
-					if (kundesokoDtoI.getTPreisgueltigab().getTime() > bestehendeDtos[iIndex]
-							.getTPreisgueltigab().getTime()) {
+				if (kundesokoDtoI.getIId().intValue() != bestehendeDtos[iIndex].getIId().intValue()) {
+					if (kundesokoDtoI.getTPreisgueltigab().getTime() > bestehendeDtos[iIndex].getTPreisgueltigab()
+							.getTime()) {
 						iIndex++;
 					} else if (kundesokoDtoI.getTPreisgueltigab().getTime() == bestehendeDtos[iIndex]
 							.getTPreisgueltigab().getTime()) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
-								new Exception("ArtikelIId="
-										+ kundesokoDtoI.getArtikelIId()
-										+ ", Menge="
-										+ nMengeI
-										+ ", gueltig ab="
-										+ Helper.formatDatum(kundesokoDtoI
-												.getTPreisgueltigab(),
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
+								new Exception("ArtikelIId=" + kundesokoDtoI.getArtikelIId() + ", Menge=" + nMengeI
+										+ ", gueltig ab=" + Helper.formatDatum(kundesokoDtoI.getTPreisgueltigab(),
 												theClientDto.getLocUi())));
 					} else if (kundesokoDtoI.getTPreisgueltigab().getTime() < bestehendeDtos[iIndex]
 							.getTPreisgueltigab().getTime()) {
@@ -291,18 +258,15 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 			}
 
 			// wenn die neue Mengenstaffel die letzte ist
-			if (iIndex > 0
-					&& kundesokoDtoI.getIId().intValue() != bestehendeDtos[iIndex - 1]
-							.getIId().intValue() && nachfolgerDto == null
-					&& vorgaengerDto == null) {
+			if (iIndex > 0 && kundesokoDtoI.getIId().intValue() != bestehendeDtos[iIndex - 1].getIId().intValue()
+					&& nachfolgerDto == null && vorgaengerDto == null) {
 				vorgaengerDto = bestehendeDtos[iIndex - 1];
 			}
 		}
 
 		// Schritt 4: Wenn es einen Nachfolger gibt, muss der neue Bereich ev.
 		// ergaenzt werden
-		if (nachfolgerDto != null
-				&& kundesokoDtoI.getTPreisgueltigbis() == null) {
+		if (nachfolgerDto != null && kundesokoDtoI.getTPreisgueltigbis() == null) {
 			// den neuen Zeitraum ergaenzen, wenn es kein bis-Datum, aber einen
 			// Nachfolger gibt
 			if (kundesokoDtoI.getTPreisgueltigbis() == null) {
@@ -310,21 +274,18 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 				cal.setTime(nachfolgerDto.getTPreisgueltigab());
 				cal.add(Calendar.DATE, -1); // den Tag davor festsetzen
 
-				kundesokoDtoI.setTPreisgueltigbis(new java.sql.Date(cal
-						.getTimeInMillis()));
+				kundesokoDtoI.setTPreisgueltigbis(new java.sql.Date(cal.getTimeInMillis()));
 			}
 		}
 
 		// Schritt 5: Wenn es einen Vorgaenger gibt, muss dieser ev. ergaenzt
 		// werden
-		if (vorgaengerDto != null
-				&& vorgaengerDto.getTPreisgueltigbis() == null) {
+		if (vorgaengerDto != null && vorgaengerDto.getTPreisgueltigbis() == null) {
 			Calendar cal = new GregorianCalendar();
 			cal.setTime(kundesokoDtoI.getTPreisgueltigab());
 			cal.add(Calendar.DATE, -1); // den Tag davor festsetzen
 
-			vorgaengerDto.setTPreisgueltigbis(new java.sql.Date(cal
-					.getTimeInMillis()));
+			vorgaengerDto.setTPreisgueltigbis(new java.sql.Date(cal.getTimeInMillis()));
 
 			updateKundesoko(vorgaengerDto, null, theClientDto);
 		}
@@ -333,24 +294,20 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 	/**
 	 * Pruefen, ob ein Datum in einem Datumsbereich enthalten ist.
 	 * 
-	 * @param tDatumVonI
-	 *            Date
-	 * @param tDatumBisI
-	 *            Date
-	 * @param tDatumEnthaltenI
-	 *            Date
+	 * @param tDatumVonI       Date
+	 * @param tDatumBisI       Date
+	 * @param tDatumEnthaltenI Date
 	 * @return boolean true, wenn das Datum enthalten ist
 	 * @throws EJBExceptionLP
 	 */
-	private boolean checkDatumInDatumsbereichEnthalten(Date tDatumVonI,
-			Date tDatumBisI, Date tDatumEnthaltenI) throws EJBExceptionLP {
+	private boolean checkDatumInDatumsbereichEnthalten(Date tDatumVonI, Date tDatumBisI, Date tDatumEnthaltenI)
+			throws EJBExceptionLP {
 		Calendar calIt = new GregorianCalendar();
 		calIt.setTime(tDatumVonI);
 
 		boolean bEnthalten = false;
 
-		while (!bEnthalten && tDatumBisI != null
-				&& calIt.getTimeInMillis() <= tDatumBisI.getTime()) {
+		while (!bEnthalten && tDatumBisI != null && calIt.getTimeInMillis() <= tDatumBisI.getTime()) {
 			if (calIt.getTimeInMillis() == tDatumEnthaltenI.getTime()) {
 				bEnthalten = true;
 			} else {
@@ -365,15 +322,11 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 	 * Einen Kundensonderkondition loeschen. <br>
 	 * Damit werden auch alle zugehoerigen Mengenstaffeln geloescht.
 	 * 
-	 * @param kundesokoDtoI
-	 *            die Kundensoko
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param kundesokoDtoI die Kundensoko
+	 * @param theClientDto  der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeKundesoko(KundesokoDto kundesokoDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeKundesoko(KundesokoDto kundesokoDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkKundesokoDto(kundesokoDtoI);
 
 		try {
@@ -381,43 +334,33 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 					kundesokoDtoI.getIId(), theClientDto);
 
 			for (int i = 0; i < aMengenstaffelDtos.length; i++) {
-				removeKundesokomengenstaffel(aMengenstaffelDtos[i],
-						theClientDto);
+				removeKundesokomengenstaffel(aMengenstaffelDtos[i], theClientDto);
 			}
 
-			Kundesoko toRemove = em.find(Kundesoko.class,
-					kundesokoDtoI.getIId());
+			Kundesoko toRemove = em.find(Kundesoko.class, kundesokoDtoI.getIId());
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, new Exception(t));
 		}
 	}
 
 	/**
 	 * Eine bestehende Kundensonderkondition aktualisieren.
 	 * 
-	 * @param kundesokoDtoI
-	 *            die zu aktualisierende Kundensoko
-	 * @param defaultMengenstaffelDtoI
-	 *            die Default Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param kundesokoDtoI            die zu aktualisierende Kundensoko
+	 * @param defaultMengenstaffelDtoI die Default Mengenstaffel
+	 * @param theClientDto             der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateKundesoko(KundesokoDto kundesokoDtoI,
-			KundesokomengenstaffelDto defaultMengenstaffelDtoI,
+	public void updateKundesoko(KundesokoDto kundesokoDtoI, KundesokomengenstaffelDto defaultMengenstaffelDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkKundesokoDto(kundesokoDtoI);
@@ -425,15 +368,16 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// try {
 		Kundesoko kundesoko = em.find(Kundesoko.class, kundesokoDtoI.getIId());
 		if (kundesoko == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		if (defaultMengenstaffelDtoI != null) {
+			checkKundesokoDto(kundesokoDtoI, defaultMengenstaffelDtoI.getNMenge(), theClientDto);
 		}
 
 		// Daten normieren
-		kundesokoDtoI.setTPreisgueltigab(Helper.cutDate(kundesokoDtoI
-				.getTPreisgueltigab()));
-		kundesokoDtoI.setTPreisgueltigbis(Helper.cutDate(kundesokoDtoI
-				.getTPreisgueltigbis()));
+		kundesokoDtoI.setTPreisgueltigab(Helper.cutDate(kundesokoDtoI.getTPreisgueltigab()));
+		kundesokoDtoI.setTPreisgueltigbis(Helper.cutDate(kundesokoDtoI.getTPreisgueltigbis()));
 
 		kundesokoDtoI.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		kundesokoDtoI.setTAendern(getTimestamp());
@@ -450,16 +394,13 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	public KundesokoDto kundesokoFindByPrimaryKey(Integer iIdI)
-			throws EJBExceptionLP {
+	public KundesokoDto kundesokoFindByPrimaryKey(Integer iIdI) throws EJBExceptionLP {
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdI == null"));
 		}
 		Kundesoko kundesoko = em.find(Kundesoko.class, iIdI);
 		if (kundesoko == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		// try {
 		return assembleKundesokoDto(kundesoko);
@@ -470,16 +411,14 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	public KundesokoDto[] kundesokoFindByKundeIIdArtikelIId(Integer kundeIIdI,
-			Integer artikelIIdI) throws EJBExceptionLP {
+	public KundesokoDto[] kundesokoFindByKundeIIdArtikelIId(Integer kundeIIdI, Integer artikelIIdI)
+			throws EJBExceptionLP {
 		if (kundeIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kundeIIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kundeIIdI == null"));
 		}
 
 		if (artikelIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("artikelIIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("artikelIIdI == null"));
 		}
 
 		// try {
@@ -497,16 +436,14 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	public KundesokoDto[] kundesokoFindByKundeIIdArtgruIId(Integer kundeIIdI,
-			Integer artgruIIdI) throws EJBExceptionLP {
+	public KundesokoDto[] kundesokoFindByKundeIIdArtgruIId(Integer kundeIIdI, Integer artgruIIdI)
+			throws EJBExceptionLP {
 		if (kundeIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kundeIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kundeIId == null"));
 		}
 
 		if (artgruIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("artgruIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("artgruIId == null"));
 		}
 
 		// try {
@@ -524,11 +461,9 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	public KundesokoDto[] kundesokoFindByKundeIId(Integer kundeIIdI)
-			throws EJBExceptionLP {
+	public KundesokoDto[] kundesokoFindByKundeIId(Integer kundeIIdI) throws EJBExceptionLP {
 		if (kundeIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kundeIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kundeIId == null"));
 		}
 		// try {
 		Query query = em.createNamedQuery("KundesokofindByKundeIId");
@@ -545,11 +480,9 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	public KundesokoDto[] kundesokoFindByKundeIIdOhneExc(Integer kundeIIdI)
-			throws EJBExceptionLP {
+	public KundesokoDto[] kundesokoFindByKundeIIdOhneExc(Integer kundeIIdI) throws EJBExceptionLP {
 		if (kundeIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kundeIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kundeIId == null"));
 		}
 		// try {
 		Query query = em.createNamedQuery("KundesokofindByKundeIId");
@@ -561,41 +494,38 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		return assembleKundesokoDtos(cl);
 	}
 
-	public KundesokoDto kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatum(
-			Integer kundeIIdI, Integer artikelIIdI, Date tGueltigkeitsdatumI)
-			throws EJBExceptionLP {
+	public KundesokoDto kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatum(Integer kundeIIdI, Integer artikelIIdI,
+			Date tGueltigkeitsdatumI) throws EJBExceptionLP {
 		Validator.notNull(tGueltigkeitsdatumI, "tGueltigkeitsdatumI");
 		Validator.notNull(kundeIIdI, "kundeIIdI");
 		Validator.notNull(artikelIIdI, "artikelIIdI");
 
-		KundesokoDto dto = kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumImpl(
-				kundeIIdI, artikelIIdI, tGueltigkeitsdatumI);
+		KundesokoDto dto = kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumImpl(kundeIIdI, artikelIIdI,
+				tGueltigkeitsdatumI);
 		if (dto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
-					new NoResultException());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, new NoResultException());
 		}
 
 		return dto;
 	}
 
-	public KundesokoDto kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
-			Integer kundeIIdI, Integer artikelIIdI, Date tGueltigkeitsdatumI) {
+	public KundesokoDto kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(Integer kundeIIdI,
+			Integer artikelIIdI, Date tGueltigkeitsdatumI) {
 		KundesokoDto kundesokoDto = null;
 
 		try {
-			kundesokoDto = kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumImpl(
-					kundeIIdI, artikelIIdI, tGueltigkeitsdatumI);
+			kundesokoDto = kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumImpl(kundeIIdI, artikelIIdI,
+					tGueltigkeitsdatumI);
 		} catch (Throwable t) {
 		}
 
 		return kundesokoDto;
 	}
 
-	private KundesokoDto kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumImpl(
-			Integer kundeIIdI, Integer artikelIIdI, Date tGueltigkeitsdatumI) {
+	private KundesokoDto kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumImpl(Integer kundeIIdI, Integer artikelIIdI,
+			Date tGueltigkeitsdatumI) {
 		try {
-			Query query = em
-					.createNamedQuery("KundesokofindByKundeIIdArtikelIIdGueltigkeitsdatum");
+			Query query = em.createNamedQuery("KundesokofindByKundeIIdArtikelIIdGueltigkeitsdatum");
 			query.setParameter(1, kundeIIdI);
 			query.setParameter(2, artikelIIdI);
 			query.setParameter(3, tGueltigkeitsdatumI);
@@ -608,27 +538,23 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		return null;
 	}
 
-	public KundesokoDto kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatum(
-			Integer kundeIIdI, Integer artgruIIdI, Date tGueltigkeitsdatumI)
-			throws EJBExceptionLP {
+	public KundesokoDto kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatum(Integer kundeIIdI, Integer artgruIIdI,
+			Date tGueltigkeitsdatumI) throws EJBExceptionLP {
 		if (tGueltigkeitsdatumI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("tPreisgueltigabI == null"));
 		}
 
 		if (kundeIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kundeIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kundeIId == null"));
 		}
 
 		if (artgruIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("artgruIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("artgruIId == null"));
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("KundesokofindByKundeIIdArtgruIIdGueltigkeitsdatum");
+			Query query = em.createNamedQuery("KundesokofindByKundeIIdArtgruIIdGueltigkeitsdatum");
 			query.setParameter(1, kundeIIdI);
 			query.setParameter(2, artgruIIdI);
 			query.setParameter(3, tGueltigkeitsdatumI);
@@ -640,13 +566,13 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		}
 	}
 
-	public KundesokoDto kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(
-			Integer kundeIIdI, Integer artgruIIdI, Date tGueltigkeitsdatumI) {
+	public KundesokoDto kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(Integer kundeIIdI, Integer artgruIIdI,
+			Date tGueltigkeitsdatumI) {
 		KundesokoDto kundesokoDto = null;
 
 		try {
-			kundesokoDto = kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatum(
-					kundeIIdI, artgruIIdI, tGueltigkeitsdatumI);
+			kundesokoDto = kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatum(kundeIIdI, artgruIIdI,
+					tGueltigkeitsdatumI);
 		} catch (Throwable t) {
 			// ignore
 		}
@@ -654,8 +580,7 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		return kundesokoDto;
 	}
 
-	private void setKundesokoFromKundesokoDto(Kundesoko kundesoko,
-			KundesokoDto kundesokoDto) {
+	private void setKundesokoFromKundesokoDto(Kundesoko kundesoko, KundesokoDto kundesokoDto) {
 		kundesoko.setKundeIId(kundesokoDto.getKundeIId());
 		kundesoko.setArtikelIId(kundesokoDto.getArtikelIId());
 		kundesoko.setArtgruIId(kundesokoDto.getArtgruIId());
@@ -670,8 +595,9 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		kundesoko.setBDrucken(kundesokoDto.getBDrucken());
 		kundesoko.setPersonalIIdAendern(kundesokoDto.getPersonalIIdAendern());
 		kundesoko.setTAendern(kundesokoDto.getTAendern());
-		kundesoko.setBWirktNichtFuerPreisfindung(kundesokoDto
-				.getBWirktNichtFuerPreisfindung());
+		kundesoko.setBWirktNichtFuerPreisfindung(kundesokoDto.getBWirktNichtFuerPreisfindung());
+		kundesoko.setBKeineMengenstaffel(kundesokoDto.getBKeineMengenstaffel());
+		kundesoko.setNStartwertLiefermenge(kundesokoDto.getNStartwertLiefermenge());
 		em.merge(kundesoko);
 		em.flush();
 	}
@@ -693,11 +619,9 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		return (KundesokoDto[]) list.toArray(returnArray);
 	}
 
-	private void checkKundesokoDto(KundesokoDto kundesokoDtoI)
-			throws EJBExceptionLP {
+	private void checkKundesokoDto(KundesokoDto kundesokoDtoI) throws EJBExceptionLP {
 		if (kundesokoDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception());
 		}
 	}
 
@@ -707,16 +631,12 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 	/**
 	 * Einen neue Mengenstaffel zu einer Kundensonderkondition anlegen.
 	 * 
-	 * @param kundesokomengenstaffelDtoI
-	 *            die neue Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param kundesokomengenstaffelDtoI die neue Mengenstaffel
+	 * @param theClientDto               der aktuelle Benutzer
 	 * @return Integer PK der neuen Mengenstaffel
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Integer createKundesokomengenstaffel(
-			KundesokomengenstaffelDto kundesokomengenstaffelDtoI,
+	public Integer createKundesokomengenstaffel(KundesokomengenstaffelDto kundesokomengenstaffelDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkKundesokoMengenstaffelDto(kundesokomengenstaffelDtoI);
@@ -730,112 +650,88 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 
 		kundesokomengenstaffelDtoI.setIId(iId);
 
-		Kundesokomengenstaffel kundesokomengenstaffel = new Kundesokomengenstaffel(
-				kundesokomengenstaffelDtoI.getIId(),
-				kundesokomengenstaffelDtoI.getKundesokoIId(),
-				kundesokomengenstaffelDtoI.getNMenge());
+		Kundesokomengenstaffel kundesokomengenstaffel = new Kundesokomengenstaffel(kundesokomengenstaffelDtoI.getIId(),
+				kundesokomengenstaffelDtoI.getKundesokoIId(), kundesokomengenstaffelDtoI.getNMenge());
 		em.persist(kundesokomengenstaffel);
 		em.flush();
 
-		setKundesokomengenstaffelFromKundesokomengenstaffelDto(
-				kundesokomengenstaffel, kundesokomengenstaffelDtoI);
+		setKundesokomengenstaffelFromKundesokomengenstaffelDto(kundesokomengenstaffel, kundesokomengenstaffelDtoI);
 
 		return iId;
 	}
 
-	private void checkUniqueKey(
-			KundesokomengenstaffelDto kundesokomengenstaffelDtoI)
-			throws EJBExceptionLP {
+	private void checkUniqueKey(KundesokomengenstaffelDto kundesokomengenstaffelDtoI) throws EJBExceptionLP {
 		KundesokomengenstaffelDto mengenstaffelDtoI = null;
 
 		try {
-			Query query = em
-					.createNamedQuery("KundesokomengenstaffelfindByUniqueKey");
+			Query query = em.createNamedQuery("KundesokomengenstaffelfindByUniqueKey");
 			query.setParameter(1, kundesokomengenstaffelDtoI.getKundesokoIId());
 			query.setParameter(2, kundesokomengenstaffelDtoI.getNMenge());
 			// @todo getSingleResult oder getResultList ?
-			mengenstaffelDtoI = assembleKundesokomengenstaffelDto((Kundesokomengenstaffel) query
-					.getSingleResult());
+			mengenstaffelDtoI = assembleKundesokomengenstaffelDto((Kundesokomengenstaffel) query.getSingleResult());
 		} catch (Throwable t) {
 			// continue
 		}
 
 		if (mengenstaffelDtoI != null) {
 			// constraint verletzt
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
 		}
 	}
 
 	/**
 	 * Eine Mengenstaffel zu einer Kundensonderkondition loeschen.
 	 * 
-	 * @param kundesokomengenstaffelDtoI
-	 *            die zu loeschende Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param kundesokomengenstaffelDtoI die zu loeschende Mengenstaffel
+	 * @param theClientDto               der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeKundesokomengenstaffel(
-			KundesokomengenstaffelDto kundesokomengenstaffelDtoI,
+	public void removeKundesokomengenstaffel(KundesokomengenstaffelDto kundesokomengenstaffelDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkKundesokoMengenstaffelDto(kundesokomengenstaffelDtoI);
 
 		try {
-			Kundesokomengenstaffel toRemove = em.find(
-					Kundesokomengenstaffel.class,
+			Kundesokomengenstaffel toRemove = em.find(Kundesokomengenstaffel.class,
 					kundesokomengenstaffelDtoI.getIId());
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, new Exception(t));
 		}
 	}
 
 	/**
 	 * Eine bestehende SOKO Mengenstaffel aktualisieren.
 	 * 
-	 * @param kundesokomengenstaffelDtoI
-	 *            die Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param kundesokomengenstaffelDtoI die Mengenstaffel
+	 * @param theClientDto               der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateKundesokomengenstaffel(
-			KundesokomengenstaffelDto kundesokomengenstaffelDtoI,
+	public void updateKundesokomengenstaffel(KundesokomengenstaffelDto kundesokomengenstaffelDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkKundesokoMengenstaffelDto(kundesokomengenstaffelDtoI);
 
 		// try {
-		Kundesokomengenstaffel kundesokomengenstaffel = em.find(
-				Kundesokomengenstaffel.class,
+		Kundesokomengenstaffel kundesokomengenstaffel = em.find(Kundesokomengenstaffel.class,
 				kundesokomengenstaffelDtoI.getIId());
 		if (kundesokomengenstaffel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
-		if (kundesokomengenstaffel.getNMenge().doubleValue() != kundesokomengenstaffelDtoI
-				.getNMenge().doubleValue()) {
+		if (kundesokomengenstaffel.getNMenge().doubleValue() != kundesokomengenstaffelDtoI.getNMenge().doubleValue()) {
 			checkUniqueKey(kundesokomengenstaffelDtoI);
 		}
 
-		setKundesokomengenstaffelFromKundesokomengenstaffelDto(
-				kundesokomengenstaffel, kundesokomengenstaffelDtoI);
+		setKundesokomengenstaffelFromKundesokomengenstaffelDto(kundesokomengenstaffel, kundesokomengenstaffelDtoI);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
@@ -843,19 +739,15 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	public KundesokomengenstaffelDto kundesokomengenstaffelFindByPrimaryKey(
-			Integer iIdI) throws EJBExceptionLP {
+	public KundesokomengenstaffelDto kundesokomengenstaffelFindByPrimaryKey(Integer iIdI) throws EJBExceptionLP {
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdI == null"));
 		}
 
 		// try {
-		Kundesokomengenstaffel kundesokomengenstaffel = em.find(
-				Kundesokomengenstaffel.class, iIdI);
+		Kundesokomengenstaffel kundesokomengenstaffel = em.find(Kundesokomengenstaffel.class, iIdI);
 		if (kundesokomengenstaffel == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleKundesokomengenstaffelDto(kundesokomengenstaffel);
 
@@ -866,57 +758,44 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	private void setKundesokomengenstaffelFromKundesokomengenstaffelDto(
-			Kundesokomengenstaffel kundesokomengenstaffel,
+	private void setKundesokomengenstaffelFromKundesokomengenstaffelDto(Kundesokomengenstaffel kundesokomengenstaffel,
 			KundesokomengenstaffelDto kundesokomengenstaffelDto) {
-		kundesokomengenstaffel.setKundesokoIId(kundesokomengenstaffelDto
-				.getKundesokoIId());
+		kundesokomengenstaffel.setKundesokoIId(kundesokomengenstaffelDto.getKundesokoIId());
 		kundesokomengenstaffel.setNMenge(kundesokomengenstaffelDto.getNMenge());
-		kundesokomengenstaffel
-				.setFArtikelstandardrabattsatz(kundesokomengenstaffelDto
-						.getFArtikelstandardrabattsatz());
-		kundesokomengenstaffel.setNArtikelfixpreis(kundesokomengenstaffelDto
-				.getNArtikelfixpreis());
+		kundesokomengenstaffel.setFArtikelstandardrabattsatz(kundesokomengenstaffelDto.getFArtikelstandardrabattsatz());
+		kundesokomengenstaffel.setNArtikelfixpreis(kundesokomengenstaffelDto.getNArtikelfixpreis());
+
 		em.merge(kundesokomengenstaffel);
 		em.flush();
 	}
 
-	private KundesokomengenstaffelDto assembleKundesokomengenstaffelDto(
-			Kundesokomengenstaffel kundesokomengenstaffel) {
-		return KundesokomengenstaffelDtoAssembler
-				.createDto(kundesokomengenstaffel);
+	private KundesokomengenstaffelDto assembleKundesokomengenstaffelDto(Kundesokomengenstaffel kundesokomengenstaffel) {
+		return KundesokomengenstaffelDtoAssembler.createDto(kundesokomengenstaffel);
 	}
 
-	private KundesokomengenstaffelDto[] assembleKundesokomengenstaffelDtos(
-			Collection<?> kundesokomengenstaffels) {
+	private KundesokomengenstaffelDto[] assembleKundesokomengenstaffelDtos(Collection<?> kundesokomengenstaffels) {
 		List<KundesokomengenstaffelDto> list = new ArrayList<KundesokomengenstaffelDto>();
 		if (kundesokomengenstaffels != null) {
 			Iterator<?> iterator = kundesokomengenstaffels.iterator();
 			while (iterator.hasNext()) {
-				Kundesokomengenstaffel kundesokomengenstaffel = (Kundesokomengenstaffel) iterator
-						.next();
+				Kundesokomengenstaffel kundesokomengenstaffel = (Kundesokomengenstaffel) iterator.next();
 				list.add(assembleKundesokomengenstaffelDto(kundesokomengenstaffel));
 			}
 		}
-		KundesokomengenstaffelDto[] returnArray = new KundesokomengenstaffelDto[list
-				.size()];
+		KundesokomengenstaffelDto[] returnArray = new KundesokomengenstaffelDto[list.size()];
 		return (KundesokomengenstaffelDto[]) list.toArray(returnArray);
 	}
 
-	private void checkKundesokoMengenstaffelDto(
-			KundesokomengenstaffelDto kundesokoMengenstaffelDtoI)
+	private void checkKundesokoMengenstaffelDto(KundesokomengenstaffelDto kundesokoMengenstaffelDtoI)
 			throws EJBExceptionLP {
 		if (kundesokoMengenstaffelDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception());
 		}
 	}
 
-	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(
-			Integer iIdKundesokoIId, Date tGueltigkeitsdatumI,
-			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
-		Query query = em
-				.createNamedQuery("KundesokomengenstaffelfindByKundesokoIId");
+	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(Integer iIdKundesokoIId,
+			Date tGueltigkeitsdatumI, String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("KundesokomengenstaffelfindByKundesokoIId");
 		query.setParameter(1, iIdKundesokoIId);
 		Collection<?> cl = query.getResultList();
 		Iterator<?> it = cl.iterator();
@@ -924,10 +803,8 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		List<KundesokomengenstaffelDto> list = new ArrayList<KundesokomengenstaffelDto>();
 		while (it.hasNext()) {
 
-			Kundesokomengenstaffel mengenstaffel = (Kundesokomengenstaffel) it
-					.next();
-			Kundesoko kundesoko = em.find(Kundesoko.class,
-					mengenstaffel.getKundesokoIId());
+			Kundesokomengenstaffel mengenstaffel = (Kundesokomengenstaffel) it.next();
+			Kundesoko kundesoko = em.find(Kundesoko.class, mengenstaffel.getKundesokoIId());
 			Kunde kunde = em.find(Kunde.class, kundesoko.getKundeIId());
 
 			KundesokomengenstaffelDto mengenstaffelDto = assembleKundesokomengenstaffelDto(mengenstaffel);
@@ -935,12 +812,9 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 			if (mengenstaffelDto.getNArtikelfixpreis() != null
 					&& mengenstaffelDto.getNArtikelfixpreis().doubleValue() != 0) {
 				try {
-					mengenstaffelDto.setNArtikelfixpreis(getLocaleFac()
-							.rechneUmInAndereWaehrungZuDatum(
-									mengenstaffelDto.getNArtikelfixpreis(),
-									kunde.getWaehrungCNr(),
-									waehrungCNrZielwaehrung,
-									tGueltigkeitsdatumI, theClientDto));
+					mengenstaffelDto.setNArtikelfixpreis(getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+							mengenstaffelDto.getNArtikelfixpreis(), kunde.getWaehrungCNr(), waehrungCNrZielwaehrung,
+							tGueltigkeitsdatumI, theClientDto));
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -949,22 +823,18 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 			list.add(mengenstaffelDto);
 		}
 
-		KundesokomengenstaffelDto[] returnArray = new KundesokomengenstaffelDto[list
-				.size()];
+		KundesokomengenstaffelDto[] returnArray = new KundesokomengenstaffelDto[list.size()];
 		return (KundesokomengenstaffelDto[]) list.toArray(returnArray);
 	}
 
-	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIId(
-			Integer iIdKundesokoIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIId(Integer iIdKundesokoIId,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdKundesokoIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdKundesokoIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdKundesokoIId == null"));
 		}
 
 		// try {
-		Query query = em
-				.createNamedQuery("KundesokomengenstaffelfindByKundesokoIId");
+		Query query = em.createNamedQuery("KundesokomengenstaffelfindByKundesokoIId");
 		query.setParameter(1, iIdKundesokoIId);
 		Collection<?> cl = query.getResultList();
 		// if(cl.isEmpty()){
@@ -977,14 +847,12 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 		// }
 	}
 
-	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIIdOhneExc(
-			Integer iIdKundesokoIId, TheClientDto theClientDto) {
+	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIIdOhneExc(Integer iIdKundesokoIId,
+			TheClientDto theClientDto) {
 		if (iIdKundesokoIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdKundesokoIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdKundesokoIId == null"));
 		}
-		Query query = em
-				.createNamedQuery("KundesokomengenstaffelfindByKundesokoIId");
+		Query query = em.createNamedQuery("KundesokomengenstaffelfindByKundesokoIId");
 		query.setParameter(1, iIdKundesokoIId);
 		Collection<?> cl = query.getResultList();
 		// if(cl.isEmpty()){
@@ -998,28 +866,21 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 	 * wurden. ORDER BY nMenge, d.h. die letzte Menge der Ergebnisliste ist die
 	 * passende Mengenstaffel.
 	 * 
-	 * @param kundesokoIIdI
-	 *            PK der Kundensoko
-	 * @param nMengeI
-	 *            die fragliche Menge
-	 * @return KundesokomengenstaffelDto[] alle Mengenstaffeln, die <= nMenge
-	 *         sind
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param kundesokoIIdI PK der Kundensoko
+	 * @param nMengeI       die fragliche Menge
+	 * @return KundesokomengenstaffelDto[] alle Mengenstaffeln, die <= nMenge sind
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIIdNMenge(
-			Integer kundesokoIIdI, BigDecimal nMengeI) throws EJBExceptionLP {
+	public KundesokomengenstaffelDto[] kundesokomengenstaffelFindByKundesokoIIdNMenge(Integer kundesokoIIdI,
+			BigDecimal nMengeI) throws EJBExceptionLP {
 		if (kundesokoIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("kundesokoIIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("kundesokoIIdI == null"));
 		}
 
 		if (nMengeI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("nMengeI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("nMengeI == null"));
 		}
-		Query query = em
-				.createNamedQuery("KundesokomengenstaffelfindByKundesokoIIdNMenge");
+		Query query = em.createNamedQuery("KundesokomengenstaffelfindByKundesokoIIdNMenge");
 		query.setParameter(1, kundesokoIIdI);
 		query.setParameter(2, nMengeI);
 		Collection<?> cl = query.getResultList();
@@ -1035,22 +896,18 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 	}
 
 	@Override
-	public void updateKundesokoOrCreateIfNotExist(Integer kundeIId,
-			Integer artikelIId, String kundeArtikelCNr, TheClientDto theClientDto) 
-			throws EJBExceptionLP, RemoteException {
-		
-		KundesokoDto soko = kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
-						kundeIId, artikelIId, new Date(System.currentTimeMillis()));
-		
+	public void updateKundesokoOrCreateIfNotExist(Integer kundeIId, Integer artikelIId, String kundeArtikelCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+
+		KundesokoDto soko = kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(kundeIId, artikelIId,
+				new Date(System.currentTimeMillis()));
+
 		if (soko == null) {
-			ParametermandantDto paramWirktNichtInPreisfindung = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(), 
-							ParameterFac.KATEGORIE_KUNDEN, 
-							ParameterFac.PARAMETER_DEFAULT_KUNDESOKO_WIRKT_NICHT_IN_PREISFINDUNG);
-			ParametermandantDto paramRabatt = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_STUECKLISTE,
-							ParameterFac.PARAMETER_INTEL_STKL_IMPORT_RABATT);
+			ParametermandantDto paramWirktNichtInPreisfindung = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
+					ParameterFac.PARAMETER_DEFAULT_KUNDESOKO_WIRKT_NICHT_IN_PREISFINDUNG);
+			ParametermandantDto paramRabatt = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_STUECKLISTE, ParameterFac.PARAMETER_INTEL_STKL_IMPORT_RABATT);
 			BigDecimal rabatt = Helper.toBigDecimal(paramRabatt.getCWert());
 
 			soko = new KundesokoDto();
@@ -1061,15 +918,14 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 			soko.setBRabattsichtbar(Helper.boolean2Short(false));
 			soko.setCKundeartikelnummer(kundeArtikelCNr);
 			soko.setTPreisgueltigab(new Date(System.currentTimeMillis()));
-			soko.setBWirktNichtFuerPreisfindung(Helper.boolean2Short(
-					(Boolean)paramWirktNichtInPreisfindung.getCWertAsObject()));
+			soko.setBWirktNichtFuerPreisfindung(
+					Helper.boolean2Short((Boolean) paramWirktNichtInPreisfindung.getCWertAsObject()));
 
 			KundesokomengenstaffelDto sokoStaffel = new KundesokomengenstaffelDto();
 			sokoStaffel.setFArtikelstandardrabattsatz(rabatt.doubleValue());
 			sokoStaffel.setNMenge(BigDecimal.ONE);
 			getKundesokoFac().createKundesoko(soko, sokoStaffel, theClientDto);
-		} else if (soko.getCKundeartikelnummer() == null
-				|| soko.getCKundeartikelnummer().isEmpty()) {
+		} else if (soko.getCKundeartikelnummer() == null || soko.getCKundeartikelnummer().isEmpty()) {
 			// TODO derzeit nur updaten, wenn noch keine kundenartikelnummer
 			// vorhanden.
 			// in Zukunft immer updaten?
@@ -1077,5 +933,5 @@ public class KundesokoFacBean extends Facade implements KundesokoFac {
 			updateKundesoko(soko, null, theClientDto);
 		}
 	}
-	
+
 }

@@ -78,6 +78,8 @@ public class FLRVersandauftrag implements Serializable {
 	
 	private Timestamp t_sendezeitpunkt;
 
+	private String c_jobid;
+
 	/** nullable persistent field */
 	private FLRPartner flrempfaenger;
 
@@ -186,6 +188,14 @@ public class FLRVersandauftrag implements Serializable {
 		this.t_sendezeitpunkt = t_sendezeitpunkt;
 	}
 
+	public String getC_jobid() {
+		return this.c_jobid;
+	}
+	
+	public void setC_jobid(String c_jobid) {
+		this.c_jobid = c_jobid;
+	}
+	
 	public FLRPartner getFlrempfaenger() {
 		return this.flrempfaenger;
 	}

@@ -45,7 +45,8 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "ArtikelsprfindByArtikelIId", query = "SELECT OBJECT(C) FROM Artikelspr c WHERE c.pk.artikelIId = ?1"),
 		@NamedQuery(name = "ArtikelsprfindByArtikelIIdLocaleCNr", query = "SELECT OBJECT (o) FROM Artikelspr o WHERE o.pk.artikelIId=?1 AND o.pk.localeCNr=?2"),
-		@NamedQuery(name = ArtikelsprQuery.ByChangedDate, query="SELECT OBJECT (o) FROM Artikelspr o WHERE o.tAendern >= :changed") })
+		@NamedQuery(name = ArtikelsprQuery.ByChangedDate, query="SELECT OBJECT (o) FROM Artikelspr o WHERE o.tAendern >= :changed"),
+		@NamedQuery(name = ArtikelsprQuery.ByCKBez, query="SELECT OBJECT (o) FROM Artikelspr o WHERE o.cKbez = :kBez AND o.pk.localeCNr = :locale")})
 @Entity
 @Table(name = "WW_ARTIKELSPR")
 public class Artikelspr implements Serializable {

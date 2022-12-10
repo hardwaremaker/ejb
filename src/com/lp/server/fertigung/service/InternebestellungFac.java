@@ -44,6 +44,8 @@ import javax.ejb.Remote;
 
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.bestellung.service.BewegungsvorschauDto;
+import com.lp.server.lieferschein.service.AusliefervorschlagFac;
+import com.lp.server.system.service.LockMeDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
@@ -52,76 +54,109 @@ public interface InternebestellungFac {
 	public static final String KRIT_ARTIKEL_I_ID = "artikelIId";
 	public static final String KRIT_INTERNEBESTELLUNG_BERUECKSICHTIGEN = "internebestellungberuecksichtigen";
 	public static final String KRIT_INTERNEBESTELLUNG = "internebestellung";
+	public static final String KRIT_PARTNER_I_ID_STANDORT = "partner_i_id_standort";
+	public static final String KRIT_MIT_RAHMEN = "mit_rahmen";
 
-	public InternebestellungDto createInternebestellung(
-			InternebestellungDto internebestellungDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public static final int UEBERLEITEN_MIT_AUFTRAGSBEZUG = 0;
+	public static final int UEBERLEITEN_NUR_KUNDE_UND_KOSTENSTELLE = 1;
+	public static final int UEBERLEITEN_OHNE_AUFTRAGSBEZUG = 2;
 
-	public void removeInternebestellung(
-			InternebestellungDto internebestellungDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public static final String LOCKME_INTERNEBESTELLUNG_TP = "lockme_internebestellung_tp";
 
-	public InternebestellungDto updateInternebestellung(
-			InternebestellungDto internebestellungDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
-	public InternebestellungDto internebestellungFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP, RemoteException;
-
-	public void erzeugeInterneBestellung(Boolean bVorhandeneLoeschen,
-			Integer iVorlaufzeit, Integer iToleranz,
-			java.sql.Date dLieferterminFuerArtikelOhneReservierung,
-			Boolean bVerdichten, Integer iVerdichtungsTage,boolean bInterneBestellung, Integer losIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
-	public ArrayList<Integer> erzeugeInterneBestellung(Integer iVorlaufzeit,
-			Integer iToleranz,
-			java.sql.Date dLieferterminFuerArtikelOhneReservierung,
-			boolean bInterneBestellungBeruecksichtigen,
-			Integer stuecklisteIId,
-			ArrayList<BewegungsvorschauDto> alZusatzeintraegeBewegungsvorschau,
-			boolean bInterneBestellung,
+	public InternebestellungDto createInternebestellung(InternebestellungDto internebestellungDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
-	public ArrayList<?> pruefeOffeneRahmenmengen(TheClientDto theClientDto)
-			throws RemoteException;
 
-	public ArrayList<MaterialbedarfDto> berechneBedarfe(ArtikelDto artikelDto,
-			Integer iVorlaufzeitInTagen, Integer iToleranz,
-			Date defaultDatumFuerEintraegeOhneLiefertermin,boolean bInterneBestellung, TheClientDto theClientDto, ArrayList<Integer> arLosIId)
+	public void removeInternebestellung(InternebestellungDto internebestellungDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public ArrayList<MaterialbedarfDto> berechneBedarfe(Integer artikelIId,
-			Integer iVorlaufzeitInTagen, Integer iToleranz,
-			Date defaultDatumFuerEintraegeOhneLiefertermin,boolean bInterneBestellung, TheClientDto theClientDto, ArrayList<Integer> arLosIId)
+	public InternebestellungDto updateInternebestellung(InternebestellungDto internebestellungDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public InternebestellungDto internebestellungFindByPrimaryKey(Integer iId) throws EJBExceptionLP, RemoteException;
+
+	public void erzeugeInterneBestellung(Boolean bVorhandeneLoeschen, Integer iVorlaufzeitAuftrag,
+			Integer iVorlaufzeitUnterlose, Integer iToleranz, java.sql.Date dLieferterminFuerArtikelOhneReservierung,
+			Boolean bVerdichten, Integer iVerdichtungsTage, boolean bInterneBestellung, ArrayList<Integer> losIIds,
+			boolean bNichtFreigegebeneAuftraegeBeruecksichtigen, ArrayList<Integer> arAuftragIId,
+			Integer fertigungsgruppeIId_Entfernen, boolean bExakterAuftragsbezug, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+
+	public ArrayList<Integer> erzeugeInterneBestellung(Integer iVorlaufzeit, Integer iVorlaufzeitUnterlose,
+			Integer iToleranz, java.sql.Date dLieferterminFuerArtikelOhneReservierung,
+			boolean bInterneBestellungBeruecksichtigen, Integer stuecklisteIId,
+			ArrayList<BewegungsvorschauDto> alZusatzeintraegeBewegungsvorschau, boolean bInterneBestellung,
+			boolean bNichtFreigegebeneAuftraegeBeruecksichtigen, boolean bTermineBelassen,
+			HashSet hmReservierungenVorhanden, boolean bUnterlos, boolean bExakterAuftragsbezug,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public ArrayList<?> pruefeOffeneRahmenmengen(TheClientDto theClientDto) throws RemoteException;
+
+	public ArrayList<MaterialbedarfDto> berechneBedarfe(ArtikelDto artikelDto, Integer iVorlaufzeitAuftrag,
+			Integer iVorlaufzeitUnterlose, Integer iToleranz, Date defaultDatumFuerEintraegeOhneLiefertermin,
+			boolean bInterneBestellung, TheClientDto theClientDto, ArrayList<Integer> arLosIId,
+			boolean bNichtFreigegebeneAuftraegeBeruecksichtigen, Integer partnerIIdStandort,
+			HashSet hmReservierungenVorhanden, boolean bExakterAuftragsbezug) throws EJBExceptionLP, RemoteException;
+
+	public ArrayList<MaterialbedarfDto> berechneBedarfe(Integer artikelIId, Integer iVorlaufzeitAuftrag,
+			Integer iVorlaufzeitUnterlose, Integer iToleranz, Date defaultDatumFuerEintraegeOhneLiefertermin,
+			boolean bInterneBestellung, TheClientDto theClientDto, ArrayList<Integer> arLosIId,
+			boolean bNichtFreigegebeneAuftraegeBeruecksichtigen, Integer partnerIIdStandort,
+			HashSet hmReservierungenVorhanden) throws EJBExceptionLP, RemoteException;
 
 	public void removeInternebestellungEinesMandanten(boolean bNurHilfsstuecklisten, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public ArrayList<BewegungsvorschauDto> getBewegungsvorschauSortiert(
-			Integer iArtikelId, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public ArrayList<BewegungsvorschauDto> getBewegungsvorschauSortiert(Integer iArtikelId, TheClientDto theClientDto,
+			Integer partnerIIdStandort, boolean bMitRahmen, boolean mitAnderenMandanten,
+			boolean bNichtFreigegebeneAuftraegeBeruecksichtigen, HashSet hmReservierungenVorhanden)
+			throws EJBExceptionLP, RemoteException;
 
-	public ArrayList<BewegungsvorschauDto> getBewegungsvorschauSortiert(
-			Integer iArtikelId, boolean bInternebestellungMiteinbeziehen,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public ArrayList<BewegungsvorschauDto> getBewegungsvorschauSortiert(Integer iArtikelId,
+			boolean bInternebestellungMiteinbeziehen, boolean bBestellvorschlagMiteinbeziehen,
+			TheClientDto theClientDto, Integer partnerIIdStandort, boolean bMitRahmen, boolean mitAnderenMandanten,
+			boolean bNichtFreigegebeneAuftraegeBeruecksichtigen, HashSet hmReservierungenVorhanden)
+			throws EJBExceptionLP, RemoteException;
 
-	public ArrayList<BewegungsvorschauDto> getBewegungsvorschauSortiert(
-			ArtikelDto artikelDto,boolean bTermineVorHeuteAufHeute, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public ArrayList<BewegungsvorschauDto> getBewegungsvorschauSortiert(ArtikelDto artikelDto,
+			boolean bTermineVorHeuteAufHeute, TheClientDto theClientDto, Integer partnerIIdStandort, boolean bMitRahmen,
+			boolean mitAnderenMandanten, boolean bNichtFreigegebeneAuftraegeBeruecksichtigen,
+			HashSet hmReservierungenVorhanden) throws EJBExceptionLP, RemoteException;
 
-	public void interneBestellungUeberleiten(Integer interneBestellungIId,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public Integer interneBestellungUeberleiten(Integer interneBestellungIId, Integer partnerIIdStandort,
+			int iTypAuftragsbezug, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public Set<Integer> getInternebestellungIIdsEinesMandanten(TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void verdichteInterneBestellung(Integer iVerdichtungsTage,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public void verdichteInterneBestellung(Integer iVerdichtungsTage, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public BigDecimal getFiktivenLagerstandZuZeitpunkt(ArtikelDto artikelDto, TheClientDto theClientDto,
+			Timestamp tLagerstandsdatum, Integer partnerIIdStandort);
+
+	public void verdichteInterneBestellung(HashSet<Integer> stuecklisteIIds, TheClientDto theClientDto);
+
+	public void ueberproduktionZuruecknehmen(TheClientDto theClientDto);
+
+	public BigDecimal getAnfangslagerstand(ArtikelDto artikelDto, boolean bInterneBestellung, TheClientDto theClientDto,
+			Integer partnerIIdStandort) throws RemoteException;
+
+	public void pruefeBearbeitenDerInternenBestellungErlaubt(TheClientDto theClientDto);
+
+	public void removeLockDerInternenBestellungWennIchIhnSperre(TheClientDto theClientDto);
+
+	public void loescheAngelegtesOderStorniertesLos(Integer losIId, TheClientDto theClientDto);
+
+	public void verdichteInterneBestellungEinerStuecklisteEinesMandanten(Integer stuecklisteIId,
+			Integer iVerdichtungsTage, TheClientDto theClientDto);
+
+	public void beginnEndeAllerEintraegeVerschieben(Timestamp tBeginn, Timestamp tEnde,
+			TheClientDto theClientDto);
 	
-	public BigDecimal getFiktivenLagerstandZuZeitpunkt
-			(ArtikelDto artikelDto, TheClientDto theClientDto, Timestamp tLagerstandsdatum);
+	public void loescheAngelegteUndStornierteLoseAufEinmal(Integer fertigungsgruppeIId_Entfernen,
+			TheClientDto theClientDto);
+
+	public void loescheAngelegteUndStornierteLoseAufEinmal(String queryStringWhereLOS_I_IDs,
+			TheClientDto theClientDto);
 	
-	public void verdichteInterneBestellung(HashSet<Integer> stuecklisteIIds,TheClientDto theClientDto);
 }

@@ -85,7 +85,21 @@ public class LossollarbeitsplanDtoAssembler {
 
 			lossollarbeitsplanDto.setLossollmaterialIId(lossollarbeitsplan
 					.getLossollmaterialIId());
-			lossollarbeitsplanDto.setIMaschinenversatzMs(lossollarbeitsplan.getIMaschinenversatzMs());
+			lossollarbeitsplanDto.setIMaschinenversatzMs(lossollarbeitsplan
+					.getIMaschinenversatzMs());
+			lossollarbeitsplanDto.setFFortschritt(lossollarbeitsplan
+					.getFFortschritt());
+			lossollarbeitsplanDto.setApkommentarIId(lossollarbeitsplan
+					.getApkommentarIId());
+
+			lossollarbeitsplanDto.setNPpm(lossollarbeitsplan.getNPpm());
+			lossollarbeitsplanDto.setPersonalIIdFertig(lossollarbeitsplan.getPersonalIIdFertig());
+			lossollarbeitsplanDto.setTFertig(lossollarbeitsplan.getTFertig());
+			
+			lossollarbeitsplanDto.setIMaschinenversatztageAusStueckliste(lossollarbeitsplan
+					.getIMaschinenversatztageAusStueckliste());
+			lossollarbeitsplanDto.setIReihung(lossollarbeitsplan.getIReihung());
+			lossollarbeitsplanDto.setTAgbeginnBerechnet(lossollarbeitsplan.getTAgbeginnBerechnet());
 			
 
 		}

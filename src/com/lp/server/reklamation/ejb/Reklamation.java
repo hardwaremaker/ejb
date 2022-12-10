@@ -43,6 +43,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries({
 		@NamedQuery(name = "ReklamationfindByMandantCNrCNr", query = "SELECT OBJECT(o) FROM Reklamation o WHERE o.mandantCNr = ?1 AND o.cNr = ?2"),
 		@NamedQuery(name = "ReklamationfindByKundeIIdMandantCNr", query = "SELECT OBJECT(O) FROM Reklamation o WHERE o.kundeIId = ?1 AND o.mandantCNr = ?2"),
@@ -53,7 +55,7 @@ import javax.persistence.Table;
 		@NamedQuery(name = "ReklamationfindByAnsprechpartnerIId", query = "SELECT OBJECT(O) FROM Reklamation o WHERE o.ansprechpartnerIId = ?1"),
 		@NamedQuery(name = "ReklamationfindByAnsprechpartnerIIdLieferant", query = "SELECT OBJECT(O) FROM Reklamation o WHERE o.ansprechpartnerIIdLieferant = ?1") })
 @Entity
-@Table(name = "REKLA_REKLAMATION")
+@Table(name = ITablenames.REKLA_REKLAMATION)
 public class Reklamation implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -64,6 +66,17 @@ public class Reklamation implements Serializable {
 
 	@Column(name = "T_BELEGDATUM")
 	private Timestamp tBelegdatum;
+	
+	@Column(name = "T_WARE_ERHALTEN")
+	private Timestamp tWareErhalten;
+
+	public Timestamp getTWareErhalten() {
+		return tWareErhalten;
+	}
+
+	public void setTWareErhalten(Timestamp tWareErhalten) {
+		this.tWareErhalten = tWareErhalten;
+	}
 
 	@Column(name = "B_ARTIKEL")
 	private Short bArtikel;
@@ -79,6 +92,28 @@ public class Reklamation implements Serializable {
 
 	@Column(name = "C_SERIENNRCHARGENNR")
 	private String cSeriennrchargennr;
+	
+	public String getCBestellnummer() {
+		return cBestellnummer;
+	}
+
+	public void setCBestellnummer(String cBestellnummer) {
+		this.cBestellnummer = cBestellnummer;
+	}
+
+	public String getCWareneingang() {
+		return cWareneingang;
+	}
+
+	public void setCWareneingang(String cWareneingang) {
+		this.cWareneingang = cWareneingang;
+	}
+
+	@Column(name = "C_BESTELLNUMMER")
+	private String cBestellnummer;
+	
+	@Column(name = "C_WARENEINGANG")
+	private String cWareneingang;
 
 	@Column(name = "C_GRUND")
 	private String cGrund;
@@ -86,20 +121,7 @@ public class Reklamation implements Serializable {
 	@Column(name = "C_PROJEKT")
 	private String cProjekt;
 
-	@Column(name = "C_TELANSPRECHPARTNER")
-	private String cTelansprechpartner;
-
-	@Column(name = "C_TELANSPRECHPARTNER_LIEFERANT")
-	private String cTelansprechpartnerLieferant;
-
-	public String getCTelansprechpartnerLieferant() {
-		return cTelansprechpartnerLieferant;
-	}
-
-	public void setCTelansprechpartnerLieferant(
-			String cTelansprechpartnerLieferant) {
-		this.cTelansprechpartnerLieferant = cTelansprechpartnerLieferant;
-	}
+	
 
 	@Column(name = "STATUS_C_NR")
 	private String statusCNr;
@@ -112,6 +134,17 @@ public class Reklamation implements Serializable {
 		this.statusCNr = statusCNr;
 	}
 
+	@Column(name = "PROJEKT_I_ID")
+	private Integer projektIId;
+	
+	public Integer getProjektIId() {
+		return projektIId;
+	}
+
+	public void setProjektIId(Integer projektIId) {
+		this.projektIId = projektIId;
+	}
+	
 	@Column(name = "X_ANALYSE")
 	private String xAnalyse;
 
@@ -273,6 +306,28 @@ public class Reklamation implements Serializable {
 
 	@Column(name = "C_KDLSNR")
 	private String cKdlsnr;
+	
+	@Column(name = "C_LFREKLANR")
+	private String cLfreklanr;
+
+	public String getCLfreklanr() {
+		return cLfreklanr;
+	}
+
+	public void setCLfreklanr(String cLfreklanr) {
+		this.cLfreklanr = cLfreklanr;
+	}
+
+	public String getCLflsnr() {
+		return cLflsnr;
+	}
+
+	public void setCLflsnr(String cLflsnr) {
+		this.cLflsnr = cLflsnr;
+	}
+
+	@Column(name = "C_LFLSNR")
+	private String cLflsnr;
 
 	public String getCSeriennrchargennr() {
 		return this.cSeriennrchargennr;
@@ -589,14 +644,6 @@ public class Reklamation implements Serializable {
 
 	public void setCProjekt(String cProjekt) {
 		this.cProjekt = cProjekt;
-	}
-
-	public String getCTelansprechpartner() {
-		return this.cTelansprechpartner;
-	}
-
-	public void setCTelansprechpartner(String cTelansprechpartner) {
-		this.cTelansprechpartner = cTelansprechpartner;
 	}
 
 	public String getXAnalyse() {

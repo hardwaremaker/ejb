@@ -64,12 +64,22 @@ public class DocNodeUVAVerprobung extends DocNodeJCR {
 
 	@Override
 	public List<DocNodeBase> getHierarchy() {
-		return new HeliumDocPath().add(new DocNodeLiteral(getMandantCNr()))
-				.add(new DocNodeFolder(BELEGART_FINANZBUCHHALTG))
-				.add(new DocNodeLiteral(String.valueOf(iGeschaeftsjahr)))
-				.add(new DocNodeLiteral(String.valueOf(BELEGART_UVA)))
-				.add(new DocNodeLiteral(String.valueOf(partnerIId), partnerName))
-				.add(this).asDocNodeList();
+		DocNodeFinanzbuchhaltung docNodeFibu =
+				new DocNodeFinanzbuchhaltung(getMandantCNr(), iGeschaeftsjahr);
+		
+		List<DocNodeBase> hierarchy = docNodeFibu.getHierarchy();
+		hierarchy.add(new DocNodeLiteral(String.valueOf(BELEGART_UVA)));
+		hierarchy.add(new DocNodeLiteral(String.valueOf(partnerIId), partnerName));
+		hierarchy.add(this);
+		
+		return hierarchy;
+		
+//		return new HeliumDocPath().add(new DocNodeLiteral(getMandantCNr()))
+//				.add(new DocNodeFolder(BELEGART_FINANZBUCHHALTG))
+//				.add(new DocNodeLiteral(String.valueOf(iGeschaeftsjahr)))
+//				.add(new DocNodeLiteral(String.valueOf(BELEGART_UVA)))
+//				.add(new DocNodeLiteral(String.valueOf(partnerIId), partnerName))
+//				.add(this).asDocNodeList();
 	}
 
 }

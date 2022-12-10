@@ -52,11 +52,11 @@ public class FLRBestellungart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> bestellungart_bestellungartspr_set;
+	private Set<FLRBestellungartspr> bestellungart_bestellungartspr_set;
 
 	/** full constructor */
 	public FLRBestellungart(Integer i_sort,
-			Set<?> bestellungart_bestellungartspr_set) {
+			Set<FLRBestellungartspr> bestellungart_bestellungartspr_set) {
 		this.i_sort = i_sort;
 		this.bestellungart_bestellungartspr_set = bestellungart_bestellungartspr_set;
 	}
@@ -66,7 +66,7 @@ public class FLRBestellungart implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRBestellungart(Set<?> bestellungart_bestellungartspr_set) {
+	public FLRBestellungart(Set<FLRBestellungartspr> bestellungart_bestellungartspr_set) {
 		this.bestellungart_bestellungartspr_set = bestellungart_bestellungartspr_set;
 	}
 
@@ -86,12 +86,12 @@ public class FLRBestellungart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getBestellungart_bestellungartspr_set() {
+	public Set<FLRBestellungartspr> getBestellungart_bestellungartspr_set() {
 		return this.bestellungart_bestellungartspr_set;
 	}
 
 	public void setBestellungart_bestellungartspr_set(
-			Set<?> bestellungart_bestellungartspr_set) {
+			Set<FLRBestellungartspr> bestellungart_bestellungartspr_set) {
 		this.bestellungart_bestellungartspr_set = bestellungart_bestellungartspr_set;
 	}
 

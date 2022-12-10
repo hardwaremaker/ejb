@@ -1,38 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.stueckliste.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
+import com.lp.server.partner.fastlanereader.generated.FLRKunde;
+import com.lp.server.stueckliste.service.FormelArtikel;
+import com.lp.service.plscript.ScriptReportLogging;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Set;
@@ -41,10 +13,28 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 /** @author Hibernate CodeGenerator */
 public class FLRStuecklisteposition implements Serializable {
+	private static final long serialVersionUID = 1818733446843100693L;
 
-	//
 	public BigDecimal bdZielmenge=null;
 	
+	public ScriptReportLogging reportLogging;
+	
+	/**
+	 * Die vom Formel-Anwender gesetzten Attribute landen hier
+	 * und koennem beim Erzeugen der Produktionsst&uuml;ckliste
+	 * fuer den Artikel der St&uuml;cklistenposition verwendet werden.
+	 */
+	public FormelArtikel formelArtikel = new FormelArtikel();
+	
+	/**
+	 * Die vom Formel-Anwender gesetzten Attribute landen hier 
+	 * und k&ouml;nnen beim Erzeugen der Produktionsst&uuml;ckliste
+	 * f&uuml;r den Artikel der &uuml;bergeordneten (Kopf)
+	 * St&uuml;ckliste verwendet werden.
+	 */
+	public FormelArtikel formelUebergeordneterArtikel = new FormelArtikel();
+	
+	public FLRKunde formelFlrKunde;
     /** identifier field */
     private Integer i_id;
 
@@ -82,7 +72,16 @@ public class FLRStuecklisteposition implements Serializable {
     private Short b_mitdrucken;
 
     /** nullable persistent field */
+    private Short b_ruestmenge;
+
+    /** nullable persistent field */
+    private Short b_initial;
+
+    /** nullable persistent field */
     private Integer stueckliste_i_id;
+
+    /** nullable persistent field */
+    private String x_formel;
 
     /** nullable persistent field */
     private com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste flrstueckliste;
@@ -97,7 +96,7 @@ public class FLRStuecklisteposition implements Serializable {
     private Set posersatzset;
 
     /** full constructor */
-    public FLRStuecklisteposition(Integer i_sort, BigDecimal n_menge, BigDecimal n_kalkpreis, String c_position, String c_kommentar, Integer i_lfdnummer, String einheit_c_nr, Double f_dimension1, Double f_dimension2, Double f_dimension3, Short b_mitdrucken, Integer stueckliste_i_id, com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste flrstueckliste, FLRArtikelliste flrartikel, com.lp.server.stueckliste.fastlanereader.generated.FLRMontageart flrmontageart, Set posersatzset) {
+    public FLRStuecklisteposition(Integer i_sort, BigDecimal n_menge, BigDecimal n_kalkpreis, String c_position, String c_kommentar, Integer i_lfdnummer, String einheit_c_nr, Double f_dimension1, Double f_dimension2, Double f_dimension3, Short b_mitdrucken, Short b_ruestmenge, Short b_initial, Integer stueckliste_i_id, String x_formel, com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste flrstueckliste, FLRArtikelliste flrartikel, com.lp.server.stueckliste.fastlanereader.generated.FLRMontageart flrmontageart, Set posersatzset) {
         this.i_sort = i_sort;
         this.n_menge = n_menge;
         this.n_kalkpreis = n_kalkpreis;
@@ -109,7 +108,10 @@ public class FLRStuecklisteposition implements Serializable {
         this.f_dimension2 = f_dimension2;
         this.f_dimension3 = f_dimension3;
         this.b_mitdrucken = b_mitdrucken;
+        this.b_ruestmenge = b_ruestmenge;
+        this.b_initial = b_initial;
         this.stueckliste_i_id = stueckliste_i_id;
+        this.x_formel = x_formel;
         this.flrstueckliste = flrstueckliste;
         this.flrartikel = flrartikel;
         this.flrmontageart = flrmontageart;
@@ -221,12 +223,36 @@ public class FLRStuecklisteposition implements Serializable {
         this.b_mitdrucken = b_mitdrucken;
     }
 
+    public Short getB_ruestmenge() {
+        return this.b_ruestmenge;
+    }
+
+    public void setB_ruestmenge(Short b_ruestmenge) {
+        this.b_ruestmenge = b_ruestmenge;
+    }
+
+    public Short getB_initial() {
+        return this.b_initial;
+    }
+
+    public void setB_initial(Short b_initial) {
+        this.b_initial = b_initial;
+    }
+
     public Integer getStueckliste_i_id() {
         return this.stueckliste_i_id;
     }
 
     public void setStueckliste_i_id(Integer stueckliste_i_id) {
         this.stueckliste_i_id = stueckliste_i_id;
+    }
+
+    public String getX_formel() {
+        return this.x_formel;
+    }
+
+    public void setX_formel(String x_formel) {
+        this.x_formel = x_formel;
     }
 
     public com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste getFlrstueckliste() {

@@ -53,6 +53,7 @@ public class SonderzeitenDtoAssembler {
 			sonderzeitenDto.setPersonalIIdAendern(sonderzeiten
 					.getPersonalIIdAendern());
 			sonderzeitenDto.setTAendern(sonderzeiten.getTAendern());
+			sonderzeitenDto.setBAutomatik(sonderzeiten.getBAutomatik());
 		}
 		return sonderzeitenDto;
 	}

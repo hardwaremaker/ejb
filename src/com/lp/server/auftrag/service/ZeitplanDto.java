@@ -43,13 +43,51 @@ public class ZeitplanDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
 	private Integer auftragIId;
-	private Integer iTerminVorLiefertermin;
+	private java.sql.Timestamp tTermin;
 	private BigDecimal nMaterial;
 	private BigDecimal nMaterialUrsprung;
 	private BigDecimal nDauer;
 	private BigDecimal nDauerUrsprung;
 	private String cKommentar;
 	private String xText;
+
+	private java.sql.Timestamp tMaterialErledigt;
+	private Integer personalIIdMaterialErledigt;
+	private java.sql.Timestamp tDauerErledigt;
+	private Integer personalIIdDauerErledigt;
+
+	public java.sql.Timestamp getTMaterialErledigt() {
+		return tMaterialErledigt;
+	}
+
+	public void setTMaterialErledigt(java.sql.Timestamp tMaterialErledigt) {
+		this.tMaterialErledigt = tMaterialErledigt;
+	}
+
+	public Integer getPersonalIIdMaterialErledigt() {
+		return personalIIdMaterialErledigt;
+	}
+
+	public void setPersonalIIdMaterialErledigt(
+			Integer personalIIdMaterialErledigt) {
+		this.personalIIdMaterialErledigt = personalIIdMaterialErledigt;
+	}
+
+	public java.sql.Timestamp getTDauerErledigt() {
+		return tDauerErledigt;
+	}
+
+	public void setTDauerErledigt(java.sql.Timestamp tDauerErledigt) {
+		this.tDauerErledigt = tDauerErledigt;
+	}
+
+	public Integer getPersonalIIdDauerErledigt() {
+		return personalIIdDauerErledigt;
+	}
+
+	public void setPersonalIIdDauerErledigt(Integer personalIIdDauerErledigt) {
+		this.personalIIdDauerErledigt = personalIIdDauerErledigt;
+	}
 
 	public Integer getAuftragIId() {
 		return auftragIId;
@@ -59,12 +97,12 @@ public class ZeitplanDto implements Serializable {
 		this.auftragIId = auftragIId;
 	}
 
-	public Integer getITerminVorLiefertermin() {
-		return iTerminVorLiefertermin;
+	public java.sql.Timestamp getTTermin() {
+		return tTermin;
 	}
 
-	public void setITerminVorLiefertermin(Integer iTerminVorLiefertermin) {
-		this.iTerminVorLiefertermin = iTerminVorLiefertermin;
+	public void setTTermin(java.sql.Timestamp tTermin) {
+		this.tTermin = tTermin;
 	}
 
 	public BigDecimal getNMaterial() {

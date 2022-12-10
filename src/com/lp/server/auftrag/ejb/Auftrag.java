@@ -43,13 +43,16 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.server.util.ICNr;
+import com.lp.server.util.IVersionable;
 
 @NamedQueries({
 		@NamedQuery(name = "AuftragfindByMandantAndStatus", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.mandantCNr=?1 AND o.auftragstatusCNr=?2"),
 		@NamedQuery(name = "AuftragfindByKundeBelegdatumVonBis", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.kundeIIdAuftragsadresse=?1 AND (o.tBelegdatum>?2 OR o.tBelegdatum=?2) AND (o.tBelegdatum<?3 OR o.tBelegdatum=?3)"),
 		@NamedQuery(name = "AuftragfindByStatusKundeBelegdatumVonBis", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.auftragstatusCNr=?1 AND o.kundeIIdAuftragsadresse=?2 AND (o.tBelegdatum>?3 OR o.tBelegdatum=?3) AND (o.tBelegdatum<?4 OR o.tBelegdatum=?4)"),
 		@NamedQuery(name = "AuftragfindByAngebotIId", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.angebotIId=?1"),
+		@NamedQuery(name = "AuftragfindByBestellungIIdAndererMandant", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.bestellungIIdAndererMandant=?1"),
 		@NamedQuery(name = "AuftragfindByAuftragIIdRahmenauftrag", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.auftragIIdRahmenauftrag=?1 ORDER BY o.cNr"),
 		@NamedQuery(name = "AuftragfindByMandantCNrCNr", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.mandantCNr=?1 AND o.cNr=?2"),
 		@NamedQuery(name = "AuftragfindByMandantCNrAuftragartCNr", query = "SELECT OBJECT (o) FROM Auftrag o WHERE o.mandantCNr=?1 AND o.auftragartCNr=?2"),
@@ -63,8 +66,8 @@ import com.lp.server.util.ICNr;
 		@NamedQuery(name = "AuftragfindByMandantCNrKundeIIdCBestellnummer", query = "SELECT OBJECT (O) FROM Auftrag o WHERE o.mandantCNr=?1 AND o.kundeIIdAuftragsadresse=?2 AND REPLACE(o.cBestellnummer,' ','')=?3"),
 		@NamedQuery(name = "AuftragfindAll", query = "SELECT OBJECT (O) FROM Auftrag o") })
 @Entity
-@Table(name = "AUFT_AUFTRAG")
-public class Auftrag implements Serializable, ICNr {
+@Table(name = ITablenames.AUFT_AUFTRAG)
+public class Auftrag implements Serializable, ICNr, IVersionable {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -93,14 +96,112 @@ public class Auftrag implements Serializable, ICNr {
 	@Column(name = "T_LIEFERTERMIN")
 	private Timestamp tLiefertermin;
 
+	@Column(name = "C_KOMMISSION")
+	private String cKommission;
+	
+	public String getCKommission() {
+		return cKommission;
+	}
+
+	public void setCKommission(String kommission) {
+		cKommission = kommission;
+	}
+	
+	@Column(name = "PERSONAL_I_ID_VERTRETER2")
+	private Integer personalIIdVertreter2;
+
+	public Integer getPersonalIIdVertreter2() {
+		return personalIIdVertreter2;
+	}
+
+	public void setPersonalIIdVertreter2(Integer personalIIdVertreter2) {
+		this.personalIIdVertreter2 = personalIIdVertreter2;
+	}
+	
+	@Column(name = "T_AENDERUNGSAUFTRAG")
+	private Timestamp tAenderungsauftrag;
+
+	public Timestamp getTAenderungsauftrag() {
+		return tAenderungsauftrag;
+	}
+
+	public void setTAenderungsauftrag(Timestamp tAenderungsauftrag) {
+		this.tAenderungsauftrag = tAenderungsauftrag;
+	}
+
+	@Column(name = "B_MINDERMENGENZUSCHLAG")
+	private Short bMindermengenzuschlag;
+	public Short getBMindermengenzuschlag() {
+		return this.bMindermengenzuschlag;
+	}
+
+	public void setBMindermengenzuschlag(Short bMindermengenzuschlag) {
+		this.bMindermengenzuschlag = bMindermengenzuschlag;
+	}
+	
+	@Column(name = "T_LAUFTERMIN_BIS")
+	private Timestamp tLaufterminBis;
+
+	@Column(name = "VERRECHNUNGSMODELL_I_ID")
+	private Integer verrechnungsmodellIId;
+	
+	
+
+	public Integer getVerrechnungsmodellIId() {
+		return verrechnungsmodellIId;
+	}
+
+	public void setVerrechnungsmodellIId(Integer verrechnungsmodellIId) {
+		this.verrechnungsmodellIId = verrechnungsmodellIId;
+	}
+
+	public Timestamp getTLaufterminBis() {
+		return tLaufterminBis;
+	}
+
+	public void setTLaufterminBis(Timestamp tLaufterminBis) {
+		this.tLaufterminBis = tLaufterminBis;
+	}
+
+	@Column(name = "T_WUNSCHTERMIN")
+	private Timestamp tWunschtermin;
+
+	public Timestamp getTWunschtermin() {
+		return tWunschtermin;
+	}
+
+	public void setTWunschtermin(Timestamp tWunschtermin) {
+		this.tWunschtermin = tWunschtermin;
+	}
+
 	@Column(name = "B_LIEFERTERMINUNVERBINDLICH")
 	private Short bLieferterminunverbindlich;
 
-	
 	@Column(name = "N_KORREKTURBETRAG")
 	private BigDecimal nKorrekturbetrag;
 
+	@Column(name = "N_INDEXANPASSUNG")
+	private BigDecimal nIndexanpassung;
 	
+	public BigDecimal getNIndexanpassung() {
+		return nIndexanpassung;
+	}
+
+	public void setNIndexanpassung(BigDecimal nIndexanpassung) {
+		this.nIndexanpassung = nIndexanpassung;
+	}
+
+	@Column(name = "N_PRAEMIE")
+	private BigDecimal nPraemie;
+
+	public BigDecimal getNPraemie() {
+		return nPraemie;
+	}
+
+	public void setNPraemie(BigDecimal nPraemie) {
+		this.nPraemie = nPraemie;
+	}
+
 	public BigDecimal getNKorrekturbetrag() {
 		return nKorrekturbetrag;
 	}
@@ -109,7 +210,6 @@ public class Auftrag implements Serializable, ICNr {
 		this.nKorrekturbetrag = nKorrekturbetrag;
 	}
 
-	
 	@Column(name = "B_MITZUSAMMENFASSUNG")
 	private Short bMitzusammenfassung;
 
@@ -120,9 +220,10 @@ public class Auftrag implements Serializable, ICNr {
 	public void setBMitzusammenfassung(Short bMitzusammenfassung) {
 		this.bMitzusammenfassung = bMitzusammenfassung;
 	}
+
 	@Column(name = "PROJEKT_I_ID")
 	private Integer projektIId;
-	
+
 	public Integer getProjektIId() {
 		return projektIId;
 	}
@@ -130,6 +231,7 @@ public class Auftrag implements Serializable, ICNr {
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
 	}
+
 	@Column(name = "B_VERSTECKT")
 	private Short bVersteckt;
 
@@ -153,8 +255,22 @@ public class Auftrag implements Serializable, ICNr {
 	@Column(name = "B_ROHS")
 	private Short bRoHs;
 
+
 	@Column(name = "I_LEIHTAGE")
 	private Integer iLeihtage;
+	
+	@Column(name = "BESTELLUNG_I_ID_ANDERERMANDANT")
+	private Integer bestellungIIdAndererMandant;
+
+	
+	
+	public Integer getBestellungIIdAndererMandant() {
+		return bestellungIIdAndererMandant;
+	}
+
+	public void setBestellungIIdAndererMandant(Integer bestellungIIdAndererMandant) {
+		this.bestellungIIdAndererMandant = bestellungIIdAndererMandant;
+	}
 
 	@Column(name = "F_VERSTECKTERAUFSCHLAG")
 	private Double fVersteckteraufschlag;
@@ -213,7 +329,6 @@ public class Auftrag implements Serializable, ICNr {
 	@Column(name = "T_VERRECHENBAR")
 	private Timestamp tVerrechenbar;
 
-	
 	@Column(name = "T_ERLEDIGT")
 	private Timestamp tErledigt;
 
@@ -247,6 +362,17 @@ public class Auftrag implements Serializable, ICNr {
 	@Column(name = "KOSTENSTELLE_I_ID")
 	private Integer kostenstelleIId;
 
+	@Column(name = "VERRECHENBAR_I_ID")
+	private Integer verrechenbarIId;
+
+	public Integer getVerrechenbarIId() {
+		return verrechenbarIId;
+	}
+
+	public void setVerrechenbarIId(Integer verrechenbarIId) {
+		this.verrechenbarIId = verrechenbarIId;
+	}
+
 	@Column(name = "LIEFERART_I_ID")
 	private Integer lieferartIId;
 
@@ -268,7 +394,6 @@ public class Auftrag implements Serializable, ICNr {
 	@Column(name = "ANSPRECHPARTNER_I_ID_RECHNUNGSADRESSE")
 	private Integer ansprechpartnerIIdRechnungsadresse;
 
-	
 	public Integer getAnsprechpartnerIIdRechnungsadresse() {
 		return ansprechpartnerIIdRechnungsadresse;
 	}
@@ -301,7 +426,7 @@ public class Auftrag implements Serializable, ICNr {
 
 	@Column(name = "PERSONAL_I_ID_ERLEDIGT")
 	private Integer personalIIdErledigt;
-	
+
 	@Column(name = "PERSONAL_I_ID_VERRECHENBAR")
 	private Integer personalIIdVerrechenbar;
 
@@ -353,24 +478,24 @@ public class Auftrag implements Serializable, ICNr {
 
 	@Column(name = "LAGER_I_ID_ABBUCHUNGSLAGER")
 	private Integer lagerIIdAbbuchungslager;
-	
 
 	public Integer getLagerIIdAbbuchungslager() {
 		return this.lagerIIdAbbuchungslager;
 	}
+
 	public void setLagerIIdAbbuchungslager(Integer lagerIIdAbbuchungslager) {
 		this.lagerIIdAbbuchungslager = lagerIIdAbbuchungslager;
 	}
+
 	@Column(name = "C_LIEFERARTORT")
 	private String cLieferartort;
-	
-	
+
 	@Column(name = "T_RESPONSE")
-	private Timestamp tResponse ;
-	
+	private Timestamp tResponse;
+
 	@Column(name = "PERSONAL_I_ID_RESPONSE")
-	private Integer personalIIdResponse ;
-	
+	private Integer personalIIdResponse;
+
 	public String getCLieferartort() {
 		return cLieferartort;
 	}
@@ -379,7 +504,6 @@ public class Auftrag implements Serializable, ICNr {
 		this.cLieferartort = cLieferartort;
 	}
 
-	
 	public Timestamp getTBegruendung() {
 		return tBegruendung;
 	}
@@ -404,6 +528,57 @@ public class Auftrag implements Serializable, ICNr {
 		this.auftragbegruendungIId = auftragbegruendungIId;
 	}
 
+	@Column(name = "T_AUFTRAGSFREIGABE")
+	private java.sql.Timestamp tAuftragsfreigabe;
+
+	@Column(name = "PERSONAL_I_ID_AUFTRAGSFREIGABE")
+	private Integer personalIIdAuftragsfreigabe;
+
+	
+	public java.sql.Timestamp getTAuftragsfreigabe() {
+		return tAuftragsfreigabe;
+	}
+
+	public void setTAuftragsfreigabe(java.sql.Timestamp tAuftragsfreigabe) {
+		this.tAuftragsfreigabe = tAuftragsfreigabe;
+	}
+
+	public Integer getPersonalIIdAuftragsfreigabe() {
+		return personalIIdAuftragsfreigabe;
+	}
+
+	public void setPersonalIIdAuftragsfreigabe(Integer personalIIdAuftragsfreigabe) {
+		this.personalIIdAuftragsfreigabe = personalIIdAuftragsfreigabe;
+	}
+
+	@Column(name = "T_FREIGABE")
+	private java.sql.Timestamp tFreigabe;
+
+	@Column(name = "PERSONAL_I_ID_FREIGABE")
+	private Integer personalIIdFreigabe;
+
+	public java.sql.Timestamp getTFreigabe() {
+		return tFreigabe;
+	}
+
+	public void setTFreigabe(java.sql.Timestamp tFreigabe) {
+		this.tFreigabe = tFreigabe;
+	}
+
+	public Integer getPersonalIIdFreigabe() {
+		return personalIIdFreigabe;
+	}
+
+	public void setPersonalIIdFreigabe(Integer personalIIdFreigabe) {
+		this.personalIIdFreigabe = personalIIdFreigabe;
+	}
+
+	@Column(name = "I_AENDERUNGSAUFTRAG_VERSION")
+	private Integer iAenderungsauftragVersion;
+	
+	@Column(name = "LAENDERART_C_NR")
+	private String laenderartCnr;
+
 	private static final long serialVersionUID = 1L;
 
 	public Auftrag(Integer id, String nr, String mandantCNr,
@@ -416,7 +591,8 @@ public class Auftrag implements Serializable, ICNr {
 			Integer personalIIdAnlegen, Integer personalIIdAendern,
 			Integer kostenstelleIId, Integer personalIIdVertreter,
 			String belegartCNr,
-			Double fWechselkursmandantwaehrungzuauftragswaehrung, Integer lagerIIdAbbuchungslager ) {
+			Double fWechselkursmandantwaehrungzuauftragswaehrung,
+			Integer lagerIIdAbbuchungslager, Integer verrechenbarIId) {
 		Timestamp t = new Timestamp(System.currentTimeMillis());
 		this.setTAnlegen(t);
 		this.setTAendern(t);
@@ -442,6 +618,7 @@ public class Auftrag implements Serializable, ICNr {
 		setBelegartCNr(belegartCNr);
 		setFWechselkursmandantwaehrungzuauftragswaehrung(fWechselkursmandantwaehrungzuauftragswaehrung);
 		setTFinaltermin(tFinaltermin);
+		setVerrechenbarIId(verrechenbarIId);
 
 		this.setBLieferterminunverbindlich(new Short((short) 0));
 		this.setBTeillieferungmoeglich(new Short((short) 1));
@@ -453,6 +630,7 @@ public class Auftrag implements Serializable, ICNr {
 		this.setFProjektierungsrabattsatz(new Double(0));
 		this.setIGarantie(new Integer(0));
 		this.setBVersteckt(new Short((short) 0));
+		this.setBMindermengenzuschlag(new Short((short) 0));
 		this.setBMitzusammenfassung(new Short((short) 0));
 
 		setFWechselkursmandantwaehrungzuauftragswaehrung(fWechselkursmandantwaehrungzuauftragswaehrung);
@@ -471,7 +649,8 @@ public class Auftrag implements Serializable, ICNr {
 			String auftragstatusCNr, Integer personalIIdAnlegen,
 			Integer personalIIdAendern, Integer kostenstelleIId,
 			Integer personalIIdVertreter, String belegartCNr,
-			Double fWechselkursmandantwaehrungzuauftragswaehrung, Integer lagerIIdAbbuchungslager ) {
+			Double fWechselkursmandantwaehrungzuauftragswaehrung,
+			Integer lagerIIdAbbuchungslager, Integer verrechenbarIId) {
 		Timestamp t = new Timestamp(System.currentTimeMillis());
 		this.setTAnlegen(t);
 		this.setTAendern(t);
@@ -498,11 +677,14 @@ public class Auftrag implements Serializable, ICNr {
 		setBelegartCNr(belegartCNr);
 		setFWechselkursmandantwaehrungzuauftragswaehrung(fWechselkursmandantwaehrungzuauftragswaehrung);
 		setLagerIIdAbbuchungslager(lagerIIdAbbuchungslager);
+		setVerrechenbarIId(verrechenbarIId);
 
 		this.setBLieferterminunverbindlich(new Short((short) 0));
 		this.setBTeillieferungmoeglich(new Short((short) 1));
 		this.setBPoenale(new Short((short) 0));
 		this.setBRoHs(new Short((short) 0));
+		this.setBMindermengenzuschlag(new Short((short) 0));
+		
 		this.setBVersteckt(new Short((short) 0));
 		this.setILeihtage(new Integer(0));
 		this.setFVersteckteraufschlag(new Double(0));
@@ -515,7 +697,7 @@ public class Auftrag implements Serializable, ICNr {
 	public Auftrag(Integer id, String nr, String mandantCNr,
 			String auftragartCNr, Integer kundeIIdAuftragsadresse,
 			Integer kundeIIdLieferadresse, Integer kundeIIdRechnungsadresse,
-			String auftragswaehrung, Integer lagerIIdAbbuchungslager ) {
+			String auftragswaehrung, Integer lagerIIdAbbuchungslager, Integer verrechenbarIId) {
 		Timestamp t = new Timestamp(System.currentTimeMillis());
 		this.setTAnlegen(t);
 		this.setTAendern(t);
@@ -534,6 +716,7 @@ public class Auftrag implements Serializable, ICNr {
 		this.setBPoenale(new Short((short) 0));
 		this.setBRoHs(new Short((short) 0));
 		this.setILeihtage(new Integer(0));
+		this.setBMindermengenzuschlag(new Short((short) 0));
 		this.setFVersteckteraufschlag(new Double(0));
 		this.setFAllgemeinerrabattsatz(new Double(0));
 		this.setFProjektierungsrabattsatz(new Double(0));
@@ -541,6 +724,7 @@ public class Auftrag implements Serializable, ICNr {
 		this.setBVersteckt(new Short((short) 0));
 		this.setBMitzusammenfassung(new Short((short) 0));
 		setLagerIIdAbbuchungslager(lagerIIdAbbuchungslager);
+		setVerrechenbarIId(verrechenbarIId);
 	}
 
 	public Auftrag(Integer id, String nr, String mandantCNr,
@@ -557,7 +741,7 @@ public class Auftrag implements Serializable, ICNr {
 			Integer lieferartIId, Integer zahlungszielIId,
 			Integer spediteurIId, Integer garantie, Integer personalIIdAnlegen,
 			Integer personalIIdAendern, Short bVersteckt,
-			Short bMitzusammenfassung, Integer lagerIIdAbbuchungslager ) {
+			Short bMitzusammenfassung, Integer lagerIIdAbbuchungslager, Integer verrechenbarIId, Short bMindermengenzuschlag) {
 		Timestamp t = new Timestamp(System.currentTimeMillis());
 		this.setTAnlegen(t);
 		this.setTAendern(t);
@@ -598,11 +782,13 @@ public class Auftrag implements Serializable, ICNr {
 		setBVersteckt(bVersteckt);
 		setBMitzusammenfassung(bMitzusammenfassung);
 		setLagerIIdAbbuchungslager(lagerIIdAbbuchungslager);
+		setVerrechenbarIId(verrechenbarIId);
+		setBMindermengenzuschlag(bMindermengenzuschlag);
+		
 
 	}
 
 	public Auftrag() {
-
 	}
 
 	public Integer getIId() {
@@ -1114,5 +1300,36 @@ public class Auftrag implements Serializable, ICNr {
 
 	public void setPersonalIIdResponse(Integer personalIIdResponse) {
 		this.personalIIdResponse = personalIIdResponse;
-	}	
+	}
+	
+	public Integer getIVersion() {
+		return iAenderungsauftragVersion;
+	}
+	
+	public void setIVersion(Integer iVersion) {
+		this.iAenderungsauftragVersion = iVersion;
+	}
+
+	@Override
+	public boolean hasVersion() {
+		return getIVersion() != null;
+	}
+
+	@Override
+	public Timestamp getTVersion() {
+		return getTAenderungsauftrag();
+	}
+
+	@Override
+	public void setTVersion(Timestamp tVersion) {
+		setTAenderungsauftrag(tVersion);
+	}
+	
+	public String getLaenderartCnr() {
+		return laenderartCnr;
+	}
+	
+	public void setLaenderartCnr(String laenderartCnr) {
+		this.laenderartCnr = laenderartCnr;
+	}
 }

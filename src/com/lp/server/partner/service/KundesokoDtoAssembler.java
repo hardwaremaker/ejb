@@ -62,6 +62,9 @@ public class KundesokoDtoAssembler {
 			kundesokoDto.setCKundeartikelzbez(kundesoko.getCKundeartikelzbez());
 			kundesokoDto.setBWirktNichtFuerPreisfindung(kundesoko
 					.getBWirktNichtFuerPreisfindung());
+			kundesokoDto.setBKeineMengenstaffel(kundesoko
+					.getBKeineMengenstaffel());
+			kundesokoDto.setNStartwertLiefermenge(kundesoko.getNStartwertLiefermenge());
 		}
 		return kundesokoDto;
 	}

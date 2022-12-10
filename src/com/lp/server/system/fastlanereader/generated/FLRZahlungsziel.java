@@ -74,14 +74,14 @@ public class FLRZahlungsziel implements Serializable {
 	private Short b_versteckt;
 
 	/** persistent field */
-	private Set<?> zahlungsziel_zahlungsziel_set;
+	private Set<FLRZahlungszielspr> zahlungsziel_zahlungsziel_set;
 
 	/** full constructor */
 	public FLRZahlungsziel(String mandant_c_nr, String c_bez,
 			Integer anzahlzieltagefuernetto, Integer skontoprozentsatz1,
 			Integer anzahltage1, Integer skontoprozentsatz2,
 			Integer anzahltage2, Short b_versteckt,
-			Set<?> zahlungsziel_zahlungsziel_set) {
+			Set<FLRZahlungszielspr> zahlungsziel_zahlungsziel_set) {
 		this.mandant_c_nr = mandant_c_nr;
 		this.c_bez = c_bez;
 		this.anzahlzieltagefuernetto = anzahlzieltagefuernetto;
@@ -101,7 +101,7 @@ public class FLRZahlungsziel implements Serializable {
 	public FLRZahlungsziel(String mandant_c_nr, String c_bez,
 			Integer anzahlzieltagefuernetto, Integer skontoprozentsatz1,
 			Integer anzahltage1, Integer skontoprozentsatz2,
-			Integer anzahltage2, Set<?> zahlungsziel_zahlungsziel_set) {
+			Integer anzahltage2, Set<FLRZahlungszielspr> zahlungsziel_zahlungsziel_set) {
 		this.mandant_c_nr = mandant_c_nr;
 		this.c_bez = c_bez;
 		this.anzahlzieltagefuernetto = anzahlzieltagefuernetto;
@@ -184,12 +184,12 @@ public class FLRZahlungsziel implements Serializable {
 		this.b_versteckt = b_versteckt;
 	}
 
-	public Set<?> getZahlungsziel_zahlungsziel_set() {
+	public Set<FLRZahlungszielspr> getZahlungsziel_zahlungsziel_set() {
 		return this.zahlungsziel_zahlungsziel_set;
 	}
 
 	public void setZahlungsziel_zahlungsziel_set(
-			Set<?> zahlungsziel_zahlungsziel_set) {
+			Set<FLRZahlungszielspr> zahlungsziel_zahlungsziel_set) {
 		this.zahlungsziel_zahlungsziel_set = zahlungsziel_zahlungsziel_set;
 	}
 

@@ -44,10 +44,24 @@ public class WarenzugangsreferenzDto implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private boolean bZirkelbezug=false;
+	public boolean isbZirkelbezug() {
+		return bZirkelbezug;
+	}
+	public void setBZirkelbezug(boolean bZirkelbezug) {
+		this.bZirkelbezug = bZirkelbezug;
+	}
 	private String belegart = null;
 	private String belegnummer = null;
 	private String zusatz = null;
 	private java.sql.Timestamp tBelegdatum = null;
+	private java.sql.Timestamp tBuchungszeit = null;
+	public java.sql.Timestamp getTBuchungszeit() {
+		return tBuchungszeit;
+	}
+	public void setTBuchungszeit(java.sql.Timestamp tBuchungszeit) {
+		this.tBuchungszeit = tBuchungszeit;
+	}
 	private DocPath docPath = null;
 	private ArrayList<JCRDocDto> jcrdocs=null;
 	private Integer position1 = null;
@@ -57,6 +71,14 @@ public class WarenzugangsreferenzDto implements Serializable {
 	private Integer belegartIId = null;
 	private Integer belegartpositionIId = null;
 	
+	private String snrChnr=null;
+	
+	public String getSnrChnr() {
+		return snrChnr;
+	}
+	public void setSnrChnr(String snrChnr) {
+		this.snrChnr = snrChnr;
+	}
 	public Integer getBelegartpositionIId() {
 		return belegartpositionIId;
 	}
@@ -72,8 +94,16 @@ public class WarenzugangsreferenzDto implements Serializable {
 	private String person_buchender = null;
 	private String kurzzeichen_buchender = null;
 	
+	private String belegstatus = null;
 	
 	
+	
+	public String getBelegstatus() {
+		return belegstatus;
+	}
+	public void setBelegstatus(String belegstatus) {
+		this.belegstatus = belegstatus;
+	}
 	public String getPerson_buchender() {
 		return person_buchender;
 	}
@@ -106,6 +136,15 @@ public class WarenzugangsreferenzDto implements Serializable {
 	}
 	public void setLosMaterialanteil(BigDecimal losMaterialanteil) {
 		this.losMaterialanteil = losMaterialanteil;
+	}
+	
+	private BigDecimal nGestehungspreis = null;
+	
+	public BigDecimal getNGestehungspreis() {
+		return nGestehungspreis;
+	}
+	public void setNGestehungspreis(BigDecimal nGestehungspreis) {
+		this.nGestehungspreis = nGestehungspreis;
 	}
 	private BigDecimal nEinstandspreis = null;
 	public BigDecimal getnEinstandspreis() {
@@ -192,4 +231,16 @@ public class WarenzugangsreferenzDto implements Serializable {
 	public void setDocPath(DocPath docPath) {
 		this.docPath = docPath;
 	}
+	
+	public String toString() {
+		String returnString = "";
+		returnString += belegart;
+		returnString += ",belegnummer: " + belegnummer;
+		returnString += ",belegartpositionIId: " + belegartpositionIId;
+		returnString += ",menge: " + menge;
+		returnString += ",snrChnr: " + snrChnr;
+		
+		return returnString;
+	}
+	
 }

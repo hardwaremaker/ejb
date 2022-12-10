@@ -33,14 +33,26 @@
 package com.lp.server.auftrag.ejbfac;
 
 public class ChangeEntry<T> {
-	private final T expectedValue ;
-	private final T presentedValue ;
-	private String message ;
+	enum Level {
+		Info,
+		Warn,
+		Error
+	};
+	
+	private final T expectedValue;
+	private final T presentedValue;
+	private final String message;
+	private final Level level;
 	
 	public ChangeEntry(T expectedValue, T presentedValue, String msg) {
-		this.expectedValue = expectedValue ;
-		this.presentedValue = presentedValue ;
-		message = msg ;
+		this(Level.Info, expectedValue, presentedValue, msg);
+	}
+	
+	public ChangeEntry(Level level, T expectedValue, T presentedValue, String msg) {
+		this.expectedValue = expectedValue;
+		this.presentedValue = presentedValue;
+		this.message = msg;
+		this.level = level;
 	}
 	
 	public T getExpectedValue() {
@@ -53,5 +65,9 @@ public class ChangeEntry<T> {
 	
 	public String getMessage() {
 		return message ;
+	}
+	
+	public Level getLevel() {
+		return level;
 	}
 }

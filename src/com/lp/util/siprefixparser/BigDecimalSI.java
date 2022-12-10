@@ -81,6 +81,40 @@ public class BigDecimalSI extends BigDecimal {
 			put(-24, YOKTO);
 		}
 	};
+	
+	
+	/**
+	 * FloorDiv Methode aus Java 8 Math
+	 * @param x
+	 * @param y
+	 * @return
+	 */
+    private static int floorDiv(int x, int y) {
+        int r = x / y;
+        // if the signs are different and modulo not zero, round down
+        if ((x ^ y) < 0 && (r * y != x)) {
+            r--;
+        }
+        return r;
+    }
+
+	/**
+	 * Normalisiere scale, wird bei aufruf von superkonstruktor benoetigt. Sorgt
+	 * dafuer, dass gleiche Werte auch gleich werden (z.B. 10n und 0u01 sollten
+	 * beide gleich sein, auch gleicher scale) Setze deshalb hier scale auf bestes
+	 * vielfache von 3
+	 */
+	private static String normalizeNumber(String dbString) {
+		BigDecimal val = new BigDecimal(dbString);
+		// Nullen hinter Komma entfernen
+		val = val.stripTrailingZeros();
+		// Scale auf naechstes vielfach von 3 setzen
+		int newScale = val.scale() + 2;
+		newScale = floorDiv(newScale, 3);
+		newScale *= 3;
+		val = val.setScale(newScale);
+		return val.toString();
+	}
 
 	/**
 	 * Gibt bei toString() einen mit SI Pr&auml;fix formatierten String zur&uuml;ck.
@@ -96,7 +130,7 @@ public class BigDecimalSI extends BigDecimal {
 	 * @param unit die Einheit (nicht SI, sonder wirklich zB. 'F' f&uuml;r Farad
 	 */
 	public BigDecimalSI(String bd, String unit) {
-		super(bd);
+		super(normalizeNumber(bd));
 		this.unit = unit == null ? "" : unit;
 	}
 

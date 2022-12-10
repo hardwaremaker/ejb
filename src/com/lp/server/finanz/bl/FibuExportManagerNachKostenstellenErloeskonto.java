@@ -36,8 +36,10 @@ import java.sql.Date;
 
 import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuexportDto;
+import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.finanz.service.ReportErloeskontoDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.Validator;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 
@@ -70,5 +72,13 @@ public class FibuExportManagerNachKostenstellenErloeskonto extends
 			BelegpositionVerkaufDto positionDto) throws EJBExceptionLP {
 		// Es gibt keine Erloeskonten wenn nach Kostenstellen exportiert wird
 		return new ReportErloeskontoDto() ;
+	}
+	
+	@Override
+	public KontoDto getUebersetzeKontoNachLandBzwLaenderart(Integer kontoIId,
+			 Integer belegId) throws EJBExceptionLP {
+		Validator.notNull(kontoIId, "kontoIId");
+		Validator.notNull(belegId, "belegId") ;
+		throw new IllegalArgumentException("should not be called!");
 	}	
 }

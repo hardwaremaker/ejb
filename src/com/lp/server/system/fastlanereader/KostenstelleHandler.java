@@ -257,7 +257,7 @@ public class KostenstelleHandler extends UseCaseHandler {
 					getTextRespectUISpr("bes.bezeichnung", theClientDto
 							.getMandant(), theClientDto.getLocUi()), }, new int[] {
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_M,
+					QueryParameters.FLR_BREITE_L,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST }, new String[] {
 					"i_id", "c_nr", SystemFac.FLR_KOSTENSTELLE_C_BEZ }));
 		}

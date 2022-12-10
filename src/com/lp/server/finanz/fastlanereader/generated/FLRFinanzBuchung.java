@@ -89,8 +89,10 @@ public class FLRFinanzBuchung implements Serializable {
     
     private Short b_autombuchungeb ;
     
+    private Integer uvaverprobung_i_id ;
+
     /** full constructor */
-    public FLRFinanzBuchung(String c_text, String c_belegnummer, Date d_buchungsdatum, String buchungsart_c_nr, Timestamp t_anlegen, Date t_storniert, Integer geschaeftsjahr_i_geschaeftsjahr, Integer personal_i_id_anlegen, FLRKostenstelle flrkostenstelle, com.lp.server.finanz.fastlanereader.generated.FLRFbbelegart flrfbbelegart, com.lp.server.finanz.fastlanereader.generated.FLRBuchungsart flrbuchungsart) {
+    public FLRFinanzBuchung(String c_text, String c_belegnummer, Date d_buchungsdatum, String buchungsart_c_nr, Timestamp t_anlegen, Date t_storniert, Integer geschaeftsjahr_i_geschaeftsjahr, Integer personal_i_id_anlegen, Integer uvaverprobung_i_id, FLRKostenstelle flrkostenstelle, com.lp.server.finanz.fastlanereader.generated.FLRFbbelegart flrfbbelegart, com.lp.server.finanz.fastlanereader.generated.FLRBuchungsart flrbuchungsart) {
         this.c_text = c_text;
         this.c_belegnummer = c_belegnummer;
         this.d_buchungsdatum = d_buchungsdatum;
@@ -218,6 +220,14 @@ public class FLRFinanzBuchung implements Serializable {
 
 	public void setB_autombuchungeb(Short b_autombuchungeb) {
 		this.b_autombuchungeb = b_autombuchungeb;
+	}
+
+    public Integer getUvaverprobung_i_id() {
+		return uvaverprobung_i_id ;
+	}
+
+	public void setUvaverprobung_i_id(Integer uvaverprobungIId) {
+		this.uvaverprobung_i_id = uvaverprobungIId;
 	}
 
 	public String toString() {

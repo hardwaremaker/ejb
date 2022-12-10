@@ -59,6 +59,7 @@ public class VersandauftragDto implements Serializable {
 	private String cStatustext;
 	private byte[] oInhalt;
 	private Short bEmpfangsbestaetigung;
+	private String cBccempfaenger;
 
 	public Integer getIId() {
 		return iId;
@@ -211,6 +212,14 @@ public class VersandauftragDto implements Serializable {
 	public void setBEmpfangsbestaetigung(Short bEmpfangsbestaetigung) {
 		this.bEmpfangsbestaetigung = bEmpfangsbestaetigung;
 	}
+	
+	public String getCBccempfaenger() {
+		return cBccempfaenger;
+	}
+	
+	public void setCBccempfaenger(String cBccempfaenger) {
+		this.cBccempfaenger = cBccempfaenger;
+	}
 
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -292,6 +301,7 @@ public class VersandauftragDto implements Serializable {
 		result = 37 * result + this.iIdBeleg.hashCode();
 		result = 37 * result + this.statusCNr.hashCode();
 		result = 37 * result + this.cStatustext.hashCode();
+		result = 37 * result + this.cBccempfaenger.hashCode();
 
 		return result;
 	}
@@ -316,6 +326,7 @@ public class VersandauftragDto implements Serializable {
 		returnString += ", " + statusCNr;
 		returnString += ", " + cStatustext;
 		returnString += ", " + oInhalt;
+		returnString += ", " + cBccempfaenger;
 		return returnString;
 	}
 
@@ -328,6 +339,8 @@ public class VersandauftragDto implements Serializable {
 			sb.append("BETR:" + cBetreff + " ");
 			if (cCcempfaenger != null)
 				sb.append("CC:" + cCcempfaenger + " ");
+			if (cBccempfaenger != null)
+				sb.append("BCC:" + cBccempfaenger + " ");
 			if (oInhalt != null) {
 				if (oInhalt.length>0) {
 					if (cDateiname == null)

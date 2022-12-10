@@ -33,6 +33,7 @@
 package com.lp.server.projekt.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
@@ -40,10 +41,6 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
-
-
-
-
 
 //@NamedQueries( { @NamedQuery(name = "HistoryfindByProjektIid", query = "SELECT OBJECT (o) FROM History o WHERE o.projektIId=?1") })
 @Entity
@@ -61,6 +58,17 @@ public class History implements Serializable {
 
 	@Column(name = "X_TEXT")
 	private String xText;
+	
+	@Column(name = "N_DAUER_GEPLANT")
+	private BigDecimal nDauerGeplant;
+
+	public BigDecimal getNDauerGeplant() {
+		return nDauerGeplant;
+	}
+
+	public void setNDauerGeplant(BigDecimal nDauerGeplant) {
+		this.nDauerGeplant = nDauerGeplant;
+	}
 
 	@Column(name = "O_ATTACHMENTS")
 	private byte[] oAttachments;
@@ -73,7 +81,73 @@ public class History implements Serializable {
 
 	@Column(name = "HISTORYART_I_ID")
 	private Integer historyartIId;
+
+	@Column(name = "PERSONAL_I_ID_ANLEGEN")
+	private Integer personalIIdAnlegen;
+
+	@Column(name = "PERSONAL_I_ID_AENDERN")
+	private Integer personalIIdAendern;
+
+	@Column(name = "T_AENDERN")
+	private Timestamp tAendern;
+
+	@Column(name = "T_ANLEGEN")
+	private Timestamp tAnlegen;
+
+	@Column(name = "PERSONAL_I_ID_WIRDDURCHGEFUEHRT")
+	private Integer personalIIdWirddurchgefuehrt;
 	
+	public Integer getPersonalIIdWirddurchgefuehrt() {
+		return personalIIdWirddurchgefuehrt;
+	}
+
+	public void setPersonalIIdWirddurchgefuehrt(Integer personalIIdWirddurchgefuehrt) {
+		this.personalIIdWirddurchgefuehrt = personalIIdWirddurchgefuehrt;
+	}
+
+	public Double getFErledigungsgrad() {
+		return fErledigungsgrad;
+	}
+
+	public void setFErledigungsgrad(Double fErledigungsgrad) {
+		this.fErledigungsgrad = fErledigungsgrad;
+	}
+
+	@Column(name = "F_ERLEDIGUNGSGRAD")
+	private Double fErledigungsgrad;
+	
+	public Integer getPersonalIIdAnlegen() {
+		return personalIIdAnlegen;
+	}
+
+	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
+		this.personalIIdAnlegen = personalIIdAnlegen;
+	}
+
+	public Integer getPersonalIIdAendern() {
+		return personalIIdAendern;
+	}
+
+	public void setPersonalIIdAendern(Integer personalIIdAendern) {
+		this.personalIIdAendern = personalIIdAendern;
+	}
+
+	public Timestamp getTAendern() {
+		return tAendern;
+	}
+
+	public void setTAendern(Timestamp tAendern) {
+		this.tAendern = tAendern;
+	}
+
+	public Timestamp getTAnlegen() {
+		return tAnlegen;
+	}
+
+	public void setTAnlegen(Timestamp tAnlegen) {
+		this.tAnlegen = tAnlegen;
+	}
+
 	public Integer getHistoryartIId() {
 		return historyartIId;
 	}
@@ -92,43 +166,34 @@ public class History implements Serializable {
 
 	@Column(name = "C_TITEL")
 	private String cTitel;
-	
-//	@Column(name = "PROJEKT_I_ID")
-//	private Integer projektIId;
-	
+
+	// @Column(name = "PROJEKT_I_ID")
+	// private Integer projektIId;
+
 	@ManyToOne
 	private Projekt PROJEKT;
 
-
 	@Column(name = "B_HTML")
-	private Short bHtml ;
+	private Short bHtml;
 
 	private static final long serialVersionUID = 1L;
 
-	public History(Integer iId,
-			Integer personalIId, 
-			Integer projektIId,
-			Timestamp tBelegdatum,
-			String xText, Short bHtml) {
-		setPersonalIId(personalIId);
-		setTBelegdatum(tBelegdatum);
-		setXText(xText);
-//		setProjektIId(projektIId);
-		setIId(iId);
-		setBHtml(bHtml) ;
-	}
-	
-	public History(Integer iId,
-			Integer personalIId, 
-			Timestamp tBelegdatum,
-			String xText,
-			Projekt projekt, Short bHtml) {
+	public History(Integer iId, Integer personalIId, Timestamp tBelegdatum,
+			String xText, Projekt projekt, Short bHtml,
+			Integer personalIIdAnlegen, Timestamp tAnlegen,
+			Integer personalIIdAendern, Timestamp tAendern,  Double fErledigungsgrad) {
 		setPersonalIId(personalIId);
 		setTBelegdatum(tBelegdatum);
 		setXText(xText);
 		setProjekt(projekt);
 		setIId(iId);
-		setBHtml(bHtml) ;
+		setBHtml(bHtml);
+		setPersonalIIdAendern(personalIIdAendern);
+		setPersonalIIdAnlegen(personalIIdAnlegen);
+		setTAendern(tAendern);
+		setTAnlegen(tAnlegen);
+		setFErledigungsgrad(fErledigungsgrad);
+		
 	}
 
 	public Integer getIId() {
@@ -178,15 +243,13 @@ public class History implements Serializable {
 	public void setPersonalIId(Integer personalIId) {
 		this.personalIId = personalIId;
 	}
-/*
-	public Integer getProjektIId() {
-		return this.projektIId;
-	}
 
-	public void setProjektIId(Integer projektIId) {
-		this.projektIId = projektIId;
-	}
-*/	
+	/*
+	 * public Integer getProjektIId() { return this.projektIId; }
+	 * 
+	 * public void setProjektIId(Integer projektIId) { this.projektIId =
+	 * projektIId; }
+	 */
 	public Projekt getProjekt() {
 		return this.PROJEKT;
 	}
@@ -195,12 +258,11 @@ public class History implements Serializable {
 		this.PROJEKT = projekt;
 	}
 
-	
 	public Short getBHtml() {
 		return bHtml;
 	}
 
 	public void setBHtml(Short bHtml) {
 		this.bHtml = bHtml;
-	}	
+	}
 }

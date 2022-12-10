@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.service.WwArtikellagerPK;
@@ -49,6 +17,12 @@ public class FLRArtikellager implements Serializable {
     /** persistent field */
     private BigDecimal n_lagerstand;
 
+    /** nullable persistent field */
+    private Double f_lagermindest;
+
+    /** nullable persistent field */
+    private Double f_lagersoll;
+
     /** persistent field */
     private BigDecimal n_gestehungspreis;
 
@@ -65,9 +39,11 @@ public class FLRArtikellager implements Serializable {
     private com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste flrartikelliste;
 
     /** full constructor */
-    public FLRArtikellager(WwArtikellagerPK compId, BigDecimal n_lagerstand, BigDecimal n_gestehungspreis, String mandant_c_nr, com.lp.server.artikel.fastlanereader.generated.FLRLager flrlager, com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel, com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste flrartikelliste) {
+    public FLRArtikellager(WwArtikellagerPK compId, BigDecimal n_lagerstand, Double f_lagermindest, Double f_lagersoll, BigDecimal n_gestehungspreis, String mandant_c_nr, com.lp.server.artikel.fastlanereader.generated.FLRLager flrlager, com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel, com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste flrartikelliste) {
         this.compId = compId;
         this.n_lagerstand = n_lagerstand;
+        this.f_lagermindest = f_lagermindest;
+        this.f_lagersoll = f_lagersoll;
         this.n_gestehungspreis = n_gestehungspreis;
         this.mandant_c_nr = mandant_c_nr;
         this.flrlager = flrlager;
@@ -101,6 +77,22 @@ public class FLRArtikellager implements Serializable {
 
     public void setN_lagerstand(BigDecimal n_lagerstand) {
         this.n_lagerstand = n_lagerstand;
+    }
+
+    public Double getF_lagermindest() {
+        return this.f_lagermindest;
+    }
+
+    public void setF_lagermindest(Double f_lagermindest) {
+        this.f_lagermindest = f_lagermindest;
+    }
+
+    public Double getF_lagersoll() {
+        return this.f_lagersoll;
+    }
+
+    public void setF_lagersoll(Double f_lagersoll) {
+        this.f_lagersoll = f_lagersoll;
     }
 
     public BigDecimal getN_gestehungspreis() {

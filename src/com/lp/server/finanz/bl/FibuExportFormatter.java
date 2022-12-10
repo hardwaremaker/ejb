@@ -84,6 +84,7 @@ abstract class FibuExportFormatter extends Facade {
 	protected final static String XSL_FILE_ABACUS_TA995 = "_ta995";
 	protected final static String XSL_FILE_SCHLEUPEN = "fb_export_schleupen";
 	protected final static String XSL_FILE_DATEV = "fb_export_datev-csv";
+	protected final static String XSL_FILE_DATEV_EXTF = "fb_export_datev-extf";
 		
 	protected final TheClientDto theClientDto;
 	protected final FibuExportKriterienDto exportKriterienDto;
@@ -282,4 +283,21 @@ abstract class FibuExportFormatter extends Facade {
 		}
 		return bFinanzamtImPartnerLand;
 	}
+	
+	protected final boolean isER(FibuexportDto fibuexportDto) {
+		return FibuExportManager.BELEGART_ER.equals(fibuexportDto.getBelegart());
+	}
+	
+	protected final boolean isAR(FibuexportDto fibuexportDto) {
+		return FibuExportManager.BELEGART_AR.equals(fibuexportDto.getBelegart());
+	}
+	
+	protected final boolean isGS(FibuexportDto fibuexportDto) {
+		return FibuExportManager.BELEGART_GS.equals(fibuexportDto.getBelegart());
+	}
+	
+	protected final boolean isARorGS(FibuexportDto fibuexportDto) {
+		return isAR(fibuexportDto) || isGS(fibuexportDto);
+	}
+	
 }

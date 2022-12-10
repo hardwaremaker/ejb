@@ -32,7 +32,6 @@
  *******************************************************************************/
 package com.lp.server.angebotstkl.ejbfac;
 
-import java.math.BigDecimal;
 import java.rmi.RemoteException;
 
 import javax.ejb.Local;
@@ -44,16 +43,11 @@ import com.lp.util.EJBExceptionLP;
 @Local
 public interface AngebotstklpositionLocalFac {
 	
-	public AgstklpositionDto befuellePositionMitPreisenKalkulationsart2(
-			TheClientDto theClientDto, String waehrungCNr, Integer artikelIId,
-			BigDecimal nMenge, AgstklpositionDto agstklpositionDtoI);
-
 	/**
 	 * Bef&uuml;llt ein {@link AgstklpositionDto} mit Preisen gem&auml;&szlig; der
 	 * mit dem Parameter eingestellten Kalkulationsart
 	 * 
 	 * @param agstklpositionDto das zu bef&uuml;llende Dto
-	 * @param waehrungCnr die in der Angebotsstkl verwendete W&auml;hrung
 	 * @param theClientDto der aktuelle Benutzer
 	 * @return das als Parameter &uuml;bergebene und mit Preisen bef&uuml;llte
 	 * 			AgstklpositionDto
@@ -61,5 +55,5 @@ public interface AngebotstklpositionLocalFac {
 	 * @throws RemoteException
 	 */
 	public AgstklpositionDto befuelleMitPreisenNachKalkulationsart(AgstklpositionDto agstklpositionDto, 
-			String waehrungCnr, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 }

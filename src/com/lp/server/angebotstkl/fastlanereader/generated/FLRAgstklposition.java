@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.angebotstkl.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
@@ -61,6 +29,9 @@ public class FLRAgstklposition implements Serializable {
     private String einheit_c_nr;
 
     /** nullable persistent field */
+    private String c_position;
+
+    /** nullable persistent field */
     private String c_bez;
 
     /** nullable persistent field */
@@ -85,12 +56,13 @@ public class FLRAgstklposition implements Serializable {
     private FLRArtikelliste flrartikelliste;
 
     /** full constructor */
-    public FLRAgstklposition(Integer i_sort, Integer agstkl_i_id, String agstklpositionsart_c_nr, BigDecimal n_menge, String einheit_c_nr, String c_bez, BigDecimal n_nettogesamtpreis, BigDecimal n_nettoeinzelpreis, BigDecimal n_gestehungspreis, Short b_drucken, com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl flragstkl, FLRArtikel flrartikel, FLRArtikelliste flrartikelliste) {
+    public FLRAgstklposition(Integer i_sort, Integer agstkl_i_id, String agstklpositionsart_c_nr, BigDecimal n_menge, String einheit_c_nr, String c_position, String c_bez, BigDecimal n_nettogesamtpreis, BigDecimal n_nettoeinzelpreis, BigDecimal n_gestehungspreis, Short b_drucken, com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl flragstkl, FLRArtikel flrartikel, FLRArtikelliste flrartikelliste) {
         this.i_sort = i_sort;
         this.agstkl_i_id = agstkl_i_id;
         this.agstklpositionsart_c_nr = agstklpositionsart_c_nr;
         this.n_menge = n_menge;
         this.einheit_c_nr = einheit_c_nr;
+        this.c_position = c_position;
         this.c_bez = c_bez;
         this.n_nettogesamtpreis = n_nettogesamtpreis;
         this.n_nettoeinzelpreis = n_nettoeinzelpreis;
@@ -151,6 +123,14 @@ public class FLRAgstklposition implements Serializable {
 
     public void setEinheit_c_nr(String einheit_c_nr) {
         this.einheit_c_nr = einheit_c_nr;
+    }
+
+    public String getC_position() {
+        return this.c_position;
+    }
+
+    public void setC_position(String c_position) {
+        this.c_position = c_position;
     }
 
     public String getC_bez() {

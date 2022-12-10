@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 public class PartnerbankDto implements Serializable {
 	/**
@@ -53,6 +54,47 @@ public class PartnerbankDto implements Serializable {
 		this.iId = iId;
 	}
 
+	private String cEsr;
+
+	public String getCEsr() {
+		return cEsr;
+	}
+
+	public void setCEsr(String cEsr) {
+		this.cEsr = cEsr;
+	}
+
+	private String waehrungCNr;
+	
+	public String getWaehrungCNr() {
+		return this.waehrungCNr;
+	}
+
+	public void setWaehrungCNr(String waehrungCNr) {
+		this.waehrungCNr = waehrungCNr;
+	}
+	
+	private String cSepamandatsnummer;
+
+	public String getCSepamandatsnummer() {
+		return cSepamandatsnummer;
+	}
+
+	public void setCSepamandatsnummer(String cSepamandatsnummer) {
+		this.cSepamandatsnummer = cSepamandatsnummer;
+	}
+
+	private Timestamp tSepaerteilt;
+	
+	public Timestamp getTSepaerteilt() {
+		return tSepaerteilt;
+	}
+
+	public void setTSepaerteilt(Timestamp tSepaerteilt) {
+		this.tSepaerteilt = tSepaerteilt;
+	}
+
+	
 	public Integer getPartnerIId() {
 		return partnerIId;
 	}

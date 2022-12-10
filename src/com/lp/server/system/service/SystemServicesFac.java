@@ -33,11 +33,13 @@
 package com.lp.server.system.service;
 
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import javax.ejb.Remote;
 
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.LPDatenSubreport;
 
 @Remote
 public interface SystemServicesFac {
@@ -46,15 +48,27 @@ public interface SystemServicesFac {
 	public final static String KEYVALUE_STKL_IMPORT_SPEZ = "STKL_IMPORT_SPEZ";
 	public final static String KEYVALUE_AGSTKL_IMPORT_SPEZ = "AGSTKL_IMPORT_SPEZ";
 	public final static String KEYVALUE_EINKAUFSAGSTKL_IMPORT_SPEZ = "EINKAUFSAGSTKL_IMPORT_SPEZ";
+	public final static String KEYVALUE_BESTELLUNGSTKL_IMPORT_SPEZ = "BESTELLUNGSTKL_IMPORT_SPEZ";
+	public final static String KEYVALUE_ZEITDATEN_QUELLE = "ZEITDATEN_QUELLE";
 
+	public final static String KEYVALUE_EINSTELLUNGEN_LETZTER_BESTELLVORSCHLAG = "EINSTELLUNGEN_LETZTER_BESTELLVORSCHLAG";
+	public final static String KEYVALUE_EINSTELLUNGEN_LETZTE_INTERNE_BESTELLUNG = "EINSTELLUNGEN_LETZTE_INTERNE_BESTELLUNG";
+	public final static String KEYVALUE_EINSTELLUNGEN_LETZTER_AUSLIEFERVORSCHLAG = "EINSTELLUNGEN_LETZTER_AUSLIEFERVORSCHLAG";
+	public final static String KEYVALUE_EINSTELLUNGEN_LETZTER_ABRECHUNGSVORSCHLAG = "EINSTELLUNGEN_LETZTER_ABRECHUNGSVORSCHLAG";
+
+	public final static String KEYVALUE_WEP_EXPORT_PRO_FIRST_LETZTER_ZEITPUNKT = "WEP_EXPORT_PRO_FIRST_LETZTER_ZEITPUNKT";
+	
+	public final static String KEYVALUE_GTIN_ARTIKELNUMMER = "GTIN_ARTIKELNUMMER";
+	
 	public void createKeyvalue(KeyvalueDto keyvalueDto) throws RemoteException,
 			EJBExceptionLP;
 
 	public void removeKeyvalue(String cGruppe, String cKey)
 			throws RemoteException, EJBExceptionLP;
 
-	public KeyvalueDto[] keyvalueFindyByCGruppe(String cGruppe)throws RemoteException;
-	
+	public KeyvalueDto[] keyvalueFindyByCGruppe(String cGruppe)
+			throws RemoteException;
+
 	public void removeKeyvalue(KeyvalueDto keyvalueDto) throws RemoteException,
 			EJBExceptionLP;
 
@@ -66,7 +80,11 @@ public interface SystemServicesFac {
 
 	public void speichereKeyValueDtos(KeyvalueDto[] keyvalueDto)
 			throws RemoteException;
-	
+
 	public String getPrinterNameForReport(String modulI, String filenameI,
 			Locale spracheI, String cSubdirectory, TheClientDto theClientDto);
+	public void replaceKeyvaluesEinerGruppe(String cGruppe, ArrayList<KeyvalueDto> alDtos);
+	
+	public LPDatenSubreport getSubreportLetzteEinstellungen(String cGruppe);
+	
 }

@@ -46,26 +46,32 @@ public class TimingInterceptor extends Facade {
 	@AroundInvoke
 	public Object timming(InvocationContext ctx) throws Exception {
 		long t1 = System.currentTimeMillis();
-		long now;
 		String name = "";
 		String meth = "";
 		try {
 			name = ctx.getClass().getName();
 			meth = ctx.getMethod().getName();
+			myLogger.info("" + name + "." + meth + "\tBeginn: " + getBenutzer(ctx));
 			return ctx.proceed();
 		} finally {
-			now = System.currentTimeMillis();
-			TheClientDto theClientDto = null;
-			String benutzer = "";
-			Object[] o = ctx.getParameters();
-			for (int i=0; i<o.length; i++) {
-				if (o[i] instanceof TheClientDto) {
-					theClientDto = (TheClientDto) o[i];
-					benutzer = theClientDto.getBenutzername();
-					break;
-				}
-			}
+			long now = System.currentTimeMillis();
+			String benutzer = getBenutzer(ctx);
 			myLogger.info("" + name + "." + meth + "\tDauer: " + (now-t1) + "\t" + benutzer);
 		}
+	}
+	
+	private String getBenutzer(InvocationContext ctx) {
+		TheClientDto theClientDto = null;
+		String benutzer = "";
+		Object[] o = ctx.getParameters();
+		for (int i=0; i<o.length; i++) {
+			if (o[i] instanceof TheClientDto) {
+				theClientDto = (TheClientDto) o[i];
+				benutzer = theClientDto.getBenutzername();
+				return benutzer;
+			}
+		}
+		
+		return benutzer;
 	}
 }

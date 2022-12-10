@@ -54,6 +54,26 @@ public class InternebestellungDto implements Serializable {
 	private Integer internebestellungIIdElternlos;
 	private Integer iBelegpositionIId;
 
+	private Double fLagermindest;
+
+	public Double getFLagermindest() {
+		return this.fLagermindest;
+	}
+
+	public void setFLagermindest(Double fLagermindest) {
+		this.fLagermindest = fLagermindest;
+	}
+
+	private String xAusloeser;
+
+	public String getXAusloeser() {
+		return xAusloeser;
+	}
+
+	public void setXAusloeser(String xAusloeser) {
+		this.xAusloeser = xAusloeser;
+	}
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -130,8 +150,7 @@ public class InternebestellungDto implements Serializable {
 		return internebestellungIIdElternlos;
 	}
 
-	public void setInternebestellungIIdElternlos(
-			Integer internebestellungIIdElternlos) {
+	public void setInternebestellungIIdElternlos(Integer internebestellungIIdElternlos) {
 		this.internebestellungIIdElternlos = internebestellungIIdElternlos;
 	}
 
@@ -153,6 +172,26 @@ public class InternebestellungDto implements Serializable {
 		this.tProduktionsbeginn = tProduktionsbeginn;
 	}
 
+	private Integer partnerIIdStandort;
+
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
+
+	private Integer auftragIIdKopfauftrag;
+
+	public Integer getAuftragIIdKopfauftrag() {
+		return auftragIIdKopfauftrag;
+	}
+
+	public void setAuftragIIdKopfauftrag(Integer auftragIIdKopfauftrag) {
+		this.auftragIIdKopfauftrag = auftragIIdKopfauftrag;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -161,33 +200,26 @@ public class InternebestellungDto implements Serializable {
 		InternebestellungDto that = (InternebestellungDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
-		if (!(that.belegartCNr == null ? this.belegartCNr == null
-				: that.belegartCNr.equals(this.belegartCNr)))
+		if (!(that.belegartCNr == null ? this.belegartCNr == null : that.belegartCNr.equals(this.belegartCNr)))
 			return false;
-		if (!(that.iBelegiid == null ? this.iBelegiid == null : that.iBelegiid
-				.equals(this.iBelegiid)))
+		if (!(that.iBelegiid == null ? this.iBelegiid == null : that.iBelegiid.equals(this.iBelegiid)))
 			return false;
 		if (!(that.stuecklisteIId == null ? this.stuecklisteIId == null
 				: that.stuecklisteIId.equals(this.stuecklisteIId)))
 			return false;
-		if (!(that.nMenge == null ? this.nMenge == null : that.nMenge
-				.equals(this.nMenge)))
+		if (!(that.nMenge == null ? this.nMenge == null : that.nMenge.equals(this.nMenge)))
 			return false;
-		if (!(that.tLiefertermin == null ? this.tLiefertermin == null
-				: that.tLiefertermin.equals(this.tLiefertermin)))
+		if (!(that.tLiefertermin == null ? this.tLiefertermin == null : that.tLiefertermin.equals(this.tLiefertermin)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		if (!(that.internebestellungIIdElternlos == null ? this.internebestellungIIdElternlos == null
-				: that.internebestellungIIdElternlos
-						.equals(this.internebestellungIIdElternlos)))
+				: that.internebestellungIIdElternlos.equals(this.internebestellungIIdElternlos)))
 			return false;
 		if (!(that.iBelegpositionIId == null ? this.iBelegpositionIId == null
 				: that.iBelegpositionIId.equals(this.iBelegpositionIId)))

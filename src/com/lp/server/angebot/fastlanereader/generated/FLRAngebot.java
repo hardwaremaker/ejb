@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.angebot.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
@@ -85,6 +53,9 @@ public class FLRAngebot implements Serializable {
     private Integer vertreter_i_id;
 
     /** nullable persistent field */
+    private Integer vertreter_i_id2;
+
+    /** nullable persistent field */
     private Date t_realisierungstermin;
 
     /** nullable persistent field */
@@ -115,6 +86,9 @@ public class FLRAngebot implements Serializable {
     private String c_versandtype;
 
     /** nullable persistent field */
+    private Integer ansprechpartner_i_id_kunde;
+
+    /** nullable persistent field */
     private FLRKunde flrkunde;
 
     /** nullable persistent field */
@@ -122,6 +96,12 @@ public class FLRAngebot implements Serializable {
 
     /** nullable persistent field */
     private FLRPersonal flrvertreter;
+
+    /** nullable persistent field */
+    private FLRPersonal flrvertreter2;
+
+    /** nullable persistent field */
+    private com.lp.server.angebot.fastlanereader.generated.FLRAkquisestatus flrakquisestatus;
 
     /** nullable persistent field */
     private FLRPersonal flrpersonalanleger;
@@ -135,8 +115,11 @@ public class FLRAngebot implements Serializable {
     /** nullable persistent field */
     private FLRProjekt flrprojekt;
 
+    /** nullable persistent field */
+    private FLRKunde flrkunde_rechnungsadresse;
+
     /** full constructor */
-    public FLRAngebot(String mandant_c_nr, String c_nr, String c_bez, String c_kundenanfrage, Date t_belegdatum, String angebotstatus_c_nr, String waehrung_c_nr_angebotswaehrung, BigDecimal n_gesamtangebotswertinangebotswaehrung, Integer kunde_i_id_angebotsadresse, Integer kostenstelle_i_id, Integer projekt_i_id, Integer vertreter_i_id, Date t_realisierungstermin, String angeboterledigungsgrund_c_nr, Double f_auftragswahrscheinlichkeit, Double f_wechselkursmandantwaehrungzuangebotswaehrung, Date t_nachfasstermin, Date t_manuellerledigt, String x_internerkommentar, String x_externerkommentar, Date t_versandzeitpunkt, String c_versandtype, FLRKunde flrkunde, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, com.lp.server.angebot.fastlanereader.generated.FLRAngebottextsuche flrangebottextsuche, FLRProjekt flrprojekt) {
+    public FLRAngebot(String mandant_c_nr, String c_nr, String c_bez, String c_kundenanfrage, Date t_belegdatum, String angebotstatus_c_nr, String waehrung_c_nr_angebotswaehrung, BigDecimal n_gesamtangebotswertinangebotswaehrung, Integer kunde_i_id_angebotsadresse, Integer kostenstelle_i_id, Integer projekt_i_id, Integer vertreter_i_id, Integer vertreter_i_id2, Date t_realisierungstermin, String angeboterledigungsgrund_c_nr, Double f_auftragswahrscheinlichkeit, Double f_wechselkursmandantwaehrungzuangebotswaehrung, Date t_nachfasstermin, Date t_manuellerledigt, String x_internerkommentar, String x_externerkommentar, Date t_versandzeitpunkt, String c_versandtype, Integer ansprechpartner_i_id_kunde, FLRKunde flrkunde, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRPersonal flrvertreter2, com.lp.server.angebot.fastlanereader.generated.FLRAkquisestatus flrakquisestatus, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, com.lp.server.angebot.fastlanereader.generated.FLRAngebottextsuche flrangebottextsuche, FLRProjekt flrprojekt, FLRKunde flrkunde_rechnungsadresse) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.c_bez = c_bez;
@@ -149,6 +132,7 @@ public class FLRAngebot implements Serializable {
         this.kostenstelle_i_id = kostenstelle_i_id;
         this.projekt_i_id = projekt_i_id;
         this.vertreter_i_id = vertreter_i_id;
+        this.vertreter_i_id2 = vertreter_i_id2;
         this.t_realisierungstermin = t_realisierungstermin;
         this.angeboterledigungsgrund_c_nr = angeboterledigungsgrund_c_nr;
         this.f_auftragswahrscheinlichkeit = f_auftragswahrscheinlichkeit;
@@ -159,13 +143,17 @@ public class FLRAngebot implements Serializable {
         this.x_externerkommentar = x_externerkommentar;
         this.t_versandzeitpunkt = t_versandzeitpunkt;
         this.c_versandtype = c_versandtype;
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
         this.flrkunde = flrkunde;
         this.flrkostenstelle = flrkostenstelle;
         this.flrvertreter = flrvertreter;
+        this.flrvertreter2 = flrvertreter2;
+        this.flrakquisestatus = flrakquisestatus;
         this.flrpersonalanleger = flrpersonalanleger;
         this.flrpersonalaenderer = flrpersonalaenderer;
         this.flrangebottextsuche = flrangebottextsuche;
         this.flrprojekt = flrprojekt;
+        this.flrkunde_rechnungsadresse = flrkunde_rechnungsadresse;
     }
 
     /** default constructor */
@@ -276,6 +264,14 @@ public class FLRAngebot implements Serializable {
         this.vertreter_i_id = vertreter_i_id;
     }
 
+    public Integer getVertreter_i_id2() {
+        return this.vertreter_i_id2;
+    }
+
+    public void setVertreter_i_id2(Integer vertreter_i_id2) {
+        this.vertreter_i_id2 = vertreter_i_id2;
+    }
+
     public Date getT_realisierungstermin() {
         return this.t_realisierungstermin;
     }
@@ -356,6 +352,14 @@ public class FLRAngebot implements Serializable {
         this.c_versandtype = c_versandtype;
     }
 
+    public Integer getAnsprechpartner_i_id_kunde() {
+        return this.ansprechpartner_i_id_kunde;
+    }
+
+    public void setAnsprechpartner_i_id_kunde(Integer ansprechpartner_i_id_kunde) {
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
+    }
+
     public FLRKunde getFlrkunde() {
         return this.flrkunde;
     }
@@ -378,6 +382,22 @@ public class FLRAngebot implements Serializable {
 
     public void setFlrvertreter(FLRPersonal flrvertreter) {
         this.flrvertreter = flrvertreter;
+    }
+
+    public FLRPersonal getFlrvertreter2() {
+        return this.flrvertreter2;
+    }
+
+    public void setFlrvertreter2(FLRPersonal flrvertreter2) {
+        this.flrvertreter2 = flrvertreter2;
+    }
+
+    public com.lp.server.angebot.fastlanereader.generated.FLRAkquisestatus getFlrakquisestatus() {
+        return this.flrakquisestatus;
+    }
+
+    public void setFlrakquisestatus(com.lp.server.angebot.fastlanereader.generated.FLRAkquisestatus flrakquisestatus) {
+        this.flrakquisestatus = flrakquisestatus;
     }
 
     public FLRPersonal getFlrpersonalanleger() {
@@ -410,6 +430,14 @@ public class FLRAngebot implements Serializable {
 
     public void setFlrprojekt(FLRProjekt flrprojekt) {
         this.flrprojekt = flrprojekt;
+    }
+
+    public FLRKunde getFlrkunde_rechnungsadresse() {
+        return this.flrkunde_rechnungsadresse;
+    }
+
+    public void setFlrkunde_rechnungsadresse(FLRKunde flrkunde_rechnungsadresse) {
+        this.flrkunde_rechnungsadresse = flrkunde_rechnungsadresse;
     }
 
     public String toString() {

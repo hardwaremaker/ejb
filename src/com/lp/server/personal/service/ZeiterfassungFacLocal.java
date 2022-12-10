@@ -39,6 +39,6 @@ import com.lp.server.util.report.JasperPrintLP;
 public interface ZeiterfassungFacLocal extends ZeiterfassungFacAll{
 	public JasperPrintLP printAnwesenheitsliste2(TheClientDto theClientDto, 
 			boolean bDarfAlleSehen,
-			boolean bDarfAbteilungSehen);
+			boolean bDarfAbteilungSehen,Integer kostenstelleIId);
 
 }

@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.personal.fastlanereader;
 
+import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -43,7 +45,9 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.personal.fastlanereader.generated.FLRStundenabrechnung;
+import com.lp.server.personal.service.KollektivDto;
 import com.lp.server.personal.service.PersonalFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -87,6 +91,44 @@ public class StundenabrechnungHandler extends UseCaseHandler {
 						.next();
 				rows[row][col++] = stundenabrechnung.getI_id();
 				rows[row][col++] = stundenabrechnung.getT_datum();
+
+				BigDecimal bdErrechneteNormalstunden = stundenabrechnung
+						.getN_normalstunden();
+
+				Integer kollektivIId = getPersonalFac()
+						.personalFindByPrimaryKey(
+								stundenabrechnung.getPersonal_i_id(),
+								theClientDto).getKollektivIId();
+				if (kollektivIId != null) {
+					try {
+						KollektivDto kDto = getPersonalFac()
+								.kollektivFindByPrimaryKey(kollektivIId);
+
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(stundenabrechnung.getN_mehrstunden()
+										.multiply(kDto.getNFaktormehrstd()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(stundenabrechnung.getN_uest200().multiply(
+										kDto.getNFaktoruestd200()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(stundenabrechnung.getN_uestfrei100()
+										.multiply(kDto.getNFaktoruestd100()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(stundenabrechnung.getN_uestpflichtig100()
+										.multiply(kDto.getNFaktoruestd100()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(stundenabrechnung.getN_uestfrei50()
+										.multiply(kDto.getNFaktoruestd50()));
+						bdErrechneteNormalstunden = bdErrechneteNormalstunden
+								.add(stundenabrechnung.getN_uestpflichtig50()
+										.multiply(kDto.getNFaktoruestd50()));
+
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+				}
+
+				rows[row][col++] = bdErrechneteNormalstunden;
 				rows[row][col++] = stundenabrechnung.getN_normalstunden();
 				rows[row][col++] = stundenabrechnung.getN_mehrstunden();
 				rows[row][col++] = stundenabrechnung.getN_uestfrei50();
@@ -295,58 +337,56 @@ public class StundenabrechnungHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, java.util.Date.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class,
-							java.math.BigDecimal.class, },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
-							getTextRespectUISpr("lp.normalstd", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.mehrstd", mandantCNr, locUI),
-							getTextRespectUISpr("lp.uf50", mandantCNr, locUI),
-							getTextRespectUISpr("lp.up50", mandantCNr, locUI),
-							getTextRespectUISpr("lp.uf100", mandantCNr, locUI),
-							getTextRespectUISpr("lp.up100", mandantCNr, locUI),
-							getTextRespectUISpr("pers.gleitzeitsaldo.200",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.gutstunden", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.qp", mandantCNr, locUI) },
+			setTableInfo(new TableInfo(new Class[] { Integer.class,
+					java.util.Date.class, java.math.BigDecimal.class,
+					java.math.BigDecimal.class, java.math.BigDecimal.class,
+					java.math.BigDecimal.class, java.math.BigDecimal.class,
+					java.math.BigDecimal.class, java.math.BigDecimal.class,
+					java.math.BigDecimal.class, java.math.BigDecimal.class,
+					java.math.BigDecimal.class, }, new String[] {
+					"Id",
+					getTextRespectUISpr("lp.datum", mandantCNr, locUI),
+					getTextRespectUISpr(
+							"pers.stundenabrechnung.errechnete.normalstunden",
+							mandantCNr, locUI),
+					getTextRespectUISpr(
+							"pers.stundenabrechnung.gleitzeitsaldo",
+							mandantCNr, locUI),
+					getTextRespectUISpr("lp.mehrstd", mandantCNr, locUI),
+					getTextRespectUISpr("lp.uf50", mandantCNr, locUI),
+					getTextRespectUISpr("lp.up50", mandantCNr, locUI),
+					getTextRespectUISpr("lp.uf100", mandantCNr, locUI),
+					getTextRespectUISpr("lp.up100", mandantCNr, locUI),
+					getTextRespectUISpr("pers.gleitzeitsaldo.200", mandantCNr,
+							locUI),
+					getTextRespectUISpr("lp.gutstunden", mandantCNr, locUI),
+					getTextRespectUISpr("lp.qp", mandantCNr, locUI) },
 
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
-					new String[] {
-							"i_id",
-							PersonalFac.FLR_STUNDENABRECHNUNG_D_DATUM,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_NORMALSTUNDEN,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_MEHRSTUNDEN,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTFREI50,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTPFLICHTIG50,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTFREI100,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTPFLICHTIG100,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_UEST200,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_GUTSTUNDEN,
-							PersonalFac.FLR_STUNDENABRECHNUNG_N_QUALIFIKATIONSPRAEMIE }));
+			new String[] { "i_id", PersonalFac.FLR_STUNDENABRECHNUNG_D_DATUM,
+					Facade.NICHT_SORTIERBAR,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_NORMALSTUNDEN,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_MEHRSTUNDEN,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTFREI50,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTPFLICHTIG50,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTFREI100,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_UESTPFLICHTIG100,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_UEST200,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_GUTSTUNDEN,
+					PersonalFac.FLR_STUNDENABRECHNUNG_N_QUALIFIKATIONSPRAEMIE }));
 
 		}
 

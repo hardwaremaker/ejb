@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,30 @@ public class CustomerPricelistItemDto implements Serializable {
 	private String einheit ;
 	private String gruppe ;
 	private String klasse ;
+	
+	private String material ;
+	private BigDecimal materialgewicht ;
+	private BigDecimal kursMaterialzuschlag ;
+	
+	private String kundeartikelnummer;
+	public String getKundeartikelnummer() {
+		return kundeartikelnummer;
+	}
+
+	public void setKundeartikelnummer(String kundeartikelnummer) {
+		this.kundeartikelnummer = kundeartikelnummer;
+	}
+
+	public String getKundeartikelbezeichnung() {
+		return kundeartikelbezeichnung;
+	}
+
+	public void setKundeartikelbezeichnung(String kundeartikelbezeichnung) {
+		this.kundeartikelbezeichnung = kundeartikelbezeichnung;
+	}
+
+	private String kundeartikelbezeichnung;
+	
 	private Boolean versteckt ;
 	private Boolean soko ;
 	private Integer mwstsatzId ;
@@ -71,6 +96,10 @@ public class CustomerPricelistItemDto implements Serializable {
 		clientDescriptionDto = new CustomerPricelistItemDescriptionDto() ;
 	}
 	
+	/**
+	 * Die Kennung des Artikels
+	 * @return die Kennung des Artikels (Id und Artikelnummer)
+	 */
 	public IdValueDto getItem() {
 		return artikel;
 	}
@@ -97,12 +126,21 @@ public class CustomerPricelistItemDto implements Serializable {
 		this.clientDescriptionDto = mandantenbezeichnungDto;
 	}
 
+	/**
+	 * Der Artikelbezeichnung 
+	 * @return die Artikelbezeichnung
+	 */
 	public String getName() {
 		return descriptionDto.getName() ;
 	}
 	public void setName(String bezeichnung) {
 		descriptionDto.setName(bezeichnung) ;
 	}	
+	
+	/**
+	 * Die Kurzbezeichnung des Artikels
+	 * @return die (optionale) Kurzbezeichnung des Artikels
+	 */
 	public String getShortName() {
 		return descriptionDto.getShortName() ;
 	}
@@ -110,13 +148,21 @@ public class CustomerPricelistItemDto implements Serializable {
 		descriptionDto.setShortName(kurzbezeichnung);
 	}
 
+	/**
+	 * Die Zusatzbezeichnung des Artikels
+	 * @return die (optionale) Zusatzbezeichnung des Artikels
+	 */
 	public String getAdditionalName() {
 		return descriptionDto.getAdditionalName() ;
 	}
 	public void setAdditionalName(String zusatzbezeichnung) {
 		descriptionDto.setAdditionalName(zusatzbezeichnung);
 	}
-	
+
+	/**
+	 * Die Zusatzbezeichnung2 des Artikels
+	 * @return die (optionale) zweite Zusatzbezeichnung des Artikels
+	 */
 	public String getAdditionalName2() {
 		return descriptionDto.getAdditionalName2() ;
 	}
@@ -124,24 +170,67 @@ public class CustomerPricelistItemDto implements Serializable {
 		descriptionDto.setAdditionalName2(zusatzbezeichnung2);
 	}
 
+	/**
+	 * Die Lagereinheit des Artikels 
+	 * @return die Lagereinheit des Artikels
+	 */
 	public String getUnit() {
 		return einheit;
 	}
 	public void setUnit(String einheit) {
 		this.einheit = einheit;
 	}
+
+	/**
+	 * Die Artikelgruppe in der sich der Artikel befindet
+	 * @return die Artikelgruppe des Artikels
+	 */
 	public String getItemGroup() {
 		return gruppe;
 	}
 	public void setItemGroup(String gruppe) {
 		this.gruppe = gruppe;
 	}
+	
+	/**
+	 * Die Artikelklasse in der sich der Artikel befindet
+	 * @return die (optionale) Artikelklasse des Artikels
+	 */
 	public String getItemClass() {
 		return klasse;
 	}
 	public void setItemClass(String klasse) {
 		this.klasse = klasse;
 	}
+	
+	public String getItemMaterial() {
+		return material;
+	}
+	public void setItemMaterial(String material) {
+		this.material = material;
+	}
+	
+	public BigDecimal getItemMaterialgewicht() {
+		return materialgewicht;
+	}
+	public void setItemMaterialgewicht(BigDecimal materialgewicht) {
+		this.materialgewicht = materialgewicht;
+	}
+	
+	public BigDecimal getItemKursMaterialzuschlag() {
+		return kursMaterialzuschlag;
+	}
+	public void setItemKursMaterialzuschlag(BigDecimal kursMaterialzuschlag) {
+		this.kursMaterialzuschlag = kursMaterialzuschlag;
+	}
+	
+	
+	
+	/**
+	 * Ist der Artikel versteckt?
+	 * 
+	 * @return true wenn es sich um einen versteckten Artikel handelt
+	 */
 	public Boolean getHidden() {
 		return versteckt;
 	}
@@ -151,12 +240,26 @@ public class CustomerPricelistItemDto implements Serializable {
 	public void setHidden(Short versteckt) {
 		this.versteckt = versteckt == null ? false : (versteckt == 1) ;
 	}
+	
+	/**
+	 * Gelten bzw. gibt es Sonderkonditionen (f&uuml;r den Kunden) f&uuml;r den Artikel?
+	 * @return true wenn es Sonderkonditionen gibt
+	 */
 	public Boolean getSpecialCondition() {
 		return soko;
 	}
 	public void setSpecialCondition(Boolean soko) {
 		this.soko = soko;
 	}	
+	
+	/**
+	 * Die Kennung des Mehrwertsteuersatzes<br>
+	 * <p>Innerhalb des ERP gibt es verschiedene Wege um auf den
+	 * Mehrwertsteuersatz des Artikels zu kommen. Einer davon ist,
+	 * dass der Mehrwertsteuersatz direkt im Artikel hinterlegt
+	 * wird. Nur dann wird ein Wert &uuml;bermittelt.</p>
+	 * @return die (optionale) Kennung des Mehrwertsteuersatzes
+	 */
 	public Integer getVATId() {
 		return mwstsatzId;
 	}
@@ -170,7 +273,10 @@ public class CustomerPricelistItemDto implements Serializable {
 //		this.artikelgruppeId = artikelgruppeId;
 //	}
 //
-	
+	/**
+	 * Die Kennung der Artikelgruppe (Id und Nummer)
+	 * @return die Kennung der Artikelgruppe
+	 */
 	public IdValueDto getItemGroupDto() {
 		return artikelgruppe;
 	}
@@ -179,13 +285,22 @@ public class CustomerPricelistItemDto implements Serializable {
 		this.artikelgruppe = artikelgruppe;
 	}
 
+	/**
+	 * Die Liste aller Preise des Artikels
+	 * @return die (leere) Liste der Preise dieses Artikels
+	 */
 	public List<CustomerPricelistPriceDto> getPrices() {
 		return preise;
 	}
+	
 	public void setPrices(List<CustomerPricelistPriceDto> preise) {
 		this.preise = preise;
 	}
 
+	/**
+	 * Information &uuml;ber die Shopgruppe
+	 * @return die (optionale) Information &uuml;ber die Shopgruppe
+	 */
 	public CustomerPricelistShopgroupDto getShopgroupDto() {
 		return shopgroupDto;
 	}

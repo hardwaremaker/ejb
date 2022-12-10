@@ -32,32 +32,73 @@
  ******************************************************************************/
 package com.lp.server.eingangsrechnung.ejbfac;
 
-import com.lp.server.artikel.service.ArtikelFac;
-import com.lp.server.eingangsrechnung.ejb.*;
-import com.lp.server.eingangsrechnung.service.*;
-import com.lp.server.system.service.*;
-import com.lp.server.util.*;
-import com.lp.util.*;
-
-import java.util.*;
-
-import org.hibernate.*;
-
-import com.lp.server.util.fastlanereader.*;
-import com.lp.server.eingangsrechnung.fastlanereader.generated.*;
-import org.hibernate.criterion.*;
-import com.lp.server.system.pkgenerator.PKConst;
-import java.rmi.*;
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.rmi.RemoteException;
 import java.sql.Date;
-import java.math.*;
-import com.lp.server.finanz.service.*;
-import com.lp.server.eingangsrechnung.bl.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Restrictions;
+
+import com.lp.server.eingangsrechnung.assembler.ZahlungsvorschlagDtoAssembler;
+import com.lp.server.eingangsrechnung.assembler.ZahlungsvorschlaglaufDtoAssembler;
+import com.lp.server.eingangsrechnung.bl.ZahlungsvorschlagExportFormatter;
+import com.lp.server.eingangsrechnung.bl.ZahlungsvorschlagExportFormatterFactory;
+import com.lp.server.eingangsrechnung.ejb.Zahlungsvorschlag;
+import com.lp.server.eingangsrechnung.ejb.ZahlungsvorschlagQuery;
+import com.lp.server.eingangsrechnung.ejb.Zahlungsvorschlaglauf;
+import com.lp.server.eingangsrechnung.ejb.ZahlungsvorschlaglaufQuery;
+import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport;
+import com.lp.server.eingangsrechnung.fastlanereader.generated.FLRZahlungsvorschlag;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungzahlungDto;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagDto;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagExportResult;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagFac;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagkriterienDto;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlaglaufDto;
+import com.lp.server.finanz.service.BankverbindungDto;
+import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.finanz.service.KontoDtoSmall;
+import com.lp.server.partner.service.BankDto;
+import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.personal.service.PersonalDto;
+import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.system.jcr.service.JCRDocDto;
+import com.lp.server.system.jcr.service.JCRDocFac;
+import com.lp.server.system.jcr.service.docnode.DocNodeBase;
+import com.lp.server.system.jcr.service.docnode.DocNodeFile;
+import com.lp.server.system.jcr.service.docnode.DocNodeSepaExportZahlungsvorschlaglauf;
+import com.lp.server.system.jcr.service.docnode.DocPath;
+import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.TheClientDto;
+import com.lp.server.system.service.WechselkursDto;
+import com.lp.server.system.service.ZahlungszielDto;
+import com.lp.server.util.Facade;
+import com.lp.server.util.Validator;
+import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 @Stateless
 public class ZahlungsvorschlagFacBean extends Facade implements
@@ -70,6 +111,16 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 		Integer iZViid = null;
 		Session session = null;
 		try {
+			
+			
+			
+			
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_EINGANGSRECHNUNG, ParameterFac.PARAMETER_EINGANGSRECHNUNG_PRUEFEN);
+
+			int iERPruefen=(Integer)parameter.getCWertAsObject();
+			
+			
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
 			Criteria c = session
@@ -84,6 +135,11 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 			collStati.add(EingangsrechnungFac.STATUS_TEILBEZAHLT);
 			c.add(Restrictions.in(EingangsrechnungFac.FLR_ER_STATUS_C_NR,
 					collStati));
+			// 3. Filter nach Waehrung (PJ18093)
+			if (krit.getWaehrungCNr() != null) {
+				c.add(Restrictions.eq(EingangsrechnungFac.FLR_ER_WAEHRUNG_C_NR,
+						krit.getWaehrungCNr()));
+			}
 			// Abfragen
 			List<?> list = c.list();
 			if (list.size() > 0) {
@@ -103,6 +159,11 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 				final Map<Integer, ZahlungszielDto> mZahlungsziele = (Map<Integer, ZahlungszielDto>) getMandantFac()
 						.zahlungszielFindAllByMandantAsDto(
 								theClientDto.getMandant(), theClientDto);
+				BankverbindungDto bankverbindungDto = getFinanzFac().bankverbindungFindByPrimaryKey(
+						krit.getBankvertbindungIId());
+				//PJ19874
+				boolean isGeldTransitKonto = bankverbindungDto.isbAlsGeldtransitkonto();
+				
 				for (Iterator<?> iter = list.iterator(); iter.hasNext();) {
 					FLREingangsrechnungReport e = (FLREingangsrechnungReport) iter
 							.next();
@@ -118,45 +179,48 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 										e.getI_id()));
 					}
 
-					// Vorgaenger holen
-					Session sessionV = FLRSessionFactory.getFactory()
-							.openSession();
-					String queryString = "SELECT zv FROM FLRZahlungsvorschlag as zv WHERE zv.eingangsrechnung_i_id="
-							+ e.getI_id()
-							+ " AND zv.flrzahlungsvorschlaglauf.t_zahlungsstichtag<='"
-							+ Helper.formatDateWithSlashes(krit
-									.getDZahlungsstichtag())
-							+ "' ORDER BY zv.flrzahlungsvorschlaglauf.t_anlegen DESC";
-
-					org.hibernate.Query query = sessionV
-							.createQuery(queryString);
-
-					List<?> results = query.list();
-					Iterator<?> resultListIterator = results.iterator();
-
-					boolean bNichtMehrRelevant = false;
-
-					while (resultListIterator.hasNext()) {
-						// Wenn mindestens einer freigegeben ist und
-						// vollstaendig bezahlt, dann auslassen
-						FLRZahlungsvorschlag zv = (FLRZahlungsvorschlag) resultListIterator
-								.next();
-
-						bdBezahltFW = bdBezahltFW.add(zv.getN_zahlbetrag());
-
-						if (Helper.short2boolean(zv
-								.getB_waere_vollstaendig_bezahlt())
-								&& Helper.short2boolean(zv.getB_bezahlen())) {
-							bNichtMehrRelevant = true;
+					if (!isGeldTransitKonto) {
+						// Vorgaenger holen
+						Session sessionV = FLRSessionFactory.getFactory()
+								.openSession();
+						String queryString = "SELECT zv FROM FLRZahlungsvorschlag as zv WHERE zv.eingangsrechnung_i_id="
+								+ e.getI_id()
+								+ " AND zv.flrzahlungsvorschlaglauf.t_zahlungsstichtag<='"
+								+ Helper.formatDateWithSlashes(krit
+										.getDZahlungsstichtag())
+								+ "' ORDER BY zv.flrzahlungsvorschlaglauf.t_anlegen DESC";
+	
+						org.hibernate.Query query = sessionV
+								.createQuery(queryString);
+	
+						List<?> results = query.list();
+						Iterator<?> resultListIterator = results.iterator();
+	
+						boolean bNichtMehrRelevant = false;
+	
+						while (resultListIterator.hasNext()) {
+							// Wenn mindestens einer freigegeben ist und
+							// vollstaendig bezahlt, dann auslassen
+							FLRZahlungsvorschlag zv = (FLRZahlungsvorschlag) resultListIterator
+									.next();
+							if (Helper.short2boolean(zv.getB_bezahlen())) {
+								bdBezahltFW = bdBezahltFW.add(zv.getN_zahlbetrag());
+							}
+	
+							if (Helper.short2boolean(zv
+									.getB_waere_vollstaendig_bezahlt())
+									&& Helper.short2boolean(zv.getB_bezahlen())) {
+								bNichtMehrRelevant = true;
+							}
+	
 						}
-
+						sessionV.close();
+	
+						if (bNichtMehrRelevant == true) {
+							continue;
+						}
 					}
-					sessionV.close();
-
-					if (bNichtMehrRelevant == true) {
-						continue;
-					}
-
+					
 					// Wenn noch was offen ist
 					if (bdBruttowertFW.subtract(bdBezahltFW).compareTo(
 							new BigDecimal(0)) > 0
@@ -199,9 +263,7 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 							// mit Skonto zahlen
 							if (krit.isBMitSkonto()) {
 								// Skontoueberziehungstage einrechnen
-								dFaellig = Helper
-										.addiereTageZuDatum(
-												dFaellig,
+								java.util.Date dFaelligSkontoueberziehung = Helper.addiereTageZuDatum(dFaellig,
 												krit.getISkontoUeberziehungsfristInTagen());
 								boolean bSkontoGehtSichAus = false;
 
@@ -211,12 +273,12 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 									// Bei diesem Datum waere mit Skonto1 zu
 									// zahlen
 									java.util.Date dFaelligBeiSkonto1 = Helper
-											.addiereTageZuDatum(dFaellig, zzDto
+											.addiereTageZuDatum(dFaelligSkontoueberziehung, zzDto
 													.getSkontoAnzahlTage1());
 									// wenn das spaetestens heute ist ->
 									// anwenden
 									if (dFaelligBeiSkonto1.compareTo(Helper
-											.cutDate(getDate())) >= 0) {
+											.cutDate(krit.getDZahlungsstichtag())) >= 0) {
 										bSkontoGehtSichAus = true;
 										bdAngewandterSkontoSatz = zzDto
 												.getSkontoProzentsatz1();
@@ -232,18 +294,22 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 									// Bei diesem Datum waere mit Skonto2 zu
 									// zahlen
 									java.util.Date dFaelligBeiSkonto2 = Helper
-											.addiereTageZuDatum(dFaellig, zzDto
+											.addiereTageZuDatum(dFaelligSkontoueberziehung, zzDto
 													.getSkontoAnzahlTage2());
 									// wenn das spaetestens heute ist ->
 									// anwenden
 									if (dFaelligBeiSkonto2.compareTo(Helper
-											.cutDate(getDate())) >= 0) {
+											.cutDate(krit.getDZahlungsstichtag())) >= 0) {
 										bSkontoGehtSichAus = true;
 										bdAngewandterSkontoSatz = zzDto
 												.getSkontoProzentsatz2();
 										iZielTage = zzDto
 												.getSkontoAnzahlTage2();
 									}
+								}
+								
+								if (bSkontoGehtSichAus) {
+									dFaellig = dFaelligSkontoueberziehung;
 								}
 								// wenn auch das nicht gegangen ist, muss
 								// sowieso netto gezahlt werden
@@ -279,7 +345,8 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 											RoundingMode.HALF_UP);
 							// Dto zusammenbauen
 							ZahlungsvorschlagDto zvDto = new ZahlungsvorschlagDto();
-							zvDto.setBBezahlen(Helper.boolean2Short(true));
+							zvDto.setBBezahlen(Helper.boolean2Short(
+									getParameterFac().getZahlungsvorschlagDefaultFreigabe(theClientDto.getMandant())));
 							zvDto.setEingangsrechnungIId(e.getI_id());
 							zvDto.setNAngewandterskontosatz(bdAngewandterSkontoSatz);
 							zvDto.setNErBruttoBetrag(bdBruttowertFW);
@@ -291,6 +358,16 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 							zvDto.setTFaellig(new java.sql.Date(dFaellig
 									.getTime())); // in sql-date umwandeln
 							zvDto.setZahlungsvorschlaglaufIId(iZViid);
+							
+							
+							
+							//PJ22194
+							if(iERPruefen>0 && e.getT_geprueft() == null) {
+								zvDto.setBBezahlen(Helper.boolean2Short(false));
+							}
+							
+							
+							
 							// Eintrag speichern
 							createZahlungsvorschlag(zvDto);
 						}
@@ -570,6 +647,8 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 		zahlungsvorschlag.setNZahlbetrag(zahlungsvorschlagDto.getNZahlbetrag());
 		zahlungsvorschlag.setBWaereVollstaendigBezahlt(zahlungsvorschlagDto
 				.getBWaereVollstaendigBezahlt());
+		zahlungsvorschlag.setCAuftraggeberreferenz(zahlungsvorschlagDto
+				.getCAuftraggeberreferenz());
 		em.merge(zahlungsvorschlag);
 		em.flush();
 	}
@@ -595,34 +674,31 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 		return (ZahlungsvorschlagDto[]) list.toArray(returnArray);
 	}
 
-	/**
-	 * Flag "Bezahlen" auf diesem Datensatz invertieren.
-	 * 
-	 * @param zahlungsvorschlagIId
-	 *            Integer
-	 * @param theClientDto
-	 *            String
-	 * @throws EJBExceptionLP
-	 */
-	public void toggleZahlungsvorschlagBBezahlen(Integer zahlungsvorschlagIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		// try {
-		Zahlungsvorschlag zv = em.find(Zahlungsvorschlag.class,
-				zahlungsvorschlagIId);
-		if (zv == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+	public void updateZahlungsvorschlagBBezahlenMultiSelect(
+			List<Integer> zahlungsvorschlagIIds, TheClientDto theClientDto)
+			throws EJBExceptionLP {
+
+		List<Zahlungsvorschlag> zvs = new ArrayList<Zahlungsvorschlag>();
+		boolean bBezahlen = false;
+
+		for (Integer id : zahlungsvorschlagIIds) {
+			Zahlungsvorschlag zv = em.find(Zahlungsvorschlag.class, id);
+			if (zv == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+			if (!Helper.short2boolean(zv.getBBezahlen())) {
+				bBezahlen = true;
+			}
+
+			zvs.add(zv);
 		}
-		zv.setBBezahlen(Helper.boolean2Short(!Helper.short2Boolean(zv
-				.getBBezahlen())));
-		// }
-		// catch (javax.ejb.ObjectNotFoundException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// e);
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
-		// }
+
+		for (Zahlungsvorschlag zv : zvs) {
+			zv.setBBezahlen(Helper.boolean2Short(bBezahlen));
+			em.merge(zv);
+		}
+		em.flush();
 	}
 
 	public BigDecimal getGesamtwertEinesZahlungsvorschlaglaufsInMandantenwaehrung(
@@ -666,38 +742,117 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 		return bdWert;
 	}
 
-	public String exportiereZahlungsvorschlaglauf(
-			Integer zahlungsvorschlagleufIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	@Override
+	public ZahlungsvorschlagExportResult exportiereZahlungsvorschlaglauf(
+			Integer zahlungsvorschlagleufIId, Integer iExportTyp,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		Validator.pkFieldNotNull(zahlungsvorschlagleufIId, "zahlungsvorschlaglaufIId");
+		Validator.notNull(iExportTyp, "iExportTyp");
+		
 		ZahlungsvorschlagExportFormatter em = ZahlungsvorschlagExportFormatterFactory
-				.getZahlungsvorschlagExportFormatter(
-						getExportFormat(theClientDto), theClientDto);
-		return exportiereZV(em, zahlungsvorschlagleufIId, theClientDto);
-	}
+				.getZahlungsvorschlagExportFormatter(iExportTyp, theClientDto);
 
-	private String exportiereZV(ZahlungsvorschlagExportFormatter efm,
-			Integer zahlungsvorschlagleufIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		StringBuffer sExport = new StringBuffer();
 		ZahlungsvorschlaglaufDto zvLauf = zahlungsvorschlaglaufFindByPrimaryKey(zahlungsvorschlagleufIId);
-		ZahlungsvorschlagDto[] zv = zahlungsvorschlagFindByZahlungsvorschlaglaufIId(zahlungsvorschlagleufIId);
-		// sExport.append(em.exportiereUeberschriftPersonenkonten(theClientDto));
-		if (zv == null || zv.length == 0) {
+		ZahlungsvorschlagDto[] zvDtos = zahlungsvorschlagFindByZahlungsvorschlaglaufIId(zahlungsvorschlagleufIId);
+		if (zvDtos == null || zvDtos.length == 0) {
+			myLogger.info("Keine Zahlungsvorschlaege in Zahlungslauf (iId=" + zahlungsvorschlagleufIId + ") enthalten"); 
 			return null;
 		}
-		sExport.append(efm.exportiereDaten(zvLauf, zv, theClientDto));
+		ZahlungsvorschlagExportResult result = exportiereZV(em, zvLauf, zvDtos, theClientDto);
+		
+		if (!result.hasFailed()) {
+			createEingangsrechnungZahlungenWennTransitKonto(zvLauf, zvDtos, theClientDto);
+		}
 
-		Zahlungsvorschlaglauf zvl = em.find(Zahlungsvorschlaglauf.class,
-				zahlungsvorschlagleufIId);
-		zvl.setPersonalIIdGespeichert(theClientDto.getIDPersonal());
-		zvl.setTGespeichert(new java.sql.Timestamp(System.currentTimeMillis()));
+		return result;
+	}
+	
+	private void createEingangsrechnungZahlungenWennTransitKonto(
+			ZahlungsvorschlaglaufDto zvLauf, ZahlungsvorschlagDto[] zvDtos,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		if (zvLauf.getTGespeichert() != null) return;
+		
+		BankverbindungDto bvDto = getFinanzFac().bankverbindungFindByPrimaryKey(
+				zvLauf.getBankverbindungIId());
+		if (!bvDto.isbAlsGeldtransitkonto()) return;
 
-		return sExport.toString();
+		createEingangsrechnungZahlungenImpl(zvLauf, zvDtos, theClientDto);
 	}
 
-	private int getExportFormat(TheClientDto theClientDto)
+	private void createEingangsrechnungZahlungenImpl(ZahlungsvorschlaglaufDto laufDto, 
+			ZahlungsvorschlagDto[] zvDtos, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		Date dZahlung = getDate();
+		for (ZahlungsvorschlagDto zvDto : zvDtos) {
+			if (!Helper.short2boolean(zvDto.getBBezahlen())) continue;
+			
+			EingangsrechnungzahlungDto erZahlungDto = new EingangsrechnungzahlungDto();
+			erZahlungDto.setEingangsrechnungIId(zvDto.getEingangsrechnungIId());
+			erZahlungDto.setBankverbindungIId(laufDto.getBankverbindungIId());
+			erZahlungDto.setZahlungsartCNr(RechnungFac.ZAHLUNGSART_BANK);
+			erZahlungDto.setBKursuebersteuert(Helper.getShortFalse());
+			erZahlungDto.setIAuszug(laufDto.getIId());
+
+			String mandantWaehrung = getMandantFac()
+					.mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto).getWaehrungCNr();
+			erZahlungDto.setNBetragfw(zvDto.getNZahlbetrag());
+			erZahlungDto.setNBetragustfw(getEingangsrechnungFac().getWertUstAnteiligZuEingangsrechnungUst(
+					zvDto.getEingangsrechnungIId(), zvDto.getNZahlbetrag()));
+			
+			EingangsrechnungDto erDto = getEingangsrechnungFac().eingangsrechnungFindByPrimaryKey(zvDto.getEingangsrechnungIId());
+			String erWaehrung = erDto.getWaehrungCNr();
+			erZahlungDto.setNBetrag(getLocaleFac().rechneUmInAndereWaehrungGerundetZuDatum(
+					erZahlungDto.getNBetragfw(), erWaehrung,
+							mandantWaehrung, dZahlung, theClientDto));
+			erZahlungDto.setNBetragust(getLocaleFac().rechneUmInAndereWaehrungGerundetZuDatum(
+					erZahlungDto.getNBetragustfw(), erWaehrung,
+					mandantWaehrung, dZahlung, theClientDto));
+			if (mandantWaehrung.equals(erWaehrung)) {
+				erZahlungDto.setNKurs(BigDecimal.ONE);
+			} else {
+				WechselkursDto kursDto = getLocaleFac().getKursZuDatum(
+						mandantWaehrung, erWaehrung, dZahlung, theClientDto);
+				erZahlungDto.setNKurs(kursDto.getNKurs());
+			}
+			erZahlungDto.setTZahldatum(dZahlung);
+			
+			getEingangsrechnungFac().createEingangsrechnungzahlung(erZahlungDto, 
+					Helper.short2Boolean(zvDto.getBWaereVollstaendigBezahlt()), theClientDto);
+		}
+	}
+
+	public boolean sindNegativeZuExportierendeZahlungenVorhanden(
+			Integer zahlungsvorschlagleufIId, TheClientDto theClientDto) {
+		ZahlungsvorschlagDto[] zv = zahlungsvorschlagFindByZahlungsvorschlaglaufIId(zahlungsvorschlagleufIId);
+
+		boolean b = false;
+
+		for (int i = 0; i < zv.length; i++) {
+			ZahlungsvorschlagDto zvDto = zv[i];
+
+			if (zvDto.getNZahlbetrag().doubleValue() < 0
+					&& Helper.short2boolean(zvDto.getBBezahlen()) == true) {
+				return true;
+			}
+
+		}
+
+		return b;
+
+	}
+
+	private ZahlungsvorschlagExportResult exportiereZV(ZahlungsvorschlagExportFormatter efm,
+			ZahlungsvorschlaglaufDto zvLauf, ZahlungsvorschlagDto[] zvDtos, TheClientDto theClientDto)
 			throws EJBExceptionLP {
-		return ZahlungsvorschlagFac.FORMAT_CSV;
+		ZahlungsvorschlagExportResult result = efm.exportiereDaten(zvLauf, zvDtos, theClientDto);
+		if (result.hasFailed()) return result;
+		
+		Zahlungsvorschlaglauf zvl = em.find(Zahlungsvorschlaglauf.class,
+				zvLauf.getIId());
+		zvl.setPersonalIIdGespeichert(theClientDto.getIDPersonal());
+		zvl.setTGespeichert(getTimestamp());
+		em.merge(zvl);
+
+		return result;
 	}
 
 	public ZahlungsvorschlagDto updateZahlungsvorschlag(
@@ -723,4 +878,129 @@ public class ZahlungsvorschlagFacBean extends Facade implements
 		// }
 		return zahlungsvorschlagDto;
 	}
+
+	@Override
+	public ZahlungsvorschlagDto zahlungsvorschlagFindByAuftraggeberreferenzOhneExc(
+			String cAuftraggeberreferenz) throws EJBExceptionLP {
+		List<Zahlungsvorschlag> zvList = ZahlungsvorschlagQuery
+				.listByCAuftraggeberreferenz(em, cAuftraggeberreferenz);
+		if (zvList == null || zvList.size() == 0)
+			return null;
+		if (zvList.size() > 1)
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, "");
+
+		return assembleZahlungsvorschlagDto(zvList.get(0));
+	}
+
+	@Override
+	public String generateCAuftraggeberreferenzAndUpdateZV(
+			ZahlungsvorschlagDto zahlungsvorschlagDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+
+		boolean uniqueIdFound = false;
+		String cAuftraggeberreferenz = "";
+
+		while (!uniqueIdFound) {
+			cAuftraggeberreferenz = UUID.randomUUID().toString()
+					.replace("-", "");
+			if (zahlungsvorschlagFindByAuftraggeberreferenzOhneExc(cAuftraggeberreferenz) == null) {
+				uniqueIdFound = true;
+			}
+		}
+
+		zahlungsvorschlagDto.setCAuftraggeberreferenz(cAuftraggeberreferenz);
+		updateZahlungsvorschlag(zahlungsvorschlagDto, theClientDto);
+
+		return cAuftraggeberreferenz;
+	}
+
+	@Override
+	public String getZahlungsvorschlagSepaExportFilename(
+			Integer bankverbindungIId, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+
+		BankverbindungDto bvDto = getFinanzFac()
+				.bankverbindungFindByPrimaryKey(bankverbindungIId);
+
+		if (bvDto != null
+				&& (bvDto.getCSepaVerzeichnis() == null || bvDto
+						.getCSepaVerzeichnis().trim().isEmpty())) {
+			BankDto bankDto = getBankFac().bankFindByPrimaryKeyOhneExc(
+					bvDto.getBankIId(), theClientDto);
+			KontoDtoSmall kontoDto = getFinanzFac()
+					.kontoFindByPrimaryKeySmallOhneExc(bvDto.getKontoIId());
+			List<String> bvBezeichnungen = new ArrayList<String>();
+			if (kontoDto != null)
+				bvBezeichnungen.add(kontoDto.getCNr());
+			if (bankDto != null)
+				bvBezeichnungen.add(bankDto.getPartnerDto()
+						.getCName1nachnamefirmazeile1());
+			if (bvDto.getCBez() != null)
+				bvBezeichnungen.add(bvDto.getCBez());
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_SEPAEXPORT_KEIN_SEPA_VERZEICHNIS_VORHANDEN,
+					"",
+					new Object[] { Helper.erzeugeStringAusStringArray(bvBezeichnungen
+							.toArray(new String[bvBezeichnungen.size()])) });
+		}
+
+		return bvDto.getCSepaVerzeichnis();
+	}
+
+	@Override
+	public void archiviereSepaZahlungsvorschlag(String xmlZahlungsvorschlag,
+			Integer zahlungsvorschlaglaufIId, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+
+		ZahlungsvorschlaglaufDto zvDto = zahlungsvorschlaglaufFindByPrimaryKey(zahlungsvorschlaglaufIId);
+		BankverbindungDto bankverbindungDto = getFinanzFac()
+				.bankverbindungFindByPrimaryKey(zvDto.getBankverbindungIId());
+		PartnerDto partnerBankDto = getPartnerFac().partnerFindByPrimaryKey(
+				bankverbindungDto.getBankIId(), theClientDto);
+		Integer geschaeftsjahr = getBuchenFac().findGeschaeftsjahrFuerDatum(
+				new Date(zvDto.getTAnlegen().getTime()),
+				theClientDto.getMandant());
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
+				theClientDto.getIDPersonal(), theClientDto);
+		PartnerDto anlegerDto = personalDto.getPartnerDto();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("ddMMyyyyHHmmss");
+		String sDate = dateFormat.format(zvDto.getTAnlegen());
+
+		JCRDocDto jcrDocDto = new JCRDocDto();
+		DocNodeBase docNodeBase = new DocNodeSepaExportZahlungsvorschlaglauf(bankverbindungDto,
+				partnerBankDto, geschaeftsjahr, zvDto);
+		DocPath docPath = new DocPath(docNodeBase).add(new DocNodeFile(
+				"zv_export_sepa.xml"));
+
+		jcrDocDto.setDocPath(docPath);
+		try {
+			jcrDocDto.setbData(xmlZahlungsvorschlag.getBytes("UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			throw new EJBExceptionLP(e);
+		}
+		jcrDocDto.setbVersteckt(false);
+		jcrDocDto.setlAnleger(anlegerDto.getIId());
+		jcrDocDto.setlPartner(partnerBankDto.getIId());
+		jcrDocDto.setlSicherheitsstufe(JCRDocFac.SECURITY_ARCHIV);
+		jcrDocDto.setlZeitpunkt(System.currentTimeMillis());
+		jcrDocDto.setsBelegart(JCRDocFac.DEFAULT_ARCHIV_BELEGART);
+		jcrDocDto.setsGruppierung(JCRDocFac.DEFAULT_ARCHIV_GRUPPE);
+		jcrDocDto.setsBelegnummer(sDate);
+		jcrDocDto.setsFilename("zv_export_sepa");
+		jcrDocDto.setsMIME(".xml");
+		jcrDocDto.setsName("Export Sepa " + sDate);
+		jcrDocDto.setsRow(zvDto.getIId().toString());
+		jcrDocDto.setsTable("");
+		jcrDocDto.setsSchlagworte("Export Sepa Zahlungsvorschlag XML");
+
+		getJCRDocFac().addNewDocumentOrNewVersionOfDocumentWithinTransaction(
+				jcrDocDto, theClientDto);
+	}
+
+	@Override
+	public boolean darfNeuerZahlungsvorschlaglaufErstelltWerden(TheClientDto theClientDto) {
+		List<Zahlungsvorschlaglauf> list = ZahlungsvorschlaglaufQuery.listByMandantCnrTGespeichertIsNull(theClientDto.getMandant(), em);
+		return list.isEmpty();
+	}
+	
 }

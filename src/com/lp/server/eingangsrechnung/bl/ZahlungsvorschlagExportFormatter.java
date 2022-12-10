@@ -38,6 +38,7 @@ import java.util.ArrayList;
 
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagDto;
+import com.lp.server.eingangsrechnung.service.ZahlungsvorschlagExportResult;
 import com.lp.server.eingangsrechnung.service.ZahlungsvorschlaglaufDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.system.service.TheClientDto;
@@ -75,7 +76,7 @@ public abstract class ZahlungsvorschlagExportFormatter extends Facade {
 		this.theClientDto = theClientDto;
 	}
 
-	public abstract String exportiereDaten(ZahlungsvorschlaglaufDto laufDto,
+	public abstract ZahlungsvorschlagExportResult exportiereDaten(ZahlungsvorschlaglaufDto laufDto,
 			ZahlungsvorschlagDto[] zahlungsvorschlagDtos, TheClientDto theClientDto)
 			throws EJBExceptionLP;
 

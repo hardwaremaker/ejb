@@ -49,6 +49,11 @@ public class PartnerbankDtoAssembler {
 			partnerbankDto.setCKtonr(partnerbank.getCKtonr());
 			partnerbankDto.setCIban(partnerbank.getCIban());
 			partnerbankDto.setISort(partnerbank.getISort());
+			partnerbankDto.setTSepaerteilt(partnerbank.getTSepaerteilt());
+			partnerbankDto.setCSepamandatsnummer(partnerbank
+					.getCSepamandatsnummer());
+			partnerbankDto.setCEsr(partnerbank.getCEsr());
+			partnerbankDto.setWaehrungCNr(partnerbank.getWaehrungCNr());
 		}
 		return partnerbankDto;
 	}

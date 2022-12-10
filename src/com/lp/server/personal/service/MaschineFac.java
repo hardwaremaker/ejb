@@ -62,4 +62,10 @@ public interface MaschineFac {
 
 	List<MaschinenVerfuegbarkeitsStundenDto> getVerfuegbarkeitInStunden(
 			Integer maschineId, Date startDate, int days, TheClientDto theClientDto) ;
+	
+	public Integer createMaschineleistungsfaktor(MaschineleistungsfaktorDto dto, TheClientDto theClientDto);
+	public void updateMaschineleistungsfaktor(MaschineleistungsfaktorDto dto);
+	public void removeMaschineleistungsfaktor(MaschineleistungsfaktorDto dto);
+	public MaschineleistungsfaktorDto maschineleistungsfaktorFindByPrimaryKey(Integer iId);
+	
 }

@@ -56,6 +56,16 @@ public class PrintKontoblaetterModel implements Serializable {
 	private boolean enableSaldo ;
 	private Integer periodeImGJ ;
 	
+	private boolean gegenkontogezeichnungAndrucken;
+	
+	public boolean isGegenkontogezeichnungAndrucken() {
+		return gegenkontogezeichnungAndrucken;
+	}
+
+	public void setGegenkontogezeichnungAndrucken(boolean gegenkontogezeichnungAndrucken) {
+		this.gegenkontogezeichnungAndrucken = gegenkontogezeichnungAndrucken;
+	}
+
 	private EnumSortOrder sortOrder ;
 	private EnumSortOrder defaultSortOrder ;
 	

@@ -35,13 +35,17 @@ package com.lp.server.fertigung.service;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.List;
 
-import com.lp.server.artikel.service.GeraetesnrDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
+import com.lp.server.fertigung.ejb.Los;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.system.service.HvDtoLogIgnore;
+import com.lp.server.util.IIId;
 
-public class LosablieferungDto implements Serializable {
+@HvDtoLogClass(name = HvDtoLogClass.LOSABLIEFERUNG, filtername = HvDtoLogClass.LOS)
+public class LosablieferungDto implements Serializable, IIId {
 	/**
 	 * 
 	 */
@@ -60,7 +64,7 @@ public class LosablieferungDto implements Serializable {
 	
 	private List<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge = null;
 	
-
+	@HvDtoLogIgnore
 	public List<SeriennrChargennrMitMengeDto> getSeriennrChargennrMitMenge() {
 		return alSeriennrChargennrMitMenge;
 	}
@@ -77,6 +81,7 @@ public class LosablieferungDto implements Serializable {
 		this.iId = iId;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Los.class)
 	public Integer getLosIId() {
 		return losIId;
 	}
@@ -159,6 +164,16 @@ public class LosablieferungDto implements Serializable {
 		this.bGestehungspreisNeuBerechnen = bGestehungspreisNeuBerechnen;
 	}
 
+	private Integer lagerIId;
+
+	public Integer getLagerIId() {
+		return lagerIId;
+	}
+
+	public void setLagerIId(Integer lagerIId) {
+		this.lagerIId = lagerIId;
+	}
+	
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

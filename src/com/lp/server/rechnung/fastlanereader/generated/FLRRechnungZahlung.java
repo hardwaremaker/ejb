@@ -2,44 +2,46 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.rechnung.fastlanereader.generated;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBankkonto;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchungDetail;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKassenbuch;
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.util.Date;
-import org.apache.commons.lang.builder.ToStringBuilder;
 
 
 /** @author Hibernate CodeGenerator */
@@ -98,6 +100,9 @@ public class FLRRechnungZahlung implements Serializable {
 
     /** nullable persistent field */
     private FLRFinanzBuchungDetail flrfinanzbuchungdetail;
+
+    /** nullable persistent field */
+    private String c_kommentar;
 
     /** full constructor */
     public FLRRechnungZahlung(Integer rechnung_i_id, Integer bankverbindung_i_id, Date d_zahldatum, String zahlungsart_c_nr, BigDecimal n_kurs, BigDecimal n_betrag, BigDecimal n_betragfw, BigDecimal n_betrag_ust, BigDecimal n_betrag_ustfw, Date d_wechsel_faellig_am, Integer i_auszug, FLRFinanzBankkonto flrbankverbindung, FLRFinanzKassenbuch flrkassenbuch, com.lp.server.rechnung.fastlanereader.generated.FLRRechnung flrrechnung, FLREingangsrechnung flreingangsrechnung, com.lp.server.rechnung.fastlanereader.generated.FLRRechnung flrrechnunggutschrift, FLRFinanzBuchungDetail flrfinanzbuchungdetail) {
@@ -273,5 +278,13 @@ public class FLRRechnungZahlung implements Serializable {
             .append("i_id", getI_id())
             .toString();
     }
+
+	public void setC_kommentar(String c_kommentar) {
+		this.c_kommentar = c_kommentar;
+	}
+
+	public String getC_kommentar() {
+		return c_kommentar;
+	}
 
 }

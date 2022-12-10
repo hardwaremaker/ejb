@@ -42,43 +42,48 @@ import javax.jws.soap.SOAPBinding.Style;
 import javax.jws.soap.SOAPBinding.Use;
 import javax.xml.ws.BindingType;
 
-import org.jboss.wsf.spi.annotation.WebContext;
+// import org.jboss.wsf.spi.annotation.WebContext;
 
 import com.lp.server.auftrag.service.CreateOrderResult;
 import com.lp.server.auftrag.service.WebshopOrderServiceInterface;
 import com.lp.server.system.service.WebshopAuthHeader;
 import com.lp.server.util.Facade;
 
-@WebService(name = "IWebshop2OrderServices", serviceName = "HeliumVOrderServiceOpenTrans")
+// @WebService(name = "IWebshop2OrderServices", serviceName = "HeliumVOrderServiceOpenTrans")
+@WebService
 @SOAPBinding(style = Style.DOCUMENT, use = Use.LITERAL, parameterStyle = ParameterStyle.WRAPPED)
 @BindingType(value = "http://schemas.xmlsoap.org/wsdl/soap/http?mtom=true")
 @Stateless
 // @Interceptors(WebserviceCallInterceptor.class)
-@WebContext (urlPattern="/version1/AuftragFacBeanRest")
+// @WebContext (urlPattern="/version1/AuftragFacBeanRest")
 public class AuftragFacBeanRest extends Facade implements
 		WebshopOrderServiceInterface {
 
 	private WebshopOrderServiceInterface delegate;
 
 	public AuftragFacBeanRest() {
-		// delegate = new WebshopOrderItemServiceMock() ;
-//		delegate = getWebshopOrderServiceFac();
-		delegate = getWebshopCustomerOrderServiceFac() ;
 	}
 
-	public AuftragFacBeanRest(WebshopOrderServiceInterface theDelegate) {
-		delegate = theDelegate ;
+//	public AuftragFacBeanRest(WebshopOrderServiceInterface theDelegate) {
+//		delegate = theDelegate ;
+//	}
+//
+//	protected void setDelegate(WebshopOrderServiceInterface theDelegate) {
+//		delegate = theDelegate ;
+//	}
+//
+	private WebshopOrderServiceInterface getDelegate() {
+		if(delegate == null) {
+			delegate = getWebshopCustomerOrderServiceFac();
+		}
+		return delegate;
 	}
-
-	protected void setDelegate(WebshopOrderServiceInterface theDelegate) {
-		delegate = theDelegate ;
-	}
-
+	
 	@Override
 	@WebMethod
 	public CreateOrderResult createOrder(
 			@WebParam(header = true) WebshopAuthHeader header,
 			@WebParam(name="xmlOpenTransOrder") String xmlOpenTransOrder) {
-		return delegate.createOrder(header, xmlOpenTransOrder);
+		return getDelegate().createOrder(header, xmlOpenTransOrder);
 	}
 }

@@ -41,7 +41,8 @@ public class WarenverkehrsnummerDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private String cNr;
 	private String cBez;
-
+	private String cBM;
+	
 	public String getCNr() {
 		return cNr;
 	}
@@ -58,6 +59,15 @@ public class WarenverkehrsnummerDto implements Serializable {
 		this.cBez = cBez;
 	}
 
+	public String getCBM() {
+		return cBM;
+	}
+
+	public void setCBM(String cBM) {
+		this.cBM = cBM;
+	}
+
+	
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -69,6 +79,9 @@ public class WarenverkehrsnummerDto implements Serializable {
 		if (!(that.cBez == null ? this.cBez == null : that.cBez
 				.equals(this.cBez)))
 			return false;
+		if (!(that.cBM == null ? this.cBM == null : that.cBM
+				.equals(this.cBM)))
+			return false;
 		return true;
 	}
 
@@ -76,6 +89,7 @@ public class WarenverkehrsnummerDto implements Serializable {
 		int result = 17;
 		result = 37 * result + this.cNr.hashCode();
 		result = 37 * result + this.cBez.hashCode();
+		result = 37 * result + this.cBM.hashCode();
 		return result;
 	}
 
@@ -83,7 +97,8 @@ public class WarenverkehrsnummerDto implements Serializable {
 		StringBuffer returnStringBuffer = new StringBuffer(64);
 		returnStringBuffer.append("[");
 		returnStringBuffer.append("cNr:").append(cNr);
-		returnStringBuffer.append("cBez:").append(cBez);
+		returnStringBuffer.append(", cBM:").append(cBM);
+		returnStringBuffer.append(", cBez:").append(cBez);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}

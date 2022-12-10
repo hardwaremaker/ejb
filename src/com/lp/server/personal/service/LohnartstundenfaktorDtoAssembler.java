@@ -48,6 +48,9 @@ public class LohnartstundenfaktorDtoAssembler {
 			lohnartstundenfaktorDto.setLohnartIId(lohnartstundenfaktor.getLohnartIId());
 			lohnartstundenfaktorDto.setLohnstundenartCNr(lohnartstundenfaktor.getLohnstundenartCNr());
 			lohnartstundenfaktorDto.setTagesartIId(lohnartstundenfaktor.getTagesartIId());
+			lohnartstundenfaktorDto.setZeitmodellIId(lohnartstundenfaktor.getZeitmodellIId());
+			lohnartstundenfaktorDto.setSchichtzeitIId(lohnartstundenfaktor.getSchichtzeitIId());
+			lohnartstundenfaktorDto.setTaetigkeitIId(lohnartstundenfaktor.getTaetigkeitIId());
 		}
 		return lohnartstundenfaktorDto;
 	}

@@ -148,7 +148,7 @@ public class DokumentDto implements Serializable {
 	public int hashCode() {
 		int result = 17;
 		result = 37 * result + this.iId.hashCode();
-		result = 37 * result + this.oInhalt.hashCode();
+		result = 37 * result + Arrays.hashCode(this.oInhalt);
 		result = 37 * result + this.datenformatCNr.hashCode();
 		result = 37 * result + this.cDateiname.hashCode();
 		result = 37 * result + this.cBez.hashCode();
@@ -161,7 +161,7 @@ public class DokumentDto implements Serializable {
 		StringBuffer returnStringBuffer = new StringBuffer(224);
 		returnStringBuffer.append("[");
 		returnStringBuffer.append("iId:").append(iId);
-		returnStringBuffer.append("oInhalt:").append(oInhalt);
+//		returnStringBuffer.append("oInhalt:").append(oInhalt);
 		returnStringBuffer.append("datenformatCNr:").append(datenformatCNr);
 		returnStringBuffer.append("cDateiname:").append(cDateiname);
 		returnStringBuffer.append("cBez:").append(cBez);

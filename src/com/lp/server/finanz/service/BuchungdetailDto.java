@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.service;
@@ -37,10 +37,11 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import com.lp.server.util.IModificationData;
+import com.lp.util.EJBExceptionLP;
 
 public class BuchungdetailDto implements Serializable, Cloneable, IModificationData {
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
@@ -56,18 +57,22 @@ public class BuchungdetailDto implements Serializable, Cloneable, IModificationD
 	private BigDecimal nUst;
 	private Integer iAuszug;
 	private Integer iAusziffern;
-	private String kommentar;
+	private String cKommentar;
 
 	public BuchungdetailDto() {
-		
+
 	}
-	
+
 	public BuchungdetailDto(String buchungdetailartCNr, Integer kontoIId, Integer kontoIIdGegenkonto, BigDecimal nBetrag, BigDecimal nUst) {
 		this.buchungdetailartCNr = buchungdetailartCNr;
 		this.kontoIId = kontoIId;
 		this.kontoIIdGegenkonto = kontoIIdGegenkonto;
 		this.nBetrag = nBetrag;
 		this.nUst = nUst;
+	}
+
+	public BuchungdetailDto(boolean sollBuchung, Integer kontoIId, Integer kontoIIdGegenkonto, BigDecimal betrag, BigDecimal ust) {
+		this(sollBuchung ? BuchenFac.SollBuchung : BuchenFac.HabenBuchung, kontoIId, kontoIIdGegenkonto, betrag, ust) ;
 	}
 	
 	public Integer getIId() {
@@ -205,8 +210,8 @@ public class BuchungdetailDto implements Serializable, Cloneable, IModificationD
 				: that.iAusziffern.equals(this.iAusziffern))) {
 			return false;
 		}
-		if (!(that.kommentar == null ? this.kommentar == null
-				: that.kommentar.equals(this.kommentar))) {
+		if (!(that.cKommentar == null ? this.cKommentar == null
+				: that.cKommentar.equals(this.cKommentar))) {
 			return false;
 		}
 		return true;
@@ -226,7 +231,7 @@ public class BuchungdetailDto implements Serializable, Cloneable, IModificationD
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
 		result = 37 * result + this.iAusziffern.hashCode();
-		result = 37 * result + this.kommentar.hashCode();
+		result = 37 * result + this.cKommentar.hashCode();
 		return result;
 	}
 
@@ -244,7 +249,7 @@ public class BuchungdetailDto implements Serializable, Cloneable, IModificationD
 		returnString += ", " + tAendern;
 		returnString += ", " + personalIIdAendern;
 		returnString += ", " + iAusziffern;
-		returnString += ", " + kommentar;
+		returnString += ", " + cKommentar;
 		return returnString;
 	}
 
@@ -271,15 +276,15 @@ public class BuchungdetailDto implements Serializable, Cloneable, IModificationD
 	public Integer getIAusziffern() {
 		return iAusziffern;
 	}
-	
+
 	public boolean isHabenBuchung() {
 		return BuchenFac.HabenBuchung.equals(getBuchungdetailartCNr()) ;
  	}
-	
+
 	public boolean isSollBuchung() {
-		return BuchenFac.SollBuchung.equals(getBuchungdetailartCNr()) ;		
+		return BuchenFac.SollBuchung.equals(getBuchungdetailartCNr()) ;
 	}
-	
+
 	public Object clone() {
 		try {
 			BuchungdetailDto baseClone = (BuchungdetailDto) super.clone() ;
@@ -288,19 +293,50 @@ public class BuchungdetailDto implements Serializable, Cloneable, IModificationD
 			return this ;
 		}
 	}
-	
+
 	public void swapSollHaben() {
-		if (this.buchungdetailartCNr.equals(BuchenFac.HabenBuchung))
-			this.buchungdetailartCNr = BuchenFac.SollBuchung;
-		else
-			this.buchungdetailartCNr = BuchenFac.HabenBuchung;
+		beSollBuchung(isHabenBuchung());
+//		if (this.buchungdetailartCNr.equals(BuchenFac.HabenBuchung))
+//			this.buchungdetailartCNr = BuchenFac.SollBuchung;
+//		else
+//			this.buchungdetailartCNr = BuchenFac.HabenBuchung;
+	}
+
+	public void swapKonten() {
+		Integer myKontoId = getKontoIId() ;
+		if(getKontoIIdGegenkonto() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_GEGENKONTO_NICHT_DEFINIERT, "") ;
+		}
+		setKontoIId(getKontoIIdGegenkonto()) ;
+		setKontoIIdGegenkonto(myKontoId);
 	}
 	
-	public String getKommentar() {
-		return kommentar;
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
+	public void setCKommentar(String cKommentar) {
+		this.cKommentar = cKommentar;
+	}
+
+	public void beHabenBuchung() {
+		setBuchungdetailartCNr(BuchenFac.HabenBuchung);
+	}
+
+	public void beSollBuchung() {
+		setBuchungdetailartCNr(BuchenFac.SollBuchung);
 	}
 	
-	public void setKommentar(String kommentar) {
-		this.kommentar = kommentar;
+	public void beSollBuchung(boolean sollbuchung) {
+		setBuchungdetailartCNr(sollbuchung 
+				? BuchenFac.SollBuchung : BuchenFac.HabenBuchung) ;
+	}
+	
+	public static BuchungdetailDto soll(Integer kontoId, Integer gegenKontoId, BigDecimal betrag, BigDecimal ust) {
+		return new BuchungdetailDto(true, kontoId, gegenKontoId, betrag, ust);
+	}
+	
+	public static BuchungdetailDto haben(Integer kontoId, Integer gegenKontoId, BigDecimal betrag, BigDecimal ust) {
+		return new BuchungdetailDto(false, kontoId, gegenKontoId, betrag, ust);
 	}
 }

@@ -33,6 +33,7 @@
 package com.lp.server.angebotstkl.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
@@ -42,12 +43,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+import com.lp.server.system.service.ITablenames;
+
+@NamedQueries({
 		@NamedQuery(name = "AgstklfindByCNrMandantCNr", query = "SELECT OBJECT(o) FROM Agstkl o WHERE o.cNr = ?1 AND o.mandantCNr = ?2"),
 		@NamedQuery(name = "AgstklfindByKundeIIdMandantCNr", query = "SELECT OBJECT(O) FROM Agstkl o WHERE o.kundeIId = ?1 AND o.mandantCNr = ?2"),
 		@NamedQuery(name = "AgstklfindByAnsprechpartnerIIdKunde", query = "SELECT OBJECT(O) FROM Agstkl o WHERE o.ansprechpartnerIIdKunde = ?1") })
 @Entity
-@Table(name = "AS_AGSTKL")
+@Table(name = ITablenames.AS_AGSTKL)
 public class Agstkl implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -58,9 +61,97 @@ public class Agstkl implements Serializable {
 
 	@Column(name = "C_BEZ")
 	private String cBez;
+	
+	@Column(name = "C_ZEICHNUNGSNUMMER")
+	private String cZeichnungsnummer;
+
+	public String getCZeichnungsnummer() {
+		return cZeichnungsnummer;
+	}
+
+	public void setCZeichnungsnummer(String cZeichnungsnummer) {
+		this.cZeichnungsnummer = cZeichnungsnummer;
+	}
+
+	@Column(name = "N_INITIALKOSTEN")
+	private BigDecimal nInitialkosten;
+	
+	public BigDecimal getNInitialkosten() {
+		return nInitialkosten;
+	}
+
+	public void setNInitialkosten(BigDecimal nInitialkosten) {
+		this.nInitialkosten = nInitialkosten;
+	}
+
+	@Column(name = "C_DATEINAME")
+	private String cDateiname;
+
+	public String getCDateiname() {
+		return cDateiname;
+	}
+
+	public void setCDateiname(String cDateiname) {
+		this.cDateiname = cDateiname;
+	}
 
 	@Column(name = "T_BELEGDATUM")
 	private Timestamp tBelegdatum;
+
+	@Column(name = "B_VORLAGE")
+	private Short bVorlage;
+
+	public Short getBVorlage() {
+		return bVorlage;
+	}
+
+	public void setBVorlage(Short bVorlage) {
+		this.bVorlage = bVorlage;
+	}
+
+	@Column(name = "DATENFORMAT_C_NR")
+	private String datenformatCNr;
+
+	public String getDatenformatCNr() {
+		return datenformatCNr;
+	}
+
+	public void setDatenformatCNr(String datenformatCNr) {
+		this.datenformatCNr = datenformatCNr;
+	}
+
+	@Column(name = "O_MEDIA")
+	private byte[] oMedia;
+
+	public byte[] getOMedia() {
+		return oMedia;
+	}
+
+	public void setOMEdia(byte[] oMedia) {
+		this.oMedia = oMedia;
+	}
+
+	@Column(name = "I_HOEHE_DIALOG")
+	private Integer iHoeheDialog;
+
+	public Integer getIHoeheDialog() {
+		return iHoeheDialog;
+	}
+
+	public void setIHoeheDialog(Integer iHoeheDialog) {
+		this.iHoeheDialog = iHoeheDialog;
+	}
+
+	@Column(name = "B_DATENGEAENDERT")
+	private Short bDatengeaendert;
+
+	public Short getBDatengeaendert() {
+		return bDatengeaendert;
+	}
+
+	public void setBDatengeaendert(Short bDatengeaendert) {
+		this.bDatengeaendert = bDatengeaendert;
+	}
 
 	@Column(name = "F_WECHSELKURSMANDANTWAEHRUNGZUAGSTKLWAEHRUNG")
 	private Double fWechselkursmandantwaehrungzuagstklwaehrung;
@@ -92,9 +183,22 @@ public class Agstkl implements Serializable {
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
 
+	@Column(name = "STUECKLISTE_I_ID")
+	private Integer stuecklisteIId;
+
+	public Integer getStuecklisteIId() {
+		return this.stuecklisteIId;
+	}
+
+	public void setStuecklisteIId(Integer stuecklisteIId) {
+		this.stuecklisteIId = stuecklisteIId;
+	}
+
+	
+
 	@Column(name = "PROJEKT_I_ID")
 	private Integer projektIId;
-	
+
 	public Integer getProjektIId() {
 		return projektIId;
 	}
@@ -102,11 +206,10 @@ public class Agstkl implements Serializable {
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
 	}
-	
+
 	@Column(name = "I_EKPREISBASIS")
 	private Integer iEkpreisbasis;
-	
-	
+
 	public Integer getIEkpreisbasis() {
 		return iEkpreisbasis;
 	}
@@ -121,11 +224,10 @@ public class Agstkl implements Serializable {
 		super();
 	}
 
-	public Agstkl(Integer id, java.lang.String mandantCNr, java.lang.String nr,
-			java.lang.String belegartCNr, Integer kundeIId,
-			Timestamp belegdatum, java.lang.String waehrungCNr,
-			Double wechselkursmandantwaehrungzuagstklwaehrung,
-			Integer personalIIdAnlegen, Integer personalIIdAendern, Integer iEkpreisbasis) {
+	public Agstkl(Integer id, java.lang.String mandantCNr, java.lang.String nr, java.lang.String belegartCNr,
+			Integer kundeIId, Timestamp belegdatum, java.lang.String waehrungCNr,
+			Double wechselkursmandantwaehrungzuagstklwaehrung, Integer personalIIdAnlegen, Integer personalIIdAendern,
+			Integer iEkpreisbasis, Short bDatengeaendert, Short bVorlage) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setCNr(nr);
@@ -140,6 +242,8 @@ public class Agstkl implements Serializable {
 		setTAendern(t);
 		setTBelegdatum(belegdatum);
 		setIEkpreisbasis(iEkpreisbasis);
+		setBDatengeaendert(bDatengeaendert);
+		setBVorlage(bVorlage);
 	}
 
 	public Integer getIId() {
@@ -178,8 +282,7 @@ public class Agstkl implements Serializable {
 		return this.fWechselkursmandantwaehrungzuagstklwaehrung;
 	}
 
-	public void setFWechselkursmandantwaehrungzuagstklwaehrung(
-			Double fWechselkursmandantwaehrungzuagstklwaehrung) {
+	public void setFWechselkursmandantwaehrungzuagstklwaehrung(Double fWechselkursmandantwaehrungzuagstklwaehrung) {
 		this.fWechselkursmandantwaehrungzuagstklwaehrung = fWechselkursmandantwaehrungzuagstklwaehrung;
 	}
 

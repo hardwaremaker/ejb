@@ -34,6 +34,7 @@ package com.lp.server.system.service;
 
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.util.List;
 
 import javax.ejb.Remote;
 
@@ -103,4 +104,62 @@ public interface TheClientFac {
 	 * @throws EJBExceptionLP
 	 */
 	int logoutAllClients(boolean remove) throws EJBExceptionLP ;
+	public void setRmiPort(TheClientDto theClientDto, Integer rmiPort);
+	public List<VerfuegbareHostsDto> getVerfuegbareHosts(
+			String benutzerCNr, String mandantCNr, TheClientDto theClientDto);
+	
+	public List<VerfuegbareHostsDto> getVerfuegbareHosts(Integer personalIId,
+			TheClientDto theClientDto);
+
+	/**
+	 * Die Client-Daten zum angegebenen Token ermitteln.<br>
+	 * <p>Das impliziert eine interne &Uuml;berpr&uuml;fung, ob der Client
+	 * noch angemeldet ist, ber&uuml;cksichtigt auch, eventuelle 
+	 * &Auml;nderungen der Systemrollen</p>
+	 * 
+	 * @param token
+	 * @return die ClientDaten
+	 */
+	TheClientDto theClientFindByUserLoggedInMobil(String token);
+
+	/**
+	 * Die Liste aller Benutzer gegen den Mandantenzaehler, die "heute" angemeldet sind.</br>
+	 * 
+	 * @return eine (leere) Liste aller Benutzer, die heute als angemeldet
+	 * z&auml;hlen. 
+	 */
+	List<TheClientLoggedInDto> getLoggedInClients();
+
+	/**
+	 * Die Anzahl der Benutzer die heute als angemeldete Benutzer an den  
+	 * Mandanten zaehlen</br>
+	 * <p>&Uuml;blicherweise sind das Desktop-Benutzer (und Restapi-Benutzer).
+	 * Ein Benutzer kann vom gleichen Rechner aus eine beliebige Anzahl an
+	 * Anmeldungen am HELIUM V Server haben. Er kann sich auch (vom gleichen 
+	 * Rechner) an unterschiedlichen Mandanten anmelden. Meldet sich der
+	 * gleiche Benutzer von unterschiedlichen Rechnern aus an, verbraucht er
+	 * Concurrent User.</p> 
+	 * @return Anzahl der angemeldeten Benutzer an Mandanten
+	 */
+	Integer getZaehlerAngemeldeteBenutzer();
+	
+	/**
+	 * Die Anzahl jener HVMA-Benutzer die angemeldet sind.</br>
+	 * <p>Bei den HVMA-Benutzer handelt es sich um benannte Benutzer. D.h.
+	 * nur derjenige Benutzer der (zum Anmeldezeitpunkt) als Benutzer 
+	 * f&uuml;r eine bestimmte Lizenz bekannt war, darf sich &uuml;berhaupt
+	 * anmelden. Der Benutzer darf sich an beliebig vielen Ger&auml;ten
+	 * gleichzeitig anmelden (zumindest vorerst). Es kann - und wird daher -
+	 * passieren, dass die hier gelieferte Anzahl h&ouml;her ist, als 
+	 * die in der Lizenz hinterlegte maximale Anzahl an Benutzer.</p>
+	 * @param hvmalizenzId
+	 * @return Anzahl der angemeldeten HVMA Benutzer dieser Lizenz
+	 */
+	Integer getZaehlerAngemeldeteHvmaBenutzer(Integer hvmalizenzId);
+
+	Integer getZaehlerAngemeldeteBenutzerRolle(Integer systemrolleId);
+
+	List<VerfuegbareHostsDto> getVerfuegbareBenutzer(String host, TheClientDto theClientDto);
+
+	Integer getRmiPort(TheClientDto theClientDto);
 }

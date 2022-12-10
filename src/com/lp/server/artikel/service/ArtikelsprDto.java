@@ -37,9 +37,10 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
 
 @HvDtoLogClass(name=HvDtoLogClass.ARTIKEL_SPR, filtername=HvDtoLogClass.ARTIKEL)
-public class ArtikelsprDto implements Serializable {
+public class ArtikelsprDto implements Serializable ,IIId {
 	/**
 	 * 
 	 */
@@ -53,6 +54,15 @@ public class ArtikelsprDto implements Serializable {
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
 
+	
+	public Integer getIId() {
+		return artikelIId;
+	}
+
+	public void setIId(Integer iId) {
+		
+	}
+	
 	public Integer getArtikelIId() {
 		return artikelIId;
 	}

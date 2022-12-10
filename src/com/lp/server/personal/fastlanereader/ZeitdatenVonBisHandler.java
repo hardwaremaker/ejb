@@ -87,14 +87,15 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 
 	private int SPALTE_ZEITDATEN_I_ID = 0;
 	private int SPALTE_TAETIGKEIT = 1;
-	private int SPALTE_ZUSATZ = 2;
-	private int SPALTE_ZEIT_VON = 3;
-	private int SPALTE_ZEIT_BIS = 4;
+	private int SPALTE_BEZEICHNUNG = 2;
+	private int SPALTE_ZUSATZ = 3;
+	private int SPALTE_ZEIT_VON = 4;
+	private int SPALTE_ZEIT_BIS = 5;
 
-	private int SPALTE_DAUER = 5;
-	private int SPALTE_BEMERKUNG = 6;
-	private int SPALTE_QUELLE = 7;
-	private int ANZAHL_SPALTEN = 8;
+	private int SPALTE_DAUER = 6;
+	private int SPALTE_BEMERKUNG = 7;
+	private int SPALTE_QUELLE = 8;
+	private int ANZAHL_SPALTEN = 9;
 
 	private ArrayList<Object[]> hmDaten = null;
 
@@ -273,6 +274,7 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 		getFilterKriterien();
 		Integer personalIId = new Integer(aFilterKriterium[0].value);
 		Session session = FLRSessionFactory.getFactory().openSession();
+		setFilter(session);
 		Query query = session
 				.createQuery("from FLRZeitdaten zeitdaten LEFT OUTER JOIN zeitdaten.flrartikel.artikelsprset AS aspr WHERE zeitdaten.personal_i_id="
 						+ personalIId
@@ -311,6 +313,12 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 				}
 			} else {
 				oZeile[SPALTE_TAETIGKEIT] = zeitdaten.getFlrartikel().getC_nr();
+
+				oZeile[SPALTE_BEZEICHNUNG] = getArtikelFac()
+						.artikelFindByPrimaryKeySmall(
+								zeitdaten.getFlrartikel().getI_id(),
+								theClientDto).formatBezeichnung();
+
 			}
 
 			String sZusatz = null;
@@ -492,12 +500,10 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 
 				}
 
-				
-				
-
 			}
-			ZeitdatenDto zeitdatenDto=getZeiterfassungFac().zeitdatenFindByPrimaryKey(zeitdaten.getI_id(), theClientDto);
-			
+			ZeitdatenDto zeitdatenDto = getZeiterfassungFac()
+					.zeitdatenFindByPrimaryKey(zeitdaten.getI_id(),
+							theClientDto);
 
 			if (zeitdatenDto.gettZeit_Bis() != null) {
 				long l_zeitdec = zeitdatenDto.gettZeit_Bis().getTime()
@@ -511,10 +517,11 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 				String dauer = df.format(d.doubleValue()).toString();
 
 				oZeile[SPALTE_DAUER] = dauer;
-				oZeile[SPALTE_ZEIT_BIS] = new java.sql.Time(zeitdatenDto.gettZeit_Bis() 
-						.getTime()).toString();
+				oZeile[SPALTE_ZEIT_BIS] = new java.sql.Time(zeitdatenDto
+						.gettZeit_Bis().getTime()).toString();
 
-				hBereitsAlsBisVerbraucht.add(zeitdatenDto.getZeitdatenIId_BisZeit());
+				hBereitsAlsBisVerbraucht.add(zeitdatenDto
+						.getZeitdatenIId_BisZeit());
 			}
 			hmDaten.add(oZeile);
 		}
@@ -535,34 +542,27 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 
 		if (selectedId != null && selectedId instanceof Integer
 				&& ((Integer) selectedId).intValue() >= 0) {
-			SessionFactory factory = FLRSessionFactory.getFactory();
-			Session session = null;
 
 			try {
-				session = factory.openSession();
-				session = setFilter(session);
-				String queryString = "select zeitdaten.i_id from FLRZeitdaten zeitdaten LEFT OUTER JOIN zeitdaten.flrartikel.artikelsprset AS aspr  "
-						+ this.buildWhereClause() + this.buildOrderByClause();
-				Query query = session.createQuery(queryString);
-				ScrollableResults scrollableResult = query.scroll();
-				if (scrollableResult != null) {
-					scrollableResult.beforeFirst();
-					while (scrollableResult.next()) {
-						Integer id = scrollableResult.getInteger(0);
+
+				if (hmDaten != null) {
+					Iterator it = hmDaten.iterator();
+					int i = 0;
+					while (it.hasNext()) {
+						
+						Object[] row = (Object[]) it.next();
+						Integer id = (Integer) row[0];
 						if (selectedId.equals(id)) {
-							rowNumber = scrollableResult.getRowNumber();
+							rowNumber = i;
 							break;
 						}
+						i++;
 					}
 				}
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-				}
+
 			}
 		}
 
@@ -580,20 +580,26 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 		if (tableInfo == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			tableInfo = new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class, String.class,
-					String.class, String.class, String.class }, new String[] {
-					"Id",
-					getTextRespectUISpr("lp.taetigkeit", mandantCNr, locUI),
-					getTextRespectUISpr("lp.zusatz", mandantCNr, locUI),
-					getTextRespectUISpr("lp.zeit", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bis", mandantCNr, locUI),
-					getTextRespectUISpr("lp.dauer", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bem", mandantCNr, locUI),
-					getTextRespectUISpr("lp.quelle", mandantCNr, locUI), },
+			tableInfo = new TableInfo(
+					new Class[] { Integer.class, String.class, String.class,
+							String.class, String.class, String.class,
+							String.class, String.class, String.class },
+					new String[] {
+							"Id",
+							getTextRespectUISpr("lp.taetigkeit", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.zusatz", mandantCNr, locUI),
+							getTextRespectUISpr("lp.zeit", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bis", mandantCNr, locUI),
+							getTextRespectUISpr("lp.dauer", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bem", mandantCNr, locUI),
+							getTextRespectUISpr("lp.quelle", mandantCNr, locUI), },
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
 							QueryParameters.FLR_BREITE_L,
+							QueryParameters.FLR_BREITE_XM,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
@@ -606,6 +612,7 @@ public class ZeitdatenVonBisHandler extends UseCaseHandlerTabelle {
 							// damit am Client das Symbol 'nosort.png' im
 							// TabelHeader angezeigt wird
 							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR,
 							ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
 							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
 							Facade.NICHT_SORTIERBAR,

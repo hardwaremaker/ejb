@@ -68,6 +68,17 @@ public class Taetigkeit implements Serializable {
 	@Column(name = "B_TAGBUCHBAR")
 	private Short bTagbuchbar;
 
+	@Column(name = "B_DARF_SELBER_BUCHEN")
+	private Short bDarfSelberBuchen;
+	
+	public Short getBDarfSelberBuchen() {
+		return bDarfSelberBuchen;
+	}
+
+	public void setBDarfSelberBuchen(Short bDarfSelberBuchen) {
+		this.bDarfSelberBuchen = bDarfSelberBuchen;
+	}
+	
 	@Column(name = "B_UNTERBRICHTWARNMELDUNG")
 	private Short bUnterbrichtwarnmeldung;
 	
@@ -120,6 +131,18 @@ public class Taetigkeit implements Serializable {
 		this.iWarnmeldunginkalendertagen = iWarnmeldunginkalendertagen;
 	}
 
+	
+	@Column(name = "ABWESENHEITSART_I_ID")
+	private Integer abwesenheitsartIId;
+	
+	public Integer getAbwesenheitsartIId() {
+		return abwesenheitsartIId;
+	}
+
+	public void setAbwesenheitsartIId(Integer abwesenheitsartIId) {
+		this.abwesenheitsartIId = abwesenheitsartIId;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Taetigkeit() {
@@ -135,7 +158,7 @@ public class Taetigkeit implements Serializable {
 	}
 
 	public Taetigkeit(Integer id, String nr, String taetigkeitartCNr2,
-			Integer sort, Integer personalIIdAendern2) {
+			Integer sort, Integer personalIIdAendern2, Short bDarfSelberBuchen){
 		setIId(id);
 		setCNr(nr);
 		setTaetigkeitartCNr(taetigkeitartCNr2);
@@ -149,6 +172,7 @@ public class Taetigkeit implements Serializable {
 		setISort(sort);
 		setTAendern(new Timestamp(System.currentTimeMillis()));
 		setPersonalIIdAendern(personalIIdAendern2);
+		setBDarfSelberBuchen(bDarfSelberBuchen);
 	}
 
 	public Taetigkeit(Integer id, String nr, String taetigkeitartCNr2,

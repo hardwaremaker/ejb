@@ -61,9 +61,50 @@ public class PersonalgehaltDto implements Serializable {
 	private Timestamp tAendern;
 	private Double fUestpauschale;
 	private BigDecimal nUestdpuffer;
-	private Short bUestdauszahlen;
+	private Integer iUestdauszahlen;
 	private Double fLeistungswert;
-	
+
+	private BigDecimal nKmgeldMitfahrer;
+
+	public BigDecimal getNKmgeldMitfahrer() {
+		return nKmgeldMitfahrer;
+	}
+
+	public void setNKmgeldMitfahrer(BigDecimal nKmgeldMitfahrer) {
+		this.nKmgeldMitfahrer = nKmgeldMitfahrer;
+	}
+
+	private Short bNegativstundenInUrlaubUmwandelnTageweiseBetrachten;
+
+	public Short getBNegativstundenInUrlaubUmwandelnTageweiseBetrachten() {
+		return bNegativstundenInUrlaubUmwandelnTageweiseBetrachten;
+	}
+
+	public void setBNegativstundenInUrlaubUmwandelnTageweiseBetrachten(
+			Short bNegativstundenInUrlaubUmwandelnTageweiseBetrachten) {
+		this.bNegativstundenInUrlaubUmwandelnTageweiseBetrachten = bNegativstundenInUrlaubUmwandelnTageweiseBetrachten;
+	}
+
+	private BigDecimal nDrzpauschale;
+
+	public BigDecimal getNDrzpauschale() {
+		return nDrzpauschale;
+	}
+
+	public void setNDrzpauschale(BigDecimal nDrzpauschale) {
+		this.nDrzpauschale = nDrzpauschale;
+	}
+
+	private BigDecimal nLohnsteuer;
+
+	public BigDecimal getNLohnsteuer() {
+		return nLohnsteuer;
+	}
+
+	public void setNLohnsteuer(BigDecimal nLohnsteuer) {
+		this.nLohnsteuer = nLohnsteuer;
+	}
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -79,6 +120,7 @@ public class PersonalgehaltDto implements Serializable {
 	public void setFLeistungswert(Double fLeistungswert) {
 		this.fLeistungswert = fLeistungswert;
 	}
+
 	public Integer getPersonalIId() {
 		return personalIId;
 	}
@@ -207,10 +249,6 @@ public class PersonalgehaltDto implements Serializable {
 		return nUestdpuffer;
 	}
 
-	public Short getBUestdauszahlen() {
-		return bUestdauszahlen;
-	}
-
 	public void setFUestpauschale(Double fUestpauschale) {
 		this.fUestpauschale = fUestpauschale;
 	}
@@ -219,9 +257,14 @@ public class PersonalgehaltDto implements Serializable {
 		this.nUestdpuffer = nUestdpuffer;
 	}
 
-	public void setBUestdauszahlen(Short bUestdauszahlen) {
-		this.bUestdauszahlen = bUestdauszahlen;
+	public Integer getIUestdauszahlen() {
+		return this.iUestdauszahlen;
 	}
+
+	public void setIUestdauszahlen(Integer iUestdauszahlen) {
+		this.iUestdauszahlen = iUestdauszahlen;
+	}
+
 	public BigDecimal getNGehaltNetto() {
 		return nGehaltNetto;
 	}
@@ -266,8 +309,7 @@ public class PersonalgehaltDto implements Serializable {
 		return nAufschlagLohnmittelstundensatz;
 	}
 
-	public void setNAufschlagLohnmittelstundensatz(
-			BigDecimal nAufschlagLohnmittelstundensatz) {
+	public void setNAufschlagLohnmittelstundensatz(BigDecimal nAufschlagLohnmittelstundensatz) {
 		this.nAufschlagLohnmittelstundensatz = nAufschlagLohnmittelstundensatz;
 	}
 
@@ -278,7 +320,6 @@ public class PersonalgehaltDto implements Serializable {
 	public void setFFaktorLohnmittelstundensatz(Double fFaktorLohnmittelstundensatz) {
 		this.fFaktorLohnmittelstundensatz = fFaktorLohnmittelstundensatz;
 	}
-	
 
 	private BigDecimal nGehaltNetto;
 	private BigDecimal nGehaltBruttobrutto;
@@ -297,7 +338,6 @@ public class PersonalgehaltDto implements Serializable {
 		this.bStundensatzFixiert = bStundensatzFixiert;
 	}
 
-	
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -306,35 +346,27 @@ public class PersonalgehaltDto implements Serializable {
 		PersonalgehaltDto that = (PersonalgehaltDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.personalIId == null ? this.personalIId == null
-				: that.personalIId.equals(this.personalIId)))
+		if (!(that.personalIId == null ? this.personalIId == null : that.personalIId.equals(this.personalIId)))
 			return false;
-		if (!(that.iJahr == null ? this.iJahr == null : that.iJahr
-				.equals(this.iJahr)))
+		if (!(that.iJahr == null ? this.iJahr == null : that.iJahr.equals(this.iJahr)))
 			return false;
-		if (!(that.iMonat == null ? this.iMonat == null : that.iMonat
-				.equals(this.iMonat)))
+		if (!(that.iMonat == null ? this.iMonat == null : that.iMonat.equals(this.iMonat)))
 			return false;
-		if (!(that.nGehalt == null ? this.nGehalt == null : that.nGehalt
-				.equals(this.nGehalt)))
+		if (!(that.nGehalt == null ? this.nGehalt == null : that.nGehalt.equals(this.nGehalt)))
 			return false;
 		if (!(that.fUestpauschale == null ? this.fUestpauschale == null
 				: that.fUestpauschale.equals(this.fUestpauschale)))
 			return false;
-		if (!(that.nStundensatz == null ? this.nStundensatz == null
-				: that.nStundensatz.equals(this.nStundensatz)))
+		if (!(that.nStundensatz == null ? this.nStundensatz == null : that.nStundensatz.equals(this.nStundensatz)))
 			return false;
 		if (!(that.fVerfuegbarkeit == null ? this.fVerfuegbarkeit == null
 				: that.fVerfuegbarkeit.equals(this.fVerfuegbarkeit)))
 			return false;
-		if (!(that.nKmgeld1 == null ? this.nKmgeld1 == null : that.nKmgeld1
-				.equals(this.nKmgeld1)))
+		if (!(that.nKmgeld1 == null ? this.nKmgeld1 == null : that.nKmgeld1.equals(this.nKmgeld1)))
 			return false;
-		if (!(that.fBiskilometer == null ? this.fBiskilometer == null
-				: that.fBiskilometer.equals(this.fBiskilometer)))
+		if (!(that.fBiskilometer == null ? this.fBiskilometer == null : that.fBiskilometer.equals(this.fBiskilometer)))
 			return false;
-		if (!(that.nKmgeld2 == null ? this.nKmgeld2 == null : that.nKmgeld2
-				.equals(this.nKmgeld2)))
+		if (!(that.nKmgeld2 == null ? this.nKmgeld2 == null : that.nKmgeld2.equals(this.nKmgeld2)))
 			return false;
 		if (!(that.bKksgebbefreit == null ? this.bKksgebbefreit == null
 				: that.bKksgebbefreit.equals(this.bKksgebbefreit)))
@@ -351,8 +383,7 @@ public class PersonalgehaltDto implements Serializable {
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		return true;
 	}

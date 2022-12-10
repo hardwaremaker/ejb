@@ -1,42 +1,12 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.fertigung.fastlanereader.generated;
 
 import com.lp.server.personal.fastlanereader.generated.FLRMaschinenzeitdaten;
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdaten;
 import com.lp.server.reklamation.fastlanereader.generated.FLRFehler;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -62,6 +32,12 @@ public class FLRLosgutschlecht implements Serializable {
     private String c_kommentar;
 
     /** nullable persistent field */
+    private Date t_anlegen;
+
+    /** nullable persistent field */
+    private Date t_zeitpunkt;
+
+    /** nullable persistent field */
     private FLRZeitdaten flrzeitdaten;
 
     /** nullable persistent field */
@@ -73,17 +49,27 @@ public class FLRLosgutschlecht implements Serializable {
     /** nullable persistent field */
     private FLRFehler flrfehler;
 
+    /** nullable persistent field */
+    private FLRPersonal flrpersonal_erfasst;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonal_anlegen;
+
     /** full constructor */
-    public FLRLosgutschlecht(Integer lossollarbeitsplan_i_id, BigDecimal n_gut, BigDecimal n_schlecht, BigDecimal n_inarbeit, String c_kommentar, FLRZeitdaten flrzeitdaten, FLRMaschinenzeitdaten flrmaschinenzeitdaten, com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan flrlossollarbeitsplan, FLRFehler flrfehler) {
+    public FLRLosgutschlecht(Integer lossollarbeitsplan_i_id, BigDecimal n_gut, BigDecimal n_schlecht, BigDecimal n_inarbeit, String c_kommentar, Date t_anlegen, Date t_zeitpunkt, FLRZeitdaten flrzeitdaten, FLRMaschinenzeitdaten flrmaschinenzeitdaten, com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan flrlossollarbeitsplan, FLRFehler flrfehler, FLRPersonal flrpersonal_erfasst, FLRPersonal flrpersonal_anlegen) {
         this.lossollarbeitsplan_i_id = lossollarbeitsplan_i_id;
         this.n_gut = n_gut;
         this.n_schlecht = n_schlecht;
         this.n_inarbeit = n_inarbeit;
         this.c_kommentar = c_kommentar;
+        this.t_anlegen = t_anlegen;
+        this.t_zeitpunkt = t_zeitpunkt;
         this.flrzeitdaten = flrzeitdaten;
         this.flrmaschinenzeitdaten = flrmaschinenzeitdaten;
         this.flrlossollarbeitsplan = flrlossollarbeitsplan;
         this.flrfehler = flrfehler;
+        this.flrpersonal_erfasst = flrpersonal_erfasst;
+        this.flrpersonal_anlegen = flrpersonal_anlegen;
     }
 
     /** default constructor */
@@ -138,6 +124,22 @@ public class FLRLosgutschlecht implements Serializable {
         this.c_kommentar = c_kommentar;
     }
 
+    public Date getT_anlegen() {
+        return this.t_anlegen;
+    }
+
+    public void setT_anlegen(Date t_anlegen) {
+        this.t_anlegen = t_anlegen;
+    }
+
+    public Date getT_zeitpunkt() {
+        return this.t_zeitpunkt;
+    }
+
+    public void setT_zeitpunkt(Date t_zeitpunkt) {
+        this.t_zeitpunkt = t_zeitpunkt;
+    }
+
     public FLRZeitdaten getFlrzeitdaten() {
         return this.flrzeitdaten;
     }
@@ -168,6 +170,22 @@ public class FLRLosgutschlecht implements Serializable {
 
     public void setFlrfehler(FLRFehler flrfehler) {
         this.flrfehler = flrfehler;
+    }
+
+    public FLRPersonal getFlrpersonal_erfasst() {
+        return this.flrpersonal_erfasst;
+    }
+
+    public void setFlrpersonal_erfasst(FLRPersonal flrpersonal_erfasst) {
+        this.flrpersonal_erfasst = flrpersonal_erfasst;
+    }
+
+    public FLRPersonal getFlrpersonal_anlegen() {
+        return this.flrpersonal_anlegen;
+    }
+
+    public void setFlrpersonal_anlegen(FLRPersonal flrpersonal_anlegen) {
+        this.flrpersonal_anlegen = flrpersonal_anlegen;
     }
 
     public String toString() {

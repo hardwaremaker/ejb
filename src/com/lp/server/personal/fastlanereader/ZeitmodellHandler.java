@@ -59,8 +59,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Zeitmodelle implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Zeitmodelle implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur GmbH (c) 2004
@@ -139,11 +139,18 @@ public class ZeitmodellHandler extends UseCaseHandler {
 					}
 				}
 				rows[row][col++] = spr;
+
+				if (zeitmodell.getFlrschicht() != null) {
+					rows[row][col++] = zeitmodell.getFlrschicht().getC_bez();
+				} else {
+					rows[row][col++] = null;
+
+				}
+
 				if (zeitmodell.getZeitmodelltagset() == null
 						|| zeitmodell.getZeitmodelltagset().size() == 0) {
 					rows[row][col++] = Color.RED;
 				}
-
 				row++;
 				col = 0;
 			}
@@ -200,15 +207,14 @@ public class ZeitmodellHandler extends UseCaseHandler {
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
-		
+
 		StringBuffer where = new StringBuffer("");
 
 		if (getQuery() != null && getQuery().getFilterBlock() != null
 				&& getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -241,57 +247,58 @@ public class ZeitmodellHandler extends UseCaseHandler {
 		return where.toString();
 	}
 
-//	/**
-//	 * builds the HQL (Hibernate Query Language) order by clause using the sort
-//	 * criterias contained in the current query.
-//	 * 
-//	 * @return the HQL order by clause.
-//	 */
-//	private String buildOrderByClause() {
-//		StringBuffer orderBy = new StringBuffer("");
-//		if (this.getQuery() != null) {
-//			SortierKriterium[] kriterien = this.getQuery().getSortKrit();
-//			boolean sortAdded = false;
-//			if (kriterien != null && kriterien.length > 0) {
-//				for (int i = 0; i < kriterien.length; i++) {
-//					if (kriterien[i].isKrit) {
-//						if (sortAdded) {
-//							orderBy.append(", ");
-//						}
-//						sortAdded = true;
-//						orderBy.append("zeitmodell." + kriterien[i].kritName);
-//						orderBy.append(" ");
-//						orderBy.append(kriterien[i].value);
-//					}
-//				}
-//			} else {
-//				// no sort criteria found, add default sort
-//				if (sortAdded) {
-//					orderBy.append(", ");
-//				}
-//				orderBy.append("zeitmodell.c_nr ASC ");
-//
-//				sortAdded = true;
-//			}
-//			if (orderBy.indexOf("zeitmodell.c_nr") < 0) {
-//				// unique sort required because otherwise rowNumber of
-//				// selectedId
-//				// within sort() method may be different from the position of
-//				// selectedId
-//				// as returned in the page of getPageAt().
-//				if (sortAdded) {
-//					orderBy.append(", ");
-//				}
-//				orderBy.append(" zeitmodell.c_nr ");
-//				sortAdded = true;
-//			}
-//			if (sortAdded) {
-//				orderBy.insert(0, " ORDER BY ");
-//			}
-//		}
-//		return orderBy.toString();
-//	}
-	
+	// /**
+	// * builds the HQL (Hibernate Query Language) order by clause using the
+	// sort
+	// * criterias contained in the current query.
+	// *
+	// * @return the HQL order by clause.
+	// */
+	// private String buildOrderByClause() {
+	// StringBuffer orderBy = new StringBuffer("");
+	// if (this.getQuery() != null) {
+	// SortierKriterium[] kriterien = this.getQuery().getSortKrit();
+	// boolean sortAdded = false;
+	// if (kriterien != null && kriterien.length > 0) {
+	// for (int i = 0; i < kriterien.length; i++) {
+	// if (kriterien[i].isKrit) {
+	// if (sortAdded) {
+	// orderBy.append(", ");
+	// }
+	// sortAdded = true;
+	// orderBy.append("zeitmodell." + kriterien[i].kritName);
+	// orderBy.append(" ");
+	// orderBy.append(kriterien[i].value);
+	// }
+	// }
+	// } else {
+	// // no sort criteria found, add default sort
+	// if (sortAdded) {
+	// orderBy.append(", ");
+	// }
+	// orderBy.append("zeitmodell.c_nr ASC ");
+	//
+	// sortAdded = true;
+	// }
+	// if (orderBy.indexOf("zeitmodell.c_nr") < 0) {
+	// // unique sort required because otherwise rowNumber of
+	// // selectedId
+	// // within sort() method may be different from the position of
+	// // selectedId
+	// // as returned in the page of getPageAt().
+	// if (sortAdded) {
+	// orderBy.append(", ");
+	// }
+	// orderBy.append(" zeitmodell.c_nr ");
+	// sortAdded = true;
+	// }
+	// if (sortAdded) {
+	// orderBy.insert(0, " ORDER BY ");
+	// }
+	// }
+	// return orderBy.toString();
+	// }
+
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
@@ -349,7 +356,7 @@ public class ZeitmodellHandler extends UseCaseHandler {
 	 */
 	private String getFromClause() {
 		return "FROM FLRZeitmodell AS zeitmodell"
-				+ " LEFT JOIN zeitmodell.zeitmodellsprset AS zeitmodellsprset";
+				+ " LEFT JOIN zeitmodell.zeitmodellsprset AS zeitmodellsprset LEFT JOIN zeitmodell.flrschicht AS schicht";
 	}
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -409,22 +416,28 @@ public class ZeitmodellHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, Color.class }, new String[] {
-					"Id", getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) }
-
-			, new int[] {
-					-1, // diese Spalte wird ausgeblendet
-					QueryParameters.FLR_BREITE_L,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST }
-
-			,
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class,
+							String.class, Color.class },
 					new String[] {
+							"Id",
+							getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
+									locUI),
+							getTextRespectUISpr("pers.schicht", mandantCNr,
+									locUI) }
+
+					, new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_L,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST }
+
+					, new String[] {
 							"i_id",
 							FLR_ZEITMODELL_C_NR,
 							ZeiterfassungFac.FLR_ZEITMODELL_ZEITMODELLSPRSET
-									+ ".c_bez" }));
+									+ ".c_bez", "schicht.c_bez" }));
 
 		}
 		return super.getTableInfo();

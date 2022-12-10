@@ -41,7 +41,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "LostechnikerfindByLosIIdPersonalIId", query = "SELECT OBJECT(o) FROM Lostechniker o WHERE o.losIId=?1 AND o.personalIId=?2") })
+@NamedQueries( { @NamedQuery(name = "LostechnikerfindByLosIIdPersonalIId", query = "SELECT OBJECT(o) FROM Lostechniker o WHERE o.losIId=?1 AND o.personalIId=?2"),
+	@NamedQuery(name = "LostechnikerfindByLosIId", query = "SELECT OBJECT(o) FROM Lostechniker o WHERE o.losIId=?1")})
 @Entity
 @Table(name = "FERT_LOSTECHNIKER")
 public class Lostechniker implements Serializable {

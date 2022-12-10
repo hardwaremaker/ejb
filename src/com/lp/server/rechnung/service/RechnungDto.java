@@ -37,15 +37,16 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
+import com.lp.server.angebot.service.AngebotDto;
+import com.lp.server.angebot.service.AngebotServiceFac;
+import com.lp.server.finanz.service.ReversechargeartDto;
+import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.SystemFac;
 import com.lp.service.BelegVerkaufDto;
 import com.lp.util.Helper;
 
 public class RechnungDto extends BelegVerkaufDto implements Serializable {
-
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 5934692223933611L;
 
 	private Integer iId;
 	private String mandantCNr;
@@ -72,7 +73,7 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 	private Short bMindermengenzuschlag;
 	private BigDecimal nProvision;
 	private String cProvisiontext;
-	
+
 	private Timestamp tGedruckt;
 	private Timestamp tFibuuebernahme;
 	private String cKopftextuebersteuert;
@@ -92,9 +93,22 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 	private Integer kundeIIdStatistikadresse;
 	private Integer personalIIdVertreter;
 	private Integer gutschriftsgrundIId;
-	
-	
+
 	private Integer projektIId;
+	private ReversechargeartDto rcArtDto;
+	private Integer rcartId;
+	private Timestamp tElektronisch;
+	private Integer personalIIdElektronisch;
+
+	private String zahlungsartCNr;
+
+	public String getZahlungsartCNr() {
+		return zahlungsartCNr;
+	}
+
+	public void setZahlungsartCNr(String zahlungsartCNr) {
+		this.zahlungsartCNr = zahlungsartCNr;
+	}
 
 	public Integer getProjektIId() {
 		return projektIId;
@@ -103,9 +117,10 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
 	}
-	
-	private Timestamp  tZollpapier;
+
+	private Timestamp tZollpapier;
 	private Integer personalIIdZollpapier;
+
 	public Timestamp getTZollpapier() {
 		return tZollpapier;
 	}
@@ -122,6 +137,16 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		this.personalIIdZollpapier = personalIIdZollpapier;
 	}
 
+	private String cMahnungsanmerkung;
+
+	public String getCMahnungsanmerkung() {
+		return cMahnungsanmerkung;
+	}
+
+	public void setCMahnungsanmerkung(String cMahnungsanmerkung) {
+		this.cMahnungsanmerkung = cMahnungsanmerkung;
+	}
+
 	public String getCZollpapier() {
 		return cZollpapier;
 	}
@@ -129,11 +154,10 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 	public void setCZollpapier(String cZollpapier) {
 		this.cZollpapier = cZollpapier;
 	}
-	private String   cZollpapier;
-	
-	
-	boolean bMwstSatzWurdeVonNullGeaendertUndEsGibtHandeingaben =false;
-	
+
+	private String cZollpapier;
+
+	boolean bMwstSatzWurdeVonNullGeaendertUndEsGibtHandeingaben = false;
 
 	public boolean isBMwstSatzWurdeVonNullGeaendertUndEsGibtHandeingaben() {
 		return bMwstSatzWurdeVonNullGeaendertUndEsGibtHandeingaben;
@@ -276,10 +300,8 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 	}
 
 	@Override
-	public void setFWechselkursmandantwaehrungzubelegwaehrung(
-			Double fWechselkursmandantwaehrungzubelegwaehrung) {
-		BigDecimal bd = new BigDecimal(
-				fWechselkursmandantwaehrungzubelegwaehrung);
+	public void setFWechselkursmandantwaehrungzubelegwaehrung(Double fWechselkursmandantwaehrungzubelegwaehrung) {
+		BigDecimal bd = new BigDecimal(fWechselkursmandantwaehrungzubelegwaehrung);
 		bd = Helper.rundeKaufmaennisch(bd, 4);
 		setNKurs(bd);
 	}
@@ -381,8 +403,6 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		this.cProvisiontext = cProvisiontext;
 	}
 
-	
-
 	public Timestamp getTGedruckt() {
 		return tGedruckt;
 	}
@@ -447,7 +467,6 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		this.tMahnsperrebis = tMahnsperrebis;
 	}
 
-
 	public Timestamp getTAnlegen() {
 		return tAnlegen;
 	}
@@ -504,12 +523,13 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		this.cBestellnummer = cBestellnummer;
 	}
 
-	public Short getBReversecharge() {
-		return bReversecharge;
-	}
-	
+	// public Short getBReversecharge() {
+	// return bReversecharge;
+	// }
+	//
 	public boolean isReverseCharge() {
-		return Helper.short2boolean(getBReversecharge());
+		// return Helper.short2boolean(getBReversecharge());
+		return bReversecharge == null ? false : bReversecharge > 0;
 	}
 
 	public Integer getKundeIIdStatistikadresse() {
@@ -541,8 +561,7 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 	}
 
 	private String cLieferartort;
-	
-	
+
 	public String getCLieferartort() {
 		return cLieferartort;
 	}
@@ -550,7 +569,57 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 	public void setCLieferartort(String cLieferartort) {
 		this.cLieferartort = cLieferartort;
 	}
-	
+
+	public AngebotDto cloneAsAngebotDto() {
+		AngebotDto angebotDto = new AngebotDto();
+
+		// iId, rechnungIId, cNr, angebotIId null
+		angebotDto.setMandantCNr(getMandantCNr());
+		angebotDto.setStatusCNr(AngebotServiceFac.ANGEBOTSTATUS_ANGELEGT);
+		angebotDto.setArtCNr(AngebotServiceFac.ANGEBOTART_FREI);
+		angebotDto.setAngeboteinheitCNr(SystemFac.EINHEIT_WOCHE);
+		angebotDto.setILieferzeitinstunden(0);
+		angebotDto.setBelegartCNr(LocaleFac.BELEGART_ANGEBOT);
+
+		angebotDto.setTBelegdatum(new Timestamp(System.currentTimeMillis())); // jetzt
+		// !
+		angebotDto.setKundeIIdAngebotsadresse(kundeIId);
+
+		// nun dann kann der Ansprechpartner uebernommen werden
+		angebotDto.setAnsprechpartnerIIdKunde(ansprechpartnerIId);
+
+		angebotDto.setPersonalIIdVertreter(personalIIdVertreter);
+
+		angebotDto.setFAuftragswahrscheinlichkeit(0D);
+		angebotDto.setIGarantie(0);
+
+		angebotDto.setCBez(getCBez());
+		angebotDto.setProjektIId(getProjektIId());
+		// lagerIID am Client setzen
+		angebotDto.setKostenstelleIId(getKostenstelleIId());
+
+		// rueckgabetermin null
+		angebotDto.setFVersteckterAufschlag(getFVersteckterAufschlag());
+		// MB IMS 1532 da der LS keinen Projektrabatt hat, werden fuer den LS
+		// allgemeiner Rabatt und Projektrabatt zusammengefasst
+		Double dRabattsatz = new Double(100.0 - ((1.0 - (getFAllgemeinerRabattsatz().doubleValue() / 100.0))
+				* (1.0 - (getFProjektierungsrabattsatz().doubleValue() / 100.0)) * 100.0));
+		// lieferscheinDto.setFAllgemeinerRabatt(getFAllgemeinerRabattsatz());
+		angebotDto.setFAllgemeinerRabattsatz(dRabattsatz);
+		// nGesamtwertInLieferscheinwaehrung, nGestehungswertInMandantenwaehrung
+		// null
+
+		angebotDto.setLieferartIId(getLieferartIId());
+		angebotDto.setZahlungszielIId(getZahlungszielIId());
+		angebotDto.setSpediteurIId(getSpediteurIId());
+
+		angebotDto.setWaehrungCNr(getWaehrungCNr());
+		// wechselkurs, kopftext, fusstext am Client bestimmen
+		// der Rest null
+
+		return angebotDto;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -559,8 +628,7 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		RechnungDto that = (RechnungDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
 		if (!(that.iGeschaeftsjahr == null ? this.iGeschaeftsjahr == null
 				: that.iGeschaeftsjahr.equals(this.iGeschaeftsjahr)))
@@ -570,26 +638,21 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		if (!(that.rechnungIIdZurechnung == null ? this.rechnungIIdZurechnung == null
 				: that.rechnungIIdZurechnung.equals(this.rechnungIIdZurechnung)))
 			return false;
-		if (!(that.kundeIId == null ? this.kundeIId == null : that.kundeIId
-				.equals(this.kundeIId)))
+		if (!(that.kundeIId == null ? this.kundeIId == null : that.kundeIId.equals(this.kundeIId)))
 			return false;
 		if (!(that.ansprechpartnerIId == null ? this.ansprechpartnerIId == null
 				: that.ansprechpartnerIId.equals(this.ansprechpartnerIId)))
 			return false;
-		if (!(that.auftragIId == null ? this.auftragIId == null
-				: that.auftragIId.equals(this.auftragIId)))
+		if (!(that.auftragIId == null ? this.auftragIId == null : that.auftragIId.equals(this.auftragIId)))
 			return false;
 		if (!(that.lieferscheinIId == null ? this.lieferscheinIId == null
 				: that.lieferscheinIId.equals(this.lieferscheinIId)))
 			return false;
-		if (!(that.lagerIId == null ? this.lagerIId == null : that.lagerIId
-				.equals(this.lagerIId)))
+		if (!(that.lagerIId == null ? this.lagerIId == null : that.lagerIId.equals(this.lagerIId)))
 			return false;
-		if (!(that.tBelegdatum == null ? this.tBelegdatum == null
-				: that.tBelegdatum.equals(this.tBelegdatum)))
+		if (!(that.tBelegdatum == null ? this.tBelegdatum == null : that.tBelegdatum.equals(this.tBelegdatum)))
 			return false;
-		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr
-				.equals(this.statusCNr)))
+		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr.equals(this.statusCNr)))
 			return false;
 		if (!(that.rechnungartCNr == null ? this.rechnungartCNr == null
 				: that.rechnungartCNr.equals(this.rechnungartCNr)))
@@ -597,42 +660,33 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		if (!(that.kostenstelleIId == null ? this.kostenstelleIId == null
 				: that.kostenstelleIId.equals(this.kostenstelleIId)))
 			return false;
-		if (!(that.waehrungCNr == null ? this.waehrungCNr == null
-				: that.waehrungCNr.equals(this.waehrungCNr)))
+		if (!(that.waehrungCNr == null ? this.waehrungCNr == null : that.waehrungCNr.equals(this.waehrungCNr)))
 			return false;
-		if (!(that.nKurs == null ? this.nKurs == null : that.nKurs
-				.equals(this.nKurs)))
+		if (!(that.nKurs == null ? this.nKurs == null : that.nKurs.equals(this.nKurs)))
 			return false;
-		if (!(that.mwstsatzIId == null ? this.mwstsatzIId == null
-				: that.mwstsatzIId.equals(this.mwstsatzIId)))
+		if (!(that.mwstsatzIId == null ? this.mwstsatzIId == null : that.mwstsatzIId.equals(this.mwstsatzIId)))
 			return false;
 		if (!(that.bMwstallepositionen == null ? this.bMwstallepositionen == null
 				: that.bMwstallepositionen.equals(this.bMwstallepositionen)))
 			return false;
-		if (!(that.nWert == null ? this.nWert == null : that.nWert
-				.equals(this.nWert)))
+		if (!(that.nWert == null ? this.nWert == null : that.nWert.equals(this.nWert)))
 			return false;
-		if (!(that.nWertfw == null ? this.nWertfw == null : that.nWertfw
-				.equals(this.nWertfw)))
+		if (!(that.nWertfw == null ? this.nWertfw == null : that.nWertfw.equals(this.nWertfw)))
 			return false;
-		if (!(that.nWertust == null ? this.nWertust == null : that.nWertust
-				.equals(this.nWertust)))
+		if (!(that.nWertust == null ? this.nWertust == null : that.nWertust.equals(this.nWertust)))
 			return false;
-		if (!(that.nWertustfw == null ? this.nWertustfw == null
-				: that.nWertustfw.equals(this.nWertustfw)))
+		if (!(that.nWertustfw == null ? this.nWertustfw == null : that.nWertustfw.equals(this.nWertustfw)))
 			return false;
 		if (!(that.fVersteckterAufschlag == null ? this.fVersteckterAufschlag == null
 				: that.fVersteckterAufschlag.equals(this.fVersteckterAufschlag)))
 			return false;
 		if (!(that.fAllgemeinerRabattsatz == null ? this.fAllgemeinerRabattsatz == null
-				: that.fAllgemeinerRabattsatz
-						.equals(this.fAllgemeinerRabattsatz)))
+				: that.fAllgemeinerRabattsatz.equals(this.fAllgemeinerRabattsatz)))
 			return false;
 		if (!(that.bMindermengenzuschlag == null ? this.bMindermengenzuschlag == null
 				: that.bMindermengenzuschlag.equals(this.bMindermengenzuschlag)))
 			return false;
-		if (!(that.nProvision == null ? this.nProvision == null
-				: that.nProvision.equals(this.nProvision)))
+		if (!(that.nProvision == null ? this.nProvision == null : that.nProvision.equals(this.nProvision)))
 			return false;
 		if (!(that.cProvisiontext == null ? this.cProvisiontext == null
 				: that.cProvisiontext.equals(this.cProvisiontext)))
@@ -646,8 +700,7 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		if (!(that.getSpediteurIId() == null ? this.getSpediteurIId() == null
 				: that.getSpediteurIId().equals(this.getSpediteurIId())))
 			return false;
-		if (!(that.tGedruckt == null ? this.tGedruckt == null : that.tGedruckt
-				.equals(this.tGedruckt)))
+		if (!(that.tGedruckt == null ? this.tGedruckt == null : that.tGedruckt.equals(this.tGedruckt)))
 			return false;
 		if (!(that.tFibuuebernahme == null ? this.tFibuuebernahme == null
 				: that.tFibuuebernahme.equals(this.tFibuuebernahme)))
@@ -658,26 +711,22 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		if (!(that.cFusstextuebersteuert == null ? this.cFusstextuebersteuert == null
 				: that.cFusstextuebersteuert.equals(this.cFusstextuebersteuert)))
 			return false;
-		if (!(that.tStorniert == null ? this.tStorniert == null
-				: that.tStorniert.equals(this.tStorniert)))
+		if (!(that.tStorniert == null ? this.tStorniert == null : that.tStorniert.equals(this.tStorniert)))
 			return false;
 		if (!(that.personalIIdStorniert == null ? this.personalIIdStorniert == null
 				: that.personalIIdStorniert.equals(this.personalIIdStorniert)))
 			return false;
-		if (!(that.tBezahltdatum == null ? this.tBezahltdatum == null
-				: that.tBezahltdatum.equals(this.tBezahltdatum)))
+		if (!(that.tBezahltdatum == null ? this.tBezahltdatum == null : that.tBezahltdatum.equals(this.tBezahltdatum)))
 			return false;
 		if (!(that.tMahnsperrebis == null ? this.tMahnsperrebis == null
 				: that.tMahnsperrebis.equals(this.tMahnsperrebis)))
 			return false;
-	if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen)))
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen)))
 			return false;
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
@@ -686,8 +735,7 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 				: that.tManuellerledigt.equals(this.tManuellerledigt)))
 			return false;
 		if (!(that.personalIIdManuellerledigt == null ? this.personalIIdManuellerledigt == null
-				: that.personalIIdManuellerledigt
-						.equals(this.personalIIdManuellerledigt)))
+				: that.personalIIdManuellerledigt.equals(this.personalIIdManuellerledigt)))
 			return false;
 		if (!(that.cBestellnummer == null ? this.cBestellnummer == null
 				: that.cBestellnummer.equals(this.cBestellnummer)))
@@ -696,8 +744,7 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 				: that.bReversecharge.equals(this.bReversecharge)))
 			return false;
 		if (!(that.kundeIIdStatistikadresse == null ? this.kundeIIdStatistikadresse == null
-				: that.kundeIIdStatistikadresse
-						.equals(this.kundeIIdStatistikadresse)))
+				: that.kundeIIdStatistikadresse.equals(this.kundeIIdStatistikadresse)))
 			return false;
 		if (!(that.personalIIdVertreter == null ? this.personalIIdVertreter == null
 				: that.personalIIdVertreter.equals(this.personalIIdVertreter)))
@@ -759,6 +806,7 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		result = 37 * result + this.kundeIIdStatistikadresse.hashCode();
 		result = 37 * result + this.personalIIdVertreter.hashCode();
 		result = 37 * result + this.gutschriftsgrundIId.hashCode();
+		result = 37 * result + this.rcartId.hashCode();
 		return result;
 	}
 
@@ -769,11 +817,9 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		returnStringBuffer.append("mandantCNr:").append(mandantCNr);
 		returnStringBuffer.append("iGeschaeftsjahr:").append(iGeschaeftsjahr);
 		returnStringBuffer.append("cNr:").append(cNr);
-		returnStringBuffer.append("rechnungIIdZurechnung:").append(
-				rechnungIIdZurechnung);
+		returnStringBuffer.append("rechnungIIdZurechnung:").append(rechnungIIdZurechnung);
 		returnStringBuffer.append("kundeIId:").append(kundeIId);
-		returnStringBuffer.append("ansprechpartnerIId:").append(
-				ansprechpartnerIId);
+		returnStringBuffer.append("ansprechpartnerIId:").append(ansprechpartnerIId);
 		returnStringBuffer.append("auftragIId:").append(auftragIId);
 		returnStringBuffer.append("lieferscheinIId:").append(lieferscheinIId);
 		returnStringBuffer.append("lagerIId:").append(lagerIId);
@@ -784,18 +830,14 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		returnStringBuffer.append("waehrungCNr:").append(waehrungCNr);
 		returnStringBuffer.append("nKurs:").append(nKurs);
 		returnStringBuffer.append("mwstsatzIId:").append(mwstsatzIId);
-		returnStringBuffer.append("bMwstallepositionen:").append(
-				bMwstallepositionen);
+		returnStringBuffer.append("bMwstallepositionen:").append(bMwstallepositionen);
 		returnStringBuffer.append("nWert:").append(nWert);
 		returnStringBuffer.append("nWertfw:").append(nWertfw);
 		returnStringBuffer.append("nWertust:").append(nWertust);
 		returnStringBuffer.append("nWertustfw:").append(nWertustfw);
-		returnStringBuffer.append("fVersteckteraufschlag:").append(
-				fVersteckterAufschlag);
-		returnStringBuffer.append("fAllgemeinerrabattsatz:").append(
-				fAllgemeinerRabattsatz);
-		returnStringBuffer.append("bMindermengenzuschlag:").append(
-				bMindermengenzuschlag);
+		returnStringBuffer.append("fVersteckteraufschlag:").append(fVersteckterAufschlag);
+		returnStringBuffer.append("fAllgemeinerrabattsatz:").append(fAllgemeinerRabattsatz);
+		returnStringBuffer.append("bMindermengenzuschlag:").append(bMindermengenzuschlag);
 		returnStringBuffer.append("nProvision:").append(nProvision);
 		returnStringBuffer.append("cProvisiontext:").append(cProvisiontext);
 		returnStringBuffer.append("zahlungszielIId:").append(getZahlungszielIId());
@@ -803,37 +845,76 @@ public class RechnungDto extends BelegVerkaufDto implements Serializable {
 		returnStringBuffer.append("spediteurIId:").append(getSpediteurIId());
 		returnStringBuffer.append("tGedruckt:").append(tGedruckt);
 		returnStringBuffer.append("tFibuuebernahme:").append(tFibuuebernahme);
-		returnStringBuffer.append("cKopftextuebersteuert:").append(
-				cKopftextuebersteuert);
-		returnStringBuffer.append("cFusstextuebersteuert:").append(
-				cFusstextuebersteuert);
+		returnStringBuffer.append("cKopftextuebersteuert:").append(cKopftextuebersteuert);
+		returnStringBuffer.append("cFusstextuebersteuert:").append(cFusstextuebersteuert);
 		returnStringBuffer.append("tStorniert:").append(tStorniert);
-		returnStringBuffer.append("personalIIdStorniert:").append(
-				personalIIdStorniert);
+		returnStringBuffer.append("personalIIdStorniert:").append(personalIIdStorniert);
 		returnStringBuffer.append("tBezahltdatum:").append(tBezahltdatum);
 		returnStringBuffer.append("tMahnsperrebis:").append(tMahnsperrebis);
 		returnStringBuffer.append("tAnlegen:").append(tAnlegen);
-		returnStringBuffer.append("personalIIdAnlegen:").append(
-				personalIIdAnlegen);
+		returnStringBuffer.append("personalIIdAnlegen:").append(personalIIdAnlegen);
 		returnStringBuffer.append("tAendern:").append(tAendern);
-		returnStringBuffer.append("personalIIdAendern:").append(
-				personalIIdAendern);
+		returnStringBuffer.append("personalIIdAendern:").append(personalIIdAendern);
 		returnStringBuffer.append("tManuellerledigt:").append(tManuellerledigt);
-		returnStringBuffer.append("personalIIdManuellerledigt:").append(
-				personalIIdManuellerledigt);
+		returnStringBuffer.append("personalIIdManuellerledigt:").append(personalIIdManuellerledigt);
 		returnStringBuffer.append("cBestellnummer:").append(cBestellnummer);
 		returnStringBuffer.append("bReversecharge:").append(bReversecharge);
-		returnStringBuffer.append("kundeIIdStatistikadresse:").append(
-				kundeIIdStatistikadresse);
-		returnStringBuffer.append("personalIIdVertreter:").append(
-				personalIIdVertreter);
-		returnStringBuffer.append("gutschriftsgrundIId:").append(
-				gutschriftsgrundIId);
+		returnStringBuffer.append("kundeIIdStatistikadresse:").append(kundeIIdStatistikadresse);
+		returnStringBuffer.append("personalIIdVertreter:").append(personalIIdVertreter);
+		returnStringBuffer.append("gutschriftsgrundIId:").append(gutschriftsgrundIId);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}
-	
+
 	public boolean isAnzahlungsRechnung() {
-		return RechnungFac.RECHNUNGART_ANZAHLUNG.equals(getRechnungartCNr()) ;
+		return RechnungFac.RECHNUNGART_ANZAHLUNG.equals(getRechnungartCNr());
+	}
+
+	public boolean isSchlussRechnung() {
+		return RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG.equals(getRechnungartCNr());
+	}
+
+	public boolean isStorniert() {
+		return RechnungFac.STATUS_STORNIERT.equals(getStatusCNr());
+	}
+
+	public boolean isAngelegt() {
+		return RechnungFac.STATUS_ANGELEGT.equals(getStatusCNr());
+	}
+	
+	public boolean isBezahlt() {
+		return RechnungFac.STATUS_BEZAHLT.equals(getStatusCNr());
+	}
+
+	public ReversechargeartDto getRcArtDto() {
+		return rcArtDto;
+	}
+
+	public void setRcArt(ReversechargeartDto rcArtDto) {
+		this.rcArtDto = rcArtDto;
+	}
+
+	public Integer getReversechargeartId() {
+		return rcartId;
+	}
+
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.rcartId = reversechargeartId;
+	}
+
+	public Timestamp getTElektronisch() {
+		return tElektronisch;
+	}
+
+	public void setTElektronisch(Timestamp tElektronisch) {
+		this.tElektronisch = tElektronisch;
+	}
+
+	public Integer getPersonalIIdElektronisch() {
+		return personalIIdElektronisch;
+	}
+
+	public void setPersonalIIdElektronisch(Integer personalIIdElektronisch) {
+		this.personalIIdElektronisch = personalIIdElektronisch;
 	}
 }

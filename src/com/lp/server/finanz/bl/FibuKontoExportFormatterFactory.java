@@ -33,6 +33,7 @@
 package com.lp.server.finanz.bl;
 
 import com.lp.server.finanz.service.FibuExportFac;
+import com.lp.server.finanz.service.FinanzServiceFac;
 import com.lp.util.EJBExceptionLP;
 
 /**
@@ -62,17 +63,35 @@ abstract class FibuKontoExportFormatterFactory {
 			return new FibuKontoExportFormatterRZL();
 		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_BMD)) {
 			return new FibuKontoExportFormatterBMD();
+		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_BMD_NTCS)) {
+			return new FibuKontoExportFormatterBMD();
 		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_ABACUS)) {
 			return new FibuKontoExportFormatterAbacus();
 		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_SCHLEUPEN)) {
 			return new FibuKontoExportFormatterSchleupen();
 		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_DATEV)) {
 			return new FibuKontoExportFormatterDatev();
+		} else if (sFormat.equalsIgnoreCase(FibuExportFac.ZIEL_DATEV_EXTF)) {
+			return new FibuKontoExportFormatterDatev();
 		} else {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
-					new Exception(
-							"Format: "
-									+ sFormat));
+					new Exception("Format: " + sFormat));
 		}
+	}
+	
+	public static FibuKontoExportFormatter getFibuKontoExportFormatter(String sFormat, String kontotypCnr) {
+		if (FibuExportFac.ZIEL_RZL.equals(sFormat)
+				&& FinanzServiceFac.KONTOTYP_SACHKONTO.equals(kontotypCnr)) {
+			return new FibuSachkontoExportFormatterRZL();
+		}
+		
+		if ((FibuExportFac.ZIEL_DATEV.equalsIgnoreCase(sFormat)
+					|| FibuExportFac.ZIEL_DATEV_EXTF.equalsIgnoreCase(sFormat))
+				&& FinanzServiceFac.KONTOTYP_SACHKONTO.equals(kontotypCnr)) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
+					new Exception("Format: " + sFormat + ", Kontotyp: " + kontotypCnr));
+		}
+		
+		return getFibuKontoExportFormatter(sFormat);
 	}
 }

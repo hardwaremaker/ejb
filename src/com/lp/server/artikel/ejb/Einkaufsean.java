@@ -43,8 +43,8 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 @NamedQueries( {
-		@NamedQuery(name = "EinkaufseanfindByArtikelIIdNMenge", query = "SELECT OBJECT(c) FROM Einkaufsean c WHERE c.artikelIId = ?1 AND c.nMenge = ?2"),
-		@NamedQuery(name = "EinkaufseanfindByCEan", query = "SELECT OBJECT(c) FROM Einkaufsean c WHERE c.cEan = ?1")
+		@NamedQuery(name = "EinkaufseanfindByCEan", query = "SELECT OBJECT(c) FROM Einkaufsean c WHERE c.cEan = ?1"),
+		@NamedQuery(name = EinkaufseanQuery.ByArtikelIId, query = "SELECT OBJECT(c) FROM Einkaufsean c WHERE c.artikelIId = :artikelIId")
  })
 @Entity
 @Table(name = "WW_EINKAUFSEAN")

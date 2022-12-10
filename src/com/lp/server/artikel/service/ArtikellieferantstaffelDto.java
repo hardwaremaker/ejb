@@ -36,6 +36,8 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
+
 import com.lp.util.Helper;
 
 public class ArtikellieferantstaffelDto implements Serializable {
@@ -47,6 +49,16 @@ public class ArtikellieferantstaffelDto implements Serializable {
 		bRabattbehalten = rabattbehalten;
 	}
 
+	private Integer anfragepositionlieferdatenIId;
+
+	public Integer getAnfragepositionlieferdatenIId() {
+		return anfragepositionlieferdatenIId;
+	}
+
+	public void setAnfragepositionlieferdatenIId(Integer anfragepositionIId) {
+		this.anfragepositionlieferdatenIId = anfragepositionIId;
+	}
+	
 	/**
 	 * 
 	 */
@@ -61,8 +73,19 @@ public class ArtikellieferantstaffelDto implements Serializable {
 	private Short bRabattbehalten;
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
+
+	private String cAngebotnummer;
+
+	public String getCAngebotnummer() {
+		return cAngebotnummer;
+	}
+
+	public void setCAngebotnummer(String angebotnummer) {
+		cAngebotnummer = angebotnummer;
+	}
+
 	private Integer iWiederbeschaffungszeit;
-	
+
 	public void setIWiederbeschaffungszeit(Integer iWiederbeschaffungszeit) {
 		this.iWiederbeschaffungszeit = iWiederbeschaffungszeit;
 	}
@@ -70,6 +93,7 @@ public class ArtikellieferantstaffelDto implements Serializable {
 	public Integer getIWiederbeschaffungszeit() {
 		return iWiederbeschaffungszeit;
 	}
+
 	public Integer getPersonalIIdAendern() {
 		return personalIIdAendern;
 	}
@@ -142,6 +166,36 @@ public class ArtikellieferantstaffelDto implements Serializable {
 		this.tPreisgueltigbis = Helper.cutTimestamp(tPreisgueltigbis);
 	}
 
+	private String cBezbeilieferant;
+
+	public String getCBezbeilieferant() {
+		return this.cBezbeilieferant;
+	}
+
+	public void setCBezbeilieferant(String cBezbeilieferant) {
+		this.cBezbeilieferant = cBezbeilieferant;
+	}
+
+	private String cArtikelnrlieferant;
+
+	public String getCArtikelnrlieferant() {
+		return this.cArtikelnrlieferant;
+	}
+
+	public void setCArtikelnrlieferant(String cArtikelnrlieferant) {
+		this.cArtikelnrlieferant = cArtikelnrlieferant;
+	}
+
+	private String einheitCNrVpe;
+
+	public String getEinheitCNrVpe() {
+		return einheitCNrVpe;
+	}
+
+	public void setEinheitCNrVpe(String einheitCNrVpe) {
+		this.einheitCNrVpe = einheitCNrVpe;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -153,14 +207,11 @@ public class ArtikellieferantstaffelDto implements Serializable {
 		if (!(that.artikellieferantIId == null ? this.artikellieferantIId == null
 				: that.artikellieferantIId.equals(this.artikellieferantIId)))
 			return false;
-		if (!(that.nMenge == null ? this.nMenge == null : that.nMenge
-				.equals(this.nMenge)))
+		if (!(that.nMenge == null ? this.nMenge == null : that.nMenge.equals(this.nMenge)))
 			return false;
-		if (!(that.fRabatt == null ? this.fRabatt == null : that.fRabatt
-				.equals(this.fRabatt)))
+		if (!(that.fRabatt == null ? this.fRabatt == null : that.fRabatt.equals(this.fRabatt)))
 			return false;
-		if (!(that.nNettopreis == null ? this.nNettopreis == null
-				: that.nNettopreis.equals(this.nNettopreis)))
+		if (!(that.nNettopreis == null ? this.nNettopreis == null : that.nNettopreis.equals(this.nNettopreis)))
 			return false;
 		if (!(that.tPreisgueltigab == null ? this.tPreisgueltigab == null
 				: that.tPreisgueltigab.equals(this.tPreisgueltigab)))

@@ -44,8 +44,10 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 	@NamedQuery(name = "LagerplatzfindAll", query = "SELECT OBJECT (o) FROM Lagerplatz o ORDER BY o.cLagerplatz"),
-	@NamedQuery(name = "LagerplatzfindByLagerIIdCLagerplatz", query = "SELECT OBJECT (o) FROM Lagerplatz o WHERE o.lagerIId=?1 AND o.cLagerplatz=?2"),
-	@NamedQuery(name = "LagerplatzfindAllByPaternosterIId", query = "SELECT OBJECT (o) FROM Lagerplatz o WHERE o.paternosterIId=?1" )})
+	@NamedQuery(name = LagerplatzQuery.ByLagerIIdCLagerplatz, query = "SELECT OBJECT (o) FROM Lagerplatz o WHERE o.lagerIId=?1 AND o.cLagerplatz=?2"),
+	@NamedQuery(name = "LagerplatzfindAllByPaternosterIId", query = "SELECT OBJECT (o) FROM Lagerplatz o WHERE o.paternosterIId=?1" ),
+	@NamedQuery(name = LagerplatzQuery.ByLagerplatzIIds, query = "SELECT OBJECT (o) FROM Lagerplatz o WHERE o.iId IN (:ids)")})
+	
 
 @Entity
 @Table(name = "WW_LAGERPLATZ")

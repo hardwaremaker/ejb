@@ -60,18 +60,54 @@ public class ReiseDto implements Serializable {
 	private Integer fahrzeugIId;
 	private Integer iBelegartid;
 	private String belegartCNr;
-	private Double fFaktor;
-	
-	
-	//NUR INTERN VERWENDET
+
+	// NUR INTERN VERWENDET
 	private BigDecimal nKostenDesAbschnitts;
-	
+
 	public BigDecimal getNKostenDesAbschnitts() {
 		return nKostenDesAbschnitts;
 	}
 
 	public void setNKostenDesAbschnitts(BigDecimal nKostenDesAbschnitts) {
 		this.nKostenDesAbschnitts = nKostenDesAbschnitts;
+	}
+
+	private Integer iMitfahrer;
+
+	public Integer getIMitfahrer() {
+		return iMitfahrer;
+	}
+
+	public void setIMitfahrer(Integer iMitfahrer) {
+		this.iMitfahrer = iMitfahrer;
+	}
+
+	private Integer personalIIdErledigt;
+	private Timestamp tErledigt;
+	private Double fVerrechenbar;
+
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
 	}
 
 	public Integer getFahrzeugIId() {
@@ -98,14 +134,6 @@ public class ReiseDto implements Serializable {
 		this.belegartCNr = belegartCNr;
 	}
 
-	public Double getFFaktor() {
-		return fFaktor;
-	}
-
-	public void setFFaktor(Double fFaktor) {
-		this.fFaktor = fFaktor;
-	}
-	
 	public Integer getIId() {
 		return iId;
 	}
@@ -226,41 +254,30 @@ public class ReiseDto implements Serializable {
 		ReiseDto that = (ReiseDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.personalIId == null ? this.personalIId == null
-				: that.personalIId.equals(this.personalIId)))
+		if (!(that.personalIId == null ? this.personalIId == null : that.personalIId.equals(this.personalIId)))
 			return false;
-		if (!(that.tZeit == null ? this.tZeit == null : that.tZeit
-				.equals(this.tZeit)))
+		if (!(that.tZeit == null ? this.tZeit == null : that.tZeit.equals(this.tZeit)))
 			return false;
-		if (!(that.bBeginn == null ? this.bBeginn == null : that.bBeginn
-				.equals(this.bBeginn)))
+		if (!(that.bBeginn == null ? this.bBeginn == null : that.bBeginn.equals(this.bBeginn)))
 			return false;
-		if (!(that.diaetenIId == null ? this.diaetenIId == null
-				: that.diaetenIId.equals(this.diaetenIId)))
+		if (!(that.diaetenIId == null ? this.diaetenIId == null : that.diaetenIId.equals(this.diaetenIId)))
 			return false;
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId)))
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId)))
 			return false;
 		if (!(that.ansprechpartnerIId == null ? this.ansprechpartnerIId == null
 				: that.ansprechpartnerIId.equals(this.ansprechpartnerIId)))
 			return false;
-		if (!(that.iKmbeginn == null ? this.iKmbeginn == null : that.iKmbeginn
-				.equals(this.iKmbeginn)))
+		if (!(that.iKmbeginn == null ? this.iKmbeginn == null : that.iKmbeginn.equals(this.iKmbeginn)))
 			return false;
-		if (!(that.iKmende == null ? this.iKmende == null : that.iKmende
-				.equals(this.iKmende)))
+		if (!(that.iKmende == null ? this.iKmende == null : that.iKmende.equals(this.iKmende)))
 			return false;
-		if (!(that.nSpesen == null ? this.nSpesen == null : that.nSpesen
-				.equals(this.nSpesen)))
+		if (!(that.nSpesen == null ? this.nSpesen == null : that.nSpesen.equals(this.nSpesen)))
 			return false;
-		if (!(that.cFahrzeug == null ? this.cFahrzeug == null : that.cFahrzeug
-				.equals(this.cFahrzeug)))
+		if (!(that.cFahrzeug == null ? this.cFahrzeug == null : that.cFahrzeug.equals(this.cFahrzeug)))
 			return false;
-		if (!(that.cKommentar == null ? this.cKommentar == null
-				: that.cKommentar.equals(this.cKommentar)))
+		if (!(that.cKommentar == null ? this.cKommentar == null : that.cKommentar.equals(this.cKommentar)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
@@ -296,16 +313,14 @@ public class ReiseDto implements Serializable {
 		returnStringBuffer.append("bBeginn:").append(bBeginn);
 		returnStringBuffer.append("diaetenIId:").append(diaetenIId);
 		returnStringBuffer.append("partnerIId:").append(partnerIId);
-		returnStringBuffer.append("ansprechpartnerIId:").append(
-				ansprechpartnerIId);
+		returnStringBuffer.append("ansprechpartnerIId:").append(ansprechpartnerIId);
 		returnStringBuffer.append("iKmbeginn:").append(iKmbeginn);
 		returnStringBuffer.append("iKmende:").append(iKmende);
 		returnStringBuffer.append("nSpesen:").append(nSpesen);
 		returnStringBuffer.append("cFahrzeug:").append(cFahrzeug);
 		returnStringBuffer.append("cKommentar:").append(cKommentar);
 		returnStringBuffer.append("tAendern:").append(tAendern);
-		returnStringBuffer.append("personalIIdAendern:").append(
-				personalIIdAendern);
+		returnStringBuffer.append("personalIIdAendern:").append(personalIIdAendern);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}

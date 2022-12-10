@@ -53,6 +53,7 @@ public class ErgebnisgruppeDto implements Serializable {
 	private Integer personalIIdAendern;
 	private Short bProzentbasis;
 	private Integer iTyp;
+	private Short bJahresgewinn;
 
 	public Integer getIId() {
 		return iId;
@@ -167,6 +168,14 @@ public class ErgebnisgruppeDto implements Serializable {
 	public void setBBilanzgruppe(Short bBilanzgruppe) {
 		this.bBilanzgruppe = bBilanzgruppe;
 	}
+	
+	public Short getBJahresgewinn() {
+		return bJahresgewinn;
+	}
+	
+	public void setBJahresgewinn(Short bJahresgewinn) {
+		this.bJahresgewinn = bJahresgewinn;
+	}
 
 	public boolean equals(Object obj) {
 		if (this == obj) {
@@ -224,6 +233,14 @@ public class ErgebnisgruppeDto implements Serializable {
 				: that.bProzentbasis.equals(this.bProzentbasis))) {
 			return false;
 		}
+		if (!(that.bBilanzgruppe == null ? this.bBilanzgruppe == null
+				: that.bBilanzgruppe.equals(this.bBilanzgruppe))) {
+			return false;
+		}
+		if (!(that.bJahresgewinn == null ? this.bJahresgewinn == null
+				: that.bJahresgewinn.equals(this.bJahresgewinn))) {
+			return false;
+		}
 		return true;
 	}
 
@@ -241,6 +258,8 @@ public class ErgebnisgruppeDto implements Serializable {
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
 		result = 37 * result + this.bProzentbasis.hashCode();
+		result = 37 * result + this.bBilanzgruppe.hashCode();
+		result = 37 * result + this.bJahresgewinn.hashCode();
 		return result;
 	}
 
@@ -258,6 +277,8 @@ public class ErgebnisgruppeDto implements Serializable {
 		returnString += ", " + tAendern;
 		returnString += ", " + personalIIdAendern;
 		returnString += ", " + bProzentbasis;
+		returnString += ", " + bBilanzgruppe;
+		returnString += ", " + bJahresgewinn;
 		return returnString;
 	}
 }

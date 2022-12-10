@@ -34,6 +34,7 @@ package com.lp.server.auftrag.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
 
@@ -41,7 +42,9 @@ import javax.ejb.Remote;
 
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.IPositionNumber;
+import com.lp.server.util.PositionNumberAdapter;
 import com.lp.service.Artikelset;
+import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -114,7 +117,7 @@ public interface AuftragpositionFac extends IPositionNumber {
 
 	public AuftragpositionDto[] auftragpositionFindByAuftragIIdNMengeNotNull(
 			Integer iIdAuftragI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			throws EJBExceptionLP;
 
 	public AuftragpositionDto[] auftragpositionFindByAuftragOffeneMenge(
 			Integer iIdAuftragI) throws EJBExceptionLP, RemoteException;
@@ -289,8 +292,38 @@ public interface AuftragpositionFac extends IPositionNumber {
 	 * @return true wenn alle Positionen den gleichen Mehrwertsteuersatz haben.
 	 * @throws EJBExceptionLP
 	 */
-	public boolean pruefeAufGleichenMwstSatz(Integer rechnungIId,
+	boolean pruefeAufGleichenMwstSatz(Integer rechnungIId,
 			Integer vonPositionNumber, Integer bisPositionNumber)
 			throws EJBExceptionLP;
+	BigDecimal getGeliefertMenge(Integer auftragspositionIId,
+			java.util.Date dStichtag, TheClientDto theClientDto)
+			throws RemoteException;
+	
+	void updateOffeneMengeAuftragposition(
+			Integer iIdAuftragpositionI, boolean setzeAuftragStatus,
+			TheClientDto theClientDto) throws EJBExceptionLP;
 
+	Integer getPositionNummer(Integer auftragpositionId, PositionNumberAdapter adapter);
+
+	boolean isArtikelsetKopfposition(Integer auftragpositionId, TheClientDto theClientDto);
+
+	Artikelset getArtikelsetFromKopfpositionOffen(Integer auftragpositionKopfId, TheClientDto theClientDto);
+	
+	public void sortiereNachArtikelnummer(Integer auftragIId, TheClientDto theClientDto);
+	
+	public void toggleGesehen(Integer auftragspositionIId, TheClientDto theClientDto);
+	
+	public void toggleHvmauebertragen(Integer auftragspositionIId, TheClientDto theClientDto);
+	public String getAuftragZuAuftragseriennummer(Integer artikelIId, String cSnr, TheClientDto theClientDto);
+	
+	public Integer auftragpositionSplitten(Integer auftragpositionIId, BigDecimal bdMengeNeu,
+			Timestamp dLieferterminNeu, TheClientDto theClientDto);
+	
+	public BelegpositionVerkaufDto befuellePreisfelderAnhandVKPreisfindung(BelegpositionVerkaufDto bvDto,
+			java.sql.Timestamp tBelegdatum, Integer kundeIId, String waehrungCNr, TheClientDto theClientDto);
+	
+	public boolean istRahmenMengeUeberschritten(Integer auftragpositionIId_Abruf, BigDecimal bdMengeNeu,
+			TheClientDto theClientDto);
+	
+	
 }

@@ -1,40 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.fertigung.fastlanereader.generated;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
+import com.lp.server.forecast.fastlanereader.generated.FLRForecastposition;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
@@ -68,6 +38,9 @@ public class FLRLosReport implements Serializable {
 
     /** nullable persistent field */
     private Integer stueckliste_i_id;
+
+    /** nullable persistent field */
+    private Date t_nachtraeglich_geoeffnet;
 
     /** nullable persistent field */
     private Date t_produktionsende;
@@ -112,7 +85,16 @@ public class FLRLosReport implements Serializable {
     private Integer fertigungsgruppe_i_id;
 
     /** nullable persistent field */
+    private Integer forecastposition_i_id;
+
+    /** nullable persistent field */
     private Integer partner_i_id_fertigungsort;
+
+    /** nullable persistent field */
+    private Date t_material_vollstaendig;
+
+    /** nullable persistent field */
+    private FLRForecastposition flrforecastposition;
 
     /** nullable persistent field */
     private FLRStueckliste flrstueckliste;
@@ -135,17 +117,21 @@ public class FLRLosReport implements Serializable {
     /** nullable persistent field */
     private FLRFertigungsgruppe flrwiederholendelose;
 
+    /** nullable persistent field */
+    private FLRProjekt flrprojekt;
+
     /** persistent field */
     private Set ablieferungset;
 
     /** full constructor */
-    public FLRLosReport(String mandant_c_nr, String c_nr, String c_kommentar, String status_c_nr, String c_projekt, Integer stueckliste_i_id, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_aktualisierungstueckliste, Date t_aktualisierungarbeitszeit, Date t_anlegen, Date t_produktionsstop, BigDecimal n_losgroesse, Double f_bewertung, Integer wiederholendelose_i_id, Integer kostenstelle_i_id, Integer fertigungsgruppe_i_id, Integer partner_i_id_fertigungsort, FLRStueckliste flrstueckliste, FLRKostenstelle flrkostenstelle, FLRAuftragposition flrauftragposition, FLRAuftragReport flrauftrag, FLRKunde flrkunde, FLRFertigungsgruppe flrfertigungsgruppe, FLRFertigungsgruppe flrwiederholendelose, Set ablieferungset) {
+    public FLRLosReport(String mandant_c_nr, String c_nr, String c_kommentar, String status_c_nr, String c_projekt, Integer stueckliste_i_id, Date t_nachtraeglich_geoeffnet, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_aktualisierungstueckliste, Date t_aktualisierungarbeitszeit, Date t_anlegen, Date t_produktionsstop, BigDecimal n_losgroesse, Double f_bewertung, Integer wiederholendelose_i_id, Integer kostenstelle_i_id, Integer fertigungsgruppe_i_id, Integer forecastposition_i_id, Integer partner_i_id_fertigungsort, Date t_material_vollstaendig, FLRForecastposition flrforecastposition, FLRStueckliste flrstueckliste, FLRKostenstelle flrkostenstelle, FLRAuftragposition flrauftragposition, FLRAuftragReport flrauftrag, FLRKunde flrkunde, FLRFertigungsgruppe flrfertigungsgruppe, FLRFertigungsgruppe flrwiederholendelose, FLRProjekt flrprojekt, Set ablieferungset) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.c_kommentar = c_kommentar;
         this.status_c_nr = status_c_nr;
         this.c_projekt = c_projekt;
         this.stueckliste_i_id = stueckliste_i_id;
+        this.t_nachtraeglich_geoeffnet = t_nachtraeglich_geoeffnet;
         this.t_produktionsende = t_produktionsende;
         this.t_produktionsbeginn = t_produktionsbeginn;
         this.t_ausgabe = t_ausgabe;
@@ -160,7 +146,10 @@ public class FLRLosReport implements Serializable {
         this.wiederholendelose_i_id = wiederholendelose_i_id;
         this.kostenstelle_i_id = kostenstelle_i_id;
         this.fertigungsgruppe_i_id = fertigungsgruppe_i_id;
+        this.forecastposition_i_id = forecastposition_i_id;
         this.partner_i_id_fertigungsort = partner_i_id_fertigungsort;
+        this.t_material_vollstaendig = t_material_vollstaendig;
+        this.flrforecastposition = flrforecastposition;
         this.flrstueckliste = flrstueckliste;
         this.flrkostenstelle = flrkostenstelle;
         this.flrauftragposition = flrauftragposition;
@@ -168,6 +157,7 @@ public class FLRLosReport implements Serializable {
         this.flrkunde = flrkunde;
         this.flrfertigungsgruppe = flrfertigungsgruppe;
         this.flrwiederholendelose = flrwiederholendelose;
+        this.flrprojekt = flrprojekt;
         this.ablieferungset = ablieferungset;
     }
 
@@ -234,6 +224,14 @@ public class FLRLosReport implements Serializable {
 
     public void setStueckliste_i_id(Integer stueckliste_i_id) {
         this.stueckliste_i_id = stueckliste_i_id;
+    }
+
+    public Date getT_nachtraeglich_geoeffnet() {
+        return this.t_nachtraeglich_geoeffnet;
+    }
+
+    public void setT_nachtraeglich_geoeffnet(Date t_nachtraeglich_geoeffnet) {
+        this.t_nachtraeglich_geoeffnet = t_nachtraeglich_geoeffnet;
     }
 
     public Date getT_produktionsende() {
@@ -348,12 +346,36 @@ public class FLRLosReport implements Serializable {
         this.fertigungsgruppe_i_id = fertigungsgruppe_i_id;
     }
 
+    public Integer getForecastposition_i_id() {
+        return this.forecastposition_i_id;
+    }
+
+    public void setForecastposition_i_id(Integer forecastposition_i_id) {
+        this.forecastposition_i_id = forecastposition_i_id;
+    }
+
     public Integer getPartner_i_id_fertigungsort() {
         return this.partner_i_id_fertigungsort;
     }
 
     public void setPartner_i_id_fertigungsort(Integer partner_i_id_fertigungsort) {
         this.partner_i_id_fertigungsort = partner_i_id_fertigungsort;
+    }
+
+    public Date getT_material_vollstaendig() {
+        return this.t_material_vollstaendig;
+    }
+
+    public void setT_material_vollstaendig(Date t_material_vollstaendig) {
+        this.t_material_vollstaendig = t_material_vollstaendig;
+    }
+
+    public FLRForecastposition getFlrforecastposition() {
+        return this.flrforecastposition;
+    }
+
+    public void setFlrforecastposition(FLRForecastposition flrforecastposition) {
+        this.flrforecastposition = flrforecastposition;
     }
 
     public FLRStueckliste getFlrstueckliste() {
@@ -410,6 +432,14 @@ public class FLRLosReport implements Serializable {
 
     public void setFlrwiederholendelose(FLRFertigungsgruppe flrwiederholendelose) {
         this.flrwiederholendelose = flrwiederholendelose;
+    }
+
+    public FLRProjekt getFlrprojekt() {
+        return this.flrprojekt;
+    }
+
+    public void setFlrprojekt(FLRProjekt flrprojekt) {
+        this.flrprojekt = flrprojekt;
     }
 
     public Set getAblieferungset() {

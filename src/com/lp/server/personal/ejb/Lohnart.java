@@ -69,6 +69,28 @@ public class Lohnart implements Serializable {
 	@Column(name = "TAETIGKEIT_I_ID_NL")//nichtleistungsfaktor
 	private Integer taetigkeitIIdNl;
 
+	@Column(name = "I_AUSFALL_WOCHEN")
+	private Integer iAusfallWochen;
+	
+	public Integer getIAusfallWochen() {
+		return iAusfallWochen;
+	}
+
+	public void setIAusfallWochen(Integer iAusfallWochen) {
+		this.iAusfallWochen = iAusfallWochen;
+	}
+
+	public Double getFMindestuestd() {
+		return fMindestuestd;
+	}
+
+	public void setFMindestuestd(Double fMindestuestd) {
+		this.fMindestuestd = fMindestuestd;
+	}
+
+	@Column(name = "F_MINDESTUESTD")
+	private Double fMindestuestd;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Lohnart() {

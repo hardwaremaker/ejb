@@ -67,6 +67,7 @@ public class FilterKriterium extends QueryKriterium implements Serializable {
 	public static final String OPERATOR_NULL = "NULL";
 	public static final String OPERATOR_NOT_NULL = "NOT NULL";
 	public static final String OPERATOR_NOT = "NOT";
+	public static final String OPERATOR_NOT_LIKE = "NOT LIKE";
 	public static final String OPENING_BRACKET = "(";
 	public static final String CLOSING_BRACKET = ")";
 
@@ -75,24 +76,39 @@ public class FilterKriterium extends QueryKriterium implements Serializable {
 	public static final String BOOLOPERATOR_OR = "OR";
 
 	public boolean wrapWithSingleQuotes = false;
-	
+
 	public String operator;
 
-	public FilterKriterium(String pName, boolean pKrit, String pValue,
-			String pOperator, boolean bIgnoreCaseI) {
+	public int iTyp = TYP_STRING;
+
+	public static final int TYP_STRING = 1;
+	public static final int TYP_DECIMAL = 2;
+	public static final int TYP_DATE = 3;
+	public static final int TYP_BOOLEAN = 4;
+	public static final int TYP_COMBOBOX = 5;
+
+	public FilterKriterium(String pName, boolean pKrit, String pValue, String pOperator, boolean bIgnoreCaseI) {
 		super(pName, pKrit, pValue, bIgnoreCaseI);
 
 		this.operator = pOperator;
 	}
-	public FilterKriterium(String pName, boolean pKrit, String pValue,
-			String pOperator, boolean bIgnoreCaseI, boolean bWrapWithSinlgeQuotes) {
-		super(pName, pKrit, pValue, bIgnoreCaseI);
 
-		this.wrapWithSingleQuotes=bWrapWithSinlgeQuotes;
+	public FilterKriterium(String pName, boolean pKrit, String pValue, String pOperator, boolean bIgnoreCaseI,
+			int iTyp) {
+		super(pName, pKrit, pValue, bIgnoreCaseI);
+		this.iTyp = iTyp;
 		this.operator = pOperator;
 	}
-	public FilterKriterium(String pName, boolean pKrit, BigDecimal bdValue,
-			String pOperator, boolean bIgnoreCaseI) {
+
+	public FilterKriterium(String pName, boolean pKrit, String pValue, String pOperator, boolean bIgnoreCaseI,
+			boolean bWrapWithSinlgeQuotes) {
+		super(pName, pKrit, pValue, bIgnoreCaseI);
+
+		this.wrapWithSingleQuotes = bWrapWithSinlgeQuotes;
+		this.operator = pOperator;
+	}
+
+	public FilterKriterium(String pName, boolean pKrit, BigDecimal bdValue, String pOperator, boolean bIgnoreCaseI) {
 		super(pName, pKrit, bdValue, bIgnoreCaseI);
 
 		this.operator = pOperator;
@@ -121,34 +137,98 @@ public class FilterKriterium extends QueryKriterium implements Serializable {
 
 		buff.append(" ").append(kritName);
 
-		if (!value.equals(Boolean.TRUE.toString())
-				&& !value.equals(Boolean.FALSE.toString())) {
+		if (!value.equals(Boolean.TRUE.toString()) && !value.equals(Boolean.FALSE.toString())) {
 			buff.append(" ").append(operator).append(" ").append(value);
 		}
 
 		return buff.toString();
 	}
-	
+
 	public void wrapWithSingleQuotes() {
 		if (wrapWithSingleQuotes) {
-			StringBuffer sbWrappedValue = new StringBuffer("'").append(value)
-					.append("'");
+			StringBuffer sbWrappedValue = new StringBuffer("'").append(value).append("'");
 
 			value = sbWrappedValue.toString();
 		}
 	}
-	
-	
-	public static FilterKriterium[] concat(FilterKriterium[] a, FilterKriterium[]b) {
-		if(a == null) throw new IllegalArgumentException("a == null") ;
-		if(b == null) throw new IllegalArgumentException("b == null") ;
-		
-		int lenA = a.length ;
-		int lenB = b.length ;
-		FilterKriterium[] c = new FilterKriterium[lenA + lenB] ;
-		
-		System.arraycopy(a, 0, c, 0, lenA) ;
+
+	private boolean isOperatorInverse(String operator) {
+		return operator.startsWith("NOT") || operator.equals(OPERATOR_NOT_EQUAL);
+	}
+
+	/**
+	 * SP8427 Formatiert eine Query f&uuml;r dieses Filterkriterium, allerdings mit
+	 * mehreren m&ouml;glichen Spalten. Verkn&uuml;pft beide Bedingungen mit OR bei
+	 * normalen, bzw. AND bei invertierten Operatoren (wie NOT LIKE) <br>
+	 * Falls dieses Kriterium ignoreCase ist, werden alle lower_case verglichen
+	 * 
+	 * @param columnNames Liste der Namen der Columns
+	 * @param ignoreNull  falls true, dann wird null in Spalten ignoriert. Bei
+	 *                    inversen Operatoren wird dazu &uuml;berall ein OR IS NULL
+	 *                    hinzugef&uuml;gt
+	 * @return
+	 */
+	public String getQueryWithMultipleColumns(boolean ignoreNull, String... columnNames) {
+		if (columnNames.length == 0)
+			return formatFilterKriterium("");
+		StringBuilder sb = new StringBuilder();
+		sb.append((" ( "));
+		boolean first = true;
+		boolean inverse = isOperatorInverse(operator);
+		for (String s : columnNames) {
+			if (!first) {
+				sb.append(inverse ? " AND " : " OR ");
+			}
+			first = false;
+			if (inverse) {
+				sb.append("(");
+			}
+			sb.append(formatQueryForColumn(inverse, s));
+			if (inverse) {
+				sb.append(" OR ");
+				sb.append(s);
+				sb.append(" IS NULL");
+				sb.append(")");
+			}
+		}
+
+		sb.append(") ");
+
+		return sb.toString();
+	}
+
+	private CharSequence formatQueryForColumn(boolean inverse, String s) {
+		StringBuilder sb = new StringBuilder();
+		if (this.isBIgnoreCase()) {
+			sb.append("lower(");
+		}
+		sb.append(s);
+		if (this.isBIgnoreCase()) {
+			sb.append(")");
+		}
+		sb.append(" ");
+		sb.append(operator);
+		sb.append(" ");
+		if (isBIgnoreCase()) {
+			sb.append(value.toLowerCase());
+		} else {
+			sb.append(value);
+		}
+		return sb;
+	}
+
+	public static FilterKriterium[] concat(FilterKriterium[] a, FilterKriterium[] b) {
+		if (a == null)
+			throw new IllegalArgumentException("a == null");
+		if (b == null)
+			throw new IllegalArgumentException("b == null");
+
+		int lenA = a.length;
+		int lenB = b.length;
+		FilterKriterium[] c = new FilterKriterium[lenA + lenB];
+
+		System.arraycopy(a, 0, c, 0, lenA);
 		System.arraycopy(b, 0, c, lenA, lenB);
-		return c ;
+		return c;
 	}
 }

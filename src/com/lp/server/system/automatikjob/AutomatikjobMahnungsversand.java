@@ -38,22 +38,18 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Vector;
 
-import javax.print.PrintService;
-import javax.print.PrintServiceLookup;
-
 import net.sf.jasperreports.engine.JasperExportManager;
 
 import com.lp.server.bestellung.service.BSMahnungDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.personal.service.PersonalDto;
-import com.lp.server.system.ejbfac.ServerDruckerFacBean;
+import com.lp.server.system.ejbfac.HvPrinter;
 import com.lp.server.system.service.AutoMahnungsversandDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.VersandauftragDto;
 import com.lp.server.util.report.JasperPrintLP;
-import com.lp.util.EJBExceptionLP;
 
 public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 
@@ -67,7 +63,6 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 	private static final String VERSANDART_E_MAIL = "EMAIL";
 	private static final String VERSANDART_FAX = "FAX";
 	private static final String VERSANDART_KEIN_VERSAND = "KEIN";
-	private static final String NICHT_DRUCKEN = "Nicht Drucken";
 
 	public AutomatikjobMahnungsversand() {
 		super();
@@ -85,8 +80,7 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 
 		try {
 			automahnungsversandDto = getAutoMahnungsversandFac()
-					.autoMahnungsversandFindByMandantCNr(
-							theClientDto.getMandant());
+					.autoMahnungsversandFindByMandantCNr(theClientDto.getMandant());
 		} catch (Throwable t) {
 			myLogger.error("fehler beim holen der Parameter");
 			errorInJob = true;
@@ -94,8 +88,7 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 		iMahnlaufiId = automahnungsversandDto.getMahnlaufIId();
 		automahnungsversandDto.setMahnlaufIId(null);
 		try {
-			getAutoMahnungsversandFac().updateAutoMahnungsversand(
-					automahnungsversandDto);
+			getAutoMahnungsversandFac().updateAutoMahnungsversand(automahnungsversandDto);
 		} catch (Throwable t) {
 			myLogger.error("Fehler beim zur\u00FCckschreiben der Parameter");
 			errorInJob = true;
@@ -108,12 +101,9 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 				errorInJob = true;
 			}
 			try {
-				mahnungDto = getBSMahnwesenFac().bsmahnungFindByBSMahnlaufIId(
-						iMahnlaufiId, theClientDto);
+				mahnungDto = getBSMahnwesenFac().bsmahnungFindByBSMahnlaufIId(iMahnlaufiId, theClientDto);
 				for (int z = 0; z < mahnungDto.length; z++) {
-					Integer iId = getBestellungFac()
-							.bestellungFindByPrimaryKey(
-									mahnungDto[z].getBestellungIId())
+					Integer iId = getBestellungFac().bestellungFindByPrimaryKey(mahnungDto[z].getBestellungIId())
 							.getLieferantIIdBestelladresse();
 					if (vLieferantenIId == null) {
 						vLieferantenIId = new Vector<Integer>();
@@ -126,85 +116,69 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 				// LieferantenIId for
 				// every Mahnung
 				/*
-				 * jpPrint =
-				 * bestellungreportFac.printBSSammelMahnung(iMahnlaufiId,
-				 * usedUser);
+				 * jpPrint = bestellungreportFac.printBSSammelMahnung(iMahnlaufiId, usedUser);
 				 */
 			} catch (Throwable t) {
 				myLogger.error("Fehler beim suchen, der zu Mahnenden Lieferanten");
 				errorInJob = true;
 				return errorInJob;
 			}
-			PrintService[] printService = PrintServiceLookup
-					.lookupPrintServices(null, null);
-			int i = 0;
+
 			String usedPrinter = automahnungsversandDto.getCDrucker();
 			String versandart = automahnungsversandDto.getCVersandart();
-			if (usedPrinter == null) {
-				usedPrinter = PrintServiceLookup.lookupDefaultPrintService()
-						.getName();
+			try {
+				if (usedPrinter == null)
+					usedPrinter = getServerDruckerFac().getServerStandardPrinter();
+			} catch (RemoteException e) {
+				myLogger.error("Fehler beim Holen des Standarddruckers", e);
 			}
-			ArrayList<JasperPrintLP> jpPrint = null;
-			if (usedPrinter.equals("Kein Drucker gefunden")) {
-				// do nothing there is no Printer
-			} else {
 
-				while (i < printService.length) {
-					if (!printService[i].getName().equals(usedPrinter)) {
-						i++;
-					} else {
-						break;
-					}
-				}
-			}
+			HvPrinter hvPrinter = getServerDruckerFacLocal().createHvPrinter(usedPrinter);
+			boolean existsHvPrinter = getServerDruckerFacLocal().exists(hvPrinter);
+			ArrayList<JasperPrintLP> jpPrint = null;
 			if (!vLieferantenIId.isEmpty()) {
 				for (int y = 0; y < vLieferantenIId.size(); y++) {
 					// print erstellen
 
 					try {
-						jpPrint = getBestellungReportFac()
-								.printBSSammelMahnung(iMahnlaufiId,
-										(Integer) vLieferantenIId.get(y),
-										theClientDto, false, true);
+						jpPrint = getBestellungReportFac().printBSSammelMahnung(iMahnlaufiId,
+								(Integer) vLieferantenIId.get(y), theClientDto, false, true);
 					} catch (Throwable t) {
-						myLogger.error("Fehler beim erstellen des Drucks f\u00FCr den Lieferanten: "
-								+ vLieferantenIId.get(y));
+						myLogger.error(
+								"Fehler beim erstellen des Drucks f\u00FCr den Lieferanten: " + vLieferantenIId.get(y));
 						errorInJob = true;
 					}
 
 					for (int o = 0; o < jpPrint.size(); o++) {
 						JasperPrintLP einzeldruck = jpPrint.get(o);
 
-						// Drucken
-						if (!usedPrinter.equals(NICHT_DRUCKEN)) {
-							try {
-								ServerDruckerFacBean.print(einzeldruck,
-										printService[i]);
-							} catch (Throwable t) {
-								myLogger.error("Fehler beim Drucken");
-								errorInJob = true;
-							}
+						try {
+							if (existsHvPrinter)
+								getServerDruckerFacLocal().print(einzeldruck, hvPrinter);
+						} catch (Throwable t) {
+							myLogger.error("Fehler beim Drucken", t);
+							errorInJob = true;
 						}
 						// und per mail oder fax versenden
-						if (versandart.equals(VERSANDART_KEIN_VERSAND)) {
+						if (versandart.equals(VERSANDART_KEIN_VERSAND)
+								&& automahnungsversandDto.getCEmailZusaetzlich() == null) {
 							// Nothing to do we just print
 						} else {
 							boolean bSend = true;
 							VersandauftragDto versandauftragDto = new VersandauftragDto();
 							try {
 								versandauftragDto
-										.setOInhalt(JasperExportManager
-												.exportReportToPdf(einzeldruck
-														.getPrint()));
+										.setOInhalt(JasperExportManager.exportReportToPdf(einzeldruck.getPrint()));
 							} catch (Throwable t) {
 								myLogger.error("Fehler beim erstellen des Versandauftrags f\u00FCr den Lieferant: "
 										+ vLieferantenIId.get(y));
 								errorInJob = true;
 								bSend = false;
 							}
-							versandauftragDto
-									.setBEmpfangsbestaetigung(new Short("0"));
-							if (versandart.equals(VERSANDART_E_MAIL)) {
+							versandauftragDto.setBEmpfangsbestaetigung(new Short("0"));
+
+							if (versandart.equals(VERSANDART_E_MAIL) || (versandart.equals(VERSANDART_KEIN_VERSAND)
+									&& automahnungsversandDto.getCEmailZusaetzlich() != null)) {
 								// E-Mail Versand
 								try {
 									// TODO: add correct Mailtext
@@ -228,78 +202,58 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 									String sAbsender = "";
 									if (personalIIdAnforderer == null) {
 										persDto = getPersonalFac()
-												.personalFindByPrimaryKey(
-														theClientDto
-																.getIDPersonal(),
-														theClientDto);
-										sAbsender = persDto.getPartnerDto()
-												.getCEmail();
-										versandauftragDto
-												.setCAbsenderadresse(sAbsender);
+												.personalFindByPrimaryKey(theClientDto.getIDPersonal(), theClientDto);
+										sAbsender = persDto.getPartnerDto().getCEmail();
+										versandauftragDto.setCAbsenderadresse(sAbsender);
 									} else {
-										persDto = getPersonalFac()
-												.personalFindByPrimaryKey(
-														personalIIdAnforderer,
-														theClientDto);
+										persDto = getPersonalFac().personalFindByPrimaryKey(personalIIdAnforderer,
+												theClientDto);
 										sAbsender = persDto.getCEmail();
-										versandauftragDto
-												.setCAbsenderadresse(sAbsender);
+										versandauftragDto.setCAbsenderadresse(sAbsender);
 									}
 
 									if (sAbsender == null) {
 
-										myLogger.error("Fehler... Es ist kein Absender f\u00FCr die E-Mails deklariert (PersonalIId="
-												+ persDto.getIId() + ")");
+										myLogger.error(
+												"Fehler... Es ist kein Absender f\u00FCr die E-Mails deklariert (PersonalIId="
+														+ persDto.getIId() + ")");
 										bSend = false;
 										errorInJob = true;
 									}
 
 									try {
 										ParametermandantDto parameter = (ParametermandantDto) getParameterFac()
-												.getMandantparameter(
-														theClientDto.getMandant(),
+												.getMandantparameter(theClientDto.getMandant(),
 														ParameterFac.KATEGORIE_BESTELLUNG,
 														ParameterFac.PARAMETER_MAHNUNG_AUTO_CC);
 
-										boolean bAbsenderBekommtCC = ((Boolean) parameter
-												.getCWertAsObject());
+										boolean bAbsenderBekommtCC = ((Boolean) parameter.getCWertAsObject());
 										if (bAbsenderBekommtCC == true) {
-											versandauftragDto
-													.setCCcempfaenger(sAbsender);
+											versandauftragDto.setCCcempfaenger(sAbsender);
 										}
 									} catch (RemoteException e) {
 										throwEJBExceptionLPRespectOld(e);
-									} 
+									}
 								}
 
 								if (bSend) {
 									LieferantDto lieferantDto = getLieferantFac()
-											.lieferantFindByPrimaryKey(
-													(Integer) vLieferantenIId
-															.get(y),
-													theClientDto);
+											.lieferantFindByPrimaryKey((Integer) vLieferantenIId.get(y), theClientDto);
 									String sEmpfaenger = null;
 
-									sEmpfaenger = lieferantDto.getPartnerDto()
-											.getCEmail();
+									sEmpfaenger = lieferantDto.getPartnerDto().getCEmail();
 
 									if (sEmpfaenger == null) {
-										myLogger.info("Keine Kontaktadresse f\u00FCr Lieferant "
-												+ vLieferantenIId.get(y)
-												+ lieferantDto
-														.getPartnerDto()
-														.formatFixTitelName1Name2()
-												+ " gefunden. Mail wird an zugewiesenes Personal gesendet");
+										myLogger.info(
+												"Keine Kontaktadresse f\u00FCr Lieferant " + vLieferantenIId.get(y)
+														+ lieferantDto.getPartnerDto().formatFixTitelName1Name2()
+														+ " gefunden. Mail wird an zugewiesenes Personal gesendet");
 									}
 
 									if (sEmpfaenger == null) {
 										PersonalDto persDtoEmpfaenger = getPersonalFac()
-												.personalFindByPrimaryKey(
-														theClientDto
-																.getIDPersonal(),
-														theClientDto);
-										sEmpfaenger = persDtoEmpfaenger
-												.getPartnerDto().getCEmail();
+												.personalFindByPrimaryKey(theClientDto.getIDPersonal(), theClientDto);
+										sEmpfaenger = persDtoEmpfaenger.getPartnerDto().getCEmail();
 										if (sEmpfaenger == null) {
 											myLogger.error("Fehler beim finden der Kontaktadressen");
 											bSend = false;
@@ -307,8 +261,7 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 										}
 
 									}
-									versandauftragDto
-											.setCEmpfaenger(sEmpfaenger);
+									versandauftragDto.setCEmpfaenger(sEmpfaenger);
 								}
 
 								try {
@@ -317,16 +270,13 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 										HashMap bestellnummern = (HashMap) einzeldruck
 												.getAdditionalInformation("bestellnummern");
 
-										String sLocMahnung = getTextRespectUISpr(
-												"lp.mahnung",
-												theClientDto.getMandant(),
-												theClientDto.getLocMandant());
+										String sLocMahnung = getTextRespectUISpr("lp.mahnung",
+												theClientDto.getMandant(), theClientDto.getLocMandant());
 
 										String betreff = sLocMahnung;
 
 										if (bestellnummern.size() > 0) {
-											Iterator it = bestellnummern
-													.keySet().iterator();
+											Iterator it = bestellnummern.keySet().iterator();
 											while (it.hasNext()) {
 												betreff += " " + it.next();
 												if (it.hasNext()) {
@@ -336,8 +286,7 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 										}
 
 										if (betreff.length() > 95) {
-											betreff = betreff.substring(0, 94)
-													+ "...";
+											betreff = betreff.substring(0, 94) + "...";
 										}
 										versandauftragDto.setCBetreff(betreff);
 
@@ -353,8 +302,7 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 								// Fax-Versand
 								try {
 									if (bSend) {
-										String sBetreff = "Automatischer Mahnungsversand "
-												+ theClientDto.getMandant();
+										String sBetreff = "Automatischer Mahnungsversand " + theClientDto.getMandant();
 										versandauftragDto.setCBetreff(sBetreff);
 									}
 								} catch (Throwable t) {
@@ -364,35 +312,24 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 								}
 								try {
 									if (bSend) {
-										LieferantDto lieferantDto = getLieferantFac()
-												.lieferantFindByPrimaryKey(
-														(Integer) vLieferantenIId
-																.get(y),
-														theClientDto);
+										LieferantDto lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(
+												(Integer) vLieferantenIId.get(y), theClientDto);
 										String sEmpfaenger = null;
 
-										sEmpfaenger = lieferantDto
-												.getPartnerDto().getCFax();
+										sEmpfaenger = lieferantDto.getPartnerDto().getCFax();
 										if (sEmpfaenger == null) {
 											myLogger.info("Keine Faxnummer f\u00FCr den Lieferanten "
 													+ vLieferantenIId.get(y)
-													+ lieferantDto
-															.getPartnerDto()
-															.formatFixTitelName1Name2()
+													+ lieferantDto.getPartnerDto().formatFixTitelName1Name2()
 													+ " deklariert... Mahnung wird als Mail an zust\u00E4ndigen Benutzer gesendet");
 										}
 
 										if (sEmpfaenger == null) {
-											PersonalDto persDto = getPersonalFac()
-													.personalFindByPrimaryKey(
-															theClientDto
-																	.getIDPersonal(),
-															theClientDto);
-											sEmpfaenger = persDto
-													.getPartnerDto().getCFax();
+											PersonalDto persDto = getPersonalFac().personalFindByPrimaryKey(
+													theClientDto.getIDPersonal(), theClientDto);
+											sEmpfaenger = persDto.getPartnerDto().getCFax();
 										}
-										versandauftragDto
-												.setCEmpfaenger(sEmpfaenger);
+										versandauftragDto.setCEmpfaenger(sEmpfaenger);
 									}
 								} catch (Throwable t) {
 
@@ -400,9 +337,19 @@ public class AutomatikjobMahnungsversand extends AutomatikjobBasis {
 							}
 							try {
 								if (bSend) {
-									getVersandFac().createVersandauftrag(
-											versandauftragDto, false,
-											theClientDto);
+
+									if (!versandart.equals(VERSANDART_KEIN_VERSAND)) {
+										getVersandFac().createVersandauftrag(versandauftragDto, false, theClientDto);
+									}
+
+									// PJ21156
+									if (automahnungsversandDto.getCEmailZusaetzlich() != null) {
+										versandauftragDto.setCEmpfaenger(automahnungsversandDto.getCEmailZusaetzlich());
+										versandauftragDto.setCBccempfaenger(null);
+										versandauftragDto.setCCcempfaenger(null);
+										getVersandFac().createVersandauftrag(versandauftragDto, false, theClientDto);
+									}
+
 								} else {
 									myLogger.info("Fehler beim erstellen des Versandauftrags");
 								}

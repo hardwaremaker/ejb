@@ -35,6 +35,7 @@ package com.lp.server.artikel.fastlanereader;
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -42,8 +43,11 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
+import com.lp.server.angebot.service.AngebotpositionFac;
 import com.lp.server.artikel.fastlanereader.generated.FLRHandlagerbewegung;
 import com.lp.server.artikel.service.LagerFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -59,8 +63,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Handlagerbewegungen implementiert.
- * Pro UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Handlagerbewegungen
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copyright Logistik Pur Software GmbH (c) 2004-2007
@@ -94,8 +98,7 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -110,6 +113,12 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 				rows[row][col++] = handlagerbewegung.getI_id();
 				rows[row][col++] = handlagerbewegung.getT_buchungszeit();
 				rows[row][col++] = handlagerbewegung.getFlrartikel().getC_nr();
+
+				if (bReferenznummerInPositionen) {
+					rows[row][col++] = handlagerbewegung.getFlrartikel().getC_referenznr();
+
+				}
+
 				rows[row][col++] = o[1];
 				rows[row][col++] = handlagerbewegung.getFlrlager().getC_nr();
 				// Wenn Lagerabgang, dann negative Menge
@@ -121,8 +130,7 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 				rows[row++][col++] = handlagerbewegung.getC_kommentar();
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -138,17 +146,13 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 	public Session setFilter(Session session) {
 		session = super.setFilter(session);
 		String sMandant = theClientDto.getMandant();
-		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)
-				&& !getMandantFac()
-						.darfAnwenderAufZusatzfunktionZugreifen(
-								MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
-								theClientDto)) {
-			session.enableFilter("filterMandant").setParameter("paramMandant",
-					getSystemFac().getHauptmandant());
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+				theClientDto)
+				&& !getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER,
+						theClientDto)) {
+			session.enableFilter("filterMandant").setParameter("paramMandant", getSystemFac().getHauptmandant());
 		} else {
-			session.enableFilter("filterMandant").setParameter("paramMandant",
-					sMandant);
+			session.enableFilter("filterMandant").setParameter("paramMandant", sMandant);
 		}
 		return session;
 	}
@@ -181,8 +185,8 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -193,8 +197,7 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -205,15 +208,13 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(" + filterKriterien[i].kritName
-								+ ")");
+						where.append(" upper(" + filterKriterien[i].kritName + ")");
 					} else {
 						where.append(" " + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -240,15 +241,13 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("handlagerbewegung."
-									+ kriterien[i].kritName);
+							orderBy.append("handlagerbewegung." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -259,13 +258,10 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("handlagerbewegung."
-						+ LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT
-						+ " DESC ");
+				orderBy.append("handlagerbewegung." + LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT + " DESC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("handlagerbewegung."
-					+ LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT) < 0) {
+			if (orderBy.indexOf("handlagerbewegung." + LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -274,8 +270,7 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" handlagerbewegung."
-						+ LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT + " ");
+				orderBy.append(" handlagerbewegung." + LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -294,8 +289,7 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 		return "SELECT handlagerbewegung, aspr.c_bez from FLRHandlagerbewegung handlagerbewegung LEFT OUTER JOIN handlagerbewegung.flrartikel.artikelsprset AS aspr  ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -343,63 +337,59 @@ public class HandlagerbewegungHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			try {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+		try {
 
-				int iNachkommastellenMenge = getMandantFac()
-						.getNachkommastellenMenge(theClientDto.getMandant());
-				setTableInfo(new TableInfo(
-						new Class[] {
-								Integer.class,
-								java.sql.Timestamp.class,
-								String.class,
-								String.class,
-								String.class,
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								String.class }, new String[] {
-								"PK",
-								getTextRespectUISpr("lp.zeitpunkt",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr(
-										"artikel.artikelnummerhalblang",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.bezeichnung",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.lager",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.menge",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.kommentar",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()) }, new int[] {
-								-1, // diese Spalte wird ausgeblendet
-								QueryParameters.FLR_BREITE_XM,
-								QueryParameters.FLR_BREITE_L,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_XM }, new String[] {
-								"i_id",
-								LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT,
-								LagerFac.FLR_HANDLAGERBEWEGUNG_FLRARTIKEL
-										+ ".c_nr",
-								Facade.NICHT_SORTIERBAR,
-								LagerFac.FLR_HANDLAGERBEWEGUNG_FLRLAGER
-										+ ".c_nr",
-								LagerFac.FLR_HANDLAGERBEWEGUNG_N_MENGE,
-								LagerFac.FLR_HANDLAGERBEWEGUNG_C_KOMMENTAR }));
-			} catch (RemoteException ex) {
-				throwEJBExceptionLPRespectOld(ex);
-				return null;
+			String mandantCNr = theClientDto.getMandant();
+
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+
+			columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+
+			columns.add("lp.zeitpunkt", java.sql.Timestamp.class, getTextRespectUISpr("lp.zeitpunkt", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, LagerFac.FLR_HANDLAGERBEWEGUNG_T_BUCHUNGSZEIT);
+			columns.add("artikel.artikelnummerhalblang", String.class,
+					getTextRespectUISpr("artikel.artikelnummerhalblang", mandant, locUi), QueryParameters.FLR_BREITE_L,
+					LagerFac.FLR_HANDLAGERBEWEGUNG_FLRARTIKEL + ".c_nr");
+
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM, LagerFac.FLR_HANDLAGERBEWEGUNG_FLRARTIKEL + ".c_referenznr");
 			}
+
+			columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+
+			columns.add("lp.lager", String.class, getTextRespectUISpr("lp.lager", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, LagerFac.FLR_HANDLAGERBEWEGUNG_FLRLAGER + ".c_nr");
+
+			columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.menge", mandant, locUi),
+					getUIBreiteAbhaengigvonNachkommastellen(QueryParameters.MENGE, iNachkommastellenMenge),
+					LagerFac.FLR_HANDLAGERBEWEGUNG_N_MENGE);
+			columns.add("lp.kommentar", String.class, getTextRespectUISpr("lp.kommentar", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, LagerFac.FLR_HANDLAGERBEWEGUNG_C_KOMMENTAR);
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
-		return super.getTableInfo();
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 }

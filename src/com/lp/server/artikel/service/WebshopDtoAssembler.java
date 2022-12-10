@@ -46,6 +46,10 @@ public class WebshopDtoAssembler {
 			dto.setIId(bean.getIId());
 			dto.setCBez(bean.getCBez());
 			dto.setMandantCNr(bean.getMandantCNr());
+			dto.setWebshopartCnr(bean.getWebshopartCnr());
+			dto.setCUrl(bean.getCUrl());
+			dto.setCUser(bean.getCUser());
+			dto.setCPassword(bean.getCPassword());
 		}
 		return dto;
 	}

@@ -36,14 +36,25 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 
 public class SonderzeitenImportDto implements Serializable {
-
-	
-
 	private static final long serialVersionUID = 1L;
 	
-	Integer personalIId;
-	Integer taetigkeitIId;
-	Timestamp tDatum;
+	private Integer personalIId;
+	private Integer taetigkeitIId;
+	private Timestamp tDatum;
+
+	private int row ;
+	private int col ;
+	private String source ;
+	
+	public SonderzeitenImportDto() {
+	}
+
+	public SonderzeitenImportDto(Integer personalId, Integer taetigkeitId, Timestamp timestamp) {
+		this.personalIId = personalId ;
+		this.taetigkeitIId = taetigkeitId ;
+		this.tDatum = timestamp ;
+	}
+	
 	public Integer getPersonalIId() {
 		return personalIId;
 	}
@@ -62,5 +73,28 @@ public class SonderzeitenImportDto implements Serializable {
 	public void settDatum(Timestamp tDatum) {
 		this.tDatum = tDatum;
 	}
-	
+
+	public int getRow() {
+		return row;
+	}
+
+	public void setRow(int row) {
+		this.row = row;
+	}
+
+	public int getCol() {
+		return col;
+	}
+
+	public void setCol(int col) {
+		this.col = col;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(String source) {
+		this.source = source;
+	}
 }

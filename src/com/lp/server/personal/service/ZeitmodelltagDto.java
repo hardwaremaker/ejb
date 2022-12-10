@@ -63,6 +63,48 @@ public class ZeitmodelltagDto implements Serializable {
 	private Integer iRundungende;
 	private Short bRundesondertaetigkeiten;
 
+	private Short bBeginnVortag;
+
+	public Short getBBeginnVortag() {
+		return bBeginnVortag;
+	}
+
+	public void setBBeginnVortag(Short bBeginnVortag) {
+		this.bBeginnVortag = bBeginnVortag;
+	}
+
+	private Time uSchichterkennung;
+
+	public Time getUSchichterkennung() {
+		return uSchichterkennung;
+	}
+
+	public void setUSchichterkennung(Time uSchichterkennung) {
+		this.uSchichterkennung = uSchichterkennung;
+	}
+
+	private Time uBeginnAkzeptiertBis;
+
+	public Time getUBeginnAkzeptiertBis() {
+		return uBeginnAkzeptiertBis;
+	}
+
+	public void setUBeginnAkzeptiertBis(Time uBeginnAkzeptiertBis) {
+		this.uBeginnAkzeptiertBis = uBeginnAkzeptiertBis;
+	}
+
+	private Time uEndeAkzeptiertAb;
+
+	public Time getUEndeAkzeptiertAb() {
+		return uEndeAkzeptiertAb;
+	}
+
+	public void setUEndeAkzeptiertAb(Time uEndeAkzeptiertAb) {
+		this.uEndeAkzeptiertAb = uEndeAkzeptiertAb;
+	}
+
+	
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -102,6 +144,7 @@ public class ZeitmodelltagDto implements Serializable {
 	public void setUAutopauseab2(Time uAutopauseab2) {
 		this.uAutopauseab2 = uAutopauseab2;
 	}
+
 	public Time getUMindestpause3() {
 		return uMindestpause3;
 	}
@@ -117,6 +160,7 @@ public class ZeitmodelltagDto implements Serializable {
 	public void setUAutopauseab3(Time uAutopauseab3) {
 		this.uAutopauseab3 = uAutopauseab3;
 	}
+
 	public java.sql.Time getUSollzeit() {
 		return uSollzeit;
 	}
@@ -237,38 +281,29 @@ public class ZeitmodelltagDto implements Serializable {
 		ZeitmodelltagDto that = (ZeitmodelltagDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.zeitmodellIId == null ? this.zeitmodellIId == null
-				: that.zeitmodellIId.equals(this.zeitmodellIId)))
+		if (!(that.zeitmodellIId == null ? this.zeitmodellIId == null : that.zeitmodellIId.equals(this.zeitmodellIId)))
 			return false;
-		if (!(that.tagesartIId == null ? this.tagesartIId == null
-				: that.tagesartIId.equals(this.tagesartIId)))
+		if (!(that.tagesartIId == null ? this.tagesartIId == null : that.tagesartIId.equals(this.tagesartIId)))
 			return false;
-		if (!(that.uSollzeit == null ? this.uSollzeit == null : that.uSollzeit
-				.equals(this.uSollzeit)))
+		if (!(that.uSollzeit == null ? this.uSollzeit == null : that.uSollzeit.equals(this.uSollzeit)))
 			return false;
-		if (!(that.uMindestpause == null ? this.uMindestpause == null
-				: that.uMindestpause.equals(this.uMindestpause)))
+		if (!(that.uMindestpause == null ? this.uMindestpause == null : that.uMindestpause.equals(this.uMindestpause)))
 			return false;
 		if (!(that.iMindestpausenanzahl == null ? this.iMindestpausenanzahl == null
 				: that.iMindestpausenanzahl.equals(this.iMindestpausenanzahl)))
 			return false;
-		if (!(that.uBeginn == null ? this.uBeginn == null : that.uBeginn
-				.equals(this.uBeginn)))
+		if (!(that.uBeginn == null ? this.uBeginn == null : that.uBeginn.equals(this.uBeginn)))
 			return false;
-		if (!(that.uEnde == null ? this.uEnde == null : that.uEnde
-				.equals(this.uEnde)))
+		if (!(that.uEnde == null ? this.uEnde == null : that.uEnde.equals(this.uEnde)))
 			return false;
-		if (!(that.uUeberstd == null ? this.uUeberstd == null : that.uUeberstd
-				.equals(this.uUeberstd)))
+		if (!(that.uUeberstd == null ? this.uUeberstd == null : that.uUeberstd.equals(this.uUeberstd)))
 			return false;
-		if (!(that.uMehrstd == null ? this.uMehrstd == null : that.uMehrstd
-				.equals(this.uMehrstd)))
+		if (!(that.uMehrstd == null ? this.uMehrstd == null : that.uMehrstd.equals(this.uMehrstd)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		return true;
 	}

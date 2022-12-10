@@ -34,15 +34,21 @@ package com.lp.util.report;
 
 import java.math.BigDecimal;
 
-public class UvaRpt implements java.io.Serializable {
+import com.lp.server.system.service.MwstsatzDto;
 
-	/**
-	 * 
-	 */
+public class UvaRpt implements java.io.Serializable {
 	private static final long serialVersionUID = 1L;
 	private BigDecimal saldo;
 	private String kennzeichen;
 	private BigDecimal saldogerundet;
+	private MwstsatzDto mwstsatzDto;
+	private int kontoUvavariante;
+	private Integer sort;
+	private Integer gruppe;
+	private boolean alternativ;
+	private String uvaartCnr;
+	private BigDecimal anzahlungsSaldo;
+	private BigDecimal anzahlungsSaldoGerundet;
 	
 	public UvaRpt(String kennzeichenI, BigDecimal saldoI, BigDecimal saldogerundetI) {
 		kennzeichen = kennzeichenI;
@@ -69,5 +75,73 @@ public class UvaRpt implements java.io.Serializable {
 	}
 	public BigDecimal getSaldogerundet() {
 		return saldogerundet;
+	}
+
+	public MwstsatzDto getMwstsatzDto() {
+		return mwstsatzDto;
+	}
+
+	public void setMwstsatzDto(MwstsatzDto mwstsatzDto) {
+		this.mwstsatzDto = mwstsatzDto;
+	}
+	
+	public Double getSteuersatz() {
+		return getMwstsatzDto() == null ? null : getMwstsatzDto().getFMwstsatz();
+	}
+
+	public int getKontoUvavariante() {
+		return kontoUvavariante;
+	}
+
+	public void setKontoUvavariante(int kontoUvavariante) {
+		this.kontoUvavariante = kontoUvavariante;
+	}
+
+	public Integer getSort() {
+		return sort;
+	}
+
+	public void setSort(Integer sort) {
+		this.sort = sort;
+	}
+
+	public Integer getGruppe() {
+		return gruppe;
+	}
+
+	public void setGruppe(Integer gruppe) {
+		this.gruppe = gruppe;
+	}
+
+	public boolean isAlternativ() {
+		return alternativ;
+	}
+
+	public void setAlternativ(boolean alternativ) {
+		this.alternativ = alternativ;
+	}
+
+	public String getUvaartCnr() {
+		return uvaartCnr;
+	}
+
+	public void setUvaartCnr(String uvaartCnr) {
+		this.uvaartCnr = uvaartCnr;
+	}
+
+	public BigDecimal getAnzahlungsSaldo() {
+		return anzahlungsSaldo;
+	}
+
+	public void setAnzahlungsSaldo(BigDecimal anzahlungsSaldo) {
+		this.anzahlungsSaldo = anzahlungsSaldo;
+	}
+
+	public BigDecimal getAnzahlungsSaldoGerundet() {
+		return anzahlungsSaldoGerundet;
+	}
+
+	public void setAnzahlungsSaldoGerundet(BigDecimal anzahlungsSaldoGerundet) {
+		this.anzahlungsSaldoGerundet = anzahlungsSaldoGerundet;
 	}
 }

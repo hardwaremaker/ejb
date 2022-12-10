@@ -45,6 +45,16 @@ public class AutoMahnungsversandDto implements Serializable {
 	private String cDrucker;
 	private String cVersandart;
 
+	private String cEmailZusaetzlich;
+
+	public String getCEmailZusaetzlich() {
+		return cEmailZusaetzlich;
+	}
+
+	public void setCEmailZusaetzlich(String cEmailZusaetzlich) {
+		this.cEmailZusaetzlich = cEmailZusaetzlich;
+	}
+	
 	public Integer getIId() {
 		return iId;
 	}

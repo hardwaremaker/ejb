@@ -56,6 +56,9 @@ public class AgstklarbeitsplanDtoAssembler {
 			dto.setAgartCNr(bean.getAgartCNr());
 			dto.setIAufspannung(bean.getIAufspannung());
 			dto.setIUnterarbeitsgang(bean.getIUnterarbeitsgang());
+			dto.setNStundensatzMann(bean.getNStundensatzMann());
+			dto.setNStundensatzMaschine(bean.getNStundensatzMaschine());
+			dto.setBInitial(bean.getBInitial());
 
 		}
 		return dto;

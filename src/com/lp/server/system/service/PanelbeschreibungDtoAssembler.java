@@ -79,7 +79,12 @@ public class PanelbeschreibungDtoAssembler {
 					.getCDruckname());
 			panelbeschreibungDto.setPartnerklasseIId(panelbeschreibung
 					.getPartnerklasseIId());
+			panelbeschreibungDto.setKostenstelleIId(panelbeschreibung
+					.getKostenstelleIId());
 			panelbeschreibungDto.setCDefault(panelbeschreibung.getCDefault());
+			panelbeschreibungDto.setBereichIId(panelbeschreibung.getBereichIId());
+			panelbeschreibungDto.setProjekttypCNr(panelbeschreibung.getProjekttypCNr());
+			panelbeschreibungDto.setBUeberschrift(panelbeschreibung.getBUeberschrift());
 		}
 		return panelbeschreibungDto;
 	}

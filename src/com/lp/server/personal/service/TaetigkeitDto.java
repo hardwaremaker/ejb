@@ -53,6 +53,17 @@ public class TaetigkeitDto implements Serializable {
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
 	private Short bVersteckt;
+	
+	private Integer abwesenheitsartIId;
+	
+	public Integer getAbwesenheitsartIId() {
+		return abwesenheitsartIId;
+	}
+
+	public void setAbwesenheitsartIId(Integer abwesenheitsartIId) {
+		this.abwesenheitsartIId = abwesenheitsartIId;
+	}
+	
 
 	private String cImportkennzeichen;
 
@@ -62,6 +73,16 @@ public class TaetigkeitDto implements Serializable {
 
 	public void setCImportkennzeichen(String cImportkennzeichen) {
 		this.cImportkennzeichen = cImportkennzeichen;
+	}
+
+	private Short bDarfSelberBuchen;
+
+	public Short getBDarfSelberBuchen() {
+		return bDarfSelberBuchen;
+	}
+
+	public void setBDarfSelberBuchen(Short bDarfSelberBuchen) {
+		this.bDarfSelberBuchen = bDarfSelberBuchen;
 	}
 
 	private Double fbezahlt;

@@ -34,6 +34,7 @@ package com.lp.server.anfrage.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 
@@ -56,6 +57,18 @@ public class AnfragepositionlieferdatenDto implements Serializable {
 	private BigDecimal nVerpackungseinheit;
 	private BigDecimal nStandardmenge;
 	private BigDecimal nMindestbestellmenge;
+	
+	private Timestamp tPreisgueltigab;
+
+	
+	public Timestamp getTPreisgueltigab() {
+		return tPreisgueltigab;
+	}
+
+	public void setTPreisgueltigab(Timestamp tPreisgueltigab) {
+		this.tPreisgueltigab = tPreisgueltigab;
+	}
+
 	
 	private Integer zertifikatartIId;
 	
@@ -118,6 +131,7 @@ public class AnfragepositionlieferdatenDto implements Serializable {
 		cBezbeilieferant=null;
 		cArtikelnrlieferant=null;
 		bErfasst = new Short((short) 0);
+		tPreisgueltigab=null;
 	}
 
 	public Integer getIId() {

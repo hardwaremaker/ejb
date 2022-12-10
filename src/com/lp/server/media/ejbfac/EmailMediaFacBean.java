@@ -561,6 +561,7 @@ public class EmailMediaFacBean extends Facade implements EmailMediaFac {
 		kurzbriefDto.setBelegartCNr(belegartCnr);
 		kurzbriefDto.setTAendern(emailMetaDto.getTEmailDate()) ;
 		kurzbriefDto.setBHtml(emailMetaDto.getBHtml());
+		kurzbriefDto.setMandantCNr(theClientDto.getMandant());
 
 		if(email != null) {
 			AnsprechpartnerDto[] ansprechpartners = getAnsprechpartnerFac().ansprechpartnerFindByEmail(email, theClientDto) ;

@@ -33,6 +33,7 @@
 package com.lp.server.artikel.fastlanereader;
 
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -44,10 +45,14 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellager;
+import com.lp.server.artikel.fastlanereader.generated.service.WwArtikellagerPK;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.LagerFac;
 import com.lp.server.benutzer.service.RechteFac;
+import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -63,8 +68,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikelgruppen implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikelgruppen
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -79,6 +84,8 @@ import com.lp.util.Helper;
  * @version 1.0
  */
 public class ArtikellagerHandler extends UseCaseHandler {
+
+	boolean bLagerminJeLager = false;
 
 	/**
 	 * 
@@ -110,8 +117,7 @@ public class ArtikellagerHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -122,27 +128,22 @@ public class ArtikellagerHandler extends UseCaseHandler {
 			int col = 0;
 
 			// darf Preise sehen.
-			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
-					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF, theClientDto);
+			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF,
+					theClientDto);
 
 			while (resultListIterator.hasNext()) {
-				FLRArtikellager artikellager = (FLRArtikellager) resultListIterator
-						.next();
+				FLRArtikellager artikellager = (FLRArtikellager) resultListIterator.next();
 
 				ArtikelDto artikleDto = getArtikelFac()
-						.artikelFindByPrimaryKey(
-								artikellager.getCompId().getArtikel_i_id(),
-								theClientDto);
-				LagerDto lagerDto = getLagerFac().lagerFindByPrimaryKey(
-						artikellager.getCompId().getLager_i_id());
+						.artikelFindByPrimaryKey(artikellager.getCompId().getArtikel_i_id(), theClientDto);
+				LagerDto lagerDto = getLagerFac().lagerFindByPrimaryKey(artikellager.getCompId().getLager_i_id());
 
 				rows[row][col++] = artikellager.getCompId();
 				rows[row][col++] = lagerDto.getCNr();
 				rows[row][col++] = artikellager.getN_lagerstand();
 
 				if (bDarfPreiseSehen) {
-					rows[row][col++] = Helper.rundeKaufmaennisch(artikellager
-							.getN_gestehungspreis(), 4);
+					rows[row][col++] = Helper.rundeKaufmaennisch(artikellager.getN_gestehungspreis(), 4);
 				} else {
 					rows[row][col++] = new BigDecimal(0);
 				}
@@ -151,18 +152,27 @@ public class ArtikellagerHandler extends UseCaseHandler {
 				lagerwert = artikellager.getN_lagerstand().doubleValue()
 						* artikellager.getN_gestehungspreis().doubleValue();
 
-				if (Helper.short2boolean(artikleDto.getBLagerbewertet()) == true
-						&& bDarfPreiseSehen) {
-					rows[row++][col++] = Helper.rundeKaufmaennisch(
-							new java.math.BigDecimal(lagerwert), 4);
+				if (Helper.short2boolean(artikleDto.getBLagerbewertet()) == true && bDarfPreiseSehen) {
+					rows[row][col++] = Helper.rundeKaufmaennisch(new java.math.BigDecimal(lagerwert), 4);
 				} else {
-					rows[row++][col++] = Helper.rundeKaufmaennisch(
-							new java.math.BigDecimal(0), 4);
+					rows[row][col++] = Helper.rundeKaufmaennisch(new java.math.BigDecimal(0), 4);
 				}
+
+				if (bLagerminJeLager) {
+
+					rows[row][col++] = artikellager.getF_lagermindest();
+					rows[row][col++] = artikellager.getF_lagersoll();
+
+					if (artikellager.getFlrlager().getParnter_i_id_standort() != null) {
+						rows[row][col++] = artikellager.getFlrlager().getFlrpartner().getC_kbez();
+					}
+
+				}
+
+				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -181,8 +191,7 @@ public class ArtikellagerHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -201,8 +210,8 @@ public class ArtikellagerHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -213,27 +222,22 @@ public class ArtikellagerHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
-			boolean filterAdded = false;
 
 			for (int i = 0; i < filterKriterien.length; i++) {
 				if (filterKriterien[i].isKrit) {
-					if (filterAdded) {
-						where.append(" " + booleanOperator);
-					}
-					filterAdded = true;
-					where
-							.append(" artikellager."
-									+ filterKriterien[i].kritName);
+
+					where.append(" " + booleanOperator);
+
+					where.append(" artikellager." + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
 			}
-			if (filterAdded) {
-				where.insert(0, " WHERE");
-			}
+
+			where.insert(0, " WHERE (artikellager.n_lagerstand > 0 OR artikellager.flrlager.b_lagerstand_bei_0_anzeigen = 1) ");
+
 		}
 
 		return where.toString();
@@ -252,15 +256,13 @@ public class ArtikellagerHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("artikellager."
-									+ kriterien[i].kritName);
+							orderBy.append("artikellager." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -304,8 +306,7 @@ public class ArtikellagerHandler extends UseCaseHandler {
 		return fromClause;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		this.getQuery().setSortKrit(sortierKriterien);
 
@@ -318,21 +319,19 @@ public class ArtikellagerHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select artikellager."
-						+ LagerFac.FLR_ARTIKELLAGER_ARTIKEL_I_ID
-						+ " from FLRArtikellager artikellager "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "select compId from FLRArtikellager artikellager " + this.buildWhereClause()
+						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
-						// Integer id = (Integer) scrollableResult.get(0); //
-						// TYPE OF KEY ATTRIBUTE !!!
-						// if (selectedId.equals(id)) {
-						rowNumber = scrollableResult.getRowNumber();
-						break;
-						// }
+						WwArtikellagerPK id = (WwArtikellagerPK) scrollableResult.get(0);
+
+						if (selectedId.equals(id)) {
+							rowNumber = scrollableResult.getRowNumber();
+							break;
+						}
 					}
 				}
 			} catch (Exception e) {
@@ -360,60 +359,69 @@ public class ArtikellagerHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] {
-							Object.class,
-							String.class,
-							BigDecimal.class,
-							BigDecimal4.class, // Gestehungspreis immer 4 stellig, unabhaengig von UI Preisnachkommastellen
-							BigDecimal.class
-					},
-					
-					new String[] {
-							"PK",
-							getTextRespectUISpr("lp.lager", mandantCNr, locUI),
-							getTextRespectUISpr("lp.lagerstand", mandantCNr, locUI),
-							getTextRespectUISpr("lp.gestehungspreis", mandantCNr, locUI),
-							getTextRespectUISpr("lp.lagerwert", mandantCNr,	locUI)
-					},
-					
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST
-					},
-					
-					new String[] {
-							"compId",
-							Facade.NICHT_SORTIERBAR,
-							LagerFac.FLR_ARTIKELLAGER_N_LAGERSTAND,
-							LagerFac.FLR_ARTIKELLAGER_N_GESTEHUNGSPREIS,
-							Facade.NICHT_SORTIERBAR
-					})
-			);
+
+			int iNachkommastellenPreis = 2;
+
+			try {
+
+				// SP797
+				iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisEK(theClientDto.getMandant());
+
+				ParametermandantDto param = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAGERMIN_JE_LAGER);
+				bLagerminJeLager = (Boolean) param.getCWertAsObject();
+			} catch (RemoteException ex) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+			}
+
+			if (bLagerminJeLager == false) {
+
+				setTableInfo(new TableInfo(
+						new Class[] { Object.class, String.class, BigDecimal.class,
+								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis), BigDecimal.class },
+
+						new String[] { "PK", getTextRespectUISpr("lp.lager", mandantCNr, locUI),
+								getTextRespectUISpr("lp.lagerstand", mandantCNr, locUI),
+								getTextRespectUISpr("lp.gestehungspreis", mandantCNr, locUI),
+								getTextRespectUISpr("lp.lagerwert", mandantCNr, locUI) },
+
+						new int[] { -1, // diese Spalte wird ausgeblendet
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+						new String[] { "compId", Facade.NICHT_SORTIERBAR, LagerFac.FLR_ARTIKELLAGER_N_LAGERSTAND,
+								LagerFac.FLR_ARTIKELLAGER_N_GESTEHUNGSPREIS, Facade.NICHT_SORTIERBAR }));
+			} else {
+				setTableInfo(new TableInfo(
+						new Class[] { Object.class, String.class, BigDecimal.class,
+								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis), BigDecimal.class,
+								Double.class, Double.class, String.class },
+
+						new String[] { "PK", getTextRespectUISpr("lp.lager", mandantCNr, locUI),
+								getTextRespectUISpr("lp.lagerstand", mandantCNr, locUI),
+								getTextRespectUISpr("lp.gestehungspreis", mandantCNr, locUI),
+								getTextRespectUISpr("lp.lagerwert", mandantCNr, locUI),
+								getTextRespectUISpr("ww.lagermindest", mandantCNr, locUI),
+								getTextRespectUISpr("ww.lagersoll", mandantCNr, locUI),
+								getTextRespectUISpr("system.standort", mandantCNr, locUI) },
+
+						new int[] { -1, // diese Spalte wird ausgeblendet
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+						new String[] { "compId", Facade.NICHT_SORTIERBAR, LagerFac.FLR_ARTIKELLAGER_N_LAGERSTAND,
+								LagerFac.FLR_ARTIKELLAGER_N_GESTEHUNGSPREIS, Facade.NICHT_SORTIERBAR,
+								LagerFac.FLR_ARTIKELLAGER_F_LAGERMINDEST, LagerFac.FLR_ARTIKELLAGER_F_LAGERSOLL,
+								LagerFac.FLR_ARTIKELLAGER_FLRLAGER + ".flrpartner." + PartnerFac.FLR_PARTNER_C_KBEZ }));
+			}
 		}
 		return super.getTableInfo();
 	}
 
 	public String getQueryZaehlliste(Integer lagerIId) {
-		return getFromClause() + "WHERE artikellager."
-				+ LagerFac.FLR_ARTIKELLAGER_LAGER_I_ID + "=" + lagerIId;
+		return getFromClause() + "WHERE artikellager." + LagerFac.FLR_ARTIKELLAGER_LAGER_I_ID + "=" + lagerIId;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

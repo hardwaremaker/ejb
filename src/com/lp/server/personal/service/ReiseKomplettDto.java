@@ -34,6 +34,7 @@ package com.lp.server.personal.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeMap;
 
@@ -47,6 +48,11 @@ public class ReiseKomplettDto implements Serializable {
 		return reiseEnde;
 	}
 
+	
+	public void setZusaetzlicheSpesen(HashMap<Integer,BigDecimal> hmZusaetzlicheSpesen) {
+		this.hmZusaetzlicheSpesen=hmZusaetzlicheSpesen;
+	}
+	
 	public void setReiseEnde(ReiseDto reiseEnde) {
 		this.reiseEnde = reiseEnde;
 	}
@@ -56,21 +62,22 @@ public class ReiseKomplettDto implements Serializable {
 	}
 
 	private ReiseDto reiseEnde;
+	
+	private HashMap<Integer,BigDecimal> hmZusaetzlicheSpesen;
 
 	public void addBeginn(ReiseDto reiseDto) {
 		tmReiseBeginn.put(reiseDto.getTZeit(), reiseDto);
 	}
 
-	public BigDecimal getAnteiligeKostenEinesAbschnitts(Integer reiseIId,
-			BigDecimal bdkmKosten) {
+	public BigDecimal getAnteiligeKostenEinesAbschnitts(Integer reiseIId, BigDecimal bdkmKosten) {
 		BigDecimal bdKostenAnteilig = null;
 
 		if (bdkmKosten != null) {
 
 			if (tmReiseBeginn.size() == 1) {
-				BigDecimal bdkmKostenInklSpesen=bdkmKosten;
-				if(getReiseEnde().getNSpesen()!=null){
-					bdkmKostenInklSpesen=bdkmKostenInklSpesen.add(getReiseEnde().getNSpesen());
+				BigDecimal bdkmKostenInklSpesen = bdkmKosten;
+				if (getReiseEnde().getNSpesen() != null) {
+					bdkmKostenInklSpesen = bdkmKostenInklSpesen.add(getReiseEnde().getNSpesen());
 				}
 				return bdkmKostenInklSpesen;
 			} else if (tmReiseBeginn.size() > 1) {
@@ -80,17 +87,14 @@ public class ReiseKomplettDto implements Serializable {
 				Iterator it = tmReiseBeginn.keySet().iterator();
 				while (it.hasNext()) {
 					ReiseDto rDto = (ReiseDto) tmReiseBeginn.get(it.next());
-					if (rDto.getFFaktor() == null) {
-						iAnzahlKeinFaktorAngegeben++;
-					} else {
-						dFaktorGesamt = dFaktorGesamt + rDto.getFFaktor();
-					}
+
+					iAnzahlKeinFaktorAngegeben++;
+
 				}
 
 				double dFaktorFuerReisenOhneFaktor = 0;
 				if (dFaktorGesamt < 100 && iAnzahlKeinFaktorAngegeben > 0) {
-					dFaktorFuerReisenOhneFaktor = (100 - dFaktorGesamt)
-							/ iAnzahlKeinFaktorAngegeben;
+					dFaktorFuerReisenOhneFaktor = (100 - dFaktorGesamt) / iAnzahlKeinFaktorAngegeben;
 				}
 
 				it = tmReiseBeginn.keySet().iterator();
@@ -99,19 +103,13 @@ public class ReiseKomplettDto implements Serializable {
 
 					if (rDto.getIId().equals(reiseIId)) {
 
-						BigDecimal bdkmKostenInklSpesen=bdkmKosten;
-						if(getReiseEnde().getNSpesen()!=null){
-							bdkmKostenInklSpesen=bdkmKostenInklSpesen.add(getReiseEnde().getNSpesen());
+						BigDecimal bdkmKostenInklSpesen = bdkmKosten;
+						if (getReiseEnde().getNSpesen() != null) {
+							bdkmKostenInklSpesen = bdkmKostenInklSpesen.add(getReiseEnde().getNSpesen());
 						}
-						
-						if (rDto.getFFaktor() == null) {
-							return Helper
-									.getProzentWert(bdkmKostenInklSpesen, new BigDecimal(
-											dFaktorFuerReisenOhneFaktor), 4);
-						} else {
-							return Helper.getProzentWert(bdkmKostenInklSpesen,
-									new BigDecimal(rDto.getFFaktor()), 4);
-						}
+
+						return Helper.getProzentWert(bdkmKostenInklSpesen, new BigDecimal(dFaktorFuerReisenOhneFaktor),
+								4);
 
 					}
 
@@ -124,6 +122,51 @@ public class ReiseKomplettDto implements Serializable {
 		}
 
 		return bdKostenAnteilig;
+	}
+
+	public BigDecimal getAnteiligeKilometerEinesAbschnitts(Integer reiseIId, BigDecimal bdkm) {
+		BigDecimal bdKMAnteilig = null;
+
+		if (bdkm != null) {
+
+			if (tmReiseBeginn.size() == 1) {
+				return bdkm;
+			} else if (tmReiseBeginn.size() > 1) {
+
+				int iAnzahlKeinFaktorAngegeben = 0;
+				double dFaktorGesamt = 0;
+				Iterator it = tmReiseBeginn.keySet().iterator();
+				while (it.hasNext()) {
+					ReiseDto rDto = (ReiseDto) tmReiseBeginn.get(it.next());
+
+					iAnzahlKeinFaktorAngegeben++;
+
+				}
+
+				double dFaktorFuerReisenOhneFaktor = 0;
+				if (dFaktorGesamt < 100 && iAnzahlKeinFaktorAngegeben > 0) {
+					dFaktorFuerReisenOhneFaktor = (100 - dFaktorGesamt) / iAnzahlKeinFaktorAngegeben;
+				}
+
+				it = tmReiseBeginn.keySet().iterator();
+				while (it.hasNext()) {
+					ReiseDto rDto = (ReiseDto) tmReiseBeginn.get(it.next());
+
+					if (rDto.getIId().equals(reiseIId)) {
+
+						return Helper.getProzentWert(bdkm, new BigDecimal(dFaktorFuerReisenOhneFaktor), 4);
+
+					}
+
+				}
+
+			}
+
+		} else {
+			return null;
+		}
+
+		return bdKMAnteilig;
 	}
 
 }

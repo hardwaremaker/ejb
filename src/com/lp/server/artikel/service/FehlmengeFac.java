@@ -40,18 +40,19 @@ import java.util.TreeMap;
 import javax.ejb.Remote;
 
 import com.lp.server.system.service.TheClientDto;
+import com.lp.util.AufgeloesteFehlmengenDto;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
 public interface FehlmengeFac {
 
 	public void aktualisiereFehlmenge(String belegartCNr,
-			Integer belegpositionIId, boolean throwExceptionWhenCreate, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+			Integer belegpositionIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public BigDecimal getAnzahlderPositivenFehlmengenEinesArtikels(Integer artikelIId,
-			TheClientDto theClientDto);
-	
+	public BigDecimal getAnzahlderPositivenFehlmengenEinesArtikels(
+			Integer artikelIId, TheClientDto theClientDto);
+
 	public ArtikelfehlmengeDto artikelfehlmengeFindByPrimaryKey(Integer iId)
 			throws EJBExceptionLP, RemoteException;
 
@@ -61,12 +62,15 @@ public interface FehlmengeFac {
 	public BigDecimal getAnzahlFehlmengeEinesArtikels(Integer artikelIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
+	public BigDecimal getAnzahlFehlmengeEinesArtikels(Integer artikelIId,
+			TheClientDto theClientDto, Integer partnerIIdStandort);
+
 	public ArrayList<?> getFehlmengen(Integer artikelIId, String mandantCNr,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void createArtikelfehlmenge(ArtikelfehlmengeDto artikelfehlmengeDto)
-	throws EJBExceptionLP, RemoteException;
-	
+			throws EJBExceptionLP, RemoteException;
+
 	public ArtikelfehlmengeDto artikelfehlmengeFindByBelegartCNrBelegartPositionIId(
 			String belegartCNr, Integer belegartpositionIId)
 			throws EJBExceptionLP, RemoteException;
@@ -75,10 +79,25 @@ public interface FehlmengeFac {
 			String belegartCNr, Integer belegartpositionIId)
 			throws EJBExceptionLP, RemoteException;
 
-	public void pruefeFehlmengen(TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-	public TreeMap<?, ?> alleFehlmengenDesMandantenAufloesen(
+	public void pruefeFehlmengen(TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public Integer alleFehlmengenDesMandantenAufloesen(
 			TheClientDto theClientDto);
+
 	public TreeMap<String, BigDecimal> fuelleFehlmengenDesAnderenMandantenNach(
-			String mandantCNr_Zielmandant, java.sql.Timestamp tStichtag, TheClientDto theClientDto);
+			String mandantCNr_Zielmandant, java.sql.Timestamp tStichtag,
+			TheClientDto theClientDto);
+
+	public void addAufgeloesteFehlmengeZuSession(AufgeloesteFehlmengenDto dto,
+			TheClientDto theClientDto);
+
+	public void schliesseAufgeloesteFehlmengenSessionAb(
+			Integer fasessionIId, TheClientDto theClientDto);
+	public Integer istOffeneFasessionVorhanden(TheClientDto theClientDto);
+	
+	public TreeMap getAufgeloesteFehlmengenEinerSession(Integer fasessionIId,
+			TheClientDto theClientDto);
+	public FasessionDto fasessionFindByPrimaryKey(Integer iId);
+
 }

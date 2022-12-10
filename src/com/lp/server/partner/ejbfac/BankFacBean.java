@@ -46,10 +46,13 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
 import com.lp.server.partner.ejb.Bank;
+import com.lp.server.partner.ejb.BankQuery;
 import com.lp.server.partner.ejb.Partnerbank;
+import com.lp.server.partner.ejb.PartnerbankQuery;
 import com.lp.server.partner.service.BankDto;
 import com.lp.server.partner.service.BankDtoAssembler;
 import com.lp.server.partner.service.BankFac;
+import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerbankDto;
 import com.lp.server.partner.service.PartnerbankDtoAssembler;
@@ -57,6 +60,8 @@ import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.Validator;
+import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.util.EJBExceptionLP;
 
 @Stateless
@@ -65,23 +70,19 @@ public class BankFacBean extends Facade implements BankFac {
 	@PersistenceContext
 	private EntityManager em;
 
-	public Integer createPartnerbank(PartnerbankDto partnerbankDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPartnerbank(PartnerbankDto partnerbankDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (partnerbankDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("partnerbankDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("partnerbankDtoI == null"));
 		}
 
 		Partnerbank partnerbank = null;
 		try {
-			Query query = em
-					.createNamedQuery("PartnerbankfindByPartnerIIdBankPartnerIId");
+			Query query = em.createNamedQuery("PartnerbankfindByPartnerIIdBankPartnerIId");
 			query.setParameter(1, partnerbankDtoI.getPartnerIId());
 			query.setParameter(2, partnerbankDtoI.getBankPartnerIId());
 			query.setParameter(3, partnerbankDtoI.getCKtonr());
-			partnerbank = (com.lp.server.partner.ejb.Partnerbank) query
-					.getSingleResult();
+			partnerbank = (com.lp.server.partner.ejb.Partnerbank) query.getSingleResult();
 
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, "");
 		} catch (NoResultException e) {
@@ -96,10 +97,8 @@ public class BankFacBean extends Facade implements BankFac {
 			iIdBank = pkGen.getNextPrimaryKey(PKConst.PK_PARTNERBANK);
 			partnerbankDtoI.setIId(iIdBank);
 
-			partnerbank = new Partnerbank(partnerbankDtoI.getIId(),
-					partnerbankDtoI.getPartnerIId(),
-					partnerbankDtoI.getBankPartnerIId(),
-					partnerbankDtoI.getCKtonr(), partnerbankDtoI.getISort());
+			partnerbank = new Partnerbank(partnerbankDtoI.getIId(), partnerbankDtoI.getPartnerIId(),
+					partnerbankDtoI.getBankPartnerIId(), partnerbankDtoI.getCKtonr(), partnerbankDtoI.getISort());
 			em.persist(partnerbank);
 			em.flush();
 			setPartnerbankFromPartnerbankDto(partnerbank, partnerbankDtoI);
@@ -125,20 +124,16 @@ public class BankFacBean extends Facade implements BankFac {
 		return iiMaxISortO;
 	}
 
-	public void removePartnerbank(PartnerbankDto partnerbankDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePartnerbank(PartnerbankDto partnerbankDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		// precondition
 		if (partnerbankDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-					new Exception("kundeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, new Exception("kundeDto == null"));
 		}
 
 		// try {
-		Partnerbank toRemove = em.find(Partnerbank.class,
-				partnerbankDtoI.getIId());
+		Partnerbank toRemove = em.find(Partnerbank.class, partnerbankDtoI.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -153,16 +148,13 @@ public class BankFacBean extends Facade implements BankFac {
 
 	}
 
-	public void updatePartnerbank(PartnerbankDto partnerbankDto)
-			throws EJBExceptionLP {
+	public void updatePartnerbank(PartnerbankDto partnerbankDto) throws EJBExceptionLP {
 		if (partnerbankDto != null) {
 			Integer iId = partnerbankDto.getIId();
 			// try {
-			Partnerbank partnerbank = em.find(Partnerbank.class,
-					partnerbankDto.getIId());
+			Partnerbank partnerbank = em.find(Partnerbank.class, partnerbankDto.getIId());
 			if (partnerbank == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setPartnerbankFromPartnerbankDto(partnerbank, partnerbankDto);
 			// }
@@ -174,15 +166,13 @@ public class BankFacBean extends Facade implements BankFac {
 		}
 	}
 
-	public PartnerbankDto partnerbankFindByPrimaryKey(Integer iIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PartnerbankDto partnerbankFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 		// try {
 		PartnerbankDto partnerbankDto = null;
 		// Partnerbank.
 		Partnerbank partnerbank = em.find(Partnerbank.class, iIdI);
 		if (partnerbank == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		partnerbankDto = assemblePartnerbankDto(partnerbank);
 
@@ -194,8 +184,8 @@ public class BankFacBean extends Facade implements BankFac {
 		// }
 	}
 
-	public PartnerbankDto[] partnerbankFindByPartnerIId(Integer partnerIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PartnerbankDto[] partnerbankFindByPartnerIId(Integer partnerIId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		Query query = em.createNamedQuery("PartnerbankfindByPartnerIId");
 		query.setParameter(1, partnerIId);
 		Collection<?> c = query.getResultList();
@@ -211,9 +201,26 @@ public class BankFacBean extends Facade implements BankFac {
 		}
 		return partnerbankDto;
 	}
+	public PartnerbankDto[] partnerbankfindByPartnerbankIIdCKtonr(Integer partnerbankIId, String cktonr, TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("PartnerbankfindByPartnerbankIIdCKtonr");
+		query.setParameter(1, partnerbankIId);
+		query.setParameter(2, cktonr);
+		Collection<?> c = query.getResultList();
+		
 
-	public PartnerbankDto[] partnerbankFindByPartnerIIdOhneExc(
-			Integer partnerIId, TheClientDto theClientDto)
+		PartnerbankDto[] partnerbankDto = new PartnerbankDto[c.size()];
+		int i = 0;
+		for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
+			Partnerbank item = (Partnerbank) iter.next();
+			partnerbankDto[i] = assemblePartnerbankDto(item);
+			i++;
+		}
+		return partnerbankDto;
+	}
+	
+	
+	
+	public PartnerbankDto[] partnerbankFindByPartnerIIdOhneExc(Integer partnerIId, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		PartnerbankDto[] partnerbankDtos = null;
 		Query query = em.createNamedQuery("PartnerbankfindByPartnerIId");
@@ -237,8 +244,8 @@ public class BankFacBean extends Facade implements BankFac {
 		return partnerbankDtos;
 	}
 
-	public PartnerbankDto[] partnerbankFindByPartnerBankIId(Integer partnerIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PartnerbankDto[] partnerbankFindByPartnerBankIId(Integer partnerIId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		PartnerbankDto[] partnerbankDtos = null;
 		Query query = em.createNamedQuery("PartnerbankfindByBankPartnerIId");
 		query.setParameter(1, partnerIId);
@@ -253,8 +260,7 @@ public class BankFacBean extends Facade implements BankFac {
 		return partnerbankDtos;
 	}
 
-	public PartnerbankDto[] partnerbankFindByPartnerBankIIdOhneExc(
-			Integer partnerIId, TheClientDto theClientDto)
+	public PartnerbankDto[] partnerbankFindByPartnerBankIIdOhneExc(Integer partnerIId, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		PartnerbankDto[] partnerbankDtos = null;
 		Query query = em.createNamedQuery("PartnerbankfindByBankPartnerIId");
@@ -270,13 +276,16 @@ public class BankFacBean extends Facade implements BankFac {
 		return partnerbankDtos;
 	}
 
-	private void setPartnerbankFromPartnerbankDto(Partnerbank partnerbank,
-			PartnerbankDto partnerbankDto) {
+	private void setPartnerbankFromPartnerbankDto(Partnerbank partnerbank, PartnerbankDto partnerbankDto) {
 		partnerbank.setCIban(partnerbankDto.getCIban());
 		partnerbank.setPartnerbankIId(partnerbankDto.getBankPartnerIId());
 		partnerbank.setCKtonr(partnerbankDto.getCKtonr());
 		partnerbank.setPartnerIId(partnerbankDto.getPartnerIId());
 		partnerbank.setISort(partnerbankDto.getISort());
+		partnerbank.setTSepaerteilt(partnerbankDto.getTSepaerteilt());
+		partnerbank.setCSepamandatsnummer(partnerbankDto.getCSepamandatsnummer());
+		partnerbank.setCEsr(partnerbankDto.getCEsr());
+		partnerbank.setWaehrungCNr(partnerbankDto.getWaehrungCNr());
 		em.merge(partnerbank);
 		em.flush();
 	}
@@ -298,12 +307,10 @@ public class BankFacBean extends Facade implements BankFac {
 		return (PartnerbankDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createBank(BankDto bankDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Integer createBank(BankDto bankDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (bankDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("bankDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("bankDtoI == null"));
 		}
 		if (bankDtoI.getPartnerDto() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
@@ -316,19 +323,16 @@ public class BankFacBean extends Facade implements BankFac {
 			iIdPartnerAusNeu = bankDtoI.getPartnerIIdNeuAus();
 			if (iIdPartnerAusNeu != null) {
 				bankDtoI.getPartnerDto().setIId(iIdPartnerAusNeu);
-				getPartnerFac().updatePartner(bankDtoI.getPartnerDto(),
-						theClientDto);
+				getPartnerFac().updatePartner(bankDtoI.getPartnerDto(), theClientDto);
 			} else {
-				iIdPartnerAusNeu = getPartnerFac().createPartner(
-						bankDtoI.getPartnerDto(), theClientDto);
+				iIdPartnerAusNeu = getPartnerFac().createPartner(bankDtoI.getPartnerDto(), theClientDto);
 			}
 
 			// verbinde Partner mit Kunden
 			bankDtoI.setPartnerIId(iIdPartnerAusNeu);
 
 			// Partner lesen wegen generierter Daten.
-			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(
-					iIdPartnerAusNeu, theClientDto);
+			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(iIdPartnerAusNeu, theClientDto);
 			bankDtoI.setPartnerDto(partnerDto);
 
 			// 2. Bank.
@@ -343,30 +347,31 @@ public class BankFacBean extends Facade implements BankFac {
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-
+		HvDtoLogger<BankDto> logger = new HvDtoLogger<BankDto>(em, theClientDto);
+		logger.logInsert(bankDtoI);
 		return iIdPartnerAusNeu;
 	}
 
 	/**
-	 * @param partnerIIdI
-	 *            Integer; in diesem Fall der PK der Bank.
+	 * @param partnerIIdI  Integer; in diesem Fall der PK der Bank.
 	 * @param theClientDto der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
-	public void removeBank(Integer partnerIIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void removeBank(Integer partnerIIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (partnerIIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("partnerDtoI.getIId()"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("partnerDtoI.getIId()"));
 		}
 
 		Bank toRemove = em.find(Bank.class, partnerIIdI);
+		BankDto bankDto = assembleBankDto(toRemove);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
+			HvDtoLogger<BankDto> partnerLogger = new HvDtoLogger<BankDto>(em, bankDto.getIId(), theClientDto);
+			partnerLogger.logDelete(bankDto);
+
 			em.remove(toRemove);
 			em.flush();
 		} catch (EntityExistsException er) {
@@ -374,11 +379,9 @@ public class BankFacBean extends Facade implements BankFac {
 		}
 	}
 
-	public void updateBank(BankDto bankDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void updateBank(BankDto bankDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (bankDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("bankDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("bankDtoI == null"));
 		}
 		if (bankDtoI.getPartnerIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -388,42 +391,38 @@ public class BankFacBean extends Facade implements BankFac {
 		Integer partnerIId = bankDtoI.getPartnerIId();
 		try {
 			// Partner.
-			getPartnerFac().updatePartner(bankDtoI.getPartnerDto(),
-					theClientDto);
+			getPartnerFac().updatePartner(bankDtoI.getPartnerDto(), theClientDto);
 
 			// Bank.
 			Bank bank = em.find(Bank.class, partnerIId);
+
+			BankDto dtoVorher = assembleBankDto(bank);
+
 			if (bank == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setBankFromBankDto(bank, bankDtoI);
+
+			HvDtoLogger<BankDto> artikelLogger = new HvDtoLogger<BankDto>(em, bank.getPartnerIId(), theClientDto);
+			artikelLogger.log(dtoVorher, bankDtoI);
+
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
 	}
 
-	public BankDto bankFindByPrimaryKey(Integer partnerIIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BankDto bankFindByPrimaryKey(Integer partnerIIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
-		BankDto bankDto = null;
+		BankDto bankDto = bankFindByPrimaryKeyOhneExc(partnerIIdI, theClientDto);
 
-		Bank bank = em.find(Bank.class, partnerIIdI);
-		if (bank == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		if (bankDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		bankDto = assembleBankDto(bank);
-
-		// Partner.
-		bankDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
-				bankDto.getPartnerIId(), theClientDto));
 
 		return bankDto;
 	}
 
-	public BankDto bankFindByPrimaryKeyOhneExc(Integer partnerIIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BankDto bankFindByPrimaryKeyOhneExc(Integer partnerIIdI, TheClientDto theClientDto) {
 
 		BankDto bankDto = null;
 
@@ -436,8 +435,7 @@ public class BankFacBean extends Facade implements BankFac {
 		bankDto = assembleBankDto(bank);
 
 		// Partner.
-		bankDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
-				bankDto.getPartnerIId(), theClientDto));
+		bankDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(bankDto.getPartnerIId(), theClientDto));
 
 		return bankDto;
 	}
@@ -445,6 +443,7 @@ public class BankFacBean extends Facade implements BankFac {
 	private void setBankFromBankDto(Bank bank, BankDto bankDto) {
 		bank.setCBlz(bankDto.getCBlz());
 		bank.setCBic(bankDto.getCBic());
+		
 		em.merge(bank);
 		em.flush();
 	}
@@ -452,5 +451,32 @@ public class BankFacBean extends Facade implements BankFac {
 	private BankDto assembleBankDto(Bank bank) {
 		return BankDtoAssembler.createDto(bank);
 	}
+
+	@Override
+	public List<BankDto> bankFindByBIC(String bic, TheClientDto theClientDto) {
+		Validator.notNull(bic, "BIC");
+		Validator.notNull(theClientDto, "theClientDto");
+
+		List<Bank> banken = BankQuery.listByBIC(em, bic);
+
+		List<BankDto> bankDtos = new ArrayList<BankDto>();
+		for (Bank bank : banken) {
+			bankDtos.add(assembleBankDto(bank));
+		}
+
+		return bankDtos;
+	}
+	
+	public List<PartnerbankDto> partnerbankFindByESRUndKontonummer(String esr,String kontonummer, TheClientDto theClientDto) {
+		List<Partnerbank> banken = PartnerbankQuery.listByESRUndKontonummer(em, esr,kontonummer);
+
+		List<PartnerbankDto> bankDtos = new ArrayList<PartnerbankDto>();
+		for (Partnerbank bank : banken) {
+			bankDtos.add(assemblePartnerbankDto(bank));
+		}
+
+		return bankDtos;
+	}
+	
 
 }

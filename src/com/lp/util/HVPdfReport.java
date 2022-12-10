@@ -39,7 +39,9 @@ import java.io.Serializable;
 
 import javax.naming.InitialContext;
 
+import com.lp.server.system.ejbfac.SystemFacBean;
 import com.lp.server.system.service.SystemFac;
+import com.lp.server.util.FacLookup;
 
 public class HVPdfReport implements Serializable {
 
@@ -94,8 +96,8 @@ public class HVPdfReport implements Serializable {
 	}
 
 	public LPDatenSubreport getSubreport() throws Throwable {
-		SystemFac systemFac = (SystemFac) new InitialContext()
-				.lookup("lpserver/SystemFacBean/remote");
+		
+		SystemFac systemFac = FacLookup.lookup(new InitialContext(), SystemFacBean.class, SystemFac.class);
 
 		byte[][] bilder = systemFac.konvertierePDFFileInEinzelneBilder(pdf,
 				resolution);

@@ -46,27 +46,45 @@ public class MonatsabrechnungDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private JasperPrintLP jasperPrint = null;
-	private String sEinheitVerfuegbarerUrlaub = "";
-	private BigDecimal nVerfuegbarerurlaub = new BigDecimal(0);
-	private BigDecimal nSaldo = new BigDecimal(0);
-    public String getsEinheitVerfuegbarerUrlaub() {
-		return sEinheitVerfuegbarerUrlaub;
+//	private String sEinheitVerfuegbarerUrlaub = "";
+//	private BigDecimal nVerfuegbarerurlaub = new BigDecimal(0);
+//	private BigDecimal nSaldo = new BigDecimal(0);
+	private Object[][] data;
+    private HashMap parameter = new HashMap();
+    private ZeitsaldoDto zeitsaldoDto;
+    
+    private BigDecimal gleitzeitsaldoAbrechnungsmonatOhneVormonat;
+
+	public BigDecimal getGleitzeitsaldoAbrechnungsmonatOhneVormonat() {
+		return gleitzeitsaldoAbrechnungsmonatOhneVormonat;
+	}
+
+	public void setGleitzeitsaldoAbrechnungsmonatOhneVormonat(BigDecimal gleitzeitsaldoAbrechnungsmonatOhneVormonat) {
+		this.gleitzeitsaldoAbrechnungsmonatOhneVormonat = gleitzeitsaldoAbrechnungsmonatOhneVormonat;
+	}
+
+	public MonatsabrechnungDto() {
+		setZeitsaldoDto(new ZeitsaldoDto());
+		setNVerfuegbarerurlaub(new BigDecimal(0));
+		setnSaldo(new BigDecimal(0));
+		setsEinheitVerfuegbarerUrlaub("");
+	}
+
+	public String getsEinheitVerfuegbarerUrlaub() {
+		return getZeitsaldoDto().getEinheitVerfuegbarerUrlaub();
 	}
 
 	public void setsEinheitVerfuegbarerUrlaub(String sEinheitVerfuegbarerUrlaub) {
-		this.sEinheitVerfuegbarerUrlaub = sEinheitVerfuegbarerUrlaub;
+		getZeitsaldoDto().setEinheitVerfuegbarerUrlaub(sEinheitVerfuegbarerUrlaub);
 	}
 
 	public BigDecimal getnSaldo() {
-		return nSaldo;
+		return getZeitsaldoDto().getNSaldo();
 	}
 
 	public void setnSaldo(BigDecimal nSaldo) {
-		this.nSaldo = nSaldo;
+		getZeitsaldoDto().setNSaldo(nSaldo);
 	}
-	private Object[][] data;
-    
-    private HashMap parameter = new HashMap();
     
 	public HashMap getParameter() {
 		return parameter;
@@ -76,15 +94,12 @@ public class MonatsabrechnungDto implements Serializable {
 		this.parameter = parameter;
 	}
 
-	public MonatsabrechnungDto() {
-	}
-
 	public void setJasperPrint(JasperPrintLP jasperPrint) {
 		this.jasperPrint = jasperPrint;
 	}
 
 	public void setNVerfuegbarerurlaub(BigDecimal nVerfuegbarerurlaub) {
-		this.nVerfuegbarerurlaub = nVerfuegbarerurlaub;
+		getZeitsaldoDto().setNVerfuegbarerurlaub(nVerfuegbarerurlaub);
 	}
 
 	public JasperPrintLP getJasperPrint() {
@@ -92,12 +107,13 @@ public class MonatsabrechnungDto implements Serializable {
 	}
 
 	public BigDecimal getNVerfuegbarerurlaub() {
-		if(nVerfuegbarerurlaub!=null){
-			return nVerfuegbarerurlaub;
-		} else {
-			return new BigDecimal(0);
-		}
-		
+//		if(nVerfuegbarerurlaub != null){
+//			return nVerfuegbarerurlaub;
+//		} else {
+//			return new BigDecimal(0);
+//		}
+		return getZeitsaldoDto().getNVerfuegbarerurlaub() != null ? 
+				getZeitsaldoDto().getNVerfuegbarerurlaub() : new BigDecimal(0);
 	}
 	
 	  public void setData(Object[][] data) {
@@ -106,6 +122,14 @@ public class MonatsabrechnungDto implements Serializable {
 	  public Object[][] getData() {
 		    return data;
 		  }
+
+	public ZeitsaldoDto getZeitsaldoDto() {
+		return zeitsaldoDto;
+	}
+
+	public void setZeitsaldoDto(ZeitsaldoDto zeitsaldoDto) {
+		this.zeitsaldoDto = zeitsaldoDto;
+	}
 
 	
 }

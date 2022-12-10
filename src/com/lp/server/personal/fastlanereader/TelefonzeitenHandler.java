@@ -33,6 +33,7 @@
 package com.lp.server.personal.fastlanereader;
 
 import java.awt.Color;
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -42,9 +43,13 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.lieferschein.service.LieferscheinFac;
+import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.personal.fastlanereader.generated.FLRTelefonzeiten;
 import com.lp.server.personal.service.ZeiterfassungFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -59,8 +64,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Personal implementiert. Pro UseCase
- * gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Personal implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -93,8 +98,7 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -105,39 +109,38 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 			int col = 0;
 
 			while (resultListIterator.hasNext()) {
-				FLRTelefonzeiten reise = (FLRTelefonzeiten) resultListIterator
-						.next();
+				FLRTelefonzeiten reise = (FLRTelefonzeiten) resultListIterator.next();
 				rows[row][col++] = reise.getI_id();
 				rows[row][col++] = reise.getT_von();
 				rows[row][col++] = reise.getT_bis();
 
 				if (reise.getFlrpartner() != null) {
-					String firma = reise.getFlrpartner()
-							.getC_name1nachnamefirmazeile1();
+					String firma = reise.getFlrpartner().getC_name1nachnamefirmazeile1();
 					if (reise.getFlrpartner().getC_name2vornamefirmazeile2() != null) {
-						firma += " "
-								+ reise.getFlrpartner()
-										.getC_name2vornamefirmazeile2();
+						firma += " " + reise.getFlrpartner().getC_name2vornamefirmazeile2();
 					}
 					rows[row][col++] = firma;
 				} else {
 					rows[row][col++] = null;
 				}
 				rows[row][col++] = Helper.removeStyles(reise.getX_kommentarext());
-				
+
 				boolean isTimeOK = true;
-				if(Helper.cutDate(reise.getT_von()).compareTo( Helper.cutDate(reise.getT_bis())) != 0) {
+				if (Helper.cutDate(reise.getT_von()).compareTo(Helper.cutDate(reise.getT_bis())) != 0) {
 					isTimeOK = false;
-				} else if(reise.getT_von().after(reise.getT_bis())) {
+				} else if (reise.getT_von().after(reise.getT_bis())) {
 					isTimeOK = false;
 				}
+
+				rows[row][col++] = reise.getT_wiedervorlage();
+				rows[row][col++] = reise.getT_wiedervorlage_erledigt();
+
 				rows[row][col++] = isTimeOK ? null : Color.red;
 
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -156,8 +159,7 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -176,8 +178,8 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -188,8 +190,7 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -203,24 +204,50 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 					if (filterKriterien[i].kritName.equals("c_volltext")) {
 						where.append(" (lower(cast(x_kommentarint as string))");
 						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
+						where.append(" " + filterKriterien[i].value.toLowerCase());
 						where.append(" OR lower(cast(x_kommentarext as string))");
 						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()+")");
+						where.append(" " + filterKriterien[i].value.toLowerCase() + ")");
+					} else if (filterKriterien[i].kritName
+							.equals(LieferantFac.FLR_PARTNER + "." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
+						ParametermandantDto parameter = null;
+						try {
+							parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+									ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+						} catch (RemoteException ex) {
+							throwEJBExceptionLPRespectOld(ex);
+						}
+						Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter.getCWertAsObject();
+						if (bSuchenInklusiveKbez) {
+							where.append(" (lower(telefonzeiten." + filterKriterien[i].kritName + ")");
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + filterKriterien[i].value.toLowerCase());
+							where.append(" OR lower(telefonzeiten.flrpartner.c_name2vornamefirmazeile2)");
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + filterKriterien[i].value.toLowerCase());
+							where.append(" OR lower(telefonzeiten.flrpartner.c_kbez)");
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + filterKriterien[i].value.toLowerCase() + ")");
+						} else {
+
+							where.append(" (lower(telefonzeiten." + filterKriterien[i].kritName + ")");
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + filterKriterien[i].value.toLowerCase());
+							where.append(" OR lower(telefonzeiten.flrpartner.c_name2vornamefirmazeile2)");
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + filterKriterien[i].value.toLowerCase() + ")");
+
+						}
 					} else {
 
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower("
-									+ filterKriterien[i].kritName + ")");
+							where.append(" lower(" + filterKriterien[i].kritName + ")");
 						} else {
 							where.append(" " + filterKriterien[i].kritName);
 						}
 						where.append(" " + filterKriterien[i].operator);
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
+							where.append(" " + filterKriterien[i].value.toLowerCase());
 						} else {
 							where.append(" " + filterKriterien[i].value);
 						}
@@ -249,15 +276,13 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("telefonzeiten."
-									+ kriterien[i].kritName);
+							orderBy.append("telefonzeiten." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -268,8 +293,7 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("telefonzeiten."
-						+ ZeiterfassungFac.FLR_TELEFONZEITEN_T_VON + " DESC ");
+				orderBy.append("telefonzeiten." + ZeiterfassungFac.FLR_TELEFONZEITEN_T_VON + " DESC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf("telefonzeiten.i_id") < 0) {
@@ -300,8 +324,7 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 		return "from FLRTelefonzeiten telefonzeiten ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -352,34 +375,26 @@ public class TelefonzeitenHandler extends UseCaseHandler {
 
 		if (super.getTableInfo() == null) {
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, java.sql.Timestamp.class,
-							java.sql.Timestamp.class, String.class,
-							String.class, Color.class },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.von", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bis", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.partner", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.kommentar", theClientDto
-									.getMandant(), theClientDto.getLocUi()) },
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_XL,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, },
+					new Class[] { Integer.class, java.sql.Timestamp.class, java.sql.Timestamp.class, String.class,
+							String.class, java.sql.Timestamp.class, java.sql.Timestamp.class, Color.class },
+					new String[] { "Id",
+							getTextRespectUISpr("lp.von", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.bis", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.partner", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.kommentar", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.wiedervorlage", theClientDto.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.erledigt", theClientDto.getMandant(), theClientDto.getLocUi()) },
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_XM, QueryParameters.FLR_BREITE_XM, QueryParameters.FLR_BREITE_XL,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_XM, },
 
-					new String[] {
-							"i_id",
-							ZeiterfassungFac.FLR_TELEFONZEITEN_T_VON,
+					new String[] { "i_id", ZeiterfassungFac.FLR_TELEFONZEITEN_T_VON,
 							ZeiterfassungFac.FLR_TELEFONZEITEN_T_BIS,
-							ZeiterfassungFac.FLR_TELEFONZEITEN_FLRPARTNER
-									+ "."
+							ZeiterfassungFac.FLR_TELEFONZEITEN_FLRPARTNER + "."
 									+ PartnerFac.FLR_PARTNER_C_NAME1NACHNAMEFIRMAZEILE1,
-							ZeiterfassungFac.FLR_TELEFONZEITEN_X_KOMMENTAREXT }));
+							ZeiterfassungFac.FLR_TELEFONZEITEN_X_KOMMENTAREXT, "t_wiedervorlage",
+							"t_wiedervorlage_erledigt" }));
 
 		}
 

@@ -19,7 +19,8 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">--> 
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd"> 
 <hibernate-mapping package="com.lp.server.stueckliste.fastlanereader.generated">
 	<class name="FLRPosersatz" table="STK_POSERSATZ">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -33,7 +34,22 @@
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID_ERSATZ" />
 	</class>
-
+	<class name="FLRAlternativmaschine" table="STK_ALTERNATIVMASCHINE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="stuecklistearbeitsplan_i_id" column="STUECKLISTEARBEITSPLAN_I_ID"
+			type="java.lang.Integer" />
+		<property name="n_korrekturfaktor" column="N_KORREKTURFAKTOR"
+			type="java.math.BigDecimal" insert="false" update="false" />
+		<many-to-one name="flrstuecklisteposition"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklistearbeitsplan"
+			column="STUECKLISTEARBEITSPLAN_I_ID" insert="false" update="false" />
+		<many-to-one name="flrmaschine"
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
+			column="MASCHINE_I_ID" />
+	</class>
 	<class name="FLRMontageart" table="STK_MONTAGEART">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -41,6 +57,10 @@
 		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
 	</class>
 	<class name="FLRKommentarimport" table="STK_KOMMENTARIMPORT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -64,7 +84,6 @@
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
 		<property name="c_suche" column="C_SUCHE" type="java.lang.String" />
 	</class>
-
 
 	<class name="FLRFertigungsgruppe" table="STK_FERTIGUNGSGRUPPE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -107,8 +126,8 @@
 			type="java.util.Date" />
 		<property name="fertigungsgruppe_i_id" column="FERTIGUNGSGRUPPE_I_ID"
 			type="java.lang.Integer" insert="false" update="false" />
-		<property name="i_erfassungsfaktor" column="I_ERFASSUNGSFAKTOR"
-			type="java.lang.Integer" insert="false" update="false" />
+		<property name="n_erfassungsfaktor" column="N_ERFASSUNGSFAKTOR"
+			type="java.math.BigDecimal" insert="false" update="false" />
 		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer"
 			insert="false" update="false" />
 		<property name="b_fremdfertigung" column="B_FREMDFERTIGUNG"
@@ -120,6 +139,8 @@
 		<property name="n_losgroesse" column="N_LOSGROESSE" type="java.math.BigDecimal" />
 		<property name="n_defaultdurchlaufzeit" column="N_DEFAULTDURCHLAUFZEIT"
 			type="java.math.BigDecimal" />
+		<property name="c_fremdsystemnr" column="C_FREMDSYSTEMNR"
+			type="java.lang.String" />
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
 			column="ARTIKEL_I_ID" />
@@ -137,6 +158,8 @@
 		<many-to-one name="flrpersonal_freigabe"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID_FREIGABE" insert="false" update="false" />
+		<property name="b_mitFormeln" column="B_MIT_FORMELN"
+			type="java.lang.Short" />
 
 	</class>
 	<class name="FLRStklAuftragposition" table="STK_STUECKLISTE">
@@ -161,6 +184,60 @@
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
 			column="FERTIGUNGSGRUPPE_I_ID" />
 	</class>
+
+
+	<class name="FLRApkommentar" table="STK_APKOMMENTAR">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="apkommentarspr_set" inverse="true">
+			<key column="APKOMMENTAR_I_ID" />
+			<one-to-many
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRApkommentarspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+
+
+	</class>
+	<class name="FLRApkommentarspr" table="STK_APKOMMENTARSPR">
+		<composite-id>
+			<key-many-to-one name="apkommentar" column="APKOMMENTAR_I_ID"
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRApkommentar" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
+	<class name="FLRPruefart" table="STK_PRUEFART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="pruefartspr_set" inverse="true">
+			<key column="PRUEFART_I_ID" />
+			<one-to-many
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefartspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+
+
+
+	</class>
+	<class name="FLRPruefartspr" table="STK_PRUEFARTSPR">
+		<composite-id>
+			<key-many-to-one name="pruefart" column="PRUEFART_I_ID"
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
 	<class name="FLRStuecklisteeigenschaft" table="STK_STUECKLISTEEIGENSCHAFT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -188,6 +265,9 @@
 		<property name="f_dimension2" column="F_DIMENSION2" type="java.lang.Double" />
 		<property name="f_dimension3" column="F_DIMENSION3" type="java.lang.Double" />
 		<property name="b_mitdrucken" column="B_MITDRUCKEN" type="java.lang.Short" />
+		<property name="b_ruestmenge" column="B_RUESTMENGE" type="java.lang.Short" />
+		<property name="b_initial" column="B_INITIAL" type="java.lang.Short" />
+		
 		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
 			type="java.lang.Integer" insert="false" update="false" />
 		<many-to-one name="flrstueckliste"
@@ -205,8 +285,187 @@
 			<one-to-many
 				class="com.lp.server.stueckliste.fastlanereader.generated.FLRPosersatz" />
 		</set>
+		<property name="x_formel" column="X_FORMEL" type="java.lang.String" />
+	</class>
+
+	<class name="FLRPruefkombinationspr" table="STK_PRUEFKOMBINATIONSPR">
+		<composite-id>
+			<key-many-to-one name="pruefkombinationspr" column="PRUEFKOMBINATION_I_ID"
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefkombination" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRPruefkombination" table="STK_PRUEFKOMBINATION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+
+		<property name="artikel_i_id_kontakt" column="ARTIKEL_I_ID_KONTAKT"
+			type="java.lang.Integer" />
+		<property name="artikel_i_id_litze" column="ARTIKEL_I_ID_LITZE"
+			type="java.lang.Integer" />
+		<property name="artikel_i_id_litze2" column="ARTIKEL_I_ID_LITZE2"
+			type="java.lang.Integer" />
+		<property name="verschleissteil_i_id" column="VERSCHLEISSTEIL_I_ID"
+			type="java.lang.Integer" />
+		<property name="n_crimphoehe_draht" column="N_CRIMPHOEHE_DRAHT"
+			type="java.math.BigDecimal" />
+		<property name="n_crimphoehe_isolation" column="N_CRIMPHOEHE_ISOLATION"
+			type="java.math.BigDecimal" />
+		<property name="n_crimpbreite_draht" column="N_CRIMPBREITE_DRAHT"
+			type="java.math.BigDecimal" />
+		<property name="n_crimpbreite_isolation" column="N_CRIMPBREITE_ISOLATION"
+			type="java.math.BigDecimal" />
+
+
+		<property name="n_toleranz_crimphoehe_draht" column="N_TOLERANZ_CRIMPHOEHE_DRAHT"
+			type="java.math.BigDecimal" />
+		<property name="n_toleranz_crimphoehe_isolation" column="N_TOLERANZ_CRIMPHOEHE_ISOLATION"
+			type="java.math.BigDecimal" />
+		<property name="n_toleranz_crimpbreite_draht" column="N_TOLERANZ_CRIMPBREITE_DRAHT"
+			type="java.math.BigDecimal" />
+		<property name="n_toleranz_crimpbreite_isolation" column="N_TOLERANZ_CRIMPBREITE_ISOLATION"
+			type="java.math.BigDecimal" />
+
+		<property name="n_toleranz_wert" column="N_TOLERANZ_WERT"
+			type="java.math.BigDecimal" />
+		<property name="n_wert" column="N_WERT" type="java.math.BigDecimal" />
+
+		<property name="n_abzugskraft_litze" column="N_ABZUGSKRAFT_LITZE"
+			type="java.math.BigDecimal" />
+		<property name="n_abzugskraft_litze2" column="N_ABZUGSKRAFT_LITZE2"
+			type="java.math.BigDecimal" />
+
+
+
+		<property name="b_standard" column="B_STANDARD" type="java.lang.Short" />
+		<property name="b_doppelanschlag" column="B_DOPPELANSCHLAG"
+			type="java.lang.Short" />
+
+
+		<many-to-one name="flrartikel_kontakt"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID_KONTAKT" insert="false" update="false" />
+		<many-to-one name="flrartikel_litze"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID_LITZE" insert="false" update="false" />
+		<many-to-one name="flrartikel_litze2"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID_LITZE2" insert="false" update="false" />
+		<many-to-one name="flrverschleissteil"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRVerschleissteil"
+			column="VERSCHLEISSTEIL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpruefart"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefart"
+			column="PRUEFART_I_ID" insert="false" update="false" />
+
+		<set name="pruefkombinationspr_set" inverse="true">
+			<key column="PRUEFKOMBINATION_I_ID" />
+			<one-to-many
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefkombinationspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
 
 	</class>
+
+	<class name="FLRStklparameter" table="STK_STKLPARAMETER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+
+		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_wert" column="C_WERT" type="java.lang.String" />
+		<property name="c_typ" column="C_TYP" type="java.lang.String" />
+		
+
+		<property name="n_min" column="N_MIN" type="java.math.BigDecimal" />
+		<property name="n_max" column="N_MAX" type="java.math.BigDecimal" />
+
+		<many-to-one name="flrstueckliste"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
+			column="STUECKLISTE_I_ID" />
+
+		<set name="stklparametersprset" inverse="true">
+			<key column="STKLPARAMETER_I_ID" />
+			<one-to-many
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRStklparameterspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+
+
+	</class>
+
+
+	<class name="FLRStklparameterspr" table="STK_STKLPARAMETERSPR">
+		<composite-id>
+			<key-many-to-one name="stklparameter" column="STKLPARAMETER_I_ID"
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRStklparameter" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
+	<class name="FLRStklpruefplan" table="STK_STKLPRUEFPLAN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+
+		<property name="stuecklisteposition_i_id_kontakt" column="STUECKLISTEPOSITION_I_ID_KONTAKT"
+			type="java.lang.Integer" />
+		<property name="stuecklisteposition_i_id_litze" column="STUECKLISTEPOSITION_I_ID_LITZE"
+			type="java.lang.Integer" />
+		<property name="stuecklisteposition_i_id_litze2" column="STUECKLISTEPOSITION_I_ID_LITZE2"
+			type="java.lang.Integer" />
+		<property name="verschleissteil_i_id" column="VERSCHLEISSTEIL_I_ID"
+			type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="pruefkombination_i_id" column="PRUEFKOMBINATION_I_ID"
+			type="java.lang.Integer" />
+
+
+		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+
+		<property name="b_doppelanschlag" column="B_DOPPELANSCHLAG"
+			type="java.lang.Short" />
+
+		<many-to-one name="flrstuecklisteposition_kontakt"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteposition"
+			column="STUECKLISTEPOSITION_I_ID_KONTAKT" insert="false" update="false" />
+		<many-to-one name="flrstuecklisteposition_litze"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteposition"
+			column="STUECKLISTEPOSITION_I_ID_LITZE" insert="false" update="false" />
+		<many-to-one name="flrstuecklisteposition_litze2"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteposition"
+			column="STUECKLISTEPOSITION_I_ID_LITZE2" insert="false" update="false" />
+
+		<many-to-one name="flrverschleissteil"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRVerschleissteil"
+			column="VERSCHLEISSTEIL_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrpruefart"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefart"
+			column="PRUEFART_I_ID" insert="false" update="false" />
+		<many-to-one name="flrstueckliste"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
+			column="STUECKLISTE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpruefkombination"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefkombination"
+			column="PRUEFKOMBINATION_I_ID" insert="false" update="false" />
+
+	</class>
+
+
 	<class name="FLRStuecklistearbeitsplan" table="STK_STUECKLISTEARBEITSPLAN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -217,10 +476,13 @@
 		<property name="i_aufspannung" column="I_AUFSPANNUNG" type="java.lang.Integer" />
 		<property name="i_maschinenversatztage" column="I_MASCHINENVERSATZTAGE"
 			type="java.lang.Integer" />
+		<property name="n_ppm" column="N_PPM" type="java.math.BigDecimal" />
 		<property name="l_stueckzeit" column="L_STUECKZEIT" type="java.lang.Long" />
 		<property name="l_ruestzeit" column="L_RUESTZEIT" type="java.lang.Long" />
 		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
 		<property name="b_nurmaschinenzeit" column="B_NURMASCHINENZEIT"
+			type="java.lang.Short" />
+		<property name="b_initial" column="B_INITIAL"
 			type="java.lang.Short" />
 		<property name="maschine_i_id" column="MASCHINE_I_ID" type="java.lang.Integer"
 			insert="false" update="false" />
@@ -235,7 +497,9 @@
 		<many-to-one name="flrmaschine"
 			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
 			column="MASCHINE_I_ID" />
+		<property name="x_formel" column="X_FORMEL" type="java.lang.String" />
 	</class>
+	
 	<class name="FLRStuecklistepositionFuerDruck" table="STK_STUECKLISTEPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -252,10 +516,22 @@
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" />
 	</class>
+
+	<class name="FLRStuecklisteScriptart" table="STK_STUECKLISTESCRIPTART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="c_script" column="C_SCRIPT" type="java.lang.String" />
+	</class>
+
 	<filter-def name="filterLocale">
 		<filter-param name="paramLocale" type="java.lang.String" />
 	</filter-def>
 	<filter-def name="filterMandant">
 		<filter-param name="paramMandant" type="java.lang.String" />
 	</filter-def>
+
 </hibernate-mapping>

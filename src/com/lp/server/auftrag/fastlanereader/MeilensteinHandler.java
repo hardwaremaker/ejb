@@ -241,11 +241,11 @@ public class MeilensteinHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("flrmeilenstein.c_nr ASC ");
+				orderBy.append("flrmeilenstein.i_sort ASC ");
 
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("flrmeilenstein.c_nr") < 0) {
+			if (orderBy.indexOf("flrmeilenstein.i_sort") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -254,7 +254,7 @@ public class MeilensteinHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" flrmeilenstein.c_nr ");
+				orderBy.append(" flrmeilenstein.i_sort ");
 				sortAdded = true;
 			}
 			if (sortAdded) {

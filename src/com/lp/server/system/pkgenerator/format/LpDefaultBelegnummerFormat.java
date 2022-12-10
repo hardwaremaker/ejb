@@ -55,9 +55,10 @@ public class LpDefaultBelegnummerFormat extends LpBelegnummerFormat {
 	protected char trennzeichen;
 	protected java.text.DecimalFormat dfGeschaeftsjahr;
 	private int stellenGeschaeftsjahr;
+	protected int stellenZufall;
 
 	public LpDefaultBelegnummerFormat(int stellenGeschaeftsjahr,
-			char trennzeichen, int stellenLfdNummer) {
+			char trennzeichen, int stellenLfdNummer, int stellenZufall) {
 		super(stellenLfdNummer);
 		dfGeschaeftsjahr = new DecimalFormat(
 				getDecimalFormatPattern(stellenGeschaeftsjahr));
@@ -66,6 +67,7 @@ public class LpDefaultBelegnummerFormat extends LpBelegnummerFormat {
 		dfGeschaeftsjahr.setMaximumIntegerDigits(stellenGeschaeftsjahr);
 		this.stellenGeschaeftsjahr = stellenGeschaeftsjahr;
 		this.trennzeichen = trennzeichen;
+		this.stellenZufall = stellenZufall;
 	}
 
 	public String format(LpBelegnummer lpBelegnummer) {
@@ -73,6 +75,22 @@ public class LpDefaultBelegnummerFormat extends LpBelegnummerFormat {
 				.getGeschaeftsJahr());
 		result = result + trennzeichen;
 		result = result + dfBelegNummer.format(lpBelegnummer.getBelegNummer());
+		return result;
+	}
+
+	public String formatMitStellenZufall(LpBelegnummer lpBelegnummer) {
+		String result = dfGeschaeftsjahr.format(lpBelegnummer
+				.getGeschaeftsJahr());
+		result = result + trennzeichen;
+
+		// PJ20114
+		Integer belegnummer = lpBelegnummer.getBelegNummer();
+		if (stellenZufall > 0) {
+			belegnummer = belegnummer * (int) Math.pow(10, stellenZufall);
+			belegnummer += (int) (Math.random() * (int) Math.pow(10,
+					stellenZufall));
+		}
+		result = result + dfBelegNummer.format(belegnummer);
 		return result;
 	}
 

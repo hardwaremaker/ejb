@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2022 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -36,16 +36,15 @@ import java.sql.Date;
 import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.NonUniqueResultException;
 
 import com.lp.server.partner.ejb.HvTypedQuery;
 
 public class GeschaeftsjahrMandantQuery {
-	public final static String ByDateMandant = "GeschaeftsjahrmandantfindByDatum" ;
-	public final static String ByMandant = "GeschaeftsjahrmandantfindAll" ;
-	public final static String ByYear    = "GeschaeftsjahrmandantfindAllByYear" ;
-	public final static String ByYearMandant = "GeschaeftsjahrmandantfindByYear" ;
+	public static final String ByDateMandant = "GeschaeftsjahrmandantfindByDatum";
+	public static final String ByMandant = "GeschaeftsjahrmandantfindAll";
+	public static final String ByYear    = "GeschaeftsjahrmandantfindAllByYear";
+	public static final String ByYearMandant = "GeschaeftsjahrmandantfindByYear";
+	public static final String ByOpenMandant = "GeschaeftsjahrmandantfindByOpen";
 	
 	public static HvTypedQuery<GeschaeftsjahrMandant> byJahrMandant(EntityManager em, Integer geschaeftsJahr, String mandant) {
 		HvTypedQuery<GeschaeftsjahrMandant> gjQuery = new HvTypedQuery<GeschaeftsjahrMandant>(
@@ -76,7 +75,14 @@ public class GeschaeftsjahrMandantQuery {
 		gjQuery.setParameter("mandant", mandant) ;
 		return gjQuery ;		
 	}
-	
+
+	public static HvTypedQuery<GeschaeftsjahrMandant> byOpenMandant(EntityManager em, String mandant) {
+		HvTypedQuery<GeschaeftsjahrMandant> gjQuery = new HvTypedQuery<GeschaeftsjahrMandant>(
+				em.createNamedQuery(ByOpenMandant)) ;
+		gjQuery.setParameter("mandant", mandant) ;
+		return gjQuery ;		
+	}
+
 	public static List<GeschaeftsjahrMandant> listByMandant(EntityManager em, String mandant) {
 		return byMandant(em, mandant).getResultList() ;
 	}
@@ -91,5 +97,9 @@ public class GeschaeftsjahrMandantQuery {
 	
 	public static List<GeschaeftsjahrMandant> listByYear(EntityManager em, Integer year) {
 		return byJahr(em, year).getResultList() ;
-	}	
+	}
+	
+	public static List<GeschaeftsjahrMandant> listByOpenMandant(EntityManager em, String mandant) {
+		return byOpenMandant(em, mandant).getResultList();
+	}
 }

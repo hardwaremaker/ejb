@@ -40,45 +40,56 @@ import javax.jms.QueueReceiver;
 import javax.naming.NamingException;
 
 public class HvQueueReceiver extends HvQueue {
-	private boolean created = false ;
+	private boolean created = false;
 	private Queue queue = null;
-	private QueueReceiver queueReceiver = null ;
-	
+	private QueueReceiver queueReceiver = null;
+
 	public HvQueueReceiver(String queueName) {
-		super(queueName) ;
+		super(queueName);
 	}
 
 	public HvQueueReceiver(String queueName, MessageListener messageListener) {
 		super(queueName);
-		createReceiverQueue(messageListener) ;
+		createReceiverQueue(messageListener);
 	}
 
 	public void installListener(MessageListener messageListener) {
-		createReceiverQueue(messageListener) ;
+		createReceiverQueue(messageListener);
 	}
-	
+
 	protected boolean createReceiverQueue(MessageListener messageListener) {
-		created = false ;
+		// ->>UMBAU-BEISPIEL FUER WILDFLY SIEHE KLASSE LPAsynchSubscriber
+
+		created = false;
 		try {
 			try {
-				queue = (Queue) getInitialContext().lookup(getQueueName()) ;
-			} catch(NamingException e) {
-				queue = getQueueSession().createQueue(getQueueName()) ;
-			}			
-			queueReceiver = getQueueSession().createReceiver(queue) ;
+				try {
+
+					queue = (Queue) getInitialContext().lookup(getQueueName());
+				} catch (NamingException e1) {
+					log.error("NAMING1", e1);
+					e1.printStackTrace();
+					queue = (Queue) getInitialContext().lookup("jms/" + getQueueName());
+				}
+			} catch (NamingException e) {
+				log.error("NAMING2", e);
+				e.printStackTrace();
+				queue = getQueueSession().createQueue(getQueueName());
+			}
+			queueReceiver = getQueueSession().createReceiver(queue);
 			queueReceiver.setMessageListener(messageListener);
 			getQueueConnection().start();
-			created = true ;
-			
+			created = true;
+
 			log.info("created receiving end of Queue " + getQueueName());
-		} catch(JMSException e) {
-			log.warn("JMSException: ", e);			
+		} catch (JMSException e) {
+			log.warn("JMSException: ", e);
 		}
-		
-		return created ;		
+
+		return created;
 	}
-	
+
 	public Message receiveNoWait() throws JMSException {
-		return queueReceiver.receiveNoWait() ;
+		return queueReceiver.receiveNoWait();
 	}
 }

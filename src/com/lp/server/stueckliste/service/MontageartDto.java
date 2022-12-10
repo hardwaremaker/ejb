@@ -34,6 +34,8 @@ package com.lp.server.stueckliste.service;
 
 import java.io.Serializable;
 
+import com.lp.server.artikel.service.ArtikelDto;
+
 public class MontageartDto implements Serializable {
 	/**
 	 * 
@@ -41,6 +43,8 @@ public class MontageartDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
 	private String cBez;
+	private Integer artikelIId;
+	private ArtikelDto artikelDto;
 
 	public Integer getIId() {
 		return iId;
@@ -103,5 +107,21 @@ public class MontageartDto implements Serializable {
 		returnString += iId;
 		returnString += ", " + cBez;
 		return returnString;
+	}
+
+	public ArtikelDto getArtikelDto() {
+		return artikelDto;
+	}
+
+	public void setArtikelDto(ArtikelDto artikelDto) {
+		this.artikelDto = artikelDto;
+	}
+
+	public Integer getArtikelIId() {
+		return artikelIId;
+	}
+
+	public void setArtikelIId(Integer artikelIId) {
+		this.artikelIId = artikelIId;
 	}
 }

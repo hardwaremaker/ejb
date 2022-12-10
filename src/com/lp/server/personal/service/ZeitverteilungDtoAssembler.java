@@ -49,6 +49,13 @@ public class ZeitverteilungDtoAssembler {
 			zeitverteilungDto.setTZeit(zeitverteilung.getTZeit());
 			zeitverteilungDto.setLosIId(zeitverteilung.getLosIId());
 			zeitverteilungDto.setArtikelIId(zeitverteilung.getArtikelIId());
+			zeitverteilungDto.setMaschineIId(zeitverteilung.getMaschineIId());
+			zeitverteilungDto.setLossollarbeitsplanIId(zeitverteilung
+					.getLossollarbeitsplanIId());
+			zeitverteilungDto.setBVerteilt(zeitverteilung.getBVerteilt());
+			zeitverteilungDto.setIIdBlock(zeitverteilung.getIIdBlock());
+			zeitverteilungDto.setZeitdatenIIdUmgewandelt(zeitverteilung
+					.getZeitdatenIIdUmgewandelt());
 		}
 		return zeitverteilungDto;
 	}

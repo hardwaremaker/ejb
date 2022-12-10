@@ -45,7 +45,6 @@ public class SchwereDtoAssembler {
 		if (schwere != null) {
 			schwereDto.setIId(schwere.getIId());
 			schwereDto.setCNr(schwere.getCNr());
-			schwereDto.setCBez(schwere.getCBez());
 			schwereDto.setIPunkte(schwere.getIPunkte());
 		}
 		return schwereDto;

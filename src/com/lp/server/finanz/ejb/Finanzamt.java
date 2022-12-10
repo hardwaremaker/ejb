@@ -112,23 +112,28 @@ public class Finanzamt implements Serializable {
 	@Column(name = "KONTO_I_ID_RC_ANZAHLUNG_ERHALT_BEZA")
 	private Integer kontoIIdRCAnzahlungErhaltenBezahlt;
 
-	public Integer getKontoIIdRCAnzahlungGegebenVerr() {
-		return kontoIIdRCAnzahlungGegebenVerr;
-	}
+	@Column(name = "KONTO_I_ID_GEWINNVORTRAG")
+	private Integer kontoIIdGewinnvortrag;
+	@Column(name = "KONTO_I_ID_JAHRESGEWINN")
+	private Integer kontoIIdJahresgewinn;
+	
+//	public Integer getKontoIIdRCAnzahlungGegebenVerr() {
+//		return kontoIIdRCAnzahlungGegebenVerr;
+//	}
 
-	public void setKontoIIdRCAnzahlungGegebenVerr(
-			Integer kontoIIdRCAnzahlungGegebenVerr) {
-		this.kontoIIdRCAnzahlungGegebenVerr = kontoIIdRCAnzahlungGegebenVerr;
-	}
+//	public void setKontoIIdRCAnzahlungGegebenVerr(
+//			Integer kontoIIdRCAnzahlungGegebenVerr) {
+//		this.kontoIIdRCAnzahlungGegebenVerr = kontoIIdRCAnzahlungGegebenVerr;
+//	}
 
-	public Integer getKontoIIdRCAnzahlungGegebenBezahlt() {
-		return kontoIIdRCAnzahlungGegebenBezahlt;
-	}
+//	public Integer getKontoIIdRCAnzahlungGegebenBezahlt() {
+//		return kontoIIdRCAnzahlungGegebenBezahlt;
+//	}
 
-	public void setKontoIIdRCAnzahlungGegebenBezahlt(
-			Integer kontoIIdRCAnzahlungGegebenBezahlt) {
-		this.kontoIIdRCAnzahlungGegebenBezahlt = kontoIIdRCAnzahlungGegebenBezahlt;
-	}
+//	public void setKontoIIdRCAnzahlungGegebenBezahlt(
+//			Integer kontoIIdRCAnzahlungGegebenBezahlt) {
+//		this.kontoIIdRCAnzahlungGegebenBezahlt = kontoIIdRCAnzahlungGegebenBezahlt;
+//	}
 
 	public Integer getKontoIIdRCAnzahlungErhaltenVerr() {
 		return kontoIIdRCAnzahlungErhaltenVerr;
@@ -139,14 +144,14 @@ public class Finanzamt implements Serializable {
 		this.kontoIIdRCAnzahlungErhaltenVerr = kontoIIdRCAnzahlungErhaltenVerr;
 	}
 
-	public Integer getKontoIIdRCAnzahlungErhaltenBezahlt() {
-		return kontoIIdRCAnzahlungErhaltenBezahlt;
-	}
+//	public Integer getKontoIIdRCAnzahlungErhaltenBezahlt() {
+//		return kontoIIdRCAnzahlungErhaltenBezahlt;
+//	}
 
-	public void setKontoIIdRCAnzahlungErhaltenBezahlt(
-			Integer kontoIIdRCAnzahlungErhaltenBeza) {
-		this.kontoIIdRCAnzahlungErhaltenBezahlt = kontoIIdRCAnzahlungErhaltenBeza;
-	}
+//	public void setKontoIIdRCAnzahlungErhaltenBezahlt(
+//			Integer kontoIIdRCAnzahlungErhaltenBeza) {
+//		this.kontoIIdRCAnzahlungErhaltenBezahlt = kontoIIdRCAnzahlungErhaltenBeza;
+//	}
 
 	public Integer getKontoIIdEbsachkonten() {
 		return kontoIIdEbsachkonten;
@@ -316,4 +321,19 @@ public class Finanzamt implements Serializable {
 		return kontoIIdAnzahlungGegebenBeazhlt;
 	}
 
+	public void setKontoIIdGewinnvortrag(Integer kontoIIdGewinnvortrag) {
+		this.kontoIIdGewinnvortrag = kontoIIdGewinnvortrag;
+	}
+	
+	public Integer getKontoIIdGewinnvortrag() {
+		return kontoIIdGewinnvortrag;
+	}
+	
+	public void setKontoIIdJahresgewinn(Integer kontoIIdJahresgewinn) {
+		this.kontoIIdJahresgewinn = kontoIIdJahresgewinn;
+	}
+	
+	public Integer getKontoIIdJahresgewinn() {
+		return kontoIIdJahresgewinn;
+	}
 }

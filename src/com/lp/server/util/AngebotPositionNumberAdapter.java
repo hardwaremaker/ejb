@@ -33,14 +33,17 @@
 package com.lp.server.util;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
 import com.lp.server.angebot.ejb.Angebotposition;
+import com.lp.server.artikel.ejb.Artikel;
+import com.lp.util.Helper;
 
 public class AngebotPositionNumberAdapter extends PositionNumberAdapter implements Serializable {
 
@@ -61,6 +64,11 @@ public class AngebotPositionNumberAdapter extends PositionNumberAdapter implemen
 	}
 	public AngebotPositionNumberAdapter(Angebotposition angebotPos) {
 		this.angebotPos = angebotPos ;
+	}
+	
+	@Override
+	public Object getAdaptee() {
+		return angebotPos ;
 	}
 	
 	public void setAdaptee(Object adaptee) {
@@ -121,13 +129,28 @@ public class AngebotPositionNumberAdapter extends PositionNumberAdapter implemen
 	@Override
 	public Iterator<?> getPositionsIteratorForHeadIId(Integer angebotIId) {
 		if(null == angebotIId) return null ;
-		try {
-			Query query = em.createNamedQuery("AngebotpositionfindByAngebotIId");
-			query.setParameter(1, angebotIId);
-			return query.getResultList().iterator(); 
-		} catch(NoResultException e) {	
-		}
-		
-		return null ;
+		return getPositionsListForHeadIId(angebotIId).iterator();
+//		try {
+//			Query query = em.createNamedQuery("AngebotpositionfindByAngebotIId");
+//			query.setParameter(1, angebotIId);
+//			return query.getResultList().iterator() ;
+//		} catch (NoResultException e) {
+//		}
+//		
+//		return null ;
+	}
+	
+	@Override
+	public boolean isIdent() {
+		Artikel a = em.find(Artikel.class, angebotPos.getArtikelIId());
+		return !Helper.short2boolean(a.getBKalkulatorisch()) ;
+	}
+	
+	@Override
+	public List<?> getPositionsListForHeadIId(Integer headIId) {
+		if(headIId == null) return new ArrayList();
+		Query query = em.createNamedQuery("AngebotpositionfindByAngebotIId");
+		query.setParameter(1, headIId);
+		return query.getResultList() ;
 	}
 }

@@ -62,7 +62,10 @@ public class InventurDtoAssembler {
 			inventurDto.setTAbwertungdurchgefuehrt(inventur
 					.getTAbwertungdurchgefuehrt());
 			inventurDto.setMandantCNr(inventur.getMandantCNr());
-			inventurDto.setBNichtinventierteartikelabbuchen(inventur.getBNichtinventierteartikelabbuchen());
+			inventurDto.setBNichtinventierteartikelabbuchen(inventur
+					.getBNichtinventierteartikelabbuchen());
+			inventurDto.setBNichtinventierteSnrchnrArtikelabbuchen(inventur
+					.getBNichtinventierteSnrchnrArtikelabbuchen());
 		}
 		return inventurDto;
 	}

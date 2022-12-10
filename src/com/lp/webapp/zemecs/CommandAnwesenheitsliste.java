@@ -43,9 +43,10 @@ import javax.servlet.http.HttpServletResponse;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRExporter;
 import net.sf.jasperreports.engine.JRExporterParameter;
-import net.sf.jasperreports.engine.export.JRHtmlExporter;
+import net.sf.jasperreports.engine.export.HtmlExporter;
 import net.sf.jasperreports.engine.export.JRHtmlExporterParameter;
 
+import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.report.JasperPrintLP;
@@ -81,60 +82,62 @@ public class CommandAnwesenheitsliste extends Command {
 		super(sJSPI);
 	}
 
-	public String execute(HttpServletRequest request,
-			HttpServletResponse response) throws Exception {
+	public String execute(HttpServletRequest request, HttpServletResponse response) throws Exception {
 
 		super.execute(request, response);
 
-		
 		Locale localeLogon = getMandantFac().getLocaleDesHauptmandanten();
 
 		String locale = request.getParameter("locale");
-		
+
 		if (locale != null && locale.length() > 3) {
-			localeLogon = new Locale(locale.substring(0, 2), locale.substring(
-					2, 4));
+			localeLogon = new Locale(locale.substring(0, 2), locale.substring(2, 4));
 		}
-		
+
 		if (command.equals(TheApp.CMD_ANWESENHEITSLITE)) {
 			String mandant = request.getParameter("mandant");
-			
-			TheClientDto theclientDto = getLogonFac()
-					.logon( Helper.getFullUsername(sUser), 				
-							Helper.getMD5Hash((sUser + "lpwebappzemecs").toCharArray()),
-							localeLogon, mandant,
-							new Timestamp(System.currentTimeMillis()));
-			
-			JasperPrintLP jasperprint = getZeiterfassungsFac()
-					.printAnwesenheitsliste(theclientDto);
+
+			/*
+			 * TheClientDto theclientDto = getLogonFac() .logon(
+			 * Helper.getFullUsername(sUser), Helper.getMD5Hash((sUser +
+			 * "lpwebappzemecs").toCharArray()), localeLogon, mandant, new
+			 * Timestamp(System.currentTimeMillis()));
+			 */
+
+			TheClientDto theclientDto = getLogonFac().logonIntern(localeLogon, mandant);
+
+			String kostenstelle = request.getParameter("kostenstelle");
+			Integer kostenstelleIId = null;
+			if (kostenstelle != null && kostenstelle.trim().length() > 0) {
+				KostenstelleDto kstDto = getSystemFac().kostenstelleFindByNummerMandantOhneExc(kostenstelle.trim(),
+						theclientDto.getMandant());
+				if (kstDto != null) {
+					kostenstelleIId = kstDto.getIId();
+				}
+			}
+
+			JasperPrintLP jasperprint = getZeiterfassungsFac().printAnwesenheitsliste(theclientDto, kostenstelleIId);
 
 			if (jasperprint != null) {
 				try {
 					response.setContentType("text/html");
 					response.setLocale(localeLogon);
-					//PrintWriter out = response.getWriter();
+					// PrintWriter out = response.getWriter();
 					StringBuffer out = new StringBuffer();
-					JRExporter exporter = new JRHtmlExporter();
+					JRExporter exporter = new HtmlExporter();
 					Map<Object, Object> imagesMap = new HashMap<Object, Object>();
 					request.getSession().setAttribute("IMAGES_MAP", imagesMap);
-					exporter.setParameter(JRExporterParameter.JASPER_PRINT,
-							jasperprint.getPrint());
-					exporter.setParameter(JRExporterParameter.OUTPUT_STRING_BUFFER,
-							out);
+					exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperprint.getPrint());
+					exporter.setParameter(JRExporterParameter.OUTPUT_STRING_BUFFER, out);
 
-					exporter.setParameter(
-							JRHtmlExporterParameter.IS_USING_IMAGES_TO_ALIGN,
-							Boolean.FALSE);
-
+					
 					exporter.exportReport();
-					out = HelperServer.removeScriptHtml(out);
+					//out = HelperServer.removeScriptHtml(out);
 					response.getWriter().print(out);
 
 					getTheClient(request, response).setBResponseIsReady(true);
 				} catch (JRException ex) {
-					response.sendError(
-							HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ex
-									.getMessage());
+					response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ex.getMessage());
 				}
 			}
 			getLogonFac().logout(theclientDto);

@@ -65,6 +65,27 @@ public class LagerbewegungDto implements Serializable {
 	private Short bHistorie;
 	private Integer herstellerIId;
 	private Integer landIId;
+
+	private Integer gebindeIId;
+
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
+	}
+
+	private BigDecimal nGebindemenge;
+
+	public BigDecimal getNGebindemenge() {
+		return nGebindemenge;
+	}
+
+	public void setNGebindemenge(BigDecimal nGebindemenge) {
+		this.nGebindemenge = nGebindemenge;
+	}
+
 	private String cVersion;
 
 	public String getCVersion() {
@@ -74,8 +95,7 @@ public class LagerbewegungDto implements Serializable {
 	public void setCVersion(String cVersion) {
 		this.cVersion = cVersion;
 	}
-	
-	
+
 	public Short getBHistorie() {
 		return bHistorie;
 	}

@@ -46,4 +46,6 @@ public interface PKGeneratorFac  {
 	public boolean existsSequence(String name) throws RemoteException;
 
 	public void createSequenceIfNotExists(String name) throws RemoteException;
+	
+	public void createSequenceIfNotExists(String name, Integer defaultValue) throws RemoteException;
 }

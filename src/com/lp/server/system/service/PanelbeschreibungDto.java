@@ -63,6 +63,16 @@ public class PanelbeschreibungDto implements Serializable {
 	private Integer artgruIId;
 	private String cDruckname;
 
+	private String projekttypCNr;
+
+	public String getProjekttypCNr() {
+		return projekttypCNr;
+	}
+
+	public void setProjekttypCNr(String projekttypCNr) {
+		this.projekttypCNr = projekttypCNr;
+	}
+	
 	private String cDefault;
 
 	public String getCDefault() {
@@ -71,6 +81,26 @@ public class PanelbeschreibungDto implements Serializable {
 
 	public void setCDefault(String cDefault) {
 		this.cDefault = cDefault;
+	}
+
+	private Integer bereichIId;
+
+	public Integer getBereichIId() {
+		return bereichIId;
+	}
+
+	public void setBereichIId(Integer bereichIId) {
+		this.bereichIId = bereichIId;
+	}
+
+	private Integer kostenstelleIId;
+
+	public Integer getKostenstelleIId() {
+		return this.kostenstelleIId;
+	}
+
+	public void setKostenstelleIId(Integer kostenstelle) {
+		this.kostenstelleIId = kostenstelle;
 	}
 
 	private Integer partnerklasseIId;
@@ -131,6 +161,16 @@ public class PanelbeschreibungDto implements Serializable {
 		this.cTokeninresourcebundle = cTokeninresourcebundle;
 	}
 
+	private Short bUeberschrift;
+
+	public Short getBUeberschrift() {
+		return bUeberschrift;
+	}
+
+	public void setBUeberschrift(Short bUeberschrift) {
+		this.bUeberschrift = bUeberschrift;
+	}
+	
 	public Integer getIGridx() {
 		return iGridx;
 	}

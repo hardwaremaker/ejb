@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.bestellung.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
@@ -66,6 +34,9 @@ public class FLRBestellposition implements Serializable {
     private Short b_artikelbezuebersteuert;
 
     /** nullable persistent field */
+    private BigDecimal n_nettoeinzelpreis;
+
+    /** nullable persistent field */
     private BigDecimal n_nettogesamtpreis;
 
     /** nullable persistent field */
@@ -96,6 +67,12 @@ public class FLRBestellposition implements Serializable {
     private Integer position_i_id_artikelset;
 
     /** nullable persistent field */
+    private Integer bestellposition_i_id_rahmenposition;
+
+    /** nullable persistent field */
+    private Integer lossollmaterial_i_id;
+
+    /** nullable persistent field */
     private com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung;
 
     /** nullable persistent field */
@@ -107,17 +84,15 @@ public class FLRBestellposition implements Serializable {
     /** nullable persistent field */
     private FLRLossollmaterial flrlossollmaterial;
 
-    /** nullable persistent field */
-    private BigDecimal n_nettoeinzelpreis ;
-    
     /** full constructor */
-    public FLRBestellposition(Integer i_sort, BigDecimal n_menge, String einheit_c_nr, String c_bezeichnung, String c_zusatzbezeichnung, Short b_artikelbezuebersteuert, BigDecimal n_nettogesamtpreis, String c_textinhalt, String bestellpositionstatus_c_nr, String bestellpositionart_c_nr, BigDecimal n_offenemenge, Date t_uebersteuerterliefertermin, Date t_auftragsbestaetigungstermin, Date t_abursprungstermin, String c_abnummer, Integer position_i_id_artikelset, com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, FLRLossollmaterial flrlossollmaterial) {
+    public FLRBestellposition(Integer i_sort, BigDecimal n_menge, String einheit_c_nr, String c_bezeichnung, String c_zusatzbezeichnung, Short b_artikelbezuebersteuert, BigDecimal n_nettoeinzelpreis, BigDecimal n_nettogesamtpreis, String c_textinhalt, String bestellpositionstatus_c_nr, String bestellpositionart_c_nr, BigDecimal n_offenemenge, Date t_uebersteuerterliefertermin, Date t_auftragsbestaetigungstermin, Date t_abursprungstermin, String c_abnummer, Integer position_i_id_artikelset, Integer bestellposition_i_id_rahmenposition, Integer lossollmaterial_i_id, com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, FLRLossollmaterial flrlossollmaterial) {
         this.i_sort = i_sort;
         this.n_menge = n_menge;
         this.einheit_c_nr = einheit_c_nr;
         this.c_bezeichnung = c_bezeichnung;
         this.c_zusatzbezeichnung = c_zusatzbezeichnung;
         this.b_artikelbezuebersteuert = b_artikelbezuebersteuert;
+        this.n_nettoeinzelpreis = n_nettoeinzelpreis;
         this.n_nettogesamtpreis = n_nettogesamtpreis;
         this.c_textinhalt = c_textinhalt;
         this.bestellpositionstatus_c_nr = bestellpositionstatus_c_nr;
@@ -128,6 +103,8 @@ public class FLRBestellposition implements Serializable {
         this.t_abursprungstermin = t_abursprungstermin;
         this.c_abnummer = c_abnummer;
         this.position_i_id_artikelset = position_i_id_artikelset;
+        this.bestellposition_i_id_rahmenposition = bestellposition_i_id_rahmenposition;
+        this.lossollmaterial_i_id = lossollmaterial_i_id;
         this.flrbestellung = flrbestellung;
         this.flrartikel = flrartikel;
         this.flrmediastandard = flrmediastandard;
@@ -197,6 +174,14 @@ public class FLRBestellposition implements Serializable {
 
     public void setB_artikelbezuebersteuert(Short b_artikelbezuebersteuert) {
         this.b_artikelbezuebersteuert = b_artikelbezuebersteuert;
+    }
+
+    public BigDecimal getN_nettoeinzelpreis() {
+        return this.n_nettoeinzelpreis;
+    }
+
+    public void setN_nettoeinzelpreis(BigDecimal n_nettoeinzelpreis) {
+        this.n_nettoeinzelpreis = n_nettoeinzelpreis;
     }
 
     public BigDecimal getN_nettogesamtpreis() {
@@ -279,6 +264,22 @@ public class FLRBestellposition implements Serializable {
         this.position_i_id_artikelset = position_i_id_artikelset;
     }
 
+    public Integer getBestellposition_i_id_rahmenposition() {
+        return this.bestellposition_i_id_rahmenposition;
+    }
+
+    public void setBestellposition_i_id_rahmenposition(Integer bestellposition_i_id_rahmenposition) {
+        this.bestellposition_i_id_rahmenposition = bestellposition_i_id_rahmenposition;
+    }
+
+    public Integer getLossollmaterial_i_id() {
+        return this.lossollmaterial_i_id;
+    }
+
+    public void setLossollmaterial_i_id(Integer lossollmaterial_i_id) {
+        this.lossollmaterial_i_id = lossollmaterial_i_id;
+    }
+
     public com.lp.server.bestellung.fastlanereader.generated.FLRBestellung getFlrbestellung() {
         return this.flrbestellung;
     }
@@ -309,14 +310,6 @@ public class FLRBestellposition implements Serializable {
 
     public void setFlrlossollmaterial(FLRLossollmaterial flrlossollmaterial) {
         this.flrlossollmaterial = flrlossollmaterial;
-    }
-
-    public BigDecimal getN_nettoeinzelpreis() {
-        return this.n_nettoeinzelpreis;
-    }
-
-    public void setN_nettoeinzelpreis(BigDecimal n_nettoeinzelpreis) {
-        this.n_nettoeinzelpreis = n_nettoeinzelpreis;
     }
 
     public String toString() {

@@ -35,7 +35,7 @@ package com.lp.server.finanz.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
-import java.util.Map;
+import java.util.HashMap;
 
 import javax.ejb.Remote;
 
@@ -66,91 +66,135 @@ public interface FinanzReportFac {
 	public final static String REPORT_OFFENEPOSTEN = "finanz_offene_posten.jasper";
 	public final static String REPORT_LIQUIDITAETSVORSCHAU = "finanz_liquiditaetsvorschau.jasper";
 	public final static String REPORT_ERFOLGSRECHNUNG = "finanz_ergebnisuebersicht.jasper";
+	public final static String REPORT_EINFACHE_ERFOLGSRECHNUNG = "finanz_einfache_erfolgsrechnung.jasper";
 	public final static String REPORT_STEUERKATEGORIEN = "finanz_steuerkategorien.jasper";
 	public final static String REPORT_BUCHUNGSBELEG = "finanz_buchungsbeleg.jasper";
 	public final static String REPORT_BILANZ = "finanz_bilanz.jasper";
 	public final static String REPORT_USTVERPROBUNG = "finanz_ustverprobung.jasper";
 	public final static String REPORT_AENDERUNGEN_KONTO = "finanz_aenderungen_konto.jasper";
+	public final static String REPORT_KASSENJOURNAL = "finanz_kassenjournal.jasper";
+	public final static String REPORT_KPI = "finanz_kpi.jasper";
+	public final static String REPORT_UEBERWEISUNGSLISTE = "finanz_ueberweisungsliste.jasper";
 	
-	public final static String INTRASTAT_VERFAHREN_WARENEINGANG = "40000";
-	public final static String INTRASTAT_VERFAHREN_VERSAND = "10000";
-	public final static int INTRASTAT_VERKEHRSZWEIG = 3;
-	public final static int INTRASTAT_NACHKOMMASTELLEN_MENGE = 3;
-	public final static int INTRASTAT_NACHKOMMASTELLEN_PREISE = 2;
-	public final static int INTRASTAT_NACHKOMMASTELLEN_GEWICHT = 3;
+	public static final String INTRASTAT_VERFAHREN_WARENEINGANG = "40000";
+	public static final String INTRASTAT_VERFAHREN_VERSAND = "10000";
+	public static final String INTRASTAT_VERKEHRSZWEIG = "3" /* Strasse */;
+	public static final int INTRASTAT_NACHKOMMASTELLEN_MENGE = 3;
+	public static final int INTRASTAT_NACHKOMMASTELLEN_PREISE = 2;
+	public static final int INTRASTAT_NACHKOMMASTELLEN_GEWICHT = 3;
 
-	public JasperPrintLP printAlleKonten(TheClientDto theClientDto, String kontotypCNr, boolean bMitVersteckten)
+	public JasperPrintLP printAlleKonten(TheClientDto theClientDto,
+			String kontotypCNr, boolean bMitVersteckten) throws EJBExceptionLP,
+			RemoteException;
+
+	public JasperPrintLP printBuchungenAufKonto(TheClientDto theClientDto,
+			Integer kontoIId) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printBuchungenInBuchungsjournal(
+			TheClientDto theClientDto, Integer buchungsjournalIId)
 			throws EJBExceptionLP, RemoteException;
-
-	public JasperPrintLP printBuchungenAufKonto(TheClientDto theClientDto, Integer kontoIId)
-			throws EJBExceptionLP, RemoteException;
-
-	public JasperPrintLP printBuchungenInBuchungsjournal(TheClientDto theClientDto,
-			Integer buchungsjournalIId) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printBuchungsjournal(TheClientDto theClientDto,
-			BuchungsjournalReportParameter params) throws EJBExceptionLP, RemoteException;
+			BuchungsjournalReportParameter params) throws EJBExceptionLP,
+			RemoteException;
 
-//	public JasperPrintLP printBuchungsjournal(TheClientDto theClientDto,
-//			Integer buchungsjournalIId, Date dVon, Date dBis, boolean storniert, boolean bDatumsfilterIstBuchungsdatum, String text, String belegnummer, BigDecimal betrag, String kontonummer) throws EJBExceptionLP, RemoteException;
+	// public JasperPrintLP printBuchungsjournal(TheClientDto theClientDto,
+	// Integer buchungsjournalIId, Date dVon, Date dBis, boolean storniert,
+	// boolean bDatumsfilterIstBuchungsdatum, String text, String belegnummer,
+	// BigDecimal betrag, String kontonummer) throws EJBExceptionLP,
+	// RemoteException;
 
-	public JasperPrintLP printRASchreiben(TheClientDto theClientDto, Integer mahnungIId)
+	public JasperPrintLP printRASchreiben(TheClientDto theClientDto,
+			Integer mahnungIId) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printRASchreibenFuerRechnung(
+			TheClientDto theClientDto, Integer rechnungIId)
 			throws EJBExceptionLP, RemoteException;
-
-	public JasperPrintLP printRASchreibenFuerRechnung(TheClientDto theClientDto,
-			Integer rechnungIId) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printMahnungAusMahnlauf(TheClientDto theClientDto,
-			Integer mahnungIId,Boolean bMitLogo) throws EJBExceptionLP, RemoteException;
+			Integer mahnungIId, Boolean bMitLogo) throws EJBExceptionLP,
+			RemoteException;
 
 	public JasperPrintLP printMahnungFuerRechnung(TheClientDto theClientDto,
-			Integer rechnungIId, Integer mahnstufeIId,Boolean bMitLogo) throws EJBExceptionLP,
-			RemoteException;
+			Integer rechnungIId, Integer mahnstufeIId, Boolean bMitLogo)
+			throws EJBExceptionLP, RemoteException;
+
 	public JasperPrintLP printSteuerkategorien(TheClientDto theClientDto);
-	public JasperPrintLP printLiquiditaetsvorschau(BigDecimal kontostand, BigDecimal kreditlimit,
-			Integer kalenderwochen,boolean bTerminNachZahlungsmoral, boolean bMitPlankosten,ArrayList<LiquititaetsvorschauImportDto> alPlankosten,boolean bMitOffenenAngeboten,boolean bMitOffenenBestellungen,boolean bMitOffenenAuftraegen, TheClientDto theClientDto);
-	
-	public JasperPrintLP[] printSammelmahnung(Integer mahnlaufIId, Boolean bMitLogo, TheClientDto theClientDto)
+
+	public JasperPrintLP printLiquiditaetsvorschau(BigDecimal kontostand,
+			BigDecimal kreditlimit, Integer kalenderwochen,
+			boolean bTerminNachZahlungsmoral, boolean bMitPlankosten,
+			ArrayList<LiquititaetsvorschauImportDto> alPlankosten,
+			boolean bMitOffenenAngeboten, boolean bMitOffenenBestellungen,
+			boolean bMitOffenenAuftraegen, boolean bMitAbgaben,
+			boolean bERTerminNachFreigabedatum,
+			boolean bMitABZahlungsUndZeitplan, boolean bOhneAndereMandanten, TheClientDto theClientDto);
+
+	public JasperPrintLP[] printSammelmahnung(Integer mahnlaufIId,
+			Boolean bMitLogo, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException;
+
+	public JasperPrintLP printSaldenliste(String mandantCNr,
+			ReportSaldenlisteKriterienDto krit, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printSaldenliste(String mandantCNr, ReportSaldenlisteKriterienDto krit, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public JasperPrintLP printKontoblaetter(PrintKontoblaetterModel kbModel,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printKontoblaetter(PrintKontoblaetterModel kbModel, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
-	
-	public JasperPrintLP printBuchungsbeleg(Integer buchungIId, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
-	
-	public JasperPrintLP printKassabuch(PrintKontoblaetterModel kbModel, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
+	public JasperPrintLP printBuchungsbeleg(Integer buchungIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printKassabuch(PrintKontoblaetterModel kbModel,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printMahnlauf(
 			ReportJournalKriterienDto reportJournalKriterienDtoI,
-			Integer mahnlaufIId, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-
-	public JasperPrintLP printExportlauf(Integer exportlaufIId, TheClientDto theClientDto)
+			Integer mahnlaufIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printExportlauf(Integer exportlaufIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printIntrastatVorschau(String sVerfahren,
 			java.sql.Date dVon, java.sql.Date dBis,
 			BigDecimal bdTransportkosten, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
-	public Map<String, Object> getMahnungsParameterFuerRechnung(TheClientDto theClientDto,
-			Integer rechnungIId, Integer mahnstufeIId) throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printUva(String mandant, ReportUvaKriterienDto krit, TheClientDto theClient)
+	public HashMap<String, Object> getMahnungsParameterFuerRechnung(
+			TheClientDto theClientDto, Integer rechnungIId, Integer mahnstufeIId)
 			throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printOffenePosten(String kontotypCNr, Integer geschaeftsjahr,
-			Integer kontoIId, java.sql.Timestamp tStichtag, TheClientDto theClientDto, boolean sortAlphabethisch);
+	public JasperPrintLP printUva(String mandant, ReportUvaKriterienDto krit,
+			TheClientDto theClient) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printOffenePosten(String kontotypCNr,
+			Integer geschaeftsjahr, Integer kontoIId,
+			java.sql.Timestamp tStichtag, TheClientDto theClientDto,
+			boolean sortAlphabethisch);
 
 	public JasperPrintLP printErfolgsrechnung(String mandant,
-			ReportErfolgsrechnungKriterienDto kriterien,boolean bBilanz, boolean bDetail, TheClientDto theClient)
-			throws EJBExceptionLP, RemoteException;
-	
-	public JasperPrintLP printUstVerprobung(ReportUvaKriterienDto krit, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			ReportErfolgsrechnungKriterienDto kriterien, boolean bBilanz,
+			boolean bDetail, boolean bEroeffnungsbilanz, TheClientDto theClient) throws EJBExceptionLP,
+			RemoteException;
+
+	public JasperPrintLP printUstVerprobung(ReportUvaKriterienDto krit,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printAenderungenKonto(Integer kontoIId,
 			TheClientDto theClientDto);
+
+	public ArrayList<Integer> getAlleEingetretenenPersonenEinesMonats(
+			java.util.Date tStichtag, TheClientDto theClientDto);
+
+	public JasperPrintLP printEinfacheErfolgsrechnung(
+			TheClientDto theClientDto, Integer iGeschaeftsjahr,
+			boolean bMitLagerwert, boolean bMitHalbfertiglager, boolean bMitPersonalstunden, boolean bMitMaschinenstunden);
 	
+	public JasperPrintLP printKassenjournal(Integer kassabuchIId,
+			Integer iGeschaeftsjahr, TheClientDto theClientDto);
+	
+	public JasperPrintLP printUeberweisungsliste(Integer zahlungsvorschlaglaufIId, TheClientDto theClientDto);
+	
+	
+
 }

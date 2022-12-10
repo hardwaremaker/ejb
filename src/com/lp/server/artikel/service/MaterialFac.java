@@ -35,10 +35,13 @@ package com.lp.server.artikel.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.ejb.Remote;
 
+import com.lp.server.partner.service.KundematerialDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
@@ -70,8 +73,8 @@ public interface MaterialFac {
 			String waehrungCNrZielwaehrung, TheClientDto theClientDto);
 
 	public BigDecimal getMaterialzuschlagVKInZielwaehrung(Integer artikelIId,
-			Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto);
+			Integer kundeIId, Date datGueltigkeitsdatumI,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto);
 
 	public void updateMaterial(MaterialDto materialDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -86,7 +89,7 @@ public interface MaterialFac {
 			MaterialzuschlagDto materialzuschlagDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void removeMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto)
+	public void removeMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public void updateMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto,
@@ -94,10 +97,35 @@ public interface MaterialFac {
 
 	public MaterialzuschlagDto materialzuschlagFindByPrimaryKey(Integer iId)
 			throws EJBExceptionLP, RemoteException;
+
 	public void pflegeMaterialzuschlagsKursUndDatumNachtragen(
 			TheClientDto theClientDto);
+
 	public MaterialDto materialFindByPrimaryKey(Integer iId, Locale locDruck,
 			TheClientDto theClientDto);
 	
+	public Integer createKundematerial(KundematerialDto dto,
+			TheClientDto theClientDto);
+	public void removeKundematerial(KundematerialDto dto);
+	public void updateKundematerial(KundematerialDto dto,
+			TheClientDto theClientDto);
+	public KundematerialDto kundematerialFindByPrimaryKey(Integer iId);
+	public MaterialzuschlagDto getKursMaterialzuschlagDtoVKInZielwaehrung(
+			Integer kundeIId, Integer artikelIId,
+			java.util.Date datGueltigkeitsdatumI,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto);
+	
+	public Integer createMaterialpreis(MaterialpreisDto materialpreisDto, TheClientDto theClientDto);
+	public void removeMaterialpreis(MaterialpreisDto materialpreisDto, TheClientDto theClientDto);
+	public MaterialpreisDto materialpreisFindByPrimaryKey(Integer iId);
+	public void updateMaterialpreis(MaterialpreisDto materialpreisDto, TheClientDto theClientDto);
+	
+	public BigDecimal getMaterialpreisInZielwaehrung(Integer materialIId, java.util.Date datGueltigkeitsdatumI,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto);
+	
+	Map<Integer, Object> objFindByNameClientPrimaryKeys(String methodName,
+			Collection<Integer> keys, TheClientDto theClientDto) throws NoSuchMethodException;
+	Map<Integer, Object> objFindByNamePrimaryKeys(
+			String methodName, Collection<Integer> keys) throws NoSuchMethodException;
 
 }

@@ -35,6 +35,8 @@ package com.lp.server.personal.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
+
 public class TelefonzeitenDto implements Serializable {
 
 	/**
@@ -50,6 +52,73 @@ public class TelefonzeitenDto implements Serializable {
 	private String xKommentarext;
 	private String xKommentarint;
 	private Integer ansprechpartnerIId;
+	private Integer personalIIdErledigt;
+	private Timestamp tErledigt;
+	private Double fVerrechenbar;
+
+	private Double fDauerUebersteuert;
+
+	public Double getFDauerUebersteuert() {
+		return fDauerUebersteuert;
+	}
+
+	public void setFDauerUebersteuert(Double fDauerUebersteuert) {
+		this.fDauerUebersteuert = fDauerUebersteuert;
+	}
+
+	private Integer auftragIId;
+
+	private Integer angebotIId;
+
+	public Integer getAngebotIId() {
+		return angebotIId;
+	}
+
+	public void setAngebotIId(Integer angebotIId) {
+		this.angebotIId = angebotIId;
+	}
+
+	public Integer getAuftragIId() {
+		return auftragIId;
+	}
+
+	public void setAuftragIId(Integer auftragIId) {
+		this.auftragIId = auftragIId;
+	}
+
+	private String cTelefonnrGewaehlt;
+
+	public String getCTelefonnrGewaehlt() {
+		return cTelefonnrGewaehlt;
+	}
+
+	public void setCTelefonnrGewaehlt(String cTelefonnrGewaehlt) {
+		this.cTelefonnrGewaehlt = cTelefonnrGewaehlt;
+	}
+
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
 
 	public Integer getIId() {
 		return iId;
@@ -125,6 +194,53 @@ public class TelefonzeitenDto implements Serializable {
 		this.projektIId = projektIId;
 	}
 
+	private String cTitel;
+
+	public String getCTitel() {
+		return cTitel;
+	}
+
+	public void setCTitel(String titel) {
+		cTitel = titel;
+	}
+
+	private Integer personalIIdZugewiesener;
+	private Integer kontaktartIId;
+	private Timestamp tWiedervorlage;
+	private Timestamp tWiedervorlageErledigt;
+
+	public Timestamp getTWiedervorlage() {
+		return tWiedervorlage;
+	}
+
+	public void setTWiedervorlage(Timestamp wiedervorlage) {
+		tWiedervorlage = wiedervorlage;
+	}
+
+	public void setTWiedervorlageErledigt(Timestamp wiedervorlageErledigt) {
+		tWiedervorlageErledigt = wiedervorlageErledigt;
+	}
+
+	public Timestamp getTWiedervorlageErledigt() {
+		return tWiedervorlageErledigt;
+	}
+
+	public Integer getPersonalIIdZugewiesener() {
+		return personalIIdZugewiesener;
+	}
+
+	public void setPersonalIIdZugewiesener(Integer personalIIdZugewiesener) {
+		this.personalIIdZugewiesener = personalIIdZugewiesener;
+	}
+
+	public Integer getKontaktartIId() {
+		return kontaktartIId;
+	}
+
+	public void setKontaktartIId(Integer kontaktartIId) {
+		this.kontaktartIId = kontaktartIId;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -133,23 +249,17 @@ public class TelefonzeitenDto implements Serializable {
 		TelefonzeitenDto that = (TelefonzeitenDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.personalIId == null ? this.personalIId == null
-				: that.personalIId.equals(this.personalIId)))
+		if (!(that.personalIId == null ? this.personalIId == null : that.personalIId.equals(this.personalIId)))
 			return false;
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId)))
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId)))
 			return false;
-		if (!(that.tVon == null ? this.tVon == null : that.tVon
-				.equals(this.tVon)))
+		if (!(that.tVon == null ? this.tVon == null : that.tVon.equals(this.tVon)))
 			return false;
-		if (!(that.tBis == null ? this.tBis == null : that.tBis
-				.equals(this.tBis)))
+		if (!(that.tBis == null ? this.tBis == null : that.tBis.equals(this.tBis)))
 			return false;
-		if (!(that.xKommentarext == null ? this.xKommentarext == null
-				: that.xKommentarext.equals(this.xKommentarext)))
+		if (!(that.xKommentarext == null ? this.xKommentarext == null : that.xKommentarext.equals(this.xKommentarext)))
 			return false;
-		if (!(that.xKommentarint == null ? this.xKommentarint == null
-				: that.xKommentarint.equals(this.xKommentarint)))
+		if (!(that.xKommentarint == null ? this.xKommentarint == null : that.xKommentarint.equals(this.xKommentarint)))
 			return false;
 		if (!(that.ansprechpartnerIId == null ? this.ansprechpartnerIId == null
 				: that.ansprechpartnerIId.equals(this.ansprechpartnerIId)))
@@ -180,8 +290,7 @@ public class TelefonzeitenDto implements Serializable {
 		returnStringBuffer.append("tBis:").append(tBis);
 		returnStringBuffer.append("xKommentarext:").append(xKommentarext);
 		returnStringBuffer.append("xKommentarint:").append(xKommentarint);
-		returnStringBuffer.append("ansprechpartnerIId:").append(
-				ansprechpartnerIId);
+		returnStringBuffer.append("ansprechpartnerIId:").append(ansprechpartnerIId);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}

@@ -35,6 +35,8 @@ package com.lp.server.system.automatikjob;
 import com.lp.server.bestellung.service.BSMahnlaufDto;
 import com.lp.server.system.service.AutoMahnenDto;
 import com.lp.server.system.service.AutoMahnungsversandDto;
+import com.lp.server.system.service.AutomatikjobDto;
+import com.lp.server.system.service.AutomatiktimerFac;
 import com.lp.server.system.service.TheClientDto;
 
 public class AutomatikjobMahnen extends AutomatikjobBasis {
@@ -42,6 +44,7 @@ public class AutomatikjobMahnen extends AutomatikjobBasis {
 	private AutoMahnungsversandDto automahnungsversandDto;
 	private AutoMahnenDto autoMahnenDto;
 	private boolean errorInJob;
+	private TheClientDto theClientDto;
 
 	public AutomatikjobMahnen() {
 		super();
@@ -56,13 +59,14 @@ public class AutomatikjobMahnen extends AutomatikjobBasis {
 	public boolean performJob(TheClientDto theClientDto) {
 		myLogger.info("start Mahnlauferstellung");
 		errorInJob = false;
+		this.theClientDto = theClientDto;
 
 		try {
 			automahnungsversandDto = getAutoMahnungsversandFac()
 					.autoMahnungsversandFindByMandantCNr(theClientDto.getMandant());
 			autoMahnenDto = getAutoMahnenFac().autoMahnenFindByMandantCNr(theClientDto.getMandant());
 		} catch (Throwable t) {
-			myLogger.error("Fehler beim holen der Parameter");
+			myLogger.error("Fehler beim Holen der Parameter", t);
 			errorInJob = true;
 		}
 		BSMahnlaufDto mahnlaufDto = null;
@@ -71,7 +75,7 @@ public class AutomatikjobMahnen extends AutomatikjobBasis {
 			bNotToPerform = getBSMahnwesenFac().bGibtEsEinenOffenenBSMahnlauf(
 					theClientDto.getMandant(), theClientDto);
 		} catch (Throwable t) {
-			myLogger.error("Fehler beim initialisieren");
+			myLogger.error("Fehler beim Initialisieren", t);
 			errorInJob = true;
 		}
 		if (bNotToPerform) {
@@ -94,25 +98,38 @@ public class AutomatikjobMahnen extends AutomatikjobBasis {
 				}
 			
 			} catch (Throwable t) {
-				myLogger.error("Fehler beim erstellen des Mahnlaufes " + t.getMessage());
+				myLogger.error("Fehler beim Erstellen des Mahnlaufes " + t.getMessage(), t);
 				errorInJob = true;
 			}
 		}
-		if (mahnlaufDto != null) {
-			int iMahniID = mahnlaufDto.getIId();
-			automahnungsversandDto.setMahnlaufIId(iMahniID);
-		} else {
-			automahnungsversandDto.setMahnlaufIId(null);
-		}
-		try {
-			getAutoMahnungsversandFac().updateAutoMahnungsversand(
-					automahnungsversandDto);
-		} catch (Throwable t) {
-			myLogger.error("Fehler beim zur\u00FCckschreiben der Parameter");
-			errorInJob = true;
-		}
+		
+		updateAutoMahnungsversand(mahnlaufDto != null ? mahnlaufDto.getIId() : null);
+
 		myLogger.info("ende Mahnlaufgenerierung");
 		return errorInJob;
 	}
-
+	
+	private void updateAutoMahnungsversand(Integer mahnlaufIId) {
+		try {
+			automahnungsversandDto.setMahnlaufIId(mahnlaufIId);
+			getAutoMahnungsversandFac().updateAutoMahnungsversand(
+					automahnungsversandDto);
+			if (mahnlaufIId == null) 
+				return;
+			
+			AutomatikjobDto versandjobDto = getAutomatikjobFac().automatikjobFindByCJobtypeMandantCnr(
+					AutomatiktimerFac.JOBTYPE_MAHNUNGSVERSAND_TYPE, theClientDto.getMandant());
+			AutomatikjobDto mahnenjobDto = getAutomatikjobFac().automatikjobFindByCJobtypeMandantCnr(
+					AutomatiktimerFac.JOBTYPE_MAHNEN_TYPE, theClientDto.getMandant());
+			
+			if (versandjobDto.getBActive() != 0) {
+				// SP8609 Sicherstellen, dass der Mahnungsversand, wenn aktiv, auch startet
+				versandjobDto.setDLastperformed(mahnenjobDto.getDLastperformed());
+				getAutomatikjobFac().updateAutomatikjob(versandjobDto);
+			}
+		} catch (Throwable t) {
+			myLogger.error("Fehler beim Zur\u00FCckschreiben der Parameter", t);
+			errorInJob = true;
+		}
+	}
 }

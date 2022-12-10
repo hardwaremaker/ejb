@@ -33,6 +33,7 @@
 package com.lp.server.anfrage.service;
 
 import java.rmi.RemoteException;
+import java.util.List;
 
 import javax.ejb.Remote;
 
@@ -132,4 +133,17 @@ public interface AnfragepositionFac {
 			throws EJBExceptionLP, RemoteException;
 	
 	public Integer getPositionNummer(Integer anfragepositionIId, TheClientDto theClientDto);
+	
+	public Integer createAnfrageposition(
+			AnfragepositionDto anfragepositionDtoI, boolean bMitErsatztypen,
+			TheClientDto theClientDto) throws EJBExceptionLP;
+	
+	public void vertauscheAnfragepositionenMinus(Integer iIdBasePosition,
+			List<Integer> possibleIIds, TheClientDto theClientDto)
+			throws EJBExceptionLP;
+	public void vertauscheAnfragepositionenPlus(Integer iIdBasePosition,
+			List<Integer> possibleIIds, TheClientDto theClientDto)
+			throws EJBExceptionLP;
+	public void sortiereNachArtikelnummer(Integer anfrageIId, TheClientDto theClientDto);
+	
 }

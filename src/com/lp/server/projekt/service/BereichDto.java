@@ -34,6 +34,8 @@ package com.lp.server.projekt.service;
 
 import java.io.Serializable;
 
+import javax.persistence.Column;
+
 public class BereichDto implements Serializable {
 
 	private static final long serialVersionUID = 1L;
@@ -42,6 +44,26 @@ public class BereichDto implements Serializable {
 	private String cBez;
 	private String mandantCNr;
 	private Integer iSort;
+
+	private Short bDetailtextIstPflichtfeld;
+	
+	public Short getBDetailtextIstPflichtfeld() {
+		return bDetailtextIstPflichtfeld;
+	}
+
+	public void setBDetailtextIstPflichtfeld(Short bDetailtextIstPflichtfeld) {
+		this.bDetailtextIstPflichtfeld = bDetailtextIstPflichtfeld;
+	}
+	
+	private Short bDurchgefuehrtVonInOffene;
+
+	public Short getBDurchgefuehrtVonInOffene() {
+		return bDurchgefuehrtVonInOffene;
+	}
+
+	public void setBDurchgefuehrtVonInOffene(Short bDurchgefuehrtVonInOffene) {
+		this.bDurchgefuehrtVonInOffene = bDurchgefuehrtVonInOffene;
+	}
 
 	public String getMandantCNr() {
 		return mandantCNr;
@@ -74,5 +96,44 @@ public class BereichDto implements Serializable {
 	public void setISort(Integer iSort) {
 		this.iSort = iSort;
 	}
+
+	private Short bProjektMitBetreiber;
+
+	public Short getBProjektMitBetreiber() {
+		return bProjektMitBetreiber;
+	}
+
+	public void setBProjektMitBetreiber(Short bProjektMitBetreiber) {
+		this.bProjektMitBetreiber = bProjektMitBetreiber;
+	}
+
+	private Short bProjektMitArtikel;
+
+	public Short getBProjektMitArtikel() {
+		return bProjektMitArtikel;
+	}
+
+	public void setBProjektMitArtikel(Short bProjektMitArtikel) {
+		this.bProjektMitArtikel = bProjektMitArtikel;
+	}
+
+	public Short getBProjektArtikeleindeutig() {
+		return bProjektArtikeleindeutig;
+	}
+
+	public void setBProjektArtikeleindeutig(Short bProjektArtikeleindeutig) {
+		this.bProjektArtikeleindeutig = bProjektArtikeleindeutig;
+	}
+
+	public Short getBProjektArtikelPflichtfeld() {
+		return bProjektArtikelPflichtfeld;
+	}
+
+	public void setBProjektArtikelPflichtfeld(Short bProjektArtikelPflichtfeld) {
+		this.bProjektArtikelPflichtfeld = bProjektArtikelPflichtfeld;
+	}
+
+	private Short bProjektArtikeleindeutig;
+	private Short bProjektArtikelPflichtfeld;
 
 }

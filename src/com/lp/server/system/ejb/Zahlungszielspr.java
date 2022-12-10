@@ -41,7 +41,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "ZahlungszielsprfindByZahlungszielIId", query = "SELECT OBJECT (o) FROM Zahlungszielspr o WHERE o.pk.zahlungszielIId = ?1") })
+@NamedQueries( { @NamedQuery(name = "ZahlungszielsprfindByZahlungszielIId", query = "SELECT OBJECT (o) FROM Zahlungszielspr o WHERE o.pk.zahlungszielIId = ?1"),
+	@NamedQuery(name = "ZahlungszielsprfindByCBezeichnungLocaleCNr", query = "SELECT OBJECT(C) FROM Zahlungszielspr c WHERE c.cBezeichnung=?1 AND c.pk.localeCNr = ?2") })
 @Entity
 @Table(name = "LP_ZAHLUNGSZIELSPR")
 public class Zahlungszielspr implements Serializable {

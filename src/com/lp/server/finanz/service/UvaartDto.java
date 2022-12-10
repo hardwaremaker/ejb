@@ -45,6 +45,17 @@ public class UvaartDto implements Serializable {
 	private String cKennzeichen;
 	private short bInvertiert;
 	
+	
+	private Short bKeineAuswahlBeiEr;
+
+	public Short getBKeineAuswahlBeiEr() {
+		return bKeineAuswahlBeiEr;
+	}
+
+	public void setBKeineAuswahlBeiEr(Short bKeineAuswahlBeiEr) {
+		this.bKeineAuswahlBeiEr = bKeineAuswahlBeiEr;
+	}
+	
 	private Integer iSort;
 
 	private UvaartsprDto uvaartsprDto = null;
@@ -139,5 +150,64 @@ public class UvaartDto implements Serializable {
 
 	public String getCKennzeichen() {
 		return cKennzeichen;
+	}
+	
+	public String getCnrUppercase() {
+		return getCNr().toUpperCase().replaceAll(" ", "_");
+	}
+	
+	public boolean isNichtZutreffend() {
+		return FinanzServiceFac.UVAART_NICHT_ZUTREFFEND.equals(getCNr());
+	}
+	
+	public boolean isInlandNormalsteuer() {
+		return FinanzServiceFac.UVAART_INLAND_20.equals(getCNr());
+	}
+	
+	public boolean isInlandReduziert() {
+		return FinanzServiceFac.UVAART_INLAND_10.equals(getCNr());
+	}
+	
+	public boolean isInlandSteuerfrei() {
+		return FinanzServiceFac.UVAART_INLAND_STEUERFREI.equals(getCNr());
+	}
+	
+	public boolean isEUAuslandMitUiD() {
+		return FinanzServiceFac.UVAART_EU_AUSLAND_MIT_UID.equals(getCNr());
+	}
+	
+	public boolean isExportDrittland() {
+		return FinanzServiceFac.UVAART_EXPORT_DRITTLAND.equals(getCNr());
+	}
+	
+	public boolean isIGErwerbNormalsteuer() {
+		return FinanzServiceFac.UVAART_IG_ERWERB_20.equals(getCNr());
+	}
+	
+	public boolean isIGErwerbReduziert() {
+		return FinanzServiceFac.UVAART_IG_ERWERB_10.equals(getCNr());
+	}
+	
+	public boolean isAnzahlungNormalsteuer() {
+		return FinanzServiceFac.UVAART_ZAHLUNG_20.equals(getCNr());
+	}
+	
+	public boolean isAnzahlungReduziert() {
+		return FinanzServiceFac.UVAART_ZAHLUNG_10.equals(getCNr());
+	}
+	
+	public boolean isNormalsteuer() {
+		return isInlandNormalsteuer() ||
+				isIGErwerbNormalsteuer() || isAnzahlungNormalsteuer();
+	}
+	
+	public boolean isReduziertsteuer() {
+		return isInlandReduziert() ||
+				isIGErwerbReduziert() || isAnzahlungReduziert();
+	}
+	
+	public boolean isSteuerfrei() {
+		return isNichtZutreffend() || isEUAuslandMitUiD() ||
+				isExportDrittland() || isInlandSteuerfrei();
 	}
 }

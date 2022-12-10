@@ -100,19 +100,16 @@ public class InseratFacBean extends Facade implements InseratFac {
 	@PersistenceContext
 	private EntityManager em;
 
-	public Integer createInserat(InseratDto inseratDto,
-			TheClientDto theClientDto) {
+	public Integer createInserat(InseratDto inseratDto, TheClientDto theClientDto) {
 		Integer inseratIId = null;
 		try {
 			// Generieren von PK + Belegnummer
-			LpBelegnummerFormat f = getBelegnummerGeneratorObj()
-					.getBelegnummernFormat(inseratDto.getMandantCNr());
+			LpBelegnummerFormat f = getBelegnummerGeneratorObj().getBelegnummernFormat(inseratDto.getMandantCNr());
 
-			Integer iGeschaeftsjahr = getParameterFac().getGeschaeftsjahr(
-					inseratDto.getMandantCNr(), inseratDto.getTBelegdatum());
+			Integer iGeschaeftsjahr = getParameterFac().getGeschaeftsjahr(inseratDto.getMandantCNr(),
+					inseratDto.getTBelegdatum());
 
-			LpBelegnummer bnr = getBelegnummerGeneratorObj().getNextBelegNr(
-					iGeschaeftsjahr, PKConst.PK_INSERAT,
+			LpBelegnummer bnr = getBelegnummerGeneratorObj().getNextBelegNr(iGeschaeftsjahr, PKConst.PK_INSERAT,
 					inseratDto.getMandantCNr(), theClientDto);
 
 			inseratIId = bnr.getPrimaryKey();
@@ -127,45 +124,29 @@ public class InseratFacBean extends Facade implements InseratFac {
 			inseratDto.setTAnlegen(t);
 			inseratDto.setTAendern(t);
 
-			Inserat inserat = new Inserat(inseratDto.getIId(),
-					inseratDto.getCNr(), inseratDto.getMandantCNr(),
-					inseratDto.getFKdRabatt(), inseratDto.getFKdZusatzrabatt(),
-					inseratDto.getFKdNachlass(), inseratDto.getLieferantIId(),
-					inseratDto.getTBelegdatum(), inseratDto.getFLFRabatt(),
-					inseratDto.getFLfZusatzrabatt(),
-					inseratDto.getFLfNachlass(), inseratDto.getTTermin(),
-					inseratDto.getStatusCNr(),
-					inseratDto.getArtikelIIdInseratart(),
-					inseratDto.getPersonalIIdAnlegen(),
-					inseratDto.getPersonalIIdAendern(),
-					inseratDto.getPersonalIIdVertreter(),
-					inseratDto.getNMenge(),
-					inseratDto.getNNettoeinzelpreisEk(),
-					inseratDto.getNNettoeinzelpreisVk(),
-					inseratDto.getTAnlegen(), inseratDto.getTAendern(),
-					inseratDto.getBDruckBestellungLf(),
-					inseratDto.getBDruckBestellungKd(),
-					inseratDto.getBDruckRechnungKd(),
-					inseratDto.getBWertaufteilen());
+			Inserat inserat = new Inserat(inseratDto.getIId(), inseratDto.getCNr(), inseratDto.getMandantCNr(),
+					inseratDto.getFKdRabatt(), inseratDto.getFKdZusatzrabatt(), inseratDto.getFKdNachlass(),
+					inseratDto.getLieferantIId(), inseratDto.getTBelegdatum(), inseratDto.getFLFRabatt(),
+					inseratDto.getFLfZusatzrabatt(), inseratDto.getFLfNachlass(), inseratDto.getTTermin(),
+					inseratDto.getStatusCNr(), inseratDto.getArtikelIIdInseratart(), inseratDto.getPersonalIIdAnlegen(),
+					inseratDto.getPersonalIIdAendern(), inseratDto.getPersonalIIdVertreter(), inseratDto.getNMenge(),
+					inseratDto.getNNettoeinzelpreisEk(), inseratDto.getNNettoeinzelpreisVk(), inseratDto.getTAnlegen(),
+					inseratDto.getTAendern(), inseratDto.getBDruckBestellungLf(), inseratDto.getBDruckBestellungKd(),
+					inseratDto.getBDruckRechnungKd(), inseratDto.getBWertaufteilen());
 			em.persist(inserat);
 			em.flush();
 
 			setInseratFromInseratDto(inserat, inseratDto);
 
-		
-
 			if (inseratDto.getInseratrechnungDto() != null) {
 				inseratDto.getInseratrechnungDto().setInseratIId(inseratIId);
 				inseratDto.getInseratrechnungDto().setRechnungpositionIId(null);
-				createInseratrechnung(inseratDto.getInseratrechnungDto(),
-						theClientDto);
+				createInseratrechnung(inseratDto.getInseratrechnungDto(), theClientDto);
 			}
-			
+
 			if (inseratDto.inseratIId_Kopiertvon != null) {
-				inseratArtikelRechnungKopieren(inseratDto.inseratIId_Kopiertvon,
-						inseratIId, theClientDto);
+				inseratArtikelRechnungKopieren(inseratDto.inseratIId_Kopiertvon, inseratIId, theClientDto);
 			}
-			
 
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -176,19 +157,16 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return inseratIId;
 	}
 
-	public Integer createInseratrechnung(InseratrechnungDto inseratrechnungDto,
-			TheClientDto theClientDto) {
+	public Integer createInseratrechnung(InseratrechnungDto inseratrechnungDto, TheClientDto theClientDto) {
 		Integer inseratIId = null;
 
 		try {
-			Query query = em
-					.createNamedQuery("InseratrechnungfindInseratIIdKundeIId");
+			Query query = em.createNamedQuery("InseratrechnungfindInseratIIdKundeIId");
 			query.setParameter(1, inseratrechnungDto.getInseratIId());
 			query.setParameter(2, inseratrechnungDto.getKundeIId());
 			// @todo getSingleResult oder getResultList ?
 			Inseratrechnung doppelt = (Inseratrechnung) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("IV_INSERATRECHNUNG.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("IV_INSERATRECHNUNG.UK"));
 		} catch (NoResultException ex) {
 
 		}
@@ -201,8 +179,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_INSERATRECHNUNG);
 			inseratrechnungDto.setIId(pk);
 
-			Query queryNext = em
-					.createNamedQuery("InseratrechnungejbSelectNextReihung");
+			Query queryNext = em.createNamedQuery("InseratrechnungejbSelectNextReihung");
 			queryNext.setParameter(1, inseratrechnungDto.getInseratIId());
 
 			Integer i = (Integer) queryNext.getSingleResult();
@@ -213,16 +190,13 @@ public class InseratFacBean extends Facade implements InseratFac {
 			i = new Integer(i.intValue() + 1);
 			inseratrechnungDto.setiSort(i);
 
-			Inseratrechnung inseratrechnung = new Inseratrechnung(
-					inseratrechnungDto.getIId(),
-					inseratrechnungDto.getInseratIId(),
-					inseratrechnungDto.getKundeIId(),
+			Inseratrechnung inseratrechnung = new Inseratrechnung(inseratrechnungDto.getIId(),
+					inseratrechnungDto.getInseratIId(), inseratrechnungDto.getKundeIId(),
 					inseratrechnungDto.getiSort());
 			em.persist(inseratrechnung);
 			em.flush();
 
-			setInseratrechnungFromInseratrechnungDto(inseratrechnung,
-					inseratrechnungDto);
+			setInseratrechnungFromInseratrechnungDto(inseratrechnung, inseratrechnungDto);
 
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -231,18 +205,15 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return inseratIId;
 	}
 
-	public Integer createInserater(InseraterDto inseraterDto,
-			TheClientDto theClientDto) {
+	public Integer createInserater(InseraterDto inseraterDto, TheClientDto theClientDto) {
 
 		try {
-			Query query = em
-					.createNamedQuery("InseraterfindByInseratIIdEingansrechnungIId");
+			Query query = em.createNamedQuery("InseraterfindByInseratIIdEingansrechnungIId");
 			query.setParameter(1, inseraterDto.getInseratIId());
 			query.setParameter(2, inseraterDto.getEingangsrechnungIId());
 			// @todo getSingleResult oder getResultList ?
 			Inserater doppelt = (Inserater) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("IV_INSERATER.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("IV_INSERATER.UK"));
 		} catch (NoResultException ex) {
 
 		}
@@ -255,45 +226,35 @@ public class InseratFacBean extends Facade implements InseratFac {
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_INSERATER);
 			inseraterDto.setIId(pk);
-			InseratDto inseratDto = inseratFindByPrimaryKey(inseraterDto
-					.getInseratIId());
+			InseratDto inseratDto = inseratFindByPrimaryKey(inseraterDto.getInseratIId());
 			if (Helper.short2boolean(inseratDto.getBWertaufteilen()) == false) {
 				// Wenn Inserat.b_wertaufteilen = false, wird der Betrag
 				// berechnet
 				// Preise berechnen
 
-				InseratartikelDto[] inseratartikelDtos = inseratartikelFindByInseratIId(inseraterDto
-						.getInseratIId());
+				InseratartikelDto[] inseratartikelDtos = inseratartikelFindByInseratIId(inseraterDto.getInseratIId());
 
 				BigDecimal preisZusatzEK = new BigDecimal(0);
 
 				for (int i = 0; i < inseratartikelDtos.length; i++) {
-					preisZusatzEK = preisZusatzEK.add(inseratartikelDtos[i]
-							.getNMenge().multiply(
-									inseratartikelDtos[i]
-											.getNNettoeinzelpreisEk()));
+					preisZusatzEK = preisZusatzEK.add(
+							inseratartikelDtos[i].getNMenge().multiply(inseratartikelDtos[i].getNNettoeinzelpreisEk()));
 
 				}
 
 				int iNachkommastellenPreis = 2;
 				try {
-					iNachkommastellenPreis = getMandantFac()
-							.getNachkommastellenPreisEK(
-									theClientDto.getMandant());
+					iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisEK(theClientDto.getMandant());
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
 
-				inseraterDto.setNBetrag(inseratDto.getErrechneterWertEK(
-						iNachkommastellenPreis).add(preisZusatzEK));
+				inseraterDto.setNBetrag(inseratDto.getErrechneterWertEK(iNachkommastellenPreis).add(preisZusatzEK));
 			}
 
-			Inserater inserater = new Inserater(inseraterDto.getIId(),
-					inseraterDto.getInseratIId(),
-					inseraterDto.getEingangsrechnungIId(),
-					inseraterDto.getNBetrag(),
-					inseraterDto.getPersonalIIdAnlegen(),
-					inseraterDto.getPersonalIIdAendern());
+			Inserater inserater = new Inserater(inseraterDto.getIId(), inseraterDto.getInseratIId(),
+					inseraterDto.getEingangsrechnungIId(), inseraterDto.getNBetrag(),
+					inseraterDto.getPersonalIIdAnlegen(), inseraterDto.getPersonalIIdAendern());
 
 			inseraterDto.setTAendern(inserater.getTAendern());
 			inseraterDto.setTAnlegen(inserater.getTAnlegen());
@@ -304,8 +265,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 			// Inserat auf Verrechenbar setzen
 
-			Inserat inserat = em.find(Inserat.class,
-					inseraterDto.getInseratIId());
+			Inserat inserat = em.find(Inserat.class, inseraterDto.getInseratIId());
 
 			// SP1416, ausser es ist bereits verrechnet
 			if (!inserat.getStatusCNr().equals(LocaleFac.STATUS_VERRECHNET)) {
@@ -318,10 +278,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 			// Bestellposition erledigen
 			if (inserat.getBestellpositionIId() != null) {
 				try {
-					getBestellpositionFac()
-							.manuellAufVollstaendigGeliefertSetzen(
-									inserat.getBestellpositionIId(),
-									theClientDto);
+					getBestellpositionFac().manuellAufVollstaendigGeliefertSetzen(inserat.getBestellpositionIId(),
+							theClientDto);
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -334,8 +292,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	}
 
-	public Integer createInseratartikel(InseratartikelDto inseratartikelDto,
-			TheClientDto theClientDto) {
+	public Integer createInseratartikel(InseratartikelDto inseratartikelDto, TheClientDto theClientDto) {
 		Integer inseratIId = null;
 		try {
 			// generieren von primary key
@@ -343,18 +300,13 @@ public class InseratFacBean extends Facade implements InseratFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_INSERATARTIKEL);
 			inseratartikelDto.setIId(pk);
 
-			Inseratartikel inseratrechnung = new Inseratartikel(
-					inseratartikelDto.getIId(),
-					inseratartikelDto.getInseratIId(),
-					inseratartikelDto.getArtikelIId(),
-					inseratartikelDto.getNMenge(),
-					inseratartikelDto.getNNettoeinzelpreisEk(),
-					inseratartikelDto.getNNettoeinzelpreisVk());
+			Inseratartikel inseratrechnung = new Inseratartikel(inseratartikelDto.getIId(),
+					inseratartikelDto.getInseratIId(), inseratartikelDto.getArtikelIId(), inseratartikelDto.getNMenge(),
+					inseratartikelDto.getNNettoeinzelpreisEk(), inseratartikelDto.getNNettoeinzelpreisVk());
 			em.persist(inseratrechnung);
 			em.flush();
 
-			setInseratartikelFromInseratartikelDto(inseratrechnung,
-					inseratartikelDto);
+			setInseratartikelFromInseratartikelDto(inseratrechnung, inseratartikelDto);
 
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -363,13 +315,10 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return inseratIId;
 	}
 
-	public void vertauscheInseratrechnung(Integer inseratrechnungIId1,
-			Integer inseratrechnungIId2) {
+	public void vertauscheInseratrechnung(Integer inseratrechnungIId1, Integer inseratrechnungIId2) {
 
-		Inseratrechnung oLieferant1 = em.find(Inseratrechnung.class,
-				inseratrechnungIId1);
-		Inseratrechnung oLieferant2 = em.find(Inseratrechnung.class,
-				inseratrechnungIId2);
+		Inseratrechnung oLieferant1 = em.find(Inseratrechnung.class, inseratrechnungIId1);
+		Inseratrechnung oLieferant2 = em.find(Inseratrechnung.class, inseratrechnungIId2);
 		Integer iSort1 = oLieferant1.getiSort();
 		Integer iSort2 = oLieferant2.getiSort();
 
@@ -379,8 +328,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	}
 
-	public void inseratVertreterAendern(Integer inseratIId,
-			Integer personalId_Vertreter, TheClientDto theClientDto) {
+	public void inseratVertreterAendern(Integer inseratIId, Integer personalId_Vertreter, TheClientDto theClientDto) {
 		Inserat inserat = em.find(Inserat.class, inseratIId);
 		inserat.setPersonalIIdVertreter(personalId_Vertreter);
 		inserat.setTAendern(getTimestamp());
@@ -391,16 +339,13 @@ public class InseratFacBean extends Facade implements InseratFac {
 	public InseratDto inseratFindByPrimaryKey(Integer iId) {
 		Inserat inserat = em.find(Inserat.class, iId);
 		InseratDto inseratDto = assembleInseratDto(inserat);
-		inseratDto
-				.setInseratrechnungDto(inseratrechnungFindErstenEintragByInseratIId(inseratDto
-						.getIId()));
+		inseratDto.setInseratrechnungDto(inseratrechnungFindErstenEintragByInseratIId(inseratDto.getIId()));
 		return inseratDto;
 	}
 
 	public ArrayList eingangsrechnungsIIdsEinesInserates(Integer inseratIId) {
 		ArrayList al = new ArrayList();
-		Query query = em
-				.createNamedQuery("InseraterfindInseratIIdEingansrechnungIId");
+		Query query = em.createNamedQuery("InseraterfindInseratIIdEingansrechnungIId");
 		query.setParameter(1, inseratIId);
 		query.setMaxResults(1);
 
@@ -413,8 +358,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return al;
 	}
 
-	public InseraterDto[] inseraterFindByEingangsrechnungIId(
-			Integer eingangsrechnungIId) {
+	public InseraterDto[] inseraterFindByEingangsrechnungIId(Integer eingangsrechnungIId) {
 
 		Query query = em.createNamedQuery("InseraterfindByEingangsrechnungIId");
 		query.setParameter(1, eingangsrechnungIId);
@@ -446,15 +390,13 @@ public class InseratFacBean extends Facade implements InseratFac {
 	public boolean istInseratInEinerRechnungEnthalten(Integer rechnungIId) {
 		RechnungPositionDto[] rechposDtos = null;
 		try {
-			rechposDtos = getRechnungFac().rechnungPositionFindByRechnungIId(
-					rechnungIId);
+			rechposDtos = getRechnungFac().rechnungPositionFindByRechnungIId(rechnungIId);
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}
 
 		for (int i = 0; i < rechposDtos.length; i++) {
-			InseratDto dto = istIseratAufRechnungspositionVorhanden(rechposDtos[i]
-					.getIId());
+			InseratDto dto = istIseratAufRechnungspositionVorhanden(rechposDtos[i].getIId());
 
 			if (dto != null) {
 				return true;
@@ -471,10 +413,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	}
 
-	public InseratrechnungDto inseratrechnungFindErstenEintragByInseratIId(
-			Integer inseratIId) {
-		Query query = em
-				.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
+	public InseratrechnungDto inseratrechnungFindErstenEintragByInseratIId(Integer inseratIId) {
+		Query query = em.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
 		query.setParameter(1, inseratIId);
 		query.setMaxResults(1);
 
@@ -486,12 +426,10 @@ public class InseratFacBean extends Facade implements InseratFac {
 		}
 	}
 
-	public void toggleManuellerledigt(Integer inseratIId,
-			TheClientDto theClientDto) {
+	public void toggleManuellerledigt(Integer inseratIId, TheClientDto theClientDto) {
 		Inserat inserat = em.find(Inserat.class, inseratIId);
 		if (inserat.getTManuellerledigt() == null) {
-			inserat.setTManuellerledigt(new Timestamp(System
-					.currentTimeMillis()));
+			inserat.setTManuellerledigt(new Timestamp(System.currentTimeMillis()));
 			inserat.setPersonalIIdManuellerledigt(theClientDto.getIDPersonal());
 			inserat.setStatusCNr(LocaleFac.STATUS_ERLEDIGT);
 		} else {
@@ -506,8 +444,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 			if (inserat.getPersonalIIdErschienen() != null) {
 				inserat.setStatusCNr(LocaleFac.STATUS_ERSCHIENEN);
 			}
-			if (gibtEsNochWeitereRechnungenFuerdiesesInserat(inseratIId,
-					theClientDto).size() > 0) {
+			if (gibtEsNochWeitereRechnungenFuerdiesesInserat(inseratIId, theClientDto).size() > 0) {
 				inserat.setStatusCNr(LocaleFac.STATUS_VERRECHNET);
 			} else if (inserat.getPersonalIIdVerrechnen() != null
 					|| inserat.getPersonalIIdManuellverrechnen() != null) {
@@ -532,8 +469,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 		em.flush();
 	}
 
-	public void toggleGestoppt(Integer inseratIId, String cBegruendung,
-			TheClientDto theClientDto) {
+	public void toggleGestoppt(Integer inseratIId, String cBegruendung, TheClientDto theClientDto) {
 		Inserat inserat = em.find(Inserat.class, inseratIId);
 		if (inserat.getStatusCNr().equals(LocaleFac.STATUS_VERRECHENBAR)) {
 			inserat.setStatusCNr(LocaleFac.STATUS_GESTOPPT);
@@ -553,10 +489,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 		Inserat inserat = em.find(Inserat.class, inseratIId);
 		if (inserat.getStatusCNr().equals(LocaleFac.STATUS_ERSCHIENEN)) {
 			inserat.setStatusCNr(LocaleFac.STATUS_VERRECHENBAR);
-			inserat.setTManuellverrechnen(new Timestamp(System
-					.currentTimeMillis()));
-			inserat.setPersonalIIdManuellverrechnen(theClientDto
-					.getIDPersonal());
+			inserat.setTManuellverrechnen(new Timestamp(System.currentTimeMillis()));
+			inserat.setPersonalIIdManuellverrechnen(theClientDto.getIDPersonal());
 		} else if (inserat.getStatusCNr().equals(LocaleFac.STATUS_VERRECHENBAR)) {
 			inserat.setStatusCNr(LocaleFac.STATUS_ERSCHIENEN);
 			inserat.setTManuellverrechnen(null);
@@ -578,18 +512,15 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return list;
 	}
 
-	private InseratrechnungDto assembleInseratrechnungDto(
-			Inseratrechnung inseratrechnung) {
+	private InseratrechnungDto assembleInseratrechnungDto(Inseratrechnung inseratrechnung) {
 		return InseratrechnungDtoAssembler.createDto(inseratrechnung);
 	}
 
-	public void eingangsrechnungZuordnen(Integer inseratIId,
-			Integer eingangsrechnungIId, BigDecimal nBetrag,
+	public void eingangsrechnungZuordnen(Integer inseratIId, Integer eingangsrechnungIId, BigDecimal nBetrag,
 			TheClientDto theClientDto) {
 		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_INSERATER);
-		Inserater inserater = new Inserater(pk, inseratIId,
-				eingangsrechnungIId, nBetrag, theClientDto.getIDPersonal(),
+		Inserater inserater = new Inserater(pk, inseratIId, eingangsrechnungIId, nBetrag, theClientDto.getIDPersonal(),
 				theClientDto.getIDPersonal());
 		em.merge(inserater);
 		em.flush();
@@ -603,8 +534,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	}
 
-	public void updateInseratOhneWeiterAktion(InseratDto inseratDto,
-			TheClientDto theClientDto) {
+	public void updateInseratOhneWeiterAktion(InseratDto inseratDto, TheClientDto theClientDto) {
 		Inserat inserat = em.find(Inserat.class, inseratDto.getIId());
 		setInseratFromInseratDto(inserat, inseratDto);
 	}
@@ -622,9 +552,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 			Integer iIdVorhanden = ((Inserat) query.getSingleResult()).getIId();
 			if (inserat.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"IV_INSERAT.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("IV_INSERAT.UK"));
 			}
 			setInseratFromInseratDto(inserat, inseratDto);
 		} catch (NoResultException ex) {
@@ -633,115 +561,92 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 		if (inseratDto.getInseratrechnungDto() != null) {
 			if (inseratDto.getInseratrechnungDto().getIId() == null) {
-				createInseratrechnung(inseratDto.getInseratrechnungDto(),
-						theClientDto);
+				createInseratrechnung(inseratDto.getInseratrechnungDto(), theClientDto);
 			} else {
-				updateInseratrechnung(inseratDto.getInseratrechnungDto(),
-						theClientDto);
+				updateInseratrechnung(inseratDto.getInseratrechnungDto(), theClientDto);
 			}
 
 		}
 		if (inseratDto.getBestellpositionIId() != null) {
-			preisInBestellpositionRueckpflegenAusKopfdaten(inseratDto.getIId(),
-					theClientDto);
+			preisInBestellpositionRueckpflegenAusKopfdaten(inseratDto.getIId(), theClientDto);
 		}
 	}
 
-	public void updateInseratrechnung(InseratrechnungDto inseratrechnungDto,
-			TheClientDto theClientDto) {
-		Inseratrechnung inseratrechnung = em.find(Inseratrechnung.class,
-				inseratrechnungDto.getIId());
+	public void updateInseratrechnung(InseratrechnungDto inseratrechnungDto, TheClientDto theClientDto) {
+		Inseratrechnung inseratrechnung = em.find(Inseratrechnung.class, inseratrechnungDto.getIId());
 
 		try {
-			Query query = em
-					.createNamedQuery("InseratrechnungfindInseratIIdKundeIId");
+			Query query = em.createNamedQuery("InseratrechnungfindInseratIIdKundeIId");
 			query.setParameter(1, inseratrechnungDto.getInseratIId());
 			query.setParameter(2, inseratrechnungDto.getKundeIId());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Inseratrechnung) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Inseratrechnung) query.getSingleResult()).getIId();
 			if (inseratrechnungDto.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"IV_INSERATRECHNUNG.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("IV_INSERATRECHNUNG.UK"));
 			}
 
 		} catch (NoResultException ex) {
 
 		}
 
-		setInseratrechnungFromInseratrechnungDto(inseratrechnung,
-				inseratrechnungDto);
+		setInseratrechnungFromInseratrechnungDto(inseratrechnung, inseratrechnungDto);
 	}
 
-	public void updateInserater(InseraterDto inseraterDto,
-			TheClientDto theClientDto) {
+	public void updateInserater(InseraterDto inseraterDto, TheClientDto theClientDto) {
 		inseraterDto.setTAendern(new Timestamp(System.currentTimeMillis()));
 		inseraterDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		Inserater inserater = em.find(Inserater.class, inseraterDto.getIId());
 
 		try {
-			Query query = em
-					.createNamedQuery("InseraterfindByInseratIIdEingansrechnungIId");
+			Query query = em.createNamedQuery("InseraterfindByInseratIIdEingansrechnungIId");
 			query.setParameter(1, inseraterDto.getInseratIId());
 			query.setParameter(2, inseraterDto.getEingangsrechnungIId());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Inserater) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Inserater) query.getSingleResult()).getIId();
 			if (inseraterDto.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"IV_INSERATER.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("IV_INSERATER.UK"));
 			}
 
 		} catch (NoResultException ex) {
 
 		}
 
-		InseratDto inseratDto = inseratFindByPrimaryKey(inseraterDto
-				.getInseratIId());
+		InseratDto inseratDto = inseratFindByPrimaryKey(inseraterDto.getInseratIId());
 		if (Helper.short2boolean(inseratDto.getBWertaufteilen()) == false) {
 			// Wenn Inserat.b_wertaufteilen = false, wird der Betrag
 			// berechnet
 			// Preise berechnen
 
-			InseratartikelDto[] inseratartikelDtos = inseratartikelFindByInseratIId(inseraterDto
-					.getInseratIId());
+			InseratartikelDto[] inseratartikelDtos = inseratartikelFindByInseratIId(inseraterDto.getInseratIId());
 
 			BigDecimal preisZusatzEK = new BigDecimal(0);
 
 			for (int i = 0; i < inseratartikelDtos.length; i++) {
-				preisZusatzEK = preisZusatzEK
-						.add(inseratartikelDtos[i].getNMenge().multiply(
-								inseratartikelDtos[i].getNNettoeinzelpreisEk()));
+				preisZusatzEK = preisZusatzEK.add(
+						inseratartikelDtos[i].getNMenge().multiply(inseratartikelDtos[i].getNNettoeinzelpreisEk()));
 
 			}
 
 			int iNachkommastellenPreis = 2;
 			try {
-				iNachkommastellenPreis = getMandantFac()
-						.getNachkommastellenPreisVK(theClientDto.getMandant());
+				iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(theClientDto.getMandant());
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
 
-			inseraterDto.setNBetrag(inseratDto.getErrechneterWertEK(
-					iNachkommastellenPreis).add(preisZusatzEK));
+			inseraterDto.setNBetrag(inseratDto.getErrechneterWertEK(iNachkommastellenPreis).add(preisZusatzEK));
 		}
 
 		setInseraterFromInseraterDto(inserater, inseraterDto);
 	}
 
-	public void updateInseratartikel(InseratartikelDto inseratartikelDto,
-			TheClientDto theClientDto) {
-		Inseratartikel inseratartikel = em.find(Inseratartikel.class,
-				inseratartikelDto.getIId());
+	public void updateInseratartikel(InseratartikelDto inseratartikelDto, TheClientDto theClientDto) {
+		Inseratartikel inseratartikel = em.find(Inseratartikel.class, inseratartikelDto.getIId());
 
-		setInseratartikelFromInseratartikelDto(inseratartikel,
-				inseratartikelDto);
+		setInseratartikelFromInseratartikelDto(inseratartikel, inseratartikelDto);
 
-		preisInBestellpositionRueckpflegenAusInseratArtikel(
-				inseratartikel.getIId(), theClientDto);
+		preisInBestellpositionRueckpflegenAusInseratArtikel(inseratartikel.getIId(), theClientDto);
 	}
 
 	public void storniereInserat(Integer inseratIId, TheClientDto theClientDto) {
@@ -758,20 +663,16 @@ public class InseratFacBean extends Facade implements InseratFac {
 	}
 
 	public void removeInseratrechnung(Integer inseratrechnungIId) {
-		Inseratrechnung toRemove = em.find(Inseratrechnung.class,
-				inseratrechnungIId);
+		Inseratrechnung toRemove = em.find(Inseratrechnung.class, inseratrechnungIId);
 
 		Integer inseratIId = toRemove.getInseratIId();
-		Query query = em
-				.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
+		Query query = em.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
 		query.setParameter(1, toRemove.getInseratIId());
 		List l = query.getResultList();
 		if (l.size() == 1) {
 			// Es muss mindestens 1 Kunde verbleiben
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_INSERAT_EIN_KUNDE_MUSS_VORHANDEN_SEIN,
-					new Exception(
-							"FEHLER_INSERAT_EIN_KUNDE_MUSS_VORHANDEN_SEIN"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_INSERAT_EIN_KUNDE_MUSS_VORHANDEN_SEIN,
+					new Exception("FEHLER_INSERAT_EIN_KUNDE_MUSS_VORHANDEN_SEIN"));
 
 		}
 
@@ -785,8 +686,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 		// Es muss immer einen Kunden mit der I_SORT=1 geben, daher nach dem
 		// loeschen unbedingt neu re.indizieren
 
-		query = em
-				.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
+		query = em.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
 		query.setParameter(1, inseratIId);
 
 		l = query.getResultList();
@@ -800,8 +700,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 		}
 	}
 
-	public BigDecimal getZuEingangsrechnungenZugeordnetenWert(
-			Integer inseratIId, TheClientDto theClientDto) {
+	public BigDecimal getZuEingangsrechnungenZugeordnetenWert(Integer inseratIId, TheClientDto theClientDto) {
 		Query query = em.createNamedQuery("InseraterfindByInseratIId");
 		query.setParameter(1, inseratIId);
 
@@ -818,86 +717,79 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return bdWert;
 	}
 
-	public BigDecimal berechneWerbeabgabeLFEinesInserates(Integer inseratIId,
+	public BigDecimal berechneWerbeabgabeLFEinesInserates(Integer inseratIId, BigDecimal teilbetrag,
 			TheClientDto theClientDto) {
 
-		InseratDto inseratDto = getInseratFac().inseratFindByPrimaryKey(
-				inseratIId);
+		InseratDto inseratDto = getInseratFac().inseratFindByPrimaryKey(inseratIId);
 
 		BigDecimal werbeabgabe = new BigDecimal(0);
 
 		try {
-			ParametermandantDto parameterWerbeabgabe = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ARTIKEL,
-							ParameterFac.PARAMETER_WERBEABGABE_ARTIKEL);
+			ParametermandantDto parameterWerbeabgabe = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_WERBEABGABE_ARTIKEL);
 
 			String werbeabgabeArtikel = parameterWerbeabgabe.getCWert();
-			if (werbeabgabeArtikel != null
-					&& werbeabgabeArtikel.trim().length() > 0) {
-				parameterWerbeabgabe = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_ARTIKEL,
-						ParameterFac.PARAMETER_WERBEABGABE_PROZENT);
+			if (werbeabgabeArtikel != null && werbeabgabeArtikel.trim().length() > 0) {
+				parameterWerbeabgabe = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_WERBEABGABE_PROZENT);
 
-				double dProzent = (Integer) parameterWerbeabgabe
-						.getCWertAsObject();
+				double dProzent = (Integer) parameterWerbeabgabe.getCWertAsObject();
 
-				ArtikelDto aDtoWerbeabgabe = getArtikelFac()
-						.artikelFindByCNrMandantCNrOhneExc(werbeabgabeArtikel,
-								theClientDto.getMandant());
+				ArtikelDto aDtoWerbeabgabe = getArtikelFac().artikelFindByCNrMandantCNrOhneExc(werbeabgabeArtikel,
+						theClientDto.getMandant());
 				if (aDtoWerbeabgabe != null) {
 
-					InseratartikelDto[] iaDtos = getInseratFac()
-							.inseratartikelFindByInseratIId(inseratIId);
+					InseratartikelDto[] iaDtos = getInseratFac().inseratartikelFindByInseratIId(inseratIId);
 
 					// Wert der Werbeabgabepflichtigen Artikelberechnen
-					BigDecimal bdWertDerAbgabepflichtigenArtikel = new BigDecimal(
-							0.0000);
+					BigDecimal bdWertDerAbgabepflichtigenArtikel = new BigDecimal(0.0000);
 
 					int iNachkommastellenPreis = 2;
 					try {
-						iNachkommastellenPreis = getMandantFac()
-								.getNachkommastellenPreisVK(
-										theClientDto.getMandant());
+						iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(theClientDto.getMandant());
 					} catch (RemoteException e) {
 						throwEJBExceptionLPRespectOld(e);
 					}
 
-					ArtikelDto aDto = getArtikelFac()
-							.artikelFindByPrimaryKeySmall(
-									inseratDto.getArtikelIIdInseratart(),
-									theClientDto);
+					ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(inseratDto.getArtikelIIdInseratart(),
+							theClientDto);
 					if (Helper.short2boolean(aDto.getBWerbeabgabepflichtig())) {
 						bdWertDerAbgabepflichtigenArtikel = bdWertDerAbgabepflichtigenArtikel
-								.add(inseratDto
-										.getErrechneterWertEK(iNachkommastellenPreis));
+								.add(inseratDto.getErrechneterWertEK(iNachkommastellenPreis));
 					}
 
 					for (int i = 0; i < iaDtos.length; i++) {
 
-						aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-								iaDtos[i].getArtikelIId(), theClientDto);
-						if (Helper.short2boolean(aDto
-								.getBWerbeabgabepflichtig())) {
+						aDto = getArtikelFac().artikelFindByPrimaryKeySmall(iaDtos[i].getArtikelIId(), theClientDto);
+						if (Helper.short2boolean(aDto.getBWerbeabgabepflichtig())) {
 							bdWertDerAbgabepflichtigenArtikel = bdWertDerAbgabepflichtigenArtikel
-									.add(iaDtos[i].getNNettoeinzelpreisEk()
-											.multiply(iaDtos[i].getNMenge()));
+									.add(iaDtos[i].getNNettoeinzelpreisEk().multiply(iaDtos[i].getNMenge()));
 						}
 
 					}
 
-					werbeabgabe = bdWertDerAbgabepflichtigenArtikel
-							.multiply(new BigDecimal(dProzent / 100));
+					werbeabgabe = bdWertDerAbgabepflichtigenArtikel.multiply(new BigDecimal(dProzent / 100));
+
+					// SP7160
+					if (teilbetrag != null) {
+
+						if (teilbetrag.doubleValue() == 0) {
+							werbeabgabe = BigDecimal.ZERO;
+						} else {
+							BigDecimal bdFaktor = Helper.getProzentsatzBD(bdWertDerAbgabepflichtigenArtikel, teilbetrag,
+									12);
+							werbeabgabe = bdWertDerAbgabepflichtigenArtikel
+									.multiply(new BigDecimal(bdFaktor.doubleValue() / 100))
+									.multiply(new BigDecimal(dProzent / 100));
+						}
+
+					}
 
 				} else {
 					// Werbeabgabeartikel nicht vorhanen
 					ArrayList al = new ArrayList();
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_WERBEABGABEARTIKEL_NICHT_VORHANDEN,
-							al, new Exception(
-									"WERBEABGABEARTIKEL_NICHT_VORHANDEN: "
-											+ werbeabgabeArtikel));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_WERBEABGABEARTIKEL_NICHT_VORHANDEN, al,
+							new Exception("WERBEABGABEARTIKEL_NICHT_VORHANDEN: " + werbeabgabeArtikel));
 
 				}
 			}
@@ -940,8 +832,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 				}
 				if (inserat.getBestellpositionIId() != null) {
 					try {
-						getBestellpositionFac().manuellErledigungAufheben(
-								inserat.getBestellpositionIId(), theClientDto);
+						getBestellpositionFac().manuellErledigungAufheben(inserat.getBestellpositionIId(),
+								theClientDto);
 					} catch (RemoteException e) {
 						throwEJBExceptionLPRespectOld(e);
 					}
@@ -955,8 +847,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 	}
 
 	public void removeInseratartikel(Integer inseratartikelIId) {
-		Inseratartikel toRemove = em.find(Inseratartikel.class,
-				inseratartikelIId);
+		Inseratartikel toRemove = em.find(Inseratartikel.class, inseratartikelIId);
 
 		try {
 			em.remove(toRemove);
@@ -967,8 +858,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	}
 
-	public Integer inseratArtikelRechnungKopieren(Integer inseratIIdAlt,
-			Integer inseratIIdNeu, TheClientDto theClientDto) {
+	public Integer inseratArtikelRechnungKopieren(Integer inseratIIdAlt, Integer inseratIIdNeu,
+			TheClientDto theClientDto) {
 
 		// Kunden + Artikel kopieren
 
@@ -979,42 +870,41 @@ public class InseratFacBean extends Facade implements InseratFac {
 			createInseratartikel(iaDtos[i], theClientDto);
 		}
 
-	//	Query query = em
-	//			.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
-	//	query.setParameter(1, inseratIIdAlt);
+		// Query query = em
+		// .createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
+		// query.setParameter(1, inseratIIdAlt);
 
-	//	List l = query.getResultList();
-	//	Iterator it = l.iterator();
-	//	while (it.hasNext()) {
-	//		Inseratrechnung ir = (Inseratrechnung) it.next();
-	//		InseratrechnungDto irDto = assembleInseratrechnungDto(ir);
-			
-	//		try {
-	//			Query queryUK = em
-	//					.createNamedQuery("InseratrechnungfindInseratIIdKundeIId");
-	//			queryUK.setParameter(1, inseratIIdNeu);
-	//			queryUK.setParameter(2, irDto.getKundeIId());
-	//			Inseratrechnung doppelt = (Inseratrechnung) query.getSingleResult();
-	//			//Auslassen
-	//		} catch (NoResultException ex) {
-	//			irDto.setInseratIId(inseratIIdNeu);
-	//			irDto.setIId(null);
-	//			irDto.setRechnungpositionIId(null);
-	//			createInseratrechnung(irDto, theClientDto);
-	//		}
-	//		
-	//		
-	//	}
+		// List l = query.getResultList();
+		// Iterator it = l.iterator();
+		// while (it.hasNext()) {
+		// Inseratrechnung ir = (Inseratrechnung) it.next();
+		// InseratrechnungDto irDto = assembleInseratrechnungDto(ir);
+
+		// try {
+		// Query queryUK = em
+		// .createNamedQuery("InseratrechnungfindInseratIIdKundeIId");
+		// queryUK.setParameter(1, inseratIIdNeu);
+		// queryUK.setParameter(2, irDto.getKundeIId());
+		// Inseratrechnung doppelt = (Inseratrechnung) query.getSingleResult();
+		// //Auslassen
+		// } catch (NoResultException ex) {
+		// irDto.setInseratIId(inseratIIdNeu);
+		// irDto.setIId(null);
+		// irDto.setRechnungpositionIId(null);
+		// createInseratrechnung(irDto, theClientDto);
+		// }
+		//
+		//
+		// }
 
 		return inseratIIdNeu;
 	}
 
-	public ArrayList<RechnungDto> gibtEsNochWeitereRechnungenFuerdiesesInserat(
-			Integer inseratIId, TheClientDto theClientDto) {
+	public ArrayList<RechnungDto> gibtEsNochWeitereRechnungenFuerdiesesInserat(Integer inseratIId,
+			TheClientDto theClientDto) {
 		ArrayList<RechnungDto> al = new ArrayList<RechnungDto>();
 
-		Query query = em
-				.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
+		Query query = em.createNamedQuery("InseratrechnungfindDenErstenEintragByInseratIId");
 		query.setParameter(1, inseratIId);
 
 		List l = query.getResultList();
@@ -1024,12 +914,9 @@ public class InseratFacBean extends Facade implements InseratFac {
 			if (ir.getRechnungpositionIId() != null) {
 
 				try {
-					Integer rechnungIId = getRechnungFac()
-							.rechnungPositionFindByPrimaryKey(
-									ir.getRechnungpositionIId())
+					Integer rechnungIId = getRechnungFac().rechnungPositionFindByPrimaryKey(ir.getRechnungpositionIId())
 							.getRechnungIId();
-					al.add(getRechnungFac().rechnungFindByPrimaryKey(
-							rechnungIId));
+					al.add(getRechnungFac().rechnungFindByPrimaryKey(rechnungIId));
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -1040,24 +927,20 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return al;
 	}
 
-	public InseratDto istIseratAufRechnungspositionVorhanden(
-			Integer rechnungspositionIId) {
+	public InseratDto istIseratAufRechnungspositionVorhanden(Integer rechnungspositionIId) {
 
-		Query query = em
-				.createNamedQuery("InseratrechnungfindByRechnungpositionIId");
+		Query query = em.createNamedQuery("InseratrechnungfindByRechnungpositionIId");
 		query.setParameter(1, rechnungspositionIId);
 		query.setMaxResults(1);
 		List l = query.getResultList();
 		if (l.size() >= 1) {
-			return inseratFindByPrimaryKey(((Inseratrechnung) l.get(0))
-					.getInseratIId());
+			return inseratFindByPrimaryKey(((Inseratrechnung) l.get(0)).getInseratIId());
 		} else {
 			return null;
 		}
 	}
 
-	public InseratDto istInseratAufBestellpositionVorhanden(
-			Integer bestellpositionIId) {
+	public InseratDto istInseratAufBestellpositionVorhanden(Integer bestellpositionIId) {
 
 		Query query = em.createNamedQuery("InseratfindByBestellpositionIId");
 		query.setParameter(1, bestellpositionIId);
@@ -1070,10 +953,9 @@ public class InseratFacBean extends Facade implements InseratFac {
 		}
 	}
 
-	public void beziehungZuRechnungspositionAufloesenUndRechnungspositionenLoeschen(
-			Integer rechnungspositionIId, TheClientDto theClientDto) {
-		Query query = em
-				.createNamedQuery("InseratrechnungfindByRechnungpositionIId");
+	public void beziehungZuRechnungspositionAufloesenUndRechnungspositionenLoeschen(Integer rechnungspositionIId,
+			TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("InseratrechnungfindByRechnungpositionIId");
 		query.setParameter(1, rechnungspositionIId);
 		List l = query.getResultList();
 		Iterator it = l.iterator();
@@ -1081,30 +963,26 @@ public class InseratFacBean extends Facade implements InseratFac {
 			Inseratrechnung ir = (Inseratrechnung) it.next();
 			ir.setRechnungpositionIId(null);
 
-			ArrayList<RechnungDto> alRechnungen = gibtEsNochWeitereRechnungenFuerdiesesInserat(
-					ir.getInseratIId(), theClientDto);
+			ArrayList<RechnungDto> alRechnungen = gibtEsNochWeitereRechnungenFuerdiesesInserat(ir.getInseratIId(),
+					theClientDto);
 
 			if (alRechnungen.size() == 0) {
 				Inserat i = em.find(Inserat.class, ir.getInseratIId());
 				i.setStatusCNr(LocaleFac.STATUS_VERRECHENBAR);
 			}
 
-			Query query2 = em
-					.createNamedQuery("InseratrechnungartikelfindInseratrechnungIId");
+			Query query2 = em.createNamedQuery("InseratrechnungartikelfindInseratrechnungIId");
 			query2.setParameter(1, ir.getIId());
 			List l2 = query2.getResultList();
 			Iterator it2 = l2.iterator();
 			while (it2.hasNext()) {
-				Inseratrechnungartikel ira = (Inseratrechnungartikel) it2
-						.next();
+				Inseratrechnungartikel ira = (Inseratrechnungartikel) it2.next();
 				try {
 					RechnungPositionDto reposDto = getRechnungFac()
-							.rechnungPositionFindByPrimaryKey(
-									ira.getRechnungpositionIId());
+							.rechnungPositionFindByPrimaryKey(ira.getRechnungpositionIId());
 					em.remove(ira);
 					em.flush();
-					getRechnungFac().removeRechnungPosition(reposDto,
-							theClientDto);
+					getRechnungFac().removeRechnungPosition(reposDto, theClientDto);
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -1112,8 +990,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 		}
 		try {
-			RechnungPositionDto reposDto = getRechnungFac()
-					.rechnungPositionFindByPrimaryKey(rechnungspositionIId);
+			RechnungPositionDto reposDto = getRechnungFac().rechnungPositionFindByPrimaryKey(rechnungspositionIId);
 			getRechnungFac().removeRechnungPosition(reposDto, theClientDto);
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
@@ -1123,8 +1000,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	}
 
-	public void beziehungZuBestellpositionAufloesenUndBestellpositionenLoeschen(
-			Integer bestellpositionIId, TheClientDto theClientDto) {
+	public void beziehungZuBestellpositionAufloesenUndBestellpositionenLoeschen(Integer bestellpositionIId,
+			TheClientDto theClientDto) {
 		Query query = em.createNamedQuery("InseratfindByBestellpositionIId");
 		query.setParameter(1, bestellpositionIId);
 		List l = query.getResultList();
@@ -1142,14 +1019,12 @@ public class InseratFacBean extends Facade implements InseratFac {
 				Inseratartikel ira = (Inseratartikel) it2.next();
 				try {
 					BestellpositionDto besposDto = getBestellpositionFac()
-							.bestellpositionFindByPrimaryKey(
-									ira.getBestellpositionIId());
+							.bestellpositionFindByPrimaryKey(ira.getBestellpositionIId());
 
 					ira.setBestellpositionIId(null);
 
 					em.flush();
-					getBestellpositionFac().removeBestellposition(besposDto,
-							theClientDto);
+					getBestellpositionFac().removeBestellposition(besposDto, theClientDto);
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -1157,10 +1032,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 		}
 		try {
-			BestellpositionDto besposDto = getBestellpositionFac()
-					.bestellpositionFindByPrimaryKey(bestellpositionIId);
-			getBestellpositionFac().removeBestellposition(besposDto,
-					theClientDto);
+			BestellpositionDto besposDto = getBestellpositionFac().bestellpositionFindByPrimaryKey(bestellpositionIId);
+			getBestellpositionFac().removeBestellposition(besposDto, theClientDto);
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}
@@ -1186,14 +1059,12 @@ public class InseratFacBean extends Facade implements InseratFac {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public int rechnungenAusloesen(Integer kundeIId, Integer inseratIId,
-			java.sql.Date neuDatum, TheClientDto theClientDto) {
+	public int rechnungenAusloesen(Integer kundeIId, Integer inseratIId, java.sql.Date neuDatum,
+			TheClientDto theClientDto) {
 		int anz = 0;
 		Session sessionKunden = FLRSessionFactory.getFactory().openSession();
 		String queryStringKunden = "SELECT inserat FROM FLRInserat inserat LEFT OUTER JOIN inserat.rechnungset as rechnungset WHERE rechnungset.rechnungposition_i_id IS NULL  AND inserat.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' AND inserat.status_c_nr='"
-				+ LocaleFac.STATUS_VERRECHENBAR + "' ";
+				+ theClientDto.getMandant() + "' AND inserat.status_c_nr='" + LocaleFac.STATUS_VERRECHENBAR + "' ";
 
 		// PJ18049
 
@@ -1206,8 +1077,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 		queryStringKunden += " ORDER BY inserat.c_nr ASC";
 
-		org.hibernate.Query queryKunden = sessionKunden
-				.createQuery(queryStringKunden);
+		org.hibernate.Query queryKunden = sessionKunden.createQuery(queryStringKunden);
 		List<?> resultsKunden = queryKunden.list();
 		Iterator<?> resultListIteratorInserate = resultsKunden.iterator();
 
@@ -1216,8 +1086,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 		while (resultListIteratorInserate.hasNext()) {
 
-			FLRInserat flrInserat = (FLRInserat) resultListIteratorInserate
-					.next();
+			FLRInserat flrInserat = (FLRInserat) resultListIteratorInserate.next();
 
 			Set s = flrInserat.getRechnungset();
 			Iterator itKunden = s.iterator();
@@ -1231,8 +1100,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 				// Wenn Kunde Monatsrechnung angehakt hat und im Vormonat noch
 				// keine Rechnung erhalten hat, wird alles bis jetzt verrechnet
 
-				if (Helper
-						.short2boolean(ir.getFlrkunde().getB_monatsrechnung())) {
+				if (Helper.short2boolean(ir.getFlrkunde().getB_monatsrechnung())) {
 
 					Calendar c = Calendar.getInstance();
 
@@ -1243,23 +1111,18 @@ public class InseratFacBean extends Facade implements InseratFac {
 					c.set(Calendar.SECOND, 0);
 					c.set(Calendar.MILLISECOND, 0);
 
-					java.sql.Date dVon = new java.sql.Date(c.getTime()
-							.getTime());
+					java.sql.Date dVon = new java.sql.Date(c.getTime().getTime());
 
-					c.set(Calendar.DAY_OF_MONTH,
-							c.getActualMaximum(Calendar.DAY_OF_MONTH));
+					c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH));
 					c.set(Calendar.HOUR_OF_DAY, 23);
 					c.set(Calendar.MINUTE, 59);
 					c.set(Calendar.SECOND, 59);
 					c.set(Calendar.MILLISECOND, 990);
 
-					java.sql.Date dBis = new java.sql.Date(c.getTime()
-							.getTime());
+					java.sql.Date dBis = new java.sql.Date(c.getTime().getTime());
 					try {
-						Integer iAnzahl = getRechnungFac()
-								.getAnzahlDerRechnungenVomKundenImZeitraum(
-										theClientDto, ir.getKunde_i_id(), dVon,
-										dBis, false);
+						Integer iAnzahl = getRechnungFac().getAnzahlDerRechnungenVomKundenImZeitraum(theClientDto,
+								ir.getKunde_i_id(), dVon, dBis, false);
 
 						if (iAnzahl > 0) {
 
@@ -1272,30 +1135,26 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 				}
 
-				if (hmInserateMitEinemKundenVerdichtet.containsKey(ir
-						.getKunde_i_id())) {
-					hmInserate = hmInserateMitEinemKundenVerdichtet.get(ir
-							.getKunde_i_id());
+				if (hmInserateMitEinemKundenVerdichtet.containsKey(ir.getKunde_i_id())) {
+					hmInserate = hmInserateMitEinemKundenVerdichtet.get(ir.getKunde_i_id());
 				} else {
 					hmInserate = new LinkedHashMap<Integer, FLRInserat>();
 				}
 
 				hmInserate.put(flrInserat.getI_id(), flrInserat);
 
-				hmInserateMitEinemKundenVerdichtet.put(ir.getKunde_i_id(),
-						hmInserate);
+				hmInserateMitEinemKundenVerdichtet.put(ir.getKunde_i_id(), hmInserate);
 
 			} else {
-				hmInserateMitMehrerenKunden.put(flrInserat.getI_id(),
-						flrInserat);
+				hmInserateMitMehrerenKunden.put(flrInserat.getI_id(), flrInserat);
 			}
 
 		}
 
-		anz += getInseratFac().rechnungenAusloesenInserateMitEinemKunden(
-				hmInserateMitEinemKundenVerdichtet, neuDatum, theClientDto);
-		anz += getInseratFac().rechnungenAusloesenInserateMitMehrerenKunden(
-				hmInserateMitMehrerenKunden, neuDatum, theClientDto);
+		anz += getInseratFac().rechnungenAusloesenInserateMitEinemKunden(hmInserateMitEinemKundenVerdichtet, neuDatum,
+				theClientDto);
+		anz += getInseratFac().rechnungenAusloesenInserateMitMehrerenKunden(hmInserateMitMehrerenKunden, neuDatum,
+				theClientDto);
 
 		sessionKunden.close();
 		return anz;
@@ -1308,22 +1167,17 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 		int anz = 0;
 
-		Iterator<Integer> itKunden = hmInserateMitEinemKundenVerdichtet
-				.keySet().iterator();
+		Iterator<Integer> itKunden = hmInserateMitEinemKundenVerdichtet.keySet().iterator();
 
 		while (itKunden.hasNext()) {
 			Integer kundeIId = itKunden.next();
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
-					theClientDto);
-			HashMap<Integer, FLRInserat> hmInserate = hmInserateMitEinemKundenVerdichtet
-					.get(kundeIId);
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
+			HashMap<Integer, FLRInserat> hmInserate = hmInserateMitEinemKundenVerdichtet.get(kundeIId);
 
-			Timestamp tBelegdatum = Helper.cutTimestamp(new Timestamp(System
-					.currentTimeMillis()));
+			Timestamp tBelegdatum = Helper.cutTimestamp(new Timestamp(System.currentTimeMillis()));
 
 			if (neuDatum != null) {
-				tBelegdatum = Helper.cutTimestamp(new Timestamp(neuDatum
-						.getTime()));
+				tBelegdatum = Helper.cutTimestamp(new Timestamp(neuDatum.getTime()));
 			}
 
 			Iterator itInserate = hmInserate.keySet().iterator();
@@ -1331,39 +1185,27 @@ public class InseratFacBean extends Facade implements InseratFac {
 				Integer inseratIId = (Integer) itInserate.next();
 				FLRInserat flrInserat = hmInserate.get(inseratIId);
 				try {
-					InseratDto inseratDto = inseratFindByPrimaryKey(flrInserat
-							.getI_id());
-					Integer iGeschaeftsjahr = getParameterFac()
-							.getGeschaeftsjahr(theClientDto.getMandant(),
-									tBelegdatum);
+					InseratDto inseratDto = inseratFindByPrimaryKey(flrInserat.getI_id());
+					Integer iGeschaeftsjahr = getParameterFac().getGeschaeftsjahr(theClientDto.getMandant(),
+							tBelegdatum);
 					// Wenn zu dem Kunden schon einen angelegte Rechnung gibt,
 					// dann
 					// die verwenden
-					String sQuery2 = "SELECT r"
-							+ " FROM FLRRechnung AS r WHERE r.flrkunde.i_id="
-							+ kundeIId + " AND r.status_c_nr='"
-							+ LocaleFac.STATUS_ANGELEGT
-							+ "' AND r.mandant_c_nr='"
-							+ theClientDto.getMandant()
-							+ "' AND r.flrrechnungart.c_nr='"
-							+ RechnungFac.RECHNUNGART_RECHNUNG
-							+ "' AND r.i_geschaeftsjahr=" + iGeschaeftsjahr
-							+ "";
+					String sQuery2 = "SELECT r" + " FROM FLRRechnung AS r WHERE r.flrkunde.i_id=" + kundeIId
+							+ " AND r.status_c_nr='" + LocaleFac.STATUS_ANGELEGT + "' AND r.mandant_c_nr='"
+							+ theClientDto.getMandant() + "' AND r.flrrechnungart.c_nr='"
+							+ RechnungFac.RECHNUNGART_RECHNUNG + "' AND r.i_geschaeftsjahr=" + iGeschaeftsjahr + "";
 
-					if (inseratDto.getInseratrechnungDto()
-							.getAnsprechpartnerIId() != null) {
+					if (inseratDto.getInseratrechnungDto().getAnsprechpartnerIId() != null) {
 						sQuery2 += " AND r.ansprechpartner_i_id="
-								+ inseratDto.getInseratrechnungDto()
-										.getAnsprechpartnerIId();
+								+ inseratDto.getInseratrechnungDto().getAnsprechpartnerIId();
 					} else {
 						sQuery2 += " AND r.ansprechpartner_i_id IS NULL ";
 					}
 
 					sQuery2 += " ORDER BY r.c_nr DESC";
-					Session sessionRech = FLRSessionFactory.getFactory()
-							.openSession();
-					org.hibernate.Query rechnungen = sessionRech
-							.createQuery(sQuery2);
+					Session sessionRech = FLRSessionFactory.getFactory().openSession();
+					org.hibernate.Query rechnungen = sessionRech.createQuery(sQuery2);
 					rechnungen.setMaxResults(1);
 					List<?> resultListR = rechnungen.list();
 
@@ -1371,8 +1213,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 					if (resultListR.iterator().hasNext()) {
 						// Bestehende verwenden
-						FLRRechnung r = (FLRRechnung) resultListR.iterator()
-								.next();
+						FLRRechnung r = (FLRRechnung) resultListR.iterator().next();
 						rechnungIId = r.getI_id();
 					} else {
 
@@ -1381,35 +1222,28 @@ public class InseratFacBean extends Facade implements InseratFac {
 						RechnungDto rechnungDto = new RechnungDto();
 						rechnungDto.setMandantCNr(theClientDto.getMandant());
 						rechnungDto.setKundeIId(kundeIId);
-						rechnungDto.setAnsprechpartnerIId(inseratDto
-								.getInseratrechnungDto()
-								.getAnsprechpartnerIId());
+						rechnungDto.setAnsprechpartnerIId(inseratDto.getInseratrechnungDto().getAnsprechpartnerIId());
 						rechnungDto.setKundeIIdStatistikadresse(kundeIId);
-						rechnungDto
-								.setRechnungartCNr(RechnungFac.RECHNUNGART_RECHNUNG);
+						rechnungDto.setRechnungartCNr(RechnungFac.RECHNUNGART_RECHNUNG);
 
 						rechnungDto.setLieferartIId(kundeDto.getLieferartIId());
-						rechnungDto.setZahlungszielIId(kundeDto
-								.getZahlungszielIId());
+						rechnungDto.setZahlungszielIId(kundeDto.getZahlungszielIId());
 						rechnungDto.setSpediteurIId(kundeDto.getSpediteurIId());
 						rechnungDto.setWaehrungCNr(kundeDto.getCWaehrung());
-						rechnungDto.setLagerIId(kundeDto
-								.getLagerIIdAbbuchungslager());
+						rechnungDto.setBReversecharge(Helper.getShortFalse());
+						rechnungDto.setReversechargeartId(kundeDto.getReversechargeartId());
+						rechnungDto.setLagerIId(kundeDto.getLagerIIdAbbuchungslager());
 
 						rechnungDto.setTBelegdatum(tBelegdatum);
 
-						rechnungDto.setPersonalIIdVertreter(kundeDto
-								.getPersonaliIdProvisionsempfaenger());
-						BigDecimal bdKurs = getLocaleFac().getWechselkurs2(
-								theClientDto.getSMandantenwaehrung(),
+						rechnungDto.setPersonalIIdVertreter(kundeDto.getPersonaliIdProvisionsempfaenger());
+						BigDecimal bdKurs = getLocaleFac().getWechselkurs2(theClientDto.getSMandantenwaehrung(),
 								kundeDto.getCWaehrung(), theClientDto);
 						rechnungDto.setNKurs(bdKurs);
 
-						rechnungDto.setKostenstelleIId(kundeDto
-								.getKostenstelleIId());
+						rechnungDto.setKostenstelleIId(kundeDto.getKostenstelleIId());
 
-						rechnungIId = getRechnungFac().createRechnung(
-								rechnungDto, theClientDto).getIId();
+						rechnungIId = getRechnungFac().createRechnung(rechnungDto, theClientDto).getIId();
 						anz++;
 					}
 
@@ -1420,27 +1254,24 @@ public class InseratFacBean extends Facade implements InseratFac {
 					reposDto.setBelegIId(rechnungIId);
 					reposDto.setBDrucken(Helper.boolean2Short(true));
 
-					ArtikelDto aDto = getArtikelFac()
-							.artikelFindByPrimaryKeySmall(
-									inseratDto.getArtikelIIdInseratart(),
-									theClientDto);
+					ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(inseratDto.getArtikelIIdInseratart(),
+							theClientDto);
 
 					reposDto.setPositionsartCNr(RechnungFac.POSITIONSART_RECHNUNG_IDENT);
 					reposDto.setEinheitCNr(aDto.getEinheitCNr());
 
-					reposDto.setBNettopreisuebersteuert(Helper
-							.boolean2Short(true));
+					reposDto.setBNettopreisuebersteuert(Helper.boolean2Short(true));
+			/*		
 					MwstsatzDto mwst = getMandantFac()
-							.mwstsatzFindByMwstsatzbezIIdAktuellster(
-									kundeDto.getMwstsatzbezIId(), theClientDto);
-
+							.mwstsatzFindByMwstsatzbezIIdAktuellster(kundeDto.getMwstsatzbezIId(), theClientDto);
+*/
+					MwstsatzDto mwst = getMandantFac()
+							.mwstsatzZuDatumValidate(kundeDto.getMwstsatzbezIId(),
+									tBelegdatum, theClientDto);
 					reposDto.setMwstsatzIId(mwst.getIId());
 
-					double dRabattsatz = Helper
-							.berechneRabattsatzMehrererRabatte(
-									inseratDto.getFKdRabatt(),
-									inseratDto.getFKdZusatzrabatt(),
-									inseratDto.getFKdNachlass());
+					double dRabattsatz = Helper.berechneRabattsatzMehrererRabatte(inseratDto.getFKdRabatt(),
+							inseratDto.getFKdZusatzrabatt(), inseratDto.getFKdNachlass());
 					reposDto.setFRabattsatz(inseratDto.getFKdRabatt());
 
 					reposDto.setFRabattsatz(dRabattsatz);
@@ -1448,108 +1279,73 @@ public class InseratFacBean extends Facade implements InseratFac {
 					reposDto.setNMaterialzuschlag(BigDecimal.ZERO);
 					reposDto.setBDrucken(Helper.boolean2Short(true));
 					reposDto.setNMenge(inseratDto.getNMenge());
-					reposDto.setNEinzelpreis(inseratDto
-							.getNNettoeinzelpreisVk());
-					int iNachkommastellenPreis = getMandantFac()
-							.getNachkommastellenPreisVK(
-									theClientDto.getMandant());
+					reposDto.setNEinzelpreis(inseratDto.getNNettoeinzelpreisVk());
+					int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(theClientDto.getMandant());
 
-					BigDecimal bdRabattbetrag = Helper
-							.getProzentWert(
-									inseratDto.getNNettoeinzelpreisVk(),
-									new BigDecimal(dRabattsatz),
-									iNachkommastellenPreis);
-					BigDecimal nettoeinzeilpreis = inseratDto
-							.getNNettoeinzelpreisVk().subtract(bdRabattbetrag);
+					BigDecimal bdRabattbetrag = Helper.getProzentWert(inseratDto.getNNettoeinzelpreisVk(),
+							new BigDecimal(dRabattsatz), iNachkommastellenPreis);
+					BigDecimal nettoeinzeilpreis = inseratDto.getNNettoeinzelpreisVk().subtract(bdRabattbetrag);
 
 					reposDto.setNNettoeinzelpreis(nettoeinzeilpreis);
 
-					BigDecimal bdMwstbetrag = Helper.getProzentWert(
-							nettoeinzeilpreis,
-							new BigDecimal(mwst.getFMwstsatz()),
-							iNachkommastellenPreis);
+					BigDecimal bdMwstbetrag = Helper.getProzentWert(nettoeinzeilpreis,
+							new BigDecimal(mwst.getFMwstsatz()), iNachkommastellenPreis);
 
-					reposDto.setNBruttoeinzelpreis(nettoeinzeilpreis
-							.add(bdMwstbetrag));
+					reposDto.setNBruttoeinzelpreis(nettoeinzeilpreis.add(bdMwstbetrag));
 
-					reposDto = getRechnungFac().createRechnungPosition(
-							reposDto, kundeDto.getLagerIIdAbbuchungslager(),
+					reposDto = getRechnungFac().createRechnungPosition(reposDto, kundeDto.getLagerIIdAbbuchungslager(),
 							theClientDto);
 					// Dann Im Inserat hinterlegen und ev. Status aendern
 
 					InseratrechnungDto inseratrechnungDto = getInseratFac()
-							.inseratrechnungFindByPrimaryKey(
-									inseratDto.getInseratrechnungDto().getIId());
+							.inseratrechnungFindByPrimaryKey(inseratDto.getInseratrechnungDto().getIId());
 
-					inseratrechnungDto
-							.setRechnungpositionIId(reposDto.getIId());
+					inseratrechnungDto.setRechnungpositionIId(reposDto.getIId());
 
-					getInseratFac().updateInseratrechnung(inseratrechnungDto,
-							theClientDto);
+					getInseratFac().updateInseratrechnung(inseratrechnungDto, theClientDto);
 
 					inseratDto.setStatusCNr(LocaleFac.STATUS_VERRECHNET);
-					getInseratFac().updateInseratOhneWeiterAktion(inseratDto,
-							theClientDto);
+					getInseratFac().updateInseratOhneWeiterAktion(inseratDto, theClientDto);
 
 					// Zusatzartikel anlegen
-					Session session2 = FLRSessionFactory.getFactory()
-							.openSession();
+					Session session2 = FLRSessionFactory.getFactory().openSession();
 					String queryString2 = "SELECT artikel FROM FLRInseratartikel artikel WHERE artikel.inserat_i_id="
-							+ inseratDto.getIId()
-							+ " ORDER BY artikel.flrartikel.c_nr ASC";
+							+ inseratDto.getIId() + " ORDER BY artikel.flrartikel.c_nr ASC";
 
-					org.hibernate.Query query2 = session2
-							.createQuery(queryString2);
+					org.hibernate.Query query2 = session2.createQuery(queryString2);
 					List<?> results2 = query2.list();
 					Iterator<?> resultListIterator2 = results2.iterator();
 					while (resultListIterator2.hasNext()) {
-						FLRInseratartikel flrinseratartikel = (FLRInseratartikel) resultListIterator2
-								.next();
+						FLRInseratartikel flrinseratartikel = (FLRInseratartikel) resultListIterator2.next();
 
 						RechnungPositionDto reposDtoZusatzArtikel = new RechnungPositionDto();
 
-						reposDtoZusatzArtikel.setArtikelIId(flrinseratartikel
-								.getFlrartikel().getI_id());
+						reposDtoZusatzArtikel.setArtikelIId(flrinseratartikel.getFlrartikel().getI_id());
 						reposDtoZusatzArtikel.setBelegIId(rechnungIId);
-						reposDtoZusatzArtikel.setBDrucken(Helper
-								.boolean2Short(true));
+						reposDtoZusatzArtikel.setBDrucken(Helper.boolean2Short(true));
 						reposDtoZusatzArtikel.setFRabattsatz(0D);
-						reposDtoZusatzArtikel
-								.setPositionsartCNr(RechnungFac.POSITIONSART_RECHNUNG_IDENT);
-						reposDtoZusatzArtikel.setEinheitCNr(flrinseratartikel
-								.getFlrartikel().getEinheit_c_nr());
+						reposDtoZusatzArtikel.setPositionsartCNr(RechnungFac.POSITIONSART_RECHNUNG_IDENT);
+						reposDtoZusatzArtikel.setEinheitCNr(flrinseratartikel.getFlrartikel().getEinheit_c_nr());
 
-						reposDtoZusatzArtikel.setBNettopreisuebersteuert(Helper
-								.boolean2Short(true));
+						reposDtoZusatzArtikel.setBNettopreisuebersteuert(Helper.boolean2Short(true));
 						reposDtoZusatzArtikel.setMwstsatzIId(mwst.getIId());
 
 						reposDtoZusatzArtikel.setFZusatzrabattsatz(0D);
-						reposDtoZusatzArtikel.setBDrucken(Helper
-								.boolean2Short(true));
-						reposDtoZusatzArtikel.setNMenge(flrinseratartikel
-								.getN_menge());
-						reposDtoZusatzArtikel.setNEinzelpreis(flrinseratartikel
-								.getN_nettoeinzelpreis_vk());
-						reposDtoZusatzArtikel
-								.setNNettoeinzelpreis(flrinseratartikel
-										.getN_nettoeinzelpreis_vk());
+						reposDtoZusatzArtikel.setBDrucken(Helper.boolean2Short(true));
+						reposDtoZusatzArtikel.setNMenge(flrinseratartikel.getN_menge());
+						reposDtoZusatzArtikel.setNEinzelpreis(flrinseratartikel.getN_nettoeinzelpreis_vk());
+						reposDtoZusatzArtikel.setNNettoeinzelpreis(flrinseratartikel.getN_nettoeinzelpreis_vk());
 
 						BigDecimal bdMwstbetragZusatz = Helper.getProzentWert(
-								flrinseratartikel.getN_nettoeinzelpreis_vk(),
-								new BigDecimal(mwst.getFMwstsatz()), 2);
+								flrinseratartikel.getN_nettoeinzelpreis_vk(), new BigDecimal(mwst.getFMwstsatz()), 2);
 
-						reposDtoZusatzArtikel
-								.setNBruttoeinzelpreis(flrinseratartikel
-										.getN_nettoeinzelpreis_vk().add(
-												bdMwstbetragZusatz));
+						reposDtoZusatzArtikel.setNBruttoeinzelpreis(
+								flrinseratartikel.getN_nettoeinzelpreis_vk().add(bdMwstbetragZusatz));
 
-						reposDtoZusatzArtikel = getRechnungFac()
-								.createRechnungPosition(reposDtoZusatzArtikel,
-										kundeDto.getLagerIIdAbbuchungslager(),
-										theClientDto);
+						reposDtoZusatzArtikel = getRechnungFac().createRechnungPosition(reposDtoZusatzArtikel,
+								kundeDto.getLagerIIdAbbuchungslager(), theClientDto);
 
-						getInseratFac().createInseratrechnungartikel(
-								inseratrechnungDto.getIId(),
+						getInseratFac().createInseratrechnungartikel(inseratrechnungDto.getIId(),
 								reposDtoZusatzArtikel);
 
 					}
@@ -1563,27 +1359,25 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return anz;
 	}
 
-	public void createInseratrechnungartikel(Integer inseratrechnungIId,
-			RechnungPositionDto reposDtoZusatzArtikel) {
+	public void createInseratrechnungartikel(Integer inseratrechnungIId, RechnungPositionDto reposDtoZusatzArtikel) {
 		// Auch in Inseratrechnungartikel hinterlegen
 		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_INSERATRECHNUNGARTIKEL);
 
-		Inseratrechnungartikel inseratrechnungartikel = new Inseratrechnungartikel(
-				pk, inseratrechnungIId, reposDtoZusatzArtikel.getIId());
+		Inseratrechnungartikel inseratrechnungartikel = new Inseratrechnungartikel(pk, inseratrechnungIId,
+				reposDtoZusatzArtikel.getIId());
 		em.persist(inseratrechnungartikel);
 		em.flush();
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public int rechnungenAusloesenInserateMitMehrerenKunden(
-			LinkedHashMap<Integer, FLRInserat> hmInserateMitMehrerenKunden,
-			java.sql.Date neuDatum, TheClientDto theClientDto) {
+			LinkedHashMap<Integer, FLRInserat> hmInserateMitMehrerenKunden, java.sql.Date neuDatum,
+			TheClientDto theClientDto) {
 
 		int anz = 0;
 
-		Iterator<Integer> itInserate = hmInserateMitMehrerenKunden.keySet()
-				.iterator();
+		Iterator<Integer> itInserate = hmInserateMitMehrerenKunden.keySet().iterator();
 
 		while (itInserate.hasNext()) {
 			Integer inseratIId = itInserate.next();
@@ -1601,8 +1395,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 			BigDecimal bdRabattGesamt = new BigDecimal(100.00);
 
-			BigDecimal bdSchritt = bdRabattGesamt.divide(new BigDecimal(
-					iAnzahlKunden), 2, BigDecimal.ROUND_HALF_UP);
+			BigDecimal bdSchritt = bdRabattGesamt.divide(new BigDecimal(iAnzahlKunden), 2, BigDecimal.ROUND_HALF_UP);
 
 			BigDecimal bdKumuliert = new BigDecimal(0.00);
 
@@ -1612,90 +1405,72 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 				FLRInseratrechnung ir = (FLRInseratrechnung) itKunden.next();
 
-				InseratrechnungDto inseratrechnungDto = getInseratFac()
-						.inseratrechnungFindByPrimaryKey(ir.getI_id());
+				InseratrechnungDto inseratrechnungDto = getInseratFac().inseratrechnungFindByPrimaryKey(ir.getI_id());
 
 				RechnungDto rechnungDto = new RechnungDto();
 				rechnungDto.setMandantCNr(theClientDto.getMandant());
 				rechnungDto.setKundeIId(ir.getKunde_i_id());
-				rechnungDto.setAnsprechpartnerIId(inseratrechnungDto
-						.getAnsprechpartnerIId());
+				rechnungDto.setAnsprechpartnerIId(inseratrechnungDto.getAnsprechpartnerIId());
 				rechnungDto.setKundeIIdStatistikadresse(ir.getKunde_i_id());
 				rechnungDto.setRechnungartCNr(RechnungFac.RECHNUNGART_RECHNUNG);
 
 				if (itKunden.hasNext() == false) {
 					// Der letzte bekommt die Rundung
-					rechnungDto.setFAllgemeinerRabattsatz(bdRabattGesamt
-							.subtract(bdKumuliert).doubleValue());
+					rechnungDto.setFAllgemeinerRabattsatz(bdRabattGesamt.subtract(bdKumuliert).doubleValue());
 				} else {
-					rechnungDto.setFAllgemeinerRabattsatz(bdSchritt
-							.doubleValue());
+					rechnungDto.setFAllgemeinerRabattsatz(bdSchritt.doubleValue());
 				}
 
 				bdKumuliert = bdKumuliert.add(bdSchritt);
 
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						ir.getKunde_i_id(), theClientDto);
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(ir.getKunde_i_id(), theClientDto);
 
 				rechnungDto.setLieferartIId(kundeDto.getLieferartIId());
 				rechnungDto.setZahlungszielIId(kundeDto.getZahlungszielIId());
 				rechnungDto.setSpediteurIId(kundeDto.getSpediteurIId());
 				rechnungDto.setWaehrungCNr(kundeDto.getCWaehrung());
+				rechnungDto.setBReversecharge(Helper.getShortFalse());
+				rechnungDto.setReversechargeartId(kundeDto.getReversechargeartId());
 				rechnungDto.setLagerIId(kundeDto.getLagerIIdAbbuchungslager());
 
 				if (neuDatum != null) {
-					rechnungDto.setTBelegdatum(Helper
-							.cutTimestamp(new Timestamp(neuDatum.getTime())));
+					rechnungDto.setTBelegdatum(Helper.cutTimestamp(new Timestamp(neuDatum.getTime())));
 				} else {
-					rechnungDto.setTBelegdatum(Helper
-							.cutTimestamp(new Timestamp(System
-									.currentTimeMillis())));
+					rechnungDto.setTBelegdatum(Helper.cutTimestamp(new Timestamp(System.currentTimeMillis())));
 				}
 
-				rechnungDto.setPersonalIIdVertreter(kundeDto
-						.getPersonaliIdProvisionsempfaenger());
+				rechnungDto.setPersonalIIdVertreter(kundeDto.getPersonaliIdProvisionsempfaenger());
 
 				try {
 
-					BigDecimal bdKurs = getLocaleFac().getWechselkurs2(
-							theClientDto.getSMandantenwaehrung(),
+					BigDecimal bdKurs = getLocaleFac().getWechselkurs2(theClientDto.getSMandantenwaehrung(),
 							kundeDto.getCWaehrung(), theClientDto);
 					rechnungDto.setNKurs(bdKurs);
 
-					rechnungDto.setKostenstelleIId(kundeDto
-							.getKostenstelleIId());
+					rechnungDto.setKostenstelleIId(kundeDto.getKostenstelleIId());
 					anz++;
 
-					Integer iGeschaeftsjahr = getParameterFac()
-							.getGeschaeftsjahr(rechnungDto.getMandantCNr(),
-									rechnungDto.getTBelegdatum());
+					Integer iGeschaeftsjahr = getParameterFac().getGeschaeftsjahr(rechnungDto.getMandantCNr(),
+							rechnungDto.getTBelegdatum());
 
 					// Wenn zu dem Kunden schon einen angelegte Rechnung gibt,
 					// dann
 					// die verwenden
-					String sQuery2 = "SELECT r"
-							+ " FROM FLRRechnung AS r WHERE r.flrkunde.i_id="
-							+ ir.getKunde_i_id() + " AND r.status_c_nr='"
-							+ LocaleFac.STATUS_ANGELEGT
-							+ "' AND r.mandant_c_nr='"
-							+ theClientDto.getMandant()
-							+ "' AND r.flrrechnungart.c_nr='"
-							+ RechnungFac.RECHNUNGART_RECHNUNG
-							+ "' AND r.i_geschaeftsjahr=" + iGeschaeftsjahr;
+					String sQuery2 = "SELECT r" + " FROM FLRRechnung AS r WHERE r.flrkunde.i_id=" + ir.getKunde_i_id()
+							+ " AND r.status_c_nr='" + LocaleFac.STATUS_ANGELEGT + "' AND r.mandant_c_nr='"
+							+ theClientDto.getMandant() + "' AND r.flrrechnungart.c_nr='"
+							+ RechnungFac.RECHNUNGART_RECHNUNG + "' AND r.i_geschaeftsjahr=" + iGeschaeftsjahr;
 
 					if (inseratrechnungDto.getAnsprechpartnerIId() != null) {
-						sQuery2 += " AND r.ansprechpartner_i_id="
-								+ inseratrechnungDto.getAnsprechpartnerIId();
+						sQuery2 += " AND r.ansprechpartner_i_id=" + inseratrechnungDto.getAnsprechpartnerIId();
 					} else {
 						sQuery2 += " AND r.ansprechpartner_i_id IS NULL ";
 					}
 
 					sQuery2 += " ORDER BY r.c_nr DESC";
 
-					Session sessionRech = FLRSessionFactory.getFactory()
-							.openSession();
-					org.hibernate.Query rechnungen = sessionRech
-							.createQuery(sQuery2);
+					Session sessionRech = FLRSessionFactory.getFactory().openSession();
+					org.hibernate.Query rechnungen = sessionRech.createQuery(sQuery2);
 					rechnungen.setMaxResults(1);
 					List<?> resultListR = rechnungen.list();
 
@@ -1703,18 +1478,15 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 					if (resultListR.iterator().hasNext()) {
 						// Bestehende verwenden
-						FLRRechnung r = (FLRRechnung) resultListR.iterator()
-								.next();
+						FLRRechnung r = (FLRRechnung) resultListR.iterator().next();
 						rechnungIId = r.getI_id();
 					} else {
-						rechnungIId = getRechnungFac().createRechnung(
-								rechnungDto, theClientDto).getIId();
+						rechnungIId = getRechnungFac().createRechnung(rechnungDto, theClientDto).getIId();
 					}
 
 					// Dann Rechnungsposition anlegen
 
-					InseratDto inseratDto = inseratFindByPrimaryKey(flrinserat
-							.getI_id());
+					InseratDto inseratDto = inseratFindByPrimaryKey(flrinserat.getI_id());
 
 					RechnungPositionDto reposDto = new RechnungPositionDto();
 					reposDto.setArtikelIId(inseratDto.getArtikelIIdInseratart());
@@ -1723,125 +1495,91 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 					reposDto.setPositionsartCNr(RechnungFac.POSITIONSART_RECHNUNG_IDENT);
 
-					ArtikelDto aDto = getArtikelFac()
-							.artikelFindByPrimaryKeySmall(
-									inseratDto.getArtikelIIdInseratart(),
-									theClientDto);
+					ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(inseratDto.getArtikelIIdInseratart(),
+							theClientDto);
 
 					reposDto.setEinheitCNr(aDto.getEinheitCNr());
 
-					reposDto.setBNettopreisuebersteuert(Helper
-							.boolean2Short(true));
+					reposDto.setBNettopreisuebersteuert(Helper.boolean2Short(true));
+/*					
 					MwstsatzDto mwst = getMandantFac()
-							.mwstsatzFindByMwstsatzbezIIdAktuellster(
-									kundeDto.getMwstsatzbezIId(), theClientDto);
-
+							.mwstsatzFindByMwstsatzbezIIdAktuellster(kundeDto.getMwstsatzbezIId(), theClientDto);
+*/
+					MwstsatzDto mwst = getMandantFac()
+							.mwstsatzZuDatumValidate(kundeDto.getMwstsatzbezIId(),
+									rechnungDto.getTBelegdatum(), theClientDto);
 					reposDto.setMwstsatzIId(mwst.getIId());
 
-					double dRabattsatz = Helper
-							.berechneRabattsatzMehrererRabatte(
-									inseratDto.getFKdRabatt(),
-									inseratDto.getFKdZusatzrabatt(),
-									inseratDto.getFKdNachlass());
+					double dRabattsatz = Helper.berechneRabattsatzMehrererRabatte(inseratDto.getFKdRabatt(),
+							inseratDto.getFKdZusatzrabatt(), inseratDto.getFKdNachlass());
 					reposDto.setFRabattsatz(inseratDto.getFKdRabatt());
 
-					int iNachkommastellenPreis = getMandantFac()
-							.getNachkommastellenPreisVK(
-									theClientDto.getMandant());
+					int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisVK(theClientDto.getMandant());
 
 					reposDto.setFRabattsatz(dRabattsatz);
 					reposDto.setFZusatzrabattsatz(0D);
 					reposDto.setNMaterialzuschlag(BigDecimal.ZERO);
 					reposDto.setBDrucken(Helper.boolean2Short(true));
 					reposDto.setNMenge(inseratDto.getNMenge());
-					reposDto.setNEinzelpreis(inseratDto
-							.getNNettoeinzelpreisVk());
-					BigDecimal bdRabattbetrag = Helper
-							.getProzentWert(
-									inseratDto.getNNettoeinzelpreisVk(),
-									new BigDecimal(dRabattsatz),
-									iNachkommastellenPreis);
-					BigDecimal nettoeinzeilpreis = inseratDto
-							.getNNettoeinzelpreisVk().subtract(bdRabattbetrag);
+					reposDto.setNEinzelpreis(inseratDto.getNNettoeinzelpreisVk());
+					BigDecimal bdRabattbetrag = Helper.getProzentWert(inseratDto.getNNettoeinzelpreisVk(),
+							new BigDecimal(dRabattsatz), iNachkommastellenPreis);
+					BigDecimal nettoeinzeilpreis = inseratDto.getNNettoeinzelpreisVk().subtract(bdRabattbetrag);
 
 					reposDto.setNNettoeinzelpreis(nettoeinzeilpreis);
 
-					BigDecimal bdMwstbetrag = Helper.getProzentWert(
-							nettoeinzeilpreis,
-							new BigDecimal(mwst.getFMwstsatz()),
-							iNachkommastellenPreis);
+					BigDecimal bdMwstbetrag = Helper.getProzentWert(nettoeinzeilpreis,
+							new BigDecimal(mwst.getFMwstsatz()), iNachkommastellenPreis);
 
-					reposDto.setNBruttoeinzelpreis(nettoeinzeilpreis
-							.add(bdMwstbetrag));
+					reposDto.setNBruttoeinzelpreis(nettoeinzeilpreis.add(bdMwstbetrag));
 
-					reposDto = getRechnungFac().createRechnungPosition(
-							reposDto, rechnungDto.getLagerIId(), theClientDto);
+					reposDto = getRechnungFac().createRechnungPosition(reposDto, rechnungDto.getLagerIId(),
+							theClientDto);
 					// Dann Im Inserat hinterlegen und ev. Status aendern
 
-					inseratrechnungDto
-							.setRechnungpositionIId(reposDto.getIId());
+					inseratrechnungDto.setRechnungpositionIId(reposDto.getIId());
 
-					getInseratFac().updateInseratrechnung(inseratrechnungDto,
-							theClientDto);
+					getInseratFac().updateInseratrechnung(inseratrechnungDto, theClientDto);
 
 					// Zusatzartikel anlegen
-					Session session2 = FLRSessionFactory.getFactory()
-							.openSession();
+					Session session2 = FLRSessionFactory.getFactory().openSession();
 					String queryString2 = "SELECT artikel FROM FLRInseratartikel artikel WHERE artikel.inserat_i_id="
-							+ inseratDto.getIId()
-							+ " ORDER BY artikel.flrartikel.c_nr ASC";
+							+ inseratDto.getIId() + " ORDER BY artikel.flrartikel.c_nr ASC";
 
-					org.hibernate.Query query2 = session2
-							.createQuery(queryString2);
+					org.hibernate.Query query2 = session2.createQuery(queryString2);
 					List<?> results2 = query2.list();
 					Iterator<?> resultListIterator2 = results2.iterator();
 					while (resultListIterator2.hasNext()) {
-						FLRInseratartikel flrinseratartikel = (FLRInseratartikel) resultListIterator2
-								.next();
+						FLRInseratartikel flrinseratartikel = (FLRInseratartikel) resultListIterator2.next();
 
 						RechnungPositionDto reposDtoZusatzArtikel = new RechnungPositionDto();
 
-						reposDtoZusatzArtikel.setArtikelIId(flrinseratartikel
-								.getFlrartikel().getI_id());
+						reposDtoZusatzArtikel.setArtikelIId(flrinseratartikel.getFlrartikel().getI_id());
 						reposDtoZusatzArtikel.setBelegIId(rechnungIId);
-						reposDtoZusatzArtikel.setBDrucken(Helper
-								.boolean2Short(true));
+						reposDtoZusatzArtikel.setBDrucken(Helper.boolean2Short(true));
 						reposDtoZusatzArtikel.setFRabattsatz(0D);
-						reposDtoZusatzArtikel
-								.setPositionsartCNr(RechnungFac.POSITIONSART_RECHNUNG_IDENT);
-						reposDtoZusatzArtikel.setEinheitCNr(flrinseratartikel
-								.getFlrartikel().getEinheit_c_nr());
+						reposDtoZusatzArtikel.setPositionsartCNr(RechnungFac.POSITIONSART_RECHNUNG_IDENT);
+						reposDtoZusatzArtikel.setEinheitCNr(flrinseratartikel.getFlrartikel().getEinheit_c_nr());
 
-						reposDtoZusatzArtikel.setBNettopreisuebersteuert(Helper
-								.boolean2Short(true));
+						reposDtoZusatzArtikel.setBNettopreisuebersteuert(Helper.boolean2Short(true));
 						reposDtoZusatzArtikel.setMwstsatzIId(mwst.getIId());
 
 						reposDtoZusatzArtikel.setFZusatzrabattsatz(0D);
-						reposDtoZusatzArtikel.setBDrucken(Helper
-								.boolean2Short(true));
-						reposDtoZusatzArtikel.setNMenge(flrinseratartikel
-								.getN_menge());
-						reposDtoZusatzArtikel.setNEinzelpreis(flrinseratartikel
-								.getN_nettoeinzelpreis_vk());
-						reposDtoZusatzArtikel
-								.setNNettoeinzelpreis(flrinseratartikel
-										.getN_nettoeinzelpreis_vk());
+						reposDtoZusatzArtikel.setBDrucken(Helper.boolean2Short(true));
+						reposDtoZusatzArtikel.setNMenge(flrinseratartikel.getN_menge());
+						reposDtoZusatzArtikel.setNEinzelpreis(flrinseratartikel.getN_nettoeinzelpreis_vk());
+						reposDtoZusatzArtikel.setNNettoeinzelpreis(flrinseratartikel.getN_nettoeinzelpreis_vk());
 
 						BigDecimal bdMwstbetragZusatz = Helper.getProzentWert(
-								flrinseratartikel.getN_nettoeinzelpreis_vk(),
-								new BigDecimal(mwst.getFMwstsatz()), 2);
+								flrinseratartikel.getN_nettoeinzelpreis_vk(), new BigDecimal(mwst.getFMwstsatz()), 2);
 
-						reposDtoZusatzArtikel
-								.setNBruttoeinzelpreis(flrinseratartikel
-										.getN_nettoeinzelpreis_vk().add(
-												bdMwstbetragZusatz));
+						reposDtoZusatzArtikel.setNBruttoeinzelpreis(
+								flrinseratartikel.getN_nettoeinzelpreis_vk().add(bdMwstbetragZusatz));
 
-						reposDtoZusatzArtikel = getRechnungFac()
-								.createRechnungPosition(reposDtoZusatzArtikel,
-										rechnungDto.getLagerIId(), theClientDto);
+						reposDtoZusatzArtikel = getRechnungFac().createRechnungPosition(reposDtoZusatzArtikel,
+								rechnungDto.getLagerIId(), theClientDto);
 
-						getInseratFac().createInseratrechnungartikel(
-								inseratrechnungDto.getIId(),
+						getInseratFac().createInseratrechnungartikel(inseratrechnungDto.getIId(),
 								reposDtoZusatzArtikel);
 
 					}
@@ -1852,64 +1590,50 @@ public class InseratFacBean extends Facade implements InseratFac {
 				}
 			}
 
-			InseratDto inseratDto = getInseratFac().inseratFindByPrimaryKey(
-					flrinserat.getI_id());
+			InseratDto inseratDto = getInseratFac().inseratFindByPrimaryKey(flrinserat.getI_id());
 
 			inseratDto.setStatusCNr(LocaleFac.STATUS_VERRECHNET);
-			getInseratFac().updateInseratOhneWeiterAktion(inseratDto,
-					theClientDto);
+			getInseratFac().updateInseratOhneWeiterAktion(inseratDto, theClientDto);
 
 		}
 		return anz;
 	}
 
-	public void preisInBestellpositionRueckpflegenAusKopfdaten(
-			Integer inseratIId, TheClientDto theClientDto) {
+	public void preisInBestellpositionRueckpflegenAusKopfdaten(Integer inseratIId, TheClientDto theClientDto) {
 
 		// 1.) Position aus Inserat-Kopfdaten
 		InseratDto inseratDto = inseratFindByPrimaryKey(inseratIId);
 
 		try {
 			BestellpositionDto bestposDto = getBestellpositionFac()
-					.bestellpositionFindByPrimaryKey(
-							inseratDto.getBestellpositionIId());
+					.bestellpositionFindByPrimaryKey(inseratDto.getBestellpositionIId());
 			// Preise und Artikel aendern
 			bestposDto.setArtikelIId(inseratDto.getArtikelIIdInseratart());
-			bestposDto
-					.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
-			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-					inseratDto.getArtikelIIdInseratart(), theClientDto);
+			bestposDto.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
+			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(inseratDto.getArtikelIIdInseratart(),
+					theClientDto);
 			bestposDto.setEinheitCNr(aDto.getEinheitCNr());
-			Double fRabattsatz = Helper.berechneRabattsatzMehrererRabatte(
-					inseratDto.getFLFRabatt(), inseratDto.getFLfZusatzrabatt(),
-					inseratDto.getFLfNachlass());
+			Double fRabattsatz = Helper.berechneRabattsatzMehrererRabatte(inseratDto.getFLFRabatt(),
+					inseratDto.getFLfZusatzrabatt(), inseratDto.getFLfNachlass());
 
 			if (inseratDto.getInseratrechnungDto() != null) {
-				bestposDto.setKundeIId(inseratDto.getInseratrechnungDto()
-						.getKundeIId());
+				bestposDto.setKundeIId(inseratDto.getInseratrechnungDto().getKundeIId());
 			}
 
 			bestposDto.setNMenge(inseratDto.getNMenge());
 
 			bestposDto.setDRabattsatz(fRabattsatz);
 
-			bestposDto
-					.setNNettoeinzelpreis(inseratDto.getNNettoeinzelpreisEk());
+			bestposDto.setNNettoeinzelpreis(inseratDto.getNNettoeinzelpreisEk());
 
-			BigDecimal bdRabattbetrag = Helper.getProzentWert(bestposDto
-					.getNNettoeinzelpreis(),
+			BigDecimal bdRabattbetrag = Helper.getProzentWert(bestposDto.getNNettoeinzelpreis(),
 					new BigDecimal(bestposDto.getDRabattsatz()), 2);
 
 			bestposDto.setNRabattbetrag(bdRabattbetrag);
 
-			bestposDto.setNNettogesamtpreis(bestposDto.getNNettoeinzelpreis()
-					.subtract(bdRabattbetrag));
-			getBestellpositionFac()
-					.updateBestellposition(
-							bestposDto,
-							theClientDto,
-							BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT,
-							null);
+			bestposDto.setNNettogesamtpreis(bestposDto.getNNettoeinzelpreis().subtract(bdRabattbetrag));
+			getBestellpositionFac().updateBestellposition(bestposDto, theClientDto,
+					BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT, null);
 
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
@@ -1917,8 +1641,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	}
 
-	public void preisInBestellpositionRueckpflegenAusInseratArtikel(
-			Integer inseratartikelIId, TheClientDto theClientDto) {
+	public void preisInBestellpositionRueckpflegenAusInseratArtikel(Integer inseratartikelIId,
+			TheClientDto theClientDto) {
 
 		// Positionen aus Inserat-Artikel
 		InseratartikelDto iaDto = inseratartikelFindByPrimaryKey(inseratartikelIId);
@@ -1927,20 +1651,16 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 			try {
 				BestellpositionDto bestposDto = getBestellpositionFac()
-						.bestellpositionFindByPrimaryKey(
-								iaDto.getBestellpositionIId());
+						.bestellpositionFindByPrimaryKey(iaDto.getBestellpositionIId());
 				// Preise und Artikel aendern
 				bestposDto.setArtikelIId(iaDto.getArtikelIId());
 
-				bestposDto
-						.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
-				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-						iaDto.getArtikelIId(), theClientDto);
+				bestposDto.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(iaDto.getArtikelIId(), theClientDto);
 				bestposDto.setEinheitCNr(aDto.getEinheitCNr());
 
 				if (inseratDto.getInseratrechnungDto() != null) {
-					bestposDto.setKundeIId(inseratDto.getInseratrechnungDto()
-							.getKundeIId());
+					bestposDto.setKundeIId(inseratDto.getInseratrechnungDto().getKundeIId());
 				}
 
 				bestposDto.setNNettoeinzelpreis(iaDto.getNNettoeinzelpreisEk());
@@ -1950,12 +1670,8 @@ public class InseratFacBean extends Facade implements InseratFac {
 				bestposDto.setNRabattbetrag(new BigDecimal(0));
 
 				bestposDto.setNNettogesamtpreis(iaDto.getNNettoeinzelpreisEk());
-				getBestellpositionFac()
-						.updateBestellposition(
-								bestposDto,
-								theClientDto,
-								BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT,
-								null);
+				getBestellpositionFac().updateBestellposition(bestposDto, theClientDto,
+						BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT, null);
 
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
@@ -1965,8 +1681,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public ArrayList<Integer> bestellungenAusloesen(Integer lieferantIId,
-			Integer kundeIId, TheClientDto theClientDto) {
+	public ArrayList<Integer> bestellungenAusloesen(Integer lieferantIId, Integer kundeIId, TheClientDto theClientDto) {
 		// Eine Bestellung erzeugen
 
 		try {
@@ -1975,13 +1690,9 @@ public class InseratFacBean extends Facade implements InseratFac {
 			// Nun fuer jeden Erscheinungstermin eine Bestellung erzeugen
 			Session session = FLRSessionFactory.getFactory().openSession();
 			String queryString = "SELECT ins FROM FLRInserat ins LEFT OUTER JOIN ins.rechnungset as rechnungset WHERE rechnungset.kunde_i_id="
-					+ kundeIId
-					+ " AND ins.bestellposition_i_id IS NULL  AND ins.mandant_c_nr='"
-					+ theClientDto.getMandant()
-					+ "' AND ins.lieferant_i_id="
-					+ lieferantIId
-					+ " AND ins.status_c_nr <>'"
-					+ LocaleFac.STATUS_STORNIERT
+					+ kundeIId + " AND ins.bestellposition_i_id IS NULL  AND ins.mandant_c_nr='"
+					+ theClientDto.getMandant() + "' AND ins.lieferant_i_id=" + lieferantIId
+					+ " AND ins.status_c_nr <>'" + LocaleFac.STATUS_STORNIERT
 					+ "' ORDER BY ins.t_termin ASC, ins.c_nr ASC";
 
 			org.hibernate.Query query = session.createQuery(queryString);
@@ -1990,11 +1701,9 @@ public class InseratFacBean extends Facade implements InseratFac {
 			while (resultListIterator.hasNext()) {
 				FLRInserat flrInserat = (FLRInserat) resultListIterator.next();
 
-				InseratDto inseratDto = inseratFindByPrimaryKey(flrInserat
-						.getI_id());
+				InseratDto inseratDto = inseratFindByPrimaryKey(flrInserat.getI_id());
 
-				Integer ansprechpartnerIId = inseratDto
-						.getAnsprechpartnerIIdLieferant();
+				Integer ansprechpartnerIId = inseratDto.getAnsprechpartnerIIdLieferant();
 
 				LinkedHashMap<java.util.Date, ArrayList<FLRInserat>> hmTermine = null;
 				if (hmAnsprechpartner.containsKey(ansprechpartnerIId)) {
@@ -2019,41 +1728,29 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 			ArrayList<Integer> alBestellungIId = new ArrayList<Integer>();
 
-			Iterator<Integer> itansprechpartner = hmAnsprechpartner.keySet()
-					.iterator();
+			Iterator<Integer> itansprechpartner = hmAnsprechpartner.keySet().iterator();
 
 			while (itansprechpartner.hasNext()) {
 
 				Integer ansprechpartnerIId = itansprechpartner.next();
-				HashMap<java.util.Date, ArrayList<FLRInserat>> hmTermine = hmAnsprechpartner
-						.get(ansprechpartnerIId);
+				HashMap<java.util.Date, ArrayList<FLRInserat>> hmTermine = hmAnsprechpartner.get(ansprechpartnerIId);
 
-				Iterator<java.util.Date> itTermine = hmTermine.keySet()
-						.iterator();
+				Iterator<java.util.Date> itTermine = hmTermine.keySet().iterator();
 
 				while (itTermine.hasNext()) {
 					java.util.Date dTermin = itTermine.next();
-					BestellungDto bestellungDto = getBestellungFac()
-							.createBestellungDto(lieferantIId,
-									theClientDto.getMandant(),
-									theClientDto.getIDPersonal());
-					bestellungDto.setDBelegdatum(Helper
-							.cutDate(new java.sql.Date(System
-									.currentTimeMillis())));
+					BestellungDto bestellungDto = getBestellungFac().createBestellungDto(lieferantIId,
+							theClientDto.getMandant(), theClientDto.getIDPersonal());
+					bestellungDto.setDBelegdatum(Helper.cutDate(new java.sql.Date(System.currentTimeMillis())));
 					bestellungDto.setAnsprechpartnerIId(ansprechpartnerIId);
-					bestellungDto.setDLiefertermin(Helper
-							.cutTimestamp(new java.sql.Timestamp(dTermin
-									.getTime())));
-					Integer bestellungIId = getBestellungFac()
-							.createBestellung(bestellungDto, theClientDto);
-					bestellungDto = getBestellungFac()
-							.bestellungFindByPrimaryKey(bestellungIId);
+					bestellungDto.setDLiefertermin(Helper.cutTimestamp(new java.sql.Timestamp(dTermin.getTime())));
+					Integer bestellungIId = getBestellungFac().createBestellung(bestellungDto, theClientDto);
+					bestellungDto = getBestellungFac().bestellungFindByPrimaryKey(bestellungIId);
 
 					// Allg. Rabatt auf 0 setzen, da der Rabatt in den
 					// Positionen enthalten ist
 					bestellungDto.setFAllgemeinerRabattsatz(0D);
-					getBestellungFac().updateBestellung(bestellungDto,
-							theClientDto);
+					getBestellungFac().updateBestellung(bestellungDto, theClientDto);
 
 					alBestellungIId.add(bestellungIId);
 
@@ -2063,134 +1760,84 @@ public class InseratFacBean extends Facade implements InseratFac {
 					while (itInserate.hasNext()) {
 						FLRInserat flrInserat = itInserate.next();
 
-						InseratDto inseratDto = inseratFindByPrimaryKey(flrInserat
-								.getI_id());
+						InseratDto inseratDto = inseratFindByPrimaryKey(flrInserat.getI_id());
 
-						BestellpositionDto bestposDto = getBestellungFac()
-								.createBestellPositionDto(
-										bestellungIId,
-										lieferantIId,
-										flrInserat.getFlrartikel_inseratart()
-												.getI_id(),
-										flrInserat.getN_menge(), theClientDto);
+						BestellpositionDto bestposDto = getBestellungFac().createBestellPositionDto(bestellungIId,
+								lieferantIId, flrInserat.getFlrartikel_inseratart().getI_id(), flrInserat.getN_menge(),
+								theClientDto);
 
-						bestposDto.setNNettoeinzelpreis(flrInserat
-								.getN_nettoeinzelpreis_ek());
-						bestposDto
-								.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
-						bestposDto.setEinheitCNr(flrInserat
-								.getFlrartikel_inseratart().getEinheit_c_nr());
+						bestposDto.setNNettoeinzelpreis(flrInserat.getN_nettoeinzelpreis_ek());
+						bestposDto.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
+						bestposDto.setEinheitCNr(flrInserat.getFlrartikel_inseratart().getEinheit_c_nr());
 
-						Double fRabattsatz = Helper
-								.berechneRabattsatzMehrererRabatte(
-										inseratDto.getFLFRabatt(),
-										inseratDto.getFLfZusatzrabatt(),
-										inseratDto.getFLfNachlass());
+						Double fRabattsatz = Helper.berechneRabattsatzMehrererRabatte(inseratDto.getFLFRabatt(),
+								inseratDto.getFLfZusatzrabatt(), inseratDto.getFLfNachlass());
 
 						bestposDto.setDRabattsatz(fRabattsatz);
 
-						bestposDto.setNNettoeinzelpreis(flrInserat
-								.getN_nettoeinzelpreis_ek());
+						bestposDto.setNNettoeinzelpreis(flrInserat.getN_nettoeinzelpreis_ek());
 
-						BigDecimal bdRabattbetrag = Helper.getProzentWert(
-								bestposDto.getNNettoeinzelpreis(),
+						BigDecimal bdRabattbetrag = Helper.getProzentWert(bestposDto.getNNettoeinzelpreis(),
 								new BigDecimal(bestposDto.getDRabattsatz()), 2);
 
 						bestposDto.setNRabattbetrag(bdRabattbetrag);
 
-						bestposDto.setNNettogesamtpreis(bestposDto
-								.getNNettoeinzelpreis()
-								.subtract(bdRabattbetrag));
+						bestposDto.setNNettogesamtpreis(bestposDto.getNNettoeinzelpreis().subtract(bdRabattbetrag));
 
-						bestposDto.setBNettopreisuebersteuert(Helper
-								.boolean2Short(true));
+						bestposDto.setBNettopreisuebersteuert(Helper.boolean2Short(true));
 
-						bestposDto.setTUebersteuerterLiefertermin(inseratDto
-								.getTTermin());
+						bestposDto.setTUebersteuerterLiefertermin(inseratDto.getTTermin());
 						if (inseratDto.getInseratrechnungDto() != null) {
-							bestposDto.setKundeIId(inseratDto
-									.getInseratrechnungDto().getKundeIId());
+							bestposDto.setKundeIId(inseratDto.getInseratrechnungDto().getKundeIId());
 						}
-						bestposDto.setArtikelIId(flrInserat
-								.getFlrartikel_inseratart().getI_id());
-						Integer bestellpositionIId = getBestellpositionFac()
-								.createBestellposition(
-										bestposDto,
-										theClientDto,
-										BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT,
-										null);
+						bestposDto.setArtikelIId(flrInserat.getFlrartikel_inseratart().getI_id());
+						Integer bestellpositionIId = getBestellpositionFac().createBestellposition(bestposDto,
+								theClientDto, BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT, null);
 						inseratDto.setBestellpositionIId(bestellpositionIId);
 						inseratDto.setStatusCNr(LocaleFac.STATUS_BESTELLT);
 						getInseratFac().updateInserat(inseratDto, theClientDto);
 
 						// Zusatzartikel anlegen
-						Session session2 = FLRSessionFactory.getFactory()
-								.openSession();
+						Session session2 = FLRSessionFactory.getFactory().openSession();
 						String queryString2 = "SELECT artikel FROM FLRInseratartikel artikel WHERE artikel.inserat_i_id="
-								+ inseratDto.getIId()
-								+ " ORDER BY artikel.flrartikel.c_nr ASC";
+								+ inseratDto.getIId() + " ORDER BY artikel.flrartikel.c_nr ASC";
 
-						org.hibernate.Query query2 = session2
-								.createQuery(queryString2);
+						org.hibernate.Query query2 = session2.createQuery(queryString2);
 						List<?> results2 = query2.list();
 						Iterator<?> resultListIterator2 = results2.iterator();
 						while (resultListIterator2.hasNext()) {
-							FLRInseratartikel flrinseratartikel = (FLRInseratartikel) resultListIterator2
-									.next();
+							FLRInseratartikel flrinseratartikel = (FLRInseratartikel) resultListIterator2.next();
 
-							BestellpositionDto bestposDtoZusatzartikel = getBestellungFac()
-									.createBestellPositionDto(
-											bestellungIId,
-											lieferantIId,
-											flrinseratartikel.getFlrartikel()
-													.getI_id(),
-											flrinseratartikel.getN_menge(),
-											theClientDto);
+							BestellpositionDto bestposDtoZusatzartikel = getBestellungFac().createBestellPositionDto(
+									bestellungIId, lieferantIId, flrinseratartikel.getFlrartikel().getI_id(),
+									flrinseratartikel.getN_menge(), theClientDto);
 
-							bestposDtoZusatzartikel
-									.setNNettoeinzelpreis(flrinseratartikel
-											.getN_nettoeinzelpreis_ek());
-							bestposDtoZusatzartikel
-									.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
+							bestposDtoZusatzartikel.setNNettoeinzelpreis(flrinseratartikel.getN_nettoeinzelpreis_ek());
+							bestposDtoZusatzartikel.setPositionsartCNr(BestellpositionFac.BESTELLPOSITIONART_IDENT);
 
-							bestposDtoZusatzartikel
-									.setEinheitCNr(flrinseratartikel
-											.getFlrartikel().getEinheit_c_nr());
+							bestposDtoZusatzartikel.setEinheitCNr(flrinseratartikel.getFlrartikel().getEinheit_c_nr());
 							bestposDtoZusatzartikel.setDRabattsatz(0D);
 
-							bestposDtoZusatzartikel
-									.setNRabattbetrag(new BigDecimal(0));
+							bestposDtoZusatzartikel.setNRabattbetrag(new BigDecimal(0));
 
-							bestposDtoZusatzartikel
-									.setNNettogesamtpreis(flrinseratartikel
-											.getN_nettoeinzelpreis_ek());
+							bestposDtoZusatzartikel.setNNettogesamtpreis(flrinseratartikel.getN_nettoeinzelpreis_ek());
 
-							bestposDtoZusatzartikel
-									.setBNettopreisuebersteuert(Helper
-											.boolean2Short(true));
+							bestposDtoZusatzartikel.setBNettopreisuebersteuert(Helper.boolean2Short(true));
 
-							bestposDtoZusatzartikel
-									.setTUebersteuerterLiefertermin(inseratDto
-											.getTTermin());
+							bestposDtoZusatzartikel.setTUebersteuerterLiefertermin(inseratDto.getTTermin());
 							if (inseratDto.getInseratrechnungDto() != null) {
-								bestposDtoZusatzartikel.setKundeIId(inseratDto
-										.getInseratrechnungDto().getKundeIId());
+								bestposDtoZusatzartikel.setKundeIId(inseratDto.getInseratrechnungDto().getKundeIId());
 							}
 
-							Integer bestposIId = getBestellpositionFac()
-									.createBestellposition(
-											bestposDtoZusatzartikel,
-											theClientDto,
-											BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT,
-											null);
+							Integer bestposIId = getBestellpositionFac().createBestellposition(bestposDtoZusatzartikel,
+									theClientDto, BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT,
+									null);
 
-							InseratartikelDto iaDto = inseratartikelFindByPrimaryKey(flrinseratartikel
-									.getI_id());
+							InseratartikelDto iaDto = inseratartikelFindByPrimaryKey(flrinseratartikel.getI_id());
 
 							iaDto.setBestellpositionIId(bestposIId);
 
-							getInseratFac().updateInseratartikel(iaDto,
-									theClientDto);
+							getInseratFac().updateInseratartikel(iaDto, theClientDto);
 
 						}
 						session2.close();
@@ -2205,17 +1852,14 @@ public class InseratFacBean extends Facade implements InseratFac {
 		}
 	}
 
-	public ArrayList<Integer> getAllLieferantIIdsAusInseratenOhneBestellung(
-			Integer kundeIId, TheClientDto theClientDto) {
+	public ArrayList<Integer> getAllLieferantIIdsAusInseratenOhneBestellung(Integer kundeIId,
+			TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT distinct(ins.lieferant_i_id) FROM FLRInserat ins LEFT OUTER JOIN ins.rechnungset as rechnungset WHERE rechnungset.kunde_i_id="
-				+ kundeIId
-				+ " AND  ins.bestellposition_i_id IS NULL  AND ins.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' AND ins.status_c_nr <>'"
-				+ LocaleFac.STATUS_STORNIERT + "'";
+				+ kundeIId + " AND  ins.bestellposition_i_id IS NULL  AND ins.mandant_c_nr='"
+				+ theClientDto.getMandant() + "' AND ins.status_c_nr <>'" + LocaleFac.STATUS_STORNIERT + "'";
 
 		org.hibernate.Query query = session.createQuery(queryString);
 		List<?> results = query.list();
@@ -2231,15 +1875,12 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return alLieferantIIds;
 	}
 
-	public ArrayList<Integer> getAllKundeIIdsAusInseratenOhneBestellung(
-			TheClientDto theClientDto) {
+	public ArrayList<Integer> getAllKundeIIdsAusInseratenOhneBestellung(TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT distinct(re.kunde_i_id) FROM FLRInseratrechnung re WHERE re.flrinserat.bestellposition_i_id IS NULL  AND re.flrinserat.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' AND re.flrinserat.status_c_nr <>'"
-				+ LocaleFac.STATUS_STORNIERT + "'";
+				+ theClientDto.getMandant() + "' AND re.flrinserat.status_c_nr <>'" + LocaleFac.STATUS_STORNIERT + "'";
 
 		org.hibernate.Query query = session.createQuery(queryString);
 		List<?> results = query.list();
@@ -2255,15 +1896,12 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return alLieferantIIds;
 	}
 
-	public ArrayList<Integer> getAllLieferantIIdsAusOffenenInseraten(
-			TheClientDto theClientDto) {
+	public ArrayList<Integer> getAllLieferantIIdsAusOffenenInseraten(TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String queryString = "SELECT distinct(ins.lieferant_i_id) FROM FLRInserat ins LEFT OUTER JOIN ins.erset as erset WHERE erset.i_id IS NULL  AND ins.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' AND ins.status_c_nr<>'"
-				+ LocaleFac.STATUS_STORNIERT + "')";
+				+ theClientDto.getMandant() + "' AND ins.status_c_nr<>'" + LocaleFac.STATUS_STORNIERT + "')";
 
 		org.hibernate.Query query = session.createQuery(queryString);
 		List<?> results = query.list();
@@ -2279,8 +1917,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 		return alLieferantIIds;
 	}
 
-	private void setInseratFromInseratDto(Inserat inserat, InseratDto inseratDto)
-			throws EJBExceptionLP {
+	private void setInseratFromInseratDto(Inserat inserat, InseratDto inseratDto) throws EJBExceptionLP {
 		inserat.setCNr(inseratDto.getCNr());
 		inserat.setMandantCNr(inseratDto.getMandantCNr());
 		inserat.setTBelegdatum(inseratDto.getTBelegdatum());
@@ -2296,8 +1933,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 		inserat.setCMedium(inseratDto.getCMedium());
 		inserat.setXAnhang(inseratDto.getXAnhang());
 		inserat.setLieferantIId(inseratDto.getLieferantIId());
-		inserat.setAnsprechpartnerIIdLieferant(inseratDto
-				.getAnsprechpartnerIIdLieferant());
+		inserat.setAnsprechpartnerIIdLieferant(inseratDto.getAnsprechpartnerIIdLieferant());
 		inserat.setFLFRabatt(inseratDto.getFLFRabatt());
 		inserat.setFLfZusatzrabatt(inseratDto.getFLfZusatzrabatt());
 		inserat.setFLfNachlass(inseratDto.getFLfNachlass());
@@ -2323,20 +1959,17 @@ public class InseratFacBean extends Facade implements InseratFac {
 		inserat.setBDruckBestellungKd(inseratDto.getBDruckBestellungKd());
 		inserat.setBDruckBestellungLf(inseratDto.getBDruckBestellungLf());
 		inserat.setBDruckRechnungKd(inseratDto.getBDruckRechnungKd());
-		inserat.setPersonalIIdManuellerledigt(inseratDto
-				.getPersonalIIdManuellerledigt());
+		inserat.setPersonalIIdManuellerledigt(inseratDto.getPersonalIIdManuellerledigt());
 		inserat.setTManuellerledigt(inseratDto.getTManuellerledigt());
 		inserat.setBWertaufteilen(inseratDto.getBWertaufteilen());
 		inserat.setTManuellverrechnen(inseratDto.getTManuellverrechnen());
-		inserat.setPersonalIIdManuellverrechnen(inseratDto
-				.getPersonalIIdManuellverrechnen());
+		inserat.setPersonalIIdManuellverrechnen(inseratDto.getPersonalIIdManuellverrechnen());
 
 		em.merge(inserat);
 		em.flush();
 	}
 
-	private void setInseraterFromInseraterDto(Inserater inserater,
-			InseraterDto inseraterDto) throws EJBExceptionLP {
+	private void setInseraterFromInseraterDto(Inserater inserater, InseraterDto inseraterDto) throws EJBExceptionLP {
 		inserater.setEingangsrechnungIId(inseraterDto.getEingangsrechnungIId());
 		inserater.setInseratIId(inseraterDto.getInseratIId());
 		inserater.setCText(inseraterDto.getCText());
@@ -2350,14 +1983,11 @@ public class InseratFacBean extends Facade implements InseratFac {
 		em.flush();
 	}
 
-	private void setInseratrechnungFromInseratrechnungDto(
-			Inseratrechnung inseratrechnung,
+	private void setInseratrechnungFromInseratrechnungDto(Inseratrechnung inseratrechnung,
 			InseratrechnungDto inseratrechnungDto) throws EJBExceptionLP {
 		inseratrechnung.setKundeIId(inseratrechnungDto.getKundeIId());
-		inseratrechnung.setAnsprechpartnerIId(inseratrechnungDto
-				.getAnsprechpartnerIId());
-		inseratrechnung.setRechnungpositionIId(inseratrechnungDto
-				.getRechnungpositionIId());
+		inseratrechnung.setAnsprechpartnerIId(inseratrechnungDto.getAnsprechpartnerIId());
+		inseratrechnung.setRechnungpositionIId(inseratrechnungDto.getRechnungpositionIId());
 		inseratrechnung.setInseratIId(inseratrechnungDto.getInseratIId());
 		inseratrechnung.setiSort(inseratrechnungDto.getiSort());
 
@@ -2365,19 +1995,15 @@ public class InseratFacBean extends Facade implements InseratFac {
 		em.flush();
 	}
 
-	private void setInseratartikelFromInseratartikelDto(
-			Inseratartikel inseratrechnung, InseratartikelDto inseratrechnungDto)
-			throws EJBExceptionLP {
+	private void setInseratartikelFromInseratartikelDto(Inseratartikel inseratrechnung,
+			InseratartikelDto inseratrechnungDto) throws EJBExceptionLP {
 		inseratrechnung.setArtikelIId(inseratrechnungDto.getArtikelIId());
 		inseratrechnung.setInseratIId(inseratrechnungDto.getInseratIId());
 		inseratrechnung.setNMenge(inseratrechnungDto.getNMenge());
-		inseratrechnung.setNNettoeinzelpreisEk(inseratrechnungDto
-				.getNNettoeinzelpreisEk());
-		inseratrechnung.setNNettoeinzelpreisVk(inseratrechnungDto
-				.getNNettoeinzelpreisVk());
+		inseratrechnung.setNNettoeinzelpreisEk(inseratrechnungDto.getNNettoeinzelpreisEk());
+		inseratrechnung.setNNettoeinzelpreisVk(inseratrechnungDto.getNNettoeinzelpreisVk());
 
-		inseratrechnung.setBestellpositionIId(inseratrechnungDto
-				.getBestellpositionIId());
+		inseratrechnung.setBestellpositionIId(inseratrechnungDto.getBestellpositionIId());
 
 		em.merge(inseratrechnung);
 		em.flush();
@@ -2385,8 +2011,7 @@ public class InseratFacBean extends Facade implements InseratFac {
 
 	@Override
 	public List<InseratDto> inseratFindByLieferantIId(Integer lieferantIId) {
-		HvTypedQuery<Inserat> query = new HvTypedQuery<Inserat>(
-				em.createNamedQuery("InseratfindByLieferantIId"));
+		HvTypedQuery<Inserat> query = new HvTypedQuery<Inserat>(em.createNamedQuery("InseratfindByLieferantIId"));
 		query.setParameter(1, lieferantIId);
 		return assembleInseratDtos(query.getResultList());
 	}

@@ -52,7 +52,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
-
+import com.lp.util.Helper;
 
 public class BereichHandler extends UseCaseHandler {
 
@@ -72,8 +72,7 @@ public class BereichHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -85,12 +84,13 @@ public class BereichHandler extends UseCaseHandler {
 			while (resultListIterator.hasNext()) {
 				FLRBereich anlage = (FLRBereich) resultListIterator.next();
 				rows[row][col++] = anlage.getI_id();
-				rows[row++][col++] = anlage.getC_bez();
+				rows[row][col++] = anlage.getC_bez();
+				rows[row][col++] = Helper.short2boolean(anlage.getB_projekt_mit_betreiber());
+				rows[row++][col++] = Helper.short2boolean(anlage.getB_projekt_mit_artikel());
 
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -109,8 +109,7 @@ public class BereichHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -129,8 +128,8 @@ public class BereichHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -141,8 +140,7 @@ public class BereichHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -153,15 +151,13 @@ public class BereichHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(bereich."
-								+ filterKriterien[i].kritName + ")");
+						where.append(" upper(bereich." + filterKriterien[i].kritName + ")");
 					} else {
 						where.append(" bereich." + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -234,8 +230,7 @@ public class BereichHandler extends UseCaseHandler {
 		return "from FLRBereich bereich ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -247,8 +242,8 @@ public class BereichHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select bereich.i_id from FLRBereich bereich "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "select bereich.i_id from FLRBereich bereich " + this.buildWhereClause()
+						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -289,59 +284,20 @@ public class BereichHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] {
-							Integer.class,
-							String.class
-					},
-					
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)
-					},
-			
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST
-					},
-					
-					new String[] {
-							"i_id",
-							"c_bez"
-					})
-			);
+			setTableInfo(new TableInfo(new Class[] { Integer.class, String.class, Boolean.class, Boolean.class },
+
+					new String[] { "Id", getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("proj.bereich.mitbetreiber", mandantCNr, locUI),
+							getTextRespectUISpr("proj.bereich.mitartikel", mandantCNr, locUI) },
+
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_M },
+
+					new String[] { "i_id", "c_bez", "b_projekt_mit_betreiber", "b_projekt_mit_artikel" }));
 
 		}
 
 		return super.getTableInfo();
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

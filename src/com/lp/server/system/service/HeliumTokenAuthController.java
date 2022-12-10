@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2021 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,8 +32,6 @@
  ******************************************************************************/
 package com.lp.server.system.service;
 
-import java.rmi.RemoteException;
-
 import com.lp.server.benutzer.service.BenutzerFac;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.personal.service.PersonalFac;
@@ -50,20 +48,18 @@ public class HeliumTokenAuthController extends HeliumSimpleAuthController {
 
 	public void setupSessionParams(HeliumAuthHeader header) throws HeliumSimpleAuthException {
 		super.setupSessionParams(header) ;
-		
-		
-			if(null != getWebClientDto().getIDPersonal()) {
-				PersonalDto personalDto = personalFac.personalFindByPrimaryKeySmall(getWebClientDto().getIDPersonal()) ;
-				if(null == personalDto.getCAusweis() || 0 == personalDto.getCAusweis().trim().length()) {
-					throw new HeliumSimpleAuthException(
-							EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_BEI_DIESEM_MANDANTEN_NICHT_ANMELDEN) ;										
-				}
-				
-				if(!personalDto.getCAusweis().trim().equals(header.getToken())) {
-					throw new HeliumSimpleAuthException(
-							EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_BEI_DIESEM_MANDANTEN_NICHT_ANMELDEN) ;					
-				}
+			
+		if(null != getWebClientDto().getIDPersonal()) {
+			PersonalDto personalDto = personalFac.personalFindByPrimaryKeySmall(getWebClientDto().getIDPersonal()) ;
+			if(null == personalDto.getCAusweis() || 0 == personalDto.getCAusweis().trim().length()) {
+				throw new HeliumSimpleAuthException(
+						EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_BEI_DIESEM_MANDANTEN_NICHT_ANMELDEN) ;										
 			}
-		
+			
+			if(!personalDto.getCAusweis().trim().equals(header.getToken())) {
+				throw new HeliumSimpleAuthException(
+						EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_BEI_DIESEM_MANDANTEN_NICHT_ANMELDEN) ;					
+			}
+		}		
 	}
 }

@@ -77,6 +77,15 @@ public class StuecklistearbeitsplanDtoAssembler {
 			stuecklistearbeitsplanDto
 					.setStuecklistepositionIId(stuecklistearbeitsplan
 							.getStuecklistepositionIId());
+			stuecklistearbeitsplanDto.setApkommentarIId(stuecklistearbeitsplan
+					.getApkommentarIId());
+			stuecklistearbeitsplanDto.setNPpm(stuecklistearbeitsplan.getNPpm());
+			stuecklistearbeitsplanDto.setXFormel(stuecklistearbeitsplan
+					.getXFormel());
+			stuecklistearbeitsplanDto
+					.setIMitarbeitergleichzeitig(stuecklistearbeitsplan
+							.getIMitarbeitergleichzeitig());
+			stuecklistearbeitsplanDto.setBInitial(stuecklistearbeitsplan.getBInitial());
 
 		}
 		return stuecklistearbeitsplanDto;

@@ -33,6 +33,7 @@
 package com.lp.server.artikel.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -54,6 +55,18 @@ public class Material implements Serializable, ICNr {
 	@Column(name = "C_NR")
 	private String cNr;
 
+	@Column(name = "N_GEWICHT_IN_KG")
+	private BigDecimal nGewichtInKG;
+	
+
+	public BigDecimal getNGewichtInKG() {
+		return nGewichtInKG;
+	}
+
+	public void setNGewichtInKG(BigDecimal nGewichtInKG) {
+		this.nGewichtInKG = nGewichtInKG;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public Material() {

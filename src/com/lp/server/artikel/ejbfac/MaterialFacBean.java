@@ -44,9 +44,15 @@ import com.lp.server.auftrag.ejb.Auftragposition;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
 import com.lp.server.lieferschein.ejb.Lieferscheinposition;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
+import com.lp.server.partner.ejb.Kunde;
+import com.lp.server.partner.ejb.Kundematerial;
+import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.KundematerialDto;
+import com.lp.server.partner.service.KundematerialDtoAssembler;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.rechnung.ejb.Rechnungposition;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
+import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.system.pkgenerator.*;
 import com.lp.server.system.pkgenerator.bl.*;
 import com.lp.server.system.service.MandantFac;
@@ -55,6 +61,7 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.*;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.util.*;
 
 import java.math.BigDecimal;
@@ -83,11 +90,9 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 	private EntityManager em;
 
 	/**
-	 * Liefert die IId des Materials welches &uuml;ber seine Kennung gesucht
-	 * wird
+	 * Liefert die IId des Materials welches &uuml;ber seine Kennung gesucht wird
 	 * 
-	 * @param materialCNr
-	 *            die Kennung des Materials
+	 * @param materialCNr die Kennung des Materials
 	 * @return Id des Materials
 	 * @throws EJBExceptionLP
 	 */
@@ -103,8 +108,7 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 
 	}
 
-	public void pflegeMaterialzuschlagsKursUndDatumNachtragen(
-			TheClientDto theClientDto) {
+	public void pflegeMaterialzuschlagsKursUndDatumNachtragen(TheClientDto theClientDto) {
 		// Angebot
 		Session session = FLRSessionFactory.getFactory().openSession();
 		String queryString = "SELECT a FROM FLRAngebotposition AS a WHERE a.flrartikel.flrmaterial.i_id IS NOT NULL";
@@ -114,20 +118,17 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		Iterator<?> resultListIterator = resultList.iterator();
 
 		while (resultListIterator.hasNext()) {
-			FLRAngebotposition a = (FLRAngebotposition) resultListIterator
-					.next();
+			FLRAngebotposition a = (FLRAngebotposition) resultListIterator.next();
 
 			// Nun Kurs zum Belegdatum holen
 
-			MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
-					a.getFlrartikel().getFlrmaterial().getI_id(), a
-							.getFlrangebot().getT_belegdatum(), a
-							.getFlrangebot()
-							.getWaehrung_c_nr_angebotswaehrung(), theClientDto);
+			MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoVKInZielwaehrung(
+					a.getFlrangebot().getKunde_i_id_angebotsadresse(), a.getFlrartikel().getI_id(),
+					a.getFlrangebot().getT_belegdatum(), a.getFlrangebot().getWaehrung_c_nr_angebotswaehrung(),
+					theClientDto);
 
 			if (mDto != null) {
-				Angebotposition ap = em
-						.find(Angebotposition.class, a.getI_id());
+				Angebotposition ap = em.find(Angebotposition.class, a.getI_id());
 				ap.setNMaterialzuschlagKurs(mDto.getNZuschlag());
 				ap.setTMaterialzuschlagDatum(mDto.getTGueltigab());
 				em.merge(ap);
@@ -147,20 +148,17 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		resultListIterator = resultList.iterator();
 
 		while (resultListIterator.hasNext()) {
-			FLRAuftragposition a = (FLRAuftragposition) resultListIterator
-					.next();
+			FLRAuftragposition a = (FLRAuftragposition) resultListIterator.next();
 
 			// Nun Kurs zum Belegdatum holen
 
-			MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
-					a.getFlrartikel().getFlrmaterial().getI_id(), a
-							.getFlrauftrag().getT_belegdatum(), a
-							.getFlrauftrag()
-							.getWaehrung_c_nr_auftragswaehrung(), theClientDto);
+			MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoVKInZielwaehrung(
+					a.getFlrauftrag().getKunde_i_id_rechnungsadresse(), a.getFlrartikel().getI_id(),
+					a.getFlrauftrag().getT_belegdatum(), a.getFlrauftrag().getWaehrung_c_nr_auftragswaehrung(),
+					theClientDto);
 
 			if (mDto != null) {
-				Auftragposition ap = em
-						.find(Auftragposition.class, a.getI_id());
+				Auftragposition ap = em.find(Auftragposition.class, a.getI_id());
 				ap.setNMaterialzuschlagKurs(mDto.getNZuschlag());
 				ap.setTMaterialzuschlagDatum(mDto.getTGueltigab());
 				em.merge(ap);
@@ -177,15 +175,12 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		resultListIterator = resultList.iterator();
 
 		while (resultListIterator.hasNext()) {
-			FLRLieferscheinposition l = (FLRLieferscheinposition) resultListIterator
-					.next();
+			FLRLieferscheinposition l = (FLRLieferscheinposition) resultListIterator.next();
 
 			if (l.getAuftragposition_i_id() != null) {
-				Auftragposition ap = em.find(Auftragposition.class,
-						l.getAuftragposition_i_id());
+				Auftragposition ap = em.find(Auftragposition.class, l.getAuftragposition_i_id());
 
-				Lieferscheinposition lp = em.find(Lieferscheinposition.class,
-						l.getI_id());
+				Lieferscheinposition lp = em.find(Lieferscheinposition.class, l.getI_id());
 				lp.setNMaterialzuschlagKurs(ap.getNMaterialzuschlagKurs());
 				lp.setTMaterialzuschlagDatum(ap.getTMaterialzuschlagDatum());
 				em.merge(lp);
@@ -194,16 +189,13 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 			} else {
 				// Nun Kurs zum Belegdatum holen
 
-				MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
-						l.getFlrartikel().getFlrmaterial().getI_id(), l
-								.getFlrlieferschein().getD_belegdatum(), l
-								.getFlrlieferschein()
-								.getWaehrung_c_nr_lieferscheinwaehrung(),
-						theClientDto);
+				MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoVKInZielwaehrung(
+						l.getFlrlieferschein().getKunde_i_id_rechnungsadresse(), l.getFlrartikel().getI_id(),
+						l.getFlrlieferschein().getD_belegdatum(),
+						l.getFlrlieferschein().getWaehrung_c_nr_lieferscheinwaehrung(), theClientDto);
 
 				if (mDto != null) {
-					Lieferscheinposition lp = em.find(
-							Lieferscheinposition.class, l.getI_id());
+					Lieferscheinposition lp = em.find(Lieferscheinposition.class, l.getI_id());
 					lp.setNMaterialzuschlagKurs(mDto.getNZuschlag());
 					lp.setTMaterialzuschlagDatum(mDto.getTGueltigab());
 					em.merge(lp);
@@ -221,15 +213,12 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		resultListIterator = resultList.iterator();
 
 		while (resultListIterator.hasNext()) {
-			FLRRechnungPosition r = (FLRRechnungPosition) resultListIterator
-					.next();
+			FLRRechnungPosition r = (FLRRechnungPosition) resultListIterator.next();
 
 			if (r.getAuftragposition_i_id() != null) {
-				Auftragposition ap = em.find(Auftragposition.class,
-						r.getAuftragposition_i_id());
+				Auftragposition ap = em.find(Auftragposition.class, r.getAuftragposition_i_id());
 
-				Rechnungposition rp = em.find(Rechnungposition.class,
-						r.getI_id());
+				Rechnungposition rp = em.find(Rechnungposition.class, r.getI_id());
 				rp.setNMaterialzuschlagKurs(ap.getNMaterialzuschlagKurs());
 				rp.setTMaterialzuschlagDatum(ap.getTMaterialzuschlagDatum());
 				em.merge(rp);
@@ -238,15 +227,12 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 			} else {
 				// Nun Kurs zum Belegdatum holen
 
-				MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
-						r.getFlrartikel().getFlrmaterial().getI_id(), r
-								.getFlrrechnung().getD_belegdatum(), r
-								.getFlrrechnung().getWaehrung_c_nr(),
-						theClientDto);
+				MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoVKInZielwaehrung(
+						r.getFlrrechnung().getFlrkunde().getI_id(), r.getFlrartikel().getFlrmaterial().getI_id(),
+						r.getFlrrechnung().getD_belegdatum(), r.getFlrrechnung().getWaehrung_c_nr(), theClientDto);
 
 				if (mDto != null) {
-					Rechnungposition rp = em.find(Rechnungposition.class,
-							r.getI_id());
+					Rechnungposition rp = em.find(Rechnungposition.class, r.getI_id());
 					rp.setNMaterialzuschlagKurs(mDto.getNZuschlag());
 					rp.setTMaterialzuschlagDatum(mDto.getTGueltigab());
 					em.merge(rp);
@@ -257,23 +243,19 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		}
 	}
 
-	public Integer createMaterial(MaterialDto materialDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createMaterial(MaterialDto materialDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (materialDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("materialDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("materialDto == null"));
 		}
 		if (materialDto.getCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("materialDto.getCNr() == null"));
 		}
 		try {
 			Query query = em.createNamedQuery("MaterialfindByCNr");
 			query.setParameter(1, materialDto.getCNr());
 			Material doppelt = (Material) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("WW_MATERIAL.CNR"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_MATERIAL.CNR"));
 		} catch (NoResultException ex) {
 
 		}
@@ -284,39 +266,63 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_MATERIAL);
 			materialDto.setIId(pk);
 
-			Material material = new Material(materialDto.getIId(),
-					materialDto.getCNr());
+			Material material = new Material(materialDto.getIId(), materialDto.getCNr());
 			em.persist(material);
 			em.flush();
 			setMaterialFromMaterialDto(material, materialDto);
 			if (materialDto.getMaterialsprDto() != null) {
-				Materialspr materialspr = new Materialspr(
-						theClientDto.getLocUiAsString(), materialDto.getIId());
+				Materialspr materialspr = new Materialspr(theClientDto.getLocUiAsString(), materialDto.getIId());
 				em.persist(materialspr);
 				em.flush();
-				setMaterialsprFromMaterialsprDto(materialspr,
-						materialDto.getMaterialsprDto());
+				setMaterialsprFromMaterialsprDto(materialspr, materialDto.getMaterialsprDto());
 			}
 			return materialDto.getIId();
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
+		}
+	}
+
+	public Integer createKundematerial(KundematerialDto dto, TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("KundematerialfindByKundeIIdMaterialIId");
+			query.setParameter(1, dto.getKundeIId());
+			query.setParameter(2, dto.getMaterialIId());
+			Kundematerial doppelt = (Kundematerial) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PART_KUNDEMATERIAL.UK"));
+		} catch (NoResultException ex) {
+
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_KUNDEMATERIAL);
+			dto.setIId(pk);
+
+			Kundematerial material = new Kundematerial(dto.getIId(), dto.getKundeIId(), dto.getMaterialIId(),
+					dto.getMaterialIIdNotierung(), dto.getNMaterialbasis(), dto.getBMaterialInklusive());
+			em.persist(material);
+			em.flush();
+			setKundematerialFromKundematerialDto(material, dto);
+
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
 	/**
 	 * Loescht ein vorhandenes Material
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 */
 	public void removeMaterial(Integer iId) throws EJBExceptionLP {
 		final String METHOD_NAME = "removeMaterial";
 		myLogger.entry();
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
 		try {
@@ -334,8 +340,7 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		}
 		Material material = em.find(Material.class, iId);
 		if (material == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(material);
@@ -350,19 +355,16 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
-	public void updateMaterial(MaterialDto materialDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateMaterial(MaterialDto materialDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (materialDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("materialDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("materialDto == null"));
 		}
 		Integer iId = materialDto.getIId();
 		Material material = null;
 		// try {
 		material = em.find(Material.class, iId);
 		if (material == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 		}
 
@@ -377,12 +379,9 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 			Query query = em.createNamedQuery("MaterialfindByCNr");
 			query.setParameter(1, materialDto.getCNr());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Material) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Material) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"WW_MATERIAL.C_NR"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_MATERIAL.C_NR"));
 			}
 		} catch (NoResultException ex) {
 			//
@@ -397,20 +396,16 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 					new MaterialsprPK(theClientDto.getLocUiAsString(), iId));
 			if (materialspr == null) {
 				try {
-					materialspr = new Materialspr(
-							theClientDto.getLocUiAsString(), iId);
+					materialspr = new Materialspr(theClientDto.getLocUiAsString(), iId);
 					em.persist(materialspr);
 					em.flush();
-					setMaterialsprFromMaterialsprDto(materialspr,
-							materialDto.getMaterialsprDto());
+					setMaterialsprFromMaterialsprDto(materialspr, materialDto.getMaterialsprDto());
 				} catch (EntityExistsException ex7) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_BEIM_DRUCKEN, ex7);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_DRUCKEN, ex7);
 
 				}
 			}
-			setMaterialsprFromMaterialsprDto(materialspr,
-					materialDto.getMaterialsprDto());
+			setMaterialsprFromMaterialsprDto(materialspr, materialDto.getMaterialsprDto());
 			// }
 			// catch (FinderException ex) {
 			// try {
@@ -435,74 +430,37 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 	 * @deprecated Use getMaterialzuschlagEKInZielwaehrung(...)
 	 */
 
-	public BigDecimal getKupferzuschlagInLieferantenwaehrung(
-			Integer artikelIId, Integer lieferantIId, TheClientDto theClientDto) {
+	public BigDecimal getKupferzuschlagInLieferantenwaehrung(Integer artikelIId, Integer lieferantIId,
+			TheClientDto theClientDto) {
 
 		BigDecimal zuschlagGesamt = null;
 
-		try {
-			Artikel artikel = em.find(Artikel.class, artikelIId);
-			if (artikel.getMaterialIId() != null
-					&& artikel.getFMaterialgewicht() != null) {
-				LieferantDto lieferantDto = null;
-				if (lieferantIId == null) {
-					// 1. Artikellieferant suchen
-					ArtikellieferantDto[] dtos = getArtikelFac()
-							.artikellieferantFindByArtikelIId(artikelIId,
-									theClientDto);
-					if (dtos.length > 0) {
+		Artikel artikel = em.find(Artikel.class, artikelIId);
+		if (artikel.getMaterialIId() != null && artikel.getFMaterialgewicht() != null) {
+			LieferantDto lieferantDto = null;
+			if (lieferantIId == null) {
+				// 1. Artikellieferant suchen
+				ArtikellieferantDto[] dtos = getArtikelFac().artikellieferantFindByArtikelIId(artikelIId, theClientDto);
+				if (dtos.length > 0) {
 
-						lieferantDto = getLieferantFac()
-								.lieferantFindByPrimaryKeySmall(
-										dtos[0].getLieferantIId());
-					} else {
-						return null;
-					}
+					lieferantDto = getLieferantFac().lieferantFindByPrimaryKeySmall(dtos[0].getLieferantIId());
 				} else {
-					lieferantDto = getLieferantFac()
-							.lieferantFindByPrimaryKeySmall(lieferantIId);
+					return null;
 				}
-
-				if (lieferantDto.getNKupferzahl() != null) {
-					BigDecimal zuschlag = materialzuschlagFindAktuellenzuschlag(
-							artikel.getMaterialIId(), theClientDto);
-
-					if (zuschlag != null) {
-						if (!lieferantDto.getWaehrungCNr().equals(
-								theClientDto.getSMandantenwaehrung())) {
-							zuschlag = getLocaleFac()
-									.rechneUmInAndereWaehrungZuDatum(
-											zuschlag,
-											theClientDto
-													.getSMandantenwaehrung(),
-											lieferantDto.getWaehrungCNr(),
-											new Date(System.currentTimeMillis()),
-											theClientDto);
-						}
-						zuschlagGesamt = Helper.rundeKaufmaennisch(
-								(zuschlag.subtract(lieferantDto
-										.getNKupferzahl())).multiply(
-										new BigDecimal(artikel
-												.getFMaterialgewicht()
-												.doubleValue())).divide(
-										new BigDecimal(1000), 6,
-										BigDecimal.ROUND_HALF_EVEN), 6);
-
-					}
-				}
+			} else {
+				lieferantDto = getLieferantFac().lieferantFindByPrimaryKeySmall(lieferantIId);
 			}
 
-		} catch (RemoteException e) {
-			throwEJBExceptionLPRespectOld(e);
+			return getMaterialzuschlagEKInZielwaehrung(artikelIId, lieferantDto.getIId(),
+					new Date(System.currentTimeMillis()), lieferantDto.getWaehrungCNr(), theClientDto);
 
 		}
 
 		return zuschlagGesamt;
 	}
 
-	public BigDecimal getMaterialzuschlagEKInZielwaehrung(Integer artikelIId,
-			Integer lieferantIId, Date datGueltigkeitsdatumI,
-			String waehrungCNrZielwaehrung, TheClientDto theClientDto)
+	public BigDecimal getMaterialzuschlagEKInZielwaehrung(Integer artikelIId, Integer lieferantIId,
+			Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung, TheClientDto theClientDto)
 
 	{
 
@@ -510,52 +468,40 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 
 		try {
 			Artikel artikel = em.find(Artikel.class, artikelIId);
-			if (artikel.getMaterialIId() != null
-					&& artikel.getFMaterialgewicht() != null) {
+			if (artikel.getMaterialIId() != null && artikel.getFMaterialgewicht() != null) {
 				LieferantDto lieferantDto = null;
 				if (lieferantIId == null) {
 					// 1. Artikellieferant suchen
-					ArtikellieferantDto[] dtos = getArtikelFac()
-							.artikellieferantFindByArtikelIId(artikelIId,
-									theClientDto);
+					ArtikellieferantDto[] dtos = getArtikelFac().artikellieferantFindByArtikelIId(artikelIId,
+							theClientDto);
 					if (dtos.length > 0) {
 
-						lieferantDto = getLieferantFac()
-								.lieferantFindByPrimaryKeySmall(
-										dtos[0].getLieferantIId());
+						lieferantDto = getLieferantFac().lieferantFindByPrimaryKeySmall(dtos[0].getLieferantIId());
 					} else {
 						return null;
 					}
 				} else {
-					lieferantDto = getLieferantFac()
-							.lieferantFindByPrimaryKeySmall(lieferantIId);
+					lieferantDto = getLieferantFac().lieferantFindByPrimaryKeySmall(lieferantIId);
+				}
+
+				// PJ19814
+				if (Helper.short2boolean(lieferantDto.getBZuschlagInklusive()) == true) {
+					return BigDecimal.ZERO;
 				}
 
 				if (lieferantDto.getNKupferzahl() != null) {
-					BigDecimal zuschlag = materialzuschlagFindZuschlagZuDatum(
-							artikel.getMaterialIId(), datGueltigkeitsdatumI,
-							theClientDto);
+					BigDecimal zuschlag = materialzuschlagFindZuschlagZuDatum(artikel.getMaterialIId(),
+							datGueltigkeitsdatumI, theClientDto);
 
 					if (zuschlag != null) {
-						if (!waehrungCNrZielwaehrung.equals(theClientDto
-								.getSMandantenwaehrung())) {
-							zuschlag = getLocaleFac()
-									.rechneUmInAndereWaehrungZuDatum(
-											zuschlag,
-											theClientDto
-													.getSMandantenwaehrung(),
-											waehrungCNrZielwaehrung,
-											new Date(System.currentTimeMillis()),
-											theClientDto);
+						if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
+							zuschlag = getLocaleFac().rechneUmInAndereWaehrungZuDatum(zuschlag,
+									theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung,
+									new Date(System.currentTimeMillis()), theClientDto);
 						}
-						zuschlagGesamt = Helper.rundeKaufmaennisch(
-								(zuschlag.subtract(lieferantDto
-										.getNKupferzahl())).multiply(
-										new BigDecimal(artikel
-												.getFMaterialgewicht()
-												.doubleValue())).divide(
-										new BigDecimal(1000), 6,
-										BigDecimal.ROUND_HALF_EVEN), 6);
+						zuschlagGesamt = Helper.rundeKaufmaennisch((zuschlag.subtract(lieferantDto.getNKupferzahl()))
+								.multiply(new BigDecimal(artikel.getFMaterialgewicht().doubleValue()))
+								.divide(new BigDecimal(1000), 6, BigDecimal.ROUND_HALF_EVEN), 6);
 
 					}
 				}
@@ -569,32 +515,164 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		return zuschlagGesamt;
 	}
 
-	public MaterialzuschlagDto getKursMaterialzuschlagDtoInZielwaehrung(
-			Integer materialIId, java.util.Date datGueltigkeitsdatumI,
-			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
+	public MaterialzuschlagDto getKursMaterialzuschlagDtoVKInZielwaehrung(Integer kundeIId, Integer artikelIId,
+			java.util.Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 
-		Query query = em
-				.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
+		Integer materialIIdAusKundematerial = null;
+		BigDecimal bdMaterialbasisAusKundematerial = null;
+
+		Artikel artikel = em.find(Artikel.class, artikelIId);
+
+		if (artikel.getMaterialIId() != null) {
+
+			Integer materialIId = artikel.getMaterialIId();
+
+			if (kundeIId != null) {
+				// PJ19826
+				try {
+					Query query = em.createNamedQuery("KundematerialfindByKundeIIdMaterialIId");
+					query.setParameter(1, kundeIId);
+					query.setParameter(2, artikel.getMaterialIId());
+					Kundematerial vorhanden = (Kundematerial) query.getSingleResult();
+
+					if (Helper.short2boolean(vorhanden.getBMaterialInklusive()) == true) {
+						return new MaterialzuschlagDto();
+					}
+
+					materialIId = vorhanden.getMaterialIIdNotierung();
+
+					materialIIdAusKundematerial = vorhanden.getMaterialIIdNotierung();
+					bdMaterialbasisAusKundematerial = vorhanden.getNMaterialbasis();
+
+					// SP4762
+					// Wenn Parameter VK_PREIS_BASIS_MATERIAL=1, dann wird der
+					// Kurs aus dem Material des Artikels als Basis verwendet
+
+					try {
+						ParametermandantDto parameterX = getParameterFac().getMandantparameter(
+								theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+								ParameterFac.PARAMETER_VK_PREIS_BASIS_MATERIAL);
+						boolean b = (Boolean) parameterX.getCWertAsObject();
+
+						if (b == true) {
+
+							Query query2 = em.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
+							query2.setParameter(1, artikel.getMaterialIId());
+							if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+									MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+								query2.setParameter(2, getSystemFac().getHauptmandant());
+							} else {
+								query2.setParameter(2, theClientDto.getMandant());
+							}
+							query2.setParameter(3, new java.sql.Date(datGueltigkeitsdatumI.getTime()));
+							query2.setMaxResults(1);
+							Collection<?> cl = query2.getResultList();
+
+							MaterialzuschlagDto[] dtos = assembleMaterialzuschlagDtos(cl);
+							if (dtos.length > 0) {
+
+								if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
+									try {
+										BigDecimal zuschlag = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+												dtos[0].getNZuschlag(), theClientDto.getSMandantenwaehrung(),
+												waehrungCNrZielwaehrung, new Date(System.currentTimeMillis()),
+												theClientDto);
+
+										bdMaterialbasisAusKundematerial = zuschlag;
+
+									} catch (RemoteException e) {
+										throwEJBExceptionLPRespectOld(e);
+
+									}
+								} else {
+									bdMaterialbasisAusKundematerial = dtos[0].getNZuschlag();
+								}
+							}
+
+						}
+
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+
+				} catch (NoResultException ex) {
+					// PJ19814
+
+					Kunde kunde = em.find(Kunde.class, kundeIId);
+
+					if (Helper.short2boolean(kunde.getBZuschlagInklusive()) == true) {
+						return new MaterialzuschlagDto();
+					}
+
+				}
+			}
+
+			Query query = em.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
+			query.setParameter(1, materialIId);
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				query.setParameter(2, getSystemFac().getHauptmandant());
+			} else {
+				query.setParameter(2, theClientDto.getMandant());
+			}
+
+			query.setParameter(3, new java.sql.Date(datGueltigkeitsdatumI.getTime()));
+			query.setMaxResults(1);
+			Collection<?> cl = query.getResultList();
+
+			MaterialzuschlagDto[] dtos = assembleMaterialzuschlagDtos(cl);
+			if (dtos.length > 0) {
+
+				if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
+					try {
+						BigDecimal zuschlag = getLocaleFac().rechneUmInAndereWaehrungZuDatum(dtos[0].getNZuschlag(),
+								theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung,
+								new Date(System.currentTimeMillis()), theClientDto);
+
+						dtos[0].setNZuschlag(zuschlag);
+
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+
+					}
+				}
+
+				dtos[0].materialIIdWennMaterialAusKundematerial = materialIIdAusKundematerial;
+				dtos[0].nMaterialbasisWennMaterialAusKundematerial = bdMaterialbasisAusKundematerial;
+
+				return dtos[0];
+			} else {
+				// SP4805 Basis zurueckgeben, auch wenn kein Kurs definiert
+				MaterialzuschlagDto mzDto = new MaterialzuschlagDto();
+				mzDto.materialIIdWennMaterialAusKundematerial = materialIIdAusKundematerial;
+				mzDto.nMaterialbasisWennMaterialAusKundematerial = bdMaterialbasisAusKundematerial;
+				return mzDto;
+			}
+
+		} else {
+			return new MaterialzuschlagDto();
+		}
+
+	}
+
+	public MaterialzuschlagDto getKursMaterialzuschlagDtoInZielwaehrung(Integer materialIId,
+			java.util.Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
+
+		Query query = em.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
 		query.setParameter(1, materialIId);
 		query.setParameter(2, theClientDto.getMandant());
-		query.setParameter(3,
-				new java.sql.Date(datGueltigkeitsdatumI.getTime()));
+		query.setParameter(3, new java.sql.Date(datGueltigkeitsdatumI.getTime()));
 		query.setMaxResults(1);
 		Collection<?> cl = query.getResultList();
 
 		MaterialzuschlagDto[] dtos = assembleMaterialzuschlagDtos(cl);
 		if (dtos.length > 0) {
 
-			if (!waehrungCNrZielwaehrung.equals(theClientDto
-					.getSMandantenwaehrung())) {
+			if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
 				try {
-					BigDecimal zuschlag = getLocaleFac()
-							.rechneUmInAndereWaehrungZuDatum(
-									dtos[0].getNZuschlag(),
-									theClientDto.getSMandantenwaehrung(),
-									waehrungCNrZielwaehrung,
-									new Date(System.currentTimeMillis()),
-									theClientDto);
+					BigDecimal zuschlag = getLocaleFac().rechneUmInAndereWaehrungZuDatum(dtos[0].getNZuschlag(),
+							theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung,
+							new Date(System.currentTimeMillis()), theClientDto);
 
 					dtos[0].setNZuschlag(zuschlag);
 
@@ -610,65 +688,219 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 
 	}
 
-	public BigDecimal getMaterialzuschlagVKInZielwaehrung(Integer artikelIId,
-			Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto) {
+	public BigDecimal getMaterialpreisInZielwaehrung(Integer materialIId, java.util.Date datGueltigkeitsdatumI,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
+
+		Query query = em.createNamedQuery("MaterialpreisfindAktuellenPreis");
+		query.setParameter(1, materialIId);
+		query.setParameter(2, new java.sql.Date(datGueltigkeitsdatumI.getTime()));
+		query.setMaxResults(1);
+		Collection<?> cl = query.getResultList();
+
+		if (cl.size() > 0) {
+			Materialpreis mp = (Materialpreis) cl.iterator().next();
+
+			if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
+				try {
+					BigDecimal preis = getLocaleFac().rechneUmInAndereWaehrungZuDatum(mp.getNPreisProKG(),
+							theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung,
+							new Date(System.currentTimeMillis()), theClientDto);
+
+					return preis;
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+
+				}
+			}
+			return mp.getNPreisProKG();
+		} else {
+			return null;
+		}
+
+	}
+
+	public BigDecimal getMaterialzuschlagVKInZielwaehrung(Integer artikelIId, Integer kundeIId,
+			Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 
 		BigDecimal zuschlagGesamt = new BigDecimal(0);
 
 		try {
 			Artikel artikel = em.find(Artikel.class, artikelIId);
-			if (artikel.getMaterialIId() != null
-					&& artikel.getFMaterialgewicht() != null) {
+			if (artikel.getMaterialIId() != null && artikel.getFMaterialgewicht() != null) {
 
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_KUNDEN,
-								ParameterFac.PARAMETER_KUPFERZAHL);
+				Integer materialIId = artikel.getMaterialIId();
 
-				Double kupferzahl = (Double) parameter.getCWertAsObject();
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_KUNDEN, ParameterFac.PARAMETER_KUPFERZAHL);
 
-				BigDecimal zuschlag = materialzuschlagFindZuschlagZuDatum(
-						artikel.getMaterialIId(), datGueltigkeitsdatumI,
+				Double kupferzahlTemp = (Double) parameter.getCWertAsObject();
+
+				BigDecimal kupferzahl = new BigDecimal(kupferzahlTemp.doubleValue());
+
+				// PJ19209 Wenn Kunde Kupferzahl hinterlegt hat, dann diese
+				// verwenden
+
+				KundematerialDto kundematerialDto = null;
+
+				if (kundeIId != null) {
+
+					KundeDto kdDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
+
+					// PJ19826
+					try {
+						Query query = em.createNamedQuery("KundematerialfindByKundeIIdMaterialIId");
+						query.setParameter(1, kundeIId);
+						query.setParameter(2, artikel.getMaterialIId());
+						Kundematerial vorhanden = (Kundematerial) query.getSingleResult();
+
+						if (Helper.short2boolean(vorhanden.getBMaterialInklusive()) == true) {
+							return BigDecimal.ZERO;
+						}
+
+						kundematerialDto = assembleKundematerialDto(vorhanden);
+
+						materialIId = vorhanden.getMaterialIIdNotierung();
+						kupferzahl = vorhanden.getNMaterialbasis();
+
+						// SP4762
+						// Wenn Parameter VK_PREIS_BASIS_MATERIAL=1, dann wird
+						// der Kurs aus dem Material des Artikels als Basis
+						// verwendet
+
+						try {
+							ParametermandantDto parameterX = getParameterFac().getMandantparameter(
+									theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+									ParameterFac.PARAMETER_VK_PREIS_BASIS_MATERIAL);
+							boolean b = (Boolean) parameterX.getCWertAsObject();
+
+							if (b == true) {
+
+								Query query2 = em.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
+								query2.setParameter(1, artikel.getMaterialIId());
+								query2.setParameter(2, theClientDto.getMandant());
+								query2.setParameter(3, new java.sql.Date(datGueltigkeitsdatumI.getTime()));
+								query2.setMaxResults(1);
+								Collection<?> cl = query2.getResultList();
+
+								MaterialzuschlagDto[] dtos = assembleMaterialzuschlagDtos(cl);
+								if (dtos.length > 0) {
+
+									if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
+										try {
+											BigDecimal zuschlag = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+													dtos[0].getNZuschlag(), theClientDto.getSMandantenwaehrung(),
+													waehrungCNrZielwaehrung, new Date(System.currentTimeMillis()),
+													theClientDto);
+
+											kupferzahl = zuschlag;
+
+										} catch (RemoteException e) {
+											throwEJBExceptionLPRespectOld(e);
+
+										}
+									} else {
+										kupferzahl = dtos[0].getNZuschlag();
+									}
+								}
+
+							}
+
+						} catch (RemoteException e) {
+							throwEJBExceptionLPRespectOld(e);
+						}
+
+					} catch (NoResultException ex) {
+
+						// SP4782
+						if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+								MandantFac.ZUSATZFUNKTION_METALLNOTIERUNG_DETAILLIERT, theClientDto)) {
+							// Wenn METALLNOTIERUNG_DETAILLIERT dann muss es
+							// hier einen Eintrag geben
+
+							ArrayList alDaten = new ArrayList();
+							alDaten.add(kdDto.getPartnerDto().formatFixName1Name2());
+							alDaten.add(
+									materialFindByPrimaryKey(artikel.getMaterialIId(), theClientDto).getBezeichnung());
+							alDaten.add(artikel.getCNr());
+
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KUNDEMATERIAL_NICHT_DEFINIERT, alDaten,
+									new Exception("FEHLER_KUNDEMATERIAL_NICHT_DEFINIERT"));
+
+						}
+
+						// PJ19814
+						if (Helper.short2boolean(kdDto.getBZuschlagInklusive()) == true) {
+							return BigDecimal.ZERO;
+						}
+
+						BigDecimal nKupferzahlKunde = kdDto.getNKupferzahl();
+
+						if (nKupferzahlKunde != null) {
+							kupferzahl = nKupferzahlKunde;
+						}
+					}
+
+					// In Mandantenwaehrung umrechnen
+					if (kupferzahl != null) {
+						kupferzahl = getLocaleFac().rechneUmInAndereWaehrungZuDatum(kupferzahl, kdDto.getCWaehrung(),
+								theClientDto.getSMandantenwaehrung(), new Date(System.currentTimeMillis()),
+								theClientDto);
+					}
+
+				}
+
+				BigDecimal zuschlag = materialzuschlagFindZuschlagZuDatum(materialIId, datGueltigkeitsdatumI,
 						theClientDto);
 
 				if (zuschlag != null) {
-					if (!waehrungCNrZielwaehrung.equals(theClientDto
-							.getSMandantenwaehrung())) {
-						zuschlag = getLocaleFac()
-								.rechneUmInAndereWaehrungZuDatum(zuschlag,
-										theClientDto.getSMandantenwaehrung(),
-										waehrungCNrZielwaehrung,
-										new Date(System.currentTimeMillis()),
-										theClientDto);
+					if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
+						zuschlag = getLocaleFac().rechneUmInAndereWaehrungZuDatum(zuschlag,
+								theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung,
+								new Date(System.currentTimeMillis()), theClientDto);
 					}
 
-					zuschlagGesamt = zuschlag.subtract(new BigDecimal(
-							kupferzahl));
+					zuschlagGesamt = zuschlag.subtract(kupferzahl);
 
-					// PJ18160
-
-					if (artikel.getNAufschlagBetrag() != null) {
-						zuschlagGesamt = zuschlagGesamt.add(artikel
-								.getNAufschlagBetrag());
+					if (kundematerialDto != null) {
+						if (kundematerialDto.getNAufschlagBetrag() != null) {
+							zuschlagGesamt = zuschlagGesamt.add(kundematerialDto.getNAufschlagBetrag());
+						}
+					} else {
+						// PJ18160
+						if (artikel.getNAufschlagBetrag() != null) {
+							zuschlagGesamt = zuschlagGesamt.add(artikel.getNAufschlagBetrag());
+						}
 					}
 
-					if (artikel.getFAufschlagProzent() != null
-							&& artikel.getFAufschlagProzent().doubleValue() != 0) {
+					if (kundematerialDto != null) {
+						if (kundematerialDto.getFAufschlagProzent() != null
+								&& kundematerialDto.getFAufschlagProzent().doubleValue() != 0) {
 
-						BigDecimal prozentAufschlag = Helper.getProzentWert(
-								zuschlagGesamt,
-								new BigDecimal(artikel.getFAufschlagProzent()),
-								6);
+							BigDecimal prozentAufschlag = Helper.getProzentWert(zuschlagGesamt,
+									new BigDecimal(kundematerialDto.getFAufschlagProzent()), 6);
 
-						zuschlagGesamt = zuschlagGesamt.add(prozentAufschlag);
+							zuschlagGesamt = zuschlagGesamt.add(prozentAufschlag);
+						}
+					} else {
+						if (artikel.getFAufschlagProzent() != null
+								&& artikel.getFAufschlagProzent().doubleValue() != 0) {
+
+							BigDecimal prozentAufschlag = Helper.getProzentWert(zuschlagGesamt,
+									new BigDecimal(artikel.getFAufschlagProzent()), 6);
+
+							zuschlagGesamt = zuschlagGesamt.add(prozentAufschlag);
+						}
 					}
 
-					zuschlagGesamt = Helper.rundeKaufmaennisch((zuschlagGesamt
-							.multiply(new BigDecimal(artikel
-									.getFMaterialgewicht().doubleValue()))
-							.divide(new BigDecimal(1000), 6,
-									BigDecimal.ROUND_HALF_EVEN)), 6);
+					zuschlagGesamt = Helper.rundeKaufmaennisch(
+							(zuschlagGesamt.multiply(new BigDecimal(artikel.getFMaterialgewicht().doubleValue()))
+									.divide(new BigDecimal(1000), 6, BigDecimal.ROUND_HALF_EVEN)),
+							6);
+
+					// mit WH besprochen: Zuschlag wird immer in Anzahl der
+					// VK-Nachkommastellen zurueckgegeben
+					Integer iNachkommastellenPreis = getUINachkommastellenPreisVK(theClientDto.getMandant());
+					zuschlagGesamt = Helper.rundeKaufmaennisch(zuschlagGesamt, iNachkommastellenPreis);
 
 				}
 
@@ -682,25 +914,21 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		return zuschlagGesamt;
 	}
 
-	public MaterialDto materialFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public MaterialDto materialFindByPrimaryKey(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
 		Material material = em.find(Material.class, iId);
 		if (material == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		MaterialDto materialDto = assembleMaterialDto(material);
 
 		MaterialsprDto materialsprDto = null;
 		// try {
-		Materialspr materialspr = em.find(Materialspr.class, new MaterialsprPK(
-				theClientDto.getLocUiAsString(), iId));
+		Materialspr materialspr = em.find(Materialspr.class, new MaterialsprPK(theClientDto.getLocUiAsString(), iId));
 		materialsprDto = assembleMaterialsprDto(materialspr);
 		if (materialsprDto == null) {
 		}
@@ -709,8 +937,7 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 		if (materialsprDto == null) {
 			// try {
-			Materialspr temp = em.find(Materialspr.class, new MaterialsprPK(
-					theClientDto.getLocKonzernAsString(), iId));
+			Materialspr temp = em.find(Materialspr.class, new MaterialsprPK(theClientDto.getLocKonzernAsString(), iId));
 			materialsprDto = assembleMaterialsprDto(temp);
 			if (materialsprDto == null) {
 			}
@@ -728,25 +955,22 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
-	public MaterialDto materialFindByPrimaryKey(Integer iId, Locale locDruck,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public MaterialDto materialFindByPrimaryKey(Integer iId, Locale locDruck, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
 		Material material = em.find(Material.class, iId);
 		if (material == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		MaterialDto materialDto = assembleMaterialDto(material);
 
 		MaterialsprDto materialsprDto = null;
 		// try {
-		Materialspr materialspr = em.find(Materialspr.class, new MaterialsprPK(
-				Helper.locale2String(locDruck), iId));
+		Materialspr materialspr = em.find(Materialspr.class, new MaterialsprPK(Helper.locale2String(locDruck), iId));
 		materialsprDto = assembleMaterialsprDto(materialspr);
 		if (materialsprDto == null) {
 		}
@@ -755,8 +979,7 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 		if (materialsprDto == null) {
 			// try {
-			Materialspr temp = em.find(Materialspr.class, new MaterialsprPK(
-					theClientDto.getLocUiAsString(), iId));
+			Materialspr temp = em.find(Materialspr.class, new MaterialsprPK(theClientDto.getLocUiAsString(), iId));
 			materialsprDto = assembleMaterialsprDto(temp);
 			if (materialsprDto == null) {
 			}
@@ -777,26 +1000,22 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 	/**
 	 * Gibt den zum Zeitpunkt JETZT gueltigen Materialzuschlag zurueck
 	 * 
-	 * @param iId
-	 *            Integer
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iId          Integer
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
-	public BigDecimal materialzuschlagFindAktuellenzuschlag(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BigDecimal materialzuschlagFindAktuellenzuschlag(Integer iId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
-		Query query = em
-				.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
+		Query query = em.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
 		query.setParameter(1, iId);
 		// SP2910
-		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+				theClientDto)) {
 			query.setParameter(2, getSystemFac().getHauptmandant());
 		} else {
 			query.setParameter(2, theClientDto.getMandant());
@@ -822,21 +1041,18 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
-	public BigDecimal materialzuschlagFindZuschlagZuDatum(Integer iId,
-			java.sql.Date dDatum, TheClientDto theClientDto)
+	public BigDecimal materialzuschlagFindZuschlagZuDatum(Integer iId, java.sql.Date dDatum, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
-		Query query = em
-				.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
+		Query query = em.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
 		query.setParameter(1, iId);
 
 		// SP2910
-		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+				theClientDto)) {
 			query.setParameter(2, getSystemFac().getHauptmandant());
 		} else {
 			query.setParameter(2, theClientDto.getMandant());
@@ -860,10 +1076,22 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
-	private void setMaterialFromMaterialDto(Material material,
-			MaterialDto materialDto) {
+	private void setMaterialFromMaterialDto(Material material, MaterialDto materialDto) {
 		material.setCNr(materialDto.getCNr());
+		material.setNGewichtInKG(materialDto.getNGewichtInKG());
 		em.merge(material);
+		em.flush();
+	}
+
+	private void setKundematerialFromKundematerialDto(Kundematerial bean, KundematerialDto dto) {
+		bean.setKundeIId(dto.getKundeIId());
+		bean.setMaterialIId(dto.getMaterialIId());
+		bean.setMaterialIIdNotierung(dto.getMaterialIIdNotierung());
+		bean.setBMaterialInklusive(dto.getBMaterialInklusive());
+		bean.setFAufschlagProzent(dto.getFAufschlagProzent());
+		bean.setNAufschlagBetrag(dto.getNAufschlagBetrag());
+		bean.setNMaterialbasis(dto.getNMaterialbasis());
+		em.merge(bean);
 		em.flush();
 	}
 
@@ -884,32 +1112,26 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		return (MaterialDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createMaterialzuschlag(
-			MaterialzuschlagDto materialzuschlagDto, TheClientDto theClientDto)
+	public Integer createMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		if (materialzuschlagDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("materialzuschlagDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("materialzuschlagDto == null"));
 		}
 		materialzuschlagDto.setMandantCNr(theClientDto.getMandant());
 
-		if (materialzuschlagDto.getMandantCNr() == null
-				|| materialzuschlagDto.getMaterialIId() == null
+		if (materialzuschlagDto.getMandantCNr() == null || materialzuschlagDto.getMaterialIId() == null
 				|| materialzuschlagDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"materialzuschlagDto.getMandantCNr() == null || materialzuschlagDto.getMaterialCNr() == null || materialzuschlagDto.getDGueltigab() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"materialzuschlagDto.getMandantCNr() == null || materialzuschlagDto.getMaterialCNr() == null || materialzuschlagDto.getDGueltigab() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("MaterialzuschlagfindByMaterialIIdMandantCNrTGueltigab");
+			Query query = em.createNamedQuery("MaterialzuschlagfindByMaterialIIdMandantCNrTGueltigab");
 			query.setParameter(1, materialzuschlagDto.getMaterialIId());
 			query.setParameter(2, materialzuschlagDto.getMandantCNr());
 			query.setParameter(3, materialzuschlagDto.getTGueltigab());
 			// @todo getSingleResult oder getResultList ?
-			Materialzuschlag doppelt = (Materialzuschlag) query
-					.getSingleResult();
+			Materialzuschlag doppelt = (Materialzuschlag) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_MATERIALZUSCHLAG.UK"));
 		} catch (NoResultException ex) {
 			//
 		}
@@ -919,28 +1141,61 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_MATERIALZUSCHLAG);
 			materialzuschlagDto.setIId(pk);
 
-			Materialzuschlag materialzuschlag = new Materialzuschlag(
-					materialzuschlagDto.getMaterialIId(),
-					materialzuschlagDto.getMandantCNr(),
-					materialzuschlagDto.getTGueltigab(),
+			Materialzuschlag materialzuschlag = new Materialzuschlag(materialzuschlagDto.getMaterialIId(),
+					materialzuschlagDto.getMandantCNr(), materialzuschlagDto.getTGueltigab(),
 					materialzuschlagDto.getIId());
 			em.persist(materialzuschlag);
 			em.flush();
-			setMaterialzuschlagFromMaterialzuschlagDto(materialzuschlag,
-					materialzuschlagDto);
+
+			HvDtoLogger<MaterialzuschlagDto> zsLogger = new HvDtoLogger<MaterialzuschlagDto>(em,
+					materialzuschlagDto.getMaterialIId(), theClientDto);
+			zsLogger.logInsert(materialzuschlagDto);
+			setMaterialzuschlagFromMaterialzuschlagDto(materialzuschlag, materialzuschlagDto);
 			return materialzuschlagDto.getIId();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
+
 	}
 
-	public void removeMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto)
+	public Integer createMaterialpreis(MaterialpreisDto materialpreisDto, TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("MaterialpreisfindByMaterialIIdTGueltigab");
+			query.setParameter(1, materialpreisDto.getMaterialIId());
+			query.setParameter(2, materialpreisDto.getTGueltigab());
+			// @todo getSingleResult oder getResultList ?
+			Materialpreis doppelt = (Materialpreis) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_MATERIALPREIS.UK"));
+		} catch (NoResultException ex) {
+			//
+		}
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_MATERIALPREIS);
+			materialpreisDto.setIId(pk);
+
+			Materialpreis materialpreis = new Materialpreis(materialpreisDto.getIId(),
+					materialpreisDto.getMaterialIId(), materialpreisDto.getTGueltigab(),
+					materialpreisDto.getNPreisProKG());
+			em.persist(materialpreis);
+			em.flush();
+
+			setMaterialpreisFromMaterialpreisDto(materialpreis, materialpreisDto);
+			return materialpreisDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+
+	}
+
+	public void removeMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		myLogger.entry();
 
 		if (materialzuschlagDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("materialzuschlagDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("materialzuschlagDto == null"));
 		}
 		if (materialzuschlagDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -948,12 +1203,15 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		}
 		// try {
 
-		Materialzuschlag materialzuschlag = em.find(Materialzuschlag.class,
-				materialzuschlagDto.getIId());
+		Materialzuschlag materialzuschlag = em.find(Materialzuschlag.class, materialzuschlagDto.getIId());
 		if (materialzuschlag == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
+
+		HvDtoLogger<MaterialzuschlagDto> zsLogger = new HvDtoLogger<MaterialzuschlagDto>(em,
+				materialzuschlagDto.getMaterialIId(), theClientDto);
+		zsLogger.logDelete(materialzuschlagDto);
+
 		try {
 			em.remove(materialzuschlag);
 			em.flush();
@@ -967,51 +1225,68 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
-	public void updateMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeMaterialpreis(MaterialpreisDto materialpreisDto, TheClientDto theClientDto) {
+
+		Materialpreis materialpreis = em.find(Materialpreis.class, materialpreisDto.getIId());
+		try {
+			em.remove(materialpreis);
+			em.flush();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+	}
+
+	public void removeKundematerial(KundematerialDto dto) {
+		Kundematerial kundematerial = em.find(Kundematerial.class, dto.getIId());
+		try {
+			em.remove(kundematerial);
+			em.flush();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+
+	}
+
+	public void updateMaterialzuschlag(MaterialzuschlagDto materialzuschlagDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		myLogger.entry();
 		if (materialzuschlagDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("materialzuschlagDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("materialzuschlagDto == null"));
 		}
 
 		materialzuschlagDto.setMandantCNr(theClientDto.getMandant());
-		if (materialzuschlagDto.getIId() == null
-				|| materialzuschlagDto.getMandantCNr() == null
-				|| materialzuschlagDto.getMaterialIId() == null
-				|| materialzuschlagDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"materialzuschlagDto.getIId() == null || materialzuschlagDto.getMaterialCNr() == null || materialzuschlagDto.getDGueltigab() == null"));
+		if (materialzuschlagDto.getIId() == null || materialzuschlagDto.getMandantCNr() == null
+				|| materialzuschlagDto.getMaterialIId() == null || materialzuschlagDto.getTGueltigab() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"materialzuschlagDto.getIId() == null || materialzuschlagDto.getMaterialCNr() == null || materialzuschlagDto.getDGueltigab() == null"));
 		}
+
+		MaterialzuschlagDto materialzuschlagDto_Vorher = materialzuschlagFindByPrimaryKey(materialzuschlagDto.getIId());
+
+		HvDtoLogger<MaterialzuschlagDto> logger = new HvDtoLogger<MaterialzuschlagDto>(em,
+				materialzuschlagDto.getMaterialIId(), theClientDto);
+		logger.log(materialzuschlagDto_Vorher, materialzuschlagDto);
 
 		// try {
 		Integer iId = materialzuschlagDto.getIId();
-		Materialzuschlag materialzuschlag = em.find(Materialzuschlag.class,
-				materialzuschlagDto.getIId());
+		Materialzuschlag materialzuschlag = em.find(Materialzuschlag.class, materialzuschlagDto.getIId());
 		if (materialzuschlag == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
-			Query query = em
-					.createNamedQuery("MaterialzuschlagfindByMaterialIIdMandantCNrTGueltigab");
+			Query query = em.createNamedQuery("MaterialzuschlagfindByMaterialIIdMandantCNrTGueltigab");
 			query.setParameter(1, materialzuschlagDto.getIId());
 			query.setParameter(2, materialzuschlagDto.getMandantCNr());
 			query.setParameter(3, materialzuschlagDto.getTGueltigab());
-			Integer iIdVorhanden = ((Materialzuschlag) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Materialzuschlag) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"WW_MATERIALZUSCHLAG.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("WW_MATERIALZUSCHLAG.UK"));
 			}
 		} catch (NoResultException ex) {
 			// NIX
 		}
-		setMaterialzuschlagFromMaterialzuschlagDto(materialzuschlag,
-				materialzuschlagDto);
+		setMaterialzuschlagFromMaterialzuschlagDto(materialzuschlag, materialzuschlagDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -1019,19 +1294,55 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
-	public MaterialzuschlagDto materialzuschlagFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public void updateMaterialpreis(MaterialpreisDto materialpreisDto, TheClientDto theClientDto) {
+		Integer iId = materialpreisDto.getIId();
+		Materialpreis materialpreis = em.find(Materialpreis.class, materialpreisDto.getIId());
+		if (materialpreis == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			Query query = em.createNamedQuery("MaterialpreisfindByMaterialIIdTGueltigab");
+			query.setParameter(1, materialpreisDto.getIId());
+			query.setParameter(2, materialpreisDto.getTGueltigab());
+			Integer iIdVorhanden = ((Materialpreis) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_MATERIALPREIS.UK"));
+			}
+		} catch (NoResultException ex) {
+			// NIX
+		}
+		setMaterialpreisFromMaterialpreisDto(materialpreis, materialpreisDto);
+	}
+
+	public void updateKundematerial(KundematerialDto dto, TheClientDto theClientDto) {
+		Integer iId = dto.getIId();
+		Kundematerial bean = em.find(Kundematerial.class, dto.getIId());
+
+		try {
+			Query query = em.createNamedQuery("KundematerialfindByKundeIIdMaterialIId");
+			query.setParameter(1, dto.getKundeIId());
+			query.setParameter(2, dto.getMaterialIId());
+			Integer iIdVorhanden = ((Kundematerial) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PART_KUNDEMATERIAL.UK"));
+			}
+		} catch (NoResultException ex) {
+			// NIX
+		}
+		setKundematerialFromKundematerialDto(bean, dto);
+
+	}
+
+	public MaterialzuschlagDto materialzuschlagFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		myLogger.entry();
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
-		Materialzuschlag materialzuschlag = em
-				.find(Materialzuschlag.class, iId);
+		Materialzuschlag materialzuschlag = em.find(Materialzuschlag.class, iId);
 		if (materialzuschlag == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		return assembleMaterialzuschlagDto(materialzuschlag);
@@ -1042,27 +1353,46 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
-	private void setMaterialzuschlagFromMaterialzuschlagDto(
-			Materialzuschlag materialzuschlag,
+	public MaterialpreisDto materialpreisFindByPrimaryKey(Integer iId) {
+		Materialpreis materialpreis = em.find(Materialpreis.class, iId);
+		return MaterialpreisDtoAssembler.createDto(materialpreis);
+	}
+
+	public KundematerialDto kundematerialFindByPrimaryKey(Integer iId) {
+
+		Kundematerial kundematerial = em.find(Kundematerial.class, iId);
+		return assembleKundematerialDto(kundematerial);
+
+	}
+
+	private void setMaterialzuschlagFromMaterialzuschlagDto(Materialzuschlag materialzuschlag,
 			MaterialzuschlagDto materialzuschlagDto) {
 		materialzuschlag.setNZuschlag(materialzuschlagDto.getNZuschlag());
 		em.merge(materialzuschlag);
 		em.flush();
 	}
 
-	private MaterialzuschlagDto assembleMaterialzuschlagDto(
-			Materialzuschlag materialzuschlag) {
+	private void setMaterialpreisFromMaterialpreisDto(Materialpreis materialpreis, MaterialpreisDto materialpreisDto) {
+		materialpreis.setNPreisProKG(materialpreisDto.getNPreisProKG());
+		materialpreis.setTGueltigab(materialpreisDto.getTGueltigab());
+		em.merge(materialpreis);
+		em.flush();
+	}
+
+	private MaterialzuschlagDto assembleMaterialzuschlagDto(Materialzuschlag materialzuschlag) {
 		return MaterialzuschlagDtoAssembler.createDto(materialzuschlag);
 	}
 
-	private MaterialzuschlagDto[] assembleMaterialzuschlagDtos(
-			Collection<?> materialzuschlags) {
+	private KundematerialDto assembleKundematerialDto(Kundematerial bean) {
+		return KundematerialDtoAssembler.createDto(bean);
+	}
+
+	private MaterialzuschlagDto[] assembleMaterialzuschlagDtos(Collection<?> materialzuschlags) {
 		List<MaterialzuschlagDto> list = new ArrayList<MaterialzuschlagDto>();
 		if (materialzuschlags != null) {
 			Iterator<?> iterator = materialzuschlags.iterator();
 			while (iterator.hasNext()) {
-				Materialzuschlag materialzuschlag = (Materialzuschlag) iterator
-						.next();
+				Materialzuschlag materialzuschlag = (Materialzuschlag) iterator.next();
 				list.add(assembleMaterialzuschlagDto(materialzuschlag));
 			}
 		}
@@ -1070,8 +1400,7 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		return (MaterialzuschlagDto[]) list.toArray(returnArray);
 	}
 
-	private void setMaterialsprFromMaterialsprDto(Materialspr materialspr,
-			MaterialsprDto materialsprDto) {
+	private void setMaterialsprFromMaterialsprDto(Materialspr materialspr, MaterialsprDto materialsprDto) {
 		materialspr.setCBez(materialsprDto.getCBez());
 		em.merge(materialspr);
 		em.flush();

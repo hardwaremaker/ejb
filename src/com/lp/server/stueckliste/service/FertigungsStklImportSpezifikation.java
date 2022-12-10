@@ -32,11 +32,11 @@
  ******************************************************************************/
 package com.lp.server.stueckliste.service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 
+import com.lp.service.IReader;
+import com.lp.service.JsonWriter;
 import com.lp.service.StklImportSpezifikation;
 
 public class FertigungsStklImportSpezifikation extends StklImportSpezifikation {
@@ -57,13 +57,18 @@ public class FertigungsStklImportSpezifikation extends StklImportSpezifikation {
 	}
 
 	@Override
-	protected void readIndividualValues(BufferedReader br) throws IOException {
-		setMontageartIId(extGetInteger(br));
+	protected void readIndividualValues(IReader reader) throws IOException {
+		setMontageartIId(reader.getInteger());
 	}
 
 	@Override
-	protected void writeIndividualValues(StringWriter sw) {
-		extPut(getMontageartIId(), sw);
+	protected void readIndividualValuesJson(IReader reader) throws IOException {
+		setMontageartIId(reader.getInteger(JsonProperties.MONTAGEART_IID));
+	}
+	
+	@Override
+	protected void writeIndividualValues(JsonWriter writer) {
+		writer.putInteger(JsonProperties.MONTAGEART_IID, montageartIId);
 	}
 
 	@Override
@@ -88,5 +93,24 @@ public class FertigungsStklImportSpezifikation extends StklImportSpezifikation {
 		availableColumnTypes.add(MENGE);
 		availableColumnTypes.add(POSITION);
 		availableColumnTypes.add(KOMMENTAR);
+		availableColumnTypes.add(DIM_BREITE);
+		availableColumnTypes.add(DIM_HOEHE);
+		availableColumnTypes.add(DIM_TIEFE);
+		availableColumnTypes.add(LAUFENDE_NUMMER);
 	}
+
+	@Override
+	public void removeMappingColumnType() {
+		availableColumnTypes.remove(KUNDENARTIKELNUMMER);
+		int index = columnTypes.indexOf(KUNDENARTIKELNUMMER);
+		if(index >= 0) {
+			columnTypes.set(index, UNDEFINED);
+		}
+	}
+
+	@Override
+	public boolean isStuecklisteMitBezugVerkauf() {
+		return true;
+	}
+
 }

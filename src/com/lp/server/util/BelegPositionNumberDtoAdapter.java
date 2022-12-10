@@ -32,11 +32,12 @@
  ******************************************************************************/
 package com.lp.server.util;
 
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.collections.iterators.ArrayIterator;
 
-import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.service.BelegpositionVerkaufDto;
 
 public class BelegPositionNumberDtoAdapter extends
@@ -106,4 +107,8 @@ public class BelegPositionNumberDtoAdapter extends
 		return belegPositionPos.getIId() ;
 	}	
 
+	@Override
+	public List<?> getPositionsListForHeadIId(Integer headIId) {
+		return Arrays.asList(belegPositionDtos);
+	}
 }

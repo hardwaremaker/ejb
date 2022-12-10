@@ -46,6 +46,7 @@ public class MeilensteinDtoAssembler {
 			meilensteinDto.setCNr(meilenstein.getCNr());
 			meilensteinDto.setIId(meilenstein.getIId());
 			meilensteinDto.setMandantCNr(meilenstein.getMandantCNr());
+			meilensteinDto.setISort(meilenstein.getISort());
 		}
 		return meilensteinDto;
 	}

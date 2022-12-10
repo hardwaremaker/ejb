@@ -57,6 +57,18 @@ public class Webshop implements Serializable {
 	@Column(name = "C_BEZ")
 	private String cBez;
 
+	@Column(name = "WEBSHOPART_C_NR")
+	private String webshopartCnr;
+	
+	@Column(name = "C_URL")
+	private String cUrl;
+
+	@Column(name = "C_USER")
+	private String cUser;
+	
+	@Column(name = "C_PASSWORD")
+	private String cPassword;
+
 	public String getMandantCNr() {
 		return mandantCNr;
 	}
@@ -94,4 +106,35 @@ public class Webshop implements Serializable {
 		cBez = bez;
 	}
 
+	public String getWebshopartCnr() {
+		return webshopartCnr;
+	}
+	
+	public void setWebshopartCnr(String webshopartCnr) {
+		this.webshopartCnr = webshopartCnr;
+	}
+	
+	public String getCUrl() {
+		return cUrl;
+	}
+
+	public void setCUrl(String url) {
+		cUrl = url;
+	}
+	
+	public String getCUser() {
+		return cUser;
+	}
+
+	public void setCUser(String user) {
+		cUser = user;
+	}
+
+	public String getCPassword() {
+		return cPassword;
+	}
+
+	public void setCPassword(String password) {
+		cPassword = password;
+	}
 }

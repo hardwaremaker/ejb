@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan;
@@ -69,6 +37,18 @@ public class FLRMaschinenzeitdaten implements Serializable {
     private String c_bemerkung;
 
     /** nullable persistent field */
+    private Double f_verrechenbar;
+
+    /** nullable persistent field */
+    private Date t_erledigt;
+
+    /** nullable persistent field */
+    private Short b_parallel;
+
+    /** nullable persistent field */
+    private com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt;
+
+    /** nullable persistent field */
     private com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_gestartet;
 
     /** nullable persistent field */
@@ -78,7 +58,7 @@ public class FLRMaschinenzeitdaten implements Serializable {
     private com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine;
 
     /** full constructor */
-    public FLRMaschinenzeitdaten(Date t_von, Date t_bis, Date t_aendern, Date t_anlegen, Integer maschine_i_id, Integer lossollarbeitsplan_i_id, Integer personal_i_id_gestartet, String c_bemerkung, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_gestartet, FLRLossollarbeitsplan flrlossollarbeitsplan, com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine) {
+    public FLRMaschinenzeitdaten(Date t_von, Date t_bis, Date t_aendern, Date t_anlegen, Integer maschine_i_id, Integer lossollarbeitsplan_i_id, Integer personal_i_id_gestartet, String c_bemerkung, Double f_verrechenbar, Date t_erledigt, Short b_parallel, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_gestartet, FLRLossollarbeitsplan flrlossollarbeitsplan, com.lp.server.personal.fastlanereader.generated.FLRMaschine flrmaschine) {
         this.t_von = t_von;
         this.t_bis = t_bis;
         this.t_aendern = t_aendern;
@@ -87,6 +67,10 @@ public class FLRMaschinenzeitdaten implements Serializable {
         this.lossollarbeitsplan_i_id = lossollarbeitsplan_i_id;
         this.personal_i_id_gestartet = personal_i_id_gestartet;
         this.c_bemerkung = c_bemerkung;
+        this.f_verrechenbar = f_verrechenbar;
+        this.t_erledigt = t_erledigt;
+        this.b_parallel = b_parallel;
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
         this.flrpersonal_gestartet = flrpersonal_gestartet;
         this.flrlossollarbeitsplan = flrlossollarbeitsplan;
         this.flrmaschine = flrmaschine;
@@ -166,6 +150,38 @@ public class FLRMaschinenzeitdaten implements Serializable {
 
     public void setC_bemerkung(String c_bemerkung) {
         this.c_bemerkung = c_bemerkung;
+    }
+
+    public Double getF_verrechenbar() {
+        return this.f_verrechenbar;
+    }
+
+    public void setF_verrechenbar(Double f_verrechenbar) {
+        this.f_verrechenbar = f_verrechenbar;
+    }
+
+    public Date getT_erledigt() {
+        return this.t_erledigt;
+    }
+
+    public void setT_erledigt(Date t_erledigt) {
+        this.t_erledigt = t_erledigt;
+    }
+
+    public Short getB_parallel() {
+        return this.b_parallel;
+    }
+
+    public void setB_parallel(Short b_parallel) {
+        this.b_parallel = b_parallel;
+    }
+
+    public com.lp.server.personal.fastlanereader.generated.FLRPersonal getFlrpersonal_erledigt() {
+        return this.flrpersonal_erledigt;
+    }
+
+    public void setFlrpersonal_erledigt(com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt) {
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
     }
 
     public com.lp.server.personal.fastlanereader.generated.FLRPersonal getFlrpersonal_gestartet() {

@@ -40,7 +40,15 @@ import java.sql.Timestamp;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+
+import com.lp.server.artikel.ejb.ArtikelQuery;
+
+
+@NamedQueries({
+	@NamedQuery(name = "InternebestellungUpdateTermine", query = "UPDATE Internebestellung c SET c.tProduktionsbeginn = ?1 ,  c.tLiefertermin = ?2 WHERE c.mandantCNr=?3")})
 
 @Entity
 @Table(name = "FERT_INTERNEBESTELLUNG")
@@ -73,11 +81,33 @@ public class Internebestellung implements Serializable {
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
 
+	@Column(name = "X_AUSLOESER")
+	private String xAusloeser;
+	
+	public String getXAusloeser() {
+		return xAusloeser;
+	}
+
+	public void setXAusloeser(String xAusloeser) {
+		this.xAusloeser = xAusloeser;
+	}
+
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
 	@Column(name = "STUECKLISTE_I_ID")
 	private Integer stuecklisteIId;
+	
+	@Column(name = "AUFTRAG_I_ID_KOPFAUFTRAG")
+	private Integer auftragIIdKopfauftrag;
+
+	public Integer getAuftragIIdKopfauftrag() {
+		return auftragIIdKopfauftrag;
+	}
+
+	public void setAuftragIIdKopfauftrag(Integer auftragIIdKopfauftrag) {
+		this.auftragIIdKopfauftrag = auftragIIdKopfauftrag;
+	}
 
 	@Column(name = "T_PRODUKTIONSBEGINN")
 	private Date tProduktionsbeginn;
@@ -88,6 +118,29 @@ public class Internebestellung implements Serializable {
 
 	public void setTProduktionsbeginn(Date tProduktionsbeginn) {
 		this.tProduktionsbeginn = tProduktionsbeginn;
+	}
+
+	@Column(name = "F_LAGERMINDEST")
+	private Double fLagermindest;
+	
+	public Double getFLagermindest() {
+		return this.fLagermindest;
+	}
+
+	public void setFLagermindest(Double fLagermindest) {
+		this.fLagermindest = fLagermindest;
+	}
+
+	
+	@Column(name = "PARTNER_I_ID_STANDORT")
+	private Integer partnerIIdStandort;
+	
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
 	}
 
 	private static final long serialVersionUID = 1L;

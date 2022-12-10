@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,10 +47,13 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.auftrag.fastlanereader.FLRAuftragPositionNumberAdapter;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.auftrag.service.AuftragpositionFac;
 import com.lp.server.auftrag.service.SichtLieferstatusDto;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinFac;
@@ -57,8 +61,15 @@ import com.lp.server.lieferschein.service.LieferscheinpositionDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
+import com.lp.server.system.service.BelegartDto;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.PositionNumberAdapter;
+import com.lp.server.util.PositionNumberHandler;
+import com.lp.server.util.PositionNumberHandlerFullPaged;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -94,20 +105,10 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 	private TableInfo tableInfo = null;
 
 	private ArrayList<SichtLieferstatusDto> alDaten = null;
-	private int SPALTE_KEY = 0;
-	private int SPALTE_BELEGART = 1;
-	private int SPALTE_BELEGNUMMER = 2;
-	private int SPALTE_ARTIKELNUMMER = 3;
-	private int SPALTE_BEZEICHNUNG = 4;
-	private int SPALTE_MENGE = 5;
-	private int SPALTE_GELIEFERT = 6;
-	private int SPALTE_OFFEN = 7;
-	private int SPALTE_ERLEDIGT = 8;
-	private int ANZAHL_SPALTEN = 9;
 
 	public SichtLieferstatusHandler() {
 		super();
-		setAnzahlSpalten(ANZAHL_SPALTEN);
+		setAnzahlSpalten(15);
 	}
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
@@ -123,31 +124,51 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 
 			Object[][] rows = new Object[(int) getAnzahlZeilen()][getAnzahlSpalten()];
 
+			BelegartDto bDto = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_AUFTRAG);
+
 			for (int row = 0; row < getAnzahlZeilen(); row++) {
 
 				SichtLieferstatusDto sichtlieferstatusDto = alDaten.get(row);
 
-				rows[row][SPALTE_KEY] = sichtlieferstatusDto.getIiPosition();
-				rows[row][SPALTE_BELEGART] = sichtlieferstatusDto
+				Object[] rowToAddCandidate = new Object[getTableInfo().getColumnClasses().length];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("id")] = sichtlieferstatusDto
+						.getIiPosition();
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("belegart")] = sichtlieferstatusDto
 						.getSBelegart();
-				rows[row][SPALTE_BELEGNUMMER] = sichtlieferstatusDto
+
+				if (sichtlieferstatusDto.getSBelegart() != null
+						&& sichtlieferstatusDto.getSBelegart().equals(bDto.getCKurzbezeichnung())) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.nr")] = getAuftragpositionFac()
+							.getPositionNummer(sichtlieferstatusDto.getIiPosition());
+
+				}
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.belegnummer")] = sichtlieferstatusDto
 						.getSBelegnummer();
-				rows[row][SPALTE_ARTIKELNUMMER] = sichtlieferstatusDto
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.artikelnummer")] = sichtlieferstatusDto
 						.getSIdent();
-				rows[row][SPALTE_BEZEICHNUNG] = sichtlieferstatusDto
+
+				if (bReferenznummerInPositionen) {
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("lp.referenznummer")] = sichtlieferstatusDto.getSReferenznummer();
+				}
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.bezeichnung")] = sichtlieferstatusDto
 						.getSBezeichnung();
-				rows[row][SPALTE_MENGE] = sichtlieferstatusDto
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.menge")] = sichtlieferstatusDto
 						.getNMengeGesamt();
-				rows[row][SPALTE_GELIEFERT] = sichtlieferstatusDto
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("auft.geliefert")] = sichtlieferstatusDto
 						.getNMengeGeliefert();
-				rows[row][SPALTE_OFFEN] = sichtlieferstatusDto
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.offen")] = sichtlieferstatusDto
 						.getNMengeOffen();
-				rows[row][SPALTE_ERLEDIGT] = sichtlieferstatusDto
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("auft.erledigt")] = sichtlieferstatusDto
 						.getBErledigt();
 
+				rows[row] = rowToAddCandidate;
+
 			}
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0);
+			result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0);
 		} catch (Throwable t) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
 		}
@@ -158,11 +179,9 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 	private String getArtikelBezeichnung(Integer iIdArtikelI) throws Throwable {
 		String sBezO = null;
 
-		ArtikelDto oArtikelDto = getArtikelFac().artikelFindByPrimaryKey(
-				iIdArtikelI, theClientDto);
+		ArtikelDto oArtikelDto = getArtikelFac().artikelFindByPrimaryKey(iIdArtikelI, theClientDto);
 
-		if (oArtikelDto.getArtikelsprDto() != null
-				&& oArtikelDto.getArtikelsprDto().getCBez() != null) {
+		if (oArtikelDto.getArtikelsprDto() != null && oArtikelDto.getArtikelsprDto().getCBez() != null) {
 			sBezO = oArtikelDto.getArtikelsprDto().getCBez();
 		} else {
 			sBezO = oArtikelDto.getCNr();
@@ -176,8 +195,7 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 			return null;
 
 		String sCNr = null;
-		ArtikelDto oArtikelDto = getArtikelFac().artikelFindByPrimaryKey(
-				iIdArtikelI, theClientDto);
+		ArtikelDto oArtikelDto = getArtikelFac().artikelFindByPrimaryKey(iIdArtikelI, theClientDto);
 		sCNr = oArtikelDto.getCNr();
 		return sCNr;
 	}
@@ -195,8 +213,7 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 
 			// ACHTUNG ! An dieser Stelle muss ich wissen, welche Kriterien ich
 			// erwarte
@@ -206,56 +223,10 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 		}
 
 		if (iIdAuftrag == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iIdAuftrag == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iIdAuftrag == null"));
 		}
 
 		return iIdAuftrag;
-	}
-
-	private BigDecimal getGeliefertMenge(Integer auftragspositionIId)
-			throws RemoteException {
-
-		BigDecimal bdGeliefert = BigDecimal.ZERO;
-
-		LieferscheinpositionDto[] lsPosDtos = getLieferscheinpositionFac()
-				.lieferscheinpositionFindByAuftragpositionIId(
-						auftragspositionIId, theClientDto);
-
-		for (int j = 0; j < lsPosDtos.length; j++) {
-			LieferscheinpositionDto lsPosDto = lsPosDtos[j];
-
-			LieferscheinDto lsDto = getLieferscheinFac()
-					.lieferscheinFindByPrimaryKey(
-							lsPosDto.getLieferscheinIId(), theClientDto);
-
-			if (!lsDto.getStatusCNr()
-					.equals(LieferscheinFac.LSSTATUS_STORNIERT)) {
-				if (lsPosDto.getNMenge() != null) {
-					bdGeliefert = bdGeliefert.add(lsPosDto.getNMenge());
-				}
-			}
-
-		}
-
-		RechnungPositionDto[] reposDtos = getRechnungFac()
-				.rechnungPositionByAuftragposition(auftragspositionIId);
-
-		for (int j = 0; j < reposDtos.length; j++) {
-			RechnungPositionDto rePosDto = reposDtos[j];
-
-			RechnungDto reDto = getRechnungFac().rechnungFindByPrimaryKey(
-					rePosDto.getRechnungIId());
-
-			if (!reDto.getStatusCNr().equals(RechnungFac.STATUS_STORNIERT)) {
-				if (rePosDto.getNMenge() != null) {
-					bdGeliefert = bdGeliefert.add(rePosDto.getNMenge());
-				}
-			}
-
-		}
-
-		return bdGeliefert;
 	}
 
 	private ArrayList setInhalt() {
@@ -264,115 +235,98 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 
 			alDaten = new ArrayList<SichtLieferstatusDto>();
 
-			String belegartKurzAuftrag = getLocaleFac().belegartFindByCNr(
-					LocaleFac.BELEGART_AUFTRAG).getCKurzbezeichnung();
-			String belegartKurzLS = getLocaleFac().belegartFindByCNr(
-					LocaleFac.BELEGART_LIEFERSCHEIN).getCKurzbezeichnung();
-			String belegartKurzRE = getLocaleFac().belegartFindByCNr(
-					LocaleFac.BELEGART_RECHNUNG).getCKurzbezeichnung();
+			String belegartKurzAuftrag = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_AUFTRAG)
+					.getCKurzbezeichnung();
+			String belegartKurzLS = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_LIEFERSCHEIN)
+					.getCKurzbezeichnung();
+			String belegartKurzRE = getLocaleFac().belegartFindByCNr(LocaleFac.BELEGART_RECHNUNG).getCKurzbezeichnung();
 
 			// die aktuellen Filter Kriterien bestimmen
 			getFilterKriterien();
 			Integer auftragIId = new Integer(aFilterKriterium[0].value);
 
-			AuftragDto oAuftragDto = getAuftragFac().auftragFindByPrimaryKey(
-					auftragIId);
+			AuftragDto oAuftragDto = getAuftragFac().auftragFindByPrimaryKey(auftragIId);
 
 			// Alle mengenbehafteten Auftragspositionen holen
 			Session session = FLRSessionFactory.getFactory().openSession();
-			Query query = session
-					.createQuery("SELECT ap FROM FLRAuftragposition ap WHERE ap.flrauftrag.i_id="
-							+ auftragIId
-							+ " AND ap.flrartikel.i_id IS NOT NULL AND ap.n_menge IS NOT NULL ORDER BY ap.i_sort");
+			Query query = session.createQuery("SELECT ap FROM FLRAuftragposition ap WHERE ap.flrauftrag.i_id="
+					+ auftragIId + " AND ap.flrartikel.i_id IS NOT NULL AND ap.n_menge IS NOT NULL ORDER BY ap.i_sort");
 
 			List<?> resultListAG = query.list();
 			Iterator<?> resultListIteratorAG = resultListAG.iterator();
 			while (resultListIteratorAG.hasNext()) {
 
-				FLRAuftragposition ap = (FLRAuftragposition) resultListIteratorAG
-						.next();
+				FLRAuftragposition ap = (FLRAuftragposition) resultListIteratorAG.next();
 
 				SichtLieferstatusDto oDto = new SichtLieferstatusDto();
 				oDto.setSBelegart(belegartKurzAuftrag);
 				oDto.setSBelegnummer(oAuftragDto.getCNr());
 
-				if (ap.getAuftragpositionstatus_c_nr().equals(
-						LocaleFac.STATUS_ERLEDIGT)) {
+				if (ap.getAuftragpositionstatus_c_nr().equals(LocaleFac.STATUS_ERLEDIGT)) {
 					oDto.setBErledigt(true);
 				}
 				oDto.setIiPosition(ap.getI_id());
 				oDto.setNMengeGesamt(ap.getN_menge());
 
-			
-				
-				BigDecimal bdGeliefert=getGeliefertMenge(ap.getI_id());
-				
+				BigDecimal bdGeliefert = getAuftragpositionFac().getGeliefertMenge(ap.getI_id(), null, theClientDto);
+
 				oDto.setNMengeGeliefert(bdGeliefert);
 				oDto.setNMengeOffen(ap.getN_menge().subtract(bdGeliefert));
 
 				oDto.setSIdent(ap.getFlrartikel().getC_nr());
+				oDto.setSReferenznummer(ap.getFlrartikel().getC_referenznr());
 
 				String sBezeichnung = null;
 
 				if (ap.getC_bez() != null) {
 					sBezeichnung = ap.getC_bez();
 				} else {
-					sBezeichnung = getArtikelBezeichnung(ap.getFlrartikel()
-							.getI_id());
+					sBezeichnung = getArtikelBezeichnung(ap.getFlrartikel().getI_id());
 				}
 				oDto.setSBezeichnung(sBezeichnung);
 				alDaten.add(oDto);
 			}
 
-			Set hmLieferscheine = getAuftragReportFac()
-					.getAlleLieferscheineEinesAuftrags(auftragIId);
+			Set hmLieferscheine = getAuftragReportFac().getAlleLieferscheineEinesAuftrags(auftragIId);
 
 			Iterator itLs = hmLieferscheine.iterator();
 			while (itLs.hasNext()) {
 				Integer lieferscheinIId = (Integer) itLs.next();
 
-				LieferscheinDto lsDto = getLieferscheinFac()
-						.lieferscheinFindByPrimaryKey(lieferscheinIId);
+				LieferscheinDto lsDto = getLieferscheinFac().lieferscheinFindByPrimaryKey(lieferscheinIId);
 
-				if (!lsDto.getStatusCNr().equals(
-						LieferscheinFac.LSSTATUS_STORNIERT)) {
+				if (!lsDto.getStatusCNr().equals(LieferscheinFac.LSSTATUS_STORNIERT)) {
 					Collection<LieferscheinpositionDto> cl = getLieferscheinpositionFac()
-							.lieferscheinpositionFindByLieferscheinIId(
-									lieferscheinIId, theClientDto);
+							.lieferscheinpositionFindByLieferscheinIId(lieferscheinIId, theClientDto);
 					Iterator itLsPos = cl.iterator();
 
 					while (itLsPos.hasNext()) {
-						LieferscheinpositionDto lsposDto = (LieferscheinpositionDto) itLsPos
-								.next();
+						LieferscheinpositionDto lsposDto = (LieferscheinpositionDto) itLsPos.next();
 						// Nur mehr nicht zugeordnete
-						if (lsposDto.getAuftragpositionIId() == null
-								&& lsposDto.getArtikelIId() != null) {
+						if (lsposDto.getAuftragpositionIId() == null && lsposDto.getArtikelIId() != null) {
 
 							SichtLieferstatusDto oDto = new SichtLieferstatusDto();
 							oDto.setSBelegart(belegartKurzLS);
 							oDto.setSBelegnummer(lsDto.getCNr());
 
-							if (lsDto.getStatusCNr().equals(
-									LocaleFac.STATUS_ERLEDIGT)) {
+							if (lsDto.getStatusCNr().equals(LocaleFac.STATUS_ERLEDIGT)) {
 								oDto.setBErledigt(true);
 							}
 							oDto.setIiPosition(lsposDto.getIId());
 							oDto.setNMengeGesamt(lsposDto.getNMenge());
 							oDto.setNMengeGeliefert(lsposDto.getNMenge());
 
-							ArtikelDto aDto = getArtikelFac()
-									.artikelFindByPrimaryKeySmall(
-											lsposDto.getArtikelIId(),
-											theClientDto);
+							ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(lsposDto.getArtikelIId(),
+									theClientDto);
 							oDto.setSIdent(aDto.getCNr());
+							oDto.setSReferenznummer(aDto.getCReferenznr());
 
 							String sBezeichnung = null;
 
 							if (lsposDto.getCBez() != null) {
 								sBezeichnung = lsposDto.getCBez();
 							} else {
-								sBezeichnung = getArtikelBezeichnung(lsposDto
-										.getArtikelIId());
+								sBezeichnung = getArtikelBezeichnung(lsposDto.getArtikelIId());
 							}
 							oDto.setSBezeichnung(sBezeichnung);
 							alDaten.add(oDto);
@@ -383,53 +337,46 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 			}
 
 			// RE-Pos hinzufuegen
-			Set hmRechnungen = getAuftragReportFac()
-					.getAlleRechnungenEinesAuftrags(auftragIId);
+			Set hmRechnungen = getAuftragReportFac().getAlleRechnungenEinesAuftrags(auftragIId);
 
 			Iterator itRe = hmRechnungen.iterator();
 			while (itRe.hasNext()) {
 				Integer rechnungIId = (Integer) itRe.next();
 
-				RechnungDto reDto = getRechnungFac().rechnungFindByPrimaryKey(
-						rechnungIId);
+				RechnungDto reDto = getRechnungFac().rechnungFindByPrimaryKey(rechnungIId);
 
 				if (!reDto.getStatusCNr().equals(RechnungFac.STATUS_STORNIERT)) {
 
-					RechnungPositionDto[] reposDtos = getRechnungFac()
-							.rechnungPositionFindByRechnungIId(rechnungIId);
+					RechnungPositionDto[] reposDtos = getRechnungFac().rechnungPositionFindByRechnungIId(rechnungIId);
 
 					for (int i = 0; i < reposDtos.length; i++) {
 
 						RechnungPositionDto reposDto = reposDtos[i];
 
-						if (reposDto.getAuftragpositionIId() == null
-								&& reposDto.getArtikelIId() != null) {
+						if (reposDto.getAuftragpositionIId() == null && reposDto.getArtikelIId() != null) {
 
 							SichtLieferstatusDto oDto = new SichtLieferstatusDto();
 							oDto.setSBelegart(belegartKurzRE);
 							oDto.setSBelegnummer(reDto.getCNr());
 
-							if (reDto.getStatusCNr().equals(
-									LocaleFac.STATUS_ERLEDIGT)) {
+							if (reDto.getStatusCNr().equals(LocaleFac.STATUS_ERLEDIGT)) {
 								oDto.setBErledigt(true);
 							}
 							oDto.setIiPosition(reposDto.getIId());
 							oDto.setNMengeGesamt(reposDto.getNMenge());
 							oDto.setNMengeGeliefert(reposDto.getNMenge());
 
-							ArtikelDto aDto = getArtikelFac()
-									.artikelFindByPrimaryKeySmall(
-											reposDto.getArtikelIId(),
-											theClientDto);
+							ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(reposDto.getArtikelIId(),
+									theClientDto);
 							oDto.setSIdent(aDto.getCNr());
+							oDto.setSReferenznummer(aDto.getCReferenznr());
 
 							String sBezeichnung = null;
 
 							if (reposDto.getCBez() != null) {
 								sBezeichnung = reposDto.getCBez();
 							} else {
-								sBezeichnung = getArtikelBezeichnung(reposDto
-										.getArtikelIId());
+								sBezeichnung = getArtikelBezeichnung(reposDto.getArtikelIId());
 							}
 							oDto.setSBezeichnung(sBezeichnung);
 							alDaten.add(oDto);
@@ -440,8 +387,7 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 			}
 
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(t));
 		}
 
 		int iAnzahlZeilen = alDaten.size();
@@ -471,8 +417,7 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 				throw (EJBExceptionLP) t.getCause();
 			} else {
 
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-						new Exception(t));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(t));
 			}
 		}
 		return getAnzahlZeilen();
@@ -484,14 +429,11 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 	 * 
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
-	 * @param sortierKriterien
-	 *            SortierKriterium[]
-	 * @param selectedId
-	 *            Object
+	 * @param sortierKriterien SortierKriterium[]
+	 * @param selectedId       Object
 	 * @return QueryResult
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		int rowNumber = 0; // selektiert ist immer die erste zeile
 		QueryResult result = getPageAt(new Integer(rowNumber));
 		result.setIndexOfSelectedRow(rowNumber);
@@ -499,67 +441,91 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 		return result;
 	}
 
-	/**
-	 * gets information about the table.
-	 * 
-	 * @return TableInfo
-	 */
-	public TableInfo getTableInfo() {
-		if (tableInfo == null) {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+		try {
 			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			tableInfo = new TableInfo(new Class[] { String.class, String.class,
-					String.class, String.class, String.class, BigDecimal.class,
-					BigDecimal.class, BigDecimal.class, Boolean.class }, new String[] { " ", " ",
-					getTextRespectUISpr("lp.belegnummer", mandantCNr, locUI),
-					getTextRespectUISpr("lp.artikelnummer", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
-					getTextRespectUISpr("lp.menge", mandantCNr, locUI),
-					getTextRespectUISpr("auft.geliefert", mandantCNr, locUI),
-					getTextRespectUISpr("lp.offen", mandantCNr, locUI),
-					getTextRespectUISpr("auft.erledigt", mandantCNr, locUI) },
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_L,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // variabel
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_S }, new String[] {
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR,Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR });
+
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+
+			columns.add("id", String.class, " ", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+			columns.add("belegart", String.class, " ", QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR);
+			columns.add("lp.nr", Integer.class, getTextRespectUISpr("lp.nr", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR);
+			columns.add("lp.belegnummer", String.class, getTextRespectUISpr("lp.belegnummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+			columns.add("lp.artikelnummer", String.class, getTextRespectUISpr("lp.artikelnummer", mandant, locUi),
+					getUIBreiteIdent(), Facade.NICHT_SORTIERBAR);
+
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM, Facade.NICHT_SORTIERBAR);
+			}
+
+			columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+			columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.menge", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("auft.geliefert", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("auft.geliefert", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.offen", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.offen", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("auft.erledigt", Boolean.class, getTextRespectUISpr("auft.erledigt", mandant, locUi),
+
+					QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR,
+					getTextRespectUISpr("auft.erledigt.tooltip", mandantCNr, theClientDto.getLocUi()));
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
-		return tableInfo;
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+
+		try {
+			ParametermandantDto parametermandantDto = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_REFERENZNUMMER_IN_POSITIONEN);
+			bReferenznummerInPositionen = ((Boolean) parametermandantDto.getCWertAsObject());
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 
 	/**
-	 * In einer ArrayList von SichtLieferstatusDtos soll festgestellt werden, ob
-	 * ein bsteimmtes SichtLieferstatusDto enthalten ist.
+	 * In einer ArrayList von SichtLieferstatusDtos soll festgestellt werden, ob ein
+	 * bsteimmtes SichtLieferstatusDto enthalten ist.
 	 * 
-	 * @param alListeI
-	 *            ArrayList Liste von SichtLieferstatusDtos
-	 * @param sBelegartI
-	 *            die gesuchte Belegart
-	 * @param iIdPositionI
-	 *            die gesuchte Position innerhalb dieser Belegart
-	 * @return SichtLieferstatusDto null, wenn die gesuchte Position nicht
-	 *         enthalten ist
-	 * @throws java.lang.Throwable
-	 *             Ausnahme
+	 * @param alListeI     ArrayList Liste von SichtLieferstatusDtos
+	 * @param sBelegartI   die gesuchte Belegart
+	 * @param iIdPositionI die gesuchte Position innerhalb dieser Belegart
+	 * @return SichtLieferstatusDto null, wenn die gesuchte Position nicht enthalten
+	 *         ist
+	 * @throws java.lang.Throwable Ausnahme
 	 */
-	private SichtLieferstatusDto containsSichtLieferstatusDto(
-			ArrayList<SichtLieferstatusDto> alListeI, String sBelegartI,
-			Integer iIdPositionI) throws Throwable {
+	private SichtLieferstatusDto containsSichtLieferstatusDto(ArrayList<SichtLieferstatusDto> alListeI,
+			String sBelegartI, Integer iIdPositionI) throws Throwable {
 		SichtLieferstatusDto oDtoO = null;
 
 		for (int i = 0; i < alListeI.size(); i++) {
-			SichtLieferstatusDto oCurrentDto = (SichtLieferstatusDto) alListeI
-					.get(i);
+			SichtLieferstatusDto oCurrentDto = (SichtLieferstatusDto) alListeI.get(i);
 
 			if (oCurrentDto.getSBelegart().equals(sBelegartI)) {
 				if (oCurrentDto.getIiPosition().equals(iIdPositionI)) {
@@ -571,9 +537,8 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 		return oDtoO;
 	}
 
-	private SichtLieferstatusDto getErstesSichtLieferstatusDtoMitBelegartkurzbezeichnung(
-			ArrayList alListeI, String cBelegartkurzbezeichnung)
-			throws Throwable {
+	private SichtLieferstatusDto getErstesSichtLieferstatusDtoMitBelegartkurzbezeichnung(ArrayList alListeI,
+			String cBelegartkurzbezeichnung) throws Throwable {
 		SichtLieferstatusDto sichtlieferstatusDto = null;
 
 		boolean bGefunden = false;
@@ -581,13 +546,11 @@ public class SichtLieferstatusHandler extends UseCaseHandlerTabelle {
 
 		if (alListeI != null && alListeI.size() > 0) {
 			while (!bGefunden && iIndex < alListeI.size()) {
-				SichtLieferstatusDto sichtlieferstatusDtoTemp = (SichtLieferstatusDto) alListeI
-						.get(iIndex);
+				SichtLieferstatusDto sichtlieferstatusDtoTemp = (SichtLieferstatusDto) alListeI.get(iIndex);
 
 				iIndex++;
 
-				if (sichtlieferstatusDtoTemp.getSBelegart().equals(
-						cBelegartkurzbezeichnung)) {
+				if (sichtlieferstatusDtoTemp.getSBelegart().equals(cBelegartkurzbezeichnung)) {
 					sichtlieferstatusDto = sichtlieferstatusDtoTemp;
 
 					bGefunden = true;

@@ -61,6 +61,7 @@ public class LosablieferungDtoAssembler {
 					.getNArbeitszeitwertdetailliert());
 			losablieferungDto.setBGestehungspreisNeuBerechnen(losablieferung
 					.getBGestehungspreisneuberechnen());
+			losablieferungDto.setLagerIId(losablieferung.getLagerIId());
 		}
 		return losablieferungDto;
 	}

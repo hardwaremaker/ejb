@@ -19,52 +19,87 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<hibernate-mapping package="com.lp.server.projekt.fastlanereader.generated">
+<!-- <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd">  
+<hibernate-mapping
+	package="com.lp.server.projekt.fastlanereader.generated">
 	<class name="FLRProjekt" table="PROJ_PROJEKT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="kategorie_c_nr" column="KATEGORIE_C_NR" type="java.lang.String" />
-		<property name="c_titel" column="C_TITEL" type="java.lang.String" />
-		<property name="c_dateiname" column="C_DATEINAME" type="java.lang.String" />
-		<property name="personal_i_id_erzeuger" column="PERSONAL_I_ID_ERZEUGER"
+		<property name="kategorie_c_nr" column="KATEGORIE_C_NR"
+			type="java.lang.String" />
+		<property name="c_titel" column="C_TITEL"
+			type="java.lang.String" />
+		<property name="c_dateiname" column="C_DATEINAME"
+			type="java.lang.String" />
+		<property name="personal_i_id_erzeuger"
+			column="PERSONAL_I_ID_ERZEUGER" type="java.lang.Integer" />
+		<property name="personal_i_id_zugewiesener"
+			column="PERSONAL_I_ID_ZUGEWIESENER" type="java.lang.Integer" />
+		<property name="personal_i_id_internerledigt"
+			column="PERSONAL_I_ID_INTERNERLEDIGT" type="java.lang.Integer" />
+		<property name="personal_i_id_erlediger"
+			column="PERSONAL_I_ID_ERLEDIGER" type="java.lang.Integer" />
+		<property name="partner_i_id" column="PARTNER_I_ID"
 			type="java.lang.Integer" />
-		<property name="personal_i_id_zugewiesener" column="PERSONAL_I_ID_ZUGEWIESENER"
+		<property name="partner_i_id_betreiber"
+			column="PARTNER_I_ID_BETREIBER" type="java.lang.Integer" />
+		<property name="bereich_i_id" column="BEREICH_I_ID"
 			type="java.lang.Integer" />
-		<property name="personal_i_id_internerledigt" column="PERSONAL_I_ID_INTERNERLEDIGT"
+		<property name="typ_c_nr" column="PROJEKTTYP_C_NR"
+			type="java.lang.String" />
+		<property name="i_prio" column="I_PRIO"
 			type="java.lang.Integer" />
-		<property name="personal_i_id_erlediger" column="PERSONAL_I_ID_ERLEDIGER"
-			type="java.lang.Integer" />
-		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer" />
-		<property name="bereich_i_id" column="BEREICH_I_ID" type="java.lang.Integer" />
-		<property name="typ_c_nr" column="PROJEKTTYP_C_NR" type="java.lang.String" />
-		<property name="i_prio" column="I_PRIO" type="java.lang.Integer" />
 		<property name="status_c_nr" column="PROJEKTSTATUS_C_NR"
 			type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<property name="t_zielwunschdatum" column="T_ZIELWUNSCHDATUM"
 			type="java.util.Date" />
-		<property name="x_freetext" column="X_FREETEXT" type="java.lang.String" />
-		<property name="ansprechpartner_i_id" column="ANSPRECHPARTNER_I_ID"
+		<property name="x_freetext" column="X_FREETEXT"
+			type="java.lang.String" />
+		<property name="ansprechpartner_i_id"
+			column="ANSPRECHPARTNER_I_ID" type="java.lang.Integer" />
+		<property name="i_verrechenbar" column="I_VERRECHENBAR"
 			type="java.lang.Integer" />
-		<property name="b_verrechenbar" column="B_VERRECHENBAR" type="java.lang.Short" />
-		<property name="b_freigegeben" column="B_FREIGEGEBEN" type="java.lang.Short" />
+		<property name="b_freigegeben" column="B_FREIGEGEBEN"
+			type="java.lang.Short" />
 		<property name="t_internerledigt" column="T_INTERNERLEDIGT"
 			type="java.util.Date" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Date" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Date" />
-		<property name="d_dauer" column="F_DAUER" type="java.lang.Double" />
+		<property name="t_realisierung" column="T_REALISIERUNG"
+			type="java.sql.Date" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Date" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Date" />
+		<property name="d_dauer" column="F_DAUER"
+			type="java.lang.Double" />
 		<property name="t_zeit" column="T_ZEIT" type="java.sql.Time" />
-		<property name="t_erledigungsdatum" column="T_ERLEDIGT" type="java.util.Date" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
-		<property name="c_buildnumber" column="C_BUILDNUMBER" type="java.lang.String" />
-		<property name="c_deploynumber" column="C_DEPLOYNUMBER" type="java.lang.String" />
+		<property name="t_erledigungsdatum" column="T_ERLEDIGT"
+			type="java.util.Date" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+		<property name="c_buildnumber" column="C_BUILDNUMBER"
+			type="java.lang.String" />
+		<property name="c_deploynumber" column="C_DEPLOYNUMBER"
+			type="java.lang.String" />
 		<property name="n_umsatzgeplant" column="N_UMSATZGEPLANT"
 			type="java.math.BigDecimal" not-null="false" />
-		<property name="i_wahrscheinlichkeit" column="I_WAHRSCHEINLICHKEIT"
+		<property name="i_wahrscheinlichkeit"
+			column="I_WAHRSCHEINLICHKEIT" type="java.lang.Integer" />
+
+
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
 			type="java.lang.Integer" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrbereich"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRBereich"
+			column="BEREICH_I_ID" insert="false" update="false" />
 
 		<many-to-one name="flrprojektstatus"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus"
@@ -89,41 +124,213 @@
 		<many-to-one name="flrpartner"
 			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
 			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpartnerbetreiber"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID_BETREIBER" insert="false" update="false" />
 		<many-to-one name="flrprojekttextsuche"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche"
 			column="I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrprojekterledigungsgrund"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekterledigungsgrund"
+			column="PROJEKTERLEDIGUNGSGRUND_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrvkfortschritt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRVkfortschritt"
+			column="VKFORTSCHRITT_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrtyp"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRTyp"
+			insert="false" update="false">
+			<column name="PROJEKTTYP_C_NR" />
+			<column name="MANDANT_C_NR" />
+		</many-to-one>
+
+		<set name="technikerset" inverse="true">
+			<key column="PROJEKT_I_ID" />
+			<one-to-many
+				class="com.lp.server.projekt.fastlanereader.generated.FLRProjekttechniker" />
+		</set>
+
+		<set name="historyset" inverse="true">
+			<key column="PROJEKT_I_ID" />
+			<one-to-many
+				class="com.lp.server.projekt.fastlanereader.generated.FLRHistory" />
+		</set>
+
+		<one-to-one name="flrtitelaushistory"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRTitelaushistory"
+			/>
+
+
+
 	</class>
+	
+	
+	<class name="FLRProjektSchnell" table="PROJ_PROJEKT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="kategorie_c_nr" column="KATEGORIE_C_NR"
+			type="java.lang.String" />
+		<property name="c_titel" column="C_TITEL"
+			type="java.lang.String" />
+		<property name="c_dateiname" column="C_DATEINAME"
+			type="java.lang.String" />
+		<property name="personal_i_id_erzeuger"
+			column="PERSONAL_I_ID_ERZEUGER" type="java.lang.Integer" />
+		<property name="personal_i_id_zugewiesener"
+			column="PERSONAL_I_ID_ZUGEWIESENER" type="java.lang.Integer" />
+		<property name="personal_i_id_internerledigt"
+			column="PERSONAL_I_ID_INTERNERLEDIGT" type="java.lang.Integer" />
+		<property name="personal_i_id_erlediger"
+			column="PERSONAL_I_ID_ERLEDIGER" type="java.lang.Integer" />
+		<property name="partner_i_id" column="PARTNER_I_ID"
+			type="java.lang.Integer" />
+		<property name="partner_i_id_betreiber"
+			column="PARTNER_I_ID_BETREIBER" type="java.lang.Integer" />
+		<property name="bereich_i_id" column="BEREICH_I_ID"
+			type="java.lang.Integer" />
+		<property name="typ_c_nr" column="PROJEKTTYP_C_NR"
+			type="java.lang.String" />
+		<property name="i_prio" column="I_PRIO"
+			type="java.lang.Integer" />
+		<property name="status_c_nr" column="PROJEKTSTATUS_C_NR"
+			type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="t_zielwunschdatum" column="T_ZIELWUNSCHDATUM"
+			type="java.util.Date" />
+		<property name="x_freetext" column="X_FREETEXT"
+			type="java.lang.String" />
+		<property name="ansprechpartner_i_id"
+			column="ANSPRECHPARTNER_I_ID" type="java.lang.Integer" />
+		<property name="i_verrechenbar" column="I_VERRECHENBAR"
+			type="java.lang.Integer" />
+		<property name="b_freigegeben" column="B_FREIGEGEBEN"
+			type="java.lang.Short" />
+		<property name="t_internerledigt" column="T_INTERNERLEDIGT"
+			type="java.util.Date" />
+		<property name="t_realisierung" column="T_REALISIERUNG"
+			type="java.sql.Date" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Date" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Date" />
+		<property name="d_dauer" column="F_DAUER"
+			type="java.lang.Double" />
+		<property name="t_zeit" column="T_ZEIT" type="java.sql.Time" />
+		<property name="t_erledigungsdatum" column="T_ERLEDIGT"
+			type="java.util.Date" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+		<property name="c_buildnumber" column="C_BUILDNUMBER"
+			type="java.lang.String" />
+		<property name="c_deploynumber" column="C_DEPLOYNUMBER"
+			type="java.lang.String" />
+		<property name="n_umsatzgeplant" column="N_UMSATZGEPLANT"
+			type="java.math.BigDecimal" not-null="false" />
+		<property name="i_wahrscheinlichkeit"
+			column="I_WAHRSCHEINLICHKEIT" type="java.lang.Integer" />
+
+
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrbereich"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRBereich"
+			column="BEREICH_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrprojektstatus"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus"
+			insert="false" update="false">
+			<column name="PROJEKTSTATUS_C_NR" />
+			<column name="MANDANT_C_NR" />
+		</many-to-one>
+
+
+		<many-to-one name="flrpersonalZugewiesener"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ZUGEWIESENER" insert="false" update="false" />
+		<many-to-one name="flrpersonalErzeuger"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERZEUGER" insert="false" update="false" />
+		<many-to-one name="flrpersonalErlediger"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGER" insert="false" update="false" />
+		<many-to-one name="flransprechpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner"
+			column="ANSPRECHPARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpartnerbetreiber"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID_BETREIBER" insert="false" update="false" />
+		<many-to-one name="flrprojekttextsuche"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche"
+			column="I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrprojekterledigungsgrund"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekterledigungsgrund"
+			column="PROJEKTERLEDIGUNGSGRUND_I_ID" insert="false" update="false" />
+
+
+
+
+
+
+	</class>
+	
+	
 	<class name="FLRProjektQueue" table="PROJ_PROJEKT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="kategorie_c_nr" column="KATEGORIE_C_NR" type="java.lang.String" />
-		<property name="c_titel" column="C_TITEL" type="java.lang.String" />
-		<property name="personal_i_id_erzeuger" column="PERSONAL_I_ID_ERZEUGER"
+		<property name="kategorie_c_nr" column="KATEGORIE_C_NR"
+			type="java.lang.String" />
+		<property name="c_titel" column="C_TITEL"
+			type="java.lang.String" />
+		<property name="personal_i_id_erzeuger"
+			column="PERSONAL_I_ID_ERZEUGER" type="java.lang.Integer" />
+		<property name="personal_i_id_zugewiesener"
+			column="PERSONAL_I_ID_ZUGEWIESENER" type="java.lang.Integer" />
+		<property name="personal_i_id_erlediger"
+			column="PERSONAL_I_ID_ERLEDIGER" type="java.lang.Integer" />
+		<property name="partner_i_id" column="PARTNER_I_ID"
 			type="java.lang.Integer" />
-		<property name="personal_i_id_zugewiesener" column="PERSONAL_I_ID_ZUGEWIESENER"
+		<property name="typ_c_nr" column="PROJEKTTYP_C_NR"
+			type="java.lang.String" />
+		<property name="i_prio" column="I_PRIO"
 			type="java.lang.Integer" />
-		<property name="personal_i_id_erlediger" column="PERSONAL_I_ID_ERLEDIGER"
-			type="java.lang.Integer" />
-		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer" />
-		<property name="typ_c_nr" column="PROJEKTTYP_C_NR" type="java.lang.String" />
-		<property name="i_prio" column="I_PRIO" type="java.lang.Integer" />
 		<property name="status_c_nr" column="PROJEKTSTATUS_C_NR"
 			type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<property name="t_zielwunschdatum" column="T_ZIELWUNSCHDATUM"
 			type="java.util.Date" />
-		<property name="x_freetext" column="X_FREETEXT" type="java.lang.String" />
-		<property name="ansprechpartner_i_id" column="ANSPRECHPARTNER_I_ID"
+		<property name="x_freetext" column="X_FREETEXT"
+			type="java.lang.String" />
+		<property name="ansprechpartner_i_id"
+			column="ANSPRECHPARTNER_I_ID" type="java.lang.Integer" />
+		<property name="i_verrechenbar" column="I_VERRECHENBAR"
 			type="java.lang.Integer" />
-		<property name="b_verrechenbar" column="B_VERRECHENBAR" type="java.lang.Short" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Date" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Date" />
-		<property name="d_dauer" column="F_DAUER" type="java.lang.Double" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Date" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Date" />
+		<property name="d_dauer" column="F_DAUER"
+			type="java.lang.Double" />
 		<property name="t_zeit" column="T_ZEIT" type="java.sql.Time" />
-		<property name="t_erledigungsdatum" column="T_ERLEDIGT" type="java.util.Date" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="t_erledigungsdatum" column="T_ERLEDIGT"
+			type="java.util.Date" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 		<many-to-one name="flrpersonalZugewiesener"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID_ZUGEWIESENER" insert="false" update="false" />
@@ -142,36 +349,104 @@
 		<many-to-one name="flrprojekttextsuche"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche"
 			column="I_ID" insert="false" update="false" />
+
+		<set name="technikerset" inverse="true">
+			<key column="PROJEKT_I_ID" />
+			<one-to-many
+				class="com.lp.server.projekt.fastlanereader.generated.FLRProjekttechniker" />
+		</set>
+
 	</class>
-	<class name="FLRProjekterledigungsgrund" table="PROJ_PROJEKTERLEDIGUNGSGRUND">
+	<class name="FLRProjekterledigungsgrund"
+		table="PROJ_PROJEKTERLEDIGUNGSGRUND">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 	</class>
 	<class name="FLRProjekttextsuche" table="PROJ_TEXTSUCHE">
 		<id name="i_id" column="I_ID" type="java.lang.String">
 			<generator class="native" />
 		</id>
 		<property name="c_typ" column="C_TYP" type="java.lang.String" />
-		<property name="c_suche" column="C_SUCHE" type="java.lang.String" />
+		<property name="c_suche" column="C_SUCHE"
+			type="java.lang.String" />
 	</class>
+	
+	
+	<class name="FLRTitelaushistory" table="PROJ_TITELAUSHISTORY">
+		<id name="projekt_i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_titel" column="C_TITEL" type="java.lang.String" />
+	</class>
+	
+
 	<class name="FLRHistoryart" table="PROJ_HISTORYART">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="i_rot" column="I_ROT" type="java.lang.Integer" />
-		<property name="i_gruen" column="I_GRUEN" type="java.lang.Integer" />
-		<property name="i_blau" column="I_BLAU" type="java.lang.Integer" />
-		<property name="b_aktualisierezieltermin" column="B_AKTUALISIEREZIELTERMIN"
-			type="java.lang.Short" />
+		<property name="i_rot" column="I_ROT"
+			type="java.lang.Integer" />
+		<property name="i_gruen" column="I_GRUEN"
+			type="java.lang.Integer" />
+		<property name="i_blau" column="I_BLAU"
+			type="java.lang.Integer" />
+		<property name="b_aktualisierezieltermin"
+			column="B_AKTUALISIEREZIELTERMIN" type="java.lang.Short" />
+		<property name="b_in_auswahlliste_anzeigen"
+			column="B_IN_AUSWAHLLISTE_ANZEIGEN" type="java.lang.Short" />
+			
+			
+			
 	</class>
+
+
+	<class name="FLRVkfortschritt" table="PROJ_VKFORTSCHRITT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+
+		<many-to-one name="flrleadstatus"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRLeadstatus"
+			column="LEADSTATUS_I_ID" insert="false" update="false" />
+
+		<set name="vkfortschrittspr_set" inverse="true">
+			<key column="VKFORTSCHRITT_I_ID" />
+			<one-to-many
+				class="com.lp.server.projekt.fastlanereader.generated.FLRVkfortschrittspr" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+
+	</class>
+
+	<class name="FLRVkfortschrittspr" table="PROJ_VKFORTSCHRITTSPR">
+		<composite-id>
+			<key-many-to-one name="vkfortschritt"
+				column="VKFORTSCHRITT_I_ID"
+				class="com.lp.server.projekt.fastlanereader.generated.FLRVkfortschritt" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
+
 	<class name="FLRKategorie" table="PROJ_KATEGORIE">
 		<composite-id name="PK"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRKategoriePK">
-			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
 				type="java.lang.String" />
 		</composite-id>
@@ -182,13 +457,15 @@
 			</key>
 			<one-to-many
 				class="com.lp.server.projekt.fastlanereader.generated.FLRKategoriespr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 		<property name="c_nr" column="C_NR" type="java.lang.String"
 			insert="false" update="false" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			insert="false" update="false" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" insert="false" update="false" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLRKategoriespr" table="PROJ_KATEGORIESPR">
 		<composite-id>
@@ -198,17 +475,19 @@
 				<column name="MANDANT_C_NR" />
 			</key-many-to-one>
 		</composite-id>
-		<property name="kategorie_c_nr" column="KATEGORIE_C_NR" type="java.lang.String"
-			insert="false" update="false" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			insert="false" update="false" />
-		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="kategorie_c_nr" column="KATEGORIE_C_NR"
+			type="java.lang.String" insert="false" update="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" insert="false" update="false" />
+		<property name="locale_c_nr" column="LOCALE_C_NR"
+			type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
 	<class name="FLRTyp" table="PROJ_PROJEKTTYP">
 		<composite-id name="PK"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRTypPK">
-			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
 				type="java.lang.String" />
 		</composite-id>
@@ -219,13 +498,15 @@
 			</key>
 			<one-to-many
 				class="com.lp.server.projekt.fastlanereader.generated.FLRTypspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 		<property name="c_nr" column="C_NR" type="java.lang.String"
 			insert="false" update="false" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			insert="false" update="false" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" insert="false" update="false" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLRBereich" table="PROJ_BEREICH">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -233,9 +514,26 @@
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String"
 			insert="false" update="false" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" insert="false" update="false" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+		<property name="b_projekt_mit_betreiber"
+			column="B_PROJEKT_MIT_BETREIBER" type="java.lang.Short" />
+		<property name="b_projekt_mit_artikel"
+			column="B_PROJEKT_MIT_ARTIKEL" type="java.lang.Short" />
+		<property name="b_duchgefuehrt_von_in_offene"
+			column="B_DURCHGEFUEHRT_VON_IN_OFFENE" type="java.lang.Short" />
+	</class>
+
+	<class name="FLRLeadstatus" table="PROJ_LEADSTATUS">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String"
 			insert="false" update="false" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLRTypspr" table="PROJ_PROJEKTTYPSPR">
 		<composite-id>
@@ -247,25 +545,36 @@
 		</composite-id>
 		<property name="projekttyp_c_nr" column="PROJEKTTYP_C_NR"
 			type="java.lang.String" insert="false" update="false" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			insert="false" update="false" />
-		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" insert="false" update="false" />
+		<property name="locale_c_nr" column="LOCALE_C_NR"
+			type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
 	<class name="FLRHistory" table="PROJ_HISTORY">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer"
-			not-null="false" />
-		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer"
-			not-null="false" />
-		<property name="t_belegdatum" column="T_BELEGDATUM" type="java.util.Date"
-			not-null="false" />
-		<property name="x_text" column="X_TEXT" type="java.lang.String"
-			not-null="false" />
-		<property name="c_titel" column="C_TITEL" type="java.lang.String"
-			not-null="false" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="t_belegdatum" column="T_BELEGDATUM"
+			type="java.util.Date" not-null="false" />
+		<property name="x_text" column="X_TEXT"
+			type="java.lang.String" not-null="false" />
+		<property name="c_titel" column="C_TITEL"
+			type="java.lang.String" not-null="false" />
+		<property name="b_html" column="B_HTML"
+			type="java.lang.Short" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.util.Date" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.util.Date" />
+		<property name="f_erledigungsgrad" column="F_ERLEDIGUNGSGRAD"
+			type="java.lang.Double" />
+		<property name="n_dauer_geplant" column="N_DAUER_GEPLANT"
+			type="java.math.BigDecimal" not-null="false" />
 		<many-to-one name="flrhistoryart"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRHistoryart"
 			column="HISTORYART_I_ID" insert="false" update="false" />
@@ -275,17 +584,80 @@
 		<many-to-one name="flrprojekt"
 			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
 			column="PROJEKT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal_aendern"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_AENDERN" insert="false" update="false" />
+		<many-to-one name="flrpersonal_wirddurchgefuehrtvon"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_WIRDDURCHGEFUEHRT" insert="false"
+			update="false" />
+
 	</class>
 	<class name="FLRProjektstatus" table="PROJ_PROJEKTSTATUS">
 		<composite-id>
-			<key-property name="status_c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="status_c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
 				type="java.lang.String" />
 		</composite-id>
 
-		<property name="b_erledigt" column="B_ERLEDIGT" type="java.lang.Short" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="b_erledigt" column="B_ERLEDIGT"
+			type="java.lang.Short" />
+			<property name="b_gesperrt" column="B_GESPERRT"
+			type="java.lang.Short" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 	</class>
+
+	<class name="FLRProjekttechniker" table="PROJ_PROJEKTTECHNIKER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRProjekttaetigkeit" table="PROJ_PROJEKTTAETIGKEIT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRProjektgruppe" table="PROJ_PROJEKTGRUPPE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="projekt_i_id_vater"
+			column="PROJEKT_I_ID_VATER" type="java.lang.Integer" />
+		<property name="projekt_i_id_kind" column="PROJEKT_I_ID_KIND"
+			type="java.lang.Integer" />
+		<many-to-one name="flrprojekt_vater"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID_VATER" insert="false" update="false" />
+		<many-to-one name="flrprojekt_kind"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID_KIND" insert="false" update="false" />
+
+	</class>
+
 	<filter-def name="filterLocale">
 		<filter-param name="paramLocale" type="java.lang.String" />
 	</filter-def>

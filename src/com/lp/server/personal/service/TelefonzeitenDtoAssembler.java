@@ -54,6 +54,22 @@ public class TelefonzeitenDtoAssembler {
 			telefonzeitenDto.setAnsprechpartnerIId(telefonzeiten
 					.getAnsprechpartnerIId());
 			telefonzeitenDto.setProjektIId(telefonzeiten.getProjektIId());
+			
+			telefonzeitenDto.setFVerrechenbar(telefonzeiten.getFVerrechenbar());
+			telefonzeitenDto.setPersonalIIdErledigt(telefonzeiten.getPersonalIIdErledigt());
+			telefonzeitenDto.setTErledigt(telefonzeiten.getTErledigt());
+			telefonzeitenDto.setCTelefonnrGewaehlt(telefonzeiten.getCTelefonnrGewaehlt());
+			
+			telefonzeitenDto.setCTitel(telefonzeiten.getCTitel());
+			telefonzeitenDto.setTWiedervorlage(telefonzeiten.getTWiedervorlage());
+			telefonzeitenDto.setTWiedervorlageErledigt(telefonzeiten.getTWiedervorlageErledigt());
+			telefonzeitenDto.setPersonalIIdZugewiesener(telefonzeiten.getPersonalIIdZugewiesener());
+			telefonzeitenDto.setKontaktartIId(telefonzeiten.getKontaktartIId());
+			
+			telefonzeitenDto.setAuftragIId(telefonzeiten.getAuftragIId());
+			telefonzeitenDto.setAngebotIId(telefonzeiten.getAngebotIId());
+			telefonzeitenDto.setFDauerUebersteuert(telefonzeiten.getFDauerUebersteuert());
+			
 		}
 		return telefonzeitenDto;
 	}

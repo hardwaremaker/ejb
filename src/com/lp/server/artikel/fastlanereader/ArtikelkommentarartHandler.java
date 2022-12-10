@@ -220,10 +220,20 @@ public class ArtikelkommentarartHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" "
-							+ filterKriterien[i].kritName);
+					
+					
+					if (filterKriterien[i].isBIgnoreCase()) {
+						where.append(" lower(" + filterKriterien[i].kritName + ")");
+					} else {
+						where.append(" " + filterKriterien[i].kritName);
+					}
 					where.append(" " + filterKriterien[i].operator);
-					where.append(" " + filterKriterien[i].value);
+					if (filterKriterien[i].isBIgnoreCase()) {
+						where.append(" " + filterKriterien[i].value.toLowerCase());
+					} else {
+						where.append(" " + filterKriterien[i].value);
+					}
+					
 				}
 			}
 			if (filterAdded) {

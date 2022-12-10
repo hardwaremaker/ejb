@@ -49,6 +49,16 @@ public class AuftragseriennrnDto implements Serializable {
 	private Integer iVersionNr;
 	private Timestamp tAnlegen;
 	private Integer personalIIdAnlegen;
+	
+	private String auftragCNr_NOT_IN_DB;
+
+	public String getAuftragCNr_NOT_IN_DB() {
+		return auftragCNr_NOT_IN_DB;
+	}
+
+	public void setAuftragCNr_NOT_IN_DB(String auftragCNr_NOT_IN_DB) {
+		this.auftragCNr_NOT_IN_DB = auftragCNr_NOT_IN_DB;
+	}
 
 	public Integer getIId() {
 		return iId;

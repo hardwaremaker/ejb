@@ -38,11 +38,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.anfrage.ejb.Anfrageposition;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 
 public class AnfragepositionDtoAssembler {
 	public static AnfragepositionDto createDto(Anfrageposition anfrageposition) {
 		AnfragepositionDto anfragepositionDto = new AnfragepositionDto();
 		if (anfrageposition != null) {
+			anfragepositionDto.setUsecaseIIdQuelle(QueryParameters.UC_ID_ANFRAGEPOSITION);
 			anfragepositionDto.setIId(anfrageposition.getIId());
 			anfragepositionDto.setBelegIId(anfrageposition.getAnfrageIId());
 			anfragepositionDto.setISort(anfrageposition.getISort());
@@ -60,7 +62,10 @@ public class AnfragepositionDtoAssembler {
 			anfragepositionDto.setEinheitCNr(anfrageposition.getEinheitCNr());
 			anfragepositionDto.setNRichtpreis(anfrageposition.getNRichtpreis());
 			anfragepositionDto.setCZusatzbez(anfrageposition.getCZbez());
-			
+			anfragepositionDto.setAnfragepositionIdZugehoerig(anfrageposition
+					.getAnfragepositionIdZugehoerig());
+			anfragepositionDto.setLossollmaterialIId(anfrageposition.getLossollmaterialIId());
+
 		}
 		return anfragepositionDto;
 	}

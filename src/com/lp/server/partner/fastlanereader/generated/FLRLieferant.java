@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.partner.fastlanereader.generated;
 
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
@@ -76,6 +44,12 @@ public class FLRLieferant implements Serializable {
     private Short b_zollimportpapier;
 
     /** nullable persistent field */
+    private Short b_versteckterkunde;
+
+    /** nullable persistent field */
+    private Integer i_liefertag;
+
+    /** nullable persistent field */
     private Short b_beurteilen;
 
     /** nullable persistent field */
@@ -97,7 +71,7 @@ public class FLRLieferant implements Serializable {
     private Set set_liefergruppen;
 
     /** full constructor */
-    public FLRLieferant(String mandant_c_nr, String n_mindestbestellwert, String n_kredit, String n_rabatt, String c_hinweisintern, String c_hinweisextern, String waehrung_c_nr, String x_kommentar, Short b_moeglicherlieferant, Short b_zollimportpapier, Short b_beurteilen, Date t_bestellsperream, Date t_freigabe, Integer konto_i_id_kreditorenkonto, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner, FLRFinanzKonto flrkonto, Set set_liefergruppen) {
+    public FLRLieferant(String mandant_c_nr, String n_mindestbestellwert, String n_kredit, String n_rabatt, String c_hinweisintern, String c_hinweisextern, String waehrung_c_nr, String x_kommentar, Short b_moeglicherlieferant, Short b_zollimportpapier, Short b_versteckterkunde, Integer i_liefertag, Short b_beurteilen, Date t_bestellsperream, Date t_freigabe, Integer konto_i_id_kreditorenkonto, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner, FLRFinanzKonto flrkonto, Set set_liefergruppen) {
         this.mandant_c_nr = mandant_c_nr;
         this.n_mindestbestellwert = n_mindestbestellwert;
         this.n_kredit = n_kredit;
@@ -108,6 +82,8 @@ public class FLRLieferant implements Serializable {
         this.x_kommentar = x_kommentar;
         this.b_moeglicherlieferant = b_moeglicherlieferant;
         this.b_zollimportpapier = b_zollimportpapier;
+        this.b_versteckterkunde = b_versteckterkunde;
+        this.i_liefertag = i_liefertag;
         this.b_beurteilen = b_beurteilen;
         this.t_bestellsperream = t_bestellsperream;
         this.t_freigabe = t_freigabe;
@@ -212,6 +188,22 @@ public class FLRLieferant implements Serializable {
 
     public void setB_zollimportpapier(Short b_zollimportpapier) {
         this.b_zollimportpapier = b_zollimportpapier;
+    }
+
+    public Short getB_versteckterkunde() {
+        return this.b_versteckterkunde;
+    }
+
+    public void setB_versteckterkunde(Short b_versteckterkunde) {
+        this.b_versteckterkunde = b_versteckterkunde;
+    }
+
+    public Integer getI_liefertag() {
+        return this.i_liefertag;
+    }
+
+    public void setI_liefertag(Integer i_liefertag) {
+        this.i_liefertag = i_liefertag;
     }
 
     public Short getB_beurteilen() {

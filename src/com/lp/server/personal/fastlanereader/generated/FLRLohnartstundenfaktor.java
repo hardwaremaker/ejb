@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import java.io.Serializable;
@@ -46,6 +14,15 @@ public class FLRLohnartstundenfaktor implements Serializable {
     private Double f_faktor;
 
     /** nullable persistent field */
+    private Integer zeitmodell_i_id;
+
+    /** nullable persistent field */
+    private Integer taetigkeit_i_id;
+
+    /** nullable persistent field */
+    private Integer schichtzeit_i_id;
+
+    /** nullable persistent field */
     private com.lp.server.personal.fastlanereader.generated.FLRLohnart flrlohnart;
 
     /** nullable persistent field */
@@ -54,12 +31,19 @@ public class FLRLohnartstundenfaktor implements Serializable {
     /** nullable persistent field */
     private com.lp.server.personal.fastlanereader.generated.FLRLohnstundenart flrlohnstundenart;
 
+    /** nullable persistent field */
+    private com.lp.server.personal.fastlanereader.generated.FLRZeitmodell flrzeitmodell;
+
     /** full constructor */
-    public FLRLohnartstundenfaktor(Double f_faktor, com.lp.server.personal.fastlanereader.generated.FLRLohnart flrlohnart, com.lp.server.personal.fastlanereader.generated.FLRTagesart flrtagesart, com.lp.server.personal.fastlanereader.generated.FLRLohnstundenart flrlohnstundenart) {
+    public FLRLohnartstundenfaktor(Double f_faktor, Integer zeitmodell_i_id, Integer taetigkeit_i_id, Integer schichtzeit_i_id, com.lp.server.personal.fastlanereader.generated.FLRLohnart flrlohnart, com.lp.server.personal.fastlanereader.generated.FLRTagesart flrtagesart, com.lp.server.personal.fastlanereader.generated.FLRLohnstundenart flrlohnstundenart, com.lp.server.personal.fastlanereader.generated.FLRZeitmodell flrzeitmodell) {
         this.f_faktor = f_faktor;
+        this.zeitmodell_i_id = zeitmodell_i_id;
+        this.taetigkeit_i_id = taetigkeit_i_id;
+        this.schichtzeit_i_id = schichtzeit_i_id;
         this.flrlohnart = flrlohnart;
         this.flrtagesart = flrtagesart;
         this.flrlohnstundenart = flrlohnstundenart;
+        this.flrzeitmodell = flrzeitmodell;
     }
 
     /** default constructor */
@@ -80,6 +64,30 @@ public class FLRLohnartstundenfaktor implements Serializable {
 
     public void setF_faktor(Double f_faktor) {
         this.f_faktor = f_faktor;
+    }
+
+    public Integer getZeitmodell_i_id() {
+        return this.zeitmodell_i_id;
+    }
+
+    public void setZeitmodell_i_id(Integer zeitmodell_i_id) {
+        this.zeitmodell_i_id = zeitmodell_i_id;
+    }
+
+    public Integer getTaetigkeit_i_id() {
+        return this.taetigkeit_i_id;
+    }
+
+    public void setTaetigkeit_i_id(Integer taetigkeit_i_id) {
+        this.taetigkeit_i_id = taetigkeit_i_id;
+    }
+
+    public Integer getSchichtzeit_i_id() {
+        return this.schichtzeit_i_id;
+    }
+
+    public void setSchichtzeit_i_id(Integer schichtzeit_i_id) {
+        this.schichtzeit_i_id = schichtzeit_i_id;
     }
 
     public com.lp.server.personal.fastlanereader.generated.FLRLohnart getFlrlohnart() {
@@ -104,6 +112,14 @@ public class FLRLohnartstundenfaktor implements Serializable {
 
     public void setFlrlohnstundenart(com.lp.server.personal.fastlanereader.generated.FLRLohnstundenart flrlohnstundenart) {
         this.flrlohnstundenart = flrlohnstundenart;
+    }
+
+    public com.lp.server.personal.fastlanereader.generated.FLRZeitmodell getFlrzeitmodell() {
+        return this.flrzeitmodell;
+    }
+
+    public void setFlrzeitmodell(com.lp.server.personal.fastlanereader.generated.FLRZeitmodell flrzeitmodell) {
+        this.flrzeitmodell = flrzeitmodell;
     }
 
     public String toString() {

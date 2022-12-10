@@ -50,10 +50,68 @@ public class BestellvorschlagUeberleitungKriterienDto implements Serializable {
 	private Integer kostenstelleIId;
 	private boolean bAbrufeZuRahmen;
 	private boolean bRichtpreisUebernehmen;
+	private boolean bInclGesperrteArtikel;
+	
+	public boolean isBInclGesperrteArtikel() {
+		return bInclGesperrteArtikel;
+	}
+
+	public void setBInclGesperrteArtikel(boolean bInclGesperrteArtikel) {
+		this.bInclGesperrteArtikel = bInclGesperrteArtikel;
+	}
+
+	private boolean bRahmenbestellungenErzeugen;
+	
+	public boolean isbRahmenbestellungenErzeugen() {
+		return bRahmenbestellungenErzeugen;
+	}
+
+	public void setbRahmenbestellungenErzeugen(boolean bRahmenbestellungenErzeugen) {
+		this.bRahmenbestellungenErzeugen = bRahmenbestellungenErzeugen;
+	}
+
+	private boolean bGemeinsameArtikelBestellen;
+	
+	public boolean isbGemeinsameArtikelBestellen() {
+		return bGemeinsameArtikelBestellen;
+	}
+
+	public void setbGemeinsameArtikelBestellen(boolean bGemeinsameArtikelBestellen) {
+		this.bGemeinsameArtikelBestellen = bGemeinsameArtikelBestellen;
+	}
+
+	private boolean bNurMarkierte;
+	
+	public boolean isbNurMarkierte() {
+		return bNurMarkierte;
+	}
+
+	public void setbNurMarkierte(boolean bNurMarkierte) {
+		this.bNurMarkierte = bNurMarkierte;
+	}
+
+	private boolean bErsatztypenUebernehmen;
+	public boolean isBErsatztypenUebernehmen() {
+		return bErsatztypenUebernehmen;
+	}
+
+	public void setBErsatztypenUebernehmen(boolean bErsatztypenUebernehmen) {
+		this.bErsatztypenUebernehmen = bErsatztypenUebernehmen;
+	}
+
 	private boolean bBeruecksichtigeProjektklammer;
+	private Integer partnerIIdStandort;
 
 	
 	
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
+
 	public boolean isBBeruecksichtigeProjektklammer() {
 		return bBeruecksichtigeProjektklammer;
 	}

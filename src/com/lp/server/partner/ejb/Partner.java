@@ -43,19 +43,20 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
 import com.lp.server.util.ICBez;
 import com.lp.server.util.IIId;
 
 @NamedQueries( {
 	@NamedQuery(name = "PartnerfindByCName1", query = "SELECT OBJECT(C) FROM Partner c WHERE c.cName1nachnamefirmazeile1 like ?1"),
-	@NamedQuery(name = PartnerQuery.ByUID, query = "SELECT OBJECT(O) FROM Partner o WHERE REPLACE(o.cUid, ' ', '') like :uid"),
-	@NamedQuery(name = PartnerQuery.ByLowerCName1, query = "SELECT OBJECT(C) FROM Partner c WHERE LOWER(c.cName1nachnamefirmazeile1) like :cname"),
-	@NamedQuery(name = PartnerQuery.ByKbez, query = "SELECT OBJECT(C) FROM Partner c WHERE LOWER(c.cKbez) like :kbez"),
-	@NamedQuery(name = PartnerQuery.ByEmail, query = "SELECT OBJECT(C) FROM Partner c WHERE LOWER(c.cEmail) like :email")
+	@NamedQuery(name = PartnerQuery.ByUID, query = "SELECT OBJECT(O) FROM Partner o WHERE REPLACE(o.cUid, ' ', '') like :uid and o.bVersteckt=0"),
+	@NamedQuery(name = PartnerQuery.ByLowerCName1, query = "SELECT OBJECT(C) FROM Partner c WHERE LOWER(c.cName1nachnamefirmazeile1) like :cname AND c.bVersteckt=0"),
+	@NamedQuery(name = PartnerQuery.ByKbez, query = "SELECT OBJECT(C) FROM Partner c WHERE LOWER(c.cKbez) like :kbez and c.bVersteckt=0"),
+	@NamedQuery(name = PartnerQuery.ByEmail, query = "SELECT OBJECT(C) FROM Partner c WHERE LOWER(c.cEmail) like :email and c.bVersteckt=0")
 	
 	})
 @Entity
-@Table(name = "PART_PARTNER")
+@Table(name = ITablenames.PART_PARTNER)
 public class Partner implements Serializable, IIId, ICBez {	
 	@Id
 	@Column(name = "I_ID")
@@ -253,6 +254,40 @@ public class Partner implements Serializable, IIId, ICBez {
 	@Column(name = "VERSANDWEG_I_ID")
 	private Integer versandwegIId ;
 
+	@Column(name = "C_EXCHANGEID")
+	private String cExchangeid;
+	@Column(name = "T_ZULETZT_EXPORTIERT")
+	private Timestamp tZuletztExportiert;
+	
+	
+	public String getCExchangeid() {
+		return cExchangeid;
+	}
+
+	public void setCExchangeid(String cExchangeid) {
+		this.cExchangeid = cExchangeid;
+	}
+
+	public Timestamp getTZuletztExportiert() {
+		return tZuletztExportiert;
+	}
+
+	public void setTZuletztExportiert(Timestamp tZuletztExportiert) {
+		this.tZuletztExportiert = tZuletztExportiert;
+	}
+
+
+	@Column(name = "NEWSLETTERGRUND_I_ID")
+	private Integer newslettergrundIId;
+	
+	public void setNewslettergrundIId(Integer newslettergrundIId) {
+		this.newslettergrundIId = newslettergrundIId;
+	}
+
+
+	public Integer getNewslettergrundIId() {
+		return newslettergrundIId;
+	}
 	
 	public Double getFGmtversatz() {
 		return fGmtversatz;

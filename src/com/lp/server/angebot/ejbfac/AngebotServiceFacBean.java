@@ -32,27 +32,70 @@
  ******************************************************************************/
 package com.lp.server.angebot.ejbfac;
 
-import java.rmi.*;
-import java.util.*;
-
-import com.lp.server.angebot.ejb.*;
-import com.lp.server.angebot.service.*;
-import com.lp.server.artikel.ejb.Farbcode;
-import com.lp.server.system.ejb.Einheitspr;
-import com.lp.server.system.ejb.EinheitsprPK;
-import com.lp.server.system.pkgenerator.*;
-import com.lp.server.util.*;
-import com.lp.util.*;
-import com.lp.server.system.service.MediaFac;
-import com.lp.server.system.service.TheClientDto;
+import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+
+import com.lp.server.angebot.ejb.Akquisestatus;
+import com.lp.server.angebot.ejb.Angebotart;
+import com.lp.server.angebot.ejb.Angebotartspr;
+import com.lp.server.angebot.ejb.AngebotartsprPK;
+import com.lp.server.angebot.ejb.Angebotauftrag;
+import com.lp.server.angebot.ejb.Angeboteinheit;
+import com.lp.server.angebot.ejb.Angeboterledigungsgrund;
+import com.lp.server.angebot.ejb.Angeboterledigungsgrundspr;
+import com.lp.server.angebot.ejb.AngeboterledigungsgrundsprPK;
+import com.lp.server.angebot.ejb.Angebotpositionart;
+import com.lp.server.angebot.ejb.Angebotstatus;
+import com.lp.server.angebot.ejb.Angebottext;
+import com.lp.server.angebot.service.AkquisestatusDto;
+import com.lp.server.angebot.service.AkquisestatusDtoAssembler;
+import com.lp.server.angebot.service.AngebotDto;
+import com.lp.server.angebot.service.AngebotServiceFac;
+import com.lp.server.angebot.service.AngebotartDto;
+import com.lp.server.angebot.service.AngebotartDtoAssembler;
+import com.lp.server.angebot.service.AngebotartsprDto;
+import com.lp.server.angebot.service.AngebotartsprDtoAssembler;
+import com.lp.server.angebot.service.AngebotauftragDto;
+import com.lp.server.angebot.service.AngeboteinheitDto;
+import com.lp.server.angebot.service.AngeboteinheitDtoAssembler;
+import com.lp.server.angebot.service.AngeboterledigungsgrundDto;
+import com.lp.server.angebot.service.AngeboterledigungsgrundDtoAssembler;
+import com.lp.server.angebot.service.AngeboterledigungsgrundsprDto;
+import com.lp.server.angebot.service.AngeboterledigungsgrundsprDtoAssembler;
+import com.lp.server.angebot.service.AngebotpositionDto;
+import com.lp.server.angebot.service.AngebotpositionartDto;
+import com.lp.server.angebot.service.AngebotpositionartDtoAssembler;
+import com.lp.server.angebot.service.AngebotstatusDto;
+import com.lp.server.angebot.service.AngebotstatusDtoAssembler;
+import com.lp.server.angebot.service.AngebottextDto;
+import com.lp.server.angebot.service.AngebottextDtoAssembler;
+import com.lp.server.auftrag.ejb.Verrechenbar;
+import com.lp.server.fertigung.ejb.Zusatzstatus;
+import com.lp.server.fertigung.service.ZusatzstatusDto;
+import com.lp.server.system.ejb.Einheitspr;
+import com.lp.server.system.ejb.EinheitsprPK;
+import com.lp.server.system.ejb.Status;
+import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
+import com.lp.server.system.service.MediaFac;
+import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.Facade;
+import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 @Stateless
 public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
@@ -65,16 +108,12 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Einen neuen Angebotstext anlegen.
 	 * 
-	 * @param angebottextDtoI
-	 *            das neue Angebot
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param angebottextDtoI das neue Angebot
+	 * @param theClientDto    der aktuelle Benutzer
 	 * @return Integer PK des neuen Angebots
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Integer createAngebottext(AngebottextDto angebottextDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createAngebottext(AngebottextDto angebottextDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkAngebottextDto(angebottextDtoI);
 		myLogger.logData(angebottextDtoI);
@@ -82,16 +121,12 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		// den PK erzeugen und setzen
 		Integer iIdAngebottext = null;
 
-		iIdAngebottext = getPKGeneratorObj().getNextPrimaryKey(
-				PKConst.PK_ANGEBOTTEXT);
+		iIdAngebottext = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_ANGEBOTTEXT);
 		angebottextDtoI.setIId(iIdAngebottext);
 
 		try {
-			Angebottext angebottext = new Angebottext(angebottextDtoI.getIId(),
-					angebottextDtoI.getMandantCNr(),
-					angebottextDtoI.getLocaleCNr(),
-					angebottextDtoI.getMediaartCNr(),
-					angebottextDtoI.getXTextinhalt());
+			Angebottext angebottext = new Angebottext(angebottextDtoI.getIId(), angebottextDtoI.getMandantCNr(),
+					angebottextDtoI.getLocaleCNr(), angebottextDtoI.getMediaartCNr(), angebottextDtoI.getXTextinhalt());
 			em.persist(angebottext);
 			em.flush();
 
@@ -106,27 +141,18 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Einen bestehenden Angebotstext loeschen.
 	 * 
-	 * @param angebottextDtoI
-	 *            das zu loeschende Angebot
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param angebottextDtoI das zu loeschende Angebot
+	 * @param theClientDto    der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeAngebottext(AngebottextDto angebottextDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeAngebottext(AngebottextDto angebottextDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebottextDto(angebottextDtoI);
 		myLogger.logData(angebottextDtoI);
-		Angebottext toRemove = em.find(Angebottext.class,
-				angebottextDtoI.getIId());
+		Angebottext toRemove = em.find(Angebottext.class, angebottextDtoI.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
-							"Fehler bei removeAngebottext. Angebottext mit iid "
-									+ angebottextDtoI.getIId()
-									+ " und Textinhalt "
-									+ angebottextDtoI.getXTextinhalt()
-									+ " konnte nicht gefunden werden"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					new Exception("Fehler bei removeAngebottext. Angebottext mit iid " + angebottextDtoI.getIId()
+							+ " und Textinhalt " + angebottextDtoI.getXTextinhalt() + " konnte nicht gefunden werden"));
 		}
 		try {
 			em.remove(toRemove);
@@ -139,47 +165,36 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Einen bestehenden Angebotstext aktualisieren.
 	 * 
-	 * @param angebottextDtoI
-	 *            der bestehende Angebotstext
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param angebottextDtoI der bestehende Angebotstext
+	 * @param theClientDto    der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateAngebottext(AngebottextDto angebottextDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateAngebottext(AngebottextDto angebottextDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebottextDto(angebottextDtoI);
 		myLogger.logData(angebottextDtoI);
-		Angebottext angebottext = em.find(Angebottext.class,
-				angebottextDtoI.getIId());
+		Angebottext angebottext = em.find(Angebottext.class, angebottextDtoI.getIId());
 		if (angebottext == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					new Exception(
-							"Fehler bei updateAngebottext. Angebottext mit iid "
-									+ angebottextDtoI.getIId()
-									+ "konnte nicht gefunden werden. AngebottextDto.toString() :"
-									+ angebottextDtoI.toString()));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					new Exception("Fehler bei updateAngebottext. Angebottext mit iid " + angebottextDtoI.getIId()
+							+ "konnte nicht gefunden werden. AngebottextDto.toString() :"
+							+ angebottextDtoI.toString()));
 		}
 		setAngebottextFromAngebottextDto(angebottext, angebottextDtoI);
 	}
 
-	public AngebottextDto angebottextFindByPrimaryKey(Integer iIdAngebottextI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public AngebottextDto angebottextFindByPrimaryKey(Integer iIdAngebottextI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		AngebottextDto textDto = null;
 		Angebottext text = em.find(Angebottext.class, iIdAngebottextI);
 		if (text == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
-							"Fehler bei angebottextFindByPrimaryKey. Es gibt keinen Text mit iid "
-									+ iIdAngebottextI));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
+					"Fehler bei angebottextFindByPrimaryKey. Es gibt keinen Text mit iid " + iIdAngebottextI));
 		}
 		textDto = assembleAngebottextDto(text);
 		return textDto;
 	}
 
-	private void setAngebottextFromAngebottextDto(Angebottext angebottext,
-			AngebottextDto angebottextDto) {
+	private void setAngebottextFromAngebottextDto(Angebottext angebottext, AngebottextDto angebottextDto) {
 		angebottext.setMandantCNr(angebottextDto.getMandantCNr());
 		angebottext.setLocaleCNr(angebottextDto.getLocaleCNr());
 		angebottext.setMediaartCNr(angebottextDto.getMediaartCNr());
@@ -205,38 +220,30 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		return (AngebottextDto[]) list.toArray(returnArray);
 	}
 
-	private void checkAngebottextDto(AngebottextDto angebottextDtoI)
-			throws EJBExceptionLP {
+	private void checkAngebottextDto(AngebottextDto angebottextDtoI) throws EJBExceptionLP {
 		if (angebottextDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("angebottextDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("angebottextDtoI == null"));
 		}
 	}
 
-	private void checkAngebottextIId(Integer iIdAngebottextI)
-			throws EJBExceptionLP {
+	private void checkAngebottextIId(Integer iIdAngebottextI) throws EJBExceptionLP {
 		if (iIdAngebottextI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAngebottextI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAngebottextI == null"));
 		}
 	}
 
-	public AngebottextDto angebottextFindByMandantCNrLocaleCNrCNr(
-			String cNrLocaleI, String cNrI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public AngebottextDto angebottextFindByMandantCNrLocaleCNrCNr(String cNrLocaleI, String cNrI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (cNrLocaleI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrLocaleI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrLocaleI == null"));
 		}
 
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrI == null"));
 		}
 
 		StringBuffer buff = new StringBuffer();
-		buff.append("localeCNr: ").append(cNrLocaleI).append(", cNr:")
-				.append(cNrI);
+		buff.append("localeCNr: ").append(cNrLocaleI).append(", cNr:").append(cNrI);
 
 		myLogger.info(buff.toString());
 
@@ -244,24 +251,22 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		Angebottext textObject = null;
 
 		// Schritt 1 : Sprache des Kunden ist Parameter
-		Query query = em
-				.createNamedQuery("AngebottextfindByMandantCNrLocaleCNrMediaartCNr");
+		Query query = em.createNamedQuery("AngebottextfindByMandantCNrLocaleCNrMediaartCNr");
 		query.setParameter(1, theClientDto.getMandant());
 		query.setParameter(2, cNrLocaleI);
 		query.setParameter(3, cNrI);
 
 		try {
 			textObject = (Angebottext) query.getSingleResult();
-		} catch(NoResultException e) {
+		} catch (NoResultException e) {
 		}
-		
+
 		if (textObject == null) {
 			try {
 				// Schritt 2 : Den Angebottext in Gewaehlte UI-Sprache des Users
 				// anlegen
 				createDefaultAngebottext(cNrI, cNrLocaleI, theClientDto);
-				Query query1 = em
-						.createNamedQuery("AngebottextfindByMandantCNrLocaleCNrMediaartCNr");
+				Query query1 = em.createNamedQuery("AngebottextfindByMandantCNrLocaleCNrMediaartCNr");
 				query1.setParameter(1, theClientDto.getMandant());
 				query1.setParameter(2, cNrLocaleI);
 				query1.setParameter(3, cNrI);
@@ -279,26 +284,20 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Einen Default Angebottext anlegen.
 	 * 
-	 * @param cNrMediaartI
-	 *            Mediaart Kopftext oder Fusstext
-	 * @param cNrLocaleI
-	 *            der Textinhalt
-	 * @param theClientDto
-	 *            String der aktuelle Benutzer
+	 * @param cNrMediaartI Mediaart Kopftext oder Fusstext
+	 * @param cNrLocaleI   der Textinhalt
+	 * @param theClientDto String der aktuelle Benutzer
 	 * @return AngebottextDto der Default Angebottext
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public AngebottextDto createDefaultAngebottext(String cNrMediaartI,
-			String cNrLocaleI, TheClientDto theClientDto) throws EJBExceptionLP {
+	public AngebottextDto createDefaultAngebottext(String cNrMediaartI, String cNrLocaleI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (cNrMediaartI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrMediaartI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrMediaartI == null"));
 		}
 
 		if (cNrLocaleI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrLocaleI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrLocaleI == null"));
 		}
 		AngebottextDto angebottextDto = new AngebottextDto();
 		angebottextDto.setMediaartCNr(cNrMediaartI);
@@ -321,40 +320,32 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	// Angebotartspr
 	// -------------------------------------------------------------
 
-	public void createAngebotartspr(AngebotartsprDto angebotartsprDto)
-			throws EJBExceptionLP {
+	public void createAngebotartspr(AngebotartsprDto angebotartsprDto) throws EJBExceptionLP {
 
 		if (angebotartsprDto == null) {
 			return;
 		}
 		try {
-			Angebotartspr angebotartspr = new Angebotartspr(
-					angebotartsprDto.getLocaleCNr(),
-					angebotartsprDto.getAngebotartCNr(),
-					angebotartsprDto.getCBez());
+			Angebotartspr angebotartspr = new Angebotartspr(angebotartsprDto.getLocaleCNr(),
+					angebotartsprDto.getAngebotartCNr(), angebotartsprDto.getCBez());
 			em.persist(angebotartspr);
 			em.flush();
-			setAngebotartsprFromAngebotartsprDto(angebotartspr,
-					angebotartsprDto);
+			setAngebotartsprFromAngebotartsprDto(angebotartspr, angebotartsprDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 	}
 
-	public void removeAngebotartspr(AngebotartsprDto angebotartsprDtoI)
-			throws EJBExceptionLP {
+	public void removeAngebotartspr(AngebotartsprDto angebotartsprDtoI) throws EJBExceptionLP {
 		AngebotartsprPK angebotartsprPK = new AngebotartsprPK();
 		angebotartsprPK.setLocaleCNr(angebotartsprDtoI.getLocaleCNr());
 		angebotartsprPK.setAngebotartCNr(angebotartsprDtoI.getAngebotartCNr());
 		Angebotartspr toRemove = em.find(Angebotartspr.class, angebotartsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					new Exception(
-							"Fehler bei removeAngebotartsprache. Es gibt keine Angebotartspr mit der Locale "
-									+ angebotartsprDtoI.getLocaleCNr()
-									+ " und der art "
-									+ angebotartsprDtoI.getAngebotartCNr()));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					new Exception("Fehler bei removeAngebotartsprache. Es gibt keine Angebotartspr mit der Locale "
+							+ angebotartsprDtoI.getLocaleCNr() + " und der art "
+							+ angebotartsprDtoI.getAngebotartCNr()));
 		}
 		try {
 			em.remove(toRemove);
@@ -364,82 +355,62 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		}
 	}
 
-	public void updateAngebotartspr(AngebotartsprDto angebotartsprDto)
-			throws EJBExceptionLP {
+	public void updateAngebotartspr(AngebotartsprDto angebotartsprDto) throws EJBExceptionLP {
 		if (angebotartsprDto != null) {
 			AngebotartsprPK angebotartsprPK = new AngebotartsprPK();
 			angebotartsprPK.setLocaleCNr(angebotartsprDto.getLocaleCNr());
-			angebotartsprPK.setAngebotartCNr(angebotartsprDto
-					.getAngebotartCNr());
-			Angebotartspr angebotartspr = em.find(Angebotartspr.class,
-					angebotartsprPK);
+			angebotartsprPK.setAngebotartCNr(angebotartsprDto.getAngebotartCNr());
+			Angebotartspr angebotartspr = em.find(Angebotartspr.class, angebotartsprPK);
 			if (angebotartspr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						new Exception(
-								"Fehler bei updateAngebotartsprache. Es gibt keine Angebotartspr mit der Locale "
-										+ angebotartsprDto.getLocaleCNr()
-										+ " und der art "
-										+ angebotartsprDto.getAngebotartCNr()));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						new Exception("Fehler bei updateAngebotartsprache. Es gibt keine Angebotartspr mit der Locale "
+								+ angebotartsprDto.getLocaleCNr() + " und der art "
+								+ angebotartsprDto.getAngebotartCNr()));
 			}
-			setAngebotartsprFromAngebotartsprDto(angebotartspr,
-					angebotartsprDto);
+			setAngebotartsprFromAngebotartsprDto(angebotartspr, angebotartsprDto);
 		}
 	}
 
-	public AngebotartsprDto angebotartsprFindByPrimaryKey(String localeCNrI,
-			String angebotartCNrI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public AngebotartsprDto angebotartsprFindByPrimaryKey(String localeCNrI, String angebotartCNrI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		AngebotartsprPK angebotartsprPK = new AngebotartsprPK();
 		angebotartsprPK.setLocaleCNr(localeCNrI);
 		angebotartsprPK.setAngebotartCNr(angebotartCNrI);
-		Angebotartspr angebotartspr = em.find(Angebotartspr.class,
-				angebotartsprPK);
+		Angebotartspr angebotartspr = em.find(Angebotartspr.class, angebotartsprPK);
 		if (angebotartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					new Exception(
 							"Fehler bei angebotartsprfindbyprimarykey. Es gibt keine Angebotartspr mit der Locale "
-									+ localeCNrI
-									+ " und der art "
-									+ angebotartCNrI));
+									+ localeCNrI + " und der art " + angebotartCNrI));
 		}
 		return assembleAngebotartsprDto(angebotartspr);
 	}
 
-	public AngebotartsprDto angebotartsprFindByLocaleCNrAngebotartCNr(
-			String cNrLocaleI, String cNrAngebotartI) throws EJBExceptionLP {
-		Query query = em
-				.createNamedQuery("AngebotartsprfindByLocaleCNrAngebotartCNr");
+	public AngebotartsprDto angebotartsprFindByLocaleCNrAngebotartCNr(String cNrLocaleI, String cNrAngebotartI)
+			throws EJBExceptionLP {
+		Query query = em.createNamedQuery("AngebotartsprfindByLocaleCNrAngebotartCNr");
 		query.setParameter(1, cNrLocaleI);
 		query.setParameter(2, cNrAngebotartI);
 		Angebotartspr angebotartspr = (Angebotartspr) query.getSingleResult();
 		if (angebotartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FIND,
-					new Exception(
-							"FEhjler bei angebotartspr find by Locale und angebotartCnr. Es gibt keine Angebotartspr mit locale "
-									+ cNrLocaleI
-									+ " und der Art "
-									+ cNrAngebotartI));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, new Exception(
+					"FEhjler bei angebotartspr find by Locale und angebotartCnr. Es gibt keine Angebotartspr mit locale "
+							+ cNrLocaleI + " und der Art " + cNrAngebotartI));
 		}
 		return assembleAngebotartsprDto(angebotartspr);
 	}
 
-	private void setAngebotartsprFromAngebotartsprDto(
-			Angebotartspr angebotartspr, AngebotartsprDto angebotartsprDto) {
+	private void setAngebotartsprFromAngebotartsprDto(Angebotartspr angebotartspr, AngebotartsprDto angebotartsprDto) {
 		angebotartspr.setCBez(angebotartsprDto.getCBez());
 		em.merge(angebotartspr);
 		em.flush();
 	}
 
-	private AngebotartsprDto assembleAngebotartsprDto(
-			Angebotartspr angebotartspr) {
+	private AngebotartsprDto assembleAngebotartsprDto(Angebotartspr angebotartspr) {
 		return AngebotartsprDtoAssembler.createDto(angebotartspr);
 	}
 
-	private AngebotartsprDto[] assembleAngebotartsprDtos(
-			Collection<?> angebotartsprs) {
+	private AngebotartsprDto[] assembleAngebotartsprDtos(Collection<?> angebotartsprs) {
 		List<AngebotartsprDto> list = new ArrayList<AngebotartsprDto>();
 		if (angebotartsprs != null) {
 			Iterator<?> iterator = angebotartsprs.iterator();
@@ -458,16 +429,12 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Alle Angebotarten in der bestmoeglichen Uebersetzung holen.
 	 * 
-	 * @param locale1
-	 *            bevorzugtes Locale
-	 * @param locale2
-	 *            alternatives Locale
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param locale1 bevorzugtes Locale
+	 * @param locale2 alternatives Locale
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return Map die Liste der Angebotarten
 	 */
-	public Map getAngebotarten(Locale locale1, Locale locale2)
-			throws EJBExceptionLP {
+	public Map getAngebotarten(Locale locale1, Locale locale2) throws EJBExceptionLP {
 		Map<String, String> map = null;
 		Query query = em.createNamedQuery("AngebotartfindAll");
 		Collection<?> arten = query.getResultList();
@@ -479,18 +446,13 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Hole die bestmoeglichen Uebersetzungen fuer ein Array von Angebotarten.
 	 * 
-	 * @param pArray
-	 *            die Liste der Angebotarten
-	 * @param locale1
-	 *            bevorzugtes Locale
-	 * @param locale2
-	 *            alternatives Locale
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param pArray  die Liste der Angebotarten
+	 * @param locale1 bevorzugtes Locale
+	 * @param locale2 alternatives Locale
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return Map die Liste der uebersetzten Angebotarten
 	 */
-	private Map<String, String> uebersetzeAngebotartenOptimal(
-			AngebotartDto[] pArray, Locale locale1, Locale locale2)
+	private Map<String, String> uebersetzeAngebotartenOptimal(AngebotartDto[] pArray, Locale locale1, Locale locale2)
 			throws EJBExceptionLP {
 		myLogger.entry();
 
@@ -500,8 +462,7 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 
 		for (int i = 0; i < pArray.length; i++) {
 			String key = pArray[i].getCNr();
-			String value = uebersetzeAngebotartOptimal(pArray[i].getCNr(),
-					locale1, locale2);
+			String value = uebersetzeAngebotartOptimal(pArray[i].getCNr(), locale1, locale2);
 			map.put(key, value);
 		}
 
@@ -512,17 +473,13 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	 * Uebersetzt eine Angebotart optimal. 1.Versuch: mit locale1 2.Versuch: mit
 	 * locale2 3.Versuch: cNr
 	 * 
-	 * @param cNr
-	 *            der Name der Angebotart
-	 * @param locale1
-	 *            bevorzugtes Locale
-	 * @param locale2
-	 *            Locale Ersatzlocale
+	 * @param cNr     der Name der Angebotart
+	 * @param locale1 bevorzugtes Locale
+	 * @param locale2 Locale Ersatzlocale
 	 * @throws EJBExceptionLP
 	 * @return String die Angebotart in der bestmoeglichen Uebersetzung
 	 */
-	private String uebersetzeAngebotartOptimal(String cNr, Locale locale1,
-			Locale locale2) throws EJBExceptionLP {
+	private String uebersetzeAngebotartOptimal(String cNr, Locale locale1, Locale locale2) throws EJBExceptionLP {
 		myLogger.entry();
 
 		String uebersetzung = "";
@@ -543,64 +500,225 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Eine Angebotart in eine bestimmte Sprache uebersetzen.
 	 * 
-	 * @param pLocale
-	 *            die gewuenschte Sprache
-	 * @param pArt
-	 *            die Angebotart
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param pLocale die gewuenschte Sprache
+	 * @param pArt    die Angebotart
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return String die Uebersetzung
 	 */
-	private String uebersetzeAngebotart(Locale pLocale, String pArt)
-			throws EJBExceptionLP {
+	private String uebersetzeAngebotart(Locale pLocale, String pArt) throws EJBExceptionLP {
 		Angebotartspr spr = null;
 		String locale = Helper.locale2String(pLocale);
-		Query query = em
-				.createNamedQuery("AngebotartsprfindByLocaleCNrAngebotartCNr");
+		Query query = em.createNamedQuery("AngebotartsprfindByLocaleCNrAngebotartCNr");
 		query.setParameter(1, locale);
 		query.setParameter(2, pArt);
 		spr = (Angebotartspr) query.getSingleResult();
 		if (spr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
-							"Fehler bei uebersetzeAngebotart. Es gibt keine Angebotartspr mit der Locale "
-									+ locale + " und der Art " + pArt));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					new Exception("Fehler bei uebersetzeAngebotart. Es gibt keine Angebotartspr mit der Locale "
+							+ locale + " und der Art " + pArt));
 		}
 		return spr.getCBez();
+	}
+
+	
+	public void vertauscheAkquisestatus(Integer iIdPosition1I,
+			Integer iIdPosition2I) {
+		Akquisestatus oPosition1 = em.find(Akquisestatus.class, iIdPosition1I);
+		if (oPosition1 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Akquisestatus oPosition2 = em.find(Akquisestatus.class, iIdPosition2I);
+
+		Integer iSort1 = oPosition1.getISort();
+		Integer iSort2 = oPosition2.getISort();
+
+		oPosition2.setISort(new Integer(-1));
+
+		oPosition1.setISort(iSort2);
+		oPosition2.setISort(iSort1);
+	}
+
+	
+	public Integer createAkquisestatus(AkquisestatusDto akquisestatusDto, TheClientDto theClientDto) {
+
+		if (akquisestatusDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("akquisestatusDto == null"));
+		}
+		if (akquisestatusDto.getCBez() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("akquisestatusDto.getCBez() == null"));
+		}
+		akquisestatusDto.setMandantCNr(theClientDto.getMandant());
+
+		try {
+			Query query = em.createNamedQuery("AkquisestatusfindByMandantCNrCBez");
+			query.setParameter(1, akquisestatusDto.getMandantCNr());
+			query.setParameter(2, akquisestatusDto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Akquisestatus doppelt = (Akquisestatus) query.getSingleResult();
+			if (doppelt != null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("ANGB_AKQUISESTATUS.UK"));
+			}
+		} catch (NoResultException ex) {
+			// nix
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_AKQISESTATUS);
+			akquisestatusDto.setIId(pk);
+
+			
+			Query queryNext = em
+					.createNamedQuery("AkquisestatusejbSelectNextReihung");
+			queryNext.setParameter(1, akquisestatusDto.getMandantCNr());
+
+			Integer i = (Integer) queryNext.getSingleResult();
+
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+			akquisestatusDto.setISort(i);
+			
+			Akquisestatus zusatzstatus = new Akquisestatus(akquisestatusDto.getIId(), akquisestatusDto.getMandantCNr(),
+					akquisestatusDto.getCBez(), akquisestatusDto.getISort());
+			em.persist(zusatzstatus);
+			em.flush();
+			setAkquisestatusFromAkquisestatusDto(zusatzstatus, akquisestatusDto);
+
+			Status status = em.find(Status.class, akquisestatusDto.getCBez());
+			if (status == null) {
+				status = new Status(akquisestatusDto.getCBez());
+				try {
+					em.persist(status);
+				} catch (EntityExistsException e) {
+					// Bereits vorhanden
+				}
+			}
+
+			return akquisestatusDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	private void setAkquisestatusFromAkquisestatusDto(Akquisestatus zusatzstatus, AkquisestatusDto zusatzstatusDto) {
+		zusatzstatus.setMandantCNr(zusatzstatusDto.getMandantCNr());
+		zusatzstatus.setCBez(zusatzstatusDto.getCBez());
+		zusatzstatus.setISort(zusatzstatusDto.getISort());
+		em.merge(zusatzstatus);
+		em.flush();
+	}
+
+	public void removeAkquisestatus(AkquisestatusDto akquisestatusDto) {
+		if (akquisestatusDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("akquisestatusDto == null"));
+		}
+		if (akquisestatusDto.getIId() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("zusaakquisestatusDtotzstatusDto.getIId() == null"));
+		}
+
+		// try {
+		Akquisestatus toRemove = em.find(Akquisestatus.class, akquisestatusDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+		// }
+		// catch (RemoveException e) {
+		// throw new EJBExceptionLP(EJBExceptionLP.
+		// FEHLER_BEIM_LOESCHEN, e);
+		// }
+
+	}
+
+	public void updateAkquisestatus(AkquisestatusDto akquisestatusDto, TheClientDto theClientDto) {
+
+		if (akquisestatusDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("artikelDto == null"));
+		}
+		if (akquisestatusDto.getIId() == null || akquisestatusDto.getCBez() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+					new Exception("akquisestatusDto.getIId() == null || akquisestatusDto.getCBez() == null"));
+		}
+		akquisestatusDto.setMandantCNr(theClientDto.getMandant());
+
+		Integer iId = akquisestatusDto.getIId();
+
+		try {
+			Query query = em.createNamedQuery("AkquisestatusfindByMandantCNrCBez");
+			query.setParameter(1, akquisestatusDto.getMandantCNr());
+			query.setParameter(2, akquisestatusDto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Akquisestatus) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("ANGB_AKQUISESTATUS.UK"));
+			}
+		} catch (NoResultException ex) {
+			// nix
+		}
+
+		// try {
+		Akquisestatus zusatzstatus = em.find(Akquisestatus.class, iId);
+		if (zusatzstatus == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		setAkquisestatusFromAkquisestatusDto(zusatzstatus, akquisestatusDto);
+
+		Status status = em.find(Status.class, akquisestatusDto.getCBez());
+		if (status == null) {
+			status = new Status(akquisestatusDto.getCBez());
+			try {
+				em.persist(status);
+			} catch (EntityExistsException e) {
+				// Bereits vorhanden
+			}
+		}
+
+	}
+
+	public AkquisestatusDto akquisestatusFindByPrimaryKey(Integer iId) {
+		Akquisestatus akquisestatus = em.find(Akquisestatus.class, iId);
+		return AkquisestatusDtoAssembler.createDto(akquisestatus);
+
 	}
 
 	/**
 	 * Eine neue Angebotart anlegen.
 	 * 
-	 * @param angebotartDtoI
-	 *            die neue Angebotart
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param angebotartDtoI die neue Angebotart
+	 * @param theClientDto   der aktuelle Benutzer
 	 * @return String PK der neuen Angebotart
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public String createAngebotart(AngebotartDto angebotartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createAngebotart(AngebotartDto angebotartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotartDto(angebotartDtoI);
 		myLogger.logData(angebotartDtoI);
 		try {
 			// zuerst die Angebotart
-			Angebotart angebotart = new Angebotart(angebotartDtoI.getCNr(),
-					angebotartDtoI.getISort());
+			Angebotart angebotart = new Angebotart(angebotartDtoI.getCNr(), angebotartDtoI.getISort());
 			em.persist(angebotart);
 			em.flush();
 			setAngebotartFromAngebotartDto(angebotart, angebotartDtoI);
 			// dann die Spr
 			if (angebotartDtoI.getAngebotartsprDto() != null) {
-				Angebotartspr angebotartspr = new Angebotartspr(angebotartDtoI
-						.getAngebotartsprDto().getLocaleCNr(),
-						angebotartDtoI.getCNr(), angebotartDtoI
-								.getAngebotartsprDto().getCBez());
+				Angebotartspr angebotartspr = new Angebotartspr(angebotartDtoI.getAngebotartsprDto().getLocaleCNr(),
+						angebotartDtoI.getCNr(), angebotartDtoI.getAngebotartsprDto().getCBez());
 				em.persist(angebotartspr);
 				em.flush();
-				setAngebotartsprFromAngebotartsprDto(angebotartspr,
-						angebotartDtoI.getAngebotartsprDto());
+				setAngebotartsprFromAngebotartsprDto(angebotartspr, angebotartDtoI.getAngebotartsprDto());
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -612,18 +730,13 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Eine bestehende Angebotart loeschen.
 	 * 
-	 * @param cNrAngebotartI
-	 *            die bestehende Angebotart
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param cNrAngebotartI die bestehende Angebotart
+	 * @param theClientDto   der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeAngebotart(String cNrAngebotartI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeAngebotart(String cNrAngebotartI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (cNrAngebotartI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrAngebotartI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrAngebotartI == null"));
 		}
 		myLogger.logData(cNrAngebotartI);
 		// zuerst alle Sprs loeschen
@@ -635,11 +748,8 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		while (it.hasNext()) {
 			Angebotartspr toRemove = em.find(Angebotartspr.class, it.next());
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						new Exception(
-								"Fehler bei removeAngebotart."
-										+ "Angebotsprachen konnten nicht gefunden werden"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
+						"Fehler bei removeAngebotart." + "Angebotsprachen konnten nicht gefunden werden"));
 			}
 			em.remove(toRemove);
 			em.flush();
@@ -648,10 +758,8 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		// jetzt die Angebotart loeschen
 		Angebotart toRemove = em.find(Angebotart.class, cNrAngebotartI);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
-							"Fehler bei removeAngebotart.Es gibt keine Angebotart mit Cnr "
-									+ cNrAngebotartI));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					new Exception("Fehler bei removeAngebotart.Es gibt keine Angebotart mit Cnr " + cNrAngebotartI));
 		}
 		try {
 			em.remove(toRemove);
@@ -664,68 +772,50 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	/**
 	 * Eine bestehende Angebotart aktualisieren.
 	 * 
-	 * @param angebotartDtoI
-	 *            die bestehende Angebotart
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param angebotartDtoI die bestehende Angebotart
+	 * @param theClientDto   der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateAngebotart(AngebotartDto angebotartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateAngebotart(AngebotartDto angebotartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotartDto(angebotartDtoI);
 		myLogger.logData(angebotartDtoI);
 
 		try {
 			// erst die Angebotart
-			Angebotart angebotart = em.find(Angebotart.class,
-					angebotartDtoI.getCNr());
+			Angebotart angebotart = em.find(Angebotart.class, angebotartDtoI.getCNr());
 			if (angebotart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						new Exception("Fehler bei updateAngebotart."
-								+ " Es gibt keine Angebotart mit cnr "
-								+ angebotartDtoI.getCNr()
-								+ " angebotartDto.toString():"
-								+ angebotartDtoI.toString()));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						new Exception("Fehler bei updateAngebotart." + " Es gibt keine Angebotart mit cnr "
+								+ angebotartDtoI.getCNr() + " angebotartDto.toString():" + angebotartDtoI.toString()));
 			}
 
 			setAngebotartFromAngebotartDto(angebotart, angebotartDtoI);
 
 			// jetzt die Spr
-			AngebotartsprDto angebotartsprDto = angebotartDtoI
-					.getAngebotartsprDto();
+			AngebotartsprDto angebotartsprDto = angebotartDtoI.getAngebotartsprDto();
 
-			if (angebotartsprDto != null
-					&& angebotartsprDto.getAngebotartCNr() != null) {
+			if (angebotartsprDto != null && angebotartsprDto.getAngebotartCNr() != null) {
 				AngebotartsprPK angebotartsprPK = new AngebotartsprPK();
 				angebotartsprPK.setLocaleCNr(angebotartsprDto.getLocaleCNr());
-				angebotartsprPK.setAngebotartCNr(angebotartsprDto
-						.getAngebotartCNr());
+				angebotartsprPK.setAngebotartCNr(angebotartsprDto.getAngebotartCNr());
 
-				Angebotartspr angebotartspr = em.find(Angebotartspr.class,
-						angebotartsprPK);
+				Angebotartspr angebotartspr = em.find(Angebotartspr.class, angebotartsprPK);
 
-				setAngebotartsprFromAngebotartsprDto(angebotartspr,
-						angebotartsprDto);
+				setAngebotartsprFromAngebotartsprDto(angebotartspr, angebotartsprDto);
 			} else {
-				Angebotartspr angebotartspr = new Angebotartspr(angebotartDtoI
-						.getAngebotartsprDto().getLocaleCNr(),
-						angebotartDtoI.getCNr(), angebotartDtoI
-								.getAngebotartsprDto().getCBez());
+				Angebotartspr angebotartspr = new Angebotartspr(angebotartDtoI.getAngebotartsprDto().getLocaleCNr(),
+						angebotartDtoI.getCNr(), angebotartDtoI.getAngebotartsprDto().getCBez());
 				em.persist(angebotartspr);
 				em.flush();
 
-				setAngebotartsprFromAngebotartsprDto(angebotartspr,
-						angebotartDtoI.getAngebotartsprDto());
+				setAngebotartsprFromAngebotartsprDto(angebotartspr, angebotartDtoI.getAngebotartsprDto());
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 	}
 
-	public AngebotartDto angebotartFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public AngebotartDto angebotartFindByPrimaryKey(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkAngebotartCNr(cNrI);
 		myLogger.logData(cNrI);
@@ -733,11 +823,8 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		// zuerst die Angebotart lesen
 		Angebotart angebotart = em.find(Angebotart.class, cNrI);
 		if (angebotart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					new Exception(
-							"Fehler bei find Angebotart by Primary Key. Es gibt keine Angebotart mit der Cnr "
-									+ cNrI));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
+					"Fehler bei find Angebotart by Primary Key. Es gibt keine Angebotart mit der Cnr " + cNrI));
 		}
 		angebotartDto = assembleAngebotartDto(angebotart);
 
@@ -745,10 +832,8 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		AngebotartsprDto angebotartsprDto = null;
 
 		try {
-			AngebotartsprPK angebotartsprPK = new AngebotartsprPK(
-					theClientDto.getLocUiAsString(), cNrI);
-			Angebotartspr angebotartspr = em.find(Angebotartspr.class,
-					angebotartsprPK);
+			AngebotartsprPK angebotartsprPK = new AngebotartsprPK(theClientDto.getLocUiAsString(), cNrI);
+			Angebotartspr angebotartspr = em.find(Angebotartspr.class, angebotartsprPK);
 			if (angebotartspr != null) {
 				angebotartsprDto = assembleAngebotartsprDto(angebotartspr);
 			}
@@ -760,24 +845,19 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		return angebotartDto;
 	}
 
-	private void checkAngebotartDto(AngebotartDto angebotartDtoI)
-			throws EJBExceptionLP {
+	private void checkAngebotartDto(AngebotartDto angebotartDtoI) throws EJBExceptionLP {
 		if (angebotartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("angebotartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("angebotartDtoI == null"));
 		}
 	}
 
-	private void checkAngebotartCNr(String cNrAngebotartI)
-			throws EJBExceptionLP {
+	private void checkAngebotartCNr(String cNrAngebotartI) throws EJBExceptionLP {
 		if (cNrAngebotartI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrAngebotartI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrAngebotartI == null"));
 		}
 	}
 
-	private void setAngebotartFromAngebotartDto(Angebotart angebotart,
-			AngebotartDto angebotartDto) {
+	private void setAngebotartFromAngebotartDto(Angebotart angebotart, AngebotartDto angebotartDto) {
 		angebotart.setISort(angebotartDto.getISort());
 		em.merge(angebotart);
 		em.flush();
@@ -803,35 +883,28 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	// Angebotstatus
 	// -------------------------------------------------------------
 
-	public void createAngebotstatus(AngebotstatusDto angebotstatusDto)
-			throws EJBExceptionLP {
+	public void createAngebotstatus(AngebotstatusDto angebotstatusDto) throws EJBExceptionLP {
 		if (angebotstatusDto == null) {
 			return;
 		}
 		try {
-			Angebotstatus angebotstatus = new Angebotstatus(
-					angebotstatusDto.getStatusCNr(),
+			Angebotstatus angebotstatus = new Angebotstatus(angebotstatusDto.getStatusCNr(),
 					angebotstatusDto.getISort());
 			em.persist(angebotstatus);
 			em.flush();
-			setAngebotstatusFromAngebotstatusDto(angebotstatus,
-					angebotstatusDto);
+			setAngebotstatusFromAngebotstatusDto(angebotstatus, angebotstatusDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 	}
 
-	public void removeAngebotstatus(AngebotstatusDto angebotstatusDto)
-			throws EJBExceptionLP {
+	public void removeAngebotstatus(AngebotstatusDto angebotstatusDto) throws EJBExceptionLP {
 
-		Angebotstatus toRemove = em.find(Angebotstatus.class,
-				angebotstatusDto.getStatusCNr());
+		Angebotstatus toRemove = em.find(Angebotstatus.class, angebotstatusDto.getStatusCNr());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"Fehler bei removeAngebotstatus. Es gibt keinen Status mit der CNr "
-							+ angebotstatusDto.getStatusCNr()
-							+ "angebotstatusdDto.toString():"
+							+ angebotstatusDto.getStatusCNr() + "angebotstatusdDto.toString():"
 							+ angebotstatusDto.toString());
 		}
 		try {
@@ -842,50 +915,39 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		}
 	}
 
-	public void updateAngebotstatus(AngebotstatusDto angebotstatusDto)
-			throws EJBExceptionLP {
+	public void updateAngebotstatus(AngebotstatusDto angebotstatusDto) throws EJBExceptionLP {
 		if (angebotstatusDto != null) {
 			String statusCNr = angebotstatusDto.getStatusCNr();
-			Angebotstatus angebotstatus = em.find(Angebotstatus.class,
-					statusCNr);
+			Angebotstatus angebotstatus = em.find(Angebotstatus.class, statusCNr);
 			if (angebotstatus == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						"Fehler bei updateAngebotsstatus es gibr krinrn Status mit cnr "
-								+ statusCNr + "\nangebotsstatusDto.toString "
-								+ angebotstatusDto.toString());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						"Fehler bei updateAngebotsstatus es gibr krinrn Status mit cnr " + statusCNr
+								+ "\nangebotsstatusDto.toString " + angebotstatusDto.toString());
 			}
-			setAngebotstatusFromAngebotstatusDto(angebotstatus,
-					angebotstatusDto);
+			setAngebotstatusFromAngebotstatusDto(angebotstatus, angebotstatusDto);
 		}
 	}
 
-	public AngebotstatusDto angebotstatusFindByPrimaryKey(String statusCNr)
-			throws EJBExceptionLP {
+	public AngebotstatusDto angebotstatusFindByPrimaryKey(String statusCNr) throws EJBExceptionLP {
 		Angebotstatus angebotstatus = em.find(Angebotstatus.class, statusCNr);
 		if (angebotstatus == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei Angebotsstatus findbyPrimaryKey. Es gibt keinen Stauts "
-							+ statusCNr);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei Angebotsstatus findbyPrimaryKey. Es gibt keinen Stauts " + statusCNr);
 		}
 		return assembleAngebotstatusDto(angebotstatus);
 	}
 
-	private void setAngebotstatusFromAngebotstatusDto(
-			Angebotstatus angebotstatus, AngebotstatusDto angebotstatusDto) {
+	private void setAngebotstatusFromAngebotstatusDto(Angebotstatus angebotstatus, AngebotstatusDto angebotstatusDto) {
 		angebotstatus.setISort(angebotstatusDto.getISort());
 		em.merge(angebotstatus);
 		em.flush();
 	}
 
-	private AngebotstatusDto assembleAngebotstatusDto(
-			Angebotstatus angebotstatus) {
+	private AngebotstatusDto assembleAngebotstatusDto(Angebotstatus angebotstatus) {
 		return AngebotstatusDtoAssembler.createDto(angebotstatus);
 	}
 
-	private AngebotstatusDto[] assembleAngebotstatusDtos(
-			Collection<?> angebotstatuss) {
+	private AngebotstatusDto[] assembleAngebotstatusDtos(Collection<?> angebotstatuss) {
 		List<AngebotstatusDto> list = new ArrayList<AngebotstatusDto>();
 		if (angebotstatuss != null) {
 			Iterator<?> iterator = angebotstatuss.iterator();
@@ -901,19 +963,16 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	// Angeboteinheit
 	// ------------------------------------------------------------
 
-	public void createAngeboteinheit(AngeboteinheitDto angeboteinheitDto)
-			throws EJBExceptionLP {
+	public void createAngeboteinheit(AngeboteinheitDto angeboteinheitDto) throws EJBExceptionLP {
 		if (angeboteinheitDto == null) {
 			return;
 		}
 		try {
-			Angeboteinheit angeboteinheit = new Angeboteinheit(
-					angeboteinheitDto.getEinheitCNr(),
+			Angeboteinheit angeboteinheit = new Angeboteinheit(angeboteinheitDto.getEinheitCNr(),
 					angeboteinheitDto.getISort());
 			em.persist(angeboteinheit);
 			em.flush();
-			setAngeboteinheitFromAngeboteinheitDto(angeboteinheit,
-					angeboteinheitDto);
+			setAngeboteinheitFromAngeboteinheitDto(angeboteinheit, angeboteinheitDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -923,10 +982,8 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 
 		Angeboteinheit toRemove = em.find(Angeboteinheit.class, einheitCNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei removeAngeboteinheit. Es gibt keine Einheit "
-							+ einheitCNr);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei removeAngeboteinheit. Es gibt keine Einheit " + einheitCNr);
 		}
 		try {
 			em.remove(toRemove);
@@ -936,55 +993,54 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		}
 	}
 
-	public void updateAngeboteinheit(AngeboteinheitDto angeboteinheitDto)
-			throws EJBExceptionLP {
+	public void updateAngeboteinheit(AngeboteinheitDto angeboteinheitDto) throws EJBExceptionLP {
 		if (angeboteinheitDto != null) {
 			String einheitCNr = angeboteinheitDto.getEinheitCNr();
-			Angeboteinheit angeboteinheit = em.find(Angeboteinheit.class,
-					einheitCNr);
+			Angeboteinheit angeboteinheit = em.find(Angeboteinheit.class, einheitCNr);
 			if (angeboteinheit == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-						"Fehler bei updateAngeboteinheit. Es gibt keine Einheit "
-								+ einheitCNr + "\nangeboteinheitDto.toString"
-								+ angeboteinheitDto.toString());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						"Fehler bei updateAngeboteinheit. Es gibt keine Einheit " + einheitCNr
+								+ "\nangeboteinheitDto.toString" + angeboteinheitDto.toString());
 			}
-			setAngeboteinheitFromAngeboteinheitDto(angeboteinheit,
-					angeboteinheitDto);
+			setAngeboteinheitFromAngeboteinheitDto(angeboteinheit, angeboteinheitDto);
 		}
 	}
 
-	public AngeboteinheitDto angeboteinheitFindByPrimaryKey(String einheitCNr)
-			throws EJBExceptionLP {
-		Angeboteinheit angeboteinheit = em.find(Angeboteinheit.class,
-				einheitCNr);
+	public AngeboteinheitDto angeboteinheitFindByPrimaryKey(String einheitCNr) throws EJBExceptionLP {
+		Angeboteinheit angeboteinheit = em.find(Angeboteinheit.class, einheitCNr);
 		if (angeboteinheit == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei AngeboteinheitFindByPrimaryKey. Es gibt keine Einheit "
-							+ einheitCNr);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei AngeboteinheitFindByPrimaryKey. Es gibt keine Einheit " + einheitCNr);
 		}
 		return assembleAngeboteinheitDto(angeboteinheit);
+	}
+	
+
+	public AngebotauftragDto angebotauftragFindByPrimaryKey(Integer iId)  {
+		Angebotauftrag angebotauftrag = em.find(Angebotauftrag.class, iId);
+		
+		AngebotauftragDto dto= new AngebotauftragDto(); 
+		dto.setiId(angebotauftrag.getiId());
+		dto.setAuftragIId(angebotauftrag.getAuftragIId());
+		dto.setAngebotIId(angebotauftrag.getAngebotIId());
+		
+		return dto;
 	}
 
 	/**
 	 * Alle Angeboteinheiten holen. Aufbereitet fuer die Darstellung in einer
 	 * ComboBox.
 	 * 
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return Map die Liste der Einheiten
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Map getAngeboteinheiten(TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Map getAngeboteinheiten(TheClientDto theClientDto) throws EJBExceptionLP {
 		Map<String, String> map = new TreeMap<String, String>();
 		Query query = em.createNamedQuery("AngeboteinheitfindAll");
 		Collection<?> cl = query.getResultList();
 		if (cl.isEmpty()) { // @ToDo FinderException
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDALL,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDALL,
 					"fehler bei AngeboteinheitenFindAll. Es konnten keine angeboteinheiten gefunden werden");
 		}
 		AngeboteinheitDto[] aEinheitDto = assembleAngeboteinheitDtos(cl);
@@ -997,8 +1053,7 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 															// (WH)
 
 			Einheitspr einheitspr = em.find(Einheitspr.class,
-					new EinheitsprPK(aEinheitDto[i].getEinheitCNr(),
-							theClientDto.getLocUiAsString()));
+					new EinheitsprPK(aEinheitDto[i].getEinheitCNr(), theClientDto.getLocUiAsString()));
 
 			if (einheitspr != null) {
 				value = einheitspr.getCBez();
@@ -1011,26 +1066,23 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		return map;
 	}
 
-	private void setAngeboteinheitFromAngeboteinheitDto(
-			Angeboteinheit angeboteinheit, AngeboteinheitDto angeboteinheitDto) {
+	private void setAngeboteinheitFromAngeboteinheitDto(Angeboteinheit angeboteinheit,
+			AngeboteinheitDto angeboteinheitDto) {
 		angeboteinheit.setISort(angeboteinheitDto.getISort());
 		em.merge(angeboteinheit);
 		em.flush();
 	}
 
-	private AngeboteinheitDto assembleAngeboteinheitDto(
-			Angeboteinheit angeboteinheit) {
+	private AngeboteinheitDto assembleAngeboteinheitDto(Angeboteinheit angeboteinheit) {
 		return AngeboteinheitDtoAssembler.createDto(angeboteinheit);
 	}
 
-	private AngeboteinheitDto[] assembleAngeboteinheitDtos(
-			Collection<?> angeboteinheits) {
+	private AngeboteinheitDto[] assembleAngeboteinheitDtos(Collection<?> angeboteinheits) {
 		List<AngeboteinheitDto> list = new ArrayList<AngeboteinheitDto>();
 		if (angeboteinheits != null) {
 			Iterator<?> iterator = angeboteinheits.iterator();
 			while (iterator.hasNext()) {
-				Angeboteinheit angeboteinheit = (Angeboteinheit) iterator
-						.next();
+				Angeboteinheit angeboteinheit = (Angeboteinheit) iterator.next();
 				list.add(assembleAngeboteinheitDto(angeboteinheit));
 			}
 		}
@@ -1041,8 +1093,7 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	// Angeboterledigungsgrund
 	// ---------------------------------------------------
 
-	public String createAngeboterledigungsgrund(
-			AngeboterledigungsgrundDto angeboterledigungsgrundDtoI,
+	public String createAngeboterledigungsgrund(AngeboterledigungsgrundDto angeboterledigungsgrundDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngeboterledigungsgrundDto(angeboterledigungsgrundDtoI);
 		myLogger.logData(angeboterledigungsgrundDtoI);
@@ -1050,7 +1101,7 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		try {
 			Query query = em.createNamedQuery("AngeboterledigungsgrundfindByCNr");
 			query.setParameter(1, angeboterledigungsgrundDtoI.getCNr());
-			
+
 			// @todo getSingleResult oder getResultList ?
 			Angeboterledigungsgrund doppelt = (Angeboterledigungsgrund) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
@@ -1058,33 +1109,27 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
-		
+
 		try {
 			Angeboterledigungsgrund angeboterledigungsgrund = new Angeboterledigungsgrund(
-					angeboterledigungsgrundDtoI.getCNr(),
-					angeboterledigungsgrundDtoI.getMandantCNr(),
+					angeboterledigungsgrundDtoI.getCNr(), angeboterledigungsgrundDtoI.getMandantCNr(),
 					angeboterledigungsgrundDtoI.getISort());
 			em.persist(angeboterledigungsgrund);
 			em.flush();
 
-			setAngeboterledigungsgrundFromAngeboterledigungsgrundDto(
-					angeboterledigungsgrund, angeboterledigungsgrundDtoI);
+			setAngeboterledigungsgrundFromAngeboterledigungsgrundDto(angeboterledigungsgrund,
+					angeboterledigungsgrundDtoI);
 
 			if (angeboterledigungsgrundDtoI.getAngeboterledigungsgrundsprDto() != null) {
 				Angeboterledigungsgrundspr angeboterledigungsgrundspr = new Angeboterledigungsgrundspr(
-						angeboterledigungsgrundDtoI
-								.getAngeboterledigungsgrundsprDto()
-								.getLocaleCNr(),
+						angeboterledigungsgrundDtoI.getAngeboterledigungsgrundsprDto().getLocaleCNr(),
 						angeboterledigungsgrundDtoI.getCNr(),
-						angeboterledigungsgrundDtoI
-								.getAngeboterledigungsgrundsprDto().getCBez());
+						angeboterledigungsgrundDtoI.getAngeboterledigungsgrundsprDto().getCBez());
 				em.persist(angeboterledigungsgrundspr);
 				em.flush();
 
-				setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(
-						angeboterledigungsgrundspr,
-						angeboterledigungsgrundDtoI
-								.getAngeboterledigungsgrundsprDto());
+				setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr,
+						angeboterledigungsgrundDtoI.getAngeboterledigungsgrundsprDto());
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -1093,23 +1138,19 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		return angeboterledigungsgrundDtoI.getCNr();
 	}
 
-	public void removeAngeboterledigungsgrund(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeAngeboterledigungsgrund(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngeboterledigungsgrundCNr(cNrI);
 		myLogger.logData(cNrI);
 		// zuerst alle Sprs loeschen
-		Query query = em
-				.createNamedQuery("AngeboterledigungsgrundsprfindByAngeboterledigungsgrundCNr");
+		Query query = em.createNamedQuery("AngeboterledigungsgrundsprfindByAngeboterledigungsgrundCNr");
 		query.setParameter(1, cNrI);
 		Collection<?> cl = query.getResultList();
 		Iterator<?> it = cl.iterator();
 
 		while (it.hasNext()) {
-			Angeboterledigungsgrundspr toRemove = em.find(
-					Angeboterledigungsgrundspr.class, it.next());
+			Angeboterledigungsgrundspr toRemove =(Angeboterledigungsgrundspr)it.next();
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 						"Fehler beim loeschen der Angebotserledigungsgrundsprachen");
 			}
 			em.remove(toRemove);
@@ -1117,13 +1158,10 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		}
 
 		// jetzt den Angeboterlerledigungsgrund loeschen
-		Angeboterledigungsgrund toRemove = em.find(
-				Angeboterledigungsgrund.class, cNrI);
+		Angeboterledigungsgrund toRemove = em.find(Angeboterledigungsgrund.class, cNrI);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei removeAngebotserledigungsgrund. Es gibt keinen Grund mit cnr "
-							+ cNrI);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei removeAngebotserledigungsgrund. Es gibt keinen Grund mit cnr " + cNrI);
 		}
 		try {
 			em.remove(toRemove);
@@ -1133,82 +1171,63 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		}
 	}
 
-	public void updateAngeboterledigungsgrund(
-			AngeboterledigungsgrundDto angeboterledigungsgrundDtoI,
+	public void updateAngeboterledigungsgrund(AngeboterledigungsgrundDto angeboterledigungsgrundDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngeboterledigungsgrundDto(angeboterledigungsgrundDtoI);
 		myLogger.logData(angeboterledigungsgrundDtoI);
 
 		try {
 			// erst den Angeboterledigungsgrund
-			Angeboterledigungsgrund angeboterledigungsgrund = em.find(
-					Angeboterledigungsgrund.class,
+			Angeboterledigungsgrund angeboterledigungsgrund = em.find(Angeboterledigungsgrund.class,
 					angeboterledigungsgrundDtoI.getCNr());
 			if (angeboterledigungsgrund == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 						"fehler bei updateAngebotserledigungsgrund. Es gibt keinen Grund mit der cnr "
-								+ angeboterledigungsgrundDtoI.getCNr()
-								+ "\nangeboterledigungsgrundDto.toString: "
+								+ angeboterledigungsgrundDtoI.getCNr() + "\nangeboterledigungsgrundDto.toString: "
 								+ angeboterledigungsgrundDtoI.toString());
 			}
 
-			
 			try {
 				Query query = em.createNamedQuery("AngeboterledigungsgrundfindByCNr");
 				query.setParameter(1, angeboterledigungsgrundDtoI.getCNr());
-				
+
 				// @todo getSingleResult oder getResultList ?
-				String cNrVorhanden = ((Angeboterledigungsgrund) query.getSingleResult())
-						.getCNr();
+				String cNrVorhanden = ((Angeboterledigungsgrund) query.getSingleResult()).getCNr();
 				if (angeboterledigungsgrund.getCNr().equals(cNrVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 							new Exception("ANGB_ANGEBOTSERLEDIGUNGSGRUND.C_NR"));
 				}
 			} catch (NoResultException ex) {
 
 			}
-			
-			
-			setAngeboterledigungsgrundFromAngeboterledigungsgrundDto(
-					angeboterledigungsgrund, angeboterledigungsgrundDtoI);
+
+			setAngeboterledigungsgrundFromAngeboterledigungsgrundDto(angeboterledigungsgrund,
+					angeboterledigungsgrundDtoI);
 
 			// jetzt die Spr
 			AngeboterledigungsgrundsprDto angeboterledigungsgrundsprDto = angeboterledigungsgrundDtoI
 					.getAngeboterledigungsgrundsprDto();
 
 			if (angeboterledigungsgrundsprDto != null
-					&& angeboterledigungsgrundsprDto
-							.getAngeboterledigungsgrundCNr() != null) {
+					&& angeboterledigungsgrundsprDto.getAngeboterledigungsgrundCNr() != null) {
 				AngeboterledigungsgrundsprPK angeboterledigungsgrundsprPK = new AngeboterledigungsgrundsprPK();
-				angeboterledigungsgrundsprPK
-						.setLocaleCNr(angeboterledigungsgrundsprDto
-								.getLocaleCNr());
-				angeboterledigungsgrundsprPK
-						.setAngeboterledigungsgrundCNr(angeboterledigungsgrundDtoI
-								.getCNr());
+				angeboterledigungsgrundsprPK.setLocaleCNr(angeboterledigungsgrundsprDto.getLocaleCNr());
+				angeboterledigungsgrundsprPK.setAngeboterledigungsgrundCNr(angeboterledigungsgrundDtoI.getCNr());
 
-				Angeboterledigungsgrundspr angeboterledigungsgrundspr = em
-						.find(Angeboterledigungsgrundspr.class,
-								angeboterledigungsgrundsprPK);
+				Angeboterledigungsgrundspr angeboterledigungsgrundspr = em.find(Angeboterledigungsgrundspr.class,
+						angeboterledigungsgrundsprPK);
 
-				setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(
-						angeboterledigungsgrundspr,
+				setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr,
 						angeboterledigungsgrundsprDto);
 			} else {
 				Angeboterledigungsgrundspr angeboterledigungsgrundspr = new Angeboterledigungsgrundspr(
-						angeboterledigungsgrundDtoI
-								.getAngeboterledigungsgrundsprDto()
-								.getLocaleCNr(),
+						angeboterledigungsgrundDtoI.getAngeboterledigungsgrundsprDto().getLocaleCNr(),
 						angeboterledigungsgrundDtoI.getCNr(),
-						angeboterledigungsgrundDtoI
-								.getAngeboterledigungsgrundsprDto().getCBez());
+						angeboterledigungsgrundDtoI.getAngeboterledigungsgrundsprDto().getCBez());
 				em.persist(angeboterledigungsgrundspr);
 				em.flush();
 
-				setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(
-						angeboterledigungsgrundspr,
+				setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr,
 						angeboterledigungsgrundsprDto);
 			}
 		} catch (EntityExistsException ex) {
@@ -1217,16 +1236,13 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 
 	}
 
-	public AngeboterledigungsgrundDto angeboterledigungsgrundFindByPrimaryKey(
-			String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
+	public AngeboterledigungsgrundDto angeboterledigungsgrundFindByPrimaryKey(String cNrI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		AngeboterledigungsgrundDto angeboterledigungsgrundDto = null;
-		Angeboterledigungsgrund angeboterledigungsgrund = em.find(
-				Angeboterledigungsgrund.class, cNrI);
+		Angeboterledigungsgrund angeboterledigungsgrund = em.find(Angeboterledigungsgrund.class, cNrI);
 		if (angeboterledigungsgrund == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler bei AngebotserledigungsgrundFindByPrimaryKey. Es gibt keine Grund mit cnr "
-							+ cNrI);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					"Fehler bei AngebotserledigungsgrundFindByPrimaryKey. Es gibt keine Grund mit cnr " + cNrI);
 		}
 		angeboterledigungsgrundDto = assembleAngeboterledigungsgrundDto(angeboterledigungsgrund);
 
@@ -1234,10 +1250,9 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		AngeboterledigungsgrundsprDto angeboterledigungsgrundsprDto = null;
 
 		try {
-			AngeboterledigungsgrundsprPK angeboterledigungsgrundsprPK = new AngeboterledigungsgrundsprPK(
-					cNrI, theClientDto.getLocUiAsString());
-			Angeboterledigungsgrundspr angeboterledigungsgrundspr = em.find(
-					Angeboterledigungsgrundspr.class,
+			AngeboterledigungsgrundsprPK angeboterledigungsgrundsprPK = new AngeboterledigungsgrundsprPK(cNrI,
+					theClientDto.getLocUiAsString());
+			Angeboterledigungsgrundspr angeboterledigungsgrundspr = em.find(Angeboterledigungsgrundspr.class,
 					angeboterledigungsgrundsprPK);
 			if (angeboterledigungsgrundspr != null) {
 				angeboterledigungsgrundsprDto = assembleAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr);
@@ -1246,13 +1261,11 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 			// ignore
 		}
 
-		angeboterledigungsgrundDto
-				.setAngeboterledigungsgrundsprDto(angeboterledigungsgrundsprDto);
+		angeboterledigungsgrundDto.setAngeboterledigungsgrundsprDto(angeboterledigungsgrundsprDto);
 		return angeboterledigungsgrundDto;
 	}
 
-	private void checkAngeboterledigungsgrundDto(
-			AngeboterledigungsgrundDto angeboterledigungsgrundDtoI)
+	private void checkAngeboterledigungsgrundDto(AngeboterledigungsgrundDto angeboterledigungsgrundDtoI)
 			throws EJBExceptionLP {
 		if (angeboterledigungsgrundDtoI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
@@ -1260,8 +1273,7 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		}
 	}
 
-	private void checkAngeboterledigungsgrundCNr(
-			String cNrAngeboterledigungsgrundI) throws EJBExceptionLP {
+	private void checkAngeboterledigungsgrundCNr(String cNrAngeboterledigungsgrundI) throws EJBExceptionLP {
 		if (cNrAngeboterledigungsgrundI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("cNrAngeboterledigungsgrundI == null"));
@@ -1269,8 +1281,7 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	}
 
 	private void setAngeboterledigungsgrundFromAngeboterledigungsgrundDto(
-			Angeboterledigungsgrund angeboterledigungsgrund,
-			AngeboterledigungsgrundDto angeboterledigungsgrundDto) {
+			Angeboterledigungsgrund angeboterledigungsgrund, AngeboterledigungsgrundDto angeboterledigungsgrundDto) {
 		angeboterledigungsgrund.setISort(angeboterledigungsgrundDto.getISort());
 		em.merge(angeboterledigungsgrund);
 		em.flush();
@@ -1278,28 +1289,23 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 
 	private AngeboterledigungsgrundDto assembleAngeboterledigungsgrundDto(
 			Angeboterledigungsgrund angeboterledigungsgrund) {
-		return AngeboterledigungsgrundDtoAssembler
-				.createDto(angeboterledigungsgrund);
+		return AngeboterledigungsgrundDtoAssembler.createDto(angeboterledigungsgrund);
 	}
 
-	private AngeboterledigungsgrundDto[] assembleAngeboterledigungsgrundDtos(
-			Collection<?> angeboterledigungsgrunds) {
+	private AngeboterledigungsgrundDto[] assembleAngeboterledigungsgrundDtos(Collection<?> angeboterledigungsgrunds) {
 		List<AngeboterledigungsgrundDto> list = new ArrayList<AngeboterledigungsgrundDto>();
 		if (angeboterledigungsgrunds != null) {
 			Iterator<?> iterator = angeboterledigungsgrunds.iterator();
 			while (iterator.hasNext()) {
-				Angeboterledigungsgrund angeboterledigungsgrund = (Angeboterledigungsgrund) iterator
-						.next();
+				Angeboterledigungsgrund angeboterledigungsgrund = (Angeboterledigungsgrund) iterator.next();
 				list.add(assembleAngeboterledigungsgrundDto(angeboterledigungsgrund));
 			}
 		}
-		AngeboterledigungsgrundDto[] returnArray = new AngeboterledigungsgrundDto[list
-				.size()];
+		AngeboterledigungsgrundDto[] returnArray = new AngeboterledigungsgrundDto[list.size()];
 		return (AngeboterledigungsgrundDto[]) list.toArray(returnArray);
 	}
 
-	public void createAngeboterledigungsgrundspr(
-			AngeboterledigungsgrundsprDto angeboterledigungsgrundsprDto)
+	public void createAngeboterledigungsgrundspr(AngeboterledigungsgrundsprDto angeboterledigungsgrundsprDto)
 			throws EJBExceptionLP {
 		if (angeboterledigungsgrundsprDto == null) {
 			return;
@@ -1307,67 +1313,55 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		try {
 			Angeboterledigungsgrundspr angeboterledigungsgrundspr = new Angeboterledigungsgrundspr(
 					angeboterledigungsgrundsprDto.getLocaleCNr(),
-					angeboterledigungsgrundsprDto
-							.getAngeboterledigungsgrundCNr(),
+					angeboterledigungsgrundsprDto.getAngeboterledigungsgrundCNr(),
 					angeboterledigungsgrundsprDto.getCBez());
 			em.persist(angeboterledigungsgrundspr);
 			em.flush();
-			setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(
-					angeboterledigungsgrundspr, angeboterledigungsgrundsprDto);
+			setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr,
+					angeboterledigungsgrundsprDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 
 	}
 
-	public void removeAngeboterledigungsgrundspr(String localeCNr,
-			String angbeoterledigungsgrundCNr) throws EJBExceptionLP {
+	public void removeAngeboterledigungsgrundspr(String localeCNr, String angbeoterledigungsgrundCNr)
+			throws EJBExceptionLP {
 	}
 
-	public void updateAngeboterledigungsgrundspr(
-			AngeboterledigungsgrundsprDto angeboterledigungsgrundsprDto)
+	public void updateAngeboterledigungsgrundspr(AngeboterledigungsgrundsprDto angeboterledigungsgrundsprDto)
 			throws EJBExceptionLP {
 		if (angeboterledigungsgrundsprDto != null) {
 			AngeboterledigungsgrundsprPK angeboterledigungsgrundsprPK = new AngeboterledigungsgrundsprPK();
+			angeboterledigungsgrundsprPK.setLocaleCNr(angeboterledigungsgrundsprDto.getLocaleCNr());
 			angeboterledigungsgrundsprPK
-					.setLocaleCNr(angeboterledigungsgrundsprDto.getLocaleCNr());
-			angeboterledigungsgrundsprPK
-					.setAngeboterledigungsgrundCNr(angeboterledigungsgrundsprDto
-							.getAngeboterledigungsgrundCNr());
-			Angeboterledigungsgrundspr angeboterledigungsgrundspr = em.find(
-					Angeboterledigungsgrundspr.class,
+					.setAngeboterledigungsgrundCNr(angeboterledigungsgrundsprDto.getAngeboterledigungsgrundCNr());
+			Angeboterledigungsgrundspr angeboterledigungsgrundspr = em.find(Angeboterledigungsgrundspr.class,
 					angeboterledigungsgrundsprPK);
 			if (angeboterledigungsgrundspr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 						"Fehler bei updateAngebotserledigungsgrundspr. Es gibt keine Spr fuer Grund "
-								+ angeboterledigungsgrundsprDto
-										.getAngeboterledigungsgrundCNr()
-								+ "fuer die Locale "
+								+ angeboterledigungsgrundsprDto.getAngeboterledigungsgrundCNr() + "fuer die Locale "
 								+ angeboterledigungsgrundsprDto.getLocaleCNr()
 								+ "\nangeboterledigungsgrundsprDto.toString(): "
 								+ angeboterledigungsgrundsprDto.toString());
 			}
-			setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(
-					angeboterledigungsgrundspr, angeboterledigungsgrundsprDto);
+			setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr,
+					angeboterledigungsgrundsprDto);
 		}
 	}
 
-	public AngeboterledigungsgrundsprDto angeboterledigungsgrundsprFindByPrimaryKey(
-			String localeCNr, String angbeoterledigungsgrundCNr)
-			throws EJBExceptionLP {
+	public AngeboterledigungsgrundsprDto angeboterledigungsgrundsprFindByPrimaryKey(String localeCNr,
+			String angbeoterledigungsgrundCNr) throws EJBExceptionLP {
 		AngeboterledigungsgrundsprPK angeboterledigungsgrundsprPK = new AngeboterledigungsgrundsprPK();
 		angeboterledigungsgrundsprPK.setLocaleCNr(localeCNr);
-		angeboterledigungsgrundsprPK
-				.setAngeboterledigungsgrundCNr(angbeoterledigungsgrundCNr);
-		Angeboterledigungsgrundspr angeboterledigungsgrundspr = em.find(
-				Angeboterledigungsgrundspr.class, angeboterledigungsgrundsprPK);
+		angeboterledigungsgrundsprPK.setAngeboterledigungsgrundCNr(angbeoterledigungsgrundCNr);
+		Angeboterledigungsgrundspr angeboterledigungsgrundspr = em.find(Angeboterledigungsgrundspr.class,
+				angeboterledigungsgrundsprPK);
 		if (angeboterledigungsgrundspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"Fehler bei angebotserledigungsgrundFindByPrimaryKey. Es gibt keinen Grund "
-							+ angbeoterledigungsgrundCNr + "fuer die Locale "
-							+ localeCNr);
+							+ angbeoterledigungsgrundCNr + "fuer die Locale " + localeCNr);
 		}
 		return assembleAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr);
 	}
@@ -1375,16 +1369,14 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	private void setAngeboterledigungsgrundsprFromAngeboterledigungsgrundsprDto(
 			Angeboterledigungsgrundspr angeboterledigungsgrundspr,
 			AngeboterledigungsgrundsprDto angeboterledigungsgrundsprDto) {
-		angeboterledigungsgrundspr.setCBez(angeboterledigungsgrundsprDto
-				.getCBez());
+		angeboterledigungsgrundspr.setCBez(angeboterledigungsgrundsprDto.getCBez());
 		em.merge(angeboterledigungsgrundspr);
 		em.flush();
 	}
 
 	private AngeboterledigungsgrundsprDto assembleAngeboterledigungsgrundsprDto(
 			Angeboterledigungsgrundspr angeboterledigungsgrundspr) {
-		return AngeboterledigungsgrundsprDtoAssembler
-				.createDto(angeboterledigungsgrundspr);
+		return AngeboterledigungsgrundsprDtoAssembler.createDto(angeboterledigungsgrundspr);
 	}
 
 	private AngeboterledigungsgrundsprDto[] assembleAngeboterledigungsgrundsprDtos(
@@ -1393,33 +1385,27 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		if (angeboterledigungsgrundsprs != null) {
 			Iterator<?> iterator = angeboterledigungsgrundsprs.iterator();
 			while (iterator.hasNext()) {
-				Angeboterledigungsgrundspr angeboterledigungsgrundspr = (Angeboterledigungsgrundspr) iterator
-						.next();
+				Angeboterledigungsgrundspr angeboterledigungsgrundspr = (Angeboterledigungsgrundspr) iterator.next();
 				list.add(assembleAngeboterledigungsgrundsprDto(angeboterledigungsgrundspr));
 			}
 		}
-		AngeboterledigungsgrundsprDto[] returnArray = new AngeboterledigungsgrundsprDto[list
-				.size()];
+		AngeboterledigungsgrundsprDto[] returnArray = new AngeboterledigungsgrundsprDto[list.size()];
 		return (AngeboterledigungsgrundsprDto[]) list.toArray(returnArray);
 	}
 
 	// Angebotpositionart
 	// --------------------------------------------------------
 
-	public String createAngebotpositionart(
-			AngebotpositionartDto angebotpositionartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createAngebotpositionart(AngebotpositionartDto angebotpositionartDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkAngebotpositionartDto(angebotpositionartDtoI);
 		try {
-			Angebotpositionart angebotpositionart = new Angebotpositionart(
-					angebotpositionartDtoI.getCNr(),
-					angebotpositionartDtoI.getISort(),
-					angebotpositionartDtoI.getBVersteckt());
+			Angebotpositionart angebotpositionart = new Angebotpositionart(angebotpositionartDtoI.getCNr(),
+					angebotpositionartDtoI.getISort(), angebotpositionartDtoI.getBVersteckt());
 			em.persist(angebotpositionart);
 			em.flush();
 
-			setAngebotpositionartFromAngebotpositionartDto(angebotpositionart,
-					angebotpositionartDtoI);
+			setAngebotpositionartFromAngebotpositionartDto(angebotpositionart, angebotpositionartDtoI);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -1427,14 +1413,12 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		return angebotpositionartDtoI.getCNr();
 	}
 
-	public void removeAngebotpositionart(String cNrAngebotpositionartI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeAngebotpositionart(String cNrAngebotpositionartI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkAngebotpositionartCNr(cNrAngebotpositionartI);
-		Angebotpositionart toRemove = em.find(Angebotpositionart.class,
-				cNrAngebotpositionartI);
+		Angebotpositionart toRemove = em.find(Angebotpositionart.class, cNrAngebotpositionartI);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"Fehler bei removeAngebotpositionsart. Es gibt keine Positionsart mit der cnr "
 							+ cNrAngebotpositionartI);
 		}
@@ -1446,45 +1430,36 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		}
 	}
 
-	public void updateAngebotpositionart(
-			AngebotpositionartDto angebotpositionartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateAngebotpositionart(AngebotpositionartDto angebotpositionartDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkAngebotpositionartDto(angebotpositionartDtoI);
-		Angebotpositionart angebotpositionart = em.find(
-				Angebotpositionart.class, angebotpositionartDtoI.getCNr());
+		Angebotpositionart angebotpositionart = em.find(Angebotpositionart.class, angebotpositionartDtoI.getCNr());
 		if (angebotpositionart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"Fehler bei updateAngebotspositionart. Es gibt keine Positionsart mit der cnr "
-							+ angebotpositionartDtoI.getCNr()
-							+ "\nangebotpositionartDtoI.toString(): "
+							+ angebotpositionartDtoI.getCNr() + "\nangebotpositionartDtoI.toString(): "
 							+ angebotpositionartDtoI.toString());
 		}
 
-		setAngebotpositionartFromAngebotpositionartDto(angebotpositionart,
-				angebotpositionartDtoI);
+		setAngebotpositionartFromAngebotpositionartDto(angebotpositionart, angebotpositionartDtoI);
 	}
 
-	public Map<String, String> getAngebotpositionart(Locale locale1I,
-			Locale locale2I, TheClientDto theClientDto) throws EJBExceptionLP {
+	public Map<String, String> getAngebotpositionart(Locale locale1I, Locale locale2I, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkLocale(locale1I);
 		checkLocale(locale2I);
 		LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
 
 		try {
-			Query query = em
-					.createNamedQuery("AngebotpositionartfindAllEnable");
+			Query query = em.createNamedQuery("AngebotpositionartfindAllEnable");
 			Collection<?> cl = query.getResultList();
 
 			AngebotpositionartDto[] aAngebotpositionartDto = assembleAngebotpositionartDtos(cl);
 
 			for (int i = 0; i < aAngebotpositionartDto.length; i++) {
-				String sUebersetzung = getSystemMultilanguageFac()
-						.uebersetzePositionsartOptimal(
-								aAngebotpositionartDto[i].getPositionsartCNr(),
-								locale1I, locale2I);
-				map.put(aAngebotpositionartDto[i].getPositionsartCNr(),
-						sUebersetzung);
+				String sUebersetzung = getSystemMultilanguageFac().uebersetzePositionsartOptimal(
+						aAngebotpositionartDto[i].getPositionsartCNr(), locale1I, locale2I);
+				map.put(aAngebotpositionartDto[i].getPositionsartCNr(), sUebersetzung);
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -1493,15 +1468,12 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		return map;
 	}
 
-	public AngebotpositionartDto angebotpositionartFindByPrimaryKey(
-			String cNrAngebotpositionartI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public AngebotpositionartDto angebotpositionartFindByPrimaryKey(String cNrAngebotpositionartI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		AngebotpositionartDto angebotpositionartDto = null;
-		Angebotpositionart angebotpositionart = em.find(
-				Angebotpositionart.class, cNrAngebotpositionartI);
+		Angebotpositionart angebotpositionart = em.find(Angebotpositionart.class, cNrAngebotpositionartI);
 		if (angebotpositionart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"FEhler bei AngebotspositionartFindByPrimaryKey. Es gibt keine Positionsart mit der cnr "
 							+ cNrAngebotpositionartI);
 		}
@@ -1509,19 +1481,16 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		return angebotpositionartDto;
 	}
 
-	private void checkAngebotpositionartDto(
-			AngebotpositionartDto angebotpositionartDtoI) throws EJBExceptionLP {
+	private void checkAngebotpositionartDto(AngebotpositionartDto angebotpositionartDtoI) throws EJBExceptionLP {
 		if (angebotpositionartDtoI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("angebotpositionartDtoI == null"));
 		}
 
-		myLogger.info("AngebotpositionartDtoI: "
-				+ angebotpositionartDtoI.toString());
+		myLogger.info("AngebotpositionartDtoI: " + angebotpositionartDtoI.toString());
 	}
 
-	private void checkAngebotpositionartCNr(String cNrAngebotpositionartI)
-			throws EJBExceptionLP {
+	private void checkAngebotpositionartCNr(String cNrAngebotpositionartI) throws EJBExceptionLP {
 		if (cNrAngebotpositionartI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("cNrAngebotpositionartI == null"));
@@ -1530,8 +1499,7 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		myLogger.info("AngebotpositionartCNr: " + cNrAngebotpositionartI);
 	}
 
-	private void setAngebotpositionartFromAngebotpositionartDto(
-			Angebotpositionart angebotpositionart,
+	private void setAngebotpositionartFromAngebotpositionartDto(Angebotpositionart angebotpositionart,
 			AngebotpositionartDto angebotpositionartDto) {
 		angebotpositionart.setISort(angebotpositionartDto.getISort());
 		angebotpositionart.setBVersteckt(angebotpositionartDto.getBVersteckt());
@@ -1539,31 +1507,26 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		em.flush();
 	}
 
-	private AngebotpositionartDto assembleAngebotpositionartDto(
-			Angebotpositionart angebotpositionart) {
+	private AngebotpositionartDto assembleAngebotpositionartDto(Angebotpositionart angebotpositionart) {
 		return AngebotpositionartDtoAssembler.createDto(angebotpositionart);
 	}
 
-	private AngebotpositionartDto[] assembleAngebotpositionartDtos(
-			Collection<?> angebotpositionarts) {
+	private AngebotpositionartDto[] assembleAngebotpositionartDtos(Collection<?> angebotpositionarts) {
 		List<AngebotpositionartDto> list = new ArrayList<AngebotpositionartDto>();
 		if (angebotpositionarts != null) {
 			Iterator<?> iterator = angebotpositionarts.iterator();
 			while (iterator.hasNext()) {
-				Angebotpositionart angebotpositionart = (Angebotpositionart) iterator
-						.next();
+				Angebotpositionart angebotpositionart = (Angebotpositionart) iterator.next();
 				list.add(assembleAngebotpositionartDto(angebotpositionart));
 			}
 		}
-		AngebotpositionartDto[] returnArray = new AngebotpositionartDto[list
-				.size()];
+		AngebotpositionartDto[] returnArray = new AngebotpositionartDto[list.size()];
 		return (AngebotpositionartDto[]) list.toArray(returnArray);
 	}
 
 	public void checkAngebotIId(Integer iIdAngebotI) throws EJBExceptionLP {
 		if (iIdAngebotI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAngebotI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAngebotI == null"));
 		}
 
 		myLogger.info("AngebotIId: " + iIdAngebotI.toString());
@@ -1573,27 +1536,19 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 	 * Die in Stunden hinterlegte Lieferzeit in die gewuenschte Angebotseinheit
 	 * umrechnen.
 	 * 
-	 * @param iIdAngebotI
-	 *            PK des Angebots
-	 * @param cNrAngeboteinheitI
-	 *            die gewuenschte Einheit
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdAngebotI        PK des Angebots
+	 * @param cNrAngeboteinheitI die gewuenschte Einheit
+	 * @param theClientDto       der aktuelle Benutzer
 	 * @return Integer die Lieferzeit in der gewuenschten Einheit
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Integer getLieferzeitInAngeboteinheit(Integer iIdAngebotI,
-			String cNrAngeboteinheitI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Integer getLieferzeitInAngeboteinheit(Integer iIdAngebotI, Integer angebotpositionIId,
+			String cNrAngeboteinheitI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotIId(iIdAngebotI);
 
-		if (cNrAngeboteinheitI == null
-				|| (!cNrAngeboteinheitI
-						.equals(AngebotServiceFac.ANGEBOTEINHEIT_TAG)
-						&& !cNrAngeboteinheitI
-								.equals(AngebotServiceFac.ANGEBOTEINHEIT_STUNDE) && !cNrAngeboteinheitI
-						.equals(AngebotServiceFac.ANGEBOTEINHEIT_WOCHE))) {
+		if (cNrAngeboteinheitI == null || (!cNrAngeboteinheitI.equals(AngebotServiceFac.ANGEBOTEINHEIT_TAG)
+				&& !cNrAngeboteinheitI.equals(AngebotServiceFac.ANGEBOTEINHEIT_STUNDE)
+				&& !cNrAngeboteinheitI.equals(AngebotServiceFac.ANGEBOTEINHEIT_WOCHE))) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("cNrAngeboteinheitI ungueltig"));
 		}
@@ -1601,17 +1556,23 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		Integer iiLieferzeit = null;
 
 		try {
-			AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(
-					iIdAngebotI, theClientDto);
+			AngebotDto angebotDto = getAngebotFac().angebotFindByPrimaryKey(iIdAngebotI, theClientDto);
 
 			// die Lieferzeit in Stunden
-			double dLieferzeit = angebotDto.getILieferzeitinstunden()
-					.doubleValue();
+			double dLieferzeit = angebotDto.getILieferzeitinstunden().doubleValue();
+
+			if (angebotpositionIId != null) {
+				AngebotpositionDto apDto = getAngebotpositionFac().angebotpositionFindByPrimaryKey(angebotpositionIId,
+						theClientDto);
+				if (apDto.getILieferzeitinstunden() != null) {
+					dLieferzeit = apDto.getILieferzeitinstunden().doubleValue();
+				}
+
+			}
 
 			if (cNrAngeboteinheitI.equals(AngebotServiceFac.ANGEBOTEINHEIT_TAG)) {
 				dLieferzeit /= 24;
-			} else if (cNrAngeboteinheitI
-					.equals(AngebotServiceFac.ANGEBOTEINHEIT_WOCHE)) {
+			} else if (cNrAngeboteinheitI.equals(AngebotServiceFac.ANGEBOTEINHEIT_WOCHE)) {
 				dLieferzeit /= 24 * 7;
 			}
 

@@ -37,6 +37,7 @@ import java.sql.Date;
 
 import javax.ejb.Remote;
 
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
@@ -58,14 +59,15 @@ public interface KundeReportFac {
 	public final static int UC_REPORT_KUNDE_WARTUNGSAUSWERTUNG = 5;
 	public final static int UC_REPORT_KUNDE_MONATSSTATISTIK = 6;
 	public final static int UC_REPORT_KUNDE_KUNDENPREISLISTE = 7;
+	public final static int UC_REPORT_KUNDE_LIEFERMENGEN = 8;
 
 	public final static int REPORT_KUNDENLISTE_OPTION_PROJEKTEALLE = 1;
 	public final static int REPORT_KUNDENLISTE_OPTION_PROJEKTEOFFENE = 2;
-	
+
 	public final static int REPORT_LIEFERSTATISTIK_OPTION_LIEFERADRESSE = 0;
 	public final static int REPORT_LIEFERSTATISTIK_OPTION_RECHNUNGSADRESSE = 1;
 	public final static int REPORT_LIEFERSTATISTIK_OPTION_STATISTIKADRESSE = 2;
-	
+
 	public final static int REPORT_STATISTIK_RE_OR_GS = 0;
 	public final static int REPORT_STATISTIK_RECHNUNGSNUMMER = 1;
 	public final static int REPORT_STATISTIK_LIEFERSCHEINNUMMER = 2;
@@ -94,14 +96,32 @@ public interface KundeReportFac {
 	public final static int REPORT_STATISTIK_SETARTIKEL_TYP = 25;
 	public final static int REPORT_STATISTIK_MATERIALZUSCHLAG = 26;
 	public final static int REPORT_STATISTIK_WERT = 27;
-	public final static int REPORT_STATISTIK_ANZAHL_FELDER = 28;
+	public final static int REPORT_STATISTIK_RECHNUNGSDATUM = 28;
+	public final static int REPORT_STATISTIK_RUECKGABE = 29;
+	public final static int REPORT_STATISTIK_MANUELL_ERLEDIGT = 30;
+	public final static int REPORT_STATISTIK_AUFTRAGSNUMMER = 31;
+	public final static int REPORT_STATISTIK_LIEFERSCHEINART = 32;
+	public final static int REPORT_STATISTIK_ANZAHL_FELDER = 33;
 	
+
 	public final static int REPORT_MONATSSTATISTIK_MONAT = 0;
 	public final static int REPORT_MONATSSTATISTIK_JAHR = 1;
 	public final static int REPORT_MONATSSTATISTIK_MENGE = 2;
 	public final static int REPORT_MONATSSTATISTIK_WERT = 3;
 	public final static int REPORT_MONATSSTATISTIK_ANZAHL_FELDER = 25;
-	
+
+	public static int REPORT_LIEFERMENGEN_ARTIKELNUMMER = 0;
+	public static int REPORT_LIEFERMENGEN_BEZEICHUNG = 1;
+	public static int REPORT_LIEFERMENGEN_EINHEIT = 2;
+	public static int REPORT_LIEFERMENGEN_MENGE = 3;
+	public static int REPORT_LIEFERMENGEN_DATUM = 4;
+	public static int REPORT_LIEFERMENGEN_LSTEXT = 5;
+	public static int REPORT_LIEFERMENGEN_LETZTER_STARTWERT = 6;
+	public static int REPORT_LIEFERMENGEN_LIEFERMENGE_GESAMT = 7;
+	public static int REPORT_LIEFERMENGEN_DATUM_LETZTER_STARTWERT = 8;
+	public static int REPORT_LIEFERMENGEN_MENGE_UNTERWEGS = 9;
+	public static int REPORT_LIEFERMENGEN_ANZAHL_SPALTEN = 10;
+
 	public final static String REPORT_MODUL = "partner";
 
 	public final static String REPORT_KUNDENSTAMMBLATT = "part_kundenstammblatt.jasper";
@@ -110,40 +130,68 @@ public interface KundeReportFac {
 	public final static String REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT = "part_wartungsauswertung_artikellieferant.jasper";
 
 	public final static String REPORT_KUNDENPREISLISTE = "part_kundenpreisliste.jasper";
-	
-	
+	public final static String REPORT_LIEFERMENGEN = "part_liefermengen.jasper";
+
 	public JasperPrintLP printLieferStatistik(TheClientDto theClientDto,
-			Integer iIdkundeI, Integer artikelIId, Integer artikelgruppeIId, Date dVonI, Date dBisI, Integer iSortierungI,
-			boolean bMitTexteingaben, boolean bVerdichtetNachArtikel, boolean bEingeschraenkt,boolean bMonatsstatistik, int iOptionAdresse,boolean bRechnungsdatum);
+			Integer iIdkundeI, Integer artikelIId, Integer artikelgruppeIId,
+			Date dVonI, Date dBisI, Integer iSortierungI,
+			boolean bMitTexteingaben, boolean bVerdichtetNachArtikel,
+			boolean bSortiertNachArtikelgruppe, boolean bEingeschraenkt,
+			boolean bMonatsstatistik, int iOptionAdresse,
+			boolean bRechnungsdatum);
 
-	public JasperPrintLP printKundenstammblatt(Integer kundeIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-	public JasperPrintLP printKundenpreisliste(Integer kundeIId, Integer artikelgruppeIId, Integer artikelklasseIId,
-			boolean bMitInaktiven, String artikelNrVon, String artikelNrBis,
-			boolean bMitVersteckten, java.sql.Date datGueltikeitsdatumI,boolean nurSonderkonditionen, boolean bMitArtikelbezeichnungenInMandantensprache, 
-			TheClientDto theClientDto);
-	public JasperPrintLP printKundenstatistik(
-			StatistikParamDto statistikParamDtoI) throws RemoteException;
+	public JasperPrintLP printKundenstammblatt(Integer kundeIId, boolean bStatistikadresse,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public Object[][] getDataLieferstatistik(TheClientDto theClientDto,
-			Integer kundeIId, Integer artikelIId ,Integer artikelgruppeIId, Date dVon, Date dBis, Integer iSortierung,
-			String mandantCNr, boolean bMitTexteingaben,
-			boolean bVerdichtetNachArtikel,boolean bEingeschraenkt, int iOptionAdresse, boolean bRechnungsdatum);
-	
-	public JasperPrintLP printKundenliste(TheClientDto theClientDto,
-			boolean bUmsatzNachStatistikadresse, boolean bMitVersteckten,
-			boolean bMitInteressenten, boolean bMitAnsprechpartner, Integer kundeIIdSelektiert, int iProjektemitdrucken, String cPlz, Integer landIId, Integer brancheIId, Integer partnerklasseIId) throws RemoteException;
-	public LPDatenSubreport getSubreportProjekte(Integer partnerIId,
-			boolean bNurOffene, TheClientDto theClientDto);
-	
-	public JasperPrintLP printWartungsauswertung(java.sql.Timestamp tStichtag,boolean bVerdichtet, boolean bSortiertNachArtikellieferant, TheClientDto theClientDto)throws RemoteException;
-
-	public CustomerPricelistReportDto printKundenpreislisteRaw(Integer kundeIId,
+	public JasperPrintLP printKundenpreisliste(Integer kundeIId,
 			Integer artikelgruppeIId, Integer artikelklasseIId,
 			boolean bMitInaktiven, String artikelNrVon, String artikelNrBis,
 			boolean bMitVersteckten, java.sql.Date datGueltikeitsdatumI,
 			boolean nurSonderkonditionen,
 			boolean bMitArtikelbezeichnungenInMandantensprache,
-			boolean nurWebshopartikel,
-			TheClientDto theClientDto) ;	
+			Integer shopgruppeIId, TheClientDto theClientDto);
+
+	public JasperPrintLP printKundenstatistik(
+			StatistikParamDto statistikParamDtoI) throws RemoteException;
+
+	public Object[][] getDataLieferstatistik(TheClientDto theClientDto,
+			Integer kundeIId, Integer artikelIId, Integer artikelgruppeIId,
+			Date dVon, Date dBis, Integer iSortierung, String mandantCNr,
+			boolean bMitTexteingaben, boolean bVerdichtetNachArtikel,
+			boolean bSortiertNachArtikelgruppe, boolean bEingeschraenkt,
+			int iOptionAdresse, boolean bRechnungsdatum);
+
+	public JasperPrintLP printKundenliste(TheClientDto theClientDto,
+			boolean bUmsatzNachStatistikadresse, boolean bMitVersteckten,
+			boolean bMitInteressenten, boolean bMitAnsprechpartner,
+			Integer kundeIIdSelektiert, int iProjektemitdrucken, String cPlz,
+			Integer landIId, Integer brancheIId, Integer partnerklasseIId)
+			throws RemoteException;
+
+	public LPDatenSubreport getSubreportProjekte(Integer partnerIId,
+			boolean bNurOffene, TheClientDto theClientDto);
+
+	public JasperPrintLP printWartungsauswertung(java.sql.Timestamp tStichtag,
+			boolean bVerdichtet, boolean bSortiertNachArtikellieferant,
+			TheClientDto theClientDto) throws RemoteException;
+
+	public CustomerPricelistReportDto printKundenpreislisteRaw(
+			Integer kundeIId, Integer artikelgruppeIId,
+			Integer artikelklasseIId, boolean bMitInaktiven,
+			String artikelNrVon, String artikelNrBis, boolean bMitVersteckten,
+			java.sql.Date datGueltikeitsdatumI, boolean nurSonderkonditionen,
+			boolean bMitArtikelbezeichnungenInMandantensprache,
+			boolean nurWebshopartikel, Integer shopgruppeIId,
+			TheClientDto theClientDto);
+
+	public JasperPrintLP printLiefermengen(Integer kundeIId,
+			TheClientDto theClientDto);
+
+	public Object[] befuelleLiefermengenReportZeile(Integer kundeIId,
+			TheClientDto theClientDto, Integer liefermengenIId);
+
+	public Object[] befuelleLiefermengenReportZeile(Integer kundeIId,
+			TheClientDto theClientDto, Integer liefermengenIId,
+			Object[][] zeilenLieferstatistik, ArtikelDto aDto);
+
 }

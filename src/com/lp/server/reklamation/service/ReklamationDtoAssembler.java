@@ -72,10 +72,6 @@ public class ReklamationDtoAssembler {
 			reklamationDto.setAnsprechpartnerIIdLieferant(reklamation
 					.getAnsprechpartnerIIdLieferant());
 			reklamationDto.setCProjekt(reklamation.getCProjekt());
-			reklamationDto.setCTelansprechpartner(reklamation
-					.getCTelansprechpartner());
-			reklamationDto.setCTelansprechpartnerLieferant(reklamation
-					.getCTelansprechpartnerLieferant());
 			reklamationDto.setXAnalyse(reklamation.getXAnalyse());
 			reklamationDto.setXKommentar(reklamation.getXKommentar());
 			reklamationDto.setFehlerIId(reklamation.getFehlerIId());
@@ -158,6 +154,12 @@ public class ReklamationDtoAssembler {
 			reklamationDto.setCSeriennrchargennr(reklamation
 					.getCSeriennrchargennr());
 			reklamationDto.setIKundeunterart(reklamation.getIKundeunterart());
+			reklamationDto.setProjektIId(reklamation.getProjektIId());
+			reklamationDto.setCLflsnr(reklamation.getCLflsnr());
+			reklamationDto.setCLfreklanr(reklamation.getCLfreklanr());
+			reklamationDto.setTWareErhalten(reklamation.getTWareErhalten());
+			reklamationDto.setCBestellnummer(reklamation.getCBestellnummer());
+			reklamationDto.setCWareneingang(reklamation.getCWareneingang());
 
 		}
 		return reklamationDto;

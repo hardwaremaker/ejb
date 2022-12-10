@@ -64,12 +64,12 @@ public class FLRLieferart implements Serializable {
 	private Short b_versteckt;
 
 	/** persistent field */
-	private Set<?> lieferart_lieferartspr_set;
+	private Set<FLRLieferartspr> lieferart_lieferartspr_set;
 
 	/** full constructor */
 	public FLRLieferart(String mandant_c_nr, String c_nr,
 			Short b_frachtkostenalserledigtverbuchen, String c_versandort,
-			Short b_versteckt, Set<?> lieferart_lieferartspr_set) {
+			Short b_versteckt, Set<FLRLieferartspr> lieferart_lieferartspr_set) {
 		this.mandant_c_nr = mandant_c_nr;
 		this.c_nr = c_nr;
 		this.b_frachtkostenalserledigtverbuchen = b_frachtkostenalserledigtverbuchen;
@@ -85,7 +85,7 @@ public class FLRLieferart implements Serializable {
 	/** minimal constructor */
 	public FLRLieferart(String mandant_c_nr, String c_nr,
 			Short b_frachtkostenalserledigtverbuchen, String c_versandort,
-			Set<?> lieferart_lieferartspr_set) {
+			Set<FLRLieferartspr> lieferart_lieferartspr_set) {
 		this.mandant_c_nr = mandant_c_nr;
 		this.c_nr = c_nr;
 		this.b_frachtkostenalserledigtverbuchen = b_frachtkostenalserledigtverbuchen;
@@ -142,11 +142,11 @@ public class FLRLieferart implements Serializable {
 		this.b_versteckt = b_versteckt;
 	}
 
-	public Set<?> getLieferart_lieferartspr_set() {
+	public Set<FLRLieferartspr> getLieferart_lieferartspr_set() {
 		return this.lieferart_lieferartspr_set;
 	}
 
-	public void setLieferart_lieferartspr_set(Set<?> lieferart_lieferartspr_set) {
+	public void setLieferart_lieferartspr_set(Set<FLRLieferartspr> lieferart_lieferartspr_set) {
 		this.lieferart_lieferartspr_set = lieferart_lieferartspr_set;
 	}
 

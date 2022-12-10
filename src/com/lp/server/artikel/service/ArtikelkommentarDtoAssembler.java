@@ -54,6 +54,7 @@ public class ArtikelkommentarDtoAssembler {
 					.getBDefaultbild());
 			artikelkommentarDto.setIArt(artikelkommentar.getIArt());
 			artikelkommentarDto.setISort(artikelkommentar.getISort());
+			artikelkommentarDto.setBDateiverweis(artikelkommentar.getBDateiverweis());
 		}
 		return artikelkommentarDto;
 	}

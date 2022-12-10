@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 public class SerienbriefEmpfaengerDto implements Serializable, Cloneable {
 	/**
@@ -55,6 +56,16 @@ public class SerienbriefEmpfaengerDto implements Serializable, Cloneable {
 
 	public void setCAnrede_Ansprechpartner(String cAnrede_Ansprechpartner) {
 		this.cAnrede_Ansprechpartner = cAnrede_Ansprechpartner;
+	}
+
+	private String cAbteilung_Ansprechpartner;
+	
+	public String getCAbteilung_Ansprechpartner() {
+		return cAbteilung_Ansprechpartner;
+	}
+
+	public void setCAbteilung_Ansprechpartner(String cAbteilung_Ansprechpartner) {
+		this.cAbteilung_Ansprechpartner = cAbteilung_Ansprechpartner;
 	}
 
 	private String cNTitel_Ansprechpartner;
@@ -83,6 +94,22 @@ public class SerienbriefEmpfaengerDto implements Serializable, Cloneable {
 	private String cVersandEmailadresse;
 	private String cVersandFaxnummer;
 	private String cVersandBriefanrede;
+	
+	private Integer kundeIId;
+	private Integer lieferantIId;
+	private boolean istInteressent;
+	private BigDecimal umsatz;
+	private Integer partnerIId;
+	private String cBranche;
+	private String cPartnerklasse;
+
+	public Integer getPartnerIId() {
+		return partnerIId;
+	}
+
+	public void setPartnerIId(Integer partnerIId) {
+		this.partnerIId = partnerIId;
+	}
 
 	public PartnerDto getPartnerDto() {
 		return partnerDto;
@@ -121,6 +148,13 @@ public class SerienbriefEmpfaengerDto implements Serializable, Cloneable {
 		serienbriefEmpfaengerDto.cVersandEmailadresse = this.cVersandEmailadresse;
 		serienbriefEmpfaengerDto.cVersandFaxnummer = this.cVersandFaxnummer;
 		serienbriefEmpfaengerDto.cVersandBriefanrede = this.cVersandBriefanrede;
+		serienbriefEmpfaengerDto.istInteressent = this.istInteressent;
+		serienbriefEmpfaengerDto.kundeIId = this.kundeIId;
+		serienbriefEmpfaengerDto.lieferantIId = this.lieferantIId;
+		serienbriefEmpfaengerDto.umsatz = this.umsatz;
+		serienbriefEmpfaengerDto.partnerIId = this.partnerIId;
+		serienbriefEmpfaengerDto.cBranche = this.cBranche;
+		serienbriefEmpfaengerDto.cPartnerklasse = this.cPartnerklasse;
 
 		return serienbriefEmpfaengerDto;
 	}
@@ -326,4 +360,62 @@ public class SerienbriefEmpfaengerDto implements Serializable, Cloneable {
 		this.cVersandBriefanrede = cVersandBriefanrede;
 	}
 
+	public void setIstInteressent(boolean istInteressent) {
+		this.istInteressent = istInteressent;
+	}
+	
+	public boolean isInteressent() {
+		return istInteressent;
+	}
+	
+	public Integer getKundeIId() {
+		return kundeIId;
+	}
+	
+	public void setKundeIId(Integer kundeIId) {
+		this.kundeIId = kundeIId;
+	}
+	
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+	
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
+	}
+	
+	public BigDecimal getUmsatz() {
+		return umsatz;
+	}
+	
+	public void setUmsatz(BigDecimal umsatz) {
+		this.umsatz = umsatz;
+	}
+	
+	public boolean isKunde() {
+		return kundeIId != null;
+	}
+	
+	public boolean isLieferant() {
+		return lieferantIId != null;
+	}
+	
+	public boolean isAnsprechpartner() {
+		return getAnsprechpartnerDto() != null;
+	}
+	
+	public String getCBranche() {
+		return cBranche;
+	}
+	public void setCBranche(String cBranche) {
+		this.cBranche = cBranche;
+	}
+	
+	public String getCPartnerklasse() {
+		return cPartnerklasse;
+	}
+	
+	public void setCPartnerklasse(String cPartnerklasse) {
+		this.cPartnerklasse = cPartnerklasse;
+	}
 }

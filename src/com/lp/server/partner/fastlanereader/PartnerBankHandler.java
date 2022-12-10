@@ -146,6 +146,7 @@ public class PartnerBankHandler extends UseCaseHandler {
 				rows[row][col++] = partnerbank.getC_ktonr();
 				rows[row][col++] = Helper.formatIBAN(partnerbank.getC_iban());
 				rows[row][col++] = bankDto.getCBic();
+				rows[row][col++] = partnerbank.getWaehrung_c_nr();
 
 				if (partnerbank.getFlrpartner().getFlrlandplzort() != null) {
 					rows[row][col++] = partnerbank.getFlrpartner()
@@ -373,7 +374,7 @@ public class PartnerBankHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
+					new Class[] { Integer.class, String.class, String.class, String.class,
 							String.class, String.class, String.class,
 							String.class, String.class, Integer.class },
 					new String[] {
@@ -384,9 +385,10 @@ public class PartnerBankHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.kontonr", mandantCNr, locUI),
 							getTextRespectUISpr("lp.iban", mandantCNr, locUI),
 							getTextRespectUISpr("lp.bic", mandantCNr, locUI),
+							getTextRespectUISpr("lp.waehrung", mandantCNr, locUI),
 							getTextRespectUISpr("lp.lkz", mandantCNr, locUI),
 							getTextRespectUISpr("lp.plz", mandantCNr, locUI),
-							"S", },
+							getTextRespectUISpr("part.sortierung",theClientDto.getMandant(),theClientDto.getLocUi()), },
 					new int[] {
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -394,6 +396,7 @@ public class PartnerBankHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_XL,
 							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_XS,
 							QueryParameters.FLR_BREITE_XS,
 							QueryParameters.FLR_BREITE_S
 									+ QueryParameters.FLR_BREITE_XS,
@@ -408,7 +411,11 @@ public class PartnerBankHandler extends UseCaseHandler {
 							Facade.NICHT_SORTIERBAR,
 							Facade.NICHT_SORTIERBAR,
 							Facade.NICHT_SORTIERBAR,
-							"i_sort" }));
+							Facade.NICHT_SORTIERBAR,
+							"i_sort" },
+					new String[]{null, null, null, null, null, null, null, null, null, 
+							getTextRespectUISpr("part.sortierung.tooltip",theClientDto.getMandant(),theClientDto.getLocUi()), }
+					));
 		}
 		return super.getTableInfo();
 	}

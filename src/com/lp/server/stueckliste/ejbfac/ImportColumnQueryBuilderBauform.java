@@ -39,28 +39,30 @@ import com.lp.service.StklImportSpezifikation;
 public class ImportColumnQueryBuilderBauform implements
 		IImportColumnQueryBuilder {
 
+	private static final String QUERY = "(LOWER({ALIAS}.c_bez) LIKE LOWER('%{VALUE}%') " +
+			"OR LOWER({ALIAS}.c_zbez) LIKE LOWER('%{VALUE}%') " +
+			"OR LOWER({ALIAS}.c_zbez2) LIKE LOWER('%{VALUE}%'))";
+
 	@Override
 	public boolean isTotalMatch() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public List<String> getDeeperColumnQueryBuilders() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public String buildJoinQuery() {
-		// TODO Auto-generated method stub
-		return null;
+		return JOIN_ARTIKELSPR;
 	}
 
 	@Override
-	public String buildWhereQuery(String columnValue,
-			StklImportSpezifikation spez) {
-		// TODO Auto-generated method stub
+	public String buildWhereQuery(String columnValue, StklImportSpezifikation spez) {
+		columnValue = columnValue.replaceAll("\\D+","");
+		if (columnValue.isEmpty()) return null;
+		
+		return QUERY.replaceAll("\\{ALIAS\\}", ArtikelSpr).replaceAll("\\{VALUE\\}", columnValue.replaceAll("/", "%"));
+	}
+
+	@Override
+	public List<String> getDeeperColumnQueryBuilders() {
 		return null;
 	}
 

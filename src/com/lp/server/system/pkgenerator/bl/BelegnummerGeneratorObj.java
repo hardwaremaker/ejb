@@ -34,6 +34,7 @@ package com.lp.server.system.pkgenerator.bl;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
 
 import com.lp.server.system.pkgenerator.ejbfac.BNGeneratorFacLocal;
@@ -82,8 +83,14 @@ public class BelegnummerGeneratorObj {
 	public BelegnummerGeneratorObj() {
 		try {
 			context = new InitialContext();
-			bnGeneratorLocal = (BNGeneratorFacLocal) context
-					.lookup("lpserver/BNGeneratorFacBean/local");
+			try {
+				bnGeneratorLocal = (BNGeneratorFacLocal) context.lookup("lpserver/BNGeneratorFacBean/local");
+			} catch (NameNotFoundException e) {
+				//WILDFLY
+				bnGeneratorLocal = (BNGeneratorFacLocal) context.lookup(
+						"java:global/lpserver/ejb/BNGeneratorFacBean!com.lp.server.system.pkgenerator.ejbfac.BNGeneratorFacLocal");
+			}
+
 		} catch (NamingException e) {
 			e.printStackTrace();
 		}
@@ -92,54 +99,45 @@ public class BelegnummerGeneratorObj {
 	/**
 	 * Liefert eine neue Belegnummer fuer ein beliebige Geschaeftsjahr
 	 * 
-	 * @param geschaeftsjahr
-	 *            Integer
-	 * @param name
-	 *            String
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param geschaeftsjahr Integer
+	 * @param name           String
+	 * @param mandantCNr     String
+	 * @param theClientDto   der aktuelle Benutzer
 	 * @return LpBelegnummer
 	 * @throws EJBExceptionLP
 	 */
-	public LpBelegnummer getNextBelegNr(Integer geschaeftsjahr, String name,
-			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
-		return bnGeneratorLocal.getNextBelegNr(geschaeftsjahr, name,
-				mandantCNr, theClientDto);
+	public LpBelegnummer getNextBelegNr(Integer geschaeftsjahr, String name, String mandantCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		return bnGeneratorLocal.getNextBelegNr(geschaeftsjahr, name, mandantCNr, theClientDto);
 	}
-	
+
 	/**
-	 * Liefert eine neue Belegnummer fuer Buchungen in einem beliebigen Geschaeftsjahr
+	 * Liefert eine neue Belegnummer fuer Buchungen in einem beliebigen
+	 * Geschaeftsjahr
 	 * 
-	 * @param geschaeftsjahr
-	 *            Integer
-	 * @param name
-	 *            String
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param geschaeftsjahr Integer
+	 * @param name           String
+	 * @param mandantCNr     String
+	 * @param theClientDto   der aktuelle Benutzer
 	 * @return LpBelegnummer
 	 * @throws EJBExceptionLP
 	 */
-	public LpBelegnummer getNextBelegNrFinanz(Integer geschaeftsjahr, String name,
-			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
-		return bnGeneratorLocal.getNextBelegNrFinanz(geschaeftsjahr, name,
-				mandantCNr, theClientDto);
+	public LpBelegnummer getNextBelegNrFinanz(Integer geschaeftsjahr, String name, String mandantCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		return bnGeneratorLocal.getNextBelegNrFinanz(geschaeftsjahr, name, mandantCNr, theClientDto);
 	}
 
 	/**
 	 * Liefert eine neue Belegnummer fuer das aktuelle Geschaeftsjahr
 	 * 
-	 * @param name
-	 *            String
-	 * @param mandantCNr
-	 *            String
+	 * @param name         String
+	 * @param mandantCNr   String
 	 * @param theClientDto der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 * @return LpBelegnummer
 	 */
-	public LpBelegnummer getNextBelegNr(String name, String mandantCNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public LpBelegnummer getNextBelegNr(String name, String mandantCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		return bnGeneratorLocal.getNextBelegNr(name, mandantCNr, theClientDto);
 	}
 
@@ -147,28 +145,21 @@ public class BelegnummerGeneratorObj {
 	 * Liefert die Anzahl der in einem Geschaeftsjahr fuer einen Mandanten
 	 * erstellten Belege eines Moduls
 	 * 
-	 * @param geschaeftsjahr
-	 *            Integer
-	 * @param name
-	 *            String
-	 * @param mandantCNr
-	 *            String
+	 * @param geschaeftsjahr Integer
+	 * @param name           String
+	 * @param mandantCNr     String
 	 * @return Integer
 	 */
-	public Integer getBelegAnzahl(Integer geschaeftsjahr, String name,
-			String mandantCNr) {
-		return bnGeneratorLocal
-				.getBelegAnzahl(geschaeftsjahr, name, mandantCNr);
+	public Integer getBelegAnzahl(Integer geschaeftsjahr, String name, String mandantCNr) {
+		return bnGeneratorLocal.getBelegAnzahl(geschaeftsjahr, name, mandantCNr);
 	}
 
 	/**
 	 * Liefert die Summe der erstellten Belege eines Moduls fuer einen Mandanten
 	 * ueber alle Geschaeftsjahre
 	 * 
-	 * @param name
-	 *            String
-	 * @param mandantCNr
-	 *            String
+	 * @param name       String
+	 * @param mandantCNr String
 	 * @return Integer
 	 */
 	public Integer getBelegAnzahl(String name, String mandantCNr) {
@@ -178,8 +169,7 @@ public class BelegnummerGeneratorObj {
 	/**
 	 * Liefert die Summe der insgesamt fuer ein Modul erstellten Belege
 	 * 
-	 * @param name
-	 *            String
+	 * @param name String
 	 * @return Integer
 	 */
 	public Integer getBelegAnzahl(String name) {
@@ -187,50 +177,39 @@ public class BelegnummerGeneratorObj {
 	}
 
 	/**
-	 * Liefert eine neue Belegnummer fuer das aktuelle Geschaeftsjahr fuer
-	 * Multiple Belegnummern innerhalb einer Tabelle
+	 * Liefert eine neue Belegnummer fuer das aktuelle Geschaeftsjahr fuer Multiple
+	 * Belegnummern innerhalb einer Tabelle
 	 * 
-	 * @param nameTabelle
-	 *            String
-	 * @param nameBeleg
-	 *            String
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto der aktuelle Benutzer 
+	 * @param nameTabelle  String
+	 * @param nameBeleg    String
+	 * @param mandantCNr   String
+	 * @param theClientDto der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 * @return LpBelegnummer
 	 */
-	public LpBelegnummer getNextBelegNr(String nameTabelle, String nameBeleg,
-			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
-		return bnGeneratorLocal.getNextBelegNr(nameTabelle, nameBeleg,
-				mandantCNr, theClientDto);
+	public LpBelegnummer getNextBelegNr(String nameTabelle, String nameBeleg, String mandantCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		return bnGeneratorLocal.getNextBelegNr(nameTabelle, nameBeleg, mandantCNr, theClientDto);
 	}
 
 	/**
 	 * Liefert eine neue Belegnummer fuer Multiple Belegnummern innerhalb einer
 	 * Tabelle
 	 * 
-	 * @param geschaeftsjahr
-	 *            String
-	 * @param nameTabelle
-	 *            String
-	 * @param nameBeleg
-	 *            String
-	 * @param mandantCNr
-	 *            String
-	 * @param theClientDto der aktuelle Benutzer 
+	 * @param geschaeftsjahr String
+	 * @param nameTabelle    String
+	 * @param nameBeleg      String
+	 * @param mandantCNr     String
+	 * @param theClientDto   der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 * @return LpBelegnummer
 	 */
-	public LpBelegnummer getNextBelegNr(Integer geschaeftsjahr,
-			String nameTabelle, String nameBeleg, String mandantCNr,
+	public LpBelegnummer getNextBelegNr(Integer geschaeftsjahr, String nameTabelle, String nameBeleg, String mandantCNr,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		return bnGeneratorLocal.getNextBelegNr(geschaeftsjahr, nameTabelle,
-				nameBeleg, mandantCNr, theClientDto);
+		return bnGeneratorLocal.getNextBelegNr(geschaeftsjahr, nameTabelle, nameBeleg, mandantCNr, theClientDto);
 	}
 
-	public LpBelegnummerFormat getBelegnummernFormat(String mandantCNr)
-			throws EJBExceptionLP {
+	public LpBelegnummerFormat getBelegnummernFormat(String mandantCNr) throws EJBExceptionLP {
 		return bnGeneratorLocal.getBelegnummernFormat(mandantCNr);
 	}
 }

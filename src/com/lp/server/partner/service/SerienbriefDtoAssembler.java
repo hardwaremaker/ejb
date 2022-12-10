@@ -81,11 +81,16 @@ public class SerienbriefDtoAssembler {
 					.getPartnerklasseIId());
 			serienbriefDto.setBrancheIId(serienbrief.getBrancheIId());
 			serienbriefDto.setXMailtext(serienbrief.getXMailtext());
-			serienbriefDto.setNewsletter(Helper.short2boolean(serienbrief.getbNewsletter()));
-			serienbriefDto.setBWennkeinanspmitfktDannersteransp(serienbrief.getBWennkeinanspmitfktDannersteransp());
-			serienbriefDto.setBSelektionenLogischesOder(serienbrief.getBSelektionenLogischesOder());
-
+			serienbriefDto.setNewsletter(Helper.short2boolean(serienbrief
+					.getbNewsletter()));
+			serienbriefDto.setBWennkeinanspmitfktDannersteransp(serienbrief
+					.getBWennkeinanspmitfktDannersteransp());
+			serienbriefDto.setBSelektionenLogischesOder(serienbrief
+					.getBSelektionenLogischesOder());
+			serienbriefDto.setBHtml(serienbrief.getBHtml());
+			serienbriefDto.setLocaleCNr(serienbrief.getLocaleCNr());
 		}
+
 		return serienbriefDto;
 	}
 

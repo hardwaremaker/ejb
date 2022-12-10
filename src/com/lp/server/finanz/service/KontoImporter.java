@@ -198,6 +198,20 @@ public class KontoImporter implements Serializable {
 				EJBExceptionLP.FEHLER_FINANZ_IMPORT_KOSTENSTELLE_NICHT_VORHANDEN,
 				new ArrayList<Object>(){{add(konto.getKostenstelleCnr());}}, null)) ;			
 		}
+		
+		if(!existsKontoart(konto.getKontoartCNr())) {
+			stats.incrementErrorRowCount();
+			throw new EJBLineNumberExceptionLP(-1, EJBLineNumberExceptionLP.SEVERITY_ERROR, new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_FINANZ_IMPORT_KONTOART_NICHT_VORHANDEN,
+					new ArrayList<Object>(){{add(konto.getKontoartCNr());}}, null)) ;			
+		}
+		
+		if(!validSteuerart(konto.getSteuerart())) {
+			stats.incrementErrorRowCount();
+			throw new EJBLineNumberExceptionLP(-1, EJBLineNumberExceptionLP.SEVERITY_ERROR, new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_FINANZ_IMPORT_STEUERART_UNBEKANNT,
+					new ArrayList<Object>(){{add(konto.getcSteuerart());}}, null)) ;			
+		}
 	}
 	
 	
@@ -228,7 +242,7 @@ public class KontoImporter implements Serializable {
 				kontoDto.setSteuerkategorieIId(null) ; /* ??? */
 				kontoDto.setSteuerkategorieIIdReverse(null) ; /* ??? */
 				kontoDto.setBOhneUst(new Short((short)0));
-				kontoDto.setcSteuerart(csvKonto.getcSteuerart());
+				kontoDto.setcSteuerart(csvKonto.getSteuerart());
 				beanServices.updateKonto(kontoDto) ;
 				stats.incrementGoodRowCount() ;
 			} catch(EJBExceptionLP ex) {
@@ -242,6 +256,15 @@ public class KontoImporter implements Serializable {
 		}
 		
 		return importErrors ;
+	}
+	
+	private boolean validSteuerart(String cnr) {
+		if(cnr == null || cnr.trim().length() == 0) return true;
+		if(FinanzServiceFac.STEUERART_UST.equals(cnr)) return true;
+		if(FinanzServiceFac.STEUERART_VST.equals(cnr)) return true;
+		if(FinanzServiceFac.STEUERART_EUST.equals(cnr)) return true;
+		
+		return false;
 	}
 	
 	private boolean existsKostenstelle(String cnr) {
@@ -277,7 +300,23 @@ public class KontoImporter implements Serializable {
 
 		return null ;
 	}
+	
+	private boolean existsKontoart(String kontoartCnr) {
+		return findKontoartByCnrInDb(kontoartCnr) != null ;		
+	}
+
+	protected KontoartDto findKontoartByCnrInDb(String cnr) {
+		if(cnr.length() == 0) return null ;
 		
+		try {
+			KontoartDto kontoartDto = beanServices.kontoartFindByCnr(cnr) ;
+			return kontoartDto == null ? null : kontoartDto;
+		} catch(Throwable t) {
+		}
+
+		return null ;
+	}
+	
 	private Integer getKontoIId(String cnr) {
 		return cnr.length() == 0 ? null : findKontoIIdByCnrInDb(cnr) ;
 	}

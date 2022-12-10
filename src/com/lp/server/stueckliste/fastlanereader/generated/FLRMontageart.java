@@ -36,6 +36,8 @@ import java.io.Serializable;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
+
 /** @author Hibernate CodeGenerator */
 public class FLRMontageart implements Serializable {
 
@@ -55,12 +57,18 @@ public class FLRMontageart implements Serializable {
 
 	/** nullable persistent field */
 	private Integer i_sort;
+	
+	private Integer artikel_i_id;
+	
+	private FLRArtikelliste flrartikel;
 
 	/** full constructor */
-	public FLRMontageart(String mandant_c_nr, String c_bez, Integer i_sort) {
+	public FLRMontageart(String mandant_c_nr, String c_bez, Integer i_sort, Integer artikel_i_id, FLRArtikelliste flrartikel) {
 		this.mandant_c_nr = mandant_c_nr;
 		this.c_bez = c_bez;
 		this.i_sort = i_sort;
+		this.artikel_i_id = artikel_i_id;
+		this.setFlrartikel(flrartikel);
 	}
 
 	/** default constructor */
@@ -101,6 +109,22 @@ public class FLRMontageart implements Serializable {
 
 	public String toString() {
 		return new ToStringBuilder(this).append("i_id", getI_id()).toString();
+	}
+
+	public Integer getArtikel_i_id() {
+		return artikel_i_id;
+	}
+
+	public void setArtikel_i_id(Integer artikel_i_id) {
+		this.artikel_i_id = artikel_i_id;
+	}
+
+	public FLRArtikelliste getFlrartikel() {
+		return flrartikel;
+	}
+
+	public void setFlrartikel(FLRArtikelliste flrartikel) {
+		this.flrartikel = flrartikel;
 	}
 
 }

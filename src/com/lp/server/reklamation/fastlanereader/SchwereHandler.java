@@ -42,7 +42,10 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.reklamation.fastlanereader.generated.FLRFehler;
+import com.lp.server.reklamation.fastlanereader.generated.FLRFehlerspr;
 import com.lp.server.reklamation.fastlanereader.generated.FLRSchwere;
+import com.lp.server.reklamation.fastlanereader.generated.FLRSchwerespr;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -52,6 +55,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -89,6 +93,7 @@ public class SchwereHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
+			session = setFilter(session);
 			String queryString = this.getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
@@ -99,12 +104,18 @@ public class SchwereHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
+			String sLocUI = Helper.locale2String(theClientDto
+					.getLocUi());
 			while (resultListIterator.hasNext()) {
-				FLRSchwere massnahme = (FLRSchwere) resultListIterator.next();
+				Object o[] = (Object[]) resultListIterator.next();
+				FLRSchwere massnahme = (FLRSchwere) o[0];
 				rows[row][col++] = massnahme.getI_id();
 				rows[row][col++] = massnahme.getC_nr();
-				rows[row++][col++] = massnahme.getC_bez();
-
+				
+				Iterator<?> sprsetIterator = massnahme.getSprset()
+						.iterator();
+				rows[row++][col++] = findSpr(sLocUI, sprsetIterator);
+				
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -121,12 +132,27 @@ public class SchwereHandler extends UseCaseHandler {
 		return result;
 	}
 
+	private String findSpr(String sLocaleI, Iterator<?> iterUebersetzungenI) {
+
+		String sUebersetzung = null;
+		while (iterUebersetzungenI.hasNext()) {
+			FLRSchwerespr spr = (FLRSchwerespr) iterUebersetzungenI
+					.next();
+			if (spr.getLocale().getC_nr().compareTo(sLocaleI) == 0) {
+				sUebersetzung = spr.getC_bez();
+				break;
+			}
+		}
+		return sUebersetzung;
+	}
+	
 	protected long getRowCountFromDataBase() {
 		long rowCount = 0;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 		try {
 			session = factory.openSession();
+			session = setFilter(session);
 			String queryString = "select count(*) " + this.getFromClause()
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
@@ -171,10 +197,10 @@ public class SchwereHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(schwere."
+						where.append(" upper("
 								+ filterKriterien[i].kritName + ")");
 					} else {
-						where.append(" schwere." + filterKriterien[i].kritName);
+						where.append(" " + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
@@ -211,7 +237,7 @@ public class SchwereHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("schwere." + kriterien[i].kritName);
+						orderBy.append("" + kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -249,7 +275,7 @@ public class SchwereHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRSchwere schwere ";
+		return "from FLRSchwere schwere LEFT JOIN schwere.sprset AS sprset";
 	}
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -265,7 +291,8 @@ public class SchwereHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select schwere.i_id from FLRSchwere schwere "
+				session = setFilter(session);
+				String queryString = "select schwere.i_id from FLRSchwere schwere  LEFT JOIN schwere.sprset AS sprset"
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -314,7 +341,7 @@ public class SchwereHandler extends UseCaseHandler {
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
-			new String[] { "i_id", "c_nr", "c_bez" }));
+			new String[] { "i_id", "schwere.c_nr", "sprset.c_bez" }));
 		}
 
 		return super.getTableInfo();

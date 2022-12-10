@@ -34,15 +34,21 @@ package com.lp.server.auftrag.ejbfac;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 
+import com.lp.server.auftrag.ejb.Auftragposition;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragRahmenAbrufFac;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.util.EJBExceptionLP;
@@ -66,8 +72,7 @@ import com.lp.util.Helper;
  * @version $Revision: 1.19 $
  */
 @Stateless
-public class AuftragRahmenAbrufFacBean extends Facade implements
-		AuftragRahmenAbrufFac {
+public class AuftragRahmenAbrufFacBean extends Facade implements AuftragRahmenAbrufFac {
 
 	@PersistenceContext
 	private EntityManager em;
@@ -76,16 +81,12 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 	 * Wenn eine neue Abrufposition angelegt wird, muss die entsprechende
 	 * Rahmenposition angepasst werden.
 	 * 
-	 * @param abrufpositionDtoI
-	 *            die aktuelle Abrufposition
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param abrufpositionDtoI die aktuelle Abrufposition
+	 * @param theClientDto      der aktuelle Benutzer
 	 * @return Integer PK der neuen Abrufposition
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Integer createAbrufpositionZuRahmenposition(
-			AuftragpositionDto abrufpositionDtoI, TheClientDto theClientDto)
+	public Integer createAbrufpositionZuRahmenposition(AuftragpositionDto abrufpositionDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		checkAbrufpositionDto(abrufpositionDtoI);
 		Integer abrufpositionIId = null;
@@ -93,44 +94,76 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 		AuftragDto rahmenauftragDto = null;
 
 		try {
-			abrufauftragDto = getAuftragFac().auftragFindByPrimaryKey(
-					abrufpositionDtoI.getBelegIId());
-			rahmenauftragDto = getAuftragFac().auftragFindByPrimaryKey(
-					abrufauftragDto.getAuftragIIdRahmenauftrag());
-			if (abrufauftragDto.getDLiefertermin().before(
-					rahmenauftragDto.getDLiefertermin())) {
-				abrufpositionDtoI
-						.setTUebersteuerbarerLiefertermin(abrufauftragDto
-								.getDLiefertermin());
+			abrufauftragDto = getAuftragFac().auftragFindByPrimaryKey(abrufpositionDtoI.getBelegIId());
+			rahmenauftragDto = getAuftragFac().auftragFindByPrimaryKey(abrufauftragDto.getAuftragIIdRahmenauftrag());
+		
+			//Wg. SP9253 auskommentiert
+			//if (abrufauftragDto.getDLiefertermin().before(rahmenauftragDto.getDLiefertermin())) {
+			//	abrufpositionDtoI.setTUebersteuerbarerLiefertermin(abrufauftragDto.getDLiefertermin());
+			//}
+
+			try {
+				ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_AUFTRAG, ParameterFac.PARAMETER_ABRUFPOSITIONSREIHENFOLGE_WIE_ERFASST);
+				boolean bWieErfasst = ((Boolean) parameter.getCWertAsObject()).booleanValue();
+				if (bWieErfasst) {
+
+					// PJ20595 damit wie erfasst
+					abrufpositionDtoI.setISort(null);// PJ20595 damit wie
+														// erfasst
+					abrufpositionDtoI.setISort(null);
+				}
+
+			} catch (RemoteException ex) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 			}
+
 			// Schritt 1: die Abrufposition mit Reservierung anlegen
-			abrufpositionIId = getAuftragpositionFac().createAuftragposition(
-					abrufpositionDtoI, theClientDto);
+			abrufpositionIId = getAuftragpositionFac().createAuftragposition(abrufpositionDtoI, false, theClientDto);
 
 			// Schritt 2: die zugehoerige Rahmenposition korrigieren
 			AuftragpositionDto rahmenpositionDto = getAuftragpositionFac()
-					.auftragpositionFindByPrimaryKey(
-							abrufpositionDtoI
-									.getAuftragpositionIIdRahmenposition());
+					.auftragpositionFindByPrimaryKey(abrufpositionDtoI.getAuftragpositionIIdRahmenposition());
 
-			rahmenpositionDto.setNOffeneRahmenMenge(rahmenpositionDto
-					.getNOffeneRahmenMenge().subtract(
-							abrufpositionDtoI.getNMenge()));
+			rahmenpositionDto.setNOffeneRahmenMenge(
+					rahmenpositionDto.getNOffeneRahmenMenge().subtract(abrufpositionDtoI.getNMenge()));
 
 			setzeStatusRahmenposition(rahmenpositionDto);
 
-			getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(
-					rahmenpositionDto, theClientDto);
+			getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(rahmenpositionDto, theClientDto);
+
+			BigDecimal bdFaktor = Helper.getProzentsatzBD(rahmenpositionDto.getNMenge(), abrufpositionDtoI.getNMenge(),
+					12);
+
+			// SP7999/6059
+			// Nun eventuelle Set-Positionen aus dem Rahmen kopieren
+			Query query = em.createNamedQuery("AuftragpositionfindByPositionIIdArtikelset");
+			query.setParameter(1, rahmenpositionDto.getIId());
+			Collection<Auftragposition> auftragpositions = query.getResultList();
+
+			for (Auftragposition auftragposition : auftragpositions) {
+
+				AuftragpositionDto positionDto = getAuftragpositionFac()
+						.auftragpositionFindByPrimaryKey(auftragposition.getIId());
+				positionDto.setBelegIId(abrufauftragDto.getIId());
+				positionDto.setIId(null);
+				positionDto.setPositioniIdArtikelset(abrufpositionIId);
+				positionDto.setPositionIIdZugehoerig(null);
+				positionDto.setAuftragpositionIIdRahmenposition(auftragposition.getIId());
+				positionDto.setNMenge(Helper.rundeKaufmaennisch(
+						positionDto.getNMenge().multiply(new BigDecimal(bdFaktor.doubleValue() / 100)),
+						getMandantFac().getNachkommastellenMenge(theClientDto.getMandant()).intValue()));
+				createAbrufpositionZuRahmenposition(positionDto, theClientDto);
+
+			}
 
 			// Schritt 3: den Status des zugehoerigen Rahmenauftrags
 			// aktualisieren
-			pruefeUndSetzeRahmenstatus(rahmenpositionDto.getBelegIId(),
-					theClientDto);
+			pruefeUndSetzeRahmenstatus(rahmenpositionDto.getBelegIId(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(t));
 		}
 
 		return abrufpositionIId;
@@ -140,136 +173,104 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 	 * Der Status einer Rahmenposition wird bestimmt durch die aktuelle offene
 	 * Menge.
 	 * 
-	 * @param rahmenpositionDto
-	 *            die Rahmenposition
-	 * @throws Throwable
-	 *             Ausnahme
+	 * @param rahmenpositionDto die Rahmenposition
+	 * @throws Throwable Ausnahme
 	 */
 	private void setzeStatusRahmenposition(AuftragpositionDto rahmenpositionDto) {
 		if (rahmenpositionDto.getNOffeneRahmenMenge().doubleValue() == 0) {
-			rahmenpositionDto
-					.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT);
-		} else if (rahmenpositionDto.getNOffeneRahmenMenge().doubleValue() == rahmenpositionDto
-				.getNMenge().doubleValue()) {
-			rahmenpositionDto
-					.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
+			rahmenpositionDto.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT);
+		} else if (rahmenpositionDto.getNOffeneRahmenMenge().doubleValue() == rahmenpositionDto.getNMenge()
+				.doubleValue()) {
+			rahmenpositionDto.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
 		} else {
-			rahmenpositionDto
-					.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_TEILERLEDIGT);
+			rahmenpositionDto.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_TEILERLEDIGT);
 		}
 	}
 
 	/**
-	 * Wenn eine Abrufposition geloescht wird, muss die entsprechende
-	 * Rahmenposition angepasst werden.
+	 * Wenn eine Abrufposition geloescht wird, muss die entsprechende Rahmenposition
+	 * angepasst werden.
 	 * 
-	 * @param abrufpositionDtoI
-	 *            die aktuelle Abrufbestellposition
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param abrufpositionDtoI die aktuelle Abrufbestellposition
+	 * @param theClientDto      der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeAbrufpositionZuRahmenposition(
-			AuftragpositionDto abrufpositionDtoI, TheClientDto theClientDto)
+	public void removeAbrufpositionZuRahmenposition(AuftragpositionDto abrufpositionDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		checkAbrufpositionDto(abrufpositionDtoI);
 		try {
 			// Schritt 1: die Abrufposition mit Reservierung loeschen
-			getAuftragpositionFac().removeAuftragposition(abrufpositionDtoI,
-					theClientDto);
+			getAuftragpositionFac().removeAuftragposition(abrufpositionDtoI, theClientDto);
 
 			// Schritt 2: die zugehoerige Rahmenposition korrigieren
 			AuftragpositionDto rahmenpositionDto = getAuftragpositionFac()
-					.auftragpositionFindByPrimaryKey(
-							abrufpositionDtoI
-									.getAuftragpositionIIdRahmenposition());
+					.auftragpositionFindByPrimaryKey(abrufpositionDtoI.getAuftragpositionIIdRahmenposition());
 
-			rahmenpositionDto
-					.setNOffeneRahmenMenge(rahmenpositionDto
-							.getNOffeneRahmenMenge().add(
-									abrufpositionDtoI.getNMenge()));
+			rahmenpositionDto.setNOffeneRahmenMenge(
+					rahmenpositionDto.getNOffeneRahmenMenge().add(abrufpositionDtoI.getNMenge()));
 
 			setzeStatusRahmenposition(rahmenpositionDto);
 
-			getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(
-					rahmenpositionDto, theClientDto);
+			getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(rahmenpositionDto, theClientDto);
 
 			// Schritt 3: den Status des zugehoerigen Rahmenauftrags
 			// aktualisieren
-			pruefeUndSetzeRahmenstatus(rahmenpositionDto.getBelegIId(),
-					theClientDto);
+			pruefeUndSetzeRahmenstatus(rahmenpositionDto.getBelegIId(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
 	}
 
 	/**
-	 * Eine Abrufbestellposition in Sicht Rahmen wird korrigiert. Damit mussen
-	 * auch die Mengen in der Rahmenbestellung angepasst werden.
+	 * Eine Abrufbestellposition in Sicht Rahmen wird korrigiert. Damit mussen auch
+	 * die Mengen in der Rahmenbestellung angepasst werden.
 	 * 
-	 * @param abrufpositionDtoI
-	 *            die Abrufbestellposition mit den aktuellen Werten
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param abrufpositionDtoI die Abrufbestellposition mit den aktuellen Werten
+	 * @param theClientDto      der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateAbrufpositionZuRahmenpositionSichtRahmen(
-			AuftragpositionDto abrufpositionDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void updateAbrufpositionZuRahmenpositionSichtRahmen(AuftragpositionDto abrufpositionDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAbrufpositionDto(abrufpositionDtoI);
 		try {
 			AuftragpositionDto bestehendeAbrufpositionDto = getAuftragpositionFac()
 					.auftragpositionFindByPrimaryKey(abrufpositionDtoI.getIId());
 
 			AuftragpositionDto bestehendeRahmenpositionDto = getAuftragpositionFac()
-					.auftragpositionFindByPrimaryKey(
-							bestehendeAbrufpositionDto
-									.getAuftragpositionIIdRahmenposition());
+					.auftragpositionFindByPrimaryKey(bestehendeAbrufpositionDto.getAuftragpositionIIdRahmenposition());
 
-			BigDecimal nZusaetzlicheMengeAbrufposition = abrufpositionDtoI
-					.getNMenge();
+			BigDecimal nZusaetzlicheMengeAbrufposition = abrufpositionDtoI.getNMenge();
 
 			// Schritt 1: Die Abrufposition mit Reservierung aktualisieren
-			bestehendeAbrufpositionDto.setNMenge(bestehendeAbrufpositionDto
-					.getNMenge().add(nZusaetzlicheMengeAbrufposition));
+			bestehendeAbrufpositionDto
+					.setNMenge(bestehendeAbrufpositionDto.getNMenge().add(nZusaetzlicheMengeAbrufposition));
 
-			getAuftragpositionFac().updateAuftragposition(
-					bestehendeAbrufpositionDto, theClientDto);
+			getAuftragpositionFac().updateAuftragposition(bestehendeAbrufpositionDto, theClientDto);
 
 			// Schritt 2: Die zugehoerige Rahmenposition aktualisieren
-			bestehendeRahmenpositionDto
-					.setNOffeneRahmenMenge(bestehendeRahmenpositionDto
-							.getNOffeneRahmenMenge().subtract(
-									nZusaetzlicheMengeAbrufposition));
+			bestehendeRahmenpositionDto.setNOffeneRahmenMenge(
+					bestehendeRahmenpositionDto.getNOffeneRahmenMenge().subtract(nZusaetzlicheMengeAbrufposition));
 
 			setzeStatusRahmenposition(bestehendeRahmenpositionDto);
 
-			getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(
-					bestehendeRahmenpositionDto, theClientDto);
+			getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(bestehendeRahmenpositionDto, theClientDto);
 
 			// Schritt 3: Den Status des Rahmenauftrags pruefen
-			pruefeUndSetzeRahmenstatus(
-					bestehendeRahmenpositionDto.getBelegIId(), theClientDto);
+			pruefeUndSetzeRahmenstatus(bestehendeRahmenpositionDto.getBelegIId(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
-		} 
+		}
 	}
 
 	/**
-	 * Eine Abrufbestellposition wird korrigiert. Damit mussen auch die Mengen
-	 * in der Rahmenbestellung angepasst werden.
+	 * Eine Abrufbestellposition wird korrigiert. Damit mussen auch die Mengen in
+	 * der Rahmenbestellung angepasst werden.
 	 * 
-	 * @param abrufpositionDtoI
-	 *            die Abrufbestellposition mit den aktuellen Werten
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param abrufpositionDtoI die Abrufbestellposition mit den aktuellen Werten
+	 * @param theClientDto      der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateAbrufpositionZuRahmenposition(
-			AuftragpositionDto abrufpositionDtoI, TheClientDto theClientDto)
+	public void updateAbrufpositionZuRahmenposition(AuftragpositionDto abrufpositionDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		checkAbrufpositionDto(abrufpositionDtoI);
 		AuftragpositionDto bestehendeRahmenpositionDto = null;
@@ -278,61 +279,48 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 				// Schritt 1: Die Rahmenposition anpassen, wenn ein Bezug auf
 				// einen Rahmenauftrag gibt
 				AuftragpositionDto bestehendeAbrufpositionDto = getAuftragpositionFac()
-						.auftragpositionFindByPrimaryKey(
-								abrufpositionDtoI.getIId());
+						.auftragpositionFindByPrimaryKey(abrufpositionDtoI.getIId());
 
-				bestehendeRahmenpositionDto = getAuftragpositionFac()
-						.auftragpositionFindByPrimaryKey(
-								bestehendeAbrufpositionDto
-										.getAuftragpositionIIdRahmenposition());
+				bestehendeRahmenpositionDto = getAuftragpositionFac().auftragpositionFindByPrimaryKey(
+						bestehendeAbrufpositionDto.getAuftragpositionIIdRahmenposition());
 
-				BigDecimal nDeltaMengeAbrufposition = abrufpositionDtoI
-						.getNMenge().subtract(
-								bestehendeAbrufpositionDto.getNMenge());
+				BigDecimal nDeltaMengeAbrufposition = abrufpositionDtoI.getNMenge()
+						.subtract(bestehendeAbrufpositionDto.getNMenge());
 
 				if (nDeltaMengeAbrufposition.doubleValue() > 0) {
 					// die erfasste Menge wurde erhoeht -> Rahmenposition
 					// verringern
-					bestehendeRahmenpositionDto
-							.setNOffeneRahmenMenge(bestehendeRahmenpositionDto
-									.getNOffeneRahmenMenge().subtract(
-											nDeltaMengeAbrufposition));
+					bestehendeRahmenpositionDto.setNOffeneRahmenMenge(
+							bestehendeRahmenpositionDto.getNOffeneRahmenMenge().subtract(nDeltaMengeAbrufposition));
 				} else if (nDeltaMengeAbrufposition.doubleValue() < 0) {
 					// die erfasste Menge wurde verringert -> Rahmenposition
 					// erhoehen
-					bestehendeRahmenpositionDto
-							.setNOffeneRahmenMenge(bestehendeRahmenpositionDto
-									.getNOffeneRahmenMenge().add(
-											nDeltaMengeAbrufposition.negate()));
+					bestehendeRahmenpositionDto.setNOffeneRahmenMenge(
+							bestehendeRahmenpositionDto.getNOffeneRahmenMenge().add(nDeltaMengeAbrufposition.negate()));
 				}
 
 				setzeStatusRahmenposition(bestehendeRahmenpositionDto);
 
-				getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(
-						bestehendeRahmenpositionDto, theClientDto);
+				getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(bestehendeRahmenpositionDto,
+						theClientDto);
 			}
 
 			// Schritt 2: Die Abrufposition aktualisieren
-			getAuftragpositionFac().updateAuftragposition(abrufpositionDtoI,
-					theClientDto);
+			getAuftragpositionFac().updateAuftragposition(abrufpositionDtoI, theClientDto);
 
 			// Schritt 3: Den Status des Rahmenauftrags pruefen, wenn ein Bezug
 			// auf einen Rahmenauftrag gibt
 			if (abrufpositionDtoI.getAuftragpositionIIdRahmenposition() != null) {
-				pruefeUndSetzeRahmenstatus(
-						bestehendeRahmenpositionDto.getBelegIId(),
-						theClientDto);
+				pruefeUndSetzeRahmenstatus(bestehendeRahmenpositionDto.getBelegIId(), theClientDto);
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, new Exception(t));
 		}
 	}
 
-	private void checkAbrufpositionDto(AuftragpositionDto abrufpositionDtoI)
-			throws EJBExceptionLP {
+	private void checkAbrufpositionDto(AuftragpositionDto abrufpositionDtoI) throws EJBExceptionLP {
 		if (abrufpositionDtoI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("abrufpositionDtoI == null"));
@@ -342,16 +330,14 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 	}
 
 	/**
-	 * Den Status eines bestimmten Rahmenauftrags aufgrund seiner
-	 * Rahmenpositionen pruefen und setzen.
+	 * Den Status eines bestimmten Rahmenauftrags aufgrund seiner Rahmenpositionen
+	 * pruefen und setzen.
 	 * 
-	 * @param iIdRahmenauftragI
-	 *            Integer
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param iIdRahmenauftragI Integer
+	 * @param theClientDto      der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
-	public void pruefeUndSetzeRahmenstatus(Integer iIdRahmenauftragI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void pruefeUndSetzeRahmenstatus(Integer iIdRahmenauftragI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (iIdRahmenauftragI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
@@ -361,17 +347,14 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 		myLogger.logData(iIdRahmenauftragI);
 
 		try {
-			AuftragDto rahmenauftragDto = getAuftragFac()
-					.auftragFindByPrimaryKey(iIdRahmenauftragI);
+			AuftragDto rahmenauftragDto = getAuftragFac().auftragFindByPrimaryKey(iIdRahmenauftragI);
 
 			boolean bAlleAbrufeErledigt = true;
-			AuftragDto[] abrufAuftrag = getAuftragFac()
-					.abrufauftragFindByAuftragIIdRahmenauftrag(
-							iIdRahmenauftragI, theClientDto);
+			AuftragDto[] abrufAuftrag = getAuftragFac().abrufauftragFindByAuftragIIdRahmenauftrag(iIdRahmenauftragI,
+					theClientDto);
 			for (int i = 0; i < abrufAuftrag.length; i++) {
-				if (!(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT
-						.equals(abrufAuftrag[i].getStatusCNr()) || AuftragServiceFac.AUFTRAGSTATUS_STORNIERT
-						.equals(abrufAuftrag[i].getStatusCNr()))) {
+				if (!(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT.equals(abrufAuftrag[i].getStatusCNr())
+						|| AuftragServiceFac.AUFTRAGSTATUS_STORNIERT.equals(abrufAuftrag[i].getStatusCNr()))) {
 					bAlleAbrufeErledigt = false;
 				}
 			}
@@ -384,71 +367,58 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 
 			for (int i = 0; i < aRahmenpositionDto.length; i++) {
 				if (aRahmenpositionDto[i].getNOffeneRahmenMenge() != null
-						&& aRahmenpositionDto[i].getNOffeneRahmenMenge()
-								.doubleValue() > 0) { // Ueberlieferungen
-														// duerfen das Ergebnis
-														// nicht aendern
-					dOffeneMenge += aRahmenpositionDto[i]
-							.getNOffeneRahmenMenge().doubleValue();
+						&& aRahmenpositionDto[i].getNOffeneRahmenMenge().doubleValue() > 0) { // Ueberlieferungen
+																								// duerfen das Ergebnis
+																								// nicht aendern
+					dOffeneMenge += aRahmenpositionDto[i].getNOffeneRahmenMenge().doubleValue();
 
-					dGesamtmenge += aRahmenpositionDto[i].getNMenge()
-							.doubleValue();
+					dGesamtmenge += aRahmenpositionDto[i].getNMenge().doubleValue();
 				}
 			}
 
-			
-			if(rahmenauftragDto.getStatusCNr().equals(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)){
-				//ungueltiger status -> Siehe PJ 1063
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_RAHMENAUFTRAG_IST_IM_STATUS_ANGELEGT,
+			if (rahmenauftragDto.getStatusCNr().equals(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)) {
+				// ungueltiger status -> Siehe PJ 1063
+				ArrayList al = new ArrayList();
+				al.add(rahmenauftragDto.getCNr());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_RAHMENAUFTRAG_IST_IM_STATUS_ANGELEGT, al,
 						new Exception("FEHLER_RAHMENAUFTRAG_IST_IM_STATUS_ANGELEGT"));
 			}
-			
+
 			if (dOffeneMenge == 0) {
 				if (bAlleAbrufeErledigt) {
-					rahmenauftragDto
-							.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
+					rahmenauftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
 				} else {
-					rahmenauftragDto
-							.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+					rahmenauftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 				}
 			} else if (dOffeneMenge == dGesamtmenge) {
-				rahmenauftragDto
-						.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
+				rahmenauftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
 			} else {
-				rahmenauftragDto
-						.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+				rahmenauftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 			}
 
-			getAuftragFac().aendereAuftragstatus(rahmenauftragDto.getIId(),
-					rahmenauftragDto.getStatusCNr(), theClientDto);
+			getAuftragFac().aendereAuftragstatus(rahmenauftragDto.getIId(), rahmenauftragDto.getStatusCNr(),
+					theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
 	}
 
 	/**
-	 * Aufgrund des Divisors die Abrufpositionen fuer einen Abrufauftrag
-	 * erzeugen.
+	 * Aufgrund des Divisors die Abrufpositionen fuer einen Abrufauftrag erzeugen.
 	 * 
-	 * @param iIdAuftragI
-	 *            PK des Abrufauftrags
-	 * @param iDivisorI
-	 *            der Divisor
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdAuftragI  PK des Abrufauftrags
+	 * @param iDivisorI    der Divisor
+	 * @param theClientDto der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void erzeugeAbrufpositionen(Integer iIdAuftragI, int iDivisorI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void erzeugeAbrufpositionen(Integer iIdAuftragI, int iDivisorI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (iIdAuftragI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdAuftragI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdAuftragI == null"));
 		}
 
 		if (iDivisorI <= 0) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
-					new Exception("iDivisorI <= 0"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL, new Exception("iDivisorI <= 0"));
 		}
 
 		AuftragDto abrufauftragDto = null;
@@ -456,8 +426,7 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 
 		abrufauftragDto = getAuftragFac().auftragFindByPrimaryKey(iIdAuftragI);
 
-		rahmenauftragDto = getAuftragFac().auftragFindByPrimaryKey(
-				abrufauftragDto.getAuftragIIdRahmenauftrag());
+		rahmenauftragDto = getAuftragFac().auftragFindByPrimaryKey(abrufauftragDto.getAuftragIIdRahmenauftrag());
 
 		try {
 			// alle offenen oder teilerledigten Positionen des Rahmenauftrags
@@ -470,22 +439,14 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 
 				if (rahmenpositionDto.getNOffeneMenge() != null
 						&& rahmenpositionDto.getNOffeneMenge().doubleValue() > 0) {
-					AuftragpositionDto abrufpositionDto = (AuftragpositionDto) rahmenpositionDto
-							.clone();
-					abrufpositionDto
-							.setTUebersteuerbarerLiefertermin(abrufauftragDto
-									.getDLiefertermin());
+					AuftragpositionDto abrufpositionDto = (AuftragpositionDto) rahmenpositionDto.clone();
+					abrufpositionDto.setTUebersteuerbarerLiefertermin(abrufauftragDto.getDLiefertermin());
 					abrufpositionDto.setBelegIId(abrufauftragDto.getIId());
-					abrufpositionDto
-							.setAuftragpositionIIdRahmenposition(rahmenpositionDto
-									.getIId());
-					abrufpositionDto
-							.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
+					abrufpositionDto.setAuftragpositionIIdRahmenposition(rahmenpositionDto.getIId());
+					abrufpositionDto.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
 					/*
-					 * if
-					 * (abrufauftragDto.getDLiefertermin().before(rahmenauftragDto
-					 * .getDLiefertermin())){
-					 * abrufpositionDto.setTUebersteuerbarerLiefertermin
+					 * if (abrufauftragDto.getDLiefertermin().before(rahmenauftragDto
+					 * .getDLiefertermin())){ abrufpositionDto.setTUebersteuerbarerLiefertermin
 					 * (abrufauftragDto.getDLiefertermin()); }
 					 */
 
@@ -493,54 +454,41 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 
 					// die Menge aufgrund des Divisors bestimmen
 					if ((iDivisorI != 1)
-							&& (new Double(iDivisorI).doubleValue() <= rahmenpositionDto
-									.getNMenge().doubleValue())) {
+							&& (new Double(iDivisorI).doubleValue() <= rahmenpositionDto.getNMenge().doubleValue())) {
 						// zuerst den Rest bestimmen
-						double dRest = rahmenpositionDto.getNMenge()
-								.doubleValue()
+						double dRest = rahmenpositionDto.getNMenge().doubleValue()
 								% new Double(iDivisorI).doubleValue();
 
 						// jetzt ergibt die Division einen ganzzahligen Wert
-						dMengeAbrufposition = (rahmenpositionDto.getNMenge()
-								.doubleValue() - dRest)
+						dMengeAbrufposition = (rahmenpositionDto.getNMenge().doubleValue() - dRest)
 								/ new Double(iDivisorI).doubleValue();
 					} else {
-						dMengeAbrufposition = rahmenpositionDto
-								.getNOffeneRahmenMenge().doubleValue();
+						dMengeAbrufposition = rahmenpositionDto.getNOffeneRahmenMenge().doubleValue();
 					}
 
-					abrufpositionDto.setNMenge(Helper.rundeKaufmaennisch(
-							new BigDecimal(dMengeAbrufposition), 4));
-					abrufpositionDto.setNOffeneMenge(abrufpositionDto
-							.getNMenge());
+					abrufpositionDto.setNMenge(Helper.rundeKaufmaennisch(new BigDecimal(dMengeAbrufposition), 4));
+					abrufpositionDto.setNOffeneMenge(abrufpositionDto.getNMenge());
 
-					getAuftragpositionFac().createAuftragposition(
-							abrufpositionDto, theClientDto);
+					getAuftragpositionFac().createAuftragposition(abrufpositionDto, theClientDto);
 
 					// Schritt 2: Die zugehoerige Rahmenposition aktualisieren
-					rahmenpositionDto.setNOffeneRahmenMenge(rahmenpositionDto
-							.getNOffeneRahmenMenge().subtract(
-									new BigDecimal(dMengeAbrufposition)));
+					rahmenpositionDto.setNOffeneRahmenMenge(
+							rahmenpositionDto.getNOffeneRahmenMenge().subtract(new BigDecimal(dMengeAbrufposition)));
 
 					setzeStatusRahmenposition(rahmenpositionDto);
 
-					getAuftragpositionFac()
-							.updateAuftragpositionOhneWeitereAktion(
-									rahmenpositionDto, theClientDto);
+					getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(rahmenpositionDto, theClientDto);
 				} else {
-					AuftragpositionDto abrufpositionDto = (AuftragpositionDto) rahmenpositionDto
-							.clone();
+					AuftragpositionDto abrufpositionDto = (AuftragpositionDto) rahmenpositionDto.clone();
 					abrufpositionDto.setBelegIId(abrufauftragDto.getIId());
-					getAuftragpositionFac().createAuftragposition(
-							abrufpositionDto, theClientDto);
+					getAuftragpositionFac().createAuftragposition(abrufpositionDto, theClientDto);
 				}
 			}
 
 			// Schritt 3: Den Status des Rahmenauftrags pruefen
 			pruefeUndSetzeRahmenstatus(rahmenauftragDto.getIId(), theClientDto);
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(t));
 		}
 	}
 }

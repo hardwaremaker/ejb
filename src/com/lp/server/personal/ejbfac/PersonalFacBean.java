@@ -41,9 +41,11 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -54,22 +56,31 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JRField;
-
 import org.hibernate.Session;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
+import com.lp.server.auftrag.service.AuftragDto;
+import com.lp.server.auftrag.service.AuftragReportFac;
+import com.lp.server.benutzer.service.RechteFac;
+import com.lp.server.partner.service.AnredesprDto;
+import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.BankDto;
+import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerDtoSmall;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.partner.service.PartnerbankDto;
+import com.lp.server.personal.ejb.Abwesenheitsart;
+import com.lp.server.personal.ejb.Abwesenheitsartspr;
+import com.lp.server.personal.ejb.AbwesenheitsartsprPK;
 import com.lp.server.personal.ejb.Angehoerigenart;
 import com.lp.server.personal.ejb.Angehoerigenartspr;
 import com.lp.server.personal.ejb.AngehoerigenartsprPK;
+import com.lp.server.personal.ejb.Anwesenheitsbestaetigung;
 import com.lp.server.personal.ejb.Artikelzulage;
+import com.lp.server.personal.ejb.Artikelzuschlag;
 import com.lp.server.personal.ejb.Bereitschaftart;
 import com.lp.server.personal.ejb.Bereitschafttag;
 import com.lp.server.personal.ejb.Beruf;
@@ -83,12 +94,14 @@ import com.lp.server.personal.ejb.FamilienstandsprPK;
 import com.lp.server.personal.ejb.Feiertag;
 import com.lp.server.personal.ejb.Gleitzeitsaldo;
 import com.lp.server.personal.ejb.Kollektiv;
+import com.lp.server.personal.ejb.KollektivUestdBVA;
 import com.lp.server.personal.ejb.Kollektivuestd;
 import com.lp.server.personal.ejb.Kollektivuestd50;
 import com.lp.server.personal.ejb.Lohnart;
 import com.lp.server.personal.ejb.Lohnartstundenfaktor;
 import com.lp.server.personal.ejb.Lohngruppe;
 import com.lp.server.personal.ejb.Lohnstundenart;
+import com.lp.server.personal.ejb.Passivereise;
 import com.lp.server.personal.ejb.Pendlerpauschale;
 import com.lp.server.personal.ejb.Personal;
 import com.lp.server.personal.ejb.PersonalQuery;
@@ -96,12 +109,14 @@ import com.lp.server.personal.ejb.Personalangehoerige;
 import com.lp.server.personal.ejb.Personalart;
 import com.lp.server.personal.ejb.Personalartspr;
 import com.lp.server.personal.ejb.PersonalartsprPK;
+import com.lp.server.personal.ejb.Personalfahrzeug;
 import com.lp.server.personal.ejb.Personalfunktion;
 import com.lp.server.personal.ejb.Personalfunktionspr;
 import com.lp.server.personal.ejb.PersonalfunktionsprPK;
 import com.lp.server.personal.ejb.Personalgehalt;
 import com.lp.server.personal.ejb.Personalgruppe;
 import com.lp.server.personal.ejb.Personalgruppekosten;
+import com.lp.server.personal.ejb.Personalterminal;
 import com.lp.server.personal.ejb.Personalverfuegbarkeit;
 import com.lp.server.personal.ejb.Personalzeiten;
 import com.lp.server.personal.ejb.Personalzeitmodell;
@@ -112,103 +127,28 @@ import com.lp.server.personal.ejb.Schichtzeitmodell;
 import com.lp.server.personal.ejb.Signatur;
 import com.lp.server.personal.ejb.Stundenabrechnung;
 import com.lp.server.personal.ejb.Urlaubsanspruch;
+import com.lp.server.personal.ejb.Zahltag;
 import com.lp.server.personal.ejb.Zeitabschluss;
 import com.lp.server.personal.ejb.Zulage;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonalverfuegbarkeit;
-import com.lp.server.personal.service.AngehoerigenartDto;
-import com.lp.server.personal.service.AngehoerigenartDtoAssembler;
-import com.lp.server.personal.service.AngehoerigenartsprDto;
-import com.lp.server.personal.service.AngehoerigenartsprDtoAssembler;
-import com.lp.server.personal.service.ArtikelzulageDto;
-import com.lp.server.personal.service.ArtikelzulageDtoAssembler;
-import com.lp.server.personal.service.BereitschaftartDto;
-import com.lp.server.personal.service.BereitschaftartDtoAssembler;
-import com.lp.server.personal.service.BereitschafttagDto;
-import com.lp.server.personal.service.BereitschafttagDtoAssembler;
-import com.lp.server.personal.service.BerufDto;
-import com.lp.server.personal.service.BerufDtoAssembler;
-import com.lp.server.personal.service.BetriebskalenderDto;
-import com.lp.server.personal.service.BetriebskalenderDtoAssembler;
-import com.lp.server.personal.service.EintrittaustrittDto;
-import com.lp.server.personal.service.EintrittaustrittDtoAssembler;
-import com.lp.server.personal.service.FahrzeugDto;
-import com.lp.server.personal.service.FahrzeugDtoAssembler;
-import com.lp.server.personal.service.FahrzeugkostenDto;
-import com.lp.server.personal.service.FahrzeugkostenDtoAssembler;
-import com.lp.server.personal.service.FamilienstandDto;
-import com.lp.server.personal.service.FamilienstandDtoAssembler;
-import com.lp.server.personal.service.FamilienstandsprDto;
-import com.lp.server.personal.service.FamilienstandsprDtoAssembler;
-import com.lp.server.personal.service.FeiertagDto;
-import com.lp.server.personal.service.FeiertagDtoAssembler;
-import com.lp.server.personal.service.GleitzeitsaldoDto;
-import com.lp.server.personal.service.GleitzeitsaldoDtoAssembler;
-import com.lp.server.personal.service.KollektivDto;
-import com.lp.server.personal.service.KollektivDtoAssembler;
-import com.lp.server.personal.service.Kollektivuestd50Dto;
-import com.lp.server.personal.service.Kollektivuestd50DtoAssembler;
-import com.lp.server.personal.service.KollektivuestdDto;
-import com.lp.server.personal.service.KollektivuestdDtoAssembler;
-import com.lp.server.personal.service.LohnartDto;
-import com.lp.server.personal.service.LohnartDtoAssembler;
-import com.lp.server.personal.service.LohnartstundenfaktorDto;
-import com.lp.server.personal.service.LohnartstundenfaktorDtoAssembler;
-import com.lp.server.personal.service.LohngruppeDto;
-import com.lp.server.personal.service.LohngruppeDtoAssembler;
-import com.lp.server.personal.service.LohnstundenartDto;
-import com.lp.server.personal.service.LohnstundenartDtoAssembler;
-import com.lp.server.personal.service.PendlerpauschaleDto;
-import com.lp.server.personal.service.PendlerpauschaleDtoAssembler;
-import com.lp.server.personal.service.PersonalDto;
-import com.lp.server.personal.service.PersonalDtoAssembler;
-import com.lp.server.personal.service.PersonalFac;
-import com.lp.server.personal.service.PersonalangehoerigeDto;
-import com.lp.server.personal.service.PersonalangehoerigeDtoAssembler;
-import com.lp.server.personal.service.PersonalartDto;
-import com.lp.server.personal.service.PersonalartDtoAssembler;
-import com.lp.server.personal.service.PersonalartsprDto;
-import com.lp.server.personal.service.PersonalartsprDtoAssembler;
-import com.lp.server.personal.service.PersonalfunktionDto;
-import com.lp.server.personal.service.PersonalfunktionDtoAssembler;
-import com.lp.server.personal.service.PersonalfunktionsprDto;
-import com.lp.server.personal.service.PersonalfunktionsprDtoAssembler;
-import com.lp.server.personal.service.PersonalgehaltDto;
-import com.lp.server.personal.service.PersonalgehaltDtoAssembler;
-import com.lp.server.personal.service.PersonalgruppeDto;
-import com.lp.server.personal.service.PersonalgruppeDtoAssembler;
-import com.lp.server.personal.service.PersonalgruppekostenDto;
-import com.lp.server.personal.service.PersonalgruppekostenDtoAssembler;
-import com.lp.server.personal.service.PersonalverfuegbarkeitDto;
-import com.lp.server.personal.service.PersonalverfuegbarkeitDtoAssembler;
-import com.lp.server.personal.service.PersonalzeitenDto;
-import com.lp.server.personal.service.PersonalzeitenDtoAssembler;
-import com.lp.server.personal.service.PersonalzeitmodellDto;
-import com.lp.server.personal.service.PersonalzeitmodellDtoAssembler;
-import com.lp.server.personal.service.PersonalzutrittsklasseDto;
-import com.lp.server.personal.service.ReligionDto;
-import com.lp.server.personal.service.ReligionDtoAssembler;
-import com.lp.server.personal.service.ReligionsprDto;
-import com.lp.server.personal.service.ReligionsprDtoAssembler;
-import com.lp.server.personal.service.SchichtzeitmodellDto;
-import com.lp.server.personal.service.SchichtzeitmodellDtoAssembler;
-import com.lp.server.personal.service.StundenabrechnungDto;
-import com.lp.server.personal.service.StundenabrechnungDtoAssembler;
-import com.lp.server.personal.service.UrlaubsanspruchDto;
-import com.lp.server.personal.service.UrlaubsanspruchDtoAssembler;
-import com.lp.server.personal.service.ZeitabschlussDto;
-import com.lp.server.personal.service.ZeitabschlussDtoAssembler;
-import com.lp.server.personal.service.ZeiterfassungFac;
-import com.lp.server.personal.service.ZeitstiftDto;
-import com.lp.server.personal.service.ZulageDto;
-import com.lp.server.personal.service.ZulageDtoAssembler;
+import com.lp.server.personal.service.*;
+import com.lp.server.projekt.service.ProjektDto;
+import com.lp.server.system.ejbfac.EJBExcFactory;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
+import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MailtextDto;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.system.service.VersandanhangDto;
+import com.lp.server.system.service.VersandauftragDto;
+import com.lp.server.util.HvOptional;
 import com.lp.server.util.LPReport;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.server.util.report.JasperPrintLP;
@@ -217,6 +157,9 @@ import com.lp.util.EJBExceptionLPwoRollback;
 import com.lp.util.Helper;
 import com.lp.util.LPDatenSubreport;
 import com.lp.util.report.PersonRpt;
+
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRField;
 
 @Stateless
 public class PersonalFacBean extends LPReport implements PersonalFac {
@@ -277,34 +220,27 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	private static int REPORT_PERSONALLISTE_HOMEPAGE = 45;
 	private static int REPORT_PERSONALLISTE_HANDY = 46;
 	private static int REPORT_PERSONALLISTE_SUBREPORT_ANGEHOERIGE = 47;
-
-	private static int REPORT_PERSONALLISTE_ANZAHL_SPALTEN = 48;
+	private static int REPORT_PERSONALLISTE_AUSTRITTSDATUM_ZUM_STICHTAG = 48;
+	private static int REPORT_PERSONALLISTE_ANZAHL_SPALTEN = 498;
 
 	/**
 	 * Legt einen neuen Personal-Datensatz an
 	 * 
-	 * @param personalDto
-	 *            PersonalDto
-	 * @param theClientDto
-	 *            String
+	 * @param personalDto  PersonalDto
+	 * @param theClientDto String
 	 * @throws EJBExceptionLP
 	 * @return Integer
 	 */
-	public Integer createPersonal(PersonalDto personalDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPersonal(PersonalDto personalDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (personalDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalDto == null"));
 		}
 
-		if (personalDto.getCPersonalnr() == null
-				|| personalDto.getKostenstelleIIdStamm() == null
+		if (personalDto.getCPersonalnr() == null || personalDto.getKostenstelleIIdStamm() == null
 				|| personalDto.getPersonalartCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalDto.getIPersonalnr() == null  || personalDto.getKostenstelleIIdStamm() == null || personalDto.getPersonalartCNr() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalDto.getIPersonalnr() == null  || personalDto.getKostenstelleIIdStamm() == null || personalDto.getPersonalartCNr() == null"));
 		}
 
 		if (personalDto.getMandantCNr() == null) {
@@ -312,16 +248,35 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
+			Query query = em.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
 			query.setParameter(1, personalDto.getCPersonalnr());
 			query.setParameter(2, personalDto.getMandantCNr());
 			Personal doppelt = (Personal) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_PERSONAL.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_PERSONAL.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
+
+		// PJ21255
+		// Aufgrund SP8770 auskommentiert
+		// if
+		// (!getMandantFac().darfAnwenderAufModulZugreifen(LocaleFac.BELEGART_PERSONAL,
+		// theClientDto)) {
+		int iAnzahl = getAnzahlDerNichtVerstecktenPersonenEinesMandanten(theClientDto);
+		try {
+			MandantDto mDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
+			if (iAnzahl > mDto.getIMaxpersonen()) {
+
+				ArrayList al = new ArrayList();
+				al.add(mDto.getIMaxpersonen());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_MAXIMALE_PERSONENANZAHL_OHNE_PERSONALMODUL_ERREICHT, al,
+						new Exception("FEHLER_MAXIMALE_PERSONENANZAHL_OHNE_PERSONALMODUL_ERREICHT"));
+
+			}
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		// }
 
 		pruefePersonalnummer(personalDto.getCPersonalnr(), theClientDto);
 
@@ -333,8 +288,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			// if (! cl.isEmpty()) {
 			PersonalDto[] dtos = assemblePersonalDtos(cl, true);
 			if (dtos != null && dtos.length > 0) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_PERSONAL_DUPLICATE_AUSWEIS,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PERSONAL_DUPLICATE_AUSWEIS,
 						new Exception("PERS_PERSONAL.C_AUSWEIS"));
 				// }
 				// }
@@ -347,30 +301,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		if (personalDto.getPartnerIId() == null) {
 			if (personalDto.getPartnerDto() != null) {
 				try {
-					personalDto.getPartnerDto().setPartnerartCNr(
-							PartnerFac.PARTNERART_PERSON);
+					personalDto.getPartnerDto().setPartnerartCNr(PartnerFac.PARTNERART_PERSON);
 					try {
-						personalDto.getPartnerDto().setLocaleCNrKommunikation(
-								theClientDto.getLocMandantAsString());
+						personalDto.getPartnerDto().setLocaleCNrKommunikation(theClientDto.getLocMandantAsString());
 					} catch (Exception ex) {
 						throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 					}
-					personalDto.setPartnerIId(getPartnerFac().createPartner(
-							personalDto.getPartnerDto(), theClientDto));
+					personalDto.setPartnerIId(getPartnerFac().createPartner(personalDto.getPartnerDto(), theClientDto));
 				} catch (RemoteException ex) {
 					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 				}
 			} else {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 						new Exception("FEHLER_FELD_DARF_NICHT_NULL_SEIN"));
 			}
 
 		} else {
 			try {
 				if (personalDto.getPartnerDto() != null) {
-					getPartnerFac().updatePartner(personalDto.getPartnerDto(),
-							theClientDto);
+					getPartnerFac().updatePartner(personalDto.getPartnerDto(), theClientDto);
 				}
 			} catch (RemoteException ex1) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex1);
@@ -379,13 +328,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		try {
-			Query query2 = em
-					.createNamedQuery("PersonalfindByPartnerIIdMandantCNr");
+			Query query2 = em.createNamedQuery("PersonalfindByPartnerIIdMandantCNr");
 			query2.setParameter(1, personalDto.getPartnerIId());
 			query2.setParameter(2, personalDto.getMandantCNr());
 			Personal doppelt1 = (Personal) query2.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_PERSONAL.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_PERSONAL.UK"));
 		} catch (NoResultException ex1) {
 		}
 		// generieren von primary key
@@ -394,39 +341,44 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		personalDto.setIId(pk);
 
 		try {
-			Personal personal = new Personal(personalDto.getIId(),
-					personalDto.getPartnerIId(), personalDto.getMandantCNr(),
-					personalDto.getCPersonalnr(),
-					personalDto.getPersonalartCNr(),
+			Personal personal = new Personal(personalDto.getIId(), personalDto.getPartnerIId(),
+					personalDto.getMandantCNr(), personalDto.getCPersonalnr(), personalDto.getPersonalartCNr(),
 					personalDto.getKostenstelleIIdStamm());
 			em.persist(personal);
 			em.flush();
 
 			if (personalDto.getBAnwesenheitsliste() == null) {
-				personalDto.setBAnwesenheitsliste(personal
-						.getBAnwesenheitsliste());
+				personalDto.setBAnwesenheitsliste(personal.getBAnwesenheitsliste());
 			}
 			if (personalDto.getBMaennlich() == null) {
 				personalDto.setBMaennlich(personal.getBMaennlich());
 			}
 			if (personalDto.getBUeberstundenausbezahlt() == null) {
-				personalDto.setBUeberstundenausbezahlt(personal
-						.getBUeberstundenausbezahlt());
+				personalDto.setBUeberstundenausbezahlt(personal.getBUeberstundenausbezahlt());
 			}
 			if (personalDto.getBVersteckt() == null) {
 				personalDto.setBVersteckt(personal.getBVersteckt());
 			}
 			if (personalDto.getBAnwesenheitTerminal() == null) {
-				personalDto.setBAnwesenheitTerminal(personal
-						.getBAnwesenheitTerminal());
+				personalDto.setBAnwesenheitTerminal(personal.getBAnwesenheitTerminal());
 			}
 			if (personalDto.getBAnwesenheitalleterminal() == null) {
-				personalDto.setBAnwesenheitalleterminal(personal
-						.getBAnwesenheitalleterminal());
+				personalDto.setBAnwesenheitalleterminal(personal.getBAnwesenheitalleterminal());
 			}
 			if (personalDto.getBTelefonzeitstarten() == null) {
-				personalDto.setBTelefonzeitstarten(personal
-						.getBTelefonzeitstarten());
+				personalDto.setBTelefonzeitstarten(personal.getBTelefonzeitstarten());
+			}
+			if (personalDto.getBStartMitMeinenOffenenProjekten() == null) {
+				personalDto.setBStartMitMeinenOffenenProjekten(personal.getBStartMitMeinenOffenenProjekten());
+			}
+			if (personalDto.getBKommtAmTerminal() == null) {
+				personalDto.setBKommtAmTerminal(personal.getBKommtAmTerminal());
+			}
+			if (personalDto.getBKeineAnzeigeAmTerminal() == null) {
+				personalDto.setBKeineAnzeigeAmTerminal(personal.getBKeineAnzeigeAmTerminal());
+			}
+			if (personalDto.getBWepInfo() == null) {
+				personalDto.setBWepInfo(personal.getBWepInfo());
 			}
 
 			setPersonalFromPersonalDto(personal, personalDto);
@@ -438,24 +390,43 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 
+		HvDtoLogger<PersonalDto> logger = new HvDtoLogger<PersonalDto>(em, theClientDto);
+		logger.logInsert(personalDto);
+
 		return personalDto.getIId();
 	}
 
-	private void pruefePersonalnummer(String cNr, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public int getAnzahlDerNichtVerstecktenPersonenEinesMandanten(TheClientDto theClientDto) {
+
+		int iAnzahl = 0;
+		String sQuery = "select count(p.i_id) FROM FLRPersonal p WHERE p.mandant_c_nr='" + theClientDto.getMandant()
+				+ "' AND b_versteckt=0";
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Query anzahlPersonen = session.createQuery(sQuery);
+		List<?> resultList = anzahlPersonen.list();
+		Iterator<?> resultListIterator = resultList.iterator();
+		if (resultListIterator.hasNext()) {
+			Long l = (Long) resultListIterator.next();
+
+			if (l != null) {
+				iAnzahl = l.intValue();
+			}
+		}
+
+		return iAnzahl;
+	}
+
+	private void pruefePersonalnummer(String cNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (cNr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception("cNr == null"));
 		}
 
 		String gueltigeZeichen = "";
 		try {
 
-			ParametermandantDto parameter = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_PERSONAL,
-							ParameterFac.PARAMETER_PERSONALNUMMER_ZEICHENSATZ);
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_PERSONAL, ParameterFac.PARAMETER_PERSONALNUMMER_ZEICHENSATZ);
 
 			gueltigeZeichen = parameter.getCWert();
 
@@ -474,11 +445,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 					ArrayList<Object> l = new ArrayList<Object>();
 					l.add(new Character(c));
 					l.add(cNr);
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_PERSONAL_ZEICHEN_IN_PERSONALNUMMER_NICHT_ERLAUBT,
-							l,
-							new Exception(
-									"FEHLER_PERSONAL_ZEICHEN_IN_PERSONALNUMMER_NICHT_ERLAUBT"));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PERSONAL_ZEICHEN_IN_PERSONALNUMMER_NICHT_ERLAUBT, l,
+							new Exception("FEHLER_PERSONAL_ZEICHEN_IN_PERSONALNUMMER_NICHT_ERLAUBT"));
 				}
 
 			}
@@ -488,11 +456,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void removePersonal(PersonalDto personalDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removePersonal(PersonalDto personalDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (personalDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalDto == null"));
 		}
 		if (personalDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -502,9 +468,27 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 			Personal personal = em.find(Personal.class, personalDto.getIId());
 			if (personal == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
+
+			try {
+				Query query = em.createNamedQuery("SignaturfindByPersonalIId");
+				query.setParameter(1, personal.getIId());
+				Collection c = query.getResultList();
+				Iterator it = c.iterator();
+				while (it.hasNext()) {
+					Signatur s = (Signatur) it.next();
+					em.remove(s);
+					em.flush();
+				}
+
+			} catch (NoResultException ex) {
+				//
+			}
+
+			HvDtoLogger<PersonalDto> partnerLogger = new HvDtoLogger<PersonalDto>(em, personalDto.getIId(),
+					theClientDto);
+			partnerLogger.logDelete(personalDto);
 
 			em.remove(personal);
 			em.flush();
@@ -516,57 +500,49 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Schreibt &Auml;nderungen im Personaldatensatz zur&uuml;ck
 	 * 
-	 * @param personalDto
-	 *            PersonalDto
-	 * @param theClientDto
-	 *            User-ID
+	 * @param personalDto  PersonalDto
+	 * @param theClientDto User-ID
 	 * @throws EJBExceptionLP
 	 */
-	public void updatePersonal(PersonalDto personalDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePersonal(PersonalDto personalDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (personalDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalDto == null"));
 		}
 		if (personalDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("personalDto.getIId() == null"));
 		}
-		if (personalDto.getBAnwesenheitsliste() == null
-				|| personalDto.getBMaennlich() == null
-				|| personalDto.getBUeberstundenausbezahlt() == null
-				|| personalDto.getBVersteckt() == null
+		if (personalDto.getBAnwesenheitsliste() == null || personalDto.getBMaennlich() == null
+				|| personalDto.getBUeberstundenausbezahlt() == null || personalDto.getBVersteckt() == null
 				|| personalDto.getPartnerIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalDto.getBAnwesenheitsliste() == null || personalDto.getBMaennlich() == null || personalDto.getBUeberstundenausbezahlt() == null || personalDto.getBVersteckt() == null || personalDto.getPartnerIId() == null "));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalDto.getBAnwesenheitsliste() == null || personalDto.getBMaennlich() == null || personalDto.getBUeberstundenausbezahlt() == null || personalDto.getBVersteckt() == null || personalDto.getPartnerIId() == null "));
 		}
 		Integer iId = personalDto.getIId();
 		// try {
 		Personal personal = em.find(Personal.class, iId);
+
+		PersonalDto dtoVorher = assemblePersonalDto(personal);
+
 		if (personal == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
-			getPartnerFac().updatePartner(personalDto.getPartnerDto(),
-					theClientDto);
+
+			personal.setCTelefon(personalDto.getCTelefon());
+
+			getPartnerFac().updatePartner(personalDto.getPartnerDto(), theClientDto);
 		} catch (RemoteException ex1) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex1);
 		}
 		try {
-			Query query = em
-					.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
+			Query query = em.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
 			query.setParameter(1, personalDto.getCPersonalnr());
 			query.setParameter(2, theClientDto.getMandant());
-			Integer iIdVorhanden = ((Personal) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Personal) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONAL.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_PERSONAL.UK"));
 			}
 
 		} catch (javax.persistence.NoResultException ex) {
@@ -585,8 +561,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			if (dtos != null && dtos.length > 0) {
 
 				if (dtos[0].getIId().equals(iId) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_PERSONAL_DUPLICATE_AUSWEIS,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PERSONAL_DUPLICATE_AUSWEIS,
 							new Exception("PERS_PERSONAL.C_AUSWEIS"));
 				}
 			}
@@ -597,17 +572,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		try {
-			Query query2 = em
-					.createNamedQuery("PersonalfindByPartnerIIdMandantCNr");
+			Query query2 = em.createNamedQuery("PersonalfindByPartnerIIdMandantCNr");
 			query2.setParameter(1, personalDto.getPartnerIId());
 			query2.setParameter(2, theClientDto.getMandant());
 			Personal doppelt = (Personal) query2.getSingleResult();
 			if (doppelt != null) {
 				Integer iIdVorhanden = doppelt.getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-							new Exception("PERS_PERSONAL.UK"));
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_PERSONAL.UK"));
 				}
 
 			}
@@ -619,19 +591,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// 3stellig ist, dann Fehler
 		ZeitstiftDto[] zeitstiftDtos = null;
 		try {
-			zeitstiftDtos = getZeiterfassungFac().zeitstiftFindByPersonalIId(
-					iId);
+			zeitstiftDtos = getZeiterfassungFac().zeitstiftFindByPersonalIId(iId);
 		} catch (RemoteException ex3) {
 			throwEJBExceptionLPRespectOld(ex3);
 		}
 		if (zeitstiftDtos != null && zeitstiftDtos.length > 0) {
 			for (int i = 0; i < zeitstiftDtos.length; i++) {
-				if (personalDto.getCAusweis() == null
-						|| personalDto.getCAusweis().length() != 3) {
-					if (zeitstiftDtos[i].getCTyp().equals(
-							ZeiterfassungFac.ZEITSTIFT_TYP_F630)) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_AUSWEISNUMMER_ZESTIFT,
+				if (personalDto.getCAusweis() == null || personalDto.getCAusweis().length() != 3) {
+					if (zeitstiftDtos[i].getCTyp().equals(ZeiterfassungFac.ZEITSTIFT_TYP_F630)) {
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_AUSWEISNUMMER_ZESTIFT,
 								new Exception("FEHLER_AUSWEISNUMMER_ZESTIFT"));
 					}
 				}
@@ -642,6 +610,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		setPersonalFromPersonalDto(personal, personalDto);
 		personal.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 		personal.setPersonalIIdAendern(theClientDto.getIDPersonal());
+
+		HvDtoLogger<PersonalDto> artikelLogger = new HvDtoLogger<PersonalDto>(em, personal.getIId(), theClientDto);
+		artikelLogger.log(dtoVorher, personalDto);
 
 		// }
 		// catch (FinderException e) {
@@ -655,18 +626,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Datet nur X_KOMMENTAR up
 	 * 
-	 * @param personalDto
-	 *            personalDto
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param personalDto  personalDto
+	 * @param theClientDto der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
-	public void updatePersonalKommentar(PersonalDto personalDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePersonalKommentar(PersonalDto personalDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (personalDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalDto == null"));
 		}
 		if (personalDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -675,8 +642,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// try {
 		Personal personal = em.find(Personal.class, personalDto.getIId());
 		if (personal == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		personal.setXKommentar(personalDto.getXKommentar());
 		// }
@@ -686,24 +652,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PartnerDtoSmall partnerDtoSmallFindByPersonalIId(
-			Integer personalIId, TheClientDto theClientDto)
+	public PartnerDtoSmall partnerDtoSmallFindByPersonalIId(Integer personalIId, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		// check2(cNrUserI);
 		if (personalIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("personalIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("personalIId == null"));
 		}
 		PartnerDtoSmall partnerDtoSmall = null;
 		try {
 			Personal personal = em.find(Personal.class, personalIId);
 			if (personal == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 			}
-			partnerDtoSmall = getPartnerFac().partnerFindByPrimaryKeySmall(
-					personal.getPartnerIId(), theClientDto);
+			partnerDtoSmall = getPartnerFac().partnerFindByPrimaryKeySmall(personal.getPartnerIId(), theClientDto);
 			partnerDtoSmall.setCPersonalnummer(personal.getCPersonalnr());
 			// }
 			// catch (FinderException ex) {
@@ -718,24 +680,19 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	}
 
 	/**
-	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner-
-	 * Datensatz
+	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner- Datensatz
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto
 	 */
-	public PersonalDto personalFindByPrimaryKeySmall(Integer iId)
-			throws EJBExceptionLP {
+	public PersonalDto personalFindByPrimaryKeySmall(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		PersonalDto personalDto = personalFindByPrimaryKeySmallOhneExc(iId);
 		if (personalDto == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return personalDto;
 	}
@@ -751,117 +708,119 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return assemblePersonalDto(personal);
 	}
 
+	public String formatAnrede(PartnerDto partnerDto, Locale loc, TheClientDto theClientDto) {
+		String ret = "";
+		if (partnerDto != null) {
+			if (partnerDto.getAnredeCNr() != null) {
+
+				AnredesprDto anredesprDto = getPartnerFac()
+						.anredesprFindByAnredeCNrLocaleCNrOhneExc(partnerDto.getAnredeCNr(), Helper.locale2String(loc));
+				if (anredesprDto != null && anredesprDto.getCBez().length() > 0) {
+					ret += anredesprDto.getCBez().trim();
+				} else {
+					ret += partnerDto.getAnredeCNr().trim();
+				}
+
+			}
+			if (partnerDto.getCName2vornamefirmazeile2() != null) {
+				ret += " " + partnerDto.getCName2vornamefirmazeile2().trim();
+			}
+			if (partnerDto.getCName1nachnamefirmazeile1() != null) {
+				ret += " " + partnerDto.getCName1nachnamefirmazeile1().trim();
+			}
+		}
+		return ret.trim();
+	}
+
 	/**
-	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner-
-	 * Datensatz
+	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner- Datensatz
 	 * 
-	 * @param iId
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param iId          Integer
+	 * @param theClientDto String
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto
 	 * @throws EJBExceptionLP
 	 */
-	public PersonalDto personalFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public PersonalDto personalFindByPrimaryKey(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
 		// check2(idUser);
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
 		Personal personal = em.find(Personal.class, iId);
 		if (personal == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		PersonalDto personalDto = assemblePersonalDto(personal);
 		if (personalDto.getBerufIId() != null) {
 			Beruf beruf = em.find(Beruf.class, personalDto.getBerufIId());
 			if (beruf == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			personalDto.setBerufDto(assembleBerufDto(beruf));
 		}
 		if (personalDto.getKollektivIId() != null) {
-			Kollektiv kollektiv = em.find(Kollektiv.class,
-					personalDto.getKollektivIId());
+			Kollektiv kollektiv = em.find(Kollektiv.class, personalDto.getKollektivIId());
 			if (kollektiv == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			personalDto.setKollektivDto(assembleKollektivDto(kollektiv));
 		}
 		if (personalDto.getLohngruppeIId() != null) {
-			Lohngruppe lohngruppe = em.find(Lohngruppe.class,
-					personalDto.getLohngruppeIId());
+			Lohngruppe lohngruppe = em.find(Lohngruppe.class, personalDto.getLohngruppeIId());
 			if (lohngruppe == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			personalDto.setLohngruppeDto(assembleLohngruppeDto(lohngruppe));
 		}
 
 		if (personalDto.getPendlerpauschaleIId() != null) {
-			personalDto.setPendlerpauschaleDto(assemblePendlerpauschaleDto(em
-					.find(Pendlerpauschale.class,
-							personalDto.getPendlerpauschaleIId())));
+			personalDto.setPendlerpauschaleDto(
+					assemblePendlerpauschaleDto(em.find(Pendlerpauschale.class, personalDto.getPendlerpauschaleIId())));
 		}
 		if (personalDto.getReligionIId() != null) {
-			Religion religion = em.find(Religion.class,
-					personalDto.getReligionIId());
+			Religion religion = em.find(Religion.class, personalDto.getReligionIId());
 			if (religion == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			personalDto.setReligionDto(assembleReligionDto(religion));
 		}
 		try {
 			if (personalDto.getPartnerIIdSozialversicherer() != null) {
 				personalDto.setPartnerDto_Sozialversicherer(getPartnerFac()
-						.partnerFindByPrimaryKey(
-								personalDto.getPartnerIIdSozialversicherer(),
-								theClientDto));
+						.partnerFindByPrimaryKey(personalDto.getPartnerIIdSozialversicherer(), theClientDto));
 
 			}
 			if (personalDto.getPartnerIIdFirma() != null) {
-				personalDto
-						.setPartnerDto_Firma(getPartnerFac()
-								.partnerFindByPrimaryKey(
-										personalDto.getPartnerIIdFirma(),
-										theClientDto));
+				personalDto.setPartnerDto_Firma(
+						getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIIdFirma(), theClientDto));
 
 			}
 			if (personalDto.getLandplzortIIdGeburt() != null) {
-				personalDto.setLandplzortDto_Geburtsort(getSystemFac()
-						.landplzortFindByPrimaryKey(
-								personalDto.getLandplzortIIdGeburt()));
+				personalDto.setLandplzortDto_Geburtsort(
+						getSystemFac().landplzortFindByPrimaryKey(personalDto.getLandplzortIIdGeburt()));
 
 			}
 			if (personalDto.getLandIIdStaatsangehoerigkeit() != null) {
-				personalDto.setLandDto(getSystemFac().landFindByPrimaryKey(
-						personalDto.getLandIIdStaatsangehoerigkeit()));
+				personalDto
+						.setLandDto(getSystemFac().landFindByPrimaryKey(personalDto.getLandIIdStaatsangehoerigkeit()));
 
 			}
 			if (personalDto.getKostenstelleIIdAbteilung() != null) {
-				personalDto.setKostenstelleDto_Abteilung(getSystemFac()
-						.kostenstelleFindByPrimaryKey(
-								personalDto.getKostenstelleIIdAbteilung()));
+				personalDto.setKostenstelleDto_Abteilung(
+						getSystemFac().kostenstelleFindByPrimaryKey(personalDto.getKostenstelleIIdAbteilung()));
 
 			}
 			if (personalDto.getKostenstelleIIdStamm() != null) {
-				personalDto.setKostenstelleDto_Stamm(getSystemFac()
-						.kostenstelleFindByPrimaryKey(
-								personalDto.getKostenstelleIIdStamm()));
+				personalDto.setKostenstelleDto_Stamm(
+						getSystemFac().kostenstelleFindByPrimaryKey(personalDto.getKostenstelleIIdStamm()));
 
 			}
 
-			personalDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
-					personalDto.getPartnerIId(), theClientDto));
+			personalDto
+					.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(personalDto.getPartnerIId(), theClientDto));
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -875,8 +834,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setPersonalFromPersonalDto(Personal personal,
-			PersonalDto personalDto) {
+	private void setPersonalFromPersonalDto(Personal personal, PersonalDto personalDto) {
 		personal.setPartnerIId(personalDto.getPartnerIId());
 		personal.setMandantCNr(personalDto.getMandantCNr());
 		personal.setCPersonalnr(personalDto.getCPersonalnr());
@@ -887,28 +845,22 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		personal.setKollektivIId(personalDto.getKollektivIId());
 		personal.setBerufIId(personalDto.getBerufIId());
 		personal.setLohngruppeIId(personalDto.getLohngruppeIId());
-		personal.setLandIIdStaatsangehoerigkeit(personalDto
-				.getLandIIdStaatsangehoerigkeit());
-		personal.setBUeberstundenausbezahlt(personalDto
-				.getBUeberstundenausbezahlt());
+		personal.setLandIIdStaatsangehoerigkeit(personalDto.getLandIIdStaatsangehoerigkeit());
+		personal.setBUeberstundenausbezahlt(personalDto.getBUeberstundenausbezahlt());
 		personal.setReligionIId(personalDto.getReligionIId());
 		personal.setLandplzortIIdGeburt(personalDto.getLandplzortIIdGeburt());
 		personal.setTGeburtsdatum(personalDto.getTGeburtsdatum());
 		personal.setCSozialversnr(personalDto.getCSozialversnr());
-		personal.setPartnerIIdSozialversicherer(personalDto
-				.getPartnerIIdSozialversicherer());
+		personal.setPartnerIIdSozialversicherer(personalDto.getPartnerIIdSozialversicherer());
 		personal.setPartnerIIdFirma(personalDto.getPartnerIIdFirma());
-		personal.setKostenstelleIIdAbteilung(personalDto
-				.getKostenstelleIIdAbteilung());
+		personal.setKostenstelleIIdAbteilung(personalDto.getKostenstelleIIdAbteilung());
 		personal.setKostenstelleIIdStamm(personalDto.getKostenstelleIIdStamm());
 		personal.setBAnwesenheitsliste(personalDto.getBAnwesenheitsliste());
 		personal.setBAnwesenheitTerminal(personalDto.getBAnwesenheitTerminal());
-		personal.setBAnwesenheitalleterminal(personalDto
-				.getBAnwesenheitalleterminal());
+		personal.setBAnwesenheitalleterminal(personalDto.getBAnwesenheitalleterminal());
 		personal.setCKurzzeichen(personalDto.getCKurzzeichen());
 		personal.setPendlerpauschaleIId(personalDto.getPendlerpauschaleIId());
-		personal.setCUnterschriftsfunktion(personalDto
-				.getCUnterschriftsfunktion());
+		personal.setCUnterschriftsfunktion(personalDto.getCUnterschriftsfunktion());
 		personal.setCUnterschriftstext(personalDto.getCUnterschriftstext());
 
 		personal.setXKommentar(personalDto.getXKommentar());
@@ -930,6 +882,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		personal.setBTelefonzeitstarten(personalDto.getBTelefonzeitstarten());
 
 		personal.setCImapInboxFolder(personalDto.getCImapInboxFolder());
+		personal.setBStartMitMeinenOffenenProjekten(personalDto.getBStartMitMeinenOffenenProjekten());
+		personal.setBKommtAmTerminal(personalDto.getBKommtAmTerminal());
+		personal.setCBccempfaenger(personalDto.getCBccempfaenger());
+		personal.setBKeineAnzeigeAmTerminal(personalDto.getBKeineAnzeigeAmTerminal());
+		personal.setBWepInfo(personalDto.getBWepInfo());
+		personal.setMaschinengruppeIId(personalDto.getMaschinengruppeIId());
+		personal.setbSynchAlleKontakte(personalDto.getbSynchronisiereAlleKontakte());
+		personal.setCVersandkennwort(personalDto.getCVersandkennwort());
 		em.merge(personal);
 		em.flush();
 	}
@@ -938,8 +898,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return PersonalDtoAssembler.createDto(personal);
 	}
 
-	private PersonalDto[] assemblePersonalDtos(Collection<?> personals,
-			boolean bPlusVersteckte) {
+	private PersonalDto[] assemblePersonalDtos(Collection<?> personals, boolean bPlusVersteckte) {
 		List<PersonalDto> list = new ArrayList<PersonalDto>();
 		if (personals != null) {
 			Iterator<?> iterator = personals.iterator();
@@ -963,19 +922,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Legt einen neue Lohngruppe an
 	 * 
-	 * @param lohngruppeDto
-	 *            LohngruppeDto
-	 * @param theClientDto
-	 *            String
+	 * @param lohngruppeDto LohngruppeDto
+	 * @param theClientDto  String
 	 * @throws EJBExceptionLP
 	 * @return Integer
 	 */
-	public Integer createLohngruppe(LohngruppeDto lohngruppeDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createLohngruppe(LohngruppeDto lohngruppeDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (lohngruppeDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lohngruppeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lohngruppeDto == null"));
 		}
 		if (lohngruppeDto.getCBez() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -985,8 +940,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Query query = em.createNamedQuery("LohngruppefindByCBez");
 			query.setParameter(1, lohngruppeDto.getCBez());
 			Lohngruppe doppelt = (Lohngruppe) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_LOHNGRUPPE.C_BEZ"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_LOHNGRUPPE.C_BEZ"));
 		} catch (NoResultException ex1) {
 		}
 		// generieren von primary key
@@ -995,14 +949,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		lohngruppeDto.setIId(pk);
 
 		try {
-			Lohngruppe lohngruppe = new Lohngruppe(lohngruppeDto.getIId(),
-					lohngruppeDto.getCBez());
+			Lohngruppe lohngruppe = new Lohngruppe(lohngruppeDto.getIId(), lohngruppeDto.getCBez());
 			em.persist(lohngruppe);
 			em.flush();
 			setLohngruppeFromLohngruppeDto(lohngruppe, lohngruppeDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return lohngruppeDto.getIId();
 	}
@@ -1010,20 +962,17 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Entfernt eine vorhandene Lohngruppe
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 */
 	public void removeLohngruppe(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
 			Lohngruppe lohngruppe = em.find(Lohngruppe.class, iId);
 			if (lohngruppe == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(lohngruppe);
 			em.flush();
@@ -1035,39 +984,31 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Speichert &auml;nderungen einer Lohngruppe
 	 * 
-	 * @param lohngruppeDto
-	 *            LohngruppeDto
+	 * @param lohngruppeDto LohngruppeDto
 	 * @throws EJBExceptionLP
 	 */
-	public void updateLohngruppe(LohngruppeDto lohngruppeDto)
-			throws EJBExceptionLP {
+	public void updateLohngruppe(LohngruppeDto lohngruppeDto) throws EJBExceptionLP {
 		if (lohngruppeDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("lohngruppeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("lohngruppeDto == null"));
 		}
 		if (lohngruppeDto.getIId() == null || lohngruppeDto.getCBez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"lohngruppeDto.getIId() == null || lohngruppeDto.getCBez() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("lohngruppeDto.getIId() == null || lohngruppeDto.getCBez() == null"));
 		}
 
 		Integer iId = lohngruppeDto.getIId();
 		// try {
 		Lohngruppe lohngruppe = em.find(Lohngruppe.class, iId);
 		if (lohngruppe == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			Query query = em.createNamedQuery("LohngruppefindByCBez");
 			query.setParameter(1, lohngruppeDto.getCBez());
-			Integer iIdVorhanden = ((Lohngruppe) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Lohngruppe) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_LOHNGRUPPE.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_LOHNGRUPPE.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
@@ -1085,33 +1026,27 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Holt eine bestimmte Lohngruppe
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 * @return LohngruppeDto
 	 */
-	public LohngruppeDto lohngruppeFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public LohngruppeDto lohngruppeFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		try {
 			Lohngruppe lohngruppe = em.find(Lohngruppe.class, iId);
 			if (lohngruppe == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			return assembleLohngruppeDto(lohngruppe);
 		} catch (Exception e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
 		}
 	}
 
-	private void setLohngruppeFromLohngruppeDto(Lohngruppe lohngruppe,
-			LohngruppeDto lohngruppeDto) {
+	private void setLohngruppeFromLohngruppeDto(Lohngruppe lohngruppe, LohngruppeDto lohngruppeDto) {
 		lohngruppe.setCBez(lohngruppeDto.getCBez());
 		em.merge(lohngruppe);
 		em.flush();
@@ -1134,12 +1069,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (LohngruppeDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createReligion(ReligionDto religionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createReligion(ReligionDto religionDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (religionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("religionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("religionDto == null"));
 		}
 		if (religionDto.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -1149,8 +1082,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Query query = em.createNamedQuery("ReligionfindByCNr");
 			query.setParameter(1, religionDto.getCNr());
 			Religion doppelt = (Religion) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_RELIGION.C_NR"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_RELIGION.C_NR"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -1160,8 +1092,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_RELIGION);
 			religionDto.setIId(pk);
 
-			Religion religion = new Religion(religionDto.getIId(),
-					religionDto.getCNr());
+			Religion religion = new Religion(religionDto.getIId(), religionDto.getCNr());
 			em.persist(religion);
 			em.flush();
 			setReligionFromReligionDto(religion, religionDto);
@@ -1171,24 +1102,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			// dann kommen beim sortieren der bezeichnung auch alle!
 			// if (religionDto.getReligionsprDto() != null) {
 			String sprache = theClientDto.getLocUiAsString();
-			Religionspr religionspr = new Religionspr(sprache,
-					religionDto.getIId());
+			Religionspr religionspr = new Religionspr(sprache, religionDto.getIId());
 			em.persist(religionspr);
 			em.flush();
-			setReligionsprFromReligionsprDto(religionspr,
-					religionDto.getReligionsprDto());
+			setReligionsprFromReligionsprDto(religionspr, religionDto.getReligionsprDto());
 			// }
 			return religionDto.getIId();
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
 	public void removeReligion(ReligionDto religionDto) throws EJBExceptionLP {
 		if (religionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("religionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("religionDto == null"));
 		}
 		if (religionDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -1211,8 +1138,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			// }
 			Religion religion = em.find(Religion.class, religionDto.getIId());
 			if (religion == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(religion);
 			em.flush();
@@ -1221,8 +1147,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateReligion(ReligionDto religionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateReligion(ReligionDto religionDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (religionDto != null) {
 			Integer iId = religionDto.getIId();
 
@@ -1230,8 +1155,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			// try {
 			religion = em.find(Religion.class, iId);
 			if (religion == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 			}
 			// }
@@ -1244,11 +1168,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			try {
 				Query query = em.createNamedQuery("ReligionfindByCNr");
 				query.setParameter(1, religionDto.getCNr());
-				Integer iIdVorhanden = ((Religion) query.getSingleResult())
-						.getIId();
+				Integer iIdVorhanden = ((Religion) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 							new Exception("PERS_RELIGION.CNR"));
 				}
 
@@ -1260,26 +1182,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 			if (religionDto.getReligionsprDto() != null) {
 				// try {
-				Religionspr religionspr = em
-						.find(Religionspr.class,
-								new ReligionsprPK(theClientDto
-										.getLocUiAsString(), iId));
+				Religionspr religionspr = em.find(Religionspr.class,
+						new ReligionsprPK(theClientDto.getLocUiAsString(), iId));
 				if (religionspr == null) {
 					religionspr = null;
 					try {
-						religionspr = new Religionspr(
-								theClientDto.getLocUiAsString(), iId);
+						religionspr = new Religionspr(theClientDto.getLocUiAsString(), iId);
 						em.persist(religionspr);
 						em.flush();
 					} catch (EntityExistsException ex3) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex3);
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex3);
 					}
-					setReligionsprFromReligionsprDto(religionspr,
-							religionDto.getReligionsprDto());
+					setReligionsprFromReligionsprDto(religionspr, religionDto.getReligionsprDto());
 				}
-				setReligionsprFromReligionsprDto(religionspr,
-						religionDto.getReligionsprDto());
+				setReligionsprFromReligionsprDto(religionspr, religionDto.getReligionsprDto());
 				// }
 				// catch (FinderException ex) {
 				// Religionspr religionspr = null;
@@ -1300,24 +1216,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public ReligionDto religionFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public ReligionDto religionFindByPrimaryKey(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
 		Religion religion = em.find(Religion.class, iId);
 		if (religion == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		ReligionDto religionDto = assembleReligionDto(religion);
 		ReligionsprDto religionsprDto = null;
 		// try {
 		String sprache = theClientDto.getLocUiAsString();
-		Religionspr religionspr = em.find(Religionspr.class, new ReligionsprPK(
-				sprache, iId));
+		Religionspr religionspr = em.find(Religionspr.class, new ReligionsprPK(sprache, iId));
 		if (religionspr != null) {
 			religionsprDto = assembleReligionsprDto(religionspr);
 		}
@@ -1327,8 +1239,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		if (religionsprDto == null) {
 			// try {
 			String konzernsprache = theClientDto.getLocKonzernAsString();
-			Religionspr temp = em.find(Religionspr.class, new ReligionsprPK(
-					konzernsprache, iId));
+			Religionspr temp = em.find(Religionspr.class, new ReligionsprPK(konzernsprache, iId));
 			if (temp != null) {
 				religionsprDto = assembleReligionsprDto(temp);
 			}
@@ -1347,8 +1258,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setReligionFromReligionDto(Religion religion,
-			ReligionDto religionDto) {
+	private void setReligionFromReligionDto(Religion religion, ReligionDto religionDto) {
 		religion.setCNr(religionDto.getCNr());
 		em.merge(religion);
 		em.flush();
@@ -1371,8 +1281,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (ReligionDto[]) list.toArray(returnArray);
 	}
 
-	private void setReligionsprFromReligionsprDto(Religionspr religionspr,
-			ReligionsprDto religionsprDto) {
+	private void setReligionsprFromReligionsprDto(Religionspr religionspr, ReligionsprDto religionsprDto) {
 		religionspr.setCBez(religionsprDto.getCBez());
 		em.merge(religionspr);
 		em.flush();
@@ -1395,26 +1304,23 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (ReligionsprDto[]) list.toArray(returnArray);
 	}
 
-	private void setPersonalartsprFromPersonalartsprDto(
-			Personalartspr personalartspr, PersonalartsprDto personalartsprDto) {
+	private void setPersonalartsprFromPersonalartsprDto(Personalartspr personalartspr,
+			PersonalartsprDto personalartsprDto) {
 		personalartspr.setCBez(personalartsprDto.getCBez());
 		em.merge(personalartspr);
 		em.flush();
 	}
 
-	private PersonalartsprDto assemblePersonalartsprDto(
-			Personalartspr personalartspr) {
+	private PersonalartsprDto assemblePersonalartsprDto(Personalartspr personalartspr) {
 		return PersonalartsprDtoAssembler.createDto(personalartspr);
 	}
 
-	private PersonalartsprDto[] assemblePersonalartsprDtos(
-			Collection<?> personalartsprs) {
+	private PersonalartsprDto[] assemblePersonalartsprDtos(Collection<?> personalartsprs) {
 		List<PersonalartsprDto> list = new ArrayList<PersonalartsprDto>();
 		if (personalartsprs != null) {
 			Iterator<?> iterator = personalartsprs.iterator();
 			while (iterator.hasNext()) {
-				Personalartspr personalartspr = (Personalartspr) iterator
-						.next();
+				Personalartspr personalartspr = (Personalartspr) iterator.next();
 				list.add(assemblePersonalartsprDto(personalartspr));
 			}
 		}
@@ -1422,8 +1328,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (PersonalartsprDto[]) list.toArray(returnArray);
 	}
 
-	private void setPersonalartFromPersonalartDto(Personalart personalart,
-			PersonalartDto personalartDto) {
+	private void setPersonalartFromPersonalartDto(Personalart personalart, PersonalartDto personalartDto) {
 		em.merge(personalart);
 		em.flush();
 	}
@@ -1445,27 +1350,23 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (PersonalartDto[]) list.toArray(returnArray);
 	}
 
-	private void setAngehoerigenartFromAngehoerigenartDto(
-			Angehoerigenart angehoerigenart,
+	private void setAngehoerigenartFromAngehoerigenartDto(Angehoerigenart angehoerigenart,
 			AngehoerigenartDto angehoerigenartDto) {
 		angehoerigenart.setISort(angehoerigenartDto.getISort());
 		em.merge(angehoerigenart);
 		em.flush();
 	}
 
-	private AngehoerigenartDto assembleAngehoerigenartDto(
-			Angehoerigenart angehoerigenart) {
+	private AngehoerigenartDto assembleAngehoerigenartDto(Angehoerigenart angehoerigenart) {
 		return AngehoerigenartDtoAssembler.createDto(angehoerigenart);
 	}
 
-	private AngehoerigenartDto[] assembleAngehoerigenartDtos(
-			Collection<?> angehoerigenarts) {
+	private AngehoerigenartDto[] assembleAngehoerigenartDtos(Collection<?> angehoerigenarts) {
 		List<AngehoerigenartDto> list = new ArrayList<AngehoerigenartDto>();
 		if (angehoerigenarts != null) {
 			Iterator<?> iterator = angehoerigenarts.iterator();
 			while (iterator.hasNext()) {
-				Angehoerigenart angehoerigenart = (Angehoerigenart) iterator
-						.next();
+				Angehoerigenart angehoerigenart = (Angehoerigenart) iterator.next();
 				list.add(assembleAngehoerigenartDto(angehoerigenart));
 			}
 		}
@@ -1473,20 +1374,17 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (AngehoerigenartDto[]) list.toArray(returnArray);
 	}
 
-	private void setFamilienstandFromFamilienstandDto(
-			Familienstand familienstand, FamilienstandDto familienstandDto) {
+	private void setFamilienstandFromFamilienstandDto(Familienstand familienstand, FamilienstandDto familienstandDto) {
 		familienstand.setISort(familienstandDto.getISort());
 		em.merge(familienstand);
 		em.flush();
 	}
 
-	private FamilienstandDto assembleFamilienstandDto(
-			Familienstand familienstand) {
+	private FamilienstandDto assembleFamilienstandDto(Familienstand familienstand) {
 		return FamilienstandDtoAssembler.createDto(familienstand);
 	}
 
-	private FamilienstandDto[] assembleFamilienstandDtos(
-			Collection<?> familienstands) {
+	private FamilienstandDto[] assembleFamilienstandDtos(Collection<?> familienstands) {
 		List<FamilienstandDto> list = new ArrayList<FamilienstandDto>();
 		if (familienstands != null) {
 			Iterator<?> iterator = familienstands.iterator();
@@ -1499,31 +1397,24 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (FamilienstandDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createPersonalangehoerige(
-			PersonalangehoerigeDto personalangehoerigeDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPersonalangehoerige(PersonalangehoerigeDto personalangehoerigeDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (personalangehoerigeDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("partnerkommunikationDto == null"));
 		}
-		if (personalangehoerigeDto.getPersonalIId() == null
-				|| personalangehoerigeDto.getAngehoerigenartCNr() == null
+		if (personalangehoerigeDto.getPersonalIId() == null || personalangehoerigeDto.getAngehoerigenartCNr() == null
 				|| personalangehoerigeDto.getCVorname() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"personalangehoerigeDto.getPersonalPartnerIId() == null || personalangehoerigeDto.getAngehoerigenartCNr() == null || personalangehoerigeDto.getCVorname() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"personalangehoerigeDto.getPersonalPartnerIId() == null || personalangehoerigeDto.getAngehoerigenartCNr() == null || personalangehoerigeDto.getCVorname() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("PersonalangehoerigefindByPersonalIIdAngegoerigenartCNrCVorname");
+			Query query = em.createNamedQuery("PersonalangehoerigefindByPersonalIIdAngegoerigenartCNrCVorname");
 			query.setParameter(1, personalangehoerigeDto.getPersonalIId());
-			query.setParameter(2,
-					personalangehoerigeDto.getAngehoerigenartCNr());
+			query.setParameter(2, personalangehoerigeDto.getAngehoerigenartCNr());
 			query.setParameter(3, personalangehoerigeDto.getCVorname());
-			Personalangehoerige doppelt = (Personalangehoerige) query
-					.getSingleResult();
+			Personalangehoerige doppelt = (Personalangehoerige) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PERS_PERSONALANGEHOERIGE.UK"));
 		} catch (NoResultException ex1) {
@@ -1533,37 +1424,29 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			// generieren von primary key
 			PKGeneratorObj pkGen = new PKGeneratorObj();
 
-			Integer pk = pkGen
-					.getNextPrimaryKey(PKConst.PK_PERSONALANGEHOERIGE);
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PERSONALANGEHOERIGE);
 			personalangehoerigeDto.setIId(pk);
 
-			Personalangehoerige personalangehoerige = new Personalangehoerige(
-					personalangehoerigeDto.getIId(),
-					personalangehoerigeDto.getPersonalIId(),
-					personalangehoerigeDto.getAngehoerigenartCNr(),
+			Personalangehoerige personalangehoerige = new Personalangehoerige(personalangehoerigeDto.getIId(),
+					personalangehoerigeDto.getPersonalIId(), personalangehoerigeDto.getAngehoerigenartCNr(),
 					personalangehoerigeDto.getCVorname());
 			em.persist(personalangehoerige);
 			em.flush();
-			setPersonalangehoerigeFromPersonalangehoerigeDto(
-					personalangehoerige, personalangehoerigeDto);
+			setPersonalangehoerigeFromPersonalangehoerigeDto(personalangehoerige, personalangehoerigeDto);
 		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return personalangehoerigeDto.getIId();
 	}
 
 	public void removePersonalangehoerige(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		try {
-			Personalangehoerige personalangehoerige = em.find(
-					Personalangehoerige.class, iId);
+			Personalangehoerige personalangehoerige = em.find(Personalangehoerige.class, iId);
 			if (personalangehoerige == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(personalangehoerige);
 			em.flush();
@@ -1572,20 +1455,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePersonalangehoerige(
-			PersonalangehoerigeDto personalangehoerigeDto)
-			throws EJBExceptionLP {
+	public void updatePersonalangehoerige(PersonalangehoerigeDto personalangehoerigeDto) throws EJBExceptionLP {
 		if (personalangehoerigeDto != null) {
 			Integer iId = personalangehoerigeDto.getIId();
 			// try {
-			Personalangehoerige personalangehoerige = em.find(
-					Personalangehoerige.class, iId);
+			Personalangehoerige personalangehoerige = em.find(Personalangehoerige.class, iId);
 			if (personalangehoerige == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setPersonalangehoerigeFromPersonalangehoerigeDto(
-					personalangehoerige, personalangehoerigeDto);
+			setPersonalangehoerigeFromPersonalangehoerigeDto(personalangehoerige, personalangehoerigeDto);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -1595,19 +1473,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public PersonalangehoerigeDto personalangehoerigeFindByPrimaryKey(
-			Integer iId) throws EJBExceptionLP {
+	public PersonalangehoerigeDto personalangehoerigeFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
-		Personalangehoerige personalangehoerige = em.find(
-				Personalangehoerige.class, iId);
+		Personalangehoerige personalangehoerige = em.find(Personalangehoerige.class, iId);
 		if (personalangehoerige == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		PersonalangehoerigeDto personalangehoerigeDto = assemblePersonalangehoerigeDto(personalangehoerige);
 
@@ -1620,71 +1494,53 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setPersonalangehoerigeFromPersonalangehoerigeDto(
-			Personalangehoerige personalangehoerige,
+	private void setPersonalangehoerigeFromPersonalangehoerigeDto(Personalangehoerige personalangehoerige,
 			PersonalangehoerigeDto personalangehoerigeDto) {
-		personalangehoerige.setPersonalIId(personalangehoerigeDto
-				.getPersonalIId());
-		personalangehoerige.setAngehoerigenartCNr(personalangehoerigeDto
-				.getAngehoerigenartCNr());
+		personalangehoerige.setPersonalIId(personalangehoerigeDto.getPersonalIId());
+		personalangehoerige.setAngehoerigenartCNr(personalangehoerigeDto.getAngehoerigenartCNr());
 		personalangehoerige.setCVorname(personalangehoerigeDto.getCVorname());
 		personalangehoerige.setCName(personalangehoerigeDto.getCName());
-		personalangehoerige.setTGeburtsdatum(personalangehoerigeDto
-				.getTGeburtsdatum());
-		personalangehoerige.setCSozialversnr(personalangehoerigeDto
-				.getCSozialversnr());
+		personalangehoerige.setTGeburtsdatum(personalangehoerigeDto.getTGeburtsdatum());
+		personalangehoerige.setCSozialversnr(personalangehoerigeDto.getCSozialversnr());
 		em.merge(personalangehoerige);
 		em.flush();
 	}
 
-	private PersonalangehoerigeDto assemblePersonalangehoerigeDto(
-			Personalangehoerige personalangehoerige) {
+	private PersonalangehoerigeDto assemblePersonalangehoerigeDto(Personalangehoerige personalangehoerige) {
 		return PersonalangehoerigeDtoAssembler.createDto(personalangehoerige);
 	}
 
-	private PersonalangehoerigeDto[] assemblePersonalangehoerigeDtos(
-			Collection<?> personalangehoeriges) {
+	private PersonalangehoerigeDto[] assemblePersonalangehoerigeDtos(Collection<?> personalangehoeriges) {
 		List<PersonalangehoerigeDto> list = new ArrayList<PersonalangehoerigeDto>();
 		if (personalangehoeriges != null) {
 			Iterator<?> iterator = personalangehoeriges.iterator();
 			while (iterator.hasNext()) {
-				Personalangehoerige personalangehoerige = (Personalangehoerige) iterator
-						.next();
+				Personalangehoerige personalangehoerige = (Personalangehoerige) iterator.next();
 				list.add(assemblePersonalangehoerigeDto(personalangehoerige));
 			}
 		}
-		PersonalangehoerigeDto[] returnArray = new PersonalangehoerigeDto[list
-				.size()];
+		PersonalangehoerigeDto[] returnArray = new PersonalangehoerigeDto[list.size()];
 		return (PersonalangehoerigeDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createKollektiv(KollektivDto kollektivDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createKollektiv(KollektivDto kollektivDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (kollektivDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivDto == null"));
 		}
-		if (kollektivDto.getCBez() == null
-				|| kollektivDto.getBUestdverteilen() == null
-				|| kollektivDto.getBVerbraucheuestd() == null
-				|| kollektivDto.getBUestdabsollstderbracht() == null
-				|| kollektivDto.getNFaktoruestd100() == null
-				|| kollektivDto.getNFaktoruestd50() == null
-				|| kollektivDto.getNFaktormehrstd() == null
-				|| kollektivDto.getNFaktoruestd200() == null
-				|| kollektivDto.getN200prozentigeab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"kollektivDto.getCBez() == null || kollektivDto.getBUestdverteilen() == null || kollektivDto.getBUestdabsollstderbracht() == null || kollektivDto.getBVerbraucheuestd() == null || kollektivDto.getNFaktoruestd100() == null || kollektivDto.getNFaktoruestd50() == null || kollektivDto.getNFaktormehrstd() == null || kollektivDto.getNFaktoruestd200() == null || kollektivDto.getN200prozentigeab() == null"));
+		if (kollektivDto.getCBez() == null || kollektivDto.getCAbrechungsart() == null
+				|| kollektivDto.getBUestdverteilen() == null || kollektivDto.getBVerbraucheuestd() == null
+				|| kollektivDto.getBUestdabsollstderbracht() == null || kollektivDto.getNFaktoruestd100() == null
+				|| kollektivDto.getNFaktoruestd50() == null || kollektivDto.getNFaktormehrstd() == null
+				|| kollektivDto.getNFaktoruestd200() == null || kollektivDto.getN200prozentigeab() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"kollektivDto.getCBez() == null || kollektivDto.getCAbrechungsart() == null || kollektivDto.getBUestdverteilen() == null || kollektivDto.getBUestdabsollstderbracht() == null || kollektivDto.getBVerbraucheuestd() == null || kollektivDto.getNFaktoruestd100() == null || kollektivDto.getNFaktoruestd50() == null || kollektivDto.getNFaktormehrstd() == null || kollektivDto.getNFaktoruestd200() == null || kollektivDto.getN200prozentigeab() == null"));
 		}
 		try {
 			Query query = em.createNamedQuery("KollektivfindByCBez");
 			query.setParameter(1, kollektivDto.getCBez());
 			Kollektiv doppelt = (Kollektiv) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_KOLLEKTIV.C_BEZ"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_KOLLEKTIV.C_BEZ"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -1693,36 +1549,46 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_KOLLEKTIV);
 		kollektivDto.setIId(pk);
 
+		if (kollektivDto.getIBerechnungsbasis() == null) {
+			kollektivDto.setIBerechnungsbasis(PersonalFac.KOLLEKTIV_BERECHNUNGSBASIS_UHRZEIT);
+		}
+		if (kollektivDto.getbWochengesamtsicht() == null) {
+			kollektivDto.setbWochengesamtsicht(Helper.boolean2Short(false));
+		}
+
+		if (kollektivDto.getBFeiertagsueberstundenAbSoll() == null) {
+			kollektivDto.setBFeiertagsueberstundenAbSoll(Helper.boolean2Short(false));
+		}
+		if (kollektivDto.getIFaktorPassiveReisezeit() == null) {
+			kollektivDto.setIFaktorPassiveReisezeit(0);
+		}
+
 		try {
-			Kollektiv kollektiv = new Kollektiv(kollektivDto.getIId(),
-					kollektivDto.getCBez(), kollektivDto.getBVerbraucheuestd(),
-					kollektivDto.getNFaktoruestd50(),
-					kollektivDto.getNFaktoruestd100(),
-					kollektivDto.getNFaktormehrstd(),
-					kollektivDto.getBUestdabsollstderbracht(),
-					kollektivDto.getBUestdverteilen(),
-					kollektivDto.getNFaktoruestd200(),
-					kollektivDto.getN200prozentigeab());
+			Kollektiv kollektiv = new Kollektiv(kollektivDto.getIId(), kollektivDto.getCBez(),
+					kollektivDto.getCAbrechungsart(), kollektivDto.getBVerbraucheuestd(),
+					kollektivDto.getNFaktoruestd50(), kollektivDto.getNFaktoruestd100(),
+					kollektivDto.getNFaktormehrstd(), kollektivDto.getBUestdabsollstderbracht(),
+					kollektivDto.getBUestdverteilen(), kollektivDto.getNFaktoruestd200(),
+					kollektivDto.getN200prozentigeab(), kollektivDto.getIBerechnungsbasis(),
+					kollektivDto.getbWochengesamtsicht(), kollektivDto.getBFeiertagsueberstundenAbSoll(),
+					kollektivDto.getIFaktorPassiveReisezeit());
 			em.persist(kollektiv);
 			em.flush();
 			setKollektivFromKollektivDto(kollektiv, kollektivDto);
 		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return kollektivDto.getIId();
 	}
 
 	public void removeKollektiv(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
 			Kollektiv kollektiv = em.find(Kollektiv.class, iId);
 			if (kollektiv == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(kollektiv);
 			em.flush();
@@ -1735,8 +1601,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		try {
 			Lohnart lohnart = em.find(Lohnart.class, iId);
 			if (lohnart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(lohnart);
 			em.flush();
@@ -1745,13 +1610,24 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
+	public void removeZahltag(Integer iId) {
+		try {
+			Zahltag zahltag = em.find(Zahltag.class, iId);
+			if (zahltag == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+			em.remove(zahltag);
+			em.flush();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
+		}
+	}
+
 	public void removeLohnartstundenfaktor(Integer iId) {
 		try {
-			Lohnartstundenfaktor lohnartstundenfaktor = em.find(
-					Lohnartstundenfaktor.class, iId);
+			Lohnartstundenfaktor lohnartstundenfaktor = em.find(Lohnartstundenfaktor.class, iId);
 			if (lohnartstundenfaktor == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(lohnartstundenfaktor);
 			em.flush();
@@ -1764,8 +1640,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		try {
 			Lohnart lohnart = em.find(Lohnart.class, cNr);
 			if (lohnart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(lohnart);
 			em.flush();
@@ -1774,42 +1649,30 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateKollektiv(KollektivDto kollektivDto)
-			throws EJBExceptionLP {
+	public void updateKollektiv(KollektivDto kollektivDto) throws EJBExceptionLP {
 		if (kollektivDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivDto == null"));
 		}
-		if (kollektivDto.getIId() == null || kollektivDto.getCBez() == null
-				|| kollektivDto.getNFaktoruestd100() == null
-				|| kollektivDto.getBUestdabsollstderbracht() == null
-				|| kollektivDto.getBUestdverteilen() == null
-				|| kollektivDto.getNFaktoruestd50() == null
-				|| kollektivDto.getNFaktormehrstd() == null
-				|| kollektivDto.getNFaktoruestd200() == null
-				|| kollektivDto.getN200prozentigeab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"kollektivDto.getIId() == null || kollektivDto.getBUestdverteilen() == null || kollektivDto.getBUestdabsollstderbracht() == null || kollektivDto.getCBez() == null || kollektivDto.getNFaktoruestd100() == null || kollektivDto.getNFaktoruestd50() == null || kollektivDto.getNFaktormehrstd() == null || kollektivDto.getNFaktoruestd200() == null || kollektivDto.getN200prozentigeab() == null"));
+		if (kollektivDto.getIId() == null || kollektivDto.getCBez() == null || kollektivDto.getNFaktoruestd100() == null
+				|| kollektivDto.getBUestdabsollstderbracht() == null || kollektivDto.getBUestdverteilen() == null
+				|| kollektivDto.getNFaktoruestd50() == null || kollektivDto.getNFaktormehrstd() == null
+				|| kollektivDto.getNFaktoruestd200() == null || kollektivDto.getN200prozentigeab() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"kollektivDto.getIId() == null || kollektivDto.getBUestdverteilen() == null || kollektivDto.getBUestdabsollstderbracht() == null || kollektivDto.getCBez() == null || kollektivDto.getNFaktoruestd100() == null || kollektivDto.getNFaktoruestd50() == null || kollektivDto.getNFaktormehrstd() == null || kollektivDto.getNFaktoruestd200() == null || kollektivDto.getN200prozentigeab() == null"));
 		}
 
 		Integer iId = kollektivDto.getIId();
 		// try {
 		Kollektiv kollektiv = em.find(Kollektiv.class, iId);
 		if (kollektiv == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			Query query = em.createNamedQuery("KollektivfindByCBez");
 			query.setParameter(1, kollektivDto.getCBez());
-			Integer iIdVorhanden = ((Kollektiv) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Kollektiv) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_KOLLEKTIV.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_KOLLEKTIV.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
@@ -1830,17 +1693,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// try {
 		Lohnart kollektiv = em.find(Lohnart.class, iId);
 		if (kollektiv == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			Query query = em.createNamedQuery("LohnartfindByILohnart");
 			query.setParameter(1, lohnartDto.getILohnart());
 			Integer iIdVorhanden = ((Lohnart) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_KOLLEKTIV.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_KOLLEKTIV.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
@@ -1850,36 +1710,53 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void updateLohnartstundenfaktor(
-			LohnartstundenfaktorDto lohnartstundenfaktorDto) {
+	public void updateZahltag(ZahltagDto dto) {
 
-		Integer iId = lohnartstundenfaktorDto.getIId();
+		Integer iId = dto.getIId();
 		// try {
-		Lohnartstundenfaktor lohnartstundenfaktor = em.find(
-				Lohnartstundenfaktor.class, iId);
-		if (lohnartstundenfaktor == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		Zahltag zahltag = em.find(Zahltag.class, iId);
+		if (zahltag == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
-			Query query = em
-					.createNamedQuery("LohnartstundenfaktorfindByLohnartIIdLohnstundenartCNrTagesartIId");
-			query.setParameter(1, lohnartstundenfaktor.getLohnartIId());
-			query.setParameter(2, lohnartstundenfaktor.getLohnstundenartCNr());
-			query.setParameter(3, lohnartstundenfaktor.getTagesartIId());
-			Integer iIdVorhanden = ((Lohnartstundenfaktor) query
-					.getSingleResult()).getIId();
+			Query query = em.createNamedQuery("ZahltagFindByIMonatMandantCNr");
+			query.setParameter(1, dto.getIMonat());
+			query.setParameter(2, dto.getMandantCNr());
+			Integer iIdVorhanden = ((Zahltag) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_LOHNARTSTUNDENFAKTOR.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_ZAHLTAG.UK"));
 			}
 
 		} catch (NoResultException ex) {
 			//
 		}
-		setLohnartstundenfaktorFromLohnartstundenfaktorDto(
-				lohnartstundenfaktor, lohnartstundenfaktorDto);
+		setZahltagFromZahltagDto(zahltag, dto);
+
+	}
+
+	public void updateLohnartstundenfaktor(LohnartstundenfaktorDto lohnartstundenfaktorDto) {
+
+		Integer iId = lohnartstundenfaktorDto.getIId();
+		// try {
+		Lohnartstundenfaktor lohnartstundenfaktor = em.find(Lohnartstundenfaktor.class, iId);
+		if (lohnartstundenfaktor == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			Query query = em.createNamedQuery("LohnartstundenfaktorfindByLohnartIIdLohnstundenartCNrTagesartIId");
+			query.setParameter(1, lohnartstundenfaktor.getLohnartIId());
+			query.setParameter(2, lohnartstundenfaktor.getLohnstundenartCNr());
+			query.setParameter(3, lohnartstundenfaktor.getTagesartIId());
+			Integer iIdVorhanden = ((Lohnartstundenfaktor) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_LOHNARTSTUNDENFAKTOR.UK"));
+			}
+
+		} catch (NoResultException ex) {
+			//
+		}
+		setLohnartstundenfaktorFromLohnartstundenfaktorDto(lohnartstundenfaktor, lohnartstundenfaktorDto);
 
 	}
 
@@ -1889,17 +1766,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// try {
 		Lohnstundenart lohnstundenart = em.find(Lohnstundenart.class, cNr);
 		if (lohnstundenart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
-		setLohnstundenartFromLohnstundenartDto(lohnstundenart,
-				lohnstundenartDto);
+		setLohnstundenartFromLohnstundenartDto(lohnstundenart, lohnstundenartDto);
 
 	}
 
-	public Map getAllSprFamilienstaende(String cNrSpracheI)
-			throws EJBExceptionLP {
+	public Map getAllSprFamilienstaende(String cNrSpracheI) throws EJBExceptionLP {
 		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
 		// try {
 		Query query = em.createNamedQuery("FamilienstandfindAll");
@@ -1914,10 +1788,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Object key = familienstandTemp.getCNr();
 			Object value = null;
 			// try {
-			Familienstandspr familienstandspr = em.find(
-					Familienstandspr.class,
-					new FamilienstandsprPK(cNrSpracheI, familienstandTemp
-							.getCNr()));
+			Familienstandspr familienstandspr = em.find(Familienstandspr.class,
+					new FamilienstandsprPK(cNrSpracheI, familienstandTemp.getCNr()));
 			if (familienstandspr == null) {
 				// fuer locale und C_NR keine Bezeichnu g vorhanden ...
 				value = familienstandTemp.getCNr();
@@ -1959,8 +1831,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return h;
 	}
 
-	public Map getAllSprangehoerigenarten(String cNrSpracheI)
-			throws EJBExceptionLP {
+	public Map getAllSprangehoerigenarten(String cNrSpracheI) throws EJBExceptionLP {
 		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
 		// try {
 		Query query = em.createNamedQuery("AngehoerigenartfindAll");
@@ -1972,14 +1843,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		Iterator<?> itArten = clArten.iterator();
 
 		while (itArten.hasNext()) {
-			Angehoerigenart angehoerigenartTemp = (Angehoerigenart) itArten
-					.next();
+			Angehoerigenart angehoerigenartTemp = (Angehoerigenart) itArten.next();
 			Object key = angehoerigenartTemp.getCNr();
 			Object value = null;
 			// try {
-			Angehoerigenartspr angehoerigenartspr = em.find(
-					Angehoerigenartspr.class, new AngehoerigenartsprPK(
-							cNrSpracheI, angehoerigenartTemp.getCNr()));
+			Angehoerigenartspr angehoerigenartspr = em.find(Angehoerigenartspr.class,
+					new AngehoerigenartsprPK(cNrSpracheI, angehoerigenartTemp.getCNr()));
 			if (angehoerigenartspr == null) {
 				// fuer locale und C_NR keine Bezeichnug vorhanden ...
 				value = angehoerigenartTemp.getCNr();
@@ -2004,8 +1873,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * uselocalspr: 0 Hole alle Personalarten nach Spr.
 	 * 
-	 * @param cNrSpracheI
-	 *            String
+	 * @param cNrSpracheI String
 	 * @throws EJBExceptionLP
 	 * @return Map
 	 */
@@ -2024,9 +1892,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Object key = personalartTemp.getCNr();
 			Object value = null;
 			// try {
-			Personalartspr personalartspr = em
-					.find(Personalartspr.class, new PersonalartsprPK(
-							cNrSpracheI, personalartTemp.getCNr()));
+			Personalartspr personalartspr = em.find(Personalartspr.class,
+					new PersonalartsprPK(cNrSpracheI, personalartTemp.getCNr()));
 			if (personalartspr == null) {
 				// fuer locale und C_NR keine Bezeichnu g vorhanden ...
 				value = personalartTemp.getCNr();
@@ -2049,23 +1916,49 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return tmArten;
 	}
 
-	public PersonalDto[] getAllPersonenOhneEintragInEintrittAustritt(
-			TheClientDto theClientDto, Boolean bPlusVersteckte, Integer iOption)
-			throws EJBExceptionLP {
+	public Map getAllSprAbwesenheitsart(String cNrSpracheI) {
+		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
+		// try {
+		Query query = em.createNamedQuery("AbwesenheitsartfindAll");
+		Collection<?> clArten = query.getResultList();
+
+		Iterator<?> itArten = clArten.iterator();
+		while (itArten.hasNext()) {
+			Abwesenheitsart art = (Abwesenheitsart) itArten.next();
+			Object key = art.getIId();
+			Object value = null;
+
+			if (art.getCNr().equals("4")) {
+				continue; // auslassen
+			}
+
+			Abwesenheitsartspr spr = em.find(Abwesenheitsartspr.class,
+					new AbwesenheitsartsprPK(cNrSpracheI, art.getIId()));
+			if (spr == null || (spr != null && spr.getCBez() == null)) {
+
+				value = art.getCNr();
+			} else {
+				value = spr.getCBez();
+			}
+
+			tmArten.put(key, value);
+		}
+
+		return tmArten;
+	}
+
+	public PersonalDto[] getAllPersonenOhneEintragInEintrittAustritt(TheClientDto theClientDto, Boolean bPlusVersteckte,
+			Integer iOption) throws EJBExceptionLP {
 		PersonalDto[] personalDtos = null;
 
 		if (iOption.intValue() == ZeiterfassungFac.REPORT_SONDERZEITENLISTE_OPTION_ALLE_PERSONEN) {
-			personalDtos = personalFindByMandantCNr(theClientDto.getMandant(),
-					bPlusVersteckte);
+			personalDtos = personalFindByMandantCNr(theClientDto.getMandant(), bPlusVersteckte);
 		} else if (iOption.intValue() == ZeiterfassungFac.REPORT_SONDERZEITENLISTE_OPTION_ALLE_ARBEITER) {
-			personalDtos = personalFindAllArbeiterEinesMandanten(
-					theClientDto.getMandant(), bPlusVersteckte);
+			personalDtos = personalFindAllArbeiterEinesMandanten(theClientDto.getMandant(), bPlusVersteckte);
 		} else if (iOption.intValue() == ZeiterfassungFac.REPORT_SONDERZEITENLISTE_OPTION_ALLE_ANGESTELLTE) {
-			personalDtos = personalFindAllAngestellteEinesMandanten(
-					theClientDto.getMandant(), bPlusVersteckte);
+			personalDtos = personalFindAllAngestellteEinesMandanten(theClientDto.getMandant(), bPlusVersteckte);
 		} else {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"OPTION NICHT VERFUEGBAR"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("OPTION NICHT VERFUEGBAR"));
 		}
 
 		for (int i = 0; i < personalDtos.length; i++) {
@@ -2075,14 +1968,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		for (int i = 0; i < personalDtos.length; i++) {
 			// try {
-			Query query = em
-					.createNamedQuery("EintrittaustrittfindByPersonalIId");
+			Query query = em.createNamedQuery("EintrittaustrittfindByPersonalIId");
 			query.setParameter(1, personalDtos[i].getIId());
 			Collection<?> cl = query.getResultList();
 			// if (! cl.isEmpty()) {
 			if (assembleEintrittaustrittDtos(cl).length < 1) {
-				list.add(personalFindByPrimaryKey(personalDtos[i].getIId(),
-						theClientDto));
+				list.add(personalFindByPrimaryKey(personalDtos[i].getIId(), theClientDto));
 			}
 			// }
 			// catch (FinderException ex) {
@@ -2097,13 +1988,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * uselocalspr: 0 Hole alle Personalfunktionen nach Spr.
 	 * 
-	 * @param cNrSpracheI
-	 *            String
+	 * @param cNrSpracheI String
 	 * @throws EJBExceptionLP
 	 * @return Map
 	 */
-	public Map getAllSprPersonalfunktionen(String cNrSpracheI)
-			throws EJBExceptionLP {
+	public Map getAllSprPersonalfunktionen(String cNrSpracheI) throws EJBExceptionLP {
 		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
 		// try {
 		Query query = em.createNamedQuery("PersonalfunktionfindAll");
@@ -2114,14 +2003,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 		Iterator<?> itArten = clArten.iterator();
 		while (itArten.hasNext()) {
-			Personalfunktion personalfunktionTemp = (Personalfunktion) itArten
-					.next();
+			Personalfunktion personalfunktionTemp = (Personalfunktion) itArten.next();
 			Object key = personalfunktionTemp.getCNr();
 			Object value = null;
 			// try {
-			Personalfunktionspr personalfunktionspr = em.find(
-					Personalfunktionspr.class, new PersonalfunktionsprPK(
-							cNrSpracheI, personalfunktionTemp.getCNr()));
+			Personalfunktionspr personalfunktionspr = em.find(Personalfunktionspr.class,
+					new PersonalfunktionsprPK(cNrSpracheI, personalfunktionTemp.getCNr()));
 			if (personalfunktionspr == null) {
 				// fuer locale und C_NR keine Bezeichnug vorhanden ...
 				value = personalfunktionTemp.getCNr();
@@ -2144,18 +2031,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return tmArten;
 	}
 
-	public KollektivDto kollektivFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public KollektivDto kollektivFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
 		Kollektiv kollektiv = em.find(Kollektiv.class, iId);
 		if (kollektiv == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleKollektivDto(kollektiv);
 		// }
@@ -2166,12 +2050,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setKollektivFromKollektivDto(Kollektiv kollektiv,
-			KollektivDto kollektivDto) {
+	private void setKollektivFromKollektivDto(Kollektiv kollektiv, KollektivDto kollektivDto) {
 		kollektiv.setCBez(kollektivDto.getCBez());
 		kollektiv.setBVerbraucheuestdt(kollektivDto.getBVerbraucheuestd());
-		kollektiv.setBUestdabsollstderbracht(kollektivDto
-				.getBUestdabsollstderbracht());
+		kollektiv.setBUestdabsollstderbracht(kollektivDto.getBUestdabsollstderbracht());
 		kollektiv.setNNormalstunden(kollektivDto.getNNormalstunden());
 		kollektiv.setNFaktoruestd100(kollektivDto.getNFaktoruestd100());
 		kollektiv.setNFaktoruestd50(kollektivDto.getNFaktoruestd50());
@@ -2181,6 +2063,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		kollektiv.setBUestdverteilen(kollektivDto.getBUestdverteilen());
 		kollektiv.setNFaktoruestd200(kollektivDto.getNFaktoruestd200());
 		kollektiv.setN200prozentigeab(kollektivDto.getN200prozentigeab());
+		kollektiv.setIBerechnungsbasis(kollektivDto.getIBerechnungsbasis());
+		kollektiv.setbWochengesamtsicht(kollektivDto.getbWochengesamtsicht());
+		kollektiv.setCAbrechungsart(kollektivDto.getCAbrechungsart());
+		kollektiv.setBFeiertagsueberstundenAbSoll(kollektivDto.getBFeiertagsueberstundenAbSoll());
+		kollektiv.setIFaktorPassiveReisezeit(kollektivDto.getIFaktorPassiveReisezeit());
 
 		em.merge(kollektiv);
 		em.flush();
@@ -2203,13 +2090,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (KollektivDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createPendlerpauschale(
-			PendlerpauschaleDto pendlerpauschaleDto, TheClientDto theClientDto)
+	public Integer createPendlerpauschale(PendlerpauschaleDto pendlerpauschaleDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		if (pendlerpauschaleDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("pendlerpauschaleDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("pendlerpauschaleDto == null"));
 		}
 		if (pendlerpauschaleDto.getCBez() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -2218,8 +2103,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		try {
 			Query query = em.createNamedQuery("PendlerpauschalefindByCBez");
 			query.setParameter(1, pendlerpauschaleDto.getCBez());
-			Pendlerpauschale doppelt = (Pendlerpauschale) query
-					.getSingleResult();
+			Pendlerpauschale doppelt = (Pendlerpauschale) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PERS_PENDLERPAUSCHALE.C_BEZ"));
 		} catch (NoResultException ex1) {
@@ -2230,30 +2114,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		pendlerpauschaleDto.setIId(pk);
 
 		try {
-			Pendlerpauschale pendlerpauschale = new Pendlerpauschale(
-					pendlerpauschaleDto.getIId(), pendlerpauschaleDto.getCBez());
+			Pendlerpauschale pendlerpauschale = new Pendlerpauschale(pendlerpauschaleDto.getIId(),
+					pendlerpauschaleDto.getCBez());
 			em.persist(pendlerpauschale);
 			em.flush();
-			setPendlerpauschaleFromPendlerpauschaleDto(pendlerpauschale,
-					pendlerpauschaleDto);
+			setPendlerpauschaleFromPendlerpauschaleDto(pendlerpauschale, pendlerpauschaleDto);
 		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return pendlerpauschaleDto.getIId();
 	}
 
 	public void removePendlerpauschale(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
-			Pendlerpauschale pendlerpauschale = em.find(Pendlerpauschale.class,
-					iId);
+			Pendlerpauschale pendlerpauschale = em.find(Pendlerpauschale.class, iId);
 			if (pendlerpauschale == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(pendlerpauschale);
 			em.flush();
@@ -2262,45 +2141,35 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePendlerpauschale(PendlerpauschaleDto pendlerpauschaleDto)
-			throws EJBExceptionLP {
+	public void updatePendlerpauschale(PendlerpauschaleDto pendlerpauschaleDto) throws EJBExceptionLP {
 		if (pendlerpauschaleDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("pendlerpauschaleDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("pendlerpauschaleDto == null"));
 		}
-		if (pendlerpauschaleDto.getIId() == null
-				|| pendlerpauschaleDto.getCBez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"pendlerpauschaleDto.getIId() == null || pendlerpauschaleDto.getCBez() == null"));
+		if (pendlerpauschaleDto.getIId() == null || pendlerpauschaleDto.getCBez() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("pendlerpauschaleDto.getIId() == null || pendlerpauschaleDto.getCBez() == null"));
 		}
 
 		Integer iId = pendlerpauschaleDto.getIId();
 		// try {
-		Pendlerpauschale pendlerpauschale = em
-				.find(Pendlerpauschale.class, iId);
+		Pendlerpauschale pendlerpauschale = em.find(Pendlerpauschale.class, iId);
 		if (pendlerpauschale == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 		}
 		try {
 			Query query = em.createNamedQuery("PendlerpauschalefindByCBez");
 			query.setParameter(1, pendlerpauschaleDto.getCBez());
-			Integer iIdVorhanden = ((Pendlerpauschale) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Pendlerpauschale) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PENDLERPAUSCHALE.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PENDLERPAUSCHALE.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
 			//
 		}
-		setPendlerpauschaleFromPendlerpauschaleDto(pendlerpauschale,
-				pendlerpauschaleDto);
+		setPendlerpauschaleFromPendlerpauschaleDto(pendlerpauschale, pendlerpauschaleDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -2311,19 +2180,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public PendlerpauschaleDto pendlerpauschaleFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public PendlerpauschaleDto pendlerpauschaleFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
-		Pendlerpauschale pendlerpauschale = em
-				.find(Pendlerpauschale.class, iId);
+		Pendlerpauschale pendlerpauschale = em.find(Pendlerpauschale.class, iId);
 		if (pendlerpauschale == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePendlerpauschaleDto(pendlerpauschale);
 		// }
@@ -2335,27 +2200,23 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	private void setPendlerpauschaleFromPendlerpauschaleDto(
-			Pendlerpauschale pendlerpauschale,
+	private void setPendlerpauschaleFromPendlerpauschaleDto(Pendlerpauschale pendlerpauschale,
 			PendlerpauschaleDto pendlerpauschaleDto) {
 		pendlerpauschale.setCBez(pendlerpauschaleDto.getCBez());
 		em.merge(pendlerpauschale);
 		em.flush();
 	}
 
-	private PendlerpauschaleDto assemblePendlerpauschaleDto(
-			Pendlerpauschale pendlerpauschale) {
+	private PendlerpauschaleDto assemblePendlerpauschaleDto(Pendlerpauschale pendlerpauschale) {
 		return PendlerpauschaleDtoAssembler.createDto(pendlerpauschale);
 	}
 
-	private PendlerpauschaleDto[] assemblePendlerpauschaleDtos(
-			Collection<?> pendlerpauschales) {
+	private PendlerpauschaleDto[] assemblePendlerpauschaleDtos(Collection<?> pendlerpauschales) {
 		List<PendlerpauschaleDto> list = new ArrayList<PendlerpauschaleDto>();
 		if (pendlerpauschales != null) {
 			Iterator<?> iterator = pendlerpauschales.iterator();
 			while (iterator.hasNext()) {
-				Pendlerpauschale pendlerpauschale = (Pendlerpauschale) iterator
-						.next();
+				Pendlerpauschale pendlerpauschale = (Pendlerpauschale) iterator.next();
 				list.add(assemblePendlerpauschaleDto(pendlerpauschale));
 			}
 		}
@@ -2363,27 +2224,23 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (PendlerpauschaleDto[]) list.toArray(returnArray);
 	}
 
-	private void setFamilienstandsprFromFamilienstandsprDto(
-			Familienstandspr familienstandspr,
+	private void setFamilienstandsprFromFamilienstandsprDto(Familienstandspr familienstandspr,
 			FamilienstandsprDto familienstandsprDto) {
 		familienstandspr.setCBez(familienstandsprDto.getCBez());
 		em.merge(familienstandspr);
 		em.flush();
 	}
 
-	private FamilienstandsprDto assembleFamilienstandsprDto(
-			Familienstandspr familienstandspr) {
+	private FamilienstandsprDto assembleFamilienstandsprDto(Familienstandspr familienstandspr) {
 		return FamilienstandsprDtoAssembler.createDto(familienstandspr);
 	}
 
-	private FamilienstandsprDto[] assembleFamilienstandsprDtos(
-			Collection<?> familienstandsprs) {
+	private FamilienstandsprDto[] assembleFamilienstandsprDtos(Collection<?> familienstandsprs) {
 		List<FamilienstandsprDto> list = new ArrayList<FamilienstandsprDto>();
 		if (familienstandsprs != null) {
 			Iterator<?> iterator = familienstandsprs.iterator();
 			while (iterator.hasNext()) {
-				Familienstandspr familienstandspr = (Familienstandspr) iterator
-						.next();
+				Familienstandspr familienstandspr = (Familienstandspr) iterator.next();
 				list.add(assembleFamilienstandsprDto(familienstandspr));
 			}
 		}
@@ -2391,12 +2248,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (FamilienstandsprDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createBeruf(BerufDto berufDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Integer createBeruf(BerufDto berufDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (berufDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("berufDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("berufDto == null"));
 		}
 		if (berufDto.getCBez() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -2406,8 +2261,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Query query = em.createNamedQuery("BeruffindByCBez");
 			query.setParameter(1, berufDto.getCBez());
 			Beruf doppelt = (Beruf) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_BERUF.C_BEZ"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_BERUF.C_BEZ"));
 		} catch (NoResultException ex1) {
 		}
 		// generieren von primary key
@@ -2421,14 +2275,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			em.flush();
 			setBerufFromBerufDto(beruf, berufDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return berufDto.getIId();
 	}
 
 	public Map getAllLohnstundenarten() {
 		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
+
+		Query queryKV = em.createNamedQuery("KollektivfindByCAbrechungsart");
+		queryKV.setParameter(1, PersonalFac.KOLLEKTIV_ABRECHNUNGSART_BETRIEBSVEREINBARUNG_A);
+		Collection c = queryKV.getResultList();
+
 		// try {
 		Query query = em.createNamedQuery("LohnstundenartfindAll");
 		Collection<?> clArten = query.getResultList();
@@ -2440,6 +2298,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		while (itArten.hasNext()) {
 			Lohnstundenart artikelartTemp = (Lohnstundenart) itArten.next();
 			Object key = artikelartTemp.getCNr();
+
+			if (c.size() == 0 && artikelartTemp.getCNr().startsWith("BVA_")) {
+				continue;
+			}
+
 			Object value = null;
 			if (artikelartTemp.getCBez() == null) {
 				value = artikelartTemp.getCNr();
@@ -2468,8 +2331,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Query query = em.createNamedQuery("LohnartfindByILohnart");
 			query.setParameter(1, lohnartDto.getILohnart());
 			Lohnart doppelt = (Lohnart) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_LOHNART.I_LOHNART"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_LOHNART.I_LOHNART"));
 		} catch (NoResultException ex1) {
 		}
 		// generieren von primary key
@@ -2478,31 +2340,53 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		lohnartDto.setIId(pk);
 
 		try {
-			Lohnart lohnart = new Lohnart(lohnartDto.getIId(),
-					lohnartDto.getILohnart(), lohnartDto.getCBez(),
+			Lohnart lohnart = new Lohnart(lohnartDto.getIId(), lohnartDto.getILohnart(), lohnartDto.getCBez(),
 					lohnartDto.getCTyp(), lohnartDto.getTaetigkeitIIdNl());
 			em.persist(lohnart);
 			em.flush();
 			setLohnartFromLohnartDto(lohnart, lohnartDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return lohnartDto.getIId();
 	}
 
-	public Integer createLohnartstundenfaktor(
-			LohnartstundenfaktorDto lohnartstundenfaktorDto) {
+	public Integer createZahltag(ZahltagDto dto) {
 
 		try {
-			Query query = em
-					.createNamedQuery("LohnartstundenfaktorfindByLohnartIIdLohnstundenartCNrTagesartIId");
+			Query query = em.createNamedQuery("ZahltagFindByIMonatMandantCNr");
+			query.setParameter(1, dto.getIMonat());
+			query.setParameter(2, dto.getMandantCNr());
+			Zahltag doppelt = (Zahltag) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_ZAHLTAG.UK"));
+		} catch (NoResultException ex1) {
+		}
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ZAHLTAG);
+		dto.setIId(pk);
+
+		try {
+			Zahltag zahltag = new Zahltag(dto.getIId(), dto.getIMonat(), dto.getMandantCNr(), dto.getIStichtagNetto(),
+					dto.getBMonatsletzterNetto(), dto.getIStichtagLohnsteuerRelativZumLetzten(),
+					dto.getIStichtagSozialabgabenRelativZumLetzten(), dto.getFFaktor());
+			em.persist(zahltag);
+			em.flush();
+			setZahltagFromZahltagDto(zahltag, dto);
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
+		}
+		return dto.getIId();
+	}
+
+	public Integer createLohnartstundenfaktor(LohnartstundenfaktorDto lohnartstundenfaktorDto) {
+
+		try {
+			Query query = em.createNamedQuery("LohnartstundenfaktorfindByLohnartIIdLohnstundenartCNrTagesartIId");
 			query.setParameter(1, lohnartstundenfaktorDto.getLohnartIId());
-			query.setParameter(2,
-					lohnartstundenfaktorDto.getLohnstundenartCNr());
+			query.setParameter(2, lohnartstundenfaktorDto.getLohnstundenartCNr());
 			query.setParameter(3, lohnartstundenfaktorDto.getTagesartIId());
-			Lohnartstundenfaktor doppelt = (Lohnartstundenfaktor) query
-					.getSingleResult();
+			Lohnartstundenfaktor doppelt = (Lohnartstundenfaktor) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PERS_LOHNARTSTUNDENFAKTOR.UK"));
 		} catch (NoResultException ex1) {
@@ -2513,18 +2397,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		lohnartstundenfaktorDto.setIId(pk);
 
 		try {
-			Lohnartstundenfaktor lohnart = new Lohnartstundenfaktor(
-					lohnartstundenfaktorDto.getIId(),
-					lohnartstundenfaktorDto.getLohnartIId(),
-					lohnartstundenfaktorDto.getLohnstundenartCNr(),
+			Lohnartstundenfaktor lohnart = new Lohnartstundenfaktor(lohnartstundenfaktorDto.getIId(),
+					lohnartstundenfaktorDto.getLohnartIId(), lohnartstundenfaktorDto.getLohnstundenartCNr(),
 					lohnartstundenfaktorDto.getFFaktor());
 			em.persist(lohnart);
 			em.flush();
-			setLohnartstundenfaktorFromLohnartstundenfaktorDto(lohnart,
-					lohnartstundenfaktorDto);
+			setLohnartstundenfaktorFromLohnartstundenfaktorDto(lohnart, lohnartstundenfaktorDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return lohnartstundenfaktorDto.getIId();
 	}
@@ -2532,40 +2412,33 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	public void createLohnstundenart(LohnstundenartDto lohnstundenartDto) {
 
 		try {
-			Lohnstundenart ls = em.find(Lohnstundenart.class,
-					lohnstundenartDto.getCNr());
+			Lohnstundenart ls = em.find(Lohnstundenart.class, lohnstundenartDto.getCNr());
 			if (ls != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_LOHNSTUNDENART.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_LOHNSTUNDENART.UK"));
 			}
 		} catch (NoResultException ex1) {
 		}
 
 		try {
-			Lohnstundenart lohnstundenart = new Lohnstundenart(
-					lohnstundenartDto.getCNr(), lohnstundenartDto.getCBez());
+			Lohnstundenart lohnstundenart = new Lohnstundenart(lohnstundenartDto.getCNr(), lohnstundenartDto.getCBez());
 			em.persist(lohnstundenart);
 			em.flush();
-			setLohnstundenartFromLohnstundenartDto(lohnstundenart,
-					lohnstundenartDto);
+			setLohnstundenartFromLohnstundenartDto(lohnstundenart, lohnstundenartDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 
 	}
 
 	public void removeBeruf(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
 			Beruf beruf = em.find(Beruf.class, iId);
 			if (beruf == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(beruf);
 			em.flush();
@@ -2576,22 +2449,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public void updateBeruf(BerufDto berufDto) throws EJBExceptionLP {
 		if (berufDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("berufDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("berufDto == null"));
 		}
 		if (berufDto.getIId() == null || berufDto.getCBez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"berufDto.getIId() == null || berufDto.getCBez() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("berufDto.getIId() == null || berufDto.getCBez() == null"));
 		}
 
 		Integer iId = berufDto.getIId();
 		// try {
 		Beruf beruf = em.find(Beruf.class, iId);
 		if (beruf == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
@@ -2599,9 +2468,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			query.setParameter(1, berufDto.getCBez());
 			Integer iIdVorhanden = ((Beruf) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_BERUF.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_BERUF.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
@@ -2618,14 +2485,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public BerufDto berufFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
 		Beruf beruf = em.find(Beruf.class, iId);
 		if (beruf == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleBerufDto(beruf);
 		// }
@@ -2640,20 +2505,33 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		Lohnart lohnart = em.find(Lohnart.class, iId);
 		if (lohnart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLohnartDto(lohnart);
 	}
 
-	public LohnartstundenfaktorDto lohnartstundenfaktorFindByPrimaryKey(
-			Integer iId) {
+	public ZahltagDto zahltagFindByPrimaryKey(Integer iId) {
 
-		Lohnartstundenfaktor lohnartstundenfaktor = em.find(
-				Lohnartstundenfaktor.class, iId);
+		Zahltag zahltag = em.find(Zahltag.class, iId);
+		if (zahltag == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return ZahltagDtoAssembler.createDto(zahltag);
+	}
+
+	public ZahltagDto[] zahltagFindByMandantCNr(TheClientDto theClientDto) {
+
+		Query query = em.createNamedQuery("ZahltagFindByMandantCNr");
+		query.setParameter(1, theClientDto.getMandant());
+
+		return ZahltagDtoAssembler.createDtos(query.getResultList());
+	}
+
+	public LohnartstundenfaktorDto lohnartstundenfaktorFindByPrimaryKey(Integer iId) {
+
+		Lohnartstundenfaktor lohnartstundenfaktor = em.find(Lohnartstundenfaktor.class, iId);
 		if (lohnartstundenfaktor == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLohnartstundenfaktorDto(lohnartstundenfaktor);
 	}
@@ -2662,8 +2540,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		Lohnstundenart lohnstundenart = em.find(Lohnstundenart.class, iId);
 		if (lohnstundenart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLohnstundenartDto(lohnstundenart);
 	}
@@ -2682,26 +2559,39 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		lohnart.setILohnart(lohnartDto.getILohnart());
 		lohnart.setPersonalartCNr(lohnartDto.getPersonalartCNr());
 		lohnart.setTaetigkeitIIdNl(lohnartDto.getTaetigkeitIIdNl());
+		lohnart.setIAusfallWochen(lohnartDto.getIAusfallWochen());
+		lohnart.setFMindestuestd(lohnartDto.getFMindestuestd());
 		em.merge(lohnart);
 		em.flush();
 	}
 
-	private void setLohnartstundenfaktorFromLohnartstundenfaktorDto(
-			Lohnartstundenfaktor lohnartstundenfaktor,
+	private void setZahltagFromZahltagDto(Zahltag bean, ZahltagDto zahltagDto) {
+		bean.setBMonatsletzterNetto(zahltagDto.getBMonatsletzterNetto());
+		bean.setFFaktor(zahltagDto.getFFaktor());
+		bean.setIMonat(zahltagDto.getIMonat());
+		bean.setIStichtagLohnsteuerRelativZumLetzten(zahltagDto.getIStichtagLohnsteuerRelativZumLetzten());
+		bean.setIStichtagNetto(zahltagDto.getIStichtagNetto());
+		bean.setIStichtagSozialabgabenRelativZumLetzten(zahltagDto.getIStichtagSozialabgabenRelativZumLetzten());
+		bean.setMandantCNr(zahltagDto.getMandantCNr());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setLohnartstundenfaktorFromLohnartstundenfaktorDto(Lohnartstundenfaktor lohnartstundenfaktor,
 			LohnartstundenfaktorDto lohnartstundenfaktorDto) {
 		lohnartstundenfaktor.setFFaktor(lohnartstundenfaktorDto.getFFaktor());
-		lohnartstundenfaktor.setLohnartIId(lohnartstundenfaktorDto
-				.getLohnartIId());
-		lohnartstundenfaktor.setLohnstundenartCNr(lohnartstundenfaktorDto
-				.getLohnstundenartCNr());
-		lohnartstundenfaktor.setTagesartIId(lohnartstundenfaktorDto
-				.getTagesartIId());
+		lohnartstundenfaktor.setLohnartIId(lohnartstundenfaktorDto.getLohnartIId());
+		lohnartstundenfaktor.setLohnstundenartCNr(lohnartstundenfaktorDto.getLohnstundenartCNr());
+		lohnartstundenfaktor.setTagesartIId(lohnartstundenfaktorDto.getTagesartIId());
+		lohnartstundenfaktor.setZeitmodellIId(lohnartstundenfaktorDto.getZeitmodellIId());
+		lohnartstundenfaktor.setSchichtzeitIId(lohnartstundenfaktorDto.getSchichtzeitIId());
+		lohnartstundenfaktor.setTaetigkeitIId(lohnartstundenfaktorDto.getTaetigkeitIId());
 		em.merge(lohnartstundenfaktor);
 		em.flush();
 	}
 
-	private void setLohnstundenartFromLohnstundenartDto(
-			Lohnstundenart lohnstundenart, LohnstundenartDto lohnstundenartDto) {
+	private void setLohnstundenartFromLohnstundenartDto(Lohnstundenart lohnstundenart,
+			LohnstundenartDto lohnstundenartDto) {
 		lohnstundenart.setCBez(lohnstundenartDto.getCBez());
 		lohnstundenart.setCNr(lohnstundenartDto.getCNr());
 
@@ -2713,8 +2603,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return BerufDtoAssembler.createDto(beruf);
 	}
 
-	private LohnstundenartDto assembleLohnstundenartDto(
-			Lohnstundenart lohnstundenart) {
+	private LohnstundenartDto assembleLohnstundenartDto(Lohnstundenart lohnstundenart) {
 		return LohnstundenartDtoAssembler.createDto(lohnstundenart);
 	}
 
@@ -2722,8 +2611,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return LohnartDtoAssembler.createDto(lohnart);
 	}
 
-	private LohnartstundenfaktorDto assembleLohnartstundenfaktorDto(
-			Lohnartstundenfaktor lohnartstundenfaktor) {
+	private LohnartstundenfaktorDto assembleLohnartstundenfaktorDto(Lohnartstundenfaktor lohnartstundenfaktor) {
 		return LohnartstundenfaktorDtoAssembler.createDto(lohnartstundenfaktor);
 	}
 
@@ -2740,32 +2628,29 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (BerufDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createEintrittaustritt(
-			EintrittaustrittDto eintrittaustrittDto, TheClientDto theClientDto)
+	public Integer createEintrittaustritt(EintrittaustrittDto eintrittaustrittDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		if (eintrittaustrittDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("eintrittaustrittDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("eintrittaustrittDto == null"));
 		}
-		if (eintrittaustrittDto.getPersonalIId() == null
-				|| eintrittaustrittDto.getTEintritt() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"eintrittaustrittDto.getPersonalIId() == null || eintrittaustrittDto.getDEintritt() == null"));
+		if (eintrittaustrittDto.getPersonalIId() == null || eintrittaustrittDto.getTEintritt() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"eintrittaustrittDto.getPersonalIId() == null || eintrittaustrittDto.getDEintritt() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("EintrittaustrittfindByPersonalIIdTEintritt");
+			Query query = em.createNamedQuery("EintrittaustrittfindByPersonalIIdTEintritt");
 			query.setParameter(1, eintrittaustrittDto.getPersonalIId());
 			query.setParameter(2, eintrittaustrittDto.getTEintritt());
-			Eintrittaustritt doppelt = (Eintrittaustritt) query
-					.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_EINTRITTAUSTRITT.UK"));
+			Eintrittaustritt doppelt = (Eintrittaustritt) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_EINTRITTAUSTRITT.UK"));
 		} catch (NoResultException ex1) {
 		}
+
+		if (eintrittaustrittDto.getBWiedereintritt() == null) {
+			eintrittaustrittDto.setBWiedereintritt(Helper.boolean2Short(false));
+		}
+
 		try {
 
 			// generieren von primary key
@@ -2773,32 +2658,26 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_EINTRITTAUSTRITT);
 			eintrittaustrittDto.setIId(pk);
 
-			Eintrittaustritt eintrittaustritt = new Eintrittaustritt(
-					eintrittaustrittDto.getIId(),
-					eintrittaustrittDto.getPersonalIId(),
-					eintrittaustrittDto.getTEintritt());
+			Eintrittaustritt eintrittaustritt = new Eintrittaustritt(eintrittaustrittDto.getIId(),
+					eintrittaustrittDto.getPersonalIId(), eintrittaustrittDto.getTEintritt(),
+					eintrittaustrittDto.getBWiedereintritt());
 			em.persist(eintrittaustritt);
 			em.flush();
-			setEintrittaustrittFromEintrittaustrittDto(eintrittaustritt,
-					eintrittaustrittDto);
+			setEintrittaustrittFromEintrittaustrittDto(eintrittaustritt, eintrittaustrittDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return eintrittaustrittDto.getIId();
 	}
 
 	public void removeEintrittaustritt(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
-			Eintrittaustritt eintrittaustritt = em.find(Eintrittaustritt.class,
-					iId);
+			Eintrittaustritt eintrittaustritt = em.find(Eintrittaustritt.class, iId);
 			if (eintrittaustritt == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(eintrittaustritt);
 			em.flush();
@@ -2807,19 +2686,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateEintrittaustritt(EintrittaustrittDto eintrittaustrittDto)
-			throws EJBExceptionLP {
+	public void updateEintrittaustritt(EintrittaustrittDto eintrittaustrittDto) throws EJBExceptionLP {
 		if (eintrittaustrittDto != null) {
 			Integer iId = eintrittaustrittDto.getIId();
 			// try {
-			Eintrittaustritt eintrittaustritt = em.find(Eintrittaustritt.class,
-					iId);
+			Eintrittaustritt eintrittaustritt = em.find(Eintrittaustritt.class, iId);
 			if (eintrittaustritt == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setEintrittaustrittFromEintrittaustrittDto(eintrittaustritt,
-					eintrittaustrittDto);
+
+			setEintrittaustrittFromEintrittaustrittDto(eintrittaustritt, eintrittaustrittDto);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -2829,16 +2705,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
+	public void updateAnwesenheitsbestaetigung(AnwesenheitsbestaetigungDto dto) {
+		Anwesenheitsbestaetigung bean = em.find(Anwesenheitsbestaetigung.class, dto.getIId());
+		setAnwesenheitsbestaetigungFromAnwesenheitsbestaetigungDto(bean, dto);
+	}
+
 	public PersonRpt getPersonRpt(Integer personalIId, TheClientDto theClientDto) {
 
-		PersonalDto personalDto = personalFindByPrimaryKey(personalIId,
-				theClientDto);
+		PersonalDto personalDto = personalFindByPrimaryKey(personalIId, theClientDto);
 
 		Integer partnerIId_Mandant = null;
 		;
 		try {
-			partnerIId_Mandant = getMandantFac().mandantFindByPrimaryKey(
-					theClientDto.getMandant(), theClientDto).getPartnerIId();
+			partnerIId_Mandant = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto)
+					.getPartnerIId();
 		} catch (RemoteException e1) {
 			throwEJBExceptionLPRespectOld(e1);
 		}
@@ -2847,10 +2727,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		personRpt.setPersonalIId(personalIId);
 		personRpt.setSTitel(personalDto.getPartnerDto().getCTitel());
 		personRpt.setSNtitel(personalDto.getPartnerDto().getCNtitel());
-		personRpt.setSVorname(personalDto.getPartnerDto()
-				.getCName2vornamefirmazeile2());
-		personRpt.setSNachname(personalDto.getPartnerDto()
-				.getCName1nachnamefirmazeile1());
+		personRpt.setSVorname(personalDto.getPartnerDto().getCName2vornamefirmazeile2());
+		personRpt.setSNachname(personalDto.getPartnerDto().getCName1nachnamefirmazeile1());
 
 		personRpt.setSEmail(personalDto.getCEmail());
 
@@ -2860,14 +2738,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			personRpt.setSTelefonDWFirma(personalDto.getCTelefon());
 
 			try {
-				String kommDto = getPartnerFac().enrichNumber(
-						partnerIId_Mandant,
-						PartnerFac.KOMMUNIKATIONSART_TELEFON, theClientDto,
-						null, true);
-				String sNummerMitDurchwahl = kommDto + " - "
-						+ personalDto.getCTelefon();
-				personRpt
-						.setSTelefonFirmaMitDurchwahlBearbeiter(sNummerMitDurchwahl);
+				String kommDto = getPartnerFac().enrichNumber(partnerIId_Mandant, PartnerFac.KOMMUNIKATIONSART_TELEFON,
+						theClientDto, null, true);
+				String sNummerMitDurchwahl = kommDto + " - " + personalDto.getCTelefon();
+				personRpt.setSTelefonFirmaMitDurchwahlBearbeiter(sNummerMitDurchwahl);
 			} catch (Exception e) {
 				// Gibt halt keine Nummer
 			}
@@ -2877,13 +2751,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			personRpt.setSFaxDWFirma(personalDto.getCFax());
 
 			try {
-				String kommDto = getPartnerFac().enrichNumber(
-						partnerIId_Mandant, PartnerFac.KOMMUNIKATIONSART_FAX,
+				String kommDto = getPartnerFac().enrichNumber(partnerIId_Mandant, PartnerFac.KOMMUNIKATIONSART_FAX,
 						theClientDto, null, true);
-				String sNummerMitDurchwahl = kommDto + " - "
-						+ personalDto.getCFax();
-				personRpt
-						.setSFaxFirmaMitDurchwahlBearbeiter(sNummerMitDurchwahl);
+				String sNummerMitDurchwahl = kommDto + " - " + personalDto.getCFax();
+				personRpt.setSFaxFirmaMitDurchwahlBearbeiter(sNummerMitDurchwahl);
 			} catch (Exception e) {
 				// Gibt halt keine Nummer
 			}
@@ -2893,11 +2764,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		// Firmentelefon = Telefonnnummer des Mandanten
 		try {
-			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
-					theClientDto.getMandant(), theClientDto);
+			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
 
-			personRpt
-					.setSTelefonFirma(mandantDto.getPartnerDto().getCTelefon());
+			personRpt.setSTelefonFirma(mandantDto.getPartnerDto().getCTelefon());
 
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
@@ -2906,19 +2775,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return personRpt;
 	}
 
-	public EintrittaustrittDto eintrittaustrittFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public EintrittaustrittDto eintrittaustrittFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
-		Eintrittaustritt eintrittaustritt = em
-				.find(Eintrittaustritt.class, iId);
+		Eintrittaustritt eintrittaustritt = em.find(Eintrittaustritt.class, iId);
 		if (eintrittaustritt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		EintrittaustrittDto eintrittaustrittDto = assembleEintrittaustrittDto(eintrittaustritt);
 
@@ -2931,21 +2796,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public Boolean istPersonalAusgetreten(Integer personalIId,
-			java.sql.Timestamp tsZeitpunkt, TheClientDto theClientDto) {
+	public Boolean istPersonalAusgetreten(Integer personalIId, java.sql.Timestamp tsZeitpunkt,
+			TheClientDto theClientDto) {
 		if (personalIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("personalIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("personalIId == null"));
 		}
 		boolean bAusgetreten = true;
 		// try {
-		Query query = em
-				.createNamedQuery("EintrittaustrittfindLetztenEintrittBisDatum");
+		Query query = em.createNamedQuery("EintrittaustrittfindLetztenEintrittBisDatum");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, tsZeitpunkt);
 
-		EintrittaustrittDto[] eintrittaustrittDtos = assembleEintrittaustrittDtos(query
-				.getResultList());
+		EintrittaustrittDto[] eintrittaustrittDtos = assembleEintrittaustrittDtos(query.getResultList());
 
 		if (eintrittaustrittDtos.length > 0) {
 			EintrittaustrittDto eintrittaustrittDto = eintrittaustrittDtos[0];
@@ -2967,33 +2829,35 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return new Boolean(bAusgetreten);
 	}
 
-	public EintrittaustrittDto eintrittaustrittFindLetztenEintrittBisDatum(
-			Integer personalIId, java.sql.Timestamp dSucheBis)
-			throws EJBExceptionLP {
+	public EintrittaustrittDto eintrittaustrittFindLetztenEintrittBisDatum(Integer personalIId,
+			java.sql.Timestamp dSucheBis) throws EJBExceptionLP {
 		if (personalIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("personalIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("personalIId == null"));
 		}
 		EintrittaustrittDto letzterEintritt = null;
 		// try {
-		Query query = em
-				.createNamedQuery("EintrittaustrittfindLetztenEintrittBisDatum");
+		Query query = em.createNamedQuery("EintrittaustrittfindLetztenEintrittBisDatum");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, dSucheBis);
 
-		EintrittaustrittDto[] eintrittaustrittDto = assembleEintrittaustrittDtos(query
-				.getResultList());
+		EintrittaustrittDto[] eintrittaustrittDto = assembleEintrittaustrittDtos(query.getResultList());
 
 		if (eintrittaustrittDto.length > 0) {
 			letzterEintritt = eintrittaustrittDto[0];
 		} else {
+
+			Query query2 = em.createNamedQuery("EintrittaustrittfindNaechstenEintrittAbDatum");
+			query2.setParameter(1, personalIId);
+			query2.setParameter(2, dSucheBis);
+			EintrittaustrittDto[] eintrittaustrittDto2 = assembleEintrittaustrittDtos(query2.getResultList());
+
 			ArrayList<Object> al = new ArrayList<Object>();
 			al.add(personalIId);
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM,
-					al, new Exception(
-							"FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM"
-									+ " personalIId=" + personalIId));
+			if (eintrittaustrittDto2.length > 0) {
+				al.add(eintrittaustrittDto2[0].getTEintritt());
+			}
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM, al,
+					new Exception("FEHLER_PERSONAL_FEHLER_BEI_EINTRITTSDATUM" + " personalIId=" + personalIId));
 		}
 
 		return letzterEintritt;
@@ -3003,24 +2867,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public EintrittaustrittDto eintrittaustrittFindByPersonalIIdDEintritt(
-			Integer personalIId, java.sql.Timestamp dEintritt)
-			throws EJBExceptionLP {
+	public EintrittaustrittDto eintrittaustrittFindByPersonalIIdDEintritt(Integer personalIId,
+			java.sql.Timestamp dEintritt) throws EJBExceptionLP {
 		if (personalIId == null || dEintritt == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("personalIId == null || dEintritt == null"));
 		}
 
 		// try {
-		Query query = em
-				.createNamedQuery("EintrittaustrittfindByPersonalIIdTEintritt");
+		Query query = em.createNamedQuery("EintrittaustrittfindByPersonalIIdTEintritt");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, dEintritt);
-		Eintrittaustritt eintrittaustritt = (Eintrittaustritt) query
-				.getSingleResult();
+		Eintrittaustritt eintrittaustritt = (Eintrittaustritt) query.getSingleResult();
 		if (eintrittaustritt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		EintrittaustrittDto eintrittaustrittDto = assembleEintrittaustrittDto(eintrittaustritt);
 
@@ -3033,31 +2893,27 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setEintrittaustrittFromEintrittaustrittDto(
-			Eintrittaustritt eintrittaustritt,
+	private void setEintrittaustrittFromEintrittaustrittDto(Eintrittaustritt eintrittaustritt,
 			EintrittaustrittDto eintrittaustrittDto) {
 		eintrittaustritt.setPersonalIId(eintrittaustrittDto.getPersonalIId());
 		eintrittaustritt.setTEintritt(eintrittaustrittDto.getTEintritt());
 		eintrittaustritt.setTAustritt(eintrittaustrittDto.getTAustritt());
-		eintrittaustritt.setCAustrittsgrund(eintrittaustrittDto
-				.getCAustrittsgrund());
+		eintrittaustritt.setCAustrittsgrund(eintrittaustrittDto.getCAustrittsgrund());
+		eintrittaustritt.setBWiedereintritt(eintrittaustrittDto.getBWiedereintritt());
 		em.merge(eintrittaustritt);
 		em.flush();
 	}
 
-	private EintrittaustrittDto assembleEintrittaustrittDto(
-			Eintrittaustritt eintrittaustritt) {
+	private EintrittaustrittDto assembleEintrittaustrittDto(Eintrittaustritt eintrittaustritt) {
 		return EintrittaustrittDtoAssembler.createDto(eintrittaustritt);
 	}
 
-	private EintrittaustrittDto[] assembleEintrittaustrittDtos(
-			Collection<?> eintrittaustritts) {
+	private EintrittaustrittDto[] assembleEintrittaustrittDtos(Collection<?> eintrittaustritts) {
 		List<EintrittaustrittDto> list = new ArrayList<EintrittaustrittDto>();
 		if (eintrittaustritts != null) {
 			Iterator<?> iterator = eintrittaustritts.iterator();
 			while (iterator.hasNext()) {
-				Eintrittaustritt eintrittaustritt = (Eintrittaustritt) iterator
-						.next();
+				Eintrittaustritt eintrittaustritt = (Eintrittaustritt) iterator.next();
 				list.add(assembleEintrittaustrittDto(eintrittaustritt));
 			}
 		}
@@ -3065,51 +2921,43 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (EintrittaustrittDto[]) list.toArray(returnArray);
 	}
 
-	private void setAngehoerigenartsprFromAngehoerigenartsprDto(
-			Angehoerigenartspr angehoerigenartspr,
+	private void setAngehoerigenartsprFromAngehoerigenartsprDto(Angehoerigenartspr angehoerigenartspr,
 			AngehoerigenartsprDto angehoerigenartsprDto) {
 		angehoerigenartspr.setCBez(angehoerigenartsprDto.getCBez());
 		em.merge(angehoerigenartspr);
 		em.flush();
 	}
 
-	private AngehoerigenartsprDto assembleAngehoerigenartsprDto(
-			Angehoerigenartspr angehoerigenartspr) {
+	private AngehoerigenartsprDto assembleAngehoerigenartsprDto(Angehoerigenartspr angehoerigenartspr) {
 		return AngehoerigenartsprDtoAssembler.createDto(angehoerigenartspr);
 	}
 
-	private AngehoerigenartsprDto[] assembleAngehoerigenartsprDtos(
-			Collection<?> angehoerigenartsprs) {
+	private AngehoerigenartsprDto[] assembleAngehoerigenartsprDtos(Collection<?> angehoerigenartsprs) {
 		List<AngehoerigenartsprDto> list = new ArrayList<AngehoerigenartsprDto>();
 		if (angehoerigenartsprs != null) {
 			Iterator<?> iterator = angehoerigenartsprs.iterator();
 			while (iterator.hasNext()) {
-				Angehoerigenartspr angehoerigenartspr = (Angehoerigenartspr) iterator
-						.next();
+				Angehoerigenartspr angehoerigenartspr = (Angehoerigenartspr) iterator.next();
 				list.add(assembleAngehoerigenartsprDto(angehoerigenartspr));
 			}
 		}
-		AngehoerigenartsprDto[] returnArray = new AngehoerigenartsprDto[list
-				.size()];
+		AngehoerigenartsprDto[] returnArray = new AngehoerigenartsprDto[list.size()];
 		return (AngehoerigenartsprDto[]) list.toArray(returnArray);
 	}
 
 	/**
-	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner-
-	 * Datensatz anhand der Personalnummer
+	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner- Datensatz
+	 * anhand der Personalnummer
 	 * 
-	 * @param cPersonalnr
-	 *            die Personalnummer
-	 * @param mandantCNr
-	 *            Mandant
+	 * @param cPersonalnr die Personalnummer
+	 * @param mandantCNr  Mandant
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto
 	 */
-	public PersonalDto personalFindByCPersonalnrMandantCNr(String cPersonalnr,
-			String mandantCNr) throws EJBExceptionLP {
+	public PersonalDto personalFindByCPersonalnrMandantCNr(String cPersonalnr, String mandantCNr)
+			throws EJBExceptionLP {
 		try {
-			Query query = em
-					.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
+			Query query = em.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
 			query.setParameter(1, cPersonalnr);
 			query.setParameter(2, mandantCNr);
 			Personal personal = (Personal) query.getSingleResult();
@@ -3123,22 +2971,19 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	}
 
 	/**
-	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner-
-	 * Datensatz anhand der Personalnummer
+	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner- Datensatz
+	 * anhand der Personalnummer
 	 * 
-	 * @param cPersonalnr
-	 *            die Personalnummer
-	 * @param mandantCNr
-	 *            Mandant
+	 * @param cPersonalnr die Personalnummer
+	 * @param mandantCNr  Mandant
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto
 	 */
-	public PersonalDto personalFindByCPersonalnrMandantCNrOhneExc(
-			String cPersonalnr, String mandantCNr) throws EJBExceptionLP {
+	public PersonalDto personalFindByCPersonalnrMandantCNrOhneExc(String cPersonalnr, String mandantCNr)
+			throws EJBExceptionLP {
 		PersonalDto personalDto = null;
 		try {
-			Query query = em
-					.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
+			Query query = em.createNamedQuery("PersonalfindByCPersonalnrMandantCNr");
 			query.setParameter(1, cPersonalnr);
 			query.setParameter(2, mandantCNr);
 			Personal personal = (Personal) query.getSingleResult();
@@ -3156,11 +3001,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto[]
 	 */
-	public PersonalDto[] personalFindByCAusweisSortiertNachPersonalnr()
-			throws EJBExceptionLP {
+	public PersonalDto[] personalFindByCAusweisSortiertNachPersonalnr() throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalfindByCAusweisSortiertNachIPersonalnr");
+		Query query = em.createNamedQuery("PersonalfindByCAusweisSortiertNachIPersonalnr");
 		Collection<?> cl = query.getResultList();
 		// if (cl.isEmpty()) {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
@@ -3181,11 +3024,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	 * 
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto[]
-	 * @param cAusweis
-	 *            String
+	 * @param cAusweis String
 	 */
-	public PersonalDto personalFindByCAusweis(String cAusweis)
-			throws EJBExceptionLP {
+	public PersonalDto personalFindByCAusweis(String cAusweis) throws EJBExceptionLP {
 		Query query = em.createNamedQuery("PersonalfindByCAusweis");
 		query.setParameter(1, cAusweis);
 		Collection<?> cl = query.getResultList();
@@ -3204,11 +3045,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto[]
 	 */
-	public PersonalDto[] personalFindByCAusweisSortiertNachCAusweis()
-			throws EJBExceptionLP {
+	public PersonalDto[] personalFindByCAusweisSortiertNachCAusweis() throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalfindByCAusweisSortiertNachCAusweis");
+		Query query = em.createNamedQuery("PersonalfindByCAusweisSortiertNachCAusweis");
 		Collection<?> cl = query.getResultList();
 		// if (cl.isEmpty()) {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
@@ -3224,18 +3063,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	}
 
 	/**
-	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner-
-	 * Datensatz anhand des Mandanten und der PartnerIId
+	 * Holt einen Personaldatensatz und den dazugeh&ouml;rigen Partner- Datensatz
+	 * anhand des Mandanten und der PartnerIId
 	 * 
-	 * @param partnerIId
-	 *            Integer
-	 * @param mandantCNr
-	 *            String
+	 * @param partnerIId Integer
+	 * @param mandantCNr String
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto
 	 */
-	public PersonalDto personalFindByPartnerIIdMandantCNr(Integer partnerIId,
-			String mandantCNr) throws EJBExceptionLP {
+	public PersonalDto personalFindByPartnerIIdMandantCNr(Integer partnerIId, String mandantCNr) throws EJBExceptionLP {
 		// try {
 		Query query = em.createNamedQuery("PersonalfindByPartnerIIdMandantCNr");
 		query.setParameter(1, partnerIId);
@@ -3251,11 +3087,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalDto[] personalFindByPersonalgruppeIdMandantCNr(
-			Integer personalgruppe, String mandantCNr, boolean bPlusVersteckte) {
+	public PersonalDto[] personalFindByPersonalgruppeIdMandantCNr(Integer personalgruppe, String mandantCNr,
+			boolean bPlusVersteckte) {
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalfindByPersonalgruppeIIdMandantCNr");
+		Query query = em.createNamedQuery("PersonalfindByPersonalgruppeIIdMandantCNr");
 		query.setParameter(1, personalgruppe);
 		query.setParameter(2, mandantCNr);
 		Collection<?> cl = query.getResultList();
@@ -3264,11 +3099,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public PersonalDto personalFindByPartnerIIdMandantCNrOhneExc(
-			Integer partnerIId, String mandantCNr) {
+	public PersonalDto personalFindByPartnerIIdMandantCNrOhneExc(Integer partnerIId, String mandantCNr) {
 		try {
-			Query query = em
-					.createNamedQuery("PersonalfindByPartnerIIdMandantCNr");
+			Query query = em.createNamedQuery("PersonalfindByPartnerIIdMandantCNr");
 			query.setParameter(1, partnerIId);
 			query.setParameter(2, mandantCNr);
 			Personal personal = (Personal) query.getSingleResult();
@@ -3283,19 +3116,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	 * Holt alle Personaldatens&auml;tze, die als Sozialversicherer den
 	 * &uuml;bergebenen Partner haben
 	 * 
-	 * @param partnerIId
-	 *            Integer - Sozialversicherer
-	 * @param mandantCNr
-	 *            String
+	 * @param partnerIId Integer - Sozialversicherer
+	 * @param mandantCNr String
 	 * @return PersonalDto
 	 * @throws RemoteException
 	 * @throws EJBExceptionLP
 	 */
-	public PersonalDto[] personalFindBySozialversichererPartnerIIdMandantCNr(
-			Integer partnerIId, String mandantCNr) throws EJBExceptionLP {
+	public PersonalDto[] personalFindBySozialversichererPartnerIIdMandantCNr(Integer partnerIId, String mandantCNr)
+			throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalfindBySozialversichererPartnerIIdMandantCNr");
+		Query query = em.createNamedQuery("PersonalfindBySozialversichererPartnerIIdMandantCNr");
 		query.setParameter(1, partnerIId);
 		query.setParameter(2, mandantCNr);
 		Collection<?> cl = query.getResultList();
@@ -3309,12 +3139,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalDto[] personalFindBySozialversichererPartnerIIdMandantCNrOhneExc(
-			Integer partnerIId, String mandantCNr) throws EJBExceptionLP {
+	public PersonalDto[] personalFindBySozialversichererPartnerIIdMandantCNrOhneExc(Integer partnerIId,
+			String mandantCNr) throws EJBExceptionLP {
 		PersonalDto[] aPersonalDtos = null;
 		try {
-			Query query = em
-					.createNamedQuery("PersonalfindBySozialversichererPartnerIIdMandantCNr");
+			Query query = em.createNamedQuery("PersonalfindBySozialversichererPartnerIIdMandantCNr");
 			query.setParameter(1, partnerIId);
 			query.setParameter(2, mandantCNr);
 			Collection<?> cl = query.getResultList();
@@ -3322,30 +3151,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			aPersonalDtos = assemblePersonalDtos(cl, true);
 			// }
 		} catch (Throwable ex) {
-			myLogger.warn(
-					"PersonalFindBySozialversichererPartnerIIdMandantCNrOhneExc",
-					ex);
+			myLogger.warn("PersonalFindBySozialversichererPartnerIIdMandantCNrOhneExc", ex);
 		}
 		return aPersonalDtos;
 	}
 
 	/**
-	 * Holt alle Personaldatens&auml;tze, die bei Firma die &uuml;bergebe
-	 * PartnerId eingetragen haben
+	 * Holt alle Personaldatens&auml;tze, die bei Firma die &uuml;bergebe PartnerId
+	 * eingetragen haben
 	 * 
-	 * @param partnerIId
-	 *            Integer
-	 * @param mandantCNr
-	 *            String
+	 * @param partnerIId Integer
+	 * @param mandantCNr String
 	 * @return PersonalDto[]
 	 * @throws RemoteException
 	 * @throws EJBExceptionLP
 	 */
-	public PersonalDto[] personalFindByFirmaPartnerIIdMandantCNr(
-			Integer partnerIId, String mandantCNr) throws EJBExceptionLP {
+	public PersonalDto[] personalFindByFirmaPartnerIIdMandantCNr(Integer partnerIId, String mandantCNr)
+			throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalfindByFirmaPartnerIIdMandantCNr");
+		Query query = em.createNamedQuery("PersonalfindByFirmaPartnerIIdMandantCNr");
 		query.setParameter(1, partnerIId);
 		query.setParameter(2, mandantCNr);
 		Collection<?> cl = query.getResultList();
@@ -3359,12 +3183,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalDto[] personalFindByFirmaPartnerIIdMandantCNrOhneExc(
-			Integer partnerIId, String mandantCNr) throws EJBExceptionLP {
+	public PersonalDto[] personalFindByFirmaPartnerIIdMandantCNrOhneExc(Integer partnerIId, String mandantCNr)
+			throws EJBExceptionLP {
 		PersonalDto[] aPersonalDtos = null;
 		try {
-			Query query = em
-					.createNamedQuery("PersonalfindByFirmaPartnerIIdMandantCNr");
+			Query query = em.createNamedQuery("PersonalfindByFirmaPartnerIIdMandantCNr");
 			query.setParameter(1, partnerIId);
 			query.setParameter(2, mandantCNr);
 			Collection<?> cl = query.getResultList();
@@ -3385,19 +3208,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	 * Holt alle Personen eines Mandanten einer gewissen Personalfunktion des
 	 * Mandanten und der PartnerIId
 	 * 
-	 * @param mandantCNr
-	 *            String
-	 * @param personalfunktionCNr
-	 *            "Geschesftsfuehrer"
+	 * @param mandantCNr          String
+	 * @param personalfunktionCNr "Geschesftsfuehrer"
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto[]
 	 */
-	public PersonalDto[] personalFindByMandantCNrPersonalfunktionCNr(
-			String mandantCNr, String personalfunktionCNr)
+	public PersonalDto[] personalFindByMandantCNrPersonalfunktionCNr(String mandantCNr, String personalfunktionCNr)
 			throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalfindByMandantCNrPersonalfunktionCNr");
+		Query query = em.createNamedQuery("PersonalfindByMandantCNrPersonalfunktionCNr");
 		query.setParameter(1, mandantCNr);
 		query.setParameter(2, personalfunktionCNr);
 		Collection<?> cl = query.getResultList();
@@ -3415,15 +3234,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Holt alle Personen eines Mandanten des Mandanten und der PartnerIId
 	 * 
-	 * @param mandantCNr
-	 *            String
-	 * @param bPlusVersteckte
-	 *            Boolean
+	 * @param mandantCNr      String
+	 * @param bPlusVersteckte Boolean
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto[]
 	 */
-	public PersonalDto[] personalFindByMandantCNr(String mandantCNr,
-			Boolean bPlusVersteckte) throws EJBExceptionLP {
+	public PersonalDto[] personalFindByMandantCNr(String mandantCNr, Boolean bPlusVersteckte) throws EJBExceptionLP {
 		// try {
 		Query query = em.createNamedQuery("PersonalfindByMandantCNr");
 		query.setParameter(1, mandantCNr);
@@ -3446,19 +3262,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Holt alle Angestellte eines Mandanten des Mandanten und der PartnerIId
 	 * 
-	 * @param mandantCNr
-	 *            String
-	 * @param bPlusVersteckte
-	 *            Boolean
+	 * @param mandantCNr      String
+	 * @param bPlusVersteckte Boolean
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto[]
 	 */
-	public PersonalDto[] personalFindAllAngestellteEinesMandanten(
-			String mandantCNr, Boolean bPlusVersteckte) throws EJBExceptionLP {
+	public PersonalDto[] personalFindAllAngestellteEinesMandanten(String mandantCNr, Boolean bPlusVersteckte)
+			throws EJBExceptionLP {
 		// try {
 
-		Query query = em
-				.createNamedQuery("PersonalfindByMandantCNrPersonalartCNr");
+		Query query = em.createNamedQuery("PersonalfindByMandantCNrPersonalartCNr");
 		query.setParameter(1, mandantCNr);
 		query.setParameter(2, PersonalFac.PERSONALART_ANGESTELLTER);
 		Collection<?> personals = query.getResultList();
@@ -3515,11 +3328,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalDto[] personalFindAllPersonenMeinerAbteilung(
-			Integer kostenstelleIIdAbteilung, String mandantCNr,
+	public PersonalDto[] personalFindAllPersonenEinerAbteilung(Integer kostenstelleIIdAbteilung, String mandantCNr,
 			Boolean bPlusVersteckte) {
-		Query query = em
-				.createNamedQuery("PersonalfindByMandantCNrKostenstelleIIdAbteilung");
+		Query query = em.createNamedQuery("PersonalfindByMandantCNrKostenstelleIIdAbteilung");
 		query.setParameter(1, mandantCNr);
 		query.setParameter(2, kostenstelleIIdAbteilung);
 		Collection<?> personals = query.getResultList();
@@ -3547,19 +3358,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	/**
 	 * Holt alle Angestellte eines Mandanten des Mandanten und der PartnerIId
 	 * 
-	 * @param mandantCNr
-	 *            String
-	 * @param bPlusVersteckte
-	 *            Boolean
+	 * @param mandantCNr      String
+	 * @param bPlusVersteckte Boolean
 	 * @throws EJBExceptionLP
 	 * @return PersonalDto[]
 	 */
-	public PersonalDto[] personalFindAllArbeiterEinesMandanten(
-			String mandantCNr, Boolean bPlusVersteckte) throws EJBExceptionLP {
+	public PersonalDto[] personalFindAllArbeiterEinesMandanten(String mandantCNr, Boolean bPlusVersteckte)
+			throws EJBExceptionLP {
 		// try {
 
-		Query query = em
-				.createNamedQuery("PersonalfindByMandantCNrPersonalartCNr");
+		Query query = em.createNamedQuery("PersonalfindByMandantCNrPersonalartCNr");
 		query.setParameter(1, mandantCNr);
 		query.setParameter(2, PersonalFac.PERSONALART_ARBEITER);
 		Collection<?> personals = query.getResultList();
@@ -3611,12 +3419,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public void createPersonalart(PersonalartDto personalartDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createPersonalart(PersonalartDto personalartDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (personalartDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalartDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalartDto == null"));
 		}
 		if (personalartDto.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -3628,123 +3434,131 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			em.flush();
 			setPersonalartFromPersonalartDto(partnerart, personalartDto);
 			if (personalartDto.getPersonalartsprDto() != null) {
-				Personalartspr personalartspr = new Personalartspr(
-						theClientDto.getLocMandantAsString(),
+				Personalartspr personalartspr = new Personalartspr(theClientDto.getLocMandantAsString(),
 						personalartDto.getCNr());
 				em.persist(personalartspr);
 				em.flush();
-				setPersonalartsprFromPersonalartsprDto(personalartspr,
-						personalartDto.getPersonalartsprDto());
+				setPersonalartsprFromPersonalartsprDto(personalartspr, personalartDto.getPersonalartsprDto());
 			}
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
-	public void createPersonalfunktion(PersonalfunktionDto personalfunktionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createPersonalfunktion(PersonalfunktionDto personalfunktionDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (personalfunktionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalfunktionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalfunktionDto == null"));
 		}
 		if (personalfunktionDto.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("personalfunktionDto.getCNr() == null"));
 		}
 		try {
-			Personalfunktion partnerart = new Personalfunktion(
-					personalfunktionDto.getCNr());
+			Personalfunktion partnerart = new Personalfunktion(personalfunktionDto.getCNr());
 			em.persist(personalfunktion);
 			em.flush();
-			setPersonalfunktionFromPersonalfunktionDto(partnerart,
-					personalfunktionDto);
+			setPersonalfunktionFromPersonalfunktionDto(partnerart, personalfunktionDto);
 			if (personalfunktionDto.getPersonalfunktionsprDto() != null) {
-				Personalfunktionspr personalfunktionspr = new Personalfunktionspr(
-						theClientDto.getLocMandantAsString(),
+				Personalfunktionspr personalfunktionspr = new Personalfunktionspr(theClientDto.getLocMandantAsString(),
 						personalfunktionDto.getCNr());
 				em.persist(personalfunktionspr);
 				em.flush();
-				setPersonalfunktionsprFromPersonalfunktionsprDto(
-						personalfunktionspr,
+				setPersonalfunktionsprFromPersonalfunktionsprDto(personalfunktionspr,
 						personalfunktionDto.getPersonalfunktionsprDto());
 			}
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
-	public void createFamilienstand(FamilienstandDto familienstandDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createFamilienstand(FamilienstandDto familienstandDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (familienstandDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalartDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalartDto == null"));
 		}
-		if (familienstandDto.getCNr() == null
-				|| familienstandDto.getISort() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"personalartDto.getCNr() == null || familienstandDto.getISort() == null"));
+		if (familienstandDto.getCNr() == null || familienstandDto.getISort() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("personalartDto.getCNr() == null || familienstandDto.getISort() == null"));
 		}
 		try {
-			Familienstand familienstand = new Familienstand(
-					familienstandDto.getCNr(), familienstandDto.getISort());
+			Familienstand familienstand = new Familienstand(familienstandDto.getCNr(), familienstandDto.getISort());
 			em.persist(familienstand);
 			em.flush();
-			setFamilienstandFromFamilienstandDto(familienstand,
-					familienstandDto);
+			setFamilienstandFromFamilienstandDto(familienstand, familienstandDto);
 			if (familienstandDto.getFamilienstandsprDto() != null) {
-				Familienstandspr familienstandspr = new Familienstandspr(
-						theClientDto.getLocMandantAsString(),
+				Familienstandspr familienstandspr = new Familienstandspr(theClientDto.getLocMandantAsString(),
 						familienstandDto.getCNr());
 				em.persist(familienstandspr);
 				em.flush();
-				setFamilienstandsprFromFamilienstandsprDto(familienstandspr,
-						familienstandDto.getFamilienstandsprDto());
+				setFamilienstandsprFromFamilienstandsprDto(familienstandspr, familienstandDto.getFamilienstandsprDto());
 			}
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
-	public void createAngehoerigenart(AngehoerigenartDto angehoerigenartDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createAngehoerigenart(AngehoerigenartDto angehoerigenartDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (angehoerigenartDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("angehoerigenartDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("angehoerigenartDto == null"));
 		}
-		if (angehoerigenartDto.getCNr() == null
-				|| angehoerigenartDto.getISort() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"angehoerigenartDto.getCNr() == null || angehoerigenartDto.getISort() == null"));
+		if (angehoerigenartDto.getCNr() == null || angehoerigenartDto.getISort() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("angehoerigenartDto.getCNr() == null || angehoerigenartDto.getISort() == null"));
 		}
 		try {
-			Angehoerigenart angehoerigenart = new Angehoerigenart(
-					angehoerigenartDto.getCNr(), angehoerigenartDto.getISort());
+			Angehoerigenart angehoerigenart = new Angehoerigenart(angehoerigenartDto.getCNr(),
+					angehoerigenartDto.getISort());
 			em.persist(angehoerigenart);
 			em.flush();
-			setAngehoerigenartFromAngehoerigenartDto(angehoerigenart,
-					angehoerigenartDto);
+			setAngehoerigenartFromAngehoerigenartDto(angehoerigenart, angehoerigenartDto);
 			if (angehoerigenartDto.getAngehoerigenartsprDto() != null) {
-				Angehoerigenartspr angehoerigenartspr = new Angehoerigenartspr(
-						theClientDto.getLocMandantAsString(),
+				Angehoerigenartspr angehoerigenartspr = new Angehoerigenartspr(theClientDto.getLocMandantAsString(),
 						angehoerigenartDto.getCNr());
 				em.persist(angehoerigenartspr);
 				em.flush();
-				setAngehoerigenartsprFromAngehoerigenartsprDto(
-						angehoerigenartspr,
+				setAngehoerigenartsprFromAngehoerigenartsprDto(angehoerigenartspr,
 						angehoerigenartDto.getAngehoerigenartsprDto());
 			}
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
+		}
+	}
+
+	public AnwesenheitsbestaetigungDto[] getAllAnwesenheitsbestaetigungEinesAuftrages(Integer auftragIId,
+			TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("AnwesenheitsbestaetigungFindByAuftragIId");
+		query.setParameter(1, auftragIId);
+
+		return AnwesenheitsbestaetigungDtoAssembler.createDtos(query.getResultList());
+
+	}
+
+	public Integer createAnwesenheitsbestaetigung(AnwesenheitsbestaetigungDto dto, TheClientDto theClientDto) {
+
+		if (dto.getILfdnr() == null || dto.getPersonalIId() == null || dto.getTUnterschrift() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"dto.getILfdnr() == null || dto.getPersonalIId() == null || dto.getTUnterschrift() == null"));
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ANWESENHEITSESTAETIGUNG);
+			dto.setIId(pk);
+
+			Anwesenheitsbestaetigung bean = new Anwesenheitsbestaetigung(dto.getIId(), dto.getPersonalIId(),
+					dto.getTUnterschrift(), dto.getILfdnr());
+			em.persist(bean);
+			em.flush();
+			setAnwesenheitsbestaetigungFromAnwesenheitsbestaetigungDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
@@ -3752,8 +3566,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// try {
 		Personalart toRemove = em.find(Personalart.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -3768,23 +3581,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void removePersonalart(PersonalartDto personalartDto)
-			throws EJBExceptionLP {
+	public void removePersonalart(PersonalartDto personalartDto) throws EJBExceptionLP {
 		if (personalartDto != null) {
 			String cNr = personalartDto.getCNr();
 			removePersonalart(cNr);
 		}
 	}
 
-	public void updatePersonalart(PersonalartDto personalartDto)
-			throws EJBExceptionLP {
+	public void updatePersonalart(PersonalartDto personalartDto) throws EJBExceptionLP {
 		if (personalartDto != null) {
 			String cNr = personalartDto.getCNr();
 			// try {
 			Personalart personalart = em.find(Personalart.class, cNr);
 			if (personalart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setPersonalartFromPersonalartDto(personalart, personalartDto);
 			// }
@@ -3796,8 +3606,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePersonalarts(PersonalartDto[] personalartDtos)
-			throws EJBExceptionLP {
+	public void updatePersonalarts(PersonalartDto[] personalartDtos) throws EJBExceptionLP {
 		if (personalartDtos != null) {
 			for (int i = 0; i < personalartDtos.length; i++) {
 				updatePersonalart(personalartDtos[i]);
@@ -3805,13 +3614,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public PersonalartDto personalartFindByPrimaryKey(String cNr,
-			TheClientDto theClientDto) {
+	public PersonalartDto personalartFindByPrimaryKey(String cNr, TheClientDto theClientDto) {
 		// try {
 		Personalart personalart = em.find(Personalart.class, cNr);
 		if (personalart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		PersonalartDto personalartDto = assemblePersonalartDto(personalart);
 
@@ -3830,8 +3637,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		if (personalartsprDto == null) {
 			// try {
 			Personalartspr temp = em.find(Personalartspr.class,
-					new PersonalartsprPK(theClientDto.getLocKonzernAsString(),
-							cNr));
+					new PersonalartsprPK(theClientDto.getLocKonzernAsString(), cNr));
 			if (temp != null) {
 				personalartsprDto = assemblePersonalartsprDto(temp);
 			}
@@ -3852,47 +3658,39 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	private void setPersonalfunktionsprFromPersonalfunktionsprDto(
-			Personalfunktionspr personalfunktionspr,
+	private void setPersonalfunktionsprFromPersonalfunktionsprDto(Personalfunktionspr personalfunktionspr,
 			PersonalfunktionsprDto personalfunktionsprDto) {
 		personalfunktionspr.setCBez(personalfunktionsprDto.getCBez());
 		em.merge(personalfunktionspr);
 		em.flush();
 	}
 
-	private PersonalfunktionsprDto assemblePersonalfunktionsprDto(
-			Personalfunktionspr personalfunktionspr) {
+	private PersonalfunktionsprDto assemblePersonalfunktionsprDto(Personalfunktionspr personalfunktionspr) {
 		return PersonalfunktionsprDtoAssembler.createDto(personalfunktionspr);
 	}
 
-	private PersonalfunktionsprDto[] assemblePersonalfunktionsprDtos(
-			Collection<?> personalfunktionsprs) {
+	private PersonalfunktionsprDto[] assemblePersonalfunktionsprDtos(Collection<?> personalfunktionsprs) {
 		List<PersonalfunktionsprDto> list = new ArrayList<PersonalfunktionsprDto>();
 		if (personalfunktionsprs != null) {
 			Iterator<?> iterator = personalfunktionsprs.iterator();
 			while (iterator.hasNext()) {
-				Personalfunktionspr personalfunktionspr = (Personalfunktionspr) iterator
-						.next();
+				Personalfunktionspr personalfunktionspr = (Personalfunktionspr) iterator.next();
 				list.add(assemblePersonalfunktionsprDto(personalfunktionspr));
 			}
 		}
-		PersonalfunktionsprDto[] returnArray = new PersonalfunktionsprDto[list
-				.size()];
+		PersonalfunktionsprDto[] returnArray = new PersonalfunktionsprDto[list.size()];
 		return (PersonalfunktionsprDto[]) list.toArray(returnArray);
 	}
 
-	public void createPersonalfunktion(PersonalfunktionDto personalfunktionDto)
-			throws EJBExceptionLP {
+	public void createPersonalfunktion(PersonalfunktionDto personalfunktionDto) throws EJBExceptionLP {
 		if (personalfunktionDto == null) {
 			return;
 		}
 		try {
-			Personalfunktion personalfunktion = new Personalfunktion(
-					personalfunktionDto.getCNr());
+			Personalfunktion personalfunktion = new Personalfunktion(personalfunktionDto.getCNr());
 			em.persist(personalfunktion);
 			em.flush();
-			setPersonalfunktionFromPersonalfunktionDto(personalfunktion,
-					personalfunktionDto);
+			setPersonalfunktionFromPersonalfunktionDto(personalfunktion, personalfunktionDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -3903,8 +3701,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// try {
 		Personalfunktion toRemove = em.find(Personalfunktion.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -3919,27 +3716,22 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void removePersonalfunktion(PersonalfunktionDto personalfunktionDto)
-			throws EJBExceptionLP {
+	public void removePersonalfunktion(PersonalfunktionDto personalfunktionDto) throws EJBExceptionLP {
 		if (personalfunktionDto != null) {
 			String cNr = personalfunktionDto.getCNr();
 			removePersonalfunktion(cNr);
 		}
 	}
 
-	public void updatePersonalfunktion(PersonalfunktionDto personalfunktionDto)
-			throws EJBExceptionLP {
+	public void updatePersonalfunktion(PersonalfunktionDto personalfunktionDto) throws EJBExceptionLP {
 		if (personalfunktionDto != null) {
 			String cNr = personalfunktionDto.getCNr();
 			// try {
-			Personalfunktion personalfunktion = em.find(Personalfunktion.class,
-					cNr);
+			Personalfunktion personalfunktion = em.find(Personalfunktion.class, cNr);
 			if (personalfunktion == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setPersonalfunktionFromPersonalfunktionDto(personalfunktion,
-					personalfunktionDto);
+			setPersonalfunktionFromPersonalfunktionDto(personalfunktion, personalfunktionDto);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -3949,8 +3741,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePersonalfunktions(
-			PersonalfunktionDto[] personalfunktionDtos) throws EJBExceptionLP {
+	public void updatePersonalfunktions(PersonalfunktionDto[] personalfunktionDtos) throws EJBExceptionLP {
 		if (personalfunktionDtos != null) {
 			for (int i = 0; i < personalfunktionDtos.length; i++) {
 				updatePersonalfunktion(personalfunktionDtos[i]);
@@ -3958,14 +3749,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public PersonalfunktionDto personalfunktionFindByPrimaryKey(String cNr)
-			throws EJBExceptionLP {
+	public PersonalfunktionDto personalfunktionFindByPrimaryKey(String cNr) throws EJBExceptionLP {
 		// try {
-		Personalfunktion personalfunktion = em
-				.find(Personalfunktion.class, cNr);
+		Personalfunktion personalfunktion = em.find(Personalfunktion.class, cNr);
 		if (personalfunktion == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePersonalfunktionDto(personalfunktion);
 		// }
@@ -3975,8 +3763,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalfunktionDto[] personalfunktionFindAll()
-			throws EJBExceptionLP {
+	public PersonalfunktionDto[] personalfunktionFindAll() throws EJBExceptionLP {
 		// try {
 		Query query = em.createNamedQuery("PersonalfunktionfindAll");
 		Collection<?> cl = query.getResultList();
@@ -3991,26 +3778,22 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	private void setPersonalfunktionFromPersonalfunktionDto(
-			Personalfunktion personalfunktion,
+	private void setPersonalfunktionFromPersonalfunktionDto(Personalfunktion personalfunktion,
 			PersonalfunktionDto personalfunktionDto) {
 		em.merge(personalfunktion);
 		em.flush();
 	}
 
-	private PersonalfunktionDto assemblePersonalfunktionDto(
-			Personalfunktion personalfunktion) {
+	private PersonalfunktionDto assemblePersonalfunktionDto(Personalfunktion personalfunktion) {
 		return PersonalfunktionDtoAssembler.createDto(personalfunktion);
 	}
 
-	private PersonalfunktionDto[] assemblePersonalfunktionDtos(
-			Collection<?> personalfunktions) {
+	private PersonalfunktionDto[] assemblePersonalfunktionDtos(Collection<?> personalfunktions) {
 		List<PersonalfunktionDto> list = new ArrayList<PersonalfunktionDto>();
 		if (personalfunktions != null) {
 			Iterator<?> iterator = personalfunktions.iterator();
 			while (iterator.hasNext()) {
-				Personalfunktion personalfunktion = (Personalfunktion) iterator
-						.next();
+				Personalfunktion personalfunktion = (Personalfunktion) iterator.next();
 				list.add(assemblePersonalfunktionDto(personalfunktion));
 			}
 		}
@@ -4018,8 +3801,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (PersonalfunktionDto[]) list.toArray(returnArray);
 	}
 
-	public String getNextPersonalnummer(TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public String getNextPersonalnummer(TheClientDto theClientDto) throws EJBExceptionLP {
 		return generiereNeuePersonalnummer(theClientDto);
 	}
 
@@ -4054,8 +3836,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		org.hibernate.Criteria crit = session.createCriteria(FLRPersonal.class);
-		crit.add(Restrictions.like("c_personalnummer", beginnArtikelnummer,
-				MatchMode.START));
+		crit.add(Restrictions.like("c_personalnummer", beginnArtikelnummer, MatchMode.START));
 		crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
 
 		crit.addOrder(Order.desc("c_personalnummer"));
@@ -4099,13 +3880,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 				}
 			}
 			if (iStartZahl >= 0 && iEndeZahl >= 0) {
-				String zahlenteil = letzteArtikelnummer.substring(iStartZahl,
-						iEndeZahl + 1);
+				String zahlenteil = letzteArtikelnummer.substring(iStartZahl, iEndeZahl + 1);
 				long zahl = new Long(zahlenteil);
 				zahl++;
 				// Neue Artikelnummer zusammenbauen
-				String neueArtNr = letzteArtikelnummer.substring(0, iStartZahl)
-						+ zahl + letzteArtikelnummer.substring(iEndeZahl + 1);
+				String neueArtNr = letzteArtikelnummer.substring(0, iStartZahl) + zahl
+						+ letzteArtikelnummer.substring(iEndeZahl + 1);
 
 				return neueArtNr;
 			}
@@ -4115,59 +3895,46 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return beginnArtikelnummer;
 	}
 
-	public Integer getArtikelIIdHoechsterWertPersonalverfuegbarkeit(
-			Integer personaIId) throws EJBExceptionLP {
+	public Integer getArtikelIIdHoechsterWertPersonalverfuegbarkeit(Integer personaIId) throws EJBExceptionLP {
 		Session session = FLRSessionFactory.getFactory().openSession();
 		Integer artikelIId = null;
-		org.hibernate.Criteria crit = session
-				.createCriteria(FLRPersonalverfuegbarkeit.class);
-		crit.add(Restrictions.eq(
-				PersonalFac.FLR_PERSONALVERFUEGBARKEIT_PERSONAL_I_ID,
-				personaIId));
-		crit.addOrder(Order
-				.desc(PersonalFac.FLR_PERSONALVERFUEGBARKEIT_F_ANTEILPROZENT));
+		org.hibernate.Criteria crit = session.createCriteria(FLRPersonalverfuegbarkeit.class);
+		crit.add(Restrictions.eq(PersonalFac.FLR_PERSONALVERFUEGBARKEIT_PERSONAL_I_ID, personaIId));
+		crit.addOrder(Order.desc(PersonalFac.FLR_PERSONALVERFUEGBARKEIT_F_ANTEILPROZENT));
 		crit.setMaxResults(1);
 
 		List<?> resultList = crit.list();
 		if (resultList.size() > 0) {
 			Iterator<?> resultListIterator = resultList.iterator();
-			FLRPersonalverfuegbarkeit personal = (FLRPersonalverfuegbarkeit) resultListIterator
-					.next();
+			FLRPersonalverfuegbarkeit personal = (FLRPersonalverfuegbarkeit) resultListIterator.next();
 			artikelIId = personal.getArtikel_i_id();
 		}
 
 		return artikelIId;
 	}
 
-	public Integer createPersonalzeiten(PersonalzeitenDto personalzeitenDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPersonalzeiten(PersonalzeitenDto personalzeitenDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (personalzeitenDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalzeitenDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalzeitenDto == null"));
 		}
 
-		if (personalzeitenDto.getPersonalIId() == null
-				|| personalzeitenDto.getTVon() == null
+		if (personalzeitenDto.getPersonalIId() == null || personalzeitenDto.getTVon() == null
 				|| personalzeitenDto.getTBis() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalzeitenDto.getPersonalIId() == null || personalzeitenDto.getDVon() == null ||  personalzeitenDto.getDBis() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalzeitenDto.getPersonalIId() == null || personalzeitenDto.getDVon() == null ||  personalzeitenDto.getDBis() == null"));
 		}
 		// generieren von primary key
 		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PERSONALZEITEN);
 		personalzeitenDto.setIId(pk);
 		try {
-			Personalzeiten personalzeiten = new Personalzeiten(
-					personalzeitenDto.getIId(),
-					personalzeitenDto.getPersonalIId(),
-					personalzeitenDto.getTVon(), personalzeitenDto.getTBis());
+			Personalzeiten personalzeiten = new Personalzeiten(personalzeitenDto.getIId(),
+					personalzeitenDto.getPersonalIId(), personalzeitenDto.getTVon(), personalzeitenDto.getTBis());
 			em.persist(personalzeiten);
 			em.flush();
-			setPersonalzeitenFromPersonalzeitenDto(personalzeiten,
-					personalzeitenDto);
+			setPersonalzeitenFromPersonalzeitenDto(personalzeiten, personalzeitenDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -4179,8 +3946,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// try {
 		Personalzeiten toRemove = em.find(Personalzeiten.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -4195,26 +3961,22 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void removePersonalzeiten(PersonalzeitenDto personalzeitenDto)
-			throws EJBExceptionLP {
+	public void removePersonalzeiten(PersonalzeitenDto personalzeitenDto) throws EJBExceptionLP {
 		if (personalzeitenDto != null) {
 			Integer iId = personalzeitenDto.getIId();
 			removePersonalzeiten(iId);
 		}
 	}
 
-	public void updatePersonalzeiten(PersonalzeitenDto personalzeitenDto)
-			throws EJBExceptionLP {
+	public void updatePersonalzeiten(PersonalzeitenDto personalzeitenDto) throws EJBExceptionLP {
 		if (personalzeitenDto != null) {
 			Integer iId = personalzeitenDto.getIId();
 			// try {
 			Personalzeiten personalzeiten = em.find(Personalzeiten.class, iId);
 			if (personalzeiten == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setPersonalzeitenFromPersonalzeitenDto(personalzeiten,
-					personalzeitenDto);
+			setPersonalzeitenFromPersonalzeitenDto(personalzeiten, personalzeitenDto);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -4224,8 +3986,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePersonalzeitens(PersonalzeitenDto[] personalzeitenDtos)
-			throws EJBExceptionLP {
+	public void updatePersonalzeitens(PersonalzeitenDto[] personalzeitenDtos) throws EJBExceptionLP {
 		if (personalzeitenDtos != null) {
 			for (int i = 0; i < personalzeitenDtos.length; i++) {
 				updatePersonalzeiten(personalzeitenDtos[i]);
@@ -4233,13 +3994,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public PersonalzeitenDto personalzeitenFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public PersonalzeitenDto personalzeitenFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		// try {
 		Personalzeiten personalzeiten = em.find(Personalzeiten.class, iId);
 		if (personalzeiten == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePersonalzeitenDto(personalzeiten);
 		// }
@@ -4250,8 +4009,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setPersonalzeitenFromPersonalzeitenDto(
-			Personalzeiten personalzeiten, PersonalzeitenDto personalzeitenDto) {
+	private void setPersonalzeitenFromPersonalzeitenDto(Personalzeiten personalzeiten,
+			PersonalzeitenDto personalzeitenDto) {
 		personalzeiten.setPersonalIId(personalzeitenDto.getPersonalIId());
 		personalzeiten.setTVon(personalzeitenDto.getTVon());
 		personalzeiten.setTBis(personalzeitenDto.getTBis());
@@ -4260,19 +4019,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		em.flush();
 	}
 
-	private PersonalzeitenDto assemblePersonalzeitenDto(
-			Personalzeiten personalzeiten) {
+	private PersonalzeitenDto assemblePersonalzeitenDto(Personalzeiten personalzeiten) {
 		return PersonalzeitenDtoAssembler.createDto(personalzeiten);
 	}
 
-	private PersonalzeitenDto[] assemblePersonalzeitenDtos(
-			Collection<?> personalzeitens) {
+	private PersonalzeitenDto[] assemblePersonalzeitenDtos(Collection<?> personalzeitens) {
 		List<PersonalzeitenDto> list = new ArrayList<PersonalzeitenDto>();
 		if (personalzeitens != null) {
 			Iterator<?> iterator = personalzeitens.iterator();
 			while (iterator.hasNext()) {
-				Personalzeiten personalzeiten = (Personalzeiten) iterator
-						.next();
+				Personalzeiten personalzeiten = (Personalzeiten) iterator.next();
 				list.add(assemblePersonalzeitenDto(personalzeiten));
 			}
 		}
@@ -4280,35 +4036,32 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (PersonalzeitenDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createPersonalgehalt(PersonalgehaltDto personalgehaltDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createPersonalgehalt(PersonalgehaltDto personalgehaltDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (personalgehaltDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalgehaltDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalgehaltDto == null"));
 		}
 
-		if (personalgehaltDto.getPersonalIId() == null
-				|| personalgehaltDto.getIJahr() == null
-				|| personalgehaltDto.getIMonat() == null
-				|| personalgehaltDto.getBUestdauszahlen() == null
+		if (personalgehaltDto.getPersonalIId() == null || personalgehaltDto.getIJahr() == null
+				|| personalgehaltDto.getIMonat() == null || personalgehaltDto.getIUestdauszahlen() == null
 				|| personalgehaltDto.getNUestdpuffer() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalgehaltDto.getPersonalIId() == null || personalgehaltDto.getIJahr() == null || personalgehaltDto.getIMonat() == null || personalgehaltDto.getBUestdauszahlen() == null || personalgehaltDto.getNUestdpuffer() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalgehaltDto.getPersonalIId() == null || personalgehaltDto.getIJahr() == null || personalgehaltDto.getIMonat() == null || personalgehaltDto.getIUestdauszahlen() == null || personalgehaltDto.getNUestdpuffer() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("PersonalgehaltfindByPersonalIIdIJahrIMonat");
+
+			Timestamp tGueltigab = new java.sql.Timestamp(
+					new GregorianCalendar(personalgehaltDto.getIJahr(), personalgehaltDto.getIMonat(), 1)
+							.getTimeInMillis());
+
+			Query query = em.createNamedQuery("PersonalgehaltfindByPersonalIIdTGueltigab");
 			query.setParameter(1, personalgehaltDto.getPersonalIId());
-			query.setParameter(2, personalgehaltDto.getIJahr());
-			query.setParameter(3, personalgehaltDto.getIMonat());
+			query.setParameter(2, tGueltigab);
 			Personalgehalt doppelt = (Personalgehalt) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONALGEHALT.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALGEHALT.UK"));
 			}
 		} catch (NoResultException ex1) {
 			// nothing here
@@ -4319,72 +4072,64 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PERSONALGEHALT);
 			personalgehaltDto.setIId(pk);
 
-			personalgehaltDto.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
-			personalgehaltDto.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
+			personalgehaltDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			personalgehaltDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 
-			Personalgehalt personalgehalt = new Personalgehalt(
-					personalgehaltDto.getIId(),
-					personalgehaltDto.getPersonalIId(),
-					personalgehaltDto.getNGehalt(),
-					personalgehaltDto.getFUestpauschale(),
-					personalgehaltDto.getNStundensatz(),
-					personalgehaltDto.getPersonalIIdAendern(),
-					personalgehaltDto.getIJahr(),
-					personalgehaltDto.getIMonat(),
-					personalgehaltDto.getBUestdauszahlen(),
-					personalgehaltDto.getNUestdpuffer());
+			if (personalgehaltDto.getBNegativstundenInUrlaubUmwandelnTageweiseBetrachten() == null) {
+				personalgehaltDto.setBNegativstundenInUrlaubUmwandelnTageweiseBetrachten(Helper.boolean2Short(false));
+			}
+
+			Personalgehalt personalgehalt = new Personalgehalt(personalgehaltDto.getIId(),
+					personalgehaltDto.getPersonalIId(), personalgehaltDto.getNGehalt(),
+					personalgehaltDto.getFUestpauschale(), personalgehaltDto.getNStundensatz(),
+					personalgehaltDto.getPersonalIIdAendern(), personalgehaltDto.getIJahr(),
+					personalgehaltDto.getIMonat(), personalgehaltDto.getIUestdauszahlen(),
+					personalgehaltDto.getNUestdpuffer(),
+					personalgehaltDto.getBNegativstundenInUrlaubUmwandelnTageweiseBetrachten());
 			em.persist(personalgehalt);
 			em.flush();
 
 			if (personalgehaltDto.getBAlleinerzieher() == null) {
-				personalgehaltDto.setBAlleinerzieher(personalgehalt
-						.getBAlleinerzieher());
+				personalgehaltDto.setBAlleinerzieher(personalgehalt.getBAlleinerzieher());
 			}
 			if (personalgehaltDto.getBAlleinverdiener() == null) {
-				personalgehaltDto.setBAlleinverdiener(personalgehalt
-						.getBAlleinverdiener());
+				personalgehaltDto.setBAlleinverdiener(personalgehalt.getBAlleinverdiener());
 			}
 			if (personalgehaltDto.getBKksgebbefreit() == null) {
-				personalgehaltDto.setBKksgebbefreit(personalgehalt
-						.getBKksgebbefreit());
+				personalgehaltDto.setBKksgebbefreit(personalgehalt.getBKksgebbefreit());
 			}
 			if (personalgehaltDto.getBStundensatzFixiert() == null) {
-				personalgehaltDto.setBStundensatzFixiert(personalgehalt
-						.getBStundensatzFixiert());
+				personalgehaltDto.setBStundensatzFixiert(personalgehalt.getBStundensatzFixiert());
 			}
 			if (personalgehaltDto.getNKmgeld1() == null) {
 				personalgehaltDto.setNKmgeld1(personalgehalt.getNKmgeld1());
 			}
 			if (personalgehaltDto.getFBiskilometer() == null) {
-				personalgehaltDto.setFBiskilometer(personalgehalt
-						.getFBiskilometer());
+				personalgehaltDto.setFBiskilometer(personalgehalt.getFBiskilometer());
 			}
 			if (personalgehaltDto.getNKmgeld2() == null) {
 				personalgehaltDto.setNKmgeld2(personalgehalt.getNKmgeld2());
 			}
-			if (personalgehaltDto.getNKmgeld2() == null) {
-				personalgehaltDto.setNKmgeld2(personalgehalt.getNKmgeld2());
+			if (personalgehaltDto.getNKmgeldMitfahrer() == null) {
+				personalgehaltDto.setNKmgeldMitfahrer(personalgehalt.getNKmgeldMitfahrer());
 			}
 			if (personalgehaltDto.getFVerfuegbarkeit() == null) {
-				personalgehaltDto.setFVerfuegbarkeit(personalgehalt
-						.getFVerfuegbarkeit());
+				personalgehaltDto.setFVerfuegbarkeit(personalgehalt.getFVerfuegbarkeit());
 			}
 			if (personalgehaltDto.getNGehalt() == null) {
 				personalgehaltDto.setNGehalt(personalgehalt.getNGehalt());
 			}
 			if (personalgehaltDto.getFUestpauschale() == null) {
-				personalgehaltDto.setFUestpauschale(personalgehalt
-						.getFUestpauschale());
+				personalgehaltDto.setFUestpauschale(personalgehalt.getFUestpauschale());
+			}
+			if (personalgehaltDto.getNDrzpauschale() == null) {
+				personalgehaltDto.setNDrzpauschale(personalgehalt.getNDrzpauschale());
 			}
 			if (personalgehaltDto.getNStundensatz() == null) {
-				personalgehaltDto.setNStundensatz(personalgehalt
-						.getNStundensatz());
+				personalgehaltDto.setNStundensatz(personalgehalt.getNStundensatz());
 			}
 
-			setPersonalgehaltFromPersonalgehaltDto(personalgehalt,
-					personalgehaltDto);
+			setPersonalgehaltFromPersonalgehaltDto(personalgehalt, personalgehaltDto);
 
 			return personalgehaltDto.getIId();
 		} catch (EntityExistsException ex) {
@@ -4393,23 +4138,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void removePersonalgehalt(PersonalgehaltDto personalgehaltDto)
-			throws EJBExceptionLP {
+	public void removePersonalgehalt(PersonalgehaltDto personalgehaltDto) throws EJBExceptionLP {
 		if (personalgehaltDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalgehaltDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalgehaltDto == null"));
 		}
 		if (personalgehaltDto.getIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("personalgehaltDto.getIId() == nulll"));
 		}
 		try {
-			Personalgehalt personalgehalt = em.find(Personalgehalt.class,
-					personalgehaltDto.getIId());
+			Personalgehalt personalgehalt = em.find(Personalgehalt.class, personalgehaltDto.getIId());
 			if (personalgehalt == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(personalgehalt);
 			em.flush();
@@ -4418,58 +4158,46 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePersonalgehalt(PersonalgehaltDto personalgehaltDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updatePersonalgehalt(PersonalgehaltDto personalgehaltDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (personalgehaltDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalgehaltDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalgehaltDto == null"));
 		}
 
-		if (personalgehaltDto.getIId() == null
-				|| personalgehaltDto.getPersonalIId() == null
-				|| personalgehaltDto.getIJahr() == null
-				|| personalgehaltDto.getIMonat() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalgehaltDto.getIId() == null || personalgehaltDto.getPersonalIId() == null || personalgehaltDto.getIJahr() == null || personalgehaltDto.getIMonat() == null"));
+		if (personalgehaltDto.getIId() == null || personalgehaltDto.getPersonalIId() == null
+				|| personalgehaltDto.getIJahr() == null || personalgehaltDto.getIMonat() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalgehaltDto.getIId() == null || personalgehaltDto.getPersonalIId() == null || personalgehaltDto.getIJahr() == null || personalgehaltDto.getIMonat() == null"));
 		}
-		if (personalgehaltDto.getFBiskilometer() == null
-				|| personalgehaltDto.getFUestpauschale() == null
-				|| personalgehaltDto.getFVerfuegbarkeit() == null
-				|| personalgehaltDto.getNGehalt() == null
-				|| personalgehaltDto.getNKmgeld1() == null
-				|| personalgehaltDto.getNKmgeld2() == null
-				|| personalgehaltDto.getNStundensatz() == null
-				|| personalgehaltDto.getBAlleinerzieher() == null
-				|| personalgehaltDto.getBAlleinverdiener() == null
-				|| personalgehaltDto.getBKksgebbefreit() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalgehaltDto.getFBiskilometer() == null || personalgehaltDto.getFUestpauschale() == null || personalgehaltDto.getFVerfuegbarkeit() == null || personalgehaltDto.getNGehalt() == null || personalgehaltDto.getNKmgeld1() == null || personalgehaltDto.getNKmgeld2() == null || personalgehaltDto.getNStundensatz() == null || personalgehaltDto.getBAlleinerzieher() == null || personalgehaltDto.getBAlleinverdiener() == null || personalgehaltDto.getBKksgebbefreit() == null"));
+		if (personalgehaltDto.getFBiskilometer() == null || personalgehaltDto.getFUestpauschale() == null
+				|| personalgehaltDto.getFVerfuegbarkeit() == null || personalgehaltDto.getNGehalt() == null
+				|| personalgehaltDto.getNKmgeld1() == null || personalgehaltDto.getNKmgeld2() == null
+				|| personalgehaltDto.getNStundensatz() == null || personalgehaltDto.getBAlleinerzieher() == null
+				|| personalgehaltDto.getBAlleinverdiener() == null || personalgehaltDto.getBKksgebbefreit() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalgehaltDto.getFBiskilometer() == null || personalgehaltDto.getFUestpauschale() == null || personalgehaltDto.getFVerfuegbarkeit() == null || personalgehaltDto.getNGehalt() == null || personalgehaltDto.getNKmgeld1() == null || personalgehaltDto.getNKmgeld2() == null || personalgehaltDto.getNStundensatz() == null || personalgehaltDto.getBAlleinerzieher() == null || personalgehaltDto.getBAlleinverdiener() == null || personalgehaltDto.getBKksgebbefreit() == null"));
 		}
 		Integer iId = personalgehaltDto.getIId();
 		// try {
 		Personalgehalt personalgehalt = em.find(Personalgehalt.class, iId);
 		if (personalgehalt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("PersonalgehaltfindByPersonalIIdIJahrIMonat");
+
+			Timestamp tGueltigab = new java.sql.Timestamp(
+					new GregorianCalendar(personalgehaltDto.getIJahr(), personalgehaltDto.getIMonat(), 1)
+							.getTimeInMillis());
+
+			Query query = em.createNamedQuery("PersonalgehaltfindByPersonalIIdTGueltigab");
 			query.setParameter(1, personalgehaltDto.getPersonalIId());
-			query.setParameter(2, personalgehaltDto.getIJahr());
-			query.setParameter(3, personalgehaltDto.getIMonat());
-			Integer iIdVorhanden = ((Personalgehalt) query.getSingleResult())
-					.getIId();
+			query.setParameter(2, tGueltigab);
+			Integer iIdVorhanden = ((Personalgehalt) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONALGEHALT.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALGEHALT.UK"));
 			}
 
 		} catch (NoResultException ex) {
@@ -4477,11 +4205,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		personalgehaltDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		personalgehaltDto.setTAendern(new java.sql.Timestamp(System
-				.currentTimeMillis()));
+		personalgehaltDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 
-		setPersonalgehaltFromPersonalgehaltDto(personalgehalt,
-				personalgehaltDto);
+		setPersonalgehaltFromPersonalgehaltDto(personalgehalt, personalgehaltDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -4491,18 +4217,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public PersonalgehaltDto personalgehaltFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public PersonalgehaltDto personalgehaltFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
 		Personalgehalt personalgehalt = em.find(Personalgehalt.class, iId);
 		if (personalgehalt == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		PersonalgehaltDto personalgehaltDto = assemblePersonalgehaltDto(personalgehalt);
 		return personalgehaltDto;
@@ -4514,67 +4237,58 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setPersonalgehaltFromPersonalgehaltDto(
-			Personalgehalt personalgehalt, PersonalgehaltDto personalgehaltDto) {
+	private void setPersonalgehaltFromPersonalgehaltDto(Personalgehalt personalgehalt,
+			PersonalgehaltDto personalgehaltDto) {
 		personalgehalt.setPersonalIId(personalgehaltDto.getPersonalIId());
-		personalgehalt.setIJahr(personalgehaltDto.getIJahr());
-		personalgehalt.setIMonat(personalgehaltDto.getIMonat());
+
+		personalgehalt.setTGueltigab(new java.sql.Timestamp(
+				new GregorianCalendar(personalgehaltDto.getIJahr(), personalgehaltDto.getIMonat(), 1)
+						.getTimeInMillis()));
 		personalgehalt.setNGehalt(personalgehaltDto.getNGehalt());
 		personalgehalt.setFUestpauschale(personalgehaltDto.getFUestpauschale());
 		personalgehalt.setNStundensatz(personalgehaltDto.getNStundensatz());
-		personalgehalt.setFVerfuegbarkeit(personalgehaltDto
-				.getFVerfuegbarkeit());
+		personalgehalt.setFVerfuegbarkeit(personalgehaltDto.getFVerfuegbarkeit());
 		personalgehalt.setNKmgeld1(personalgehaltDto.getNKmgeld1());
 		personalgehalt.setNUestdpuffer(personalgehaltDto.getNUestdpuffer());
 		personalgehalt.setFBiskilometer(personalgehaltDto.getFBiskilometer());
 		personalgehalt.setNKmgeld2(personalgehaltDto.getNKmgeld2());
 		personalgehalt.setBKksgebbefreit(personalgehaltDto.getBKksgebbefreit());
-		personalgehalt.setBUestdauszahlen(personalgehaltDto
-				.getBUestdauszahlen());
-		personalgehalt.setCGrundkksgebbefreit(personalgehaltDto
-				.getCGrundkksgebbefreit());
-		personalgehalt.setBAlleinverdiener(personalgehaltDto
-				.getBAlleinverdiener());
-		personalgehalt.setBAlleinerzieher(personalgehaltDto
-				.getBAlleinerzieher());
-		personalgehalt.setPersonalIIdAendern(personalgehaltDto
-				.getPersonalIIdAendern());
+		personalgehalt.setIUestdauszahlen(personalgehaltDto.getIUestdauszahlen());
+		personalgehalt.setCGrundkksgebbefreit(personalgehaltDto.getCGrundkksgebbefreit());
+		personalgehalt.setBAlleinverdiener(personalgehaltDto.getBAlleinverdiener());
+		personalgehalt.setBAlleinerzieher(personalgehaltDto.getBAlleinerzieher());
+		personalgehalt.setPersonalIIdAendern(personalgehaltDto.getPersonalIIdAendern());
 		personalgehalt.setTAendern(personalgehaltDto.getTAendern());
 		personalgehalt.setFLeistungswert(personalgehaltDto.getFLeistungswert());
 
-		personalgehalt.setBStundensatzFixiert(personalgehaltDto
-				.getBStundensatzFixiert());
-		personalgehalt.setNGehaltBruttobrutto(personalgehaltDto
-				.getNGehaltBruttobrutto());
+		personalgehalt.setBStundensatzFixiert(personalgehaltDto.getBStundensatzFixiert());
+		personalgehalt.setNGehaltBruttobrutto(personalgehaltDto.getNGehaltBruttobrutto());
 		personalgehalt.setNGehaltNetto(personalgehaltDto.getNGehaltNetto());
-		personalgehalt.setNPraemieBruttobrutto(personalgehaltDto
-				.getNPraemieBruttobrutto());
-		personalgehalt.setNLohnmittelstundensatz(personalgehaltDto
-				.getNLohnmittelstundensatz());
-		personalgehalt.setFFaktorLohnmittelstundensatz(personalgehaltDto
-				.getFFaktorLohnmittelstundensatz());
-		personalgehalt.setFKalkIstJahresstunden(personalgehaltDto
-				.getFKalkIstJahresstunden());
-		personalgehalt.setNAufschlagLohnmittelstundensatz(personalgehaltDto
-				.getNAufschlagLohnmittelstundensatz());
+		personalgehalt.setNPraemieBruttobrutto(personalgehaltDto.getNPraemieBruttobrutto());
+		personalgehalt.setNLohnmittelstundensatz(personalgehaltDto.getNLohnmittelstundensatz());
+		personalgehalt.setFFaktorLohnmittelstundensatz(personalgehaltDto.getFFaktorLohnmittelstundensatz());
+		personalgehalt.setFKalkIstJahresstunden(personalgehaltDto.getFKalkIstJahresstunden());
+		personalgehalt.setNAufschlagLohnmittelstundensatz(personalgehaltDto.getNAufschlagLohnmittelstundensatz());
+		personalgehalt.setNLohnsteuer(personalgehaltDto.getNLohnsteuer());
+		personalgehalt.setNDrzpauschale(personalgehaltDto.getNDrzpauschale());
+		personalgehalt.setBNegativstundenInUrlaubUmwandelnTageweiseBetrachten(
+				personalgehaltDto.getBNegativstundenInUrlaubUmwandelnTageweiseBetrachten());
+		personalgehalt.setNKmgeldMitfahrer(personalgehaltDto.getNKmgeldMitfahrer());
 
 		em.merge(personalgehalt);
 		em.flush();
 	}
 
-	private PersonalgehaltDto assemblePersonalgehaltDto(
-			Personalgehalt personalgehalt) {
+	private PersonalgehaltDto assemblePersonalgehaltDto(Personalgehalt personalgehalt) {
 		return PersonalgehaltDtoAssembler.createDto(personalgehalt);
 	}
 
-	private PersonalgehaltDto[] assemblePersonalgehaltDtos(
-			Collection<?> personalgehalts) {
+	private PersonalgehaltDto[] assemblePersonalgehaltDtos(Collection<?> personalgehalts) {
 		List<PersonalgehaltDto> list = new ArrayList<PersonalgehaltDto>();
 		if (personalgehalts != null) {
 			Iterator<?> iterator = personalgehalts.iterator();
 			while (iterator.hasNext()) {
-				Personalgehalt personalgehalt = (Personalgehalt) iterator
-						.next();
+				Personalgehalt personalgehalt = (Personalgehalt) iterator.next();
 				list.add(assemblePersonalgehaltDto(personalgehalt));
 			}
 		}
@@ -4582,35 +4296,26 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (PersonalgehaltDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createPersonalzeitmodell(
-			PersonalzeitmodellDto personalzeitmodellDto) throws EJBExceptionLP {
+	public Integer createPersonalzeitmodell(PersonalzeitmodellDto personalzeitmodellDto) throws EJBExceptionLP {
 		if (personalzeitmodellDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalzeitmodellDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalzeitmodellDto == null"));
 		}
-		if (personalzeitmodellDto.getPersonalIId() == null
-				|| personalzeitmodellDto.getZeitmodellIId() == null
+		if (personalzeitmodellDto.getPersonalIId() == null || personalzeitmodellDto.getZeitmodellIId() == null
 				|| personalzeitmodellDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"personalzeitmodellDto.getPersonalIId() == null || personalzeitmodellDto.getZeitmodellIId() == null || personalzeitmodellDto.getDGueltigab() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"personalzeitmodellDto.getPersonalIId() == null || personalzeitmodellDto.getZeitmodellIId() == null || personalzeitmodellDto.getDGueltigab() == null"));
 		}
 
-		personalzeitmodellDto.setTGueltigab(Helper
-				.cutTimestamp(personalzeitmodellDto.getTGueltigab()));
+		personalzeitmodellDto.setTGueltigab(Helper.cutTimestamp(personalzeitmodellDto.getTGueltigab()));
 
 		try {
-			Query query = em
-					.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
+			Query query = em.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
 			query.setParameter(1, personalzeitmodellDto.getPersonalIId());
 			query.setParameter(2, personalzeitmodellDto.getTGueltigab());
-			Personalzeitmodell doppelt = (Personalzeitmodell) query
-					.getSingleResult();
+			Personalzeitmodell doppelt = (Personalzeitmodell) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONALZEITMODELL.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALZEITMODELL.UK"));
 			}
 		} catch (NoResultException ex1) {
 			// nothing here
@@ -4622,15 +4327,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		try {
 
-			Personalzeitmodell personalzeitmodell = new Personalzeitmodell(
-					personalzeitmodellDto.getIId(),
-					personalzeitmodellDto.getPersonalIId(),
-					personalzeitmodellDto.getZeitmodellIId(),
+			Personalzeitmodell personalzeitmodell = new Personalzeitmodell(personalzeitmodellDto.getIId(),
+					personalzeitmodellDto.getPersonalIId(), personalzeitmodellDto.getZeitmodellIId(),
 					personalzeitmodellDto.getTGueltigab());
 			em.persist(personalzeitmodell);
 			em.flush();
-			setPersonalzeitmodellFromPersonalzeitmodellDto(personalzeitmodell,
-					personalzeitmodellDto);
+			setPersonalzeitmodellFromPersonalzeitmodellDto(personalzeitmodell, personalzeitmodellDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -4638,31 +4340,56 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return personalzeitmodellDto.getIId();
 	}
 
-	public Integer createSchichtzeitmodell(
-			SchichtzeitmodellDto schichtzeitmodellDto) {
-		if (schichtzeitmodellDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("schichtzeitmodellDto == null"));
+	public Integer createPersonalfahrzeug(PersonalfahrzeugDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("PersonalfahrzeugFindByPersonalIIdFahrzeugIId");
+			query.setParameter(1, dto.getPersonalIId());
+			query.setParameter(2, dto.getFahrzeugIId());
+			Personalfahrzeug doppelt = (Personalfahrzeug) query.getSingleResult();
+			if (doppelt != null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALFAHRZEUG.UK"));
+			}
+		} catch (NoResultException ex1) {
+			// nothing here
 		}
-		if (schichtzeitmodellDto.getPersonalIId() == null
-				|| schichtzeitmodellDto.getZeitmodellIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"schichtzeitmodellDto.getPersonalIId() == null || schichtzeitmodellDto.getZeitmodellIId()"));
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj();
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PERSONALFAHRZEUG);
+		dto.setIId(pk);
+
+		try {
+
+			Personalfahrzeug personalfahrzeug = new Personalfahrzeug(dto.getIId(), dto.getPersonalIId(),
+					dto.getFahrzeugIId());
+			em.persist(personalfahrzeug);
+			em.flush();
+			setPersonalfahrzeugFromPersonalfahrzeugDto(personalfahrzeug, dto);
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+
+		return dto.getIId();
+	}
+
+	public Integer createSchichtzeitmodell(SchichtzeitmodellDto schichtzeitmodellDto) {
+		if (schichtzeitmodellDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("schichtzeitmodellDto == null"));
+		}
+		if (schichtzeitmodellDto.getPersonalIId() == null || schichtzeitmodellDto.getZeitmodellIId() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"schichtzeitmodellDto.getPersonalIId() == null || schichtzeitmodellDto.getZeitmodellIId()"));
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("SchichtzeitmodellfindByPersonalIIdZeitmodellIId");
+			Query query = em.createNamedQuery("SchichtzeitmodellfindByPersonalIIdZeitmodellIId");
 			query.setParameter(1, schichtzeitmodellDto.getPersonalIId());
 			query.setParameter(2, schichtzeitmodellDto.getZeitmodellIId());
-			Personalzeitmodell doppelt = (Personalzeitmodell) query
-					.getSingleResult();
+			Schichtzeitmodell doppelt = (Schichtzeitmodell) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_SCHICHTZEITMODELL.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_SCHICHTZEITMODELL.UK"));
 			}
 		} catch (NoResultException ex1) {
 			// nothing here
@@ -4674,14 +4401,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		try {
 
-			Schichtzeitmodell personalzeitmodell = new Schichtzeitmodell(
-					schichtzeitmodellDto.getIId(),
-					schichtzeitmodellDto.getPersonalIId(),
-					schichtzeitmodellDto.getZeitmodellIId());
+			Schichtzeitmodell personalzeitmodell = new Schichtzeitmodell(schichtzeitmodellDto.getIId(),
+					schichtzeitmodellDto.getPersonalIId(), schichtzeitmodellDto.getZeitmodellIId());
 			em.persist(personalzeitmodell);
 			em.flush();
-			setSchichtzeitmodellFromSchichtzeitmodellDto(personalzeitmodell,
-					schichtzeitmodellDto);
+			setSchichtzeitmodellFromSchichtzeitmodellDto(personalzeitmodell, schichtzeitmodellDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -4689,11 +4413,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return schichtzeitmodellDto.getIId();
 	}
 
-	public void removePersonalzeitmodell(
-			PersonalzeitmodellDto personalzeitmodellDto) throws EJBExceptionLP {
+	public void removePersonalzeitmodell(PersonalzeitmodellDto personalzeitmodellDto) throws EJBExceptionLP {
 		if (personalzeitmodellDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalzeitmodellDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalzeitmodellDto == null"));
 		}
 		if (personalzeitmodellDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
@@ -4703,11 +4425,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		Personalzeitmodell personalzeitmodell = null;
 		try {
-			personalzeitmodell = em.find(Personalzeitmodell.class,
-					personalzeitmodellDto.getIId());
+			personalzeitmodell = em.find(Personalzeitmodell.class, personalzeitmodellDto.getIId());
 			if (personalzeitmodell == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			// }
 			// catch (FinderException ex) {
@@ -4721,13 +4441,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void removeSchichtzeitmodell(
-			SchichtzeitmodellDto schichtzeitmodellDto) {
+	public void removeSchichtzeitmodell(SchichtzeitmodellDto schichtzeitmodellDto) {
 
 		Schichtzeitmodell schichtzeitmodell = null;
 		try {
-			schichtzeitmodell = em.find(Schichtzeitmodell.class,
-					schichtzeitmodellDto.getIId());
+			schichtzeitmodell = em.find(Schichtzeitmodell.class, schichtzeitmodellDto.getIId());
 
 			em.remove(schichtzeitmodell);
 			em.flush();
@@ -4736,50 +4454,44 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePersonalzeitmodell(
-			PersonalzeitmodellDto personalzeitmodellDto) throws EJBExceptionLP {
+	public void removePersonalfahrzeug(PersonalfahrzeugDto dto) {
+		Personalfahrzeug personalfahrzeug = em.find(Personalfahrzeug.class, dto.getIId());
+		em.remove(personalfahrzeug);
+		em.flush();
+
+	}
+
+	public void updatePersonalzeitmodell(PersonalzeitmodellDto personalzeitmodellDto) throws EJBExceptionLP {
 		if (personalzeitmodellDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalzeitmodellDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalzeitmodellDto == null"));
 		}
-		if (personalzeitmodellDto.getIId() == null
-				|| personalzeitmodellDto.getPersonalIId() == null
-				|| personalzeitmodellDto.getZeitmodellIId() == null
-				|| personalzeitmodellDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
-					new Exception(
-							"personalzeitmodellDto.getIId() == null || personalzeitmodellDto.getPersonalIId() == null || personalzeitmodellDto.getZeitmodellIId() == null || personalzeitmodellDto.getDGueltigab() == null"));
+		if (personalzeitmodellDto.getIId() == null || personalzeitmodellDto.getPersonalIId() == null
+				|| personalzeitmodellDto.getZeitmodellIId() == null || personalzeitmodellDto.getTGueltigab() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL, new Exception(
+					"personalzeitmodellDto.getIId() == null || personalzeitmodellDto.getPersonalIId() == null || personalzeitmodellDto.getZeitmodellIId() == null || personalzeitmodellDto.getDGueltigab() == null"));
 		}
-		personalzeitmodellDto.setTGueltigab(Helper
-				.cutTimestamp(personalzeitmodellDto.getTGueltigab()));
+		personalzeitmodellDto.setTGueltigab(Helper.cutTimestamp(personalzeitmodellDto.getTGueltigab()));
 
 		Integer iId = personalzeitmodellDto.getIId();
 		// try {
-		Personalzeitmodell personalzeitmodell = em.find(
-				Personalzeitmodell.class, iId);
+		Personalzeitmodell personalzeitmodell = em.find(Personalzeitmodell.class, iId);
 		if (personalzeitmodell == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
-			Query query = em
-					.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
+			Query query = em.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
 			query.setParameter(1, personalzeitmodellDto.getPersonalIId());
 			query.setParameter(2, personalzeitmodellDto.getTGueltigab());
-			Integer iIdVorhanden = ((Personalzeitmodell) query
-					.getSingleResult()).getIId();
+			Integer iIdVorhanden = ((Personalzeitmodell) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONALZEITMODELL.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALZEITMODELL.UK"));
 			}
 		} catch (NoResultException ex) {
 			//
 		}
 
-		setPersonalzeitmodellFromPersonalzeitmodellDto(personalzeitmodell,
-				personalzeitmodellDto);
+		setPersonalzeitmodellFromPersonalzeitmodellDto(personalzeitmodell, personalzeitmodellDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -4789,26 +4501,46 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public PersonalDto getPersonalDto_Vorgesetzter(Integer personalIId,
-			TheClientDto theClientDto) {
+	public void updatePersonalfahrzeug(PersonalfahrzeugDto dto) {
+
+		Integer iId = dto.getIId();
+		// try {
+		Personalfahrzeug bean = em.find(Personalfahrzeug.class, iId);
+		if (bean == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			Query query = em.createNamedQuery("PersonalfahrzeugFindByPersonalIIdFahrzeugIId");
+			query.setParameter(1, dto.getPersonalIId());
+			query.setParameter(2, dto.getFahrzeugIId());
+			Integer iIdVorhanden = ((Personalfahrzeug) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALFAHRZEUG.UK"));
+			}
+		} catch (NoResultException ex) {
+			//
+		}
+
+		setPersonalfahrzeugFromPersonalfahrzeugDto(bean, dto);
+
+	}
+
+	public PersonalDto getPersonalDto_Vorgesetzter(Integer personalIId, TheClientDto theClientDto) {
 		Personal personal = em.find(Personal.class, personalIId);
 
 		if (personal.getPersonalfunktionCNr() != null
-				&& personal.getPersonalfunktionCNr().equals(
-						PersonalFac.PERSONALFUNKTION_ABTEILUNGSLEITER)) {
+				&& personal.getPersonalfunktionCNr().equals(PersonalFac.PERSONALFUNKTION_ABTEILUNGSLEITER)) {
 			// Vorgesetztet ist Geschaeftsfuehrer
 
-			Query query = em
-					.createNamedQuery("PersonalfindByMandantCNrPersonalfunktionCNrBVersteckt");
+			Query query = em.createNamedQuery("PersonalfindByMandantCNrPersonalfunktionCNrBVersteckt");
 			query.setParameter(1, personal.getMandantCNr());
-			query.setParameter(2,
-					PersonalFac.PERSONALFUNKTION_GESCHAEFTSFUEHRER);
+			query.setParameter(2, PersonalFac.PERSONALFUNKTION_GESCHAEFTSFUEHRER);
 			Collection c = query.getResultList();
 
 			if (c.size() > 0) {
 				Personal pGF = (Personal) c.iterator().next();
-				return getPersonalFac().personalFindByPrimaryKey(pGF.getIId(),
-						theClientDto);
+				return getPersonalFac().personalFindByPrimaryKey(pGF.getIId(), theClientDto);
 			}
 
 		} else {
@@ -4817,15 +4549,13 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 						.createNamedQuery("PersonalfindByMandantCNrKostenstelleIIdAbteilungPersonalfunktionCNr");
 				query.setParameter(1, personal.getMandantCNr());
 				query.setParameter(2, personal.getKostenstelleIIdAbteilung());
-				query.setParameter(3,
-						PersonalFac.PERSONALFUNKTION_ABTEILUNGSLEITER);
+				query.setParameter(3, PersonalFac.PERSONALFUNKTION_ABTEILUNGSLEITER);
 				Collection c = query.getResultList();
 
 				if (c.size() > 0) {
 					Personal pVorgesetzter = (Personal) c.iterator().next();
 
-					return getPersonalFac().personalFindByPrimaryKey(
-							pVorgesetzter.getIId(), theClientDto);
+					return getPersonalFac().personalFindByPrimaryKey(pVorgesetzter.getIId(), theClientDto);
 
 				}
 
@@ -4836,49 +4566,53 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void updateSchichtzeitmodell(
-			SchichtzeitmodellDto schichtzeitmodellDto) {
-		if (schichtzeitmodellDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("schichtzeitmodellDto == null"));
+	public PersonalDto getAbteilungsleiter(Integer kostenstelleIIdAbteilung, TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("PersonalfindByMandantCNrKostenstelleIIdAbteilungPersonalfunktionCNr");
+		query.setParameter(1, theClientDto.getMandant());
+		query.setParameter(2, kostenstelleIIdAbteilung);
+		query.setParameter(3, PersonalFac.PERSONALFUNKTION_ABTEILUNGSLEITER);
+		Collection c = query.getResultList();
+
+		if (c.size() > 0) {
+			Personal pVorgesetzter = (Personal) c.iterator().next();
+
+			return getPersonalFac().personalFindByPrimaryKey(pVorgesetzter.getIId(), theClientDto);
+
 		}
-		if (schichtzeitmodellDto.getIId() == null
-				|| schichtzeitmodellDto.getPersonalIId() == null
+		return null;
+	}
+
+	public void updateSchichtzeitmodell(SchichtzeitmodellDto schichtzeitmodellDto) {
+		if (schichtzeitmodellDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("schichtzeitmodellDto == null"));
+		}
+		if (schichtzeitmodellDto.getIId() == null || schichtzeitmodellDto.getPersonalIId() == null
 				|| schichtzeitmodellDto.getZeitmodellIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
-					new Exception(
-							"schichtzeitmodellDto.getIId() == null || schichtzeitmodellDto.getPersonalIId() == null || schichtzeitmodellDto.getZeitmodellIId() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL, new Exception(
+					"schichtzeitmodellDto.getIId() == null || schichtzeitmodellDto.getPersonalIId() == null || schichtzeitmodellDto.getZeitmodellIId() == null"));
 		}
 
 		Integer iId = schichtzeitmodellDto.getIId();
 		// try {
-		Schichtzeitmodell schichtzeitmodell = em.find(Schichtzeitmodell.class,
-				iId);
+		Schichtzeitmodell schichtzeitmodell = em.find(Schichtzeitmodell.class, iId);
 		try {
-			Query query = em
-					.createNamedQuery("SchichtzeitmodellfindByPersonalIIdZeitmodellIId");
+			Query query = em.createNamedQuery("SchichtzeitmodellfindByPersonalIIdZeitmodellIId");
 			query.setParameter(1, schichtzeitmodellDto.getPersonalIId());
 			query.setParameter(2, schichtzeitmodellDto.getZeitmodellIId());
-			Integer iIdVorhanden = ((Schichtzeitmodell) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Schichtzeitmodell) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_SCHICHTZEITMODELL.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_SCHICHTZEITMODELL.UK"));
 			}
 		} catch (NoResultException ex) {
 			//
 		}
 
-		setSchichtzeitmodellFromSchichtzeitmodellDto(schichtzeitmodell,
-				schichtzeitmodellDto);
+		setSchichtzeitmodellFromSchichtzeitmodellDto(schichtzeitmodell, schichtzeitmodellDto);
 
 	}
 
-	public void updatePersonalzeitmodells(
-			PersonalzeitmodellDto[] personalzeitmodellDtos)
-			throws EJBExceptionLP {
+	public void updatePersonalzeitmodells(PersonalzeitmodellDto[] personalzeitmodellDtos) throws EJBExceptionLP {
 		if (personalzeitmodellDtos != null) {
 			for (int i = 0; i < personalzeitmodellDtos.length; i++) {
 				updatePersonalzeitmodell(personalzeitmodellDtos[i]);
@@ -4886,28 +4620,23 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public PersonalzeitmodellDto personalzeitmodellFindByPrimaryKey(
-			Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
+	public PersonalzeitmodellDto personalzeitmodellFindByPrimaryKey(Integer iId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
-		Personalzeitmodell personalzeitmodell = em.find(
-				Personalzeitmodell.class, iId);
+		Personalzeitmodell personalzeitmodell = em.find(Personalzeitmodell.class, iId);
 		if (personalzeitmodell == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		PersonalzeitmodellDto personalzeitmodellDto = assemblePersonalzeitmodellDto(personalzeitmodell);
 		try {
 			personalzeitmodellDto.setZeitmodellDto(getZeiterfassungFac()
-					.zeitmodellFindByPrimaryKey(
-							personalzeitmodellDto.getZeitmodellIId(),
-							theClientDto));
+					.zeitmodellFindByPrimaryKey(personalzeitmodellDto.getZeitmodellIId(), theClientDto));
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
@@ -4921,20 +4650,36 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public SchichtzeitmodellDto schichtzeitmodellFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) {
+	public PersonalfahrzeugDto personalfahrzeugFindByPrimaryKey(Integer iId, TheClientDto theClientDto) {
+		Personalfahrzeug bean = em.find(Personalfahrzeug.class, iId);
+		return PersonalfahrzeugDtoAssembler.createDto(bean);
+	}
+
+	public Integer istFahrzeugBereitsEinerAnderenPersonZugeordnet(Integer fahrzeugIId, Integer personalIId) {
+
+		Query query = em.createNamedQuery("PersonalfahrzeugFindByFahrzeugIId");
+		query.setParameter(1, fahrzeugIId);
+		Collection c = query.getResultList();
+		Iterator it = c.iterator();
+		while (it.hasNext()) {
+			Personalfahrzeug pf = (Personalfahrzeug) it.next();
+			if (!pf.getPersonalIId().equals(personalIId)) {
+				return pf.getPersonalIId();
+			}
+		}
+		return null;
+	}
+
+	public SchichtzeitmodellDto schichtzeitmodellFindByPrimaryKey(Integer iId, TheClientDto theClientDto) {
 
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
-		Schichtzeitmodell schichtzeitmodell = em.find(Schichtzeitmodell.class,
-				iId);
+		Schichtzeitmodell schichtzeitmodell = em.find(Schichtzeitmodell.class, iId);
 		if (schichtzeitmodell == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		SchichtzeitmodellDto personalzeitmodellDto = assembleSchichtzeitmodellDto(schichtzeitmodell);
@@ -4942,45 +4687,37 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return personalzeitmodellDto;
 	}
 
-	public PersonalzeitmodellDto personalzeitmodellFindByPersonalIIdTDatumOhneExc(
-			Integer personalIId, Timestamp tDatum) throws EJBExceptionLP {
+	public PersonalzeitmodellDto personalzeitmodellFindByPersonalIIdTDatumOhneExc(Integer personalIId, Timestamp tDatum)
+			throws EJBExceptionLP {
 		PersonalzeitmodellDto personalzeitmodellDto = null;
 		try {
-			personalzeitmodellDto = personalzeitmodellFindByPersonalIIdTDatum(
-					personalIId, tDatum);
+			personalzeitmodellDto = personalzeitmodellFindByPersonalIIdTDatum(personalIId, tDatum);
 		} catch (Throwable t) {
-			myLogger.warn(
-					"personalzeitmodellFindByPersonalIIdZeitmodellIIdTDatumOhneExc",
-					t);
+			myLogger.warn("personalzeitmodellFindByPersonalIIdZeitmodellIIdTDatumOhneExc", t);
 		}
 		return personalzeitmodellDto;
 	}
 
 	public int getAnzahlDerZeitmodelleEinerPerson(Integer personalIId) {
-		Query query = em
-				.createNamedQuery("PersonalzeitmodellAnzahlfindByPersonalIId");
+		Query query = em.createNamedQuery("PersonalzeitmodellAnzahlfindByPersonalIId");
 		query.setParameter(1, personalIId);
 
 		Long i = (Long) query.getSingleResult();
 		return i.intValue();
 	}
 
-	public PersonalzeitmodellDto personalzeitmodellFindByPersonalIIdTDatum(
-			Integer personalIId, Timestamp tDatum) throws EJBExceptionLP {
+	public PersonalzeitmodellDto personalzeitmodellFindByPersonalIIdTDatum(Integer personalIId, Timestamp tDatum)
+			throws EJBExceptionLP {
 		if (personalIId == null || tDatum == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"personalIId == null || zeitmodellIId  == null || tDatum == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("personalIId == null || zeitmodellIId  == null || tDatum == null"));
 		}
 
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
+		Query query = em.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, tDatum);
-		Personalzeitmodell personalzeitmodell = (Personalzeitmodell) query
-				.getSingleResult();
+		Personalzeitmodell personalzeitmodell = (Personalzeitmodell) query.getSingleResult();
 		if (personalzeitmodell == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "");
 		}
@@ -4994,19 +4731,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalzeitmodellDto personalzeitmodellFindZeitmodellZuDatum(
-			Integer personalIId, java.sql.Timestamp dDatum,
+	public PersonalzeitmodellDto personalzeitmodellFindZeitmodellZuDatum(Integer personalIId, java.sql.Timestamp dDatum,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (personalIId == null || dDatum == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("personalIId == null || dDatum == null"));
 		}
 
-		String sQuery = "select pzm.i_id FROM FLRPersonalzeitmodell pzm WHERE pzm.personal_i_id="
-				+ personalIId
-				+ " AND pzm.t_gueltigab<='"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(dDatum
-						.getTime())) + "' ORDER BY pzm.t_gueltigab DESC";
+		String sQuery = "select pzm.i_id FROM FLRPersonalzeitmodell pzm WHERE pzm.personal_i_id=" + personalIId
+				+ " AND pzm.t_gueltigab<='" + Helper.formatDateWithSlashes(new java.sql.Date(dDatum.getTime()))
+				+ "' ORDER BY pzm.t_gueltigab DESC";
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
@@ -5021,16 +4755,13 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		if (resultListIterator.hasNext()) {
 			Integer personalzeitmodellIId = (Integer) resultListIterator.next();
-			personalzeitmodellDto = personalzeitmodellFindByPrimaryKey(
-					personalzeitmodellIId, theClientDto);
+			personalzeitmodellDto = personalzeitmodellFindByPrimaryKey(personalzeitmodellIId, theClientDto);
 		}
 
 		if (personalzeitmodellDto != null) {
 			try {
 				personalzeitmodellDto.setZeitmodellDto(getZeiterfassungFac()
-						.zeitmodellFindByPrimaryKey(
-								personalzeitmodellDto.getZeitmodellIId(),
-								theClientDto));
+						.zeitmodellFindByPrimaryKey(personalzeitmodellDto.getZeitmodellIId(), theClientDto));
 			} catch (RemoteException ex) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 			}
@@ -5039,82 +4770,71 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	private void setPersonalzeitmodellFromPersonalzeitmodellDto(
-			Personalzeitmodell personalzeitmodell,
+	private void setPersonalzeitmodellFromPersonalzeitmodellDto(Personalzeitmodell personalzeitmodell,
 			PersonalzeitmodellDto personalzeitmodellDto) {
-		personalzeitmodell.setPersonalIId(personalzeitmodellDto
-				.getPersonalIId());
-		personalzeitmodell.setZeitmodellIId(personalzeitmodellDto
-				.getZeitmodellIId());
+		personalzeitmodell.setPersonalIId(personalzeitmodellDto.getPersonalIId());
+		personalzeitmodell.setZeitmodellIId(personalzeitmodellDto.getZeitmodellIId());
 		personalzeitmodell.setTGueltigab(personalzeitmodellDto.getTGueltigab());
 		em.merge(personalzeitmodell);
 		em.flush();
 	}
 
-	private void setSchichtzeitmodellFromSchichtzeitmodellDto(
-			Schichtzeitmodell schichtzeitmodell,
+	private void setPersonalfahrzeugFromPersonalfahrzeugDto(Personalfahrzeug personalfahrzeug,
+			PersonalfahrzeugDto personalfahrzeugDto) {
+		personalfahrzeug.setPersonalIId(personalfahrzeugDto.getPersonalIId());
+		personalfahrzeug.setFahrzeugIId(personalfahrzeugDto.getFahrzeugIId());
+		em.merge(personalfahrzeug);
+		em.flush();
+	}
+
+	private void setSchichtzeitmodellFromSchichtzeitmodellDto(Schichtzeitmodell schichtzeitmodell,
 			SchichtzeitmodellDto schichtzeitmodellDto) {
 		schichtzeitmodell.setPersonalIId(schichtzeitmodellDto.getPersonalIId());
-		schichtzeitmodell.setZeitmodellIId(schichtzeitmodellDto
-				.getZeitmodellIId());
+		schichtzeitmodell.setZeitmodellIId(schichtzeitmodellDto.getZeitmodellIId());
 		em.merge(schichtzeitmodell);
 		em.flush();
 	}
 
-	private PersonalzeitmodellDto assemblePersonalzeitmodellDto(
-			Personalzeitmodell personalzeitmodell) {
+	private PersonalzeitmodellDto assemblePersonalzeitmodellDto(Personalzeitmodell personalzeitmodell) {
 		return PersonalzeitmodellDtoAssembler.createDto(personalzeitmodell);
 	}
 
-	private SchichtzeitmodellDto assembleSchichtzeitmodellDto(
-			Schichtzeitmodell personalzeitmodell) {
+	private SchichtzeitmodellDto assembleSchichtzeitmodellDto(Schichtzeitmodell personalzeitmodell) {
 		return SchichtzeitmodellDtoAssembler.createDto(personalzeitmodell);
 	}
 
-	private PersonalzeitmodellDto[] assemblePersonalzeitmodellDtos(
-			Collection<?> personalzeitmodells) {
+	private PersonalzeitmodellDto[] assemblePersonalzeitmodellDtos(Collection<?> personalzeitmodells) {
 		List<PersonalzeitmodellDto> list = new ArrayList<PersonalzeitmodellDto>();
 		if (personalzeitmodells != null) {
 			Iterator<?> iterator = personalzeitmodells.iterator();
 			while (iterator.hasNext()) {
-				Personalzeitmodell personalzeitmodell = (Personalzeitmodell) iterator
-						.next();
+				Personalzeitmodell personalzeitmodell = (Personalzeitmodell) iterator.next();
 				list.add(assemblePersonalzeitmodellDto(personalzeitmodell));
 			}
 		}
-		PersonalzeitmodellDto[] returnArray = new PersonalzeitmodellDto[list
-				.size()];
+		PersonalzeitmodellDto[] returnArray = new PersonalzeitmodellDto[list.size()];
 		return (PersonalzeitmodellDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createBetriebskalender(
-			BetriebskalenderDto betriebskalenderDto, TheClientDto theClientDto)
+	public Integer createBetriebskalender(BetriebskalenderDto betriebskalenderDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		if (betriebskalenderDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("betriebskalenderDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("betriebskalenderDto == null"));
 		}
 
-		betriebskalenderDto.setTDatum(Helper.cutTimestamp(betriebskalenderDto
-				.getTDatum()));
+		betriebskalenderDto.setTDatum(Helper.cutTimestamp(betriebskalenderDto.getTDatum()));
 
-		if (betriebskalenderDto.getTDatum() == null
-				|| betriebskalenderDto.getTagesartIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"betriebskalenderDto.getDDatum() == null || betriebskalenderDto.getTagesartIId() == null"));
+		if (betriebskalenderDto.getTDatum() == null || betriebskalenderDto.getTagesartIId() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"betriebskalenderDto.getDDatum() == null || betriebskalenderDto.getTagesartIId() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("BetriebskalenderfindByMandantCNrTDatum");
+			Query query = em.createNamedQuery("BetriebskalenderfindByMandantCNrTDatum");
 			query.setParameter(1, theClientDto.getMandant());
 			query.setParameter(2, betriebskalenderDto.getTDatum());
-			Betriebskalender doppelt = (Betriebskalender) query
-					.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_BETRIEBSKALENDER.UK"));
+			Betriebskalender doppelt = (Betriebskalender) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_BETRIEBSKALENDER.UK"));
 		} catch (NoResultException ex) {
 
 		}
@@ -5125,22 +4845,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_BETRIEBSKALENDER);
 			betriebskalenderDto.setIId(pk);
 
-			betriebskalenderDto.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
-			betriebskalenderDto.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
+			betriebskalenderDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
+			betriebskalenderDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			betriebskalenderDto.setMandantCNr(theClientDto.getMandant());
 
-			Betriebskalender betriebskalender = new Betriebskalender(
-					betriebskalenderDto.getIId(),
-					betriebskalenderDto.getMandantCNr(),
-					betriebskalenderDto.getTDatum(),
-					betriebskalenderDto.getTagesartIId(),
-					betriebskalenderDto.getPersonalIIdAendern());
+			Betriebskalender betriebskalender = new Betriebskalender(betriebskalenderDto.getIId(),
+					betriebskalenderDto.getMandantCNr(), betriebskalenderDto.getTDatum(),
+					betriebskalenderDto.getTagesartIId(), betriebskalenderDto.getPersonalIIdAendern());
 			em.persist(betriebskalender);
 			em.flush();
-			setBetriebskalenderFromBetriebskalenderDto(betriebskalender,
-					betriebskalenderDto);
+			setBetriebskalenderFromBetriebskalenderDto(betriebskalender, betriebskalenderDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -5148,8 +4862,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return betriebskalenderDto.getIId();
 	}
 
-	public Integer createFeiertag(FeiertagDto feiertagDto,
-			TheClientDto theClientDto) {
+	public Integer createFeiertag(FeiertagDto feiertagDto, TheClientDto theClientDto) {
 
 		try {
 			Query query = em.createNamedQuery("FeiertagfindByMandantCNr");
@@ -5157,8 +4870,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 			Collection cl = query.getResultList();
 			/*
-			 * throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-			 * new Exception("PERS_BETRIEBSKALENDER.UK"));
+			 * throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new
+			 * Exception("PERS_BETRIEBSKALENDER.UK"));
 			 */
 		} catch (NoResultException ex) {
 
@@ -5172,8 +4885,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 			feiertagDto.setMandantCNr(theClientDto.getMandant());
 
-			Feiertag feiertag = new Feiertag(feiertagDto.getIId(),
-					feiertagDto.getMandantCNr(), feiertagDto.getCBez(),
+			Feiertag feiertag = new Feiertag(feiertagDto.getIId(), feiertagDto.getMandantCNr(), feiertagDto.getCBez(),
 					feiertagDto.getTagesartIId());
 			em.persist(feiertag);
 			em.flush();
@@ -5185,19 +4897,38 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return feiertagDto.getIId();
 	}
 
-	public Integer createZeitabschluss(ZeitabschlussDto dto,
-			TheClientDto theClientDto) {
+	public boolean darfPersonAmTerminalBuchen(Integer personalIId, Integer arbeitsplatzIId) {
+
+		Query query = em.createNamedQuery("PersonalterminalfindByPersonalIId");
+		query.setParameter(1, personalIId);
+		Collection c = query.getResultList();
+
+		if (c.size() == 0) {
+			return true;
+		} else {
+			try {
+				query = em.createNamedQuery("PersonalterminalfindByPersonalIIdArbeitsplatzIId");
+				query.setParameter(1, personalIId);
+				query.setParameter(2, arbeitsplatzIId);
+				// @todo getSingleResult oder getResultList ?
+				Personalterminal t = (Personalterminal) query.getSingleResult();
+				return true;
+			} catch (NoResultException ex1) {
+				return false;
+			}
+		}
+
+	}
+
+	public Integer createZeitabschluss(ZeitabschlussDto dto, TheClientDto theClientDto) {
 
 		try {
-			Query query = em
-					.createNamedQuery("ZeitabschlussfindByPersonalIIdTAbgeschlossenBis");
+			Query query = em.createNamedQuery("ZeitabschlussfindByPersonalIIdTAbgeschlossenBis");
 			query.setParameter(1, dto.getPersonalIId());
 			query.setParameter(2, dto.getTAbgeschlossenBis());
 
-			Zeitabschluss zeitabschluss = (Zeitabschluss) query
-					.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_ZEITABSCHLUSS.UK"));
+			Zeitabschluss zeitabschluss = (Zeitabschluss) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_ZEITABSCHLUSS.UK"));
 
 		} catch (NoResultException ex) {
 
@@ -5209,8 +4940,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ZEITABSCHLUSS);
 			dto.setIId(pk);
 
-			Zeitabschluss zeitabschluss = new Zeitabschluss(dto.getIId(),
-					dto.getPersonalIId(), dto.getTAbgeschlossenBis());
+			Zeitabschluss zeitabschluss = new Zeitabschluss(dto.getIId(), dto.getPersonalIId(),
+					dto.getTAbgeschlossenBis());
 			em.persist(zeitabschluss);
 			em.flush();
 			setZeitabschlussFromZeitabschlussDto(zeitabschluss, dto);
@@ -5218,29 +4949,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 
-		HvDtoLogger<ZeitabschlussDto> zeitdatenLogger = new HvDtoLogger<ZeitabschlussDto>(
-				em, dto.getPersonalIId(), theClientDto);
+		HvDtoLogger<ZeitabschlussDto> zeitdatenLogger = new HvDtoLogger<ZeitabschlussDto>(em, dto.getPersonalIId(),
+				theClientDto);
 		zeitdatenLogger.logInsert(dto);
 
 		return dto.getIId();
 	}
 
-	public void removeBetriebskalender(BetriebskalenderDto betriebskalenderDto)
-			throws EJBExceptionLP {
+	public void removeBetriebskalender(BetriebskalenderDto betriebskalenderDto) throws EJBExceptionLP {
 		if (betriebskalenderDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("betriebskalenderDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("betriebskalenderDto == null"));
 		}
 		if (betriebskalenderDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("betriebskalenderDto.getIId() == null"));
 		}
 		try {
-			Betriebskalender betriebskalender = em.find(Betriebskalender.class,
-					betriebskalenderDto.getIId());
+			Betriebskalender betriebskalender = em.find(Betriebskalender.class, betriebskalenderDto.getIId());
 			if (betriebskalender == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(betriebskalender);
 			em.flush();
@@ -5257,45 +4984,37 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void removeZeitabschluss(ZeitabschlussDto zeitabschlussDto,
-			TheClientDto theClientDto) {
-		Zeitabschluss zeitabschluss = em.find(Zeitabschluss.class,
-				zeitabschlussDto.getIId());
+	public void removeZeitabschluss(ZeitabschlussDto zeitabschlussDto, TheClientDto theClientDto) {
+		Zeitabschluss zeitabschluss = em.find(Zeitabschluss.class, zeitabschlussDto.getIId());
 		em.remove(zeitabschluss);
 		em.flush();
 
-		HvDtoLogger<ZeitabschlussDto> zeitdatenLogger = new HvDtoLogger<ZeitabschlussDto>(
-				em, zeitabschlussDto.getPersonalIId(), theClientDto);
+		HvDtoLogger<ZeitabschlussDto> zeitdatenLogger = new HvDtoLogger<ZeitabschlussDto>(em,
+				zeitabschlussDto.getPersonalIId(), theClientDto);
 		zeitdatenLogger.logDelete(zeitabschlussDto);
 
 	}
 
-	public void updateBetriebskalender(BetriebskalenderDto betriebskalenderDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateBetriebskalender(BetriebskalenderDto betriebskalenderDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (betriebskalenderDto != null) {
 			Integer iId = betriebskalenderDto.getIId();
 
-			betriebskalenderDto.setTDatum(Helper
-					.cutTimestamp(betriebskalenderDto.getTDatum()));
+			betriebskalenderDto.setTDatum(Helper.cutTimestamp(betriebskalenderDto.getTDatum()));
 
-			Betriebskalender betriebskalender = em.find(Betriebskalender.class,
-					iId);
+			Betriebskalender betriebskalender = em.find(Betriebskalender.class, iId);
 			if (betriebskalender == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
 			try {
-				Query query = em
-						.createNamedQuery("BetriebskalenderfindByMandantCNrTDatumReligionIId");
+				Query query = em.createNamedQuery("BetriebskalenderfindByMandantCNrTDatumReligionIId");
 				query.setParameter(1, theClientDto.getMandant());
 				query.setParameter(2, betriebskalenderDto.getTDatum());
 				query.setParameter(3, betriebskalenderDto.getReligionIId());
-				Integer iIdVorhanden = ((Betriebskalender) query
-						.getSingleResult()).getIId();
+				Integer iIdVorhanden = ((Betriebskalender) query.getSingleResult()).getIId();
 				if (iId.equals(iIdVorhanden) == false) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 							new Exception("PERS_BETRIEBSKALENDER.UK"));
 				}
 
@@ -5304,13 +5023,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			}
 
 			betriebskalenderDto.setMandantCNr(theClientDto.getMandant());
-			betriebskalenderDto.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
-			betriebskalenderDto.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
+			betriebskalenderDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
+			betriebskalenderDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 
-			setBetriebskalenderFromBetriebskalenderDto(betriebskalender,
-					betriebskalenderDto);
+			setBetriebskalenderFromBetriebskalenderDto(betriebskalender, betriebskalenderDto);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -5320,8 +5036,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void feiertageAusVorlageFuerJahrEintragen(Integer iJahr,
-			TheClientDto theClientDto) {
+	public void feiertageAusVorlageFuerJahrEintragen(Integer iJahr, TheClientDto theClientDto) {
 		Query query = em.createNamedQuery("FeiertagfindByMandantCNr");
 		query.setParameter(1, theClientDto.getMandant());
 
@@ -5350,8 +5065,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 				datum = Helper.cutTimestamp(new Timestamp(c.getTimeInMillis()));
 			}
 
-			Query queryUK = em
-					.createNamedQuery("BetriebskalenderfindByMandantCNrTDatum");
+			Query queryUK = em.createNamedQuery("BetriebskalenderfindByMandantCNrTDatum");
 			queryUK.setParameter(1, theClientDto.getMandant());
 			queryUK.setParameter(2, datum);
 			Collection cl2 = queryUK.getResultList();
@@ -5370,8 +5084,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void updateFeiertag(FeiertagDto feiertagDto,
-			TheClientDto theClientDto) {
+	public void updateFeiertag(FeiertagDto feiertagDto, TheClientDto theClientDto) {
 
 		Integer iId = feiertagDto.getIId();
 
@@ -5384,8 +5097,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Collection cl = query.getResultList();
 
 			/*
-			 * if (iId.equals(iIdVorhanden) == false) { throw new
-			 * EJBExceptionLP( EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new
+			 * if (iId.equals(iIdVorhanden) == false) { throw new EJBExceptionLP(
+			 * EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new
 			 * Exception("PERS_BETRIEBSKALENDER.UK")); }
 			 */
 
@@ -5399,26 +5112,21 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void updateZeitabschluss(ZeitabschlussDto zeitabschlussDto,
-			TheClientDto theClientDto) {
+	public void updateZeitabschluss(ZeitabschlussDto zeitabschlussDto, TheClientDto theClientDto) {
 
 		Integer iId = zeitabschlussDto.getIId();
 
 		Zeitabschluss zeitabschluss = em.find(Zeitabschluss.class, iId);
 
-		vergleicheZeitabschlussDtoVorherNachherUndLoggeAenderungen(
-				zeitabschlussDto, theClientDto);
+		vergleicheZeitabschlussDtoVorherNachherUndLoggeAenderungen(zeitabschlussDto, theClientDto);
 		try {
-			Query query = em
-					.createNamedQuery("ZeitabschlussfindByPersonalIIdTAbgeschlossenBis");
+			Query query = em.createNamedQuery("ZeitabschlussfindByPersonalIIdTAbgeschlossenBis");
 			query.setParameter(1, zeitabschlussDto.getPersonalIId());
 			query.setParameter(2, zeitabschlussDto.getTAbgeschlossenBis());
-			Integer iIdVorhanden = ((Zeitabschluss) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Zeitabschluss) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_ZEITABSCHLUSS.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_ZEITABSCHLUSS.UK"));
 			}
 
 		} catch (NoResultException ex) {
@@ -5429,30 +5137,26 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	private void vergleicheZeitabschlussDtoVorherNachherUndLoggeAenderungen(
-			ZeitabschlussDto dto, TheClientDto theClientDto) {
-		ZeitabschlussDto dto_vorher = zeitabschlussFindByPrimaryKey(
-				dto.getIId(), theClientDto);
+	private void vergleicheZeitabschlussDtoVorherNachherUndLoggeAenderungen(ZeitabschlussDto dto,
+			TheClientDto theClientDto) {
+		ZeitabschlussDto dto_vorher = zeitabschlussFindByPrimaryKey(dto.getIId(), theClientDto);
 
-		HvDtoLogger<ZeitabschlussDto> zeitdatenLogger = new HvDtoLogger<ZeitabschlussDto>(
-				em, dto_vorher.getPersonalIId(), theClientDto);
+		HvDtoLogger<ZeitabschlussDto> zeitdatenLogger = new HvDtoLogger<ZeitabschlussDto>(em,
+				dto_vorher.getPersonalIId(), theClientDto);
 		zeitdatenLogger.log(dto_vorher, dto);
 	}
 
-	public BetriebskalenderDto betriebskalenderFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public BetriebskalenderDto betriebskalenderFindByPrimaryKey(Integer iId, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		// try {
-		Betriebskalender betriebskalender = em
-				.find(Betriebskalender.class, iId);
+		Betriebskalender betriebskalender = em.find(Betriebskalender.class, iId);
 		if (betriebskalender == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		BetriebskalenderDto dto = assembleBetriebskalenderDto(betriebskalender);
 		if (dto.getReligionIId() != null) {
-			dto.setReligionDto(religionFindByPrimaryKey(dto.getReligionIId(),
-					theClientDto));
+			dto.setReligionDto(religionFindByPrimaryKey(dto.getReligionIId(), theClientDto));
 		}
 		return dto;
 		// }
@@ -5463,8 +5167,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public FeiertagDto feiertagFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) {
+	public FeiertagDto feiertagFindByPrimaryKey(Integer iId, TheClientDto theClientDto) {
 
 		Feiertag feiertag = em.find(Feiertag.class, iId);
 
@@ -5474,29 +5177,24 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public ZeitabschlussDto zeitabschlussFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) {
+	public ZeitabschlussDto zeitabschlussFindByPrimaryKey(Integer iId, TheClientDto theClientDto) {
 
 		Zeitabschluss zeitabschluss = em.find(Zeitabschluss.class, iId);
 
-		ZeitabschlussDto dto = ZeitabschlussDtoAssembler
-				.createDto(zeitabschluss);
+		ZeitabschlussDto dto = ZeitabschlussDtoAssembler.createDto(zeitabschluss);
 
 		return dto;
 
 	}
 
-	public BetriebskalenderDto betriebskalenderFindByMandantCNrDDatum(
-			java.sql.Timestamp dDatum, String mandantCNr,
+	public BetriebskalenderDto betriebskalenderFindByMandantCNrDDatum(java.sql.Timestamp dDatum, String mandantCNr,
 			TheClientDto theClientDto) {
 		try {
-			Query query = em
-					.createNamedQuery("BetriebskalenderfindByMandantCNrTDatum");
+			Query query = em.createNamedQuery("BetriebskalenderfindByMandantCNrTDatum");
 			query.setParameter(1, mandantCNr);
 			query.setParameter(2, dDatum);
 			// @todo getSingleResult oder getResultList ?
-			Betriebskalender betriebskalender = (Betriebskalender) query
-					.getSingleResult();
+			Betriebskalender betriebskalender = (Betriebskalender) query.getSingleResult();
 			BetriebskalenderDto dto = assembleBetriebskalenderDto(betriebskalender);
 			return dto;
 		} catch (NoResultException e) {
@@ -5504,14 +5202,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public BetriebskalenderDto[] betriebskalenderFindByMandantCNrTagesartCNr(
-			String tagesartCNr, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public BetriebskalenderDto[] betriebskalenderFindByMandantCNrTagesartCNr(String tagesartCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
-		Integer tagesartIId = getZeiterfassungFac().tagesartFindByCNr(
-				tagesartCNr, theClientDto).getIId();
-		Query query = em
-				.createNamedQuery("BetriebskalenderfindByMandantCNrTagesartCNr");
+		Integer tagesartIId = getZeiterfassungFac().tagesartFindByCNr(tagesartCNr, theClientDto).getIId();
+		Query query = em.createNamedQuery("BetriebskalenderfindByMandantCNrTagesartCNr");
 		query.setParameter(1, theClientDto.getMandant());
 		query.setParameter(2, tagesartIId);
 		Collection<?> cl = query.getResultList();
@@ -5521,12 +5216,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public BetriebskalenderDto betriebskalenderFindByMandantCNrDDatumReligionIId(
-			java.sql.Timestamp dDatum, String mandantCNr, Integer religionIId)
-			throws EJBExceptionLP {
+	public BetriebskalenderDto betriebskalenderFindByMandantCNrDDatumReligionIId(java.sql.Timestamp dDatum,
+			String mandantCNr, Integer religionIId) throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("BetriebskalenderfindByMandantCNrTDatumReligionIId");
+		Query query = em.createNamedQuery("BetriebskalenderfindByMandantCNrTDatumReligionIId");
 		query.setParameter(1, mandantCNr);
 		query.setParameter(2, dDatum);
 		query.setParameter(3, religionIId);
@@ -5548,23 +5241,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setBetriebskalenderFromBetriebskalenderDto(
-			Betriebskalender betriebskalender,
+	private void setBetriebskalenderFromBetriebskalenderDto(Betriebskalender betriebskalender,
 			BetriebskalenderDto betriebskalenderDto) {
 		betriebskalender.setMandantCNr(betriebskalenderDto.getMandantCNr());
 		betriebskalender.setCBez(betriebskalenderDto.getCBez());
 		betriebskalender.setTDatum(betriebskalenderDto.getTDatum());
 		betriebskalender.setReligionIId(betriebskalenderDto.getReligionIId());
 		betriebskalender.setTagesartIId(betriebskalenderDto.getTagesartIId());
-		betriebskalender.setPersonalIIdAendern(betriebskalenderDto
-				.getPersonalIIdAendern());
+		betriebskalender.setPersonalIIdAendern(betriebskalenderDto.getPersonalIIdAendern());
 		betriebskalender.setTAendern(betriebskalenderDto.getTAendern());
 		em.merge(betriebskalender);
 		em.flush();
 	}
 
-	private void setFeiertagFromFeiertagDto(Feiertag feiertag,
-			FeiertagDto feiertagDto) {
+	private void setFeiertagFromFeiertagDto(Feiertag feiertag, FeiertagDto feiertagDto) {
 		feiertag.setMandantCNr(feiertagDto.getMandantCNr());
 		feiertag.setCBez(feiertagDto.getCBez());
 		feiertag.setiTag(feiertagDto.getiTag());
@@ -5577,29 +5267,24 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		em.flush();
 	}
 
-	private void setZeitabschlussFromZeitabschlussDto(
-			Zeitabschluss zeitabschluss, ZeitabschlussDto zeitabschlussDto) {
+	private void setZeitabschlussFromZeitabschlussDto(Zeitabschluss zeitabschluss, ZeitabschlussDto zeitabschlussDto) {
 		zeitabschluss.setPersonalIId(zeitabschlussDto.getPersonalIId());
-		zeitabschluss.setTAbgeschlossenBis(zeitabschlussDto
-				.getTAbgeschlossenBis());
+		zeitabschluss.setTAbgeschlossenBis(zeitabschlussDto.getTAbgeschlossenBis());
 
 		em.merge(zeitabschluss);
 		em.flush();
 	}
 
-	private BetriebskalenderDto assembleBetriebskalenderDto(
-			Betriebskalender betriebskalender) {
+	private BetriebskalenderDto assembleBetriebskalenderDto(Betriebskalender betriebskalender) {
 		return BetriebskalenderDtoAssembler.createDto(betriebskalender);
 	}
 
-	private BetriebskalenderDto[] assembleBetriebskalenderDtos(
-			Collection<?> betriebskalenders) {
+	private BetriebskalenderDto[] assembleBetriebskalenderDtos(Collection<?> betriebskalenders) {
 		List<BetriebskalenderDto> list = new ArrayList<BetriebskalenderDto>();
 		if (betriebskalenders != null) {
 			Iterator<?> iterator = betriebskalenders.iterator();
 			while (iterator.hasNext()) {
-				Betriebskalender betriebskalender = (Betriebskalender) iterator
-						.next();
+				Betriebskalender betriebskalender = (Betriebskalender) iterator.next();
 				list.add(assembleBetriebskalenderDto(betriebskalender));
 			}
 		}
@@ -5607,38 +5292,28 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (BetriebskalenderDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createUrlaubsanspruch(UrlaubsanspruchDto urlaubsanspruchDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createUrlaubsanspruch(UrlaubsanspruchDto urlaubsanspruchDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (urlaubsanspruchDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("urlaubsanspruchDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("urlaubsanspruchDto == null"));
 		}
-		if (urlaubsanspruchDto.getIJahr() == null
-				|| urlaubsanspruchDto.getFTage() == null
-				|| urlaubsanspruchDto.getFStunden() == null
-				|| urlaubsanspruchDto.getPersonalIId() == null
+		if (urlaubsanspruchDto.getIJahr() == null || urlaubsanspruchDto.getFTage() == null
+				|| urlaubsanspruchDto.getFStunden() == null || urlaubsanspruchDto.getPersonalIId() == null
 				|| urlaubsanspruchDto.getBGesperrt() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"urlaubsanspruchDto.getIJahr() == null || urlaubsanspruchDto.getFTage() == null || urlaubsanspruchDto.getFStunden() == null || urlaubsanspruchDto.getPersonalIId() == null || urlaubsanspruchDto.getBGesperrt() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"urlaubsanspruchDto.getIJahr() == null || urlaubsanspruchDto.getFTage() == null || urlaubsanspruchDto.getFStunden() == null || urlaubsanspruchDto.getPersonalIId() == null || urlaubsanspruchDto.getBGesperrt() == null"));
 		}
-		if (urlaubsanspruchDto.getFTagezusaetzlich() == null
-				|| urlaubsanspruchDto.getFStundenzusaetzlich() == null
+		if (urlaubsanspruchDto.getFTagezusaetzlich() == null || urlaubsanspruchDto.getFStundenzusaetzlich() == null
 				|| urlaubsanspruchDto.getFJahresurlaubinwochen() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"urlaubsanspruchDto.getFTagezusaetzlich() == null || urlaubsanspruchDto.getFStundenzusaetzlich() == null || urlaubsanspruchDto.getFJahresurlaubinwochen() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"urlaubsanspruchDto.getFTagezusaetzlich() == null || urlaubsanspruchDto.getFStundenzusaetzlich() == null || urlaubsanspruchDto.getFJahresurlaubinwochen() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahr");
+			Query query = em.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahr");
 			query.setParameter(1, urlaubsanspruchDto.getPersonalIId());
 			query.setParameter(2, urlaubsanspruchDto.getIJahr());
 			Urlaubsanspruch doppelt = (Urlaubsanspruch) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_URLAUBSANSPRUCH.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_URLAUBSANSPRUCH.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -5648,50 +5323,35 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_URLAUBSANSPRUCH);
 			urlaubsanspruchDto.setIId(pk);
-			urlaubsanspruchDto.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
-			urlaubsanspruchDto.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
+			urlaubsanspruchDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			urlaubsanspruchDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 
-			Urlaubsanspruch urlaubsanspruch = new Urlaubsanspruch(
-					urlaubsanspruchDto.getIId(),
-					urlaubsanspruchDto.getPersonalIId(),
-					urlaubsanspruchDto.getIJahr(),
-					urlaubsanspruchDto.getFTage(),
-					urlaubsanspruchDto.getFStunden(),
-					urlaubsanspruchDto.getPersonaIIdAendern(),
-					urlaubsanspruchDto.getFStundenzusaetzlich(),
-					urlaubsanspruchDto.getFTagezusaetzlich(),
-					urlaubsanspruchDto.getBGesperrt(),
-					urlaubsanspruchDto.getFJahresurlaubinwochen());
+			Urlaubsanspruch urlaubsanspruch = new Urlaubsanspruch(urlaubsanspruchDto.getIId(),
+					urlaubsanspruchDto.getPersonalIId(), urlaubsanspruchDto.getIJahr(), urlaubsanspruchDto.getFTage(),
+					urlaubsanspruchDto.getFStunden(), urlaubsanspruchDto.getPersonaIIdAendern(),
+					urlaubsanspruchDto.getFStundenzusaetzlich(), urlaubsanspruchDto.getFTagezusaetzlich(),
+					urlaubsanspruchDto.getBGesperrt(), urlaubsanspruchDto.getFJahresurlaubinwochen());
 			em.persist(urlaubsanspruch);
 			em.flush();
-			setUrlaubsanspruchFromUrlaubsanspruchDto(urlaubsanspruch,
-					urlaubsanspruchDto);
+			setUrlaubsanspruchFromUrlaubsanspruchDto(urlaubsanspruch, urlaubsanspruchDto);
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 		return urlaubsanspruchDto.getIId();
 	}
 
-	public void removeUrlaubsanspruch(UrlaubsanspruchDto urlaubsanspruchDto)
-			throws EJBExceptionLP {
+	public void removeUrlaubsanspruch(UrlaubsanspruchDto urlaubsanspruchDto) throws EJBExceptionLP {
 		if (urlaubsanspruchDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("urlaubsanspruchDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("urlaubsanspruchDto == null"));
 		}
 		if (urlaubsanspruchDto.getIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("urlaubsanspruchDto.getIId() == nulll"));
 		}
 		try {
-			Urlaubsanspruch urlaubsanspruch = em.find(Urlaubsanspruch.class,
-					urlaubsanspruchDto.getIId());
+			Urlaubsanspruch urlaubsanspruch = em.find(Urlaubsanspruch.class, urlaubsanspruchDto.getIId());
 			if (urlaubsanspruch == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(urlaubsanspruch);
 			em.flush();
@@ -5700,51 +5360,38 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateUrlaubsanspruch(UrlaubsanspruchDto urlaubsanspruchDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateUrlaubsanspruch(UrlaubsanspruchDto urlaubsanspruchDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (urlaubsanspruchDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("urlaubsanspruchDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("urlaubsanspruchDto == null"));
 		}
-		if (urlaubsanspruchDto.getIId() == null
-				|| urlaubsanspruchDto.getIJahr() == null
-				|| urlaubsanspruchDto.getFTage() == null
-				|| urlaubsanspruchDto.getFStunden() == null
-				|| urlaubsanspruchDto.getPersonalIId() == null
-				|| urlaubsanspruchDto.getBGesperrt() == null
+		if (urlaubsanspruchDto.getIId() == null || urlaubsanspruchDto.getIJahr() == null
+				|| urlaubsanspruchDto.getFTage() == null || urlaubsanspruchDto.getFStunden() == null
+				|| urlaubsanspruchDto.getPersonalIId() == null || urlaubsanspruchDto.getBGesperrt() == null
 				|| urlaubsanspruchDto.getFJahresurlaubinwochen() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"urlaubsanspruchDto.getIId() == null || urlaubsanspruchDto.getIJahr() == null || urlaubsanspruchDto.getFTage() == null || urlaubsanspruchDto.getFStunden() == null || urlaubsanspruchDto.getPersonalIId() == null || urlaubsanspruchDto.getBGesperrt() == null || urlaubsanspruchDto.getFJahresurlaubinwochen() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"urlaubsanspruchDto.getIId() == null || urlaubsanspruchDto.getIJahr() == null || urlaubsanspruchDto.getFTage() == null || urlaubsanspruchDto.getFStunden() == null || urlaubsanspruchDto.getPersonalIId() == null || urlaubsanspruchDto.getBGesperrt() == null || urlaubsanspruchDto.getFJahresurlaubinwochen() == null"));
 		}
-		if (urlaubsanspruchDto.getFTagezusaetzlich() == null
-				|| urlaubsanspruchDto.getFStundenzusaetzlich() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"urlaubsanspruchDto.getFTagezusaetzlich() == null || urlaubsanspruchDto.getFStundenzusaetzlich() == null"));
+		if (urlaubsanspruchDto.getFTagezusaetzlich() == null || urlaubsanspruchDto.getFStundenzusaetzlich() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"urlaubsanspruchDto.getFTagezusaetzlich() == null || urlaubsanspruchDto.getFStundenzusaetzlich() == null"));
 		}
 
 		Integer iId = urlaubsanspruchDto.getIId();
 		// try {
 		Urlaubsanspruch urlaubsanspruch = em.find(Urlaubsanspruch.class, iId);
 		if (urlaubsanspruch == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
-			Query query = em
-					.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahr");
+			Query query = em.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahr");
 			query.setParameter(1, urlaubsanspruchDto.getPersonalIId());
 			query.setParameter(2, urlaubsanspruchDto.getIJahr());
-			Integer iIdVorhanden = ((Urlaubsanspruch) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Urlaubsanspruch) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_URLAUBSANSPRUCH.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_URLAUBSANSPRUCH.UK"));
 			}
 
 		} catch (NoResultException ex) {
@@ -5752,25 +5399,19 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		urlaubsanspruchDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		urlaubsanspruchDto.setTAendern(new java.sql.Timestamp(System
-				.currentTimeMillis()));
-		setUrlaubsanspruchFromUrlaubsanspruchDto(urlaubsanspruch,
-				urlaubsanspruchDto);
+		urlaubsanspruchDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
+		setUrlaubsanspruchFromUrlaubsanspruchDto(urlaubsanspruch, urlaubsanspruchDto);
 
 	}
 
-	public UrlaubsanspruchDto urlaubsanspruchFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public UrlaubsanspruchDto urlaubsanspruchFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
-		Urlaubsanspruch urlaubsanspruch = (Urlaubsanspruch) em.find(
-				Urlaubsanspruch.class, iId);
+		Urlaubsanspruch urlaubsanspruch = (Urlaubsanspruch) em.find(Urlaubsanspruch.class, iId);
 		if (urlaubsanspruch == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleUrlaubsanspruchDto(urlaubsanspruch);
 		// }
@@ -5781,15 +5422,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public UrlaubsanspruchDto[] urlaubsanspruchFindLetztenUrlaubsanspruch(
-			Integer personalIId, Integer iJahr) throws EJBExceptionLP {
+	public UrlaubsanspruchDto[] urlaubsanspruchFindLetztenUrlaubsanspruch(Integer personalIId, Integer iJahr)
+			throws EJBExceptionLP {
 		if (personalIId == null || iJahr == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("personalIId == null || iJahr == null"));
 		}
 		// try {
-		Query query = em
-				.createNamedQuery("UrlaubsanspruchfindLetztenUrlaubsanspruch");
+		Query query = em.createNamedQuery("UrlaubsanspruchfindLetztenUrlaubsanspruch");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, iJahr);
 		Collection<?> cl = query.getResultList();
@@ -5807,26 +5447,23 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public UrlaubsanspruchDto urlaubsanspruchFindByPersonalIIdIJahr(
-			Integer personalIId, Integer iJahr) throws EJBExceptionLP {
+	public UrlaubsanspruchDto urlaubsanspruchFindByPersonalIIdIJahr(Integer personalIId, Integer iJahr)
+			throws EJBExceptionLP {
 		try {
-			Query query = em
-					.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahr");
+			Query query = em.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahr");
 			query.setParameter(1, personalIId);
 			query.setParameter(2, iJahr);
-			Urlaubsanspruch urlaubsanspruch = (Urlaubsanspruch) query
-					.getSingleResult();
+			Urlaubsanspruch urlaubsanspruch = (Urlaubsanspruch) query.getSingleResult();
 			return assembleUrlaubsanspruchDto(urlaubsanspruch);
 		} catch (NoResultException e) {
 			return null;
 		}
 	}
 
-	public UrlaubsanspruchDto[] urlaubsanspruchFindByPersonalIIdIJahrGroesser(
-			Integer personalIId, Integer iJahr) throws EJBExceptionLP {
+	public UrlaubsanspruchDto[] urlaubsanspruchFindByPersonalIIdIJahrGroesser(Integer personalIId, Integer iJahr)
+			throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahrGroesser");
+		Query query = em.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahrGroesser");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, iJahr);
 		Collection<?> cl = query.getResultList();
@@ -5840,11 +5477,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public UrlaubsanspruchDto[] urlaubsanspruchFindByPersonalIIdIJahrKleiner(
-			Integer personalIId, Integer iJahr) throws EJBExceptionLP {
+	public UrlaubsanspruchDto[] urlaubsanspruchFindByPersonalIIdIJahrKleiner(Integer personalIId, Integer iJahr)
+			throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahrKleiner");
+		Query query = em.createNamedQuery("UrlaubsanspruchfindByPersonalIIdIJahrKleiner");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, iJahr);
 		Collection<?> cl = query.getResultList();
@@ -5858,44 +5494,34 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setUrlaubsanspruchFromUrlaubsanspruchDto(
-			Urlaubsanspruch urlaubsanspruch,
+	private void setUrlaubsanspruchFromUrlaubsanspruchDto(Urlaubsanspruch urlaubsanspruch,
 			UrlaubsanspruchDto urlaubsanspruchDto) {
 		urlaubsanspruch.setPersonalIId(urlaubsanspruchDto.getPersonalIId());
 		urlaubsanspruch.setIJahr(urlaubsanspruchDto.getIJahr());
 		urlaubsanspruch.setFTage(urlaubsanspruchDto.getFTage());
 		urlaubsanspruch.setFStunden(urlaubsanspruchDto.getFStunden());
-		urlaubsanspruch.setFTagezusaetzlich(urlaubsanspruchDto
-				.getFTagezusaetzlich());
-		urlaubsanspruch.setFStundenzusaetzlich(urlaubsanspruchDto
-				.getFStundenzusaetzlich());
-		urlaubsanspruch.setPersonalIIdAendern(urlaubsanspruchDto
-				.getPersonaIIdAendern());
+		urlaubsanspruch.setFTagezusaetzlich(urlaubsanspruchDto.getFTagezusaetzlich());
+		urlaubsanspruch.setFStundenzusaetzlich(urlaubsanspruchDto.getFStundenzusaetzlich());
+		urlaubsanspruch.setPersonalIIdAendern(urlaubsanspruchDto.getPersonaIIdAendern());
 		urlaubsanspruch.setTAendern(urlaubsanspruchDto.getTAendern());
-		urlaubsanspruch.setFResturlaubjahresendestunden(urlaubsanspruchDto
-				.getFResturlaubjahresendestunden());
-		urlaubsanspruch.setFResturlaubjahresendetage(urlaubsanspruchDto
-				.getFResturlaubjahresendetage());
+		urlaubsanspruch.setFResturlaubjahresendestunden(urlaubsanspruchDto.getFResturlaubjahresendestunden());
+		urlaubsanspruch.setFResturlaubjahresendetage(urlaubsanspruchDto.getFResturlaubjahresendetage());
 		urlaubsanspruch.setBGesperrt(urlaubsanspruchDto.getBGesperrt());
-		urlaubsanspruch.setFJahresurlaubinwochen(urlaubsanspruchDto
-				.getFJahresurlaubinwochen());
+		urlaubsanspruch.setFJahresurlaubinwochen(urlaubsanspruchDto.getFJahresurlaubinwochen());
 		em.merge(urlaubsanspruch);
 		em.flush();
 	}
 
-	private UrlaubsanspruchDto assembleUrlaubsanspruchDto(
-			Urlaubsanspruch urlaubsanspruch) {
+	private UrlaubsanspruchDto assembleUrlaubsanspruchDto(Urlaubsanspruch urlaubsanspruch) {
 		return UrlaubsanspruchDtoAssembler.createDto(urlaubsanspruch);
 	}
 
-	private UrlaubsanspruchDto[] assembleUrlaubsanspruchDtos(
-			Collection<?> urlaubsanspruchs) {
+	private UrlaubsanspruchDto[] assembleUrlaubsanspruchDtos(Collection<?> urlaubsanspruchs) {
 		List<UrlaubsanspruchDto> list = new ArrayList<UrlaubsanspruchDto>();
 		if (urlaubsanspruchs != null) {
 			Iterator<?> iterator = urlaubsanspruchs.iterator();
 			while (iterator.hasNext()) {
-				Urlaubsanspruch urlaubsanspruch = (Urlaubsanspruch) iterator
-						.next();
+				Urlaubsanspruch urlaubsanspruch = (Urlaubsanspruch) iterator.next();
 				list.add(assembleUrlaubsanspruchDto(urlaubsanspruch));
 			}
 		}
@@ -5903,32 +5529,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (UrlaubsanspruchDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createGleitzeitsaldo(GleitzeitsaldoDto gleitzeitsaldoDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createGleitzeitsaldo(GleitzeitsaldoDto gleitzeitsaldoDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (gleitzeitsaldoDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("gleitzeitsaldoDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("gleitzeitsaldoDto == null"));
 		}
-		if (gleitzeitsaldoDto.getIJahr() == null
-				|| gleitzeitsaldoDto.getIMonat() == null
-				|| gleitzeitsaldoDto.getPersonalIId() == null
-				|| gleitzeitsaldoDto.getNSaldo() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"gleitzeitsaldoDto.getIJahr() == null || gleitzeitsaldoDto.getIMonat() == null || gleitzeitsaldoDto.getPersonalIId() == null || gleitzeitsaldoDto.getNSaldo() == null"));
+		if (gleitzeitsaldoDto.getIJahr() == null || gleitzeitsaldoDto.getIMonat() == null
+				|| gleitzeitsaldoDto.getPersonalIId() == null || gleitzeitsaldoDto.getNSaldo() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"gleitzeitsaldoDto.getIJahr() == null || gleitzeitsaldoDto.getIMonat() == null || gleitzeitsaldoDto.getPersonalIId() == null || gleitzeitsaldoDto.getNSaldo() == null"));
 		}
 		// try {
-		Query query = em
-				.createNamedQuery("GleitzeitsaldofindByPersonalIIdIJahrIMonat");
+		Query query = em.createNamedQuery("GleitzeitsaldofindByPersonalIIdIJahrIMonat");
 		query.setParameter(1, gleitzeitsaldoDto.getPersonalIId());
 		query.setParameter(2, gleitzeitsaldoDto.getIJahr());
 		query.setParameter(3, gleitzeitsaldoDto.getIMonat());
 		try {
 			Gleitzeitsaldo doppelt = (Gleitzeitsaldo) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_GLEITZEITSALDO.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_GLEITZEITSALDO.UK"));
 		} catch (NoResultException e) {
 			// nix
 		}
@@ -5939,18 +5558,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_GLEITZEITSALDO);
 			gleitzeitsaldoDto.setIId(pk);
 
-			gleitzeitsaldoDto.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
-			gleitzeitsaldoDto.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
+			gleitzeitsaldoDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			gleitzeitsaldoDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 
-			Gleitzeitsaldo gleitzeitsaldo = new Gleitzeitsaldo(
-					gleitzeitsaldoDto.getIId(),
-					gleitzeitsaldoDto.getPersonalIId(),
-					gleitzeitsaldoDto.getIJahr(),
-					gleitzeitsaldoDto.getIMonat(),
-					gleitzeitsaldoDto.getPersonalIIdAendern(),
-					gleitzeitsaldoDto.getNSaldo());
+			Gleitzeitsaldo gleitzeitsaldo = new Gleitzeitsaldo(gleitzeitsaldoDto.getIId(),
+					gleitzeitsaldoDto.getPersonalIId(), gleitzeitsaldoDto.getIJahr(), gleitzeitsaldoDto.getIMonat(),
+					gleitzeitsaldoDto.getPersonalIIdAendern(), gleitzeitsaldoDto.getNSaldo());
 			em.persist(gleitzeitsaldo);
 			em.flush();
 
@@ -5958,31 +5571,28 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 				gleitzeitsaldoDto.setBGesperrt(gleitzeitsaldo.getBGesperrt());
 			}
 			if (gleitzeitsaldoDto.getNSaldomehrstunden() == null) {
-				gleitzeitsaldoDto.setNSaldomehrstunden(gleitzeitsaldo
-						.getNSaldomehrstunden());
+				gleitzeitsaldoDto.setNSaldomehrstunden(gleitzeitsaldo.getNSaldomehrstunden());
 			}
 			if (gleitzeitsaldoDto.getNSaldouestfrei100() == null) {
-				gleitzeitsaldoDto.setNSaldouestfrei100(gleitzeitsaldo
-						.getNSaldouestfrei100());
+				gleitzeitsaldoDto.setNSaldouestfrei100(gleitzeitsaldo.getNSaldouestfrei100());
 			}
 			if (gleitzeitsaldoDto.getNSaldouestfrei50() == null) {
-				gleitzeitsaldoDto.setNSaldouestfrei50(gleitzeitsaldo
-						.getNSaldouestfrei50());
+				gleitzeitsaldoDto.setNSaldouestfrei50(gleitzeitsaldo.getNSaldouestfrei50());
 			}
 			if (gleitzeitsaldoDto.getNSaldouestpflichtig100() == null) {
-				gleitzeitsaldoDto.setNSaldouestpflichtig100(gleitzeitsaldo
-						.getNSaldouestpflichtig100());
+				gleitzeitsaldoDto.setNSaldouestpflichtig100(gleitzeitsaldo.getNSaldouestpflichtig100());
 			}
 			if (gleitzeitsaldoDto.getNSaldouestpflichtig50() == null) {
-				gleitzeitsaldoDto.setNSaldouestpflichtig50(gleitzeitsaldo
-						.getNSaldouestpflichtig50());
+				gleitzeitsaldoDto.setNSaldouestpflichtig50(gleitzeitsaldo.getNSaldouestpflichtig50());
 			}
 			if (gleitzeitsaldoDto.getNSaldouest200() == null) {
-				gleitzeitsaldoDto.setNSaldouest200(gleitzeitsaldo
-						.getNSaldouest200());
+				gleitzeitsaldoDto.setNSaldouest200(gleitzeitsaldo.getNSaldouest200());
 			}
-			setGleitzeitsaldoFromGleitzeitsaldoDto(gleitzeitsaldo,
-					gleitzeitsaldoDto);
+			if (gleitzeitsaldoDto.getNGzSaldoMitUestdInNormalstunden() == null) {
+				gleitzeitsaldoDto
+						.setNGzSaldoMitUestdInNormalstunden(gleitzeitsaldo.getNGzSaldoMitUestdInNormalstunden());
+			}
+			setGleitzeitsaldoFromGleitzeitsaldoDto(gleitzeitsaldo, gleitzeitsaldoDto);
 
 			return gleitzeitsaldoDto.getIId();
 		} catch (EntityExistsException ex) {
@@ -5991,23 +5601,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void removeGleitzeitsaldo(GleitzeitsaldoDto gleitzeitsaldoDto)
-			throws EJBExceptionLP {
+	public void removeGleitzeitsaldo(GleitzeitsaldoDto gleitzeitsaldoDto) throws EJBExceptionLP {
 		if (gleitzeitsaldoDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("gleitzeitsaldoDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("gleitzeitsaldoDto == null"));
 		}
 		if (gleitzeitsaldoDto.getIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("gleitzeitsaldoDto.getIId() == nulll"));
 		}
 		try {
-			Gleitzeitsaldo gleitzeitsaldo = em.find(Gleitzeitsaldo.class,
-					gleitzeitsaldoDto.getIId());
+			Gleitzeitsaldo gleitzeitsaldo = em.find(Gleitzeitsaldo.class, gleitzeitsaldoDto.getIId());
 			if (gleitzeitsaldo == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(gleitzeitsaldo);
 			em.flush();
@@ -6016,56 +5621,42 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateGleitzeitsaldo(GleitzeitsaldoDto gleitzeitsaldoDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateGleitzeitsaldo(GleitzeitsaldoDto gleitzeitsaldoDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (gleitzeitsaldoDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("gleitzeitsaldoDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("gleitzeitsaldoDto == null"));
 		}
-		if (gleitzeitsaldoDto.getIId() == null
-				|| gleitzeitsaldoDto.getIJahr() == null
-				|| gleitzeitsaldoDto.getIMonat() == null
-				|| gleitzeitsaldoDto.getPersonalIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"gleitzeitsaldoDto.getIId() == null || gleitzeitsaldoDto.getIJahr() == null || gleitzeitsaldoDto.getIMonat() == null || gleitzeitsaldoDto.getPersonalIId() == null"));
+		if (gleitzeitsaldoDto.getIId() == null || gleitzeitsaldoDto.getIJahr() == null
+				|| gleitzeitsaldoDto.getIMonat() == null || gleitzeitsaldoDto.getPersonalIId() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"gleitzeitsaldoDto.getIId() == null || gleitzeitsaldoDto.getIJahr() == null || gleitzeitsaldoDto.getIMonat() == null || gleitzeitsaldoDto.getPersonalIId() == null"));
 		}
-		if (gleitzeitsaldoDto.getNSaldomehrstunden() == null
-				||
-				// gleitzeitsaldoDto.getNSaldouestdpauschale() == null ||
-				gleitzeitsaldoDto.getNSaldouestfrei100() == null
-				|| gleitzeitsaldoDto.getNSaldouestfrei50() == null
+		if (gleitzeitsaldoDto.getNSaldomehrstunden() == null ||
+		// gleitzeitsaldoDto.getNSaldouestdpauschale() == null ||
+				gleitzeitsaldoDto.getNSaldouestfrei100() == null || gleitzeitsaldoDto.getNSaldouestfrei50() == null
 				|| gleitzeitsaldoDto.getNSaldouestpflichtig100() == null
-				|| gleitzeitsaldoDto.getNSaldouestpflichtig50() == null
-				|| gleitzeitsaldoDto.getNSaldo() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"gleitzeitsaldoDto.getNSaldomehrst() == null || gleitzeitsaldoDto.getNSaldouestdpauschale() == null || gleitzeitsaldoDto.getNSaldouestfrei100() == null || gleitzeitsaldoDto.getNSaldouestfrei50() == null || gleitzeitsaldoDto.getNSaldouestpflichtig100() == null || gleitzeitsaldoDto.getNSaldouestpflichtig50() == null"));
+				|| gleitzeitsaldoDto.getNSaldouestpflichtig50() == null || gleitzeitsaldoDto.getNSaldo() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"gleitzeitsaldoDto.getNSaldomehrst() == null || gleitzeitsaldoDto.getNSaldouestdpauschale() == null || gleitzeitsaldoDto.getNSaldouestfrei100() == null || gleitzeitsaldoDto.getNSaldouestfrei50() == null || gleitzeitsaldoDto.getNSaldouestpflichtig100() == null || gleitzeitsaldoDto.getNSaldouestpflichtig50() == null"));
 		}
 
 		Integer iId = gleitzeitsaldoDto.getIId();
 		// try {
 		Gleitzeitsaldo gleitzeitsaldo = em.find(Gleitzeitsaldo.class, iId);
 		if (gleitzeitsaldo == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("GleitzeitsaldofindByPersonalIIdIJahrIMonat");
+			Query query = em.createNamedQuery("GleitzeitsaldofindByPersonalIIdIJahrIMonat");
 			query.setParameter(1, gleitzeitsaldoDto.getPersonalIId());
 			query.setParameter(2, gleitzeitsaldoDto.getIJahr());
 			query.setParameter(3, gleitzeitsaldoDto.getIMonat());
-			Integer iIdVorhanden = ((Gleitzeitsaldo) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Gleitzeitsaldo) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_GLEITZEITSALDO.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_GLEITZEITSALDO.UK"));
 			}
 
 		} catch (NoResultException ex) {
@@ -6073,11 +5664,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		gleitzeitsaldoDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		gleitzeitsaldoDto.setTAendern(new java.sql.Timestamp(System
-				.currentTimeMillis()));
+		gleitzeitsaldoDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 
-		setGleitzeitsaldoFromGleitzeitsaldoDto(gleitzeitsaldo,
-				gleitzeitsaldoDto);
+		setGleitzeitsaldoFromGleitzeitsaldoDto(gleitzeitsaldo, gleitzeitsaldoDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -6087,13 +5676,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public GleitzeitsaldoDto gleitzeitsaldoFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public GleitzeitsaldoDto gleitzeitsaldoFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		// try {
 		Gleitzeitsaldo gleitzeitsaldo = em.find(Gleitzeitsaldo.class, iId);
 		if (gleitzeitsaldo == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 		}
 		return assembleGleitzeitsaldoDto(gleitzeitsaldo);
@@ -6106,17 +5693,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public GleitzeitsaldoDto gleitzeitsaldoFindByPersonalIIdIJahrIMonat(
-			Integer personalIId, Integer iJahr, Integer iMonat)
-			throws EJBExceptionLP {
+	public GleitzeitsaldoDto gleitzeitsaldoFindByPersonalIIdIJahrIMonat(Integer personalIId, Integer iJahr,
+			Integer iMonat) throws EJBExceptionLP {
 		try {
-			Query query = em
-					.createNamedQuery("GleitzeitsaldofindByPersonalIIdIJahrIMonat");
+			Query query = em.createNamedQuery("GleitzeitsaldofindByPersonalIIdIJahrIMonat");
 			query.setParameter(1, personalIId);
 			query.setParameter(2, iJahr);
 			query.setParameter(3, iMonat);
-			Gleitzeitsaldo gleitzeitsaldo = (Gleitzeitsaldo) query
-					.getSingleResult();
+			Gleitzeitsaldo gleitzeitsaldo = (Gleitzeitsaldo) query.getSingleResult();
 			// if (gleitzeitsaldo==null) {
 			// throw new EJBExceptionLP(EJBExceptionLP.
 			// FEHLER_BEI_FIND,
@@ -6124,18 +5708,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			// }
 			return assembleGleitzeitsaldoDto(gleitzeitsaldo);
 		} catch (NoResultException e) {
-			throw new EJBExceptionLPwoRollback(EJBExceptionLP.FEHLER_BEI_FIND,
-					e);
+			throw new EJBExceptionLPwoRollback(EJBExceptionLP.FEHLER_BEI_FIND, e);
 
 		}
 	}
 
-	public GleitzeitsaldoDto gleitzeitsaldoFindLetztenGleitzeitsaldo(
-			Integer personalIId, Integer iJahr, Integer iMonat)
+	public GleitzeitsaldoDto gleitzeitsaldoFindLetztenGleitzeitsaldo(Integer personalIId, Integer iJahr, Integer iMonat)
 			throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("GleitzeitsaldofindLetztenGleitzeitsaldo");
+		Query query = em.createNamedQuery("GleitzeitsaldofindLetztenGleitzeitsaldo");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, iJahr);
 		Collection<?> cl = query.getResultList();
@@ -6170,48 +5751,39 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setGleitzeitsaldoFromGleitzeitsaldoDto(
-			Gleitzeitsaldo gleitzeitsaldo, GleitzeitsaldoDto gleitzeitsaldoDto) {
+	private void setGleitzeitsaldoFromGleitzeitsaldoDto(Gleitzeitsaldo gleitzeitsaldo,
+			GleitzeitsaldoDto gleitzeitsaldoDto) {
 		gleitzeitsaldo.setPersonalIId(gleitzeitsaldoDto.getPersonalIId());
 		gleitzeitsaldo.setIJahr(gleitzeitsaldoDto.getIJahr());
 		gleitzeitsaldo.setIMonat(gleitzeitsaldoDto.getIMonat());
-		gleitzeitsaldo.setNSaldomehrstunden(Helper.rundeKaufmaennisch(
-				gleitzeitsaldoDto.getNSaldomehrstunden(), 4));
-		gleitzeitsaldo.setNSaldouestfrei50(Helper.rundeKaufmaennisch(
-				gleitzeitsaldoDto.getNSaldouestfrei50(), 4));
-		gleitzeitsaldo.setNSaldouestpflichtig50(Helper.rundeKaufmaennisch(
-				gleitzeitsaldoDto.getNSaldouestpflichtig50(), 4));
-		gleitzeitsaldo.setNSaldouestfrei100(Helper.rundeKaufmaennisch(
-				gleitzeitsaldoDto.getNSaldouestfrei100(), 4));
-		gleitzeitsaldo.setNSaldouest200(Helper.rundeKaufmaennisch(
-				gleitzeitsaldoDto.getNSaldouest200(), 4));
-		gleitzeitsaldo.setNSaldouestpflichtig100(Helper.rundeKaufmaennisch(
-				gleitzeitsaldoDto.getNSaldouestpflichtig100(), 4));
-		gleitzeitsaldo.setNSaldo(Helper.rundeKaufmaennisch(
-				gleitzeitsaldoDto.getNSaldo(), 4));
+		gleitzeitsaldo.setNSaldomehrstunden(Helper.rundeKaufmaennisch(gleitzeitsaldoDto.getNSaldomehrstunden(), 4));
+		gleitzeitsaldo.setNSaldouestfrei50(Helper.rundeKaufmaennisch(gleitzeitsaldoDto.getNSaldouestfrei50(), 4));
+		gleitzeitsaldo
+				.setNSaldouestpflichtig50(Helper.rundeKaufmaennisch(gleitzeitsaldoDto.getNSaldouestpflichtig50(), 4));
+		gleitzeitsaldo.setNSaldouestfrei100(Helper.rundeKaufmaennisch(gleitzeitsaldoDto.getNSaldouestfrei100(), 4));
+		gleitzeitsaldo.setNSaldouest200(Helper.rundeKaufmaennisch(gleitzeitsaldoDto.getNSaldouest200(), 4));
+		gleitzeitsaldo
+				.setNSaldouestpflichtig100(Helper.rundeKaufmaennisch(gleitzeitsaldoDto.getNSaldouestpflichtig100(), 4));
+		gleitzeitsaldo.setNSaldo(Helper.rundeKaufmaennisch(gleitzeitsaldoDto.getNSaldo(), 4));
 		gleitzeitsaldo.setBGesperrt(gleitzeitsaldoDto.getBGesperrt());
-		gleitzeitsaldo.setPersonalIIdAendern(gleitzeitsaldoDto
-				.getPersonalIIdAendern());
+		gleitzeitsaldo.setPersonalIIdAendern(gleitzeitsaldoDto.getPersonalIIdAendern());
 		gleitzeitsaldo.setTAendern(gleitzeitsaldoDto.getTAendern());
-		gleitzeitsaldo.setTAbrechnungsstichtag(gleitzeitsaldoDto
-				.getDAbrechnungstichtag());
+		gleitzeitsaldo.setTAbrechnungsstichtag(gleitzeitsaldoDto.getDAbrechnungstichtag());
+		gleitzeitsaldo.setNGzSaldoMitUestdInNormalstunden(gleitzeitsaldoDto.getNGzSaldoMitUestdInNormalstunden());
 		em.merge(gleitzeitsaldo);
 		em.flush();
 	}
 
-	private GleitzeitsaldoDto assembleGleitzeitsaldoDto(
-			Gleitzeitsaldo gleitzeitsaldo) {
+	private GleitzeitsaldoDto assembleGleitzeitsaldoDto(Gleitzeitsaldo gleitzeitsaldo) {
 		return GleitzeitsaldoDtoAssembler.createDto(gleitzeitsaldo);
 	}
 
-	private GleitzeitsaldoDto[] assembleGleitzeitsaldoDtos(
-			Collection<?> gleitzeitsaldos) {
+	private GleitzeitsaldoDto[] assembleGleitzeitsaldoDtos(Collection<?> gleitzeitsaldos) {
 		List<GleitzeitsaldoDto> list = new ArrayList<GleitzeitsaldoDto>();
 		if (gleitzeitsaldos != null) {
 			Iterator<?> iterator = gleitzeitsaldos.iterator();
 			while (iterator.hasNext()) {
-				Gleitzeitsaldo gleitzeitsaldo = (Gleitzeitsaldo) iterator
-						.next();
+				Gleitzeitsaldo gleitzeitsaldo = (Gleitzeitsaldo) iterator.next();
 				list.add(assembleGleitzeitsaldoDto(gleitzeitsaldo));
 			}
 		}
@@ -6226,8 +5798,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			query.setParameter(1, dto.getMandantCNr());
 			query.setParameter(2, dto.getCBez());
 			Fahrzeug doppelt = (Fahrzeug) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_FAHRUEZG.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_FAHRUEZG.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -6238,8 +5809,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_FAHRZEUG);
 			dto.setIId(pk);
 
-			Fahrzeug bean = new Fahrzeug(dto.getIId(), dto.getMandantCNr(),
-					dto.getCBez(), dto.getCKennzeichen());
+			Fahrzeug bean = new Fahrzeug(dto.getIId(), dto.getMandantCNr(), dto.getCBez(), dto.getCKennzeichen(),
+					dto.getFahrzeugverwendungsartCNr(), dto.getBVersteckt());
 			em.persist(bean);
 			em.flush();
 			setFahrzeugFromFahrzeugDto(bean, dto);
@@ -6253,6 +5824,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		bean.setCBez(dto.getCBez());
 		bean.setCKennzeichen(dto.getCKennzeichen());
 		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setFahrzeugverwendungsartCNr(dto.getFahrzeugverwendungsartCNr());
+		bean.setBVersteckt(dto.getBVersteckt());
 		em.merge(bean);
 		em.flush();
 	}
@@ -6265,12 +5838,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			query.setParameter(1, dto.getMandantCNr());
 			query.setParameter(2, dto.getCBez());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Fahrzeug) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Fahrzeug) query.getSingleResult()).getIId();
 			if (fahrzeug.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_FAHRZEUG.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_FAHRZEUG.UK"));
 			}
 		} catch (NoResultException ex) {
 
@@ -6280,12 +5850,17 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	}
 
 	public FahrzeugDto fahrzeugFindByPrimaryKey(Integer iId) {
-		Fahrzeug ialle = em.find(Fahrzeug.class, iId);
-		if (ialle == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-		}
-		return FahrzeugDtoAssembler.createDto(ialle);
+		FahrzeugDto fahrzeugDto = fahrzeugFindByPrimaryKeyOhneExc(iId);
+		Validator.entityFound(fahrzeugDto, iId);
+		return fahrzeugDto;
+	}
+
+	@Override
+	public FahrzeugDto fahrzeugFindByPrimaryKeyOhneExc(Integer iId) {
+		Fahrzeug fahrzeug = em.find(Fahrzeug.class, iId);
+		if (fahrzeug == null)
+			return null;
+		return FahrzeugDtoAssembler.createDto(fahrzeug);
 	}
 
 	public void removeFahrzeug(FahrzeugDto dto) {
@@ -6302,13 +5877,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	public Integer createFahrzeugkosten(FahrzeugkostenDto dto) {
 		dto.setTGueltigab(Helper.cutTimestamp(dto.getTGueltigab()));
 		try {
-			Query query = em
-					.createNamedQuery("FahrzeugkostenfindByFahrzeugIIdTGueltigab");
+			Query query = em.createNamedQuery("FahrzeugkostenfindByFahrzeugIIdTGueltigab");
 			query.setParameter(1, dto.getFahrzeugIId());
 			query.setParameter(2, dto.getTGueltigab());
 			Fahrzeugkosten doppelt = (Fahrzeugkosten) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_FAHRUEZGKOSTEN.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_FAHRUEZGKOSTEN.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -6319,8 +5892,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_FAHRZEUGKOSTEN);
 			dto.setIId(pk);
 
-			Fahrzeugkosten bean = new Fahrzeugkosten(dto.getIId(),
-					dto.getFahrzeugIId(), dto.getTGueltigab(),
+			Fahrzeugkosten bean = new Fahrzeugkosten(dto.getIId(), dto.getFahrzeugIId(), dto.getTGueltigab(),
 					dto.getNKmkosten());
 			em.persist(bean);
 			em.flush();
@@ -6331,8 +5903,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	private void setFahrzeugkostenFromFahrzeugkostenDto(Fahrzeugkosten bean,
-			FahrzeugkostenDto dto) {
+	private void setFahrzeugkostenFromFahrzeugkostenDto(Fahrzeugkosten bean, FahrzeugkostenDto dto) {
 		bean.setFahrzeugIId(dto.getFahrzeugIId());
 		bean.setNKmkosten(dto.getNKmkosten());
 		bean.setTGueltigab(dto.getTGueltigab());
@@ -6341,21 +5912,17 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	}
 
 	public void updateFahrzeugkosten(FahrzeugkostenDto dto) {
-		Fahrzeugkosten fahrzeugkosten = em.find(Fahrzeugkosten.class,
-				dto.getIId());
+		Fahrzeugkosten fahrzeugkosten = em.find(Fahrzeugkosten.class, dto.getIId());
 		dto.setTGueltigab(Helper.cutTimestamp(dto.getTGueltigab()));
 		try {
-			Query query = em
-					.createNamedQuery("FahrzeugkostenfindByFahrzeugIIdTGueltigab");
+			Query query = em.createNamedQuery("FahrzeugkostenfindByFahrzeugIIdTGueltigab");
 			query.setParameter(1, dto.getFahrzeugIId());
 			query.setParameter(2, dto.getTGueltigab());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Fahrzeugkosten) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Fahrzeugkosten) query.getSingleResult()).getIId();
 			if (fahrzeugkosten.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_FAHRZEUGKOSTEN.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_FAHRZEUGKOSTEN.UK"));
 			}
 		} catch (NoResultException ex) {
 
@@ -6367,8 +5934,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	public FahrzeugkostenDto fahrzeugkostenFindByPrimaryKey(Integer iId) {
 		Fahrzeugkosten ialle = em.find(Fahrzeugkosten.class, iId);
 		if (ialle == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return FahrzeugkostenDtoAssembler.createDto(ialle);
 	}
@@ -6384,28 +5950,21 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public Integer createStundenabrechnung(
-			StundenabrechnungDto stundenabrechnungDto, TheClientDto theClientDto)
+	public Integer createStundenabrechnung(StundenabrechnungDto stundenabrechnungDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		if (stundenabrechnungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("stundenabrechnungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("stundenabrechnungDto == null"));
 		}
-		if (stundenabrechnungDto.getPersonalIId() == null
-				|| stundenabrechnungDto.getTDatum() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"stundenabrechnungDto.getPersonalIId() == null || stundenabrechnungDto.getDDatum() == null"));
+		if (stundenabrechnungDto.getPersonalIId() == null || stundenabrechnungDto.getTDatum() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"stundenabrechnungDto.getPersonalIId() == null || stundenabrechnungDto.getDDatum() == null"));
 		}
 		try {
-			Query query = em
-					.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatum");
+			Query query = em.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatum");
 			query.setParameter(1, stundenabrechnungDto.getPersonalIId());
 			query.setParameter(2, stundenabrechnungDto.getTDatum());
-			Stundenabrechnung doppelt = (Stundenabrechnung) query
-					.getSingleResult();
+			Stundenabrechnung doppelt = (Stundenabrechnung) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PERS_STUNDENABRECHNUNG.UK"));
 		} catch (NoResultException ex1) {
@@ -6417,58 +5976,43 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_STUNDENABRECHNUNG);
 			stundenabrechnungDto.setIId(pk);
 
-			stundenabrechnungDto.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
-			stundenabrechnungDto.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
+			stundenabrechnungDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			stundenabrechnungDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 
-			Stundenabrechnung stundenabrechnung = new Stundenabrechnung(
-					stundenabrechnungDto.getIId(),
-					stundenabrechnungDto.getPersonalIId(),
-					stundenabrechnungDto.getTDatum(),
+			Stundenabrechnung stundenabrechnung = new Stundenabrechnung(stundenabrechnungDto.getIId(),
+					stundenabrechnungDto.getPersonalIId(), stundenabrechnungDto.getTDatum(),
 					stundenabrechnungDto.getPersonalIIdAendern());
 			em.persist(stundenabrechnung);
 			em.flush();
 
 			if (stundenabrechnungDto.getNMehrstunden() == null) {
-				stundenabrechnungDto.setNMehrstunden(stundenabrechnung
-						.getNMehrstunden());
+				stundenabrechnungDto.setNMehrstunden(stundenabrechnung.getNMehrstunden());
 			}
 			if (stundenabrechnungDto.getNQualifikationspraemie() == null) {
-				stundenabrechnungDto
-						.setNQualifikationspraemie(stundenabrechnung
-								.getNQualifikationspraemie());
+				stundenabrechnungDto.setNQualifikationspraemie(stundenabrechnung.getNQualifikationspraemie());
 			}
 			if (stundenabrechnungDto.getNUestfrei100() == null) {
-				stundenabrechnungDto.setNUestfrei100(stundenabrechnung
-						.getNUestfrei100());
+				stundenabrechnungDto.setNUestfrei100(stundenabrechnung.getNUestfrei100());
 			}
 			if (stundenabrechnungDto.getNUestfrei50() == null) {
-				stundenabrechnungDto.setNUestfrei50(stundenabrechnung
-						.getNUestfrei50());
+				stundenabrechnungDto.setNUestfrei50(stundenabrechnung.getNUestfrei50());
 			}
 			if (stundenabrechnungDto.getNGutstunden() == null) {
-				stundenabrechnungDto.setNGutstunden(stundenabrechnung
-						.getNGutstunden());
+				stundenabrechnungDto.setNGutstunden(stundenabrechnung.getNGutstunden());
 			}
 			if (stundenabrechnungDto.getNUestpflichtig100() == null) {
-				stundenabrechnungDto.setNUestpflichtig100(stundenabrechnung
-						.getNUestpflichtig100());
+				stundenabrechnungDto.setNUestpflichtig100(stundenabrechnung.getNUestpflichtig100());
 			}
 			if (stundenabrechnungDto.getNUestpflichtig50() == null) {
-				stundenabrechnungDto.setNUestpflichtig50(stundenabrechnung
-						.getNUestpflichtig50());
+				stundenabrechnungDto.setNUestpflichtig50(stundenabrechnung.getNUestpflichtig50());
 			}
 			if (stundenabrechnungDto.getNNormalstunden() == null) {
-				stundenabrechnungDto.setNNormalstunden(stundenabrechnung
-						.getNNormalstunden());
+				stundenabrechnungDto.setNNormalstunden(stundenabrechnung.getNNormalstunden());
 			}
 			if (stundenabrechnungDto.getNUest200() == null) {
-				stundenabrechnungDto.setNUest200(stundenabrechnung
-						.getNUest200());
+				stundenabrechnungDto.setNUest200(stundenabrechnung.getNUest200());
 			}
-			setStundenabrechnungFromStundenabrechnungDto(stundenabrechnung,
-					stundenabrechnungDto);
+			setStundenabrechnungFromStundenabrechnungDto(stundenabrechnung, stundenabrechnungDto);
 			return stundenabrechnungDto.getIId();
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -6476,23 +6020,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void removeStundenabrechnung(
-			StundenabrechnungDto stundenabrechnungDto) throws EJBExceptionLP {
+	public void removeStundenabrechnung(StundenabrechnungDto stundenabrechnungDto) throws EJBExceptionLP {
 		if (stundenabrechnungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("stundenabrechnungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("stundenabrechnungDto == null"));
 		}
 		if (stundenabrechnungDto.getIId() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("stundenabrechnungDto.getIId() == nulll"));
 		}
 		try {
-			Stundenabrechnung stundenabrechnung = em.find(
-					Stundenabrechnung.class, stundenabrechnungDto.getIId());
+			Stundenabrechnung stundenabrechnung = em.find(Stundenabrechnung.class, stundenabrechnungDto.getIId());
 			if (stundenabrechnung == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(stundenabrechnung);
 			em.flush();
@@ -6501,21 +6040,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateStundenabrechnung(
-			StundenabrechnungDto stundenabrechnungDto, TheClientDto theClientDto)
+	public void updateStundenabrechnung(StundenabrechnungDto stundenabrechnungDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		if (stundenabrechnungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("stundenabrechnungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("stundenabrechnungDto == null"));
 		}
-		if (stundenabrechnungDto.getPersonalIId() == null
-				|| stundenabrechnungDto.getTDatum() == null
+		if (stundenabrechnungDto.getPersonalIId() == null || stundenabrechnungDto.getTDatum() == null
 				|| stundenabrechnungDto.getNNormalstunden() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"stundenabrechnungDto.getPersonalIId() == null || stundenabrechnungDto.getDDatum() == null || stundenabrechnungDto.getNNormalstunden() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"stundenabrechnungDto.getPersonalIId() == null || stundenabrechnungDto.getDDatum() == null || stundenabrechnungDto.getNNormalstunden() == null"));
 		}
 		if (stundenabrechnungDto.getNMehrstunden() == null) {
 			stundenabrechnungDto.setNMehrstunden(new BigDecimal(0));
@@ -6544,37 +6078,29 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		Integer iId = stundenabrechnungDto.getIId();
 		// try {
-		Stundenabrechnung stundenabrechnung = em.find(Stundenabrechnung.class,
-				iId);
+		Stundenabrechnung stundenabrechnung = em.find(Stundenabrechnung.class, iId);
 		if (stundenabrechnung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatum");
+			Query query = em.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatum");
 			query.setParameter(1, stundenabrechnungDto.getPersonalIId());
 			query.setParameter(2, stundenabrechnungDto.getTDatum());
-			Integer iIdVorhanden = ((Stundenabrechnung) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Stundenabrechnung) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_STUNDENABRECHNUNG.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_STUNDENABRECHNUNG.UK"));
 			}
 
 		} catch (NoResultException ex) {
 			//
 		}
 
-		stundenabrechnungDto
-				.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		stundenabrechnungDto.setTAendern(new java.sql.Timestamp(System
-				.currentTimeMillis()));
+		stundenabrechnungDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+		stundenabrechnungDto.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 
-		setStundenabrechnungFromStundenabrechnungDto(stundenabrechnung,
-				stundenabrechnungDto);
+		setStundenabrechnungFromStundenabrechnungDto(stundenabrechnung, stundenabrechnungDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -6584,18 +6110,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public StundenabrechnungDto stundenabrechnungFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public StundenabrechnungDto stundenabrechnungFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
-		Stundenabrechnung stundenabrechnung = em.find(Stundenabrechnung.class,
-				iId);
+		Stundenabrechnung stundenabrechnung = em.find(Stundenabrechnung.class, iId);
 		if (stundenabrechnung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleStundenabrechnungDto(stundenabrechnung);
 		// }
@@ -6606,10 +6128,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public StundenabrechnungDto stundenabrechnungFindByPersonalIIdDDatum(
-			Integer personalIId, Timestamp dDatum) throws EJBExceptionLP {
-		Query query = em
-				.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatum");
+	public StundenabrechnungDto stundenabrechnungFindByPersonalIIdDDatum(Integer personalIId, Timestamp dDatum)
+			throws EJBExceptionLP {
+		Query query = em.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatum");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, dDatum);
 		Collection<?> cl = query.getResultList();
@@ -6617,14 +6138,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			return null;
 		else {
 			Iterator<?> iterator = cl.iterator();
-			return assembleStundenabrechnungDto((Stundenabrechnung) iterator
-					.next());
+			return assembleStundenabrechnungDto((Stundenabrechnung) iterator.next());
 		}
 	}
 
-	public StundenabrechnungDto[] stundenabrechnungFindByPersonalIIdIJahrIMonat(
-			Integer personalIId, Integer iJahr, Integer iMonat)
-			throws EJBExceptionLP {
+	public StundenabrechnungDto[] stundenabrechnungFindByPersonalIIdIJahrIMonat(Integer personalIId, Integer iJahr,
+			Integer iMonat) throws EJBExceptionLP {
 		Calendar c = Calendar.getInstance();
 		c.set(Calendar.YEAR, iJahr.intValue());
 		c.set(Calendar.MONTH, iMonat.intValue());
@@ -6636,13 +6155,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		Timestamp tVon = new Timestamp(c.getTime().getTime());
 
-		c.set(Calendar.DAY_OF_MONTH,
-				Helper.ermittleAnzahlTageEinesMonats(iJahr, iMonat));
+		c.set(Calendar.DAY_OF_MONTH, Helper.ermittleAnzahlTageEinesMonats(iJahr, iMonat));
 
 		Timestamp tBis = new Timestamp(c.getTime().getTime());
 
-		Query query = em
-				.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatumVonTDatumBis");
+		Query query = em.createNamedQuery("StundenabrechnungfindByPersonalIIdTDatumVonTDatumBis");
 		query.setParameter(1, personalIId);
 		query.setParameter(2, tVon);
 		query.setParameter(3, tBis);
@@ -6650,119 +6167,283 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return assembleStundenabrechnungDtos(cl);
 	}
 
-	private void setStundenabrechnungFromStundenabrechnungDto(
-			Stundenabrechnung stundenabrechnung,
+	private void setStundenabrechnungFromStundenabrechnungDto(Stundenabrechnung stundenabrechnung,
 			StundenabrechnungDto stundenabrechnungDto) {
 		stundenabrechnung.setPersonalIId(stundenabrechnungDto.getPersonalIId());
 		stundenabrechnung.setTDatum(stundenabrechnungDto.getTDatum());
-		stundenabrechnung.setNMehrstunden(stundenabrechnungDto
-				.getNMehrstunden());
+		stundenabrechnung.setNMehrstunden(stundenabrechnungDto.getNMehrstunden());
 		stundenabrechnung.setNUestfrei50(stundenabrechnungDto.getNUestfrei50());
-		stundenabrechnung.setNUestpflichtig50(stundenabrechnungDto
-				.getNUestpflichtig50());
-		stundenabrechnung.setNUestfrei100(stundenabrechnungDto
-				.getNUestfrei100());
+		stundenabrechnung.setNUestpflichtig50(stundenabrechnungDto.getNUestpflichtig50());
+		stundenabrechnung.setNUestfrei100(stundenabrechnungDto.getNUestfrei100());
 		stundenabrechnung.setNUest200(stundenabrechnungDto.getNUest200());
-		stundenabrechnung.setNUestpflichtig100(stundenabrechnungDto
-				.getNUestpflichtig100());
+		stundenabrechnung.setNUestpflichtig100(stundenabrechnungDto.getNUestpflichtig100());
 		stundenabrechnung.setNGutstunden(stundenabrechnungDto.getNGutstunden());
-		stundenabrechnung.setNNormalstunden(stundenabrechnungDto
-				.getNNormalstunden());
-		stundenabrechnung.setNQualifikationspraemie(stundenabrechnungDto
-				.getNQualifikationspraemie());
+		stundenabrechnung.setNNormalstunden(stundenabrechnungDto.getNNormalstunden());
+		stundenabrechnung.setNQualifikationspraemie(stundenabrechnungDto.getNQualifikationspraemie());
 		stundenabrechnung.setCKommentar(stundenabrechnungDto.getCKommentar());
 		stundenabrechnung.setTAendern(stundenabrechnungDto.getTAendern());
-		stundenabrechnung.setPersonalIIdAendern(stundenabrechnungDto
-				.getPersonalIIdAendern());
-		stundenabrechnung.setNQualifikationsfaktor(stundenabrechnungDto
-				.getNQualifikationsfaktor());
+		stundenabrechnung.setPersonalIIdAendern(stundenabrechnungDto.getPersonalIIdAendern());
+		stundenabrechnung.setNQualifikationsfaktor(stundenabrechnungDto.getNQualifikationsfaktor());
 		em.merge(stundenabrechnung);
 		em.flush();
 	}
 
-	private StundenabrechnungDto assembleStundenabrechnungDto(
-			Stundenabrechnung stundenabrechnung) {
+	private StundenabrechnungDto assembleStundenabrechnungDto(Stundenabrechnung stundenabrechnung) {
 		return StundenabrechnungDtoAssembler.createDto(stundenabrechnung);
 	}
 
-	private StundenabrechnungDto[] assembleStundenabrechnungDtos(
-			Collection<?> stundenabrechnungs) {
+	private StundenabrechnungDto[] assembleStundenabrechnungDtos(Collection<?> stundenabrechnungs) {
 		List<StundenabrechnungDto> list = new ArrayList<StundenabrechnungDto>();
 		if (stundenabrechnungs != null) {
 			Iterator<?> iterator = stundenabrechnungs.iterator();
 			while (iterator.hasNext()) {
-				Stundenabrechnung stundenabrechnung = (Stundenabrechnung) iterator
-						.next();
+				Stundenabrechnung stundenabrechnung = (Stundenabrechnung) iterator.next();
 				list.add(assembleStundenabrechnungDto(stundenabrechnung));
 			}
 		}
-		StundenabrechnungDto[] returnArray = new StundenabrechnungDto[list
-				.size()];
+		StundenabrechnungDto[] returnArray = new StundenabrechnungDto[list.size()];
 		return (StundenabrechnungDto[]) list.toArray(returnArray);
 	}
 
-	public PersonalgehaltDto personalgehaltFindByPersonalIIdDGueltigab(
-			Integer personalIId, Integer iJahr, Integer iMonat)
+	public PersonalgehaltDto personalgehaltFindLetztePersonalgehalt(Integer personalIId, Integer iJahr, Integer iMonat)
 			throws EJBExceptionLP {
-		// try {
-		Query query = em
-				.createNamedQuery("PersonalgehaltfindByPersonalIIdIJahrIMonat");
+
+		GregorianCalendar gc = new GregorianCalendar(iJahr, iMonat, 1);
+		Query query = em.createNamedQuery("PersonalgehaltfindLetztePersonalgehalt");
 		query.setParameter(1, personalIId);
-		query.setParameter(2, iJahr);
-		query.setParameter(3, iMonat);
-		Personalgehalt personalgehalt = (Personalgehalt) query
-				.getSingleResult();
-		if (personalgehalt == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "");
-		}
-		return assemblePersonalgehaltDto(personalgehalt);
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.
-		// FEHLER_BEI_FIND, e);
-		// }
-	}
+		query.setParameter(2, gc.getTime());
+		query.setMaxResults(1);
+		Collection c = query.getResultList();
 
-	public PersonalgehaltDto personalgehaltFindLetztePersonalgehalt(
-			Integer personalIId, Integer iJahr, Integer iMonat)
-			throws EJBExceptionLP {
-		// try {
-
-		Query query2 = em
-				.createNamedQuery("PersonalgehaltfindLetztePersonalgehalt");
-		query2.setParameter(1, personalIId);
-		query2.setParameter(2, new Integer(iJahr.intValue() - 1));
-		query2.setParameter(3, new Integer(Calendar.DECEMBER));
-
-		PersonalgehaltDto[] dtos = assemblePersonalgehaltDtos(query2
-				.getResultList());
-		Query query = em
-				.createNamedQuery("PersonalgehaltfindByPersonalIIdIJahrMonat");
-		query.setParameter(1, personalIId);
-		query.setParameter(2, iJahr);
-		query.setParameter(3, iMonat);
-		// @todo getSingleResult oder getResultList ?
-		PersonalgehaltDto[] dtos2 = assemblePersonalgehaltDtos(query
-				.getResultList());
-		if (dtos2.length > 0) {
-			return dtos2[0];
-		}
-
-		if (dtos.length > 0) {
-			return dtos[0];
+		if (c.size() > 0) {
+			return assemblePersonalgehaltDto((Personalgehalt) c.iterator().next());
 		} else {
 			return null;
 		}
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.
-		// FEHLER_BEI_FIND, e);
-		// }
+
 	}
 
-	public JasperPrintLP printPersonalliste(java.sql.Timestamp tsStichtag,
-			boolean bMitBarcodes, boolean bMitVersteckten,
-			int iOptionSortierung, TheClientDto theClientDto) {
+	public JasperPrintLP printPersonalstammblatt(Integer personalIId, TheClientDto theClientDto) {
+
+		// Erstellung des Reports
+		JasperPrintLP print = null;
+		index = -1;
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(personalIId, theClientDto);
+
+		parameter.put("P_PERSONAL_I_ID", personalDto.getIId());
+
+		parameter.put("P_PERSONALNUMMER", personalDto.getCPersonalnr());
+		parameter.put("P_NACHNAME", personalDto.getPartnerDto().getCName1nachnamefirmazeile1());
+		parameter.put("P_VORNAME", personalDto.getPartnerDto().getCName2vornamefirmazeile2());
+		parameter.put("P_GEBURTSDATUM", personalDto.getTGeburtsdatum());
+
+		if (personalDto.getBerufDto() != null) {
+			parameter.put("P_BERUF", personalDto.getBerufDto().getCBez());
+		}
+
+		if (personalDto.getReligionDto() != null) {
+			parameter.put("P_RELIGION", personalDto.getReligionDto().getCNr());
+		}
+		if (personalDto.getKollektivDto() != null) {
+			parameter.put("P_KOLLEKTIV", personalDto.getKollektivDto().getCBez());
+		}
+
+		parameter.put("P_FAMILIENSTAND", personalDto.getFamilienstandCNr());
+
+		if (personalDto.getLohngruppeDto() != null) {
+			parameter.put("P_LOHNGRUPPE", personalDto.getLohngruppeDto().getCBez());
+
+		}
+		if (personalDto.getLandplzortDto_Geburtsort() != null) {
+			parameter.put("P_GEBURTSORT", personalDto.getLandplzortDto_Geburtsort().formatLandPlzOrt());
+		}
+
+		if (personalDto.getPendlerpauschaleDto() != null) {
+			parameter.put("P_PENDLERPAUSCHALE", personalDto.getPendlerpauschaleDto().getCBez());
+		}
+
+		if (personalDto.getPartnerDto_Sozialversicherer() != null) {
+			parameter.put("P_SOZIALVERSICHERER", personalDto.getPartnerDto_Sozialversicherer().formatAnrede());
+		}
+		if (personalDto.getPartnerDto_Firma() != null) {
+			parameter.put("P_FIRMENZUGEHOERIGKEIT", personalDto.getPartnerDto_Firma().formatAnrede());
+
+		}
+		if (personalDto.getLandDto() != null) {
+			parameter.put("P_STAATSANGEHOERIGKEIT", personalDto.getLandDto().getCName());
+
+		}
+		if (personalDto.getKostenstelleDto_Stamm() != null) {
+			parameter.put("P_HEIMATKOSTENSTELLE", personalDto.getKostenstelleDto_Stamm().getCBez());
+
+		}
+
+		if (Helper.short2boolean(personalDto.getBMaennlich())) {
+			parameter.put("P_GESCHLECHT", "M");
+		} else {
+			parameter.put("P_GESCHLECHT", "W");
+		}
+
+		parameter.put("P_SOZIALVERSNR", personalDto.getCSozialversnr());
+		parameter.put("P_UNTERSCHRIFTSFUNKTION", personalDto.getCUnterschriftsfunktion());
+		parameter.put("P_UNTERSCHRIFTSTEXT", personalDto.getCUnterschriftstext());
+		parameter.put("P_KEINE_UEBERSTUNDENAUSZAHLUNG", Helper.short2Boolean(personalDto.getBUeberstundenausbezahlt()));
+		parameter.put("P_VORNAME2", personalDto.getPartnerDto().getCName3vorname2abteilung());
+		parameter.put("P_TITEL", personalDto.getPartnerDto().getCTitel());
+
+		parameter.put("P_STRASSE", personalDto.getPartnerDto().getCStrasse());
+		parameter.put("P_KURZBEZEICHNUNG", personalDto.getPartnerDto().getCKbez());
+		parameter.put("P_KURZZEICHEN", personalDto.getCKurzzeichen());
+		parameter.put("P_ABSENDER_DURCHWAHL", personalDto.getCTelefon());
+		parameter.put("P_ABSENDER_EMAIL", personalDto.getCEmail());
+		parameter.put("P_ABSENDER_HANDY", personalDto.getCHandy());
+		parameter.put("P_ABSENDER_FAXDW", personalDto.getCFax());
+		parameter.put("P_ABSENDER_DIREKTFAX", personalDto.getCDirektfax());
+		parameter.put("P_PERSONALFUNKTION", personalDto.getPersonalfunktionCNr());
+
+		if (personalDto.getPersonalgruppeIId() != null) {
+
+			parameter.put("P_PERSONALGRUPPE",
+					personalgruppeFindByPrimaryKey(personalDto.getPersonalgruppeIId()).getCBez());
+
+		}
+
+		EintrittaustrittDto eaDto = eintrittaustrittFindLetztenEintrittBisDatum(personalDto.getIId(),
+				new Timestamp(System.currentTimeMillis()));
+		if (eaDto != null) {
+			parameter.put("P_EINTRITT", eaDto.getTEintritt());
+		}
+
+		parameter.put("P_TELEFON", personalDto.getPartnerDto().getCTelefon());
+		parameter.put("P_EMAIL", personalDto.getPartnerDto().getCEmail());
+		parameter.put("P_HANDY", personalDto.getPartnerDto().getCHandy());
+		parameter.put("P_FAX", personalDto.getPartnerDto().getCFax());
+		parameter.put("P_HOMEPAGE", personalDto.getPartnerDto().getCHomepage());
+
+		if (personalDto.getPartnerDto().getLandplzortDto() != null) {
+
+			parameter.put("P_ORT", personalDto.getPartnerDto().getLandplzortDto().formatLandPlzOrt());
+
+		}
+
+		if (personalDto.getTGeburtsdatum() != null) {
+
+			Calendar cGeb = Calendar.getInstance();
+			cGeb.setTimeInMillis(personalDto.getTGeburtsdatum().getTime());
+			parameter.put("P_ALTER", Calendar.getInstance().get(Calendar.YEAR) - cGeb.get(Calendar.YEAR));
+		}
+
+		parameter.put("P_BILD", Helper.byteArrayToImage(personalDto.getPartnerDto().getOBild()));
+
+		parameter.put("P_AUSWEISNUMMER", personalDto.getCAusweis());
+
+		parameter.put("P_ART", personalDto.getPersonalartCNr());
+		if (personalDto.getKostenstelleDto_Abteilung() != null) {
+			parameter.put("P_STAMMKOSTENSTELLE", personalDto.getKostenstelleDto_Abteilung().getCNr());
+		}
+
+		// PJ22501
+
+		if (getTheJudgeFac().hatRecht(RechteFac.RECHT_PERS_GEHALT_R, theClientDto)
+				|| getTheJudgeFac().hatRecht(RechteFac.RECHT_PERS_GEHALT_CUD, theClientDto)) {
+			// Stundensatz aus Personalgehalt holen
+
+			try {
+				PersonalgehaltDto pgDto = getPersonalFac().personalgehaltFindLetztePersonalgehalt(personalDto.getIId(),
+						2099, 1);
+				if (pgDto != null) {
+
+					parameter.put("P_PERSONALGEHALT_GUELTIG_AB_JAHR", pgDto.getIJahr());
+					parameter.put("P_PERSONALGEHALT_GUELTIG_AB_MONAT", pgDto.getIMonat());
+					parameter.put("P_PERSONALGEHALT_BRUTTO", pgDto.getNGehalt());
+					parameter.put("P_PERSONALGEHALT_NETTO", pgDto.getNGehaltNetto());
+					parameter.put("P_PERSONALGEHALT_BRUTTOBRUTTO", pgDto.getNGehaltBruttobrutto());
+					parameter.put("P_PERSONALGEHALT_KALK_JAHRESISTSTUNDEN", pgDto.getFKalkIstJahresstunden());
+					parameter.put("P_PERSONALGEHALT_LOHNSTEUER", pgDto.getNLohnsteuer());
+
+					if (pgDto.getNGehaltBruttobrutto() != null && pgDto.getNGehaltNetto() != null) {
+						BigDecimal bd = pgDto.getNGehaltBruttobrutto().subtract(pgDto.getNGehaltNetto());
+
+						if (pgDto.getNLohnsteuer() != null) {
+							bd = bd.subtract(pgDto.getNLohnsteuer());
+						}
+
+						parameter.put("P_PERSONALGEHALT_SOZIALABGABEN", bd);
+					}
+					parameter.put("P_PERSONALGEHALT_STUNDENSATZ", pgDto.getNStundensatz());
+
+					parameter.put("P_PERSONALGEHALT_LOHNMITTELSTUNDENSATZ", pgDto.getNLohnmittelstundensatz());
+					parameter.put("P_PERSONALGEHALT_AUFSCHLAG_LOHNMITTELSTUNDENSATZ",
+							pgDto.getNAufschlagLohnmittelstundensatz());
+					parameter.put("P_PERSONALGEHALT_FAKTOR_LOHNMITTELSTUNDENSATZ", pgDto.getFFaktorLohnmittelstundensatz());
+
+				}
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+		}
+
+		Query query = em.createNamedQuery("PersonalangehoerigefindByPersonalIId");
+		query.setParameter(1, personalDto.getIId());
+		Collection<?> cl = query.getResultList();
+
+		PersonalangehoerigeDto[] personalangehoerigeDtos = assemblePersonalangehoerigeDtos(cl);
+
+		if (personalangehoerigeDtos.length > 0) {
+
+			String[] fieldnames = new String[] { "Name", "Vorname", "Geburtsdatum", "Art", "Sozialversicherungsnr" };
+
+			Object[][] dataSub = new Object[personalangehoerigeDtos.length][fieldnames.length];
+			for (int i = 0; i < personalangehoerigeDtos.length; i++) {
+				dataSub[i][0] = personalangehoerigeDtos[i].getCName();
+				dataSub[i][1] = personalangehoerigeDtos[i].getCVorname();
+				dataSub[i][2] = personalangehoerigeDtos[i].getTGeburtsdatum();
+				dataSub[i][3] = personalangehoerigeDtos[i].getAngehoerigenartCNr();
+				dataSub[i][4] = personalangehoerigeDtos[i].getCSozialversnr();
+			}
+			parameter.put("P_SUBREPORT_ANGEHOERIGE", new LPDatenSubreport(dataSub, fieldnames));
+		}
+
+		try {
+			PartnerbankDto[] bankverbindungDtos = getBankFac().partnerbankFindByPartnerIId(personalDto.getPartnerIId(),
+					theClientDto);
+			if (bankverbindungDtos.length > 0) {
+
+				String[] fieldnames = new String[] { "Iban", "Kontonummer", "Blz", "Bic", "Bank" };
+
+				Object[][] dataSub = new Object[bankverbindungDtos.length][fieldnames.length];
+				for (int i = 0; i < bankverbindungDtos.length; i++) {
+
+					BankDto bankDto = getBankFac().bankFindByPrimaryKey(bankverbindungDtos[i].getBankPartnerIId(),
+							theClientDto);
+
+					dataSub[i][0] = bankverbindungDtos[i].getCIban();
+					dataSub[i][1] = bankverbindungDtos[i].getCKtonr();
+					dataSub[i][2] = bankDto.getCBlz();
+					dataSub[i][3] = bankDto.getCBic();
+					dataSub[i][4] = bankDto.getPartnerDto().formatAnrede();
+				}
+				parameter.put("P_SUBREPORT_BANKVERBINDUNG", new LPDatenSubreport(dataSub, fieldnames));
+
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		data = new Object[0][0];
+
+		initJRDS(parameter, PersonalFac.REPORT_MODUL, PersonalFac.REPORT_PERSONALSTAMMBLATT, theClientDto.getMandant(),
+				theClientDto.getLocUi(), theClientDto);
+
+		print = getReportPrint();
+		return print;
+
+	}
+
+	public JasperPrintLP printPersonalliste(java.sql.Timestamp tsStichtag, Integer personalIId, boolean bMitBarcodes,
+			boolean bMitVersteckten, int iOptionSortierung, TheClientDto theClientDto) {
 
 		if (tsStichtag != null) {
 			tsStichtag = Helper.cutTimestamp(tsStichtag);
@@ -6773,29 +6454,30 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 			session = FLRSessionFactory.getFactory().openSession();
 
-			org.hibernate.Criteria crit = session
-					.createCriteria(FLRPersonal.class)
+			org.hibernate.Criteria crit = session.createCriteria(FLRPersonal.class)
 					.createAlias(PersonalFac.FLR_PERSONAL_FLRPARTNER, "p")
-					.add(Restrictions.eq("mandant_c_nr",
-							theClientDto.getMandant()));
+					.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
 			if (bMitVersteckten == false) {
-				crit.add(Restrictions.eq(PersonalFac.FLR_PERSONAL_B_VERSTECKT,
-						Helper.boolean2Short(false)));
+				crit.add(Restrictions.eq(PersonalFac.FLR_PERSONAL_B_VERSTECKT, Helper.boolean2Short(false)));
 			}
 			if (iOptionSortierung == PersonalFac.REPORT_PERSONALLISTE_OPTION_SORTIERUNG_AUSWEIS) {
 				crit.addOrder(Order.asc(PersonalFac.FLR_PERSONAL_C_AUSWEIS));
-				sSortierung = getTextRespectUISpr("lp.ausweis",
-						theClientDto.getMandant(), theClientDto.getLocUi());
+				sSortierung = getTextRespectUISpr("lp.ausweis", theClientDto.getMandant(), theClientDto.getLocUi());
 			} else if (iOptionSortierung == PersonalFac.REPORT_PERSONALLISTE_OPTION_SORTIERUNG_NAME) {
-				crit.addOrder(Order.asc("p."
-						+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1));
-				sSortierung = getTextRespectUISpr("lp.name",
-						theClientDto.getMandant(), theClientDto.getLocUi());
+				crit.addOrder(Order.asc("p." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1));
+				sSortierung = getTextRespectUISpr("lp.name", theClientDto.getMandant(), theClientDto.getLocUi());
 			} else if (iOptionSortierung == PersonalFac.REPORT_PERSONALLISTE_OPTION_SORTIERUNG_PERSONALNUMMER) {
-				crit.addOrder(Order
-						.asc(PersonalFac.FLR_PERSONAL_C_PERSONALNUMMER));
-				sSortierung = getTextRespectUISpr("lp.personalnr",
-						theClientDto.getMandant(), theClientDto.getLocUi());
+				crit.addOrder(Order.asc(PersonalFac.FLR_PERSONAL_C_PERSONALNUMMER));
+				sSortierung = getTextRespectUISpr("lp.personalnr", theClientDto.getMandant(), theClientDto.getLocUi());
+			} else if (iOptionSortierung == PersonalFac.REPORT_PERSONALLISTE_OPTION_SORTIERUNG_HEIMATKOSTENSTELLE) {
+
+				crit.createAlias(PersonalFac.FLR_PERSONAL_FLRKOSTENSTELLESTAMM, "k").addOrder(Order.asc("k.c_nr"));
+				sSortierung = getTextRespectUISpr("pers.heimatkostenstelle", theClientDto.getMandant(),
+						theClientDto.getLocUi());
+			}
+
+			if (personalIId != null) {
+				crit.add(Restrictions.eq("i_id", personalIId));
 			}
 
 			List<?> resultList = crit.list();
@@ -6807,35 +6489,34 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			while (resultListIterator.hasNext()) {
 				FLRPersonal personal = (FLRPersonal) resultListIterator.next();
 
-				if (tsStichtag == null
-						|| istPersonalAusgetreten(personal.getI_id(),
-								tsStichtag, theClientDto).booleanValue() == false) {
+				if (tsStichtag == null || istPersonalAusgetreten(personal.getI_id(), tsStichtag, theClientDto)
+						.booleanValue() == false) {
 
 					Object[] dataHelp = new Object[REPORT_PERSONALLISTE_ANZAHL_SPALTEN];
 
-					PersonalDto personalDto = getPersonalFac()
-							.personalFindByPrimaryKey(personal.getI_id(),
-									theClientDto);
-					dataHelp[REPORT_PERSONALLISTE_PERSONALNUMMER] = personal
-							.getC_personalnummer();
-					dataHelp[REPORT_PERSONALLISTE_NAME] = personal
-							.getFlrpartner().getC_name1nachnamefirmazeile1();
-					dataHelp[REPORT_PERSONALLISTE_VORNAME] = personal
-							.getFlrpartner().getC_name2vornamefirmazeile2();
-					dataHelp[REPORT_PERSONALLISTE_GEBURTSTAG] = personal
-							.getT_geburtsdatum();
+					PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(personal.getI_id(),
+							theClientDto);
+					dataHelp[REPORT_PERSONALLISTE_PERSONALNUMMER] = personal.getC_personalnummer();
+					dataHelp[REPORT_PERSONALLISTE_NAME] = personal.getFlrpartner().getC_name1nachnamefirmazeile1();
+					dataHelp[REPORT_PERSONALLISTE_VORNAME] = personal.getFlrpartner().getC_name2vornamefirmazeile2();
+					dataHelp[REPORT_PERSONALLISTE_GEBURTSTAG] = personal.getT_geburtsdatum();
 
 					try {
 						if (tsStichtag == null) {
-							dataHelp[REPORT_PERSONALLISTE_EINTRITTSDATUM_ZUM_STICHTAG] = eintrittaustrittFindLetztenEintrittBisDatum(
-									personal.getI_id(),
-									new Timestamp(System.currentTimeMillis()))
-									.getTEintritt();
+
+							EintrittaustrittDto eaDto = eintrittaustrittFindLetztenEintrittBisDatum(personal.getI_id(),
+									new Timestamp(System.currentTimeMillis()));
+
+							dataHelp[REPORT_PERSONALLISTE_EINTRITTSDATUM_ZUM_STICHTAG] = eaDto.getTEintritt();
+							dataHelp[REPORT_PERSONALLISTE_AUSTRITTSDATUM_ZUM_STICHTAG] = eaDto.getTAustritt();
 
 						} else {
-							dataHelp[REPORT_PERSONALLISTE_EINTRITTSDATUM_ZUM_STICHTAG] = eintrittaustrittFindLetztenEintrittBisDatum(
-									personal.getI_id(), tsStichtag)
-									.getTEintritt();
+
+							EintrittaustrittDto eaDto = eintrittaustrittFindLetztenEintrittBisDatum(personal.getI_id(),
+									tsStichtag);
+
+							dataHelp[REPORT_PERSONALLISTE_EINTRITTSDATUM_ZUM_STICHTAG] = eaDto.getTEintritt();
+							dataHelp[REPORT_PERSONALLISTE_AUSTRITTSDATUM_ZUM_STICHTAG] = eaDto.getTAustritt();
 						}
 
 					} catch (Exception e) {
@@ -6843,67 +6524,56 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 					}
 					PersonalzeitmodellDto pzDto = null;
 					if (tsStichtag == null) {
-						pzDto = personalzeitmodellFindZeitmodellZuDatum(
-								personal.getI_id(),
-								new Timestamp(System.currentTimeMillis()),
-								theClientDto);
+						pzDto = personalzeitmodellFindZeitmodellZuDatum(personal.getI_id(),
+								new Timestamp(System.currentTimeMillis()), theClientDto);
 					} else {
-						pzDto = personalzeitmodellFindZeitmodellZuDatum(
-								personal.getI_id(), tsStichtag, theClientDto);
+						pzDto = personalzeitmodellFindZeitmodellZuDatum(personal.getI_id(), tsStichtag, theClientDto);
 					}
 
 					if (pzDto != null && pzDto.getZeitmodellDto() != null) {
-						dataHelp[REPORT_PERSONALLISTE_ZEITMODELL_ZUM_STICHTAG] = pzDto
-								.getZeitmodellDto().getBezeichnung();
+						dataHelp[REPORT_PERSONALLISTE_ZEITMODELL_ZUM_STICHTAG] = pzDto.getZeitmodellDto()
+								.getBezeichnung();
 					}
 
 					if (personalDto.getBerufDto() != null) {
-						dataHelp[REPORT_PERSONALLISTE_BERUF] = personalDto
-								.getBerufDto().getCBez();
+						dataHelp[REPORT_PERSONALLISTE_BERUF] = personalDto.getBerufDto().getCBez();
 					}
 
 					if (personalDto.getReligionDto() != null) {
-						dataHelp[REPORT_PERSONALLISTE_RELIGION] = personalDto
-								.getReligionDto().getCNr();
+						dataHelp[REPORT_PERSONALLISTE_RELIGION] = personalDto.getReligionDto().getCNr();
 					}
 					if (personalDto.getKollektivDto() != null) {
-						dataHelp[REPORT_PERSONALLISTE_KOLLEKTIV] = personalDto
-								.getKollektivDto().getCBez();
+						dataHelp[REPORT_PERSONALLISTE_KOLLEKTIV] = personalDto.getKollektivDto().getCBez();
 					}
-					dataHelp[REPORT_PERSONALLISTE_FAMILIENASTAND] = personalDto
-							.getFamilienstandCNr();
+					dataHelp[REPORT_PERSONALLISTE_FAMILIENASTAND] = personalDto.getFamilienstandCNr();
 
 					if (personalDto.getLohngruppeDto() != null) {
-						dataHelp[REPORT_PERSONALLISTE_LOHNGRUPPE] = personalDto
-								.getLohngruppeDto().getCBez();
+						dataHelp[REPORT_PERSONALLISTE_LOHNGRUPPE] = personalDto.getLohngruppeDto().getCBez();
 					}
 					if (personalDto.getLandplzortDto_Geburtsort() != null) {
-						dataHelp[REPORT_PERSONALLISTE_GEBURTSORT] = personalDto
-								.getLandplzortDto_Geburtsort()
+						dataHelp[REPORT_PERSONALLISTE_GEBURTSORT] = personalDto.getLandplzortDto_Geburtsort()
 								.formatLandPlzOrt();
 					}
 
 					if (personalDto.getPendlerpauschaleDto() != null) {
-						dataHelp[REPORT_PERSONALLISTE_PENDLERPAUSCHALE] = personalDto
-								.getPendlerpauschaleDto().getCBez();
+						dataHelp[REPORT_PERSONALLISTE_PENDLERPAUSCHALE] = personalDto.getPendlerpauschaleDto()
+								.getCBez();
 					}
 
 					if (personalDto.getPartnerDto_Sozialversicherer() != null) {
-						dataHelp[REPORT_PERSONALLISTE_SOZIALVERSICHERER] = personalDto
-								.getPartnerDto_Sozialversicherer()
+						dataHelp[REPORT_PERSONALLISTE_SOZIALVERSICHERER] = personalDto.getPartnerDto_Sozialversicherer()
 								.formatAnrede();
 					}
 					if (personalDto.getPartnerDto_Firma() != null) {
-						dataHelp[REPORT_PERSONALLISTE_FIRMENZUGEHOERIGKEIT] = personalDto
-								.getPartnerDto_Firma().formatAnrede();
+						dataHelp[REPORT_PERSONALLISTE_FIRMENZUGEHOERIGKEIT] = personalDto.getPartnerDto_Firma()
+								.formatAnrede();
 					}
 					if (personalDto.getLandDto() != null) {
-						dataHelp[REPORT_PERSONALLISTE_STAATSANGEHOERIGKEIT] = personalDto
-								.getLandDto().getCName();
+						dataHelp[REPORT_PERSONALLISTE_STAATSANGEHOERIGKEIT] = personalDto.getLandDto().getCName();
 					}
 					if (personalDto.getKostenstelleDto_Stamm() != null) {
-						dataHelp[REPORT_PERSONALLISTE_HEIMATKOSTENSTELLE] = personalDto
-								.getKostenstelleDto_Stamm().getCBez();
+						dataHelp[REPORT_PERSONALLISTE_HEIMATKOSTENSTELLE] = personalDto.getKostenstelleDto_Stamm()
+								.getCBez();
 					}
 
 					if (Helper.short2boolean(personalDto.getBMaennlich())) {
@@ -6912,43 +6582,28 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 						dataHelp[REPORT_PERSONALLISTE_GESCHLECHT] = "W";
 					}
 
-					dataHelp[REPORT_PERSONALLISTE_SOZIALVERSNR] = personalDto
-							.getCSozialversnr();
-					dataHelp[REPORT_PERSONALLISTE_UNTERSCHRIFTSFUNKTION] = personalDto
-							.getCUnterschriftsfunktion();
-					dataHelp[REPORT_PERSONALLISTE_UNTERSCHRIFTSTEXT] = personalDto
-							.getCUnterschriftstext();
+					dataHelp[REPORT_PERSONALLISTE_SOZIALVERSNR] = personalDto.getCSozialversnr();
+					dataHelp[REPORT_PERSONALLISTE_UNTERSCHRIFTSFUNKTION] = personalDto.getCUnterschriftsfunktion();
+					dataHelp[REPORT_PERSONALLISTE_UNTERSCHRIFTSTEXT] = personalDto.getCUnterschriftstext();
 					dataHelp[REPORT_PERSONALLISTE_KEINE_UEBERSTUNDENAUSZAHLUNG] = Helper
-							.short2Boolean(personalDto
-									.getBUeberstundenausbezahlt());
-					dataHelp[REPORT_PERSONALLISTE_VORNAME2] = personalDto
-							.getPartnerDto().getCName3vorname2abteilung();
-					dataHelp[REPORT_PERSONALLISTE_TITEL] = personalDto
-							.getPartnerDto().getCTitel();
-					dataHelp[REPORT_PERSONALLISTE_STRASSE] = personalDto
-							.getPartnerDto().getCStrasse();
-					dataHelp[REPORT_PERSONALLISTE_KURZBEZEICHNUNG] = personalDto
-							.getPartnerDto().getCKbez();
-					dataHelp[REPORT_PERSONALLISTE_KURZZEICHEN] = personalDto
-							.getCKurzzeichen();
+							.short2Boolean(personalDto.getBUeberstundenausbezahlt());
+					dataHelp[REPORT_PERSONALLISTE_VORNAME2] = personalDto.getPartnerDto().getCName3vorname2abteilung();
+					dataHelp[REPORT_PERSONALLISTE_TITEL] = personalDto.getPartnerDto().getCTitel();
+					dataHelp[REPORT_PERSONALLISTE_STRASSE] = personalDto.getPartnerDto().getCStrasse();
+					dataHelp[REPORT_PERSONALLISTE_KURZBEZEICHNUNG] = personalDto.getPartnerDto().getCKbez();
+					dataHelp[REPORT_PERSONALLISTE_KURZZEICHEN] = personalDto.getCKurzzeichen();
 
-					dataHelp[REPORT_PERSONALLISTE_ABSENDER_DURCHWAHL] = personalDto
-							.getCTelefon();
+					dataHelp[REPORT_PERSONALLISTE_ABSENDER_DURCHWAHL] = personalDto.getCTelefon();
 
-					dataHelp[REPORT_PERSONALLISTE_ABSENDER_EMAIL] = personalDto
-							.getCEmail();
+					dataHelp[REPORT_PERSONALLISTE_ABSENDER_EMAIL] = personalDto.getCEmail();
 
-					dataHelp[REPORT_PERSONALLISTE_ABSENDER_HANDY] = personalDto
-							.getCHandy();
+					dataHelp[REPORT_PERSONALLISTE_ABSENDER_HANDY] = personalDto.getCHandy();
 
-					dataHelp[REPORT_PERSONALLISTE_ABSENDER_FAXDW] = personalDto
-							.getCFax();
+					dataHelp[REPORT_PERSONALLISTE_ABSENDER_FAXDW] = personalDto.getCFax();
 
-					dataHelp[REPORT_PERSONALLISTE_ABSENDER_DIREKTFAX] = personalDto
-							.getCDirektfax();
+					dataHelp[REPORT_PERSONALLISTE_ABSENDER_DIREKTFAX] = personalDto.getCDirektfax();
 
-					dataHelp[REPORT_PERSONALLISTE_PERSONALFUNKTION] = personalDto
-							.getPersonalfunktionCNr();
+					dataHelp[REPORT_PERSONALLISTE_PERSONALFUNKTION] = personalDto.getPersonalfunktionCNr();
 
 					if (personalDto.getPersonalgruppeIId() != null) {
 
@@ -6956,75 +6611,60 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 								personalDto.getPersonalgruppeIId()).getCBez();
 					}
 
-					dataHelp[REPORT_PERSONALLISTE_TELEFON] = personalDto
-							.getPartnerDto().getCTelefon();
+					dataHelp[REPORT_PERSONALLISTE_TELEFON] = personalDto.getPartnerDto().getCTelefon();
 
-					dataHelp[REPORT_PERSONALLISTE_EMAIL] = personalDto
-							.getPartnerDto().getCEmail();
+					dataHelp[REPORT_PERSONALLISTE_EMAIL] = personalDto.getPartnerDto().getCEmail();
 
-					dataHelp[REPORT_PERSONALLISTE_HANDY] = personalDto
-							.getPartnerDto().getCHandy();
+					dataHelp[REPORT_PERSONALLISTE_HANDY] = personalDto.getPartnerDto().getCHandy();
 
-					dataHelp[REPORT_PERSONALLISTE_FAX] = personalDto
-							.getPartnerDto().getCFax();
+					dataHelp[REPORT_PERSONALLISTE_FAX] = personalDto.getPartnerDto().getCFax();
 
-					dataHelp[REPORT_PERSONALLISTE_HOMEPAGE] = personalDto
-							.getPartnerDto().getCHomepage();
+					dataHelp[REPORT_PERSONALLISTE_HOMEPAGE] = personalDto.getPartnerDto().getCHomepage();
 
 					if (personalDto.getPartnerDto().getLandplzortDto() != null) {
 
-						dataHelp[REPORT_PERSONALLISTE_ORT] = personalDto
-								.getPartnerDto().getLandplzortDto()
+						dataHelp[REPORT_PERSONALLISTE_ORT] = personalDto.getPartnerDto().getLandplzortDto()
 								.formatLandPlzOrt();
 					}
 
 					if (personal.getT_geburtsdatum() != null) {
 
 						Calendar cGeb = Calendar.getInstance();
-						cGeb.setTimeInMillis(personal.getT_geburtsdatum()
-								.getTime());
-						dataHelp[REPORT_PERSONALLISTE_ALTER] = Calendar
-								.getInstance().get(Calendar.YEAR)
+						cGeb.setTimeInMillis(personal.getT_geburtsdatum().getTime());
+						dataHelp[REPORT_PERSONALLISTE_ALTER] = Calendar.getInstance().get(Calendar.YEAR)
 								- cGeb.get(Calendar.YEAR);
 					}
 
-					dataHelp[REPORT_PERSONALLISTE_BILD] = Helper
-							.byteArrayToImage(personalDto.getPartnerDto()
-									.getOBild());
+					try {
+						dataHelp[REPORT_PERSONALLISTE_BILD] = Helper
+								.byteArrayToImage(personalDto.getPartnerDto().getOBild());
+					} catch (Exception e) {
+						//SP9823 Falls ein anderes Format verwendet wurde
+					}
 
-					dataHelp[REPORT_PERSONALLISTE_AUSWEISNUMMER] = personal
-							.getC_ausweis();
-					dataHelp[REPORT_PERSONALLISTE_ART] = personal
-							.getPersonalart_c_nr();
-					dataHelp[REPORT_PERSONALLISTE_KOSTENSTELLE] = personal
-							.getFlrkostenstelleabteilung() == null ? null
+					dataHelp[REPORT_PERSONALLISTE_AUSWEISNUMMER] = personal.getC_ausweis();
+					dataHelp[REPORT_PERSONALLISTE_ART] = personal.getPersonalart_c_nr();
+					dataHelp[REPORT_PERSONALLISTE_KOSTENSTELLE] = personal.getFlrkostenstelleabteilung() == null ? null
 							: personal.getFlrkostenstelleabteilung().getC_nr();
 					PersonalzutrittsklasseDto dto = null;
 					if (tsStichtag == null) {
 
 						java.sql.Timestamp tHeute = Helper
-								.cutTimestamp(new java.sql.Timestamp(System
-										.currentTimeMillis()));
+								.cutTimestamp(new java.sql.Timestamp(System.currentTimeMillis()));
 
-						dto = getZutrittscontrollerFac()
-								.personalzutrittsklasseFindZutrittsklasseZuDatum(
-										personal.getI_id(), tHeute,
-										theClientDto);
+						dto = getZutrittscontrollerFac().personalzutrittsklasseFindZutrittsklasseZuDatum(
+								personal.getI_id(), tHeute, theClientDto);
 					} else {
-						dto = getZutrittscontrollerFac()
-								.personalzutrittsklasseFindZutrittsklasseZuDatum(
-										personal.getI_id(), tsStichtag,
-										theClientDto);
+						dto = getZutrittscontrollerFac().personalzutrittsklasseFindZutrittsklasseZuDatum(
+								personal.getI_id(), tsStichtag, theClientDto);
 
 					}
 
 					if (dto != null) {
-						dataHelp[REPORT_PERSONALLISTE_ZUTRITTSKLASSE] = dto
-								.getZutrittsklasseDto().getCNr();
+						dataHelp[REPORT_PERSONALLISTE_ZUTRITTSKLASSE] = dto.getZutrittsklasseDto().getCNr();
 					}
 
-					Query query = em
-							.createNamedQuery("PersonalangehoerigefindByPersonalIId");
+					Query query = em.createNamedQuery("PersonalangehoerigefindByPersonalIId");
 					query.setParameter(1, personal.getI_id());
 					Collection<?> cl = query.getResultList();
 
@@ -7032,55 +6672,43 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 					if (personalangehoerigeDtos.length > 0) {
 
-						String[] fieldnames = new String[] { "Name", "Vorname",
-								"Geburtsdatum", "Art", "Sozialversicherungsnr" };
+						String[] fieldnames = new String[] { "Name", "Vorname", "Geburtsdatum", "Art",
+								"Sozialversicherungsnr" };
 
 						Object[][] dataSub = new Object[personalangehoerigeDtos.length][fieldnames.length];
 						for (int i = 0; i < personalangehoerigeDtos.length; i++) {
-							dataSub[i][0] = personalangehoerigeDtos[i]
-									.getCName();
-							dataSub[i][1] = personalangehoerigeDtos[i]
-									.getCVorname();
-							dataSub[i][2] = personalangehoerigeDtos[i]
-									.getTGeburtsdatum();
-							dataSub[i][3] = personalangehoerigeDtos[i]
-									.getAngehoerigenartCNr();
-							dataSub[i][4] = personalangehoerigeDtos[i]
-									.getCSozialversnr();
+							dataSub[i][0] = personalangehoerigeDtos[i].getCName();
+							dataSub[i][1] = personalangehoerigeDtos[i].getCVorname();
+							dataSub[i][2] = personalangehoerigeDtos[i].getTGeburtsdatum();
+							dataSub[i][3] = personalangehoerigeDtos[i].getAngehoerigenartCNr();
+							dataSub[i][4] = personalangehoerigeDtos[i].getCSozialversnr();
 						}
 
-						dataHelp[REPORT_PERSONALLISTE_SUBREPORT_ANGEHOERIGE] = new LPDatenSubreport(
-								dataSub, fieldnames);
+						dataHelp[REPORT_PERSONALLISTE_SUBREPORT_ANGEHOERIGE] = new LPDatenSubreport(dataSub,
+								fieldnames);
 					}
 
 					PartnerbankDto[] bankverbindungDtos = getBankFac()
-							.partnerbankFindByPartnerIId(
-									personal.getFlrpartner().getI_id(),
-									theClientDto);
+							.partnerbankFindByPartnerIId(personal.getFlrpartner().getI_id(), theClientDto);
 					if (bankverbindungDtos.length > 0) {
 
-						String[] fieldnames = new String[] { "Iban",
-								"Kontonummer", "Blz", "Bic", "Bank" };
+						String[] fieldnames = new String[] { "Iban", "Kontonummer", "Blz", "Bic", "Bank" };
 
 						Object[][] dataSub = new Object[bankverbindungDtos.length][fieldnames.length];
 						for (int i = 0; i < bankverbindungDtos.length; i++) {
 
 							BankDto bankDto = getBankFac()
-									.bankFindByPrimaryKey(
-											bankverbindungDtos[i]
-													.getBankPartnerIId(),
-											theClientDto);
+									.bankFindByPrimaryKey(bankverbindungDtos[i].getBankPartnerIId(), theClientDto);
 
 							dataSub[i][0] = bankverbindungDtos[i].getCIban();
 							dataSub[i][1] = bankverbindungDtos[i].getCKtonr();
 							dataSub[i][2] = bankDto.getCBlz();
 							dataSub[i][3] = bankDto.getCBic();
-							dataSub[i][4] = bankDto.getPartnerDto()
-									.formatAnrede();
+							dataSub[i][4] = bankDto.getPartnerDto().formatAnrede();
 						}
 
-						dataHelp[REPORT_PERSONALLISTE_SUBREPORT_BANKVERBINDUNG] = new LPDatenSubreport(
-								dataSub, fieldnames);
+						dataHelp[REPORT_PERSONALLISTE_SUBREPORT_BANKVERBINDUNG] = new LPDatenSubreport(dataSub,
+								fieldnames);
 					}
 
 					alDaten.add(dataHelp);
@@ -7098,6 +6726,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 						if (d != null) {
 							Calendar c = Calendar.getInstance();
 							c.setTimeInMillis(d.getTime());
+							c.set(Calendar.YEAR, 2000);
 							dayOfYear = c.get(Calendar.DAY_OF_YEAR);
 						}
 
@@ -7106,6 +6735,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 						if (d1 != null) {
 							Calendar c = Calendar.getInstance();
 							c.setTimeInMillis(d1.getTime());
+							c.set(Calendar.YEAR, 2000);
 							dayOfYear1 = c.get(Calendar.DAY_OF_YEAR);
 						}
 
@@ -7118,8 +6748,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 					}
 				}
 
-				sSortierung = getTextRespectUISpr("pers.geburtstag",
-						theClientDto.getMandant(), theClientDto.getLocUi());
+				sSortierung = getTextRespectUISpr("pers.geburtstag", theClientDto.getMandant(),
+						theClientDto.getLocUi());
 			}
 
 			session.close();
@@ -7141,16 +6771,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		parameter.put("P_STICHTAG", tsStichtag);
 		parameter.put("P_MITVERSTECKTEN", new Boolean(bMitVersteckten));
 
+		if (personalIId != null) {
+			parameter.put("P_AUSGEWAEHLTER_MITARBEITER",
+					getPersonalFac().personalFindByPrimaryKey(personalIId, theClientDto).formatFixName1Name2());
+		}
+
 		if (bMitBarcodes == true) {
-			initJRDS(parameter, PersonalFac.REPORT_MODUL,
-					PersonalFac.REPORT_BARCODELISTE, theClientDto.getMandant(),
+			initJRDS(parameter, PersonalFac.REPORT_MODUL, PersonalFac.REPORT_BARCODELISTE, theClientDto.getMandant(),
 					theClientDto.getLocUi(), theClientDto);
 
 		} else {
-			initJRDS(parameter, PersonalFac.REPORT_MODUL,
-					PersonalFac.REPORT_PERSONALLISTE,
-					theClientDto.getMandant(), theClientDto.getLocUi(),
-					theClientDto);
+			initJRDS(parameter, PersonalFac.REPORT_MODUL, PersonalFac.REPORT_PERSONALLISTE, theClientDto.getMandant(),
+					theClientDto.getLocUi(), theClientDto);
 		}
 
 		print = getReportPrint();
@@ -7202,6 +6834,8 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			value = data[index][REPORT_PERSONALLISTE_SUBREPORT_BANKVERBINDUNG];
 		} else if ("EintrittsdatumZumStichtag".equals(fieldName)) {
 			value = data[index][REPORT_PERSONALLISTE_EINTRITTSDATUM_ZUM_STICHTAG];
+		} else if ("AustrittsdatumZumStichtag".equals(fieldName)) {
+			value = data[index][REPORT_PERSONALLISTE_AUSTRITTSDATUM_ZUM_STICHTAG];
 		} else if ("ZeitmodellZumStichtag".equals(fieldName)) {
 			value = data[index][REPORT_PERSONALLISTE_ZEITMODELL_ZUM_STICHTAG];
 		} else if ("Familienstand".equals(fieldName)) {
@@ -7281,20 +6915,17 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public Integer createZulage(ZulageDto zulageDto) throws EJBExceptionLP {
 		if (zulageDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("zulageDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("zulageDto == null"));
 		}
 		if (zulageDto.getCBez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception("zulageDto.getCBez() == null"));
 		}
 		try {
 			Query query = em.createNamedQuery("ZulagefindByCBez");
 			query.setParameter(1, zulageDto.getCBez());
 			Zulage doppelt = (Zulage) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_ZULAGE.C_BEZ"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_ZULAGE.C_BEZ"));
 		} catch (NoResultException ex1) {
 		}
 		// generieren von primary key
@@ -7315,14 +6946,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public void removeZulage(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
 			Zulage zulage = em.find(Zulage.class, iId);
 			if (zulage == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(zulage);
 			em.flush();
@@ -7341,22 +6970,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public void updateZulage(ZulageDto zulageDto) throws EJBExceptionLP {
 		if (zulageDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("zulageDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("zulageDto == null"));
 		}
 		if (zulageDto.getIId() == null || zulageDto.getCBez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"zulageDto.getIId() == null || zulageDto.getCBez() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("zulageDto.getIId() == null || zulageDto.getCBez() == null"));
 		}
 
 		Integer iId = zulageDto.getIId();
 		// try {
 		Zulage zulage = em.find(Zulage.class, iId);
 		if (zulage == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
@@ -7364,9 +6989,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			query.setParameter(1, zulageDto.getCBez());
 			Integer iIdVorhanden = ((Zulage) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_ZULAGE.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_ZULAGE.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
@@ -7383,14 +7006,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public ZulageDto zulageFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
 		Zulage zulage = em.find(Zulage.class, iId);
 		if (zulage == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleZulageDto(zulage);
 		// }
@@ -7424,32 +7045,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (ZulageDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createArtikelzulage(ArtikelzulageDto artikelzulageDto)
-			throws EJBExceptionLP {
+	public Integer createArtikelzulage(ArtikelzulageDto artikelzulageDto) throws EJBExceptionLP {
 		if (artikelzulageDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikelzulageDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("artikelzulageDto == null"));
 		}
-		if (artikelzulageDto.getArtikelIId() == null
-				|| artikelzulageDto.getZulageIId() == null
+		if (artikelzulageDto.getArtikelIId() == null || artikelzulageDto.getZulageIId() == null
 				|| artikelzulageDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikelzulageDto.getArtikelIId() == null || artikelzulageDto.getZulageIId() == null || artikelzulageDto.getTGueltigab() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"artikelzulageDto.getArtikelIId() == null || artikelzulageDto.getZulageIId() == null || artikelzulageDto.getTGueltigab() == null"));
 		}
 
-		Query query = em
-				.createNamedQuery("ArtikelzulagefindByArtikelIIdZulageIIdTGueltigab");
+		Query query = em.createNamedQuery("ArtikelzulagefindByArtikelIIdZulageIIdTGueltigab");
 		query.setParameter(1, artikelzulageDto.getArtikelIId());
 		query.setParameter(2, artikelzulageDto.getZulageIId());
 		query.setParameter(3, artikelzulageDto.getTGueltigab());
 		try {
 			Artikelzulage doppelt = (Artikelzulage) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_ARTIKELZULAGE.UC"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_ARTIKELZULAGE.UC"));
 			}
 		} catch (NoResultException ex1) {
 			// nothing here
@@ -7460,15 +7074,44 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		artikelzulageDto.setIId(pk);
 
 		try {
-			Artikelzulage artikelzulage = new Artikelzulage(
-					artikelzulageDto.getIId(),
-					artikelzulageDto.getArtikelIId(),
-					artikelzulageDto.getZulageIId(),
-					artikelzulageDto.getTGueltigab());
+			Artikelzulage artikelzulage = new Artikelzulage(artikelzulageDto.getIId(), artikelzulageDto.getArtikelIId(),
+					artikelzulageDto.getZulageIId(), artikelzulageDto.getTGueltigab());
 			em.persist(artikelzulage);
 			em.flush();
-			setArtikelzulageFromArtikelzulageDto(artikelzulage,
-					artikelzulageDto);
+			setArtikelzulageFromArtikelzulageDto(artikelzulage, artikelzulageDto);
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+		return artikelzulageDto.getIId();
+	}
+
+	public Integer createArtikelzuschlag(ArtikelzuschlagDto artikelzulageDto) {
+
+		Query query = em.createNamedQuery("ArtikelzuschlagfindByArtikelIIdTGueltigab");
+		query.setParameter(1, artikelzulageDto.getArtikelIId());
+
+		query.setParameter(2, artikelzulageDto.getTGueltigab());
+		try {
+			Artikelzuschlag doppelt = (Artikelzuschlag) query.getSingleResult();
+			if (doppelt != null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_ARTIKELZUSCHLAG.UC"));
+			}
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ARTIKELZUSCHLAG);
+		artikelzulageDto.setIId(pk);
+
+		try {
+			Artikelzuschlag artikelzuschlag = new Artikelzuschlag(artikelzulageDto.getIId(),
+					artikelzulageDto.getArtikelIId(), artikelzulageDto.getNZuschlag(),
+					artikelzulageDto.getTGueltigab());
+			em.persist(artikelzuschlag);
+			em.flush();
+			setArtikelzuschlagFromArtikelzuschlagDto(artikelzuschlag, artikelzulageDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -7477,14 +7120,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public void removeArtikelzulage(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("iId == null"));
 		}
 		try {
 			Artikelzulage artikelzulage = em.find(Artikelzulage.class, iId);
 			if (artikelzulage == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(artikelzulage);
 			em.flush();
@@ -7493,27 +7134,46 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void removeArtikelzulage(ArtikelzulageDto artikelzulageDto)
-			throws EJBExceptionLP {
+	public void removeAnwesenheitsbestaetigung(AnwesenheitsbestaetigungDto dto) {
+
+		try {
+			Anwesenheitsbestaetigung bean = em.find(Anwesenheitsbestaetigung.class, dto.getIId());
+
+			em.remove(bean);
+			em.flush();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
+		}
+	}
+
+	public void removeArtikelzuschlag(ArtikelzuschlagDto dto) {
+
+		try {
+			Artikelzuschlag artikelzuschlag = em.find(Artikelzuschlag.class, dto.getIId());
+			if (artikelzuschlag == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+			em.remove(artikelzuschlag);
+			em.flush();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
+		}
+	}
+
+	public void removeArtikelzulage(ArtikelzulageDto artikelzulageDto) throws EJBExceptionLP {
 		if (artikelzulageDto != null) {
 			Integer iId = artikelzulageDto.getIId();
 			removeArtikelzulage(iId);
 		}
 	}
 
-	public void schichtzeitenVorausplanen(Integer personalIId,
-			Integer zeitmodellIId1, Integer zeitmodellIId2,
-			Integer zeitmodellIId3, Integer zeitmodellIId4, Integer iKwVon,
-			Integer iKwBis, Integer iJahrVon, Integer iJahrBis,
-			String tagesartCNrSchichtwechsel) {
-		if (personalIId == null || zeitmodellIId1 == null
-				|| zeitmodellIId2 == null || iKwVon == null || iKwBis == null
-				|| iJahrVon == null || iJahrBis == null
-				|| tagesartCNrSchichtwechsel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"personalIId == null || zeitmodellIId1 == null || zeitmodellIId2 == null || tVon == null || tBis == null || iJahrVon == null || iJahrBis == null || tagesartCNrSchichtwechsel == null"));
+	public void schichtzeitenVorausplanen(Integer personalIId, Integer zeitmodellIId1, Integer zeitmodellIId2,
+			Integer zeitmodellIId3, Integer zeitmodellIId4, Integer iKwVon, Integer iKwBis, Integer iJahrVon,
+			Integer iJahrBis, String tagesartCNrSchichtwechsel) {
+		if (personalIId == null || zeitmodellIId1 == null || zeitmodellIId2 == null || iKwVon == null || iKwBis == null
+				|| iJahrVon == null || iJahrBis == null || tagesartCNrSchichtwechsel == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"personalIId == null || zeitmodellIId1 == null || zeitmodellIId2 == null || tVon == null || tBis == null || iJahrVon == null || iJahrBis == null || tagesartCNrSchichtwechsel == null"));
 		}
 		Calendar cBis = Calendar.getInstance();
 		cBis.set(Calendar.YEAR, iJahrBis);
@@ -7525,33 +7185,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		if (tagesartCNrSchichtwechsel.equals(ZeiterfassungFac.TAGESART_MONTAG)) {
 			cAktuelleWoche.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-		} else if (tagesartCNrSchichtwechsel
-				.equals(ZeiterfassungFac.TAGESART_DIENSTAG)) {
+		} else if (tagesartCNrSchichtwechsel.equals(ZeiterfassungFac.TAGESART_DIENSTAG)) {
 			cAktuelleWoche.set(Calendar.DAY_OF_WEEK, Calendar.TUESDAY);
-		} else if (tagesartCNrSchichtwechsel
-				.equals(ZeiterfassungFac.TAGESART_MITTWOCH)) {
+		} else if (tagesartCNrSchichtwechsel.equals(ZeiterfassungFac.TAGESART_MITTWOCH)) {
 			cAktuelleWoche.set(Calendar.DAY_OF_WEEK, Calendar.WEDNESDAY);
-		} else if (tagesartCNrSchichtwechsel
-				.equals(ZeiterfassungFac.TAGESART_DONNERSTAG)) {
+		} else if (tagesartCNrSchichtwechsel.equals(ZeiterfassungFac.TAGESART_DONNERSTAG)) {
 			cAktuelleWoche.set(Calendar.DAY_OF_WEEK, Calendar.WEDNESDAY);
-		} else if (tagesartCNrSchichtwechsel
-				.equals(ZeiterfassungFac.TAGESART_FREITAG)) {
+		} else if (tagesartCNrSchichtwechsel.equals(ZeiterfassungFac.TAGESART_FREITAG)) {
 			cAktuelleWoche.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY);
-		} else if (tagesartCNrSchichtwechsel
-				.equals(ZeiterfassungFac.TAGESART_SAMSTAG)) {
+		} else if (tagesartCNrSchichtwechsel.equals(ZeiterfassungFac.TAGESART_SAMSTAG)) {
 			cAktuelleWoche.set(Calendar.DAY_OF_WEEK, Calendar.SATURDAY);
-		} else if (tagesartCNrSchichtwechsel
-				.equals(ZeiterfassungFac.TAGESART_SONNTAG)) {
+		} else if (tagesartCNrSchichtwechsel.equals(ZeiterfassungFac.TAGESART_SONNTAG)) {
 			cAktuelleWoche.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
 		}
 
 		int iAnzahlSchichten = 0;
 
-		if (zeitmodellIId1 != null && zeitmodellIId2 != null
-				&& zeitmodellIId3 != null && zeitmodellIId4 != null) {
+		if (zeitmodellIId1 != null && zeitmodellIId2 != null && zeitmodellIId3 != null && zeitmodellIId4 != null) {
 			iAnzahlSchichten = 4;
-		} else if (zeitmodellIId1 != null && zeitmodellIId2 != null
-				&& zeitmodellIId3 != null) {
+		} else if (zeitmodellIId1 != null && zeitmodellIId2 != null && zeitmodellIId3 != null) {
 			iAnzahlSchichten = 3;
 		} else if (zeitmodellIId1 != null && zeitmodellIId2 != null) {
 			iAnzahlSchichten = 2;
@@ -7561,16 +7213,13 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		while (cBis.getTime().after(cAktuelleWoche.getTime())) {
 			// Eintragen fuer aktuelle Wochen
-			Timestamp tAktuell = Helper.cutTimestamp(new Timestamp(
-					cAktuelleWoche.getTimeInMillis()));
+			Timestamp tAktuell = Helper.cutTimestamp(new Timestamp(cAktuelleWoche.getTimeInMillis()));
 
 			try {
-				Query query = em
-						.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
+				Query query = em.createNamedQuery("PersonalzeitmodellfindByPersonalIIdTDatum");
 				query.setParameter(1, personalIId);
 				query.setParameter(2, tAktuell);
-				Personalzeitmodell personalzeitmodell = (Personalzeitmodell) query
-						.getSingleResult();
+				Personalzeitmodell personalzeitmodell = (Personalzeitmodell) query.getSingleResult();
 				// Wenns schon ein Zeitmodell gibt an diesem Tag, dann
 				// auslassen
 			} catch (NoResultException ex) {
@@ -7602,42 +7251,31 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void updateArtikelzulage(ArtikelzulageDto artikelzulageDto)
-			throws EJBExceptionLP {
+	public void updateArtikelzulage(ArtikelzulageDto artikelzulageDto) throws EJBExceptionLP {
 		if (artikelzulageDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikelzulageDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("artikelzulageDto == null"));
 		}
-		if (artikelzulageDto.getIId() == null
-				|| artikelzulageDto.getArtikelIId() == null
-				|| artikelzulageDto.getZulageIId() == null
-				|| artikelzulageDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikelzulageDto.getIId() == null || artikelzulageDto.getArtikelIId() == null || artikelzulageDto.getZulageIId() == null || artikelzulageDto.getTGueltigab() == null"));
+		if (artikelzulageDto.getIId() == null || artikelzulageDto.getArtikelIId() == null
+				|| artikelzulageDto.getZulageIId() == null || artikelzulageDto.getTGueltigab() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"artikelzulageDto.getIId() == null || artikelzulageDto.getArtikelIId() == null || artikelzulageDto.getZulageIId() == null || artikelzulageDto.getTGueltigab() == null"));
 		}
 
 		Integer iId = artikelzulageDto.getIId();
 		// try {
 		Artikelzulage artikelzulage = em.find(Artikelzulage.class, iId);
 		if (artikelzulage == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("ArtikelzulagefindByArtikelIIdZulageIIdTGueltigab");
+			Query query = em.createNamedQuery("ArtikelzulagefindByArtikelIIdZulageIIdTGueltigab");
 			query.setParameter(1, artikelzulageDto.getArtikelIId());
 			query.setParameter(2, artikelzulageDto.getZulageIId());
 			query.setParameter(3, artikelzulageDto.getTGueltigab());
-			Integer iIdVorhanden = ((Artikelzulage) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Artikelzulage) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_ZULAGE.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_ZULAGE.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
@@ -7652,17 +7290,37 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public ArtikelzulageDto artikelzulageFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public void updateArtikelzuschlag(ArtikelzuschlagDto dto) {
+
+		Integer iId = dto.getIId();
+
+		Artikelzuschlag bean = em.find(Artikelzuschlag.class, iId);
+
+		try {
+			Query query = em.createNamedQuery("ArtikelzuschlagfindByArtikelIIdTGueltigab");
+			query.setParameter(1, dto.getArtikelIId());
+
+			query.setParameter(2, dto.getTGueltigab());
+			Integer iIdVorhanden = ((Artikelzuschlag) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_ZULAGE.C_BEZ"));
+			}
+
+		} catch (NoResultException ex) {
+			// nix
+		}
+		setArtikelzuschlagFromArtikelzuschlagDto(bean, dto);
+
+	}
+
+	public ArtikelzulageDto artikelzulageFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 		// try {
 		Artikelzulage artikelzulage = em.find(Artikelzulage.class, iId);
 		if (artikelzulage == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleArtikelzulageDto(artikelzulage);
 		// }
@@ -7673,8 +7331,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setArtikelzulageFromArtikelzulageDto(
-			Artikelzulage artikelzulage, ArtikelzulageDto artikelzulageDto) {
+	public ArtikelzuschlagDto artikelzuschlagFindByPrimaryKey(Integer iId) {
+
+		Artikelzuschlag artikelzuschlag = em.find(Artikelzuschlag.class, iId);
+
+		return ArtikelzuschlagDtoAssembler.createDto(artikelzuschlag);
+
+	}
+
+	private void setArtikelzulageFromArtikelzulageDto(Artikelzulage artikelzulage, ArtikelzulageDto artikelzulageDto) {
 		artikelzulage.setArtikelIId(artikelzulageDto.getArtikelIId());
 		artikelzulage.setZulageIId(artikelzulageDto.getZulageIId());
 		artikelzulage.setTGueltigab(artikelzulageDto.getTGueltigab());
@@ -7682,13 +7347,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		em.flush();
 	}
 
-	private ArtikelzulageDto assembleArtikelzulageDto(
-			Artikelzulage artikelzulage) {
+	private void setArtikelzuschlagFromArtikelzuschlagDto(Artikelzuschlag artikelzuschlag,
+			ArtikelzuschlagDto artikelzuschlagDto) {
+		artikelzuschlag.setArtikelIId(artikelzuschlagDto.getArtikelIId());
+		artikelzuschlag.setNZuschlag(artikelzuschlagDto.getNZuschlag());
+		artikelzuschlag.setTGueltigab(artikelzuschlagDto.getTGueltigab());
+		em.merge(artikelzuschlag);
+		em.flush();
+	}
+
+	private ArtikelzulageDto assembleArtikelzulageDto(Artikelzulage artikelzulage) {
 		return ArtikelzulageDtoAssembler.createDto(artikelzulage);
 	}
 
-	private ArtikelzulageDto[] assembleArtikelzulageDtos(
-			Collection<?> artikelzulages) {
+	private ArtikelzulageDto[] assembleArtikelzulageDtos(Collection<?> artikelzulages) {
 		List<ArtikelzulageDto> list = new ArrayList<ArtikelzulageDto>();
 		if (artikelzulages != null) {
 			Iterator<?> iterator = artikelzulages.iterator();
@@ -7701,31 +7373,25 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (ArtikelzulageDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createPersonalverfuegbarkeit(
-			PersonalverfuegbarkeitDto personalverfuegbarkeitDto)
+	public Integer createPersonalverfuegbarkeit(PersonalverfuegbarkeitDto personalverfuegbarkeitDto)
 			throws EJBExceptionLP {
 		if (personalverfuegbarkeitDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("personalverfuegbarkeitDto == null"));
 		}
 
-		if (personalverfuegbarkeitDto.getPersonalIId() == null
-				|| personalverfuegbarkeitDto.getArtikelIId() == null
+		if (personalverfuegbarkeitDto.getPersonalIId() == null || personalverfuegbarkeitDto.getArtikelIId() == null
 				|| personalverfuegbarkeitDto.getFAnteilprozent() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalverfuegbarkeitDto.getPersonalIId() == null || personalverfuegbarkeitDto.getArtikelIId() == null || personalverfuegbarkeitDto.getFAnteilprozent() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalverfuegbarkeitDto.getPersonalIId() == null || personalverfuegbarkeitDto.getArtikelIId() == null || personalverfuegbarkeitDto.getFAnteilprozent() == null"));
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIIdArtikelIId");
+			Query query = em.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIIdArtikelIId");
 			query.setParameter(1, personalverfuegbarkeitDto.getPersonalIId());
 			query.setParameter(2, personalverfuegbarkeitDto.getArtikelIId());
 			// @todo getSingleResult oder getResultList ?
-			Personalverfuegbarkeit doppelt = (Personalverfuegbarkeit) query
-					.getSingleResult();
+			Personalverfuegbarkeit doppelt = (Personalverfuegbarkeit) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PERS_PERSONALVERFUEGBARKEIT.UK"));
 		} catch (NoResultException ex1) {
@@ -7737,26 +7403,21 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		personalverfuegbarkeitDto.setIId(pk);
 		try {
 			Personalverfuegbarkeit personalverfuegbarkeit = new Personalverfuegbarkeit(
-					personalverfuegbarkeitDto.getIId(),
-					personalverfuegbarkeitDto.getPersonalIId(),
-					personalverfuegbarkeitDto.getArtikelIId(),
-					personalverfuegbarkeitDto.getFAnteilprozent());
+					personalverfuegbarkeitDto.getIId(), personalverfuegbarkeitDto.getPersonalIId(),
+					personalverfuegbarkeitDto.getArtikelIId(), personalverfuegbarkeitDto.getFAnteilprozent());
 			em.persist(personalverfuegbarkeit);
 			em.flush();
-			setPersonalverfuegbarkeitFromPersonalverfuegbarkeitDto(
-					personalverfuegbarkeit, personalverfuegbarkeitDto);
+			setPersonalverfuegbarkeitFromPersonalverfuegbarkeitDto(personalverfuegbarkeit, personalverfuegbarkeitDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
 		return personalverfuegbarkeitDto.getIId();
 	}
 
-	public Double getAuslastungEinerPerson(Integer personalIId)
-			throws EJBExceptionLP {
+	public Double getAuslastungEinerPerson(Integer personalIId) throws EJBExceptionLP {
 		double wert = 0;
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIId");
+		Query query = em.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIId");
 		query.setParameter(1, personalIId);
 		Collection<?> cl = query.getResultList();
 		// if (cl.isEmpty()) {
@@ -7779,11 +7440,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public void removePersonalverfuegbarkeit(Integer iId) throws EJBExceptionLP {
 		// try {
-		Personalverfuegbarkeit toRemove = em.find(Personalverfuegbarkeit.class,
-				iId);
+		Personalverfuegbarkeit toRemove = em.find(Personalverfuegbarkeit.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -7797,8 +7456,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public void removePersonalverfuegbarkeit(
-			PersonalverfuegbarkeitDto personalverfuegbarkeitDto)
+	public void removePersonalverfuegbarkeit(PersonalverfuegbarkeitDto personalverfuegbarkeitDto)
 			throws EJBExceptionLP {
 		if (personalverfuegbarkeitDto != null) {
 			Integer iId = personalverfuegbarkeitDto.getIId();
@@ -7806,52 +7464,42 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updatePersonalverfuegbarkeit(
-			PersonalverfuegbarkeitDto personalverfuegbarkeitDto)
+	public void updatePersonalverfuegbarkeit(PersonalverfuegbarkeitDto personalverfuegbarkeitDto)
 			throws EJBExceptionLP {
 		if (personalverfuegbarkeitDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("personalverfuegbarkeitDto == null"));
 		}
 
-		if (personalverfuegbarkeitDto.getIId() == null
-				|| personalverfuegbarkeitDto.getPersonalIId() == null
+		if (personalverfuegbarkeitDto.getIId() == null || personalverfuegbarkeitDto.getPersonalIId() == null
 				|| personalverfuegbarkeitDto.getArtikelIId() == null
 				|| personalverfuegbarkeitDto.getFAnteilprozent() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"personalverfuegbarkeitDto.getIId() == null || personalverfuegbarkeitDto.getPersonalIId() == null || personalverfuegbarkeitDto.getArtikelIId() == null || personalverfuegbarkeitDto.getFAnteilprozent() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception(
+					"personalverfuegbarkeitDto.getIId() == null || personalverfuegbarkeitDto.getPersonalIId() == null || personalverfuegbarkeitDto.getArtikelIId() == null || personalverfuegbarkeitDto.getFAnteilprozent() == null"));
 		}
 
 		Integer iId = personalverfuegbarkeitDto.getIId();
 		// try {
 
 		try {
-			Query query = em
-					.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIIdArtikelIId");
+			Query query = em.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIIdArtikelIId");
 			query.setParameter(1, personalverfuegbarkeitDto.getPersonalIId());
 			query.setParameter(2, personalverfuegbarkeitDto.getArtikelIId());
-			Integer iIdVorhanden = ((Personalverfuegbarkeit) query
-					.getSingleResult()).getIId();
+			Integer iIdVorhanden = ((Personalverfuegbarkeit) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONALVERFUEGBARKEIT.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALVERFUEGBARKEIT.UK"));
 			}
 
 		} catch (NoResultException ex) {
 			//
 		}
 
-		Personalverfuegbarkeit personalverfuegbarkeit = em.find(
-				Personalverfuegbarkeit.class, iId);
+		Personalverfuegbarkeit personalverfuegbarkeit = em.find(Personalverfuegbarkeit.class, iId);
 		if (personalverfuegbarkeit == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		setPersonalverfuegbarkeitFromPersonalverfuegbarkeitDto(
-				personalverfuegbarkeit, personalverfuegbarkeitDto);
+		setPersonalverfuegbarkeitFromPersonalverfuegbarkeitDto(personalverfuegbarkeit, personalverfuegbarkeitDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -7861,19 +7509,15 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public PersonalverfuegbarkeitDto personalverfuegbarkeitFindByPrimaryKey(
-			Integer iId) throws EJBExceptionLP {
+	public PersonalverfuegbarkeitDto personalverfuegbarkeitFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		// try {
-		Personalverfuegbarkeit personalverfuegbarkeit = em.find(
-				Personalverfuegbarkeit.class, iId);
+		Personalverfuegbarkeit personalverfuegbarkeit = em.find(Personalverfuegbarkeit.class, iId);
 		if (personalverfuegbarkeit == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePersonalverfuegbarkeitDto(personalverfuegbarkeit);
 		// }
@@ -7884,16 +7528,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalverfuegbarkeitDto[] personalverfuegbarkeitFindByPersonalIId(
-			Integer personalIId) throws EJBExceptionLP {
+	public PersonalverfuegbarkeitDto[] personalverfuegbarkeitFindByPersonalIId(Integer personalIId)
+			throws EJBExceptionLP {
 		if (personalIId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("personalIId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("personalIId == null"));
 		}
 
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIId");
+		Query query = em.createNamedQuery("PersonalverfuegbarkeitfindByPersonalIId");
 		query.setParameter(1, personalIId);
 		Collection<?> cl = query.getResultList();
 		// if (cl.isEmpty()) {
@@ -7910,55 +7552,40 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setPersonalverfuegbarkeitFromPersonalverfuegbarkeitDto(
-			Personalverfuegbarkeit personalverfuegbarkeit,
+	private void setPersonalverfuegbarkeitFromPersonalverfuegbarkeitDto(Personalverfuegbarkeit personalverfuegbarkeit,
 			PersonalverfuegbarkeitDto personalverfuegbarkeitDto) {
-		personalverfuegbarkeit.setPersonalIId(personalverfuegbarkeitDto
-				.getPersonalIId());
-		personalverfuegbarkeit.setArtikelIId(personalverfuegbarkeitDto
-				.getArtikelIId());
-		personalverfuegbarkeit.setFAnteilprozent(personalverfuegbarkeitDto
-				.getFAnteilprozent());
+		personalverfuegbarkeit.setPersonalIId(personalverfuegbarkeitDto.getPersonalIId());
+		personalverfuegbarkeit.setArtikelIId(personalverfuegbarkeitDto.getArtikelIId());
+		personalverfuegbarkeit.setFAnteilprozent(personalverfuegbarkeitDto.getFAnteilprozent());
 		em.merge(personalverfuegbarkeit);
 		em.flush();
 	}
 
-	private PersonalverfuegbarkeitDto assemblePersonalverfuegbarkeitDto(
-			Personalverfuegbarkeit personalverfuegbarkeit) {
-		return PersonalverfuegbarkeitDtoAssembler
-				.createDto(personalverfuegbarkeit);
+	private PersonalverfuegbarkeitDto assemblePersonalverfuegbarkeitDto(Personalverfuegbarkeit personalverfuegbarkeit) {
+		return PersonalverfuegbarkeitDtoAssembler.createDto(personalverfuegbarkeit);
 	}
 
-	private PersonalverfuegbarkeitDto[] assemblePersonalverfuegbarkeitDtos(
-			Collection<?> personalverfuegbarkeits) {
+	private PersonalverfuegbarkeitDto[] assemblePersonalverfuegbarkeitDtos(Collection<?> personalverfuegbarkeits) {
 		List<PersonalverfuegbarkeitDto> list = new ArrayList<PersonalverfuegbarkeitDto>();
 		if (personalverfuegbarkeits != null) {
 			Iterator<?> iterator = personalverfuegbarkeits.iterator();
 			while (iterator.hasNext()) {
-				Personalverfuegbarkeit personalverfuegbarkeit = (Personalverfuegbarkeit) iterator
-						.next();
+				Personalverfuegbarkeit personalverfuegbarkeit = (Personalverfuegbarkeit) iterator.next();
 				list.add(assemblePersonalverfuegbarkeitDto(personalverfuegbarkeit));
 			}
 		}
-		PersonalverfuegbarkeitDto[] returnArray = new PersonalverfuegbarkeitDto[list
-				.size()];
+		PersonalverfuegbarkeitDto[] returnArray = new PersonalverfuegbarkeitDto[list.size()];
 		return (PersonalverfuegbarkeitDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createKollektivuestd(KollektivuestdDto kollektivuestdDto)
-			throws EJBExceptionLP {
+	public Integer createKollektivuestd(KollektivuestdDto kollektivuestdDto) throws EJBExceptionLP {
 		if (kollektivuestdDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivuestdDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivuestdDto == null"));
 		}
-		if (kollektivuestdDto.getTagesartIId() == null
-				|| kollektivuestdDto.getKollektivIId() == null
-				|| kollektivuestdDto.getBRestdestages() == null
-				|| kollektivuestdDto.getUAb() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"kollektivuestdDto.getTagesartIId() == null || kollektivuestdDto.getKollektivIId() == null || kollektivuestdDto.getBRestdestages() == null || kollektivuestdDto.getUAb() == null"));
+		if (kollektivuestdDto.getTagesartIId() == null || kollektivuestdDto.getKollektivIId() == null
+				|| kollektivuestdDto.getBRestdestages() == null || kollektivuestdDto.getUAb() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"kollektivuestdDto.getTagesartIId() == null || kollektivuestdDto.getKollektivIId() == null || kollektivuestdDto.getBRestdestages() == null || kollektivuestdDto.getUAb() == null"));
 		}
 		if (Helper.short2Boolean(kollektivuestdDto.getBRestdestages()) == true) {
 			kollektivuestdDto.setUBis(null);
@@ -7971,14 +7598,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("KollektivuestdfindByKollektivIIdTagesartIId");
+			Query query = em.createNamedQuery("KollektivuestdfindByKollektivIIdTagesartIId");
 			query.setParameter(1, kollektivuestdDto.getKollektivIId());
 			query.setParameter(2, kollektivuestdDto.getTagesartIId());
 			// @todo getSingleResult oder getResultList ?
 			Kollektivuestd doppelt = (Kollektivuestd) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_KOLLEKTIVUESTD.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_KOLLEKTIVUESTD.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -7988,41 +7613,99 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		kollektivuestdDto.setIId(pk);
 
 		try {
-			Kollektivuestd kollektivuestd = new Kollektivuestd(
-					kollektivuestdDto.getIId(),
-					kollektivuestdDto.getKollektivIId(),
-					kollektivuestdDto.getBRestdestages(),
-					kollektivuestdDto.getTagesartIId(),
-					kollektivuestdDto.getUAb(),
+			Kollektivuestd kollektivuestd = new Kollektivuestd(kollektivuestdDto.getIId(),
+					kollektivuestdDto.getKollektivIId(), kollektivuestdDto.getBRestdestages(),
+					kollektivuestdDto.getTagesartIId(), kollektivuestdDto.getUAb(),
 					kollektivuestdDto.getBUnterignorieren());
 			em.persist(kollektivuestd);
 			em.flush();
-			setKollektivuestdFromKollektivuestdDto(kollektivuestd,
-					kollektivuestdDto);
+			setKollektivuestdFromKollektivuestdDto(kollektivuestd, kollektivuestdDto);
 			return kollektivuestdDto.getIId();
 
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
-	public void removeKollektivuestd(KollektivuestdDto kollektivuestdDto)
-			throws EJBExceptionLP {
+	public Integer createPassivereise(PassivereiseDto dto) {
+		if (Helper.short2Boolean(dto.getBRestdestages()) == true) {
+			dto.setUBis(null);
+		} else {
+			if (dto.getUBis() == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("dto.getUBis()"));
+
+			}
+		}
+
+		try {
+			Query query = em.createNamedQuery("PassivereisefindByKollektivIIdTagesartIId");
+			query.setParameter(1, dto.getKollektivIId());
+			query.setParameter(2, dto.getTagesartIId());
+			// @todo getSingleResult oder getResultList ?
+			Passivereise doppelt = (Passivereise) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_PASSIVEREISE.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PASSIVEREISE);
+		dto.setIId(pk);
+
+		try {
+			Passivereise bean = new Passivereise(dto.getIId(), dto.getKollektivIId(), dto.getBRestdestages(),
+					dto.getTagesartIId(), dto.getUAb());
+			em.persist(bean);
+			em.flush();
+			setPassivereiseFromPassivereiseDto(bean, dto);
+			return dto.getIId();
+
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
+		}
+	}
+
+	public Integer createPersonalterminal(PersonalterminalDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("PersonalterminalfindByPersonalIIdArbeitsplatzIId");
+			query.setParameter(1, dto.getPersonalIId());
+			query.setParameter(2, dto.getArbeitsplatzIId());
+			// @todo getSingleResult oder getResultList ?
+			Personalterminal doppelt = (Personalterminal) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_PERSONALTERMINAL.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PERSONALTERMINAL);
+		dto.setIId(pk);
+
+		try {
+			Personalterminal bean = new Personalterminal(dto.getIId(), dto.getPersonalIId(), dto.getArbeitsplatzIId());
+			em.persist(bean);
+			em.flush();
+			setPersonalterminalFromPersonalterminalDto(bean, dto);
+			return dto.getIId();
+
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
+		}
+	}
+
+	public void removeKollektivuestd(KollektivuestdDto kollektivuestdDto) throws EJBExceptionLP {
 		if (kollektivuestdDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivuestdDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivuestdDto == null"));
 		}
 		if (kollektivuestdDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("kollektivuestdDto.getIId() == null"));
 		}
 		try {
-			Kollektivuestd kollektivuestd = em.find(Kollektivuestd.class,
-					kollektivuestdDto.getIId());
+			Kollektivuestd kollektivuestd = em.find(Kollektivuestd.class, kollektivuestdDto.getIId());
 			if (kollektivuestd == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(kollektivuestd);
 			em.flush();
@@ -8031,21 +7714,27 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateKollektivuestd(KollektivuestdDto kollektivuestdDto)
-			throws EJBExceptionLP {
+	public void removePassivereise(PassivereiseDto dto) {
+		Passivereise passivereise = em.find(Passivereise.class, dto.getIId());
+		em.remove(passivereise);
+		em.flush();
+	}
+
+	public void removePersonalterminal(PersonalterminalDto dto) {
+		Personalterminal bean = em.find(Personalterminal.class, dto.getIId());
+		em.remove(bean);
+		em.flush();
+	}
+
+	public void updateKollektivuestd(KollektivuestdDto kollektivuestdDto) throws EJBExceptionLP {
 		if (kollektivuestdDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivuestdDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivuestdDto == null"));
 		}
-		if (kollektivuestdDto.getIId() == null
-				|| kollektivuestdDto.getTagesartIId() == null
-				|| kollektivuestdDto.getKollektivIId() == null
-				|| kollektivuestdDto.getBRestdestages() == null
+		if (kollektivuestdDto.getIId() == null || kollektivuestdDto.getTagesartIId() == null
+				|| kollektivuestdDto.getKollektivIId() == null || kollektivuestdDto.getBRestdestages() == null
 				|| kollektivuestdDto.getUAb() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"kollektivuestdDto.getIId() == null || kollektivuestdDto.getTagesartIId() == null || kollektivuestdDto.getKollektivIId() == null || kollektivuestdDto.getBRestdestages() == null || kollektivuestdDto.getUAb() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"kollektivuestdDto.getIId() == null || kollektivuestdDto.getTagesartIId() == null || kollektivuestdDto.getKollektivIId() == null || kollektivuestdDto.getBRestdestages() == null || kollektivuestdDto.getUAb() == null"));
 		}
 
 		if (Helper.short2Boolean(kollektivuestdDto.getBRestdestages()) == true) {
@@ -8061,16 +7750,13 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		Integer iId = kollektivuestdDto.getIId();
 		// try {
 		try {
-			Query query = em
-					.createNamedQuery("KollektivuestdfindByKollektivIIdTagesartIId");
+			Query query = em.createNamedQuery("KollektivuestdfindByKollektivIIdTagesartIId");
 			query.setParameter(1, kollektivuestdDto.getKollektivIId());
 			query.setParameter(2, kollektivuestdDto.getTagesartIId());
-			Integer iIdVorhanden = ((Kollektivuestd) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Kollektivuestd) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_KOLLEKTIVUESTD.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_KOLLEKTIVUESTD.UK"));
 			}
 
 		} catch (NoResultException ex) {
@@ -8079,12 +7765,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 		Kollektivuestd kollektivuestd = em.find(Kollektivuestd.class, iId);
 		if (kollektivuestd == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 		}
-		setKollektivuestdFromKollektivuestdDto(kollektivuestd,
-				kollektivuestdDto);
+		setKollektivuestdFromKollektivuestdDto(kollektivuestd, kollektivuestdDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -8095,13 +7779,80 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public KollektivuestdDto kollektivuestdFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public void updatePassivereise(PassivereiseDto dto) {
+		if (Helper.short2Boolean(dto.getBRestdestages()) == true) {
+			dto.setUBis(null);
+		} else {
+			if (dto.getUBis() == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("dto.getUBis()"));
+
+			}
+		}
+
+		Integer iId = dto.getIId();
+		// try {
+		try {
+			Query query = em.createNamedQuery("PassivereisefindByKollektivIIdTagesartIId");
+			query.setParameter(1, dto.getKollektivIId());
+			query.setParameter(2, dto.getTagesartIId());
+			Integer iIdVorhanden = ((Passivereise) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_KOLLEKTIVUESTD.UK"));
+			}
+
+		} catch (NoResultException ex) {
+
+		}
+
+		Passivereise passivereise = em.find(Passivereise.class, iId);
+		if (passivereise == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+
+		}
+		setPassivereiseFromPassivereiseDto(passivereise, dto);
+		// }
+		// catch (FinderException e) {
+		// throw new EJBExceptionLP(EJBExceptionLP.
+		// FEHLER_BEI_FINDBYPRIMARYKEY,
+		// e);
+
+		// }
+
+	}
+
+	public void updatePersonalterminal(PersonalterminalDto dto) {
+
+		Integer iId = dto.getIId();
+		// try {
+		try {
+			Query query = em.createNamedQuery("PersonalterminalfindByPersonalIIdArbeitsplatzIId");
+			query.setParameter(1, dto.getPersonalIId());
+			query.setParameter(2, dto.getArbeitsplatzIId());
+			Integer iIdVorhanden = ((Personalterminal) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALTERMINAL.UK"));
+			}
+
+		} catch (NoResultException ex) {
+
+		}
+
+		Personalterminal bean = em.find(Personalterminal.class, iId);
+		if (bean == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+
+		}
+		setPersonalterminalFromPersonalterminalDto(bean, dto);
+
+	}
+
+	public KollektivuestdDto kollektivuestdFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		// try {
 		Kollektivuestd kollektivuestd = em.find(Kollektivuestd.class, iId);
 		if (kollektivuestd == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleKollektivuestdDto(kollektivuestd);
 		// }
@@ -8113,8 +7864,20 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public KollektivuestdDto[] kollektivuestdFindByKollektivIId(
-			Integer kollektivId) throws EJBExceptionLP {
+	public PassivereiseDto passivereiseFindByPrimaryKey(Integer iId) {
+		Passivereise passivereise = em.find(Passivereise.class, iId);
+		if (passivereise == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return assemblePassivereiseDto(passivereise);
+	}
+
+	public PersonalterminalDto personalterminalFindByPrimaryKey(Integer iId) {
+		Personalterminal bean = em.find(Personalterminal.class, iId);
+		return PersonalterminalDtoAssembler.createDto(bean);
+	}
+
+	public KollektivuestdDto[] kollektivuestdFindByKollektivIId(Integer kollektivId) throws EJBExceptionLP {
 		// try {
 		Query query = em.createNamedQuery("KollektivuestdfindByKollektivIId");
 		query.setParameter(1, kollektivId);
@@ -8134,32 +7897,58 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setKollektivuestdFromKollektivuestdDto(
-			Kollektivuestd kollektivuestd, KollektivuestdDto kollektivuestdDto) {
+	public PassivereiseDto[] passivereiseFindByKollektivIId(Integer kollektivId) {
+		// try {
+		Query query = em.createNamedQuery("PassivereisefindByKollektivIId");
+		query.setParameter(1, kollektivId);
+		Collection<?> cl = query.getResultList();
+		return PassivereiseDtoAssembler.createDtos(cl);
+
+	}
+
+	private void setKollektivuestdFromKollektivuestdDto(Kollektivuestd kollektivuestd,
+			KollektivuestdDto kollektivuestdDto) {
 		kollektivuestd.setKollektivIId(kollektivuestdDto.getKollektivIId());
 		kollektivuestd.setUBis(kollektivuestdDto.getUBis());
 		kollektivuestd.setUAb(kollektivuestdDto.getUAb());
 		kollektivuestd.setBRestdestages(kollektivuestdDto.getBRestdestages());
 		kollektivuestd.setTagesartIId(kollektivuestdDto.getTagesartIId());
-		kollektivuestd.setBUnterignorieren(kollektivuestdDto
-				.getBUnterignorieren());
+		kollektivuestd.setBUnterignorieren(kollektivuestdDto.getBUnterignorieren());
 		em.merge(kollektivuestd);
 		em.flush();
 	}
 
-	private KollektivuestdDto assembleKollektivuestdDto(
-			Kollektivuestd kollektivuestd) {
+	private KollektivuestdDto assembleKollektivuestdDto(Kollektivuestd kollektivuestd) {
 		return KollektivuestdDtoAssembler.createDto(kollektivuestd);
 	}
 
-	private KollektivuestdDto[] assembleKollektivuestdDtos(
-			Collection<?> kollektivuestds) {
+	private void setPassivereiseFromPassivereiseDto(Passivereise passivereise, PassivereiseDto passivereiseDto) {
+		passivereise.setKollektivIId(passivereiseDto.getKollektivIId());
+		passivereise.setUBis(passivereiseDto.getUBis());
+		passivereise.setUAb(passivereiseDto.getUAb());
+		passivereise.setBRestdestages(passivereiseDto.getBRestdestages());
+		passivereise.setTagesartIId(passivereiseDto.getTagesartIId());
+		em.merge(passivereise);
+		em.flush();
+	}
+
+	private void setPersonalterminalFromPersonalterminalDto(Personalterminal bean, PersonalterminalDto dto) {
+		bean.setPersonalIId(dto.getPersonalIId());
+		bean.setArbeitsplatzIId(dto.getArbeitsplatzIId());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private PassivereiseDto assemblePassivereiseDto(Passivereise passivereise) {
+		return PassivereiseDtoAssembler.createDto(passivereise);
+	}
+
+	private KollektivuestdDto[] assembleKollektivuestdDtos(Collection<?> kollektivuestds) {
 		List<KollektivuestdDto> list = new ArrayList<KollektivuestdDto>();
 		if (kollektivuestds != null) {
 			Iterator<?> iterator = kollektivuestds.iterator();
 			while (iterator.hasNext()) {
-				Kollektivuestd kollektivuestd = (Kollektivuestd) iterator
-						.next();
+				Kollektivuestd kollektivuestd = (Kollektivuestd) iterator.next();
 				list.add(assembleKollektivuestdDto(kollektivuestd));
 			}
 		}
@@ -8167,20 +7956,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (KollektivuestdDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createKollektivuestd50(
-			Kollektivuestd50Dto kollektivuestd50Dto) throws EJBExceptionLP {
+	public Integer createKollektivuestd50(Kollektivuestd50Dto kollektivuestd50Dto) throws EJBExceptionLP {
 		if (kollektivuestd50Dto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivuestd50Dto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivuestd50Dto == null"));
 		}
-		if (kollektivuestd50Dto.getTagesartIId() == null
-				|| kollektivuestd50Dto.getKollektivIId() == null
-				|| kollektivuestd50Dto.getBRestdestages() == null
-				|| kollektivuestd50Dto.getUBis() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"kollektivuestd50Dto.getTagesartIId() == null || kollektivuestd50Dto.getKollektivIId() == null ||  kollektivuestd50Dto.getBRestdestages() == null || kollektivuestd50Dto.getUBis() == null"));
+		if (kollektivuestd50Dto.getTagesartIId() == null || kollektivuestd50Dto.getKollektivIId() == null
+				|| kollektivuestd50Dto.getBRestdestages() == null || kollektivuestd50Dto.getUBis() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"kollektivuestd50Dto.getTagesartIId() == null || kollektivuestd50Dto.getKollektivIId() == null ||  kollektivuestd50Dto.getBRestdestages() == null || kollektivuestd50Dto.getUBis() == null"));
 		}
 		if (Helper.short2Boolean(kollektivuestd50Dto.getBRestdestages()) == true) {
 			kollektivuestd50Dto.setUBis(null);
@@ -8193,14 +7976,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("Kollektivuestd50findByKollektivIIdTagesartIId");
+			Query query = em.createNamedQuery("Kollektivuestd50findByKollektivIIdTagesartIId");
 			query.setParameter(1, kollektivuestd50Dto.getKollektivIId());
 			query.setParameter(2, kollektivuestd50Dto.getTagesartIId());
-			Kollektivuestd50 doppelt = (Kollektivuestd50) query
-					.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_KOLLEKTIVUESTD50.UK"));
+			Kollektivuestd50 doppelt = (Kollektivuestd50) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_KOLLEKTIVUESTD50.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -8210,37 +7990,59 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		kollektivuestd50Dto.setIId(pk);
 
 		try {
-			Kollektivuestd50 kollektivuestd50 = new Kollektivuestd50(
-					kollektivuestd50Dto.getIId(),
-					kollektivuestd50Dto.getKollektivIId(),
-					kollektivuestd50Dto.getBRestdestages(),
-					kollektivuestd50Dto.getTagesartIId(),
-					kollektivuestd50Dto.getUVon(),
+			Kollektivuestd50 kollektivuestd50 = new Kollektivuestd50(kollektivuestd50Dto.getIId(),
+					kollektivuestd50Dto.getKollektivIId(), kollektivuestd50Dto.getBRestdestages(),
+					kollektivuestd50Dto.getTagesartIId(), kollektivuestd50Dto.getUVon(),
 					kollektivuestd50Dto.getBUnterignorieren());
 			em.persist(kollektivuestd50);
 			em.flush();
-			setKollektivuestd50FromKollektivuestd50Dto(kollektivuestd50,
-					kollektivuestd50Dto);
+			setKollektivuestd50FromKollektivuestd50Dto(kollektivuestd50, kollektivuestd50Dto);
 			return kollektivuestd50Dto.getIId();
 		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
 		}
 	}
 
-	public void removeKollektivuestd50(Kollektivuestd50Dto kollektivuestd50Dto)
-			throws EJBExceptionLP {
+	public Integer createKollektivuestdBVA(KollektivUestdBVADto dto) {
+
+		try {
+			Query query = em.createNamedQuery("KollektivuestdBVAfindByKollektivIIdTagesartIId");
+			query.setParameter(1, dto.getKollektivIId());
+			query.setParameter(2, dto.getTagesartIId());
+			KollektivUestdBVA doppelt = (KollektivUestdBVA) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("PERS_KOLLEKTIVUESTDBVA.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_KOLLEKTIVUESTDBVA);
+		dto.setIId(pk);
+
+		try {
+			KollektivUestdBVA kollektivuestd50 = new KollektivUestdBVA(dto.getIId(), dto.getKollektivIId(),
+					dto.getTagesartIId(), dto.getU100Ende(), dto.getU50Beginn(), dto.getU50Ende(), dto.getU100Beginn(),
+					dto.getUGleitzeitBis());
+			em.persist(kollektivuestd50);
+			em.flush();
+			setKollektivuestdBVAFromKollektivuestdBVADto(kollektivuestd50, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
+		}
+	}
+
+	public void removeKollektivuestd50(Kollektivuestd50Dto kollektivuestd50Dto) throws EJBExceptionLP {
 		if (kollektivuestd50Dto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivuestd50Dto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivuestd50Dto == null"));
 		}
 		if (kollektivuestd50Dto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("kollektivuestd50Dto.getIId() == null"));
 		}
 		try {
-			Kollektivuestd50 kollektivuestd50 = em.find(Kollektivuestd50.class,
-					kollektivuestd50Dto.getIId());
+			Kollektivuestd50 kollektivuestd50 = em.find(Kollektivuestd50.class, kollektivuestd50Dto.getIId());
 			em.remove(kollektivuestd50);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
@@ -8248,21 +8050,22 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void updateKollektivuestd50(Kollektivuestd50Dto kollektivuestd50Dto)
-			throws EJBExceptionLP {
+	public void removeKollektivuestdBVA(KollektivUestdBVADto kollektivuestdBVADto) {
+
+		KollektivUestdBVA kollektivuestd50 = em.find(KollektivUestdBVA.class, kollektivuestdBVADto.getIId());
+		em.remove(kollektivuestd50);
+
+	}
+
+	public void updateKollektivuestd50(Kollektivuestd50Dto kollektivuestd50Dto) throws EJBExceptionLP {
 		if (kollektivuestd50Dto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("kollektivuestd50Dto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("kollektivuestd50Dto == null"));
 		}
-		if (kollektivuestd50Dto.getIId() == null
-				|| kollektivuestd50Dto.getTagesartIId() == null
-				|| kollektivuestd50Dto.getKollektivIId() == null
-				|| kollektivuestd50Dto.getBRestdestages() == null
+		if (kollektivuestd50Dto.getIId() == null || kollektivuestd50Dto.getTagesartIId() == null
+				|| kollektivuestd50Dto.getKollektivIId() == null || kollektivuestd50Dto.getBRestdestages() == null
 				|| kollektivuestd50Dto.getUBis() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"kollektivuestdDto.getIId() == null || kollektivuestdDto.getTagesartIId() == null || kollektivuestdDto.getKollektivIId() == null || kollektivuestdDto.getBRestdestages() == null || kollektivuestdDto.getUBis() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"kollektivuestdDto.getIId() == null || kollektivuestdDto.getTagesartIId() == null || kollektivuestdDto.getKollektivIId() == null || kollektivuestdDto.getBRestdestages() == null || kollektivuestdDto.getUBis() == null"));
 		}
 
 		if (Helper.short2Boolean(kollektivuestd50Dto.getBRestdestages()) == true) {
@@ -8278,16 +8081,13 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		Integer iId = kollektivuestd50Dto.getIId();
 
 		try {
-			Query query = em
-					.createNamedQuery("Kollektivuestd50findByKollektivIIdTagesartIId");
+			Query query = em.createNamedQuery("Kollektivuestd50findByKollektivIIdTagesartIId");
 			query.setParameter(1, kollektivuestd50Dto.getKollektivIId());
 			query.setParameter(2, kollektivuestd50Dto.getTagesartIId());
-			Integer iIdVorhanden = ((Kollektivuestd50) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Kollektivuestd50) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_KOLLEKTIVUESTD50.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_KOLLEKTIVUESTD50.UK"));
 			}
 
 			// }
@@ -8296,15 +8096,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 
 		// try {
-		Kollektivuestd50 kollektivuestd50 = em
-				.find(Kollektivuestd50.class, iId);
+		Kollektivuestd50 kollektivuestd50 = em.find(Kollektivuestd50.class, iId);
 		if (kollektivuestd50 == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 		}
-		setKollektivuestd50FromKollektivuestd50Dto(kollektivuestd50,
-				kollektivuestd50Dto);
+		setKollektivuestd50FromKollektivuestd50Dto(kollektivuestd50, kollektivuestd50Dto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.
@@ -8315,14 +8112,36 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public Kollektivuestd50Dto kollektivuestd50FindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public void updateKollektivUestdBVA(KollektivUestdBVADto dto) {
+
+		Integer iId = dto.getIId();
+
+		try {
+			Query query = em.createNamedQuery("KollektivuestdBVAfindByKollektivIIdTagesartIId");
+			query.setParameter(1, dto.getKollektivIId());
+			query.setParameter(2, dto.getTagesartIId());
+			Integer iIdVorhanden = ((KollektivUestdBVA) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_KOLLEKTIVUESTD_BVA.UK"));
+			}
+
+			// }
+		} catch (NoResultException ex) {
+
+		}
+
+		KollektivUestdBVA kollektivuestd = em.find(KollektivUestdBVA.class, iId);
+
+		setKollektivuestdBVAFromKollektivuestdBVADto(kollektivuestd, dto);
+
+	}
+
+	public Kollektivuestd50Dto kollektivuestd50FindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		// try {
-		Kollektivuestd50 kollektivuestd50 = em
-				.find(Kollektivuestd50.class, iId);
+		Kollektivuestd50 kollektivuestd50 = em.find(Kollektivuestd50.class, iId);
 		if (kollektivuestd50 == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleKollektivuestd50Dto(kollektivuestd50);
 		// }
@@ -8334,15 +8153,18 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public Kollektivuestd50Dto kollektivuestd50FindByKollektivIIdTagesartIId(
-			Integer kollektivIId, Integer tagesartIId) throws EJBExceptionLP {
+	public KollektivUestdBVADto kollektivUestdBVAFindByPrimaryKey(Integer iId) {
+		KollektivUestdBVA kollektivuestd50 = em.find(KollektivUestdBVA.class, iId);
+		return KollektivUestdBVADtoAssembler.createDto(kollektivuestd50);
+	}
+
+	public Kollektivuestd50Dto kollektivuestd50FindByKollektivIIdTagesartIId(Integer kollektivIId, Integer tagesartIId)
+			throws EJBExceptionLP {
 		try {
-			Query query = em
-					.createNamedQuery("Kollektivuestd50findByKollektivIIdTagesartIId");
+			Query query = em.createNamedQuery("Kollektivuestd50findByKollektivIIdTagesartIId");
 			query.setParameter(1, kollektivIId);
 			query.setParameter(2, tagesartIId);
-			Kollektivuestd50 kollektivuestd50 = (Kollektivuestd50) query
-					.getSingleResult();
+			Kollektivuestd50 kollektivuestd50 = (Kollektivuestd50) query.getSingleResult();
 			return assembleKollektivuestd50Dto(kollektivuestd50);
 		} catch (NoResultException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
@@ -8350,8 +8172,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public Kollektivuestd50Dto[] kollektivuestd50FindByKollektivIId(
-			Integer kollektivIId) throws EJBExceptionLP {
+	public Kollektivuestd50Dto[] kollektivuestd50FindByKollektivIId(Integer kollektivIId) throws EJBExceptionLP {
 		// try {
 		Query query = em.createNamedQuery("Kollektivuestd50findByKollektivIId");
 		query.setParameter(1, kollektivIId);
@@ -8371,34 +8192,63 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	private void setKollektivuestd50FromKollektivuestd50Dto(
-			Kollektivuestd50 kollektivuestd50,
+	public KollektivUestdBVADto[] kollektivuestdBVAfindByKollektivIId(Integer kollektivIId) throws EJBExceptionLP {
+		// try {
+		Query query = em.createNamedQuery("KollektivuestdBVAfindByKollektivIId");
+		query.setParameter(1, kollektivIId);
+		Collection<?> cl = query.getResultList();
+		// if (cl.isEmpty()) {
+		// throw new EJBExceptionLP(EJBExceptionLP.
+		// FEHLER_BEI_FIND,
+		// null);
+		// }
+		return KollektivUestdBVADtoAssembler.createDtos(cl);
+		// }
+		// catch (FinderException e) {
+		// throw new EJBExceptionLP(EJBExceptionLP.
+		// FEHLER_BEI_FIND,
+		// e);
+
+		// }
+	}
+
+	private void setKollektivuestd50FromKollektivuestd50Dto(Kollektivuestd50 kollektivuestd50,
 			Kollektivuestd50Dto kollektivuestd50Dto) {
 		kollektivuestd50.setKollektivIId(kollektivuestd50Dto.getKollektivIId());
 		kollektivuestd50.setUVon(kollektivuestd50Dto.getUVon());
 		kollektivuestd50.setUBis(kollektivuestd50Dto.getUBis());
-		kollektivuestd50.setBRestdestages(kollektivuestd50Dto
-				.getBRestdestages());
+		kollektivuestd50.setBRestdestages(kollektivuestd50Dto.getBRestdestages());
 		kollektivuestd50.setTagesartIId(kollektivuestd50Dto.getTagesartIId());
-		kollektivuestd50.setBUnterignorieren(kollektivuestd50Dto
-				.getBUnterignorieren());
+		kollektivuestd50.setBUnterignorieren(kollektivuestd50Dto.getBUnterignorieren());
 		em.merge(kollektivuestd50);
 		em.flush();
 	}
 
-	private Kollektivuestd50Dto assembleKollektivuestd50Dto(
-			Kollektivuestd50 kollektivuestd50) {
+	private void setKollektivuestdBVAFromKollektivuestdBVADto(KollektivUestdBVA kollektivuestd50,
+			KollektivUestdBVADto kollektivuestd50Dto) {
+		kollektivuestd50.setKollektivIId(kollektivuestd50Dto.getKollektivIId());
+		kollektivuestd50.setU100Beginn(kollektivuestd50Dto.getU100Beginn());
+		kollektivuestd50.setU100Ende(kollektivuestd50Dto.getU100Ende());
+		kollektivuestd50.setU50Beginn(kollektivuestd50Dto.getU50Beginn());
+		kollektivuestd50.setU50Ende(kollektivuestd50Dto.getU50Ende());
+		kollektivuestd50.setUGleitzeitBis(kollektivuestd50Dto.getUGleitzeitBis());
+
+		kollektivuestd50.setTagesartIId(kollektivuestd50Dto.getTagesartIId());
+
+		em.merge(kollektivuestd50);
+		em.flush();
+	}
+
+	private Kollektivuestd50Dto assembleKollektivuestd50Dto(Kollektivuestd50 kollektivuestd50) {
 		return Kollektivuestd50DtoAssembler.createDto(kollektivuestd50);
 	}
 
-	private Kollektivuestd50Dto[] assembleKollektivuestd50Dtos(
-			Collection<?> kollektivuestd50s) {
+	private Kollektivuestd50Dto[] assembleKollektivuestd50Dtos(Collection<?> kollektivuestd50s) {
 		List<Kollektivuestd50Dto> list = new ArrayList<Kollektivuestd50Dto>();
 		if (kollektivuestd50s != null) {
 			Iterator<?> iterator = kollektivuestd50s.iterator();
 			while (iterator.hasNext()) {
-				Kollektivuestd50 kollektivuestd50 = (Kollektivuestd50) iterator
-						.next();
+				Kollektivuestd50 kollektivuestd50 = (Kollektivuestd50) iterator.next();
 				list.add(assembleKollektivuestd50Dto(kollektivuestd50));
 			}
 		}
@@ -8406,32 +8256,24 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		return (Kollektivuestd50Dto[]) list.toArray(returnArray);
 	}
 
-	public Integer createPersonalgruppekosten(
-			PersonalgruppekostenDto personalgruppekostenDto) {
+	public Integer createPersonalgruppekosten(PersonalgruppekostenDto personalgruppekostenDto) {
 		if (personalgruppekostenDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("personalgruppekostenDto == null"));
 		}
-		if (personalgruppekostenDto.getPersonalgruppeIId() == null
-				|| personalgruppekostenDto.getNStundensatz() == null
+		if (personalgruppekostenDto.getPersonalgruppeIId() == null || personalgruppekostenDto.getNStundensatz() == null
 				|| personalgruppekostenDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
-					new Exception(
-							"personalgruppekostenDto.getPersonalgruppeIId() == null || personalgruppekostenDto.getNStundensatz() == null || personalgruppekostenDto.getTGueltigab() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL, new Exception(
+					"personalgruppekostenDto.getPersonalgruppeIId() == null || personalgruppekostenDto.getNStundensatz() == null || personalgruppekostenDto.getTGueltigab() == null"));
 		}
 
-		personalgruppekostenDto.setTGueltigab(Helper
-				.cutTimestamp(personalgruppekostenDto.getTGueltigab()));
+		personalgruppekostenDto.setTGueltigab(Helper.cutTimestamp(personalgruppekostenDto.getTGueltigab()));
 
 		try {
-			Query query = em
-					.createNamedQuery("PersonalgruppekostenfindByPersonalgruppeIIdTGueltigab");
-			query.setParameter(1,
-					personalgruppekostenDto.getPersonalgruppeIId());
+			Query query = em.createNamedQuery("PersonalgruppekostenfindByPersonalgruppeIIdTGueltigab");
+			query.setParameter(1, personalgruppekostenDto.getPersonalgruppeIId());
 			query.setParameter(2, personalgruppekostenDto.getTGueltigab());
-			Personalgruppekosten doppelt = (Personalgruppekosten) query
-					.getSingleResult();
+			Personalgruppekosten doppelt = (Personalgruppekosten) query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PERS_PERSONALGRUPPEKOSTEN.UK"));
 		} catch (NoResultException ex1) {
@@ -8441,27 +8283,22 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		try {
 			// generieren von primary key
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
-			Integer pk = pkGen
-					.getNextPrimaryKey(PKConst.PK_PERSONALGRUPPEKOSTEN);
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PERSONALGRUPPEKOSTEN);
 			personalgruppekostenDto.setIId(pk);
 
-			Personalgruppekosten personalgruppekosten = new Personalgruppekosten(
-					personalgruppekostenDto.getIId(),
-					personalgruppekostenDto.getPersonalgruppeIId(),
-					personalgruppekostenDto.getTGueltigab(),
+			Personalgruppekosten personalgruppekosten = new Personalgruppekosten(personalgruppekostenDto.getIId(),
+					personalgruppekostenDto.getPersonalgruppeIId(), personalgruppekostenDto.getTGueltigab(),
 					personalgruppekostenDto.getNStundensatz());
 			em.persist(personalgruppekosten);
 			em.flush();
-			setPersonalgruppekostenFromPersonalgruppekostenDto(
-					personalgruppekosten, personalgruppekostenDto);
+			setPersonalgruppekostenFromPersonalgruppekostenDto(personalgruppekosten, personalgruppekostenDto);
 			return personalgruppekostenDto.getIId();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
-	public void removePersonalgruppekosten(
-			PersonalgruppekostenDto personalgruppekostenDto) {
+	public void removePersonalgruppekosten(PersonalgruppekostenDto personalgruppekostenDto) {
 		if (personalgruppekostenDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("personalgruppekostenDto == null"));
@@ -8471,11 +8308,9 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 					new Exception("personalgruppekostenDto.getIId() == null"));
 		}
 
-		Personalgruppekosten toRemove = em.find(Personalgruppekosten.class,
-				personalgruppekostenDto.getIId());
+		Personalgruppekosten toRemove = em.find(Personalgruppekosten.class, personalgruppekostenDto.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -8488,8 +8323,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public String getSignatur(Integer personalIId, String locale) {
 		try {
-			Query query = em
-					.createNamedQuery("SignaturfindByPersonalIIdLocaleCNr");
+			Query query = em.createNamedQuery("SignaturfindByPersonalIIdLocaleCNr");
 			query.setParameter(1, personalIId);
 			query.setParameter(2, locale);
 			Signatur signatur = (Signatur) query.getSingleResult();
@@ -8501,12 +8335,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		}
 	}
 
-	public void updateSignatur(Integer personalIId, String xSignatur,
-			TheClientDto theClientDto) {
+	public void updateSignatur(Integer personalIId, String xSignatur, TheClientDto theClientDto) {
 
 		try {
-			Query query = em
-					.createNamedQuery("SignaturfindByPersonalIIdLocaleCNr");
+			Query query = em.createNamedQuery("SignaturfindByPersonalIIdLocaleCNr");
 			query.setParameter(1, personalIId);
 			query.setParameter(2, theClientDto.getLocUiAsString());
 			Signatur signatur = (Signatur) query.getSingleResult();
@@ -8524,8 +8356,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 				PKGeneratorObj pkGen = new PKGeneratorObj();
 				Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_SIGNATUR);
 
-				Signatur signatur = new Signatur(pk,
-						theClientDto.getLocUiAsString(), personalIId, xSignatur);
+				Signatur signatur = new Signatur(pk, theClientDto.getLocUiAsString(), personalIId, xSignatur);
 				em.merge(signatur);
 				em.flush();
 			}
@@ -8534,75 +8365,58 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public void updatePersonalgruppekosten(
-			PersonalgruppekostenDto personalgruppekostenDto) {
+	public void updatePersonalgruppekosten(PersonalgruppekostenDto personalgruppekostenDto) {
 		if (personalgruppekostenDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("personalgruppekostenDto == null"));
 		}
-		if (personalgruppekostenDto.getIId() == null
-				|| personalgruppekostenDto.getPersonalgruppeIId() == null
+		if (personalgruppekostenDto.getIId() == null || personalgruppekostenDto.getPersonalgruppeIId() == null
 				|| personalgruppekostenDto.getNStundensatz() == null
 				|| personalgruppekostenDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
-					new Exception(
-							"personalgruppekostenDto.getIId() == null || personalgruppekostenDto.getPersonalgruppeIId() == null || personalgruppekostenDto.getNStundensatz() == null || personalgruppekostenDto.getTGueltigab() == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL, new Exception(
+					"personalgruppekostenDto.getIId() == null || personalgruppekostenDto.getPersonalgruppeIId() == null || personalgruppekostenDto.getNStundensatz() == null || personalgruppekostenDto.getTGueltigab() == null"));
 		}
 
-		personalgruppekostenDto.setTGueltigab(Helper
-				.cutTimestamp(personalgruppekostenDto.getTGueltigab()));
+		personalgruppekostenDto.setTGueltigab(Helper.cutTimestamp(personalgruppekostenDto.getTGueltigab()));
 
 		Integer iId = personalgruppekostenDto.getIId();
 		try {
-			Query query = em
-					.createNamedQuery("PersonalgruppekostenfindByPersonalgruppeIIdTGueltigab");
-			query.setParameter(1,
-					personalgruppekostenDto.getPersonalgruppeIId());
+			Query query = em.createNamedQuery("PersonalgruppekostenfindByPersonalgruppeIIdTGueltigab");
+			query.setParameter(1, personalgruppekostenDto.getPersonalgruppeIId());
 			query.setParameter(2, personalgruppekostenDto.getTGueltigab());
-			Integer iIdVorhanden = ((Personalgruppekosten) query
-					.getSingleResult()).getIId();
+			Integer iIdVorhanden = ((Personalgruppekosten) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONALGRUPPEKOSTEN.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALGRUPPEKOSTEN.UK"));
 			}
 		} catch (NoResultException ex) {
 			//
 		}
 		try {
-			Personalgruppekosten personalgruppekosten = em.find(
-					Personalgruppekosten.class, iId);
-			setPersonalgruppekostenFromPersonalgruppekostenDto(
-					personalgruppekosten, personalgruppekostenDto);
+			Personalgruppekosten personalgruppekosten = em.find(Personalgruppekosten.class, iId);
+			setPersonalgruppekostenFromPersonalgruppekostenDto(personalgruppekosten, personalgruppekostenDto);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
 		}
 
 	}
 
-	public PersonalgruppekostenDto personalgruppekostenFindByPrimaryKey(
-			Integer iId) {
+	public PersonalgruppekostenDto personalgruppekostenFindByPrimaryKey(Integer iId) {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
-		Personalgruppekosten personalgruppekosten = em.find(
-				Personalgruppekosten.class, iId);
+		Personalgruppekosten personalgruppekosten = em.find(Personalgruppekosten.class, iId);
 		if (personalgruppekosten == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePersonalgruppekostenDto(personalgruppekosten);
 
 	}
 
-	public BigDecimal getPersonalgruppeKostenZumZeitpunkt(
-			Integer personalgruppeIId, java.sql.Timestamp tDatum) {
+	public BigDecimal getPersonalgruppeKostenZumZeitpunkt(Integer personalgruppeIId, java.sql.Timestamp tDatum) {
 		// try {
-		Query query = em
-				.createNamedQuery("PersonalgruppekostenfindLetzeKostenByPersonalgruppeIIdTGueltigab");
+		Query query = em.createNamedQuery("PersonalgruppekostenfindLetzeKostenByPersonalgruppeIIdTGueltigab");
 		query.setParameter(1, personalgruppeIId);
 		query.setParameter(2, tDatum);
 		Collection<?> cl = query.getResultList();
@@ -8611,8 +8425,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// } else {
 		PersonalgruppekostenDto[] personalgruppekostenDtos = assemblePersonalgruppekostenDtos(cl);
 
-		if (personalgruppekostenDtos != null
-				&& personalgruppekostenDtos.length > 0) {
+		if (personalgruppekostenDtos != null && personalgruppekostenDtos.length > 0) {
 			return personalgruppekostenDtos[0].getNStundensatz();
 		} else {
 			return new BigDecimal(0);
@@ -8623,58 +8436,47 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		// }
 	}
 
-	public PersonalgruppekostenDto personalgruppekostenFindByPersonalgruppeIIdTGueltigab(
-			Integer personalgruppeIId, Timestamp tGueltigab) {
+	public PersonalgruppekostenDto personalgruppekostenFindByPersonalgruppeIIdTGueltigab(Integer personalgruppeIId,
+			Timestamp tGueltigab) {
 		try {
-			Query query = em
-					.createNamedQuery("PersonalgruppekostenfindByPersonalgruppeIIdTGueltigab");
+			Query query = em.createNamedQuery("PersonalgruppekostenfindByPersonalgruppeIIdTGueltigab");
 			query.setParameter(1, personalgruppeIId);
 			query.setParameter(2, tGueltigab);
-			return assemblePersonalgruppekostenDto((Personalgruppekosten) query
-					.getSingleResult());
+			return assemblePersonalgruppekostenDto((Personalgruppekosten) query.getSingleResult());
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
 		}
 	}
 
-	private void setPersonalgruppekostenFromPersonalgruppekostenDto(
-			Personalgruppekosten personalgruppekosten,
+	private void setPersonalgruppekostenFromPersonalgruppekostenDto(Personalgruppekosten personalgruppekosten,
 			PersonalgruppekostenDto personalgruppekostenDto) {
-		personalgruppekosten.setPersonalgruppeIId(personalgruppekostenDto
-				.getPersonalgruppeIId());
-		personalgruppekosten.setTGueltigab(personalgruppekostenDto
-				.getTGueltigab());
-		personalgruppekosten.setNStundensatz(personalgruppekostenDto
-				.getNStundensatz());
+		personalgruppekosten.setPersonalgruppeIId(personalgruppekostenDto.getPersonalgruppeIId());
+		personalgruppekosten.setTGueltigab(personalgruppekostenDto.getTGueltigab());
+		personalgruppekosten.setNStundensatz(personalgruppekostenDto.getNStundensatz());
 		em.merge(personalgruppekosten);
 		em.flush();
 	}
 
-	private PersonalgruppekostenDto assemblePersonalgruppekostenDto(
-			Personalgruppekosten personalgruppekosten) {
+	private PersonalgruppekostenDto assemblePersonalgruppekostenDto(Personalgruppekosten personalgruppekosten) {
 		return PersonalgruppekostenDtoAssembler.createDto(personalgruppekosten);
 	}
 
-	private PersonalgruppekostenDto[] assemblePersonalgruppekostenDtos(
-			Collection<?> personalgruppekostens) {
+	private PersonalgruppekostenDto[] assemblePersonalgruppekostenDtos(Collection<?> personalgruppekostens) {
 		List<PersonalgruppekostenDto> list = new ArrayList<PersonalgruppekostenDto>();
 		if (personalgruppekostens != null) {
 			Iterator<?> iterator = personalgruppekostens.iterator();
 			while (iterator.hasNext()) {
-				Personalgruppekosten personalgruppekosten = (Personalgruppekosten) iterator
-						.next();
+				Personalgruppekosten personalgruppekosten = (Personalgruppekosten) iterator.next();
 				list.add(assemblePersonalgruppekostenDto(personalgruppekosten));
 			}
 		}
-		PersonalgruppekostenDto[] returnArray = new PersonalgruppekostenDto[list
-				.size()];
+		PersonalgruppekostenDto[] returnArray = new PersonalgruppekostenDto[list.size()];
 		return (PersonalgruppekostenDto[]) list.toArray(returnArray);
 	}
 
 	public Integer createPersonalgruppe(PersonalgruppeDto personalgruppeDto) {
 		if (personalgruppeDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalgruppeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalgruppeDto == null"));
 		}
 		if (personalgruppeDto.getCBez() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
@@ -8696,12 +8498,10 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PERSONALGRUPPE);
 			personalgruppeDto.setIId(pk);
 
-			Personalgruppe personalgruppe = new Personalgruppe(
-					personalgruppeDto.getIId(), personalgruppeDto.getCBez());
+			Personalgruppe personalgruppe = new Personalgruppe(personalgruppeDto.getIId(), personalgruppeDto.getCBez());
 			em.persist(personalgruppe);
 			em.flush();
-			setPersonalgruppeFromPersonalgruppeDto(personalgruppe,
-					personalgruppeDto);
+			setPersonalgruppeFromPersonalgruppeDto(personalgruppe, personalgruppeDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -8710,19 +8510,16 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public void removePersonalgruppe(PersonalgruppeDto personalgruppeDto) {
 		if (personalgruppeDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalgruppeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalgruppeDto == null"));
 		}
 		if (personalgruppeDto.getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("personalgruppeDto.getIId() == null"));
 		}
 
-		Personalgruppe toRemove = em.find(Personalgruppe.class,
-				personalgruppeDto.getIId());
+		Personalgruppe toRemove = em.find(Personalgruppe.class, personalgruppeDto.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -8735,79 +8532,72 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	public void updatePersonalgruppe(PersonalgruppeDto personalgruppeDto) {
 		if (personalgruppeDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("personalgruppeDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("personalgruppeDto == null"));
 		}
-		if (personalgruppeDto.getIId() == null
-				|| personalgruppeDto.getCBez() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
-					new Exception(
-							"personalgruppeDto.getIId() == null || personalgruppeDto.getCBez() == null"));
+		if (personalgruppeDto.getIId() == null || personalgruppeDto.getCBez() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
+					new Exception("personalgruppeDto.getIId() == null || personalgruppeDto.getCBez() == null"));
 		}
 		Integer iId = personalgruppeDto.getIId();
 
 		Personalgruppe personalgruppe = em.find(Personalgruppe.class, iId);
 		if (personalgruppe == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
 			Query query = em.createNamedQuery("PersonalgruppefindByCBez");
 			query.setParameter(1, personalgruppeDto.getCBez());
-			Integer iIdVorhanden = ((Personalgruppe) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Personalgruppe) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_PERSONALGRUPPE.C_BEZ"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_PERSONALGRUPPE.C_BEZ"));
 			}
 
 		} catch (NoResultException ex) {
 			//
 		}
 
-		setPersonalgruppeFromPersonalgruppeDto(personalgruppe,
-				personalgruppeDto);
+		setPersonalgruppeFromPersonalgruppeDto(personalgruppe, personalgruppeDto);
 
 	}
 
 	public PersonalgruppeDto personalgruppeFindByPrimaryKey(Integer iId) {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
 		}
 
 		Personalgruppe personalgruppe = em.find(Personalgruppe.class, iId);
 		if (personalgruppe == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assemblePersonalgruppeDto(personalgruppe);
 
 	}
 
-	private void setPersonalgruppeFromPersonalgruppeDto(
-			Personalgruppe personalgruppe, PersonalgruppeDto personalgruppeDto) {
+	public AnwesenheitsbestaetigungDto anwesenheitsbestaetigungFindByPrimaryKey(Integer iId) {
+		Anwesenheitsbestaetigung bean = em.find(Anwesenheitsbestaetigung.class, iId);
+		return AnwesenheitsbestaetigungDtoAssembler.createDto(bean);
+
+	}
+
+	private void setPersonalgruppeFromPersonalgruppeDto(Personalgruppe personalgruppe,
+			PersonalgruppeDto personalgruppeDto) {
 		personalgruppe.setCBez(personalgruppeDto.getCBez());
 		em.merge(personalgruppe);
 		em.flush();
 	}
 
-	private PersonalgruppeDto assemblePersonalgruppeDto(
-			Personalgruppe personalgruppe) {
+	private PersonalgruppeDto assemblePersonalgruppeDto(Personalgruppe personalgruppe) {
 		return PersonalgruppeDtoAssembler.createDto(personalgruppe);
 	}
 
-	private PersonalgruppeDto[] assemblePersonalgruppeDtos(
-			Collection<?> personalgruppes) {
+	private PersonalgruppeDto[] assemblePersonalgruppeDtos(Collection<?> personalgruppes) {
 		List<PersonalgruppeDto> list = new ArrayList<PersonalgruppeDto>();
 		if (personalgruppes != null) {
 			Iterator<?> iterator = personalgruppes.iterator();
 			while (iterator.hasNext()) {
-				Personalgruppe personalgruppe = (Personalgruppe) iterator
-						.next();
+				Personalgruppe personalgruppe = (Personalgruppe) iterator.next();
 				list.add(assemblePersonalgruppeDto(personalgruppe));
 			}
 		}
@@ -8818,13 +8608,11 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	public Integer createBereitschaftart(BereitschaftartDto dto) {
 
 		try {
-			Query query = em
-					.createNamedQuery(Bereitschaftart.QueryFindByMandantCNrCBez);
+			Query query = em.createNamedQuery(Bereitschaftart.QueryFindByMandantCNrCBez);
 			query.setParameter(1, dto.getMandantCNr());
 			query.setParameter(2, dto.getCBez());
 			Bereitschaftart doppelt = (Bereitschaftart) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_BEREITSCHAFTART.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_BEREITSCHAFTART.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -8835,8 +8623,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_BEREITSCHAFTART);
 			dto.setIId(pk);
 
-			Bereitschaftart bean = new Bereitschaftart(dto.getIId(),
-					dto.getMandantCNr(), dto.getCBez());
+			Bereitschaftart bean = new Bereitschaftart(dto.getIId(), dto.getMandantCNr(), dto.getCBez());
 			em.persist(bean);
 			em.flush();
 			setBereitschaftartFromIsBereitschaftartDto(bean, dto);
@@ -8855,17 +8642,13 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		Bereitschaftart ialle = em.find(Bereitschaftart.class, dto.getIId());
 
 		try {
-			Query query = em
-					.createNamedQuery(Bereitschaftart.QueryFindByMandantCNrCBez);
+			Query query = em.createNamedQuery(Bereitschaftart.QueryFindByMandantCNrCBez);
 			query.setParameter(1, dto.getMandantCNr());
 			query.setParameter(2, dto.getCBez());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Bereitschaftart) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Bereitschaftart) query.getSingleResult()).getIId();
 			if (ialle.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"WW_WEBSHOP.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_WEBSHOP.UK"));
 			}
 		} catch (NoResultException ex) {
 
@@ -8885,10 +8668,26 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	private void setBereitschaftartFromIsBereitschaftartDto(
-			Bereitschaftart bean, BereitschaftartDto dto) {
+	private void setBereitschaftartFromIsBereitschaftartDto(Bereitschaftart bean, BereitschaftartDto dto) {
 		bean.setMandantCNr(dto.getMandantCNr());
 		bean.setCBez(dto.getCBez());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setAnwesenheitsbestaetigungFromAnwesenheitsbestaetigungDto(Anwesenheitsbestaetigung bean,
+			AnwesenheitsbestaetigungDto dto) {
+		bean.setAuftragIId(dto.getAuftragIId());
+		bean.setCBemerkung(dto.getCBemerkung());
+		bean.setDatenformatCNr(dto.getDatenformatCNr());
+		bean.setOUnterschrift(dto.getOUnterschrift());
+		bean.setPersonalIId(dto.getPersonalIId());
+		bean.setProjektIId(dto.getProjektIId());
+		bean.setTUnterschrift(dto.getTUnterschrift());
+		bean.setTVersandt(dto.getTVersandt());
+		bean.setOPdf(dto.getOPdf());
+		bean.setCName(dto.getCName());
+		bean.setILfdnr(dto.getILfdnr());
 		em.merge(bean);
 		em.flush();
 	}
@@ -8896,14 +8695,12 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 	public Integer createBereitschafttag(BereitschafttagDto dto) {
 
 		try {
-			Query query = em
-					.createNamedQuery("BereitschafttagfindByBereitschaftartIIdTagesartIIdUBeginn");
+			Query query = em.createNamedQuery("BereitschafttagfindByBereitschaftartIIdTagesartIIdUBeginn");
 			query.setParameter(1, dto.getBereitschaftartIId());
 			query.setParameter(2, dto.getTagesartIId());
 			query.setParameter(3, dto.getUBeginn());
 			Bereitschafttag doppelt = (Bereitschafttag) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_BEREITSCHAFTTAG.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_BEREITSCHAFTTAG.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -8916,8 +8713,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_BEREITSCHAFTTAG);
 			dto.setIId(pk);
 
-			Bereitschafttag bean = new Bereitschafttag(dto.getIId(),
-					dto.getBereitschaftartIId(), dto.getTagesartIId(),
+			Bereitschafttag bean = new Bereitschafttag(dto.getIId(), dto.getBereitschaftartIId(), dto.getTagesartIId(),
 					dto.getUBeginn(), dto.getBEndedestages());
 			em.persist(bean);
 			em.flush();
@@ -8939,18 +8735,14 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 			dto.setUEnde(null);
 		}
 		try {
-			Query query = em
-					.createNamedQuery("BereitschafttagfindByBereitschaftartIIdTagesartIIdUBeginn");
+			Query query = em.createNamedQuery("BereitschafttagfindByBereitschaftartIIdTagesartIIdUBeginn");
 			query.setParameter(1, dto.getBereitschaftartIId());
 			query.setParameter(2, dto.getTagesartIId());
 			query.setParameter(3, dto.getUBeginn());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Bereitschafttag) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Bereitschafttag) query.getSingleResult()).getIId();
 			if (ialle.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"WW_WEBSHOP.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("WW_WEBSHOP.UK"));
 			}
 		} catch (NoResultException ex) {
 
@@ -8970,8 +8762,7 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	private void setBereitschafttagFromIsBereitschafttagDto(
-			Bereitschafttag bean, BereitschafttagDto dto) {
+	private void setBereitschafttagFromIsBereitschafttagDto(Bereitschafttag bean, BereitschafttagDto dto) {
 		bean.setBereitschaftartIId(dto.getBereitschaftartIId());
 		bean.setTagesartIId(dto.getTagesartIId());
 		bean.setUBeginn(dto.getUBeginn());
@@ -8981,30 +8772,23 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 		em.flush();
 	}
 
-	public BigDecimal getKMKostenInZielwaehrung(Integer fahrzeugIId,
-			java.util.Date datGueltigkeitsdatumI,
+	public BigDecimal getKMKostenInZielwaehrung(Integer fahrzeugIId, java.util.Date datGueltigkeitsdatumI,
 			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 
 		Query query = em.createNamedQuery("FahrzeugkostenfindAktuelleKosten");
 		query.setParameter(1, fahrzeugIId);
-		query.setParameter(2,
-				new java.sql.Date(datGueltigkeitsdatumI.getTime()));
+		query.setParameter(2, new java.sql.Date(datGueltigkeitsdatumI.getTime()));
 		query.setMaxResults(1);
 		Collection<?> cl = query.getResultList();
 
 		FahrzeugkostenDto[] dtos = FahrzeugkostenDtoAssembler.createDtos(cl);
 		if (dtos.length > 0) {
 
-			if (!waehrungCNrZielwaehrung.equals(theClientDto
-					.getSMandantenwaehrung())) {
+			if (!waehrungCNrZielwaehrung.equals(theClientDto.getSMandantenwaehrung())) {
 				try {
-					BigDecimal kosten = getLocaleFac()
-							.rechneUmInAndereWaehrungZuDatum(
-									dtos[0].getNKmkosten(),
-									theClientDto.getSMandantenwaehrung(),
-									waehrungCNrZielwaehrung,
-									new Date(System.currentTimeMillis()),
-									theClientDto);
+					BigDecimal kosten = getLocaleFac().rechneUmInAndereWaehrungZuDatum(dtos[0].getNKmkosten(),
+							theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung,
+							new Date(System.currentTimeMillis()), theClientDto);
 
 					dtos[0].setNKmkosten(kosten);
 
@@ -9020,11 +8804,244 @@ public class PersonalFacBean extends LPReport implements PersonalFac {
 
 	}
 
-	public PersonalDto[] personalFindByMandantCNrWithEmail(String mandantCNr,
-			boolean bPlusVersteckte) throws EJBExceptionLP {
-		List<Personal> personals = PersonalQuery.listByMandantCnrWithEmail(em,
-				mandantCNr);
+	public PersonalDto[] personalFindByMandantCNrWithEmail(String mandantCNr, boolean bPlusVersteckte)
+			throws EJBExceptionLP {
+		List<Personal> personals = PersonalQuery.listByMandantCnrWithEmail(em, mandantCNr);
 		return assemblePersonalDtos(personals, bPlusVersteckte);
 	}
 
+	public AbwesenheitsartDto abwesenheitsartFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto) {
+
+		if (iIdI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iIdI == null"));
+		}
+
+		// try {
+		Abwesenheitsart bean = em.find(Abwesenheitsart.class, iIdI);
+		if (bean == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		AbwesenheitsartDto dto = AbwesenheitsartDtoAssembler.createDto(bean);
+
+		try {
+			Abwesenheitsartspr spr = em.find(Abwesenheitsartspr.class,
+					new AbwesenheitsartsprPK(theClientDto.getLocUiAsString(), iIdI));
+			dto.setAbwesenheitsartsprDto(AbwesenheitsartsprDtoAssembler.createDto(spr));
+		} catch (Throwable t) {
+			// nothing here.
+		}
+
+		return dto;
+
+	}
+
+	public void vertauscheAbwesenheitsart(Integer id1, Integer id2) {
+		// try {
+		Abwesenheitsart abwesenheitsart1 = em.find(Abwesenheitsart.class, id1);
+
+		Abwesenheitsart abwesenheitsart2 = em.find(Abwesenheitsart.class, id2);
+
+		Integer iSort1 = abwesenheitsart1.getISort();
+		Integer iSort2 = abwesenheitsart2.getISort();
+
+		abwesenheitsart2.setISort(new Integer(-1));
+
+		abwesenheitsart1.setISort(iSort2);
+		abwesenheitsart2.setISort(iSort1);
+
+	}
+
+	public void updateAbwesenheitsart(AbwesenheitsartDto dto, TheClientDto theClientDto) {
+
+		Integer iId = dto.getIId();
+		if (dto.getAbwesenheitsartsprDto() != null) {
+			Abwesenheitsartspr spr = em.find(Abwesenheitsartspr.class,
+					new AbwesenheitsartsprPK(theClientDto.getLocUiAsString(), iId));
+			if (spr == null) {
+				try {
+					spr = new Abwesenheitsartspr(theClientDto.getLocUiAsString(), iId);
+
+				} catch (EntityExistsException ex7) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_DRUCKEN, ex7);
+				}
+			}
+			spr.setCBez(dto.getAbwesenheitsartsprDto().getCBez());
+			em.persist(spr);
+			em.flush();
+		}
+	}
+
+	public void removeAbwesenheitsart(AbwesenheitsartDto dto, TheClientDto theClientDto) {
+
+		Integer iId = dto.getIId();
+
+		if (dto.getAbwesenheitsartsprDto() != null) {
+
+			Abwesenheitsartspr spr = em.find(Abwesenheitsartspr.class,
+					new AbwesenheitsartsprPK(theClientDto.getLocUiAsString(), iId));
+			if (spr != null) {
+
+				em.remove(spr);
+				em.flush();
+			}
+
+		}
+
+	}
+
+	@Override
+	public void createAnwesenheitsbestaetigungEmail(Integer anwesenheitsbestaetigungId, TheClientDto theClientDto)
+			throws RemoteException {
+		AnwesenheitsbestaetigungDto dto = anwesenheitsbestaetigungFindByPrimaryKey(anwesenheitsbestaetigungId);
+
+		if (dto.getAuftragIId() != null) {
+			AuftragDto auftragDto = getAuftragFac().auftragFindByPrimaryKey(dto.getAuftragIId());
+			if (createAuftragAnwesenheitsbestaetigungEmail(auftragDto, dto, theClientDto)) {
+				dto.setTVersandt(getTimestamp());
+				updateAnwesenheitsbestaetigung(dto);
+			}
+		}
+
+		if (dto.getAuftragIId() == null && dto.getProjektIId() != null) {
+			ProjektDto projektDto = getProjektFac().projektFindByPrimaryKey(dto.getProjektIId());
+		}
+	}
+
+	private boolean createAuftragAnwesenheitsbestaetigungEmail(AuftragDto auftragDto, AnwesenheitsbestaetigungDto dto,
+			TheClientDto theClientDto) throws RemoteException {
+		String emailEmpfaenger = getEmailEmpfaenger(auftragDto, theClientDto);
+		if (emailEmpfaenger == null) {
+			myLogger.warn("Anwesenheitsbestaetigung fuer Auftrag " + auftragDto.getCNr()
+					+ " nicht per E-Mail gesendet (kein E-Mail Empfaenger)");
+			return false;
+		}
+
+		MailtextDto txtDto = new MailtextDto();
+		txtDto.setParamMandantCNr(theClientDto.getMandant());
+
+		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(auftragDto.getKundeIIdAuftragsadresse(), theClientDto);
+		txtDto.setParamLocale(Helper.string2Locale(kundeDto.getPartnerDto().getLocaleCNrKommunikation()));
+
+		txtDto.setMailPartnerIId(kundeDto.getPartnerIId());
+		txtDto.setMailAnprechpartnerIId(auftragDto.getAnsprechparnterIId());
+//		PersonalDto personalDtoBearbeiter = personalFindByPrimaryKey(
+//						auftragDto.getPersonalIIdVertreter(), theClientDto);
+//		txtDto.setMailVertreter(personalDtoBearbeiter);
+		PersonalDto personalDtoVertreter = personalFindByPrimaryKey(auftragDto.getPersonalIIdVertreter(), theClientDto);
+		txtDto.setMailVertreter(personalDtoVertreter);
+		txtDto.setMailBelegdatum(new Date(auftragDto.getTBelegdatum().getTime()));
+		txtDto.setMailBelegnummer(auftragDto.getCNr());
+		txtDto.setMailProjekt(auftragDto.getCBezProjektbezeichnung());
+		txtDto.setKundenbestellnummer(auftragDto.getCBestellnummer());
+		txtDto.setProjektIId(auftragDto.getProjektIId());
+		txtDto.setAbnummer(auftragDto.getCNr());
+		txtDto.setMailFusstext(auftragDto.getCFusstextUebersteuert());
+		txtDto.setKundenbestellnummer(auftragDto.getCBestellnummer());
+		txtDto.setParamXslFile(AuftragReportFac.REPORT_ZEITBESTAETIGUNG_EMAIL);
+		txtDto.setParamModul(AuftragReportFac.REPORT_MODUL);
+		txtDto.setMailText(null);
+		txtDto.setAnwesenheitsLfdnr(dto.getILfdnr());
+
+		txtDto.setMailBetreff(null);
+
+		VersandauftragDto versandDto = new VersandauftragDto();
+		versandDto.setCEmpfaenger(emailEmpfaenger);
+		versandDto.setCBetreff(getVersandFac().getDefaultBetreffForBelegEmail(txtDto, LocaleFac.BELEGART_AUFTRAG, null,
+				txtDto.getParamLocale(), theClientDto));
+
+		txtDto.setMailText(null);
+		versandDto.setCText(getVersandFac().getDefaultTextForBelegEmail(txtDto, theClientDto));
+		versandDto.setBelegartCNr(null);
+
+		versandDto.setCAbsenderadresse(getAbsenderEmailThrow(theClientDto));
+
+//		VersandauftragDto resultDto = getVersandFac().createVersandauftrag(versandDto, false, theClientDto);
+
+		VersandanhangDto anhangPdfDto = new VersandanhangDto();
+		anhangPdfDto.setCDateiname(auftragDto.getCNr() + "_anwesenheitsbestaetigung.pdf");
+		anhangPdfDto.setOInhalt(dto.getOPdf());
+//		anhangPdfDto.setVersandauftragIId(resultDto.getIId());
+
+		VersandanhangDto anhangSigDto = new VersandanhangDto();
+		anhangSigDto.setCDateiname(
+				auftragDto.getCNr() + "_unterschrift." + getFileExtensionFromDatenformat(dto.getDatenformatCNr()));
+		anhangSigDto.setOInhalt(dto.getOUnterschrift());
+//		anhangSigDto.setVersandauftragIId(resultDto.getIId());
+
+		List<VersandanhangDto> anhaenge = new ArrayList<VersandanhangDto>();
+		anhaenge.add(anhangPdfDto);
+		anhaenge.add(anhangSigDto);
+//		getVersandFac().createVersandanhaenge(anhaenge, theClientDto);
+
+		getVersandFac().createVersandauftrag(versandDto, anhaenge, false, theClientDto);
+		return true;
+	}
+
+	private String getAbsenderEmailThrow(TheClientDto theClientDto) throws RemoteException {
+		HvOptional<String> sender = getAbsenderEmail(theClientDto);
+		if (sender.isPresent())
+			return sender.get();
+
+		throw EJBExcFactory.absenderEMailZeitbestaetigungFehlt(
+				getPersonalFac().personalFindByPrimaryKey(theClientDto.getIDPersonal(), theClientDto));
+	}
+
+	@Override
+	public HvOptional<String> getAbsenderEmail(TheClientDto theClientDto) throws RemoteException {
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(theClientDto.getIDPersonal(), theClientDto);
+		String from = personalDto.getCEmail();
+		if (!Helper.isStringEmpty(from)) {
+			return HvOptional.of(from.trim());
+		}
+
+		MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
+		if (mandantDto.getPartnerDto() != null) {
+			if (!Helper.isStringEmpty(mandantDto.getPartnerDto().getCEmail())) {
+				return HvOptional.of(mandantDto.getPartnerDto().getCEmail().trim());
+			}
+		}
+
+		ParametermandantDto paramDto = getParameterFac().parametermandantFindByPrimaryKey(
+				ParameterFac.PARAMETER_MAILADRESSE_ADMIN, ParameterFac.KATEGORIE_VERSANDAUFTRAG,
+				theClientDto.getMandant());
+		if (!Helper.isStringEmpty(paramDto.getCWert())) {
+			return HvOptional.of(paramDto.getCWert().trim());
+		}
+
+		return HvOptional.empty();
+	}
+
+	private String getFileExtensionFromDatenformat(String datenformatCnr) {
+		if (MediaFac.DATENFORMAT_MIMETYPE_IMAGE_PNG.equals(datenformatCnr))
+			return "png";
+		if (MediaFac.DATENFORMAT_MIMETYPE_IMAGE_JPEG.equals(datenformatCnr))
+			return "jpg";
+		if (MediaFac.DATENFORMAT_MIMETYPE_IMAGE_GIF.equals(datenformatCnr))
+			return "gif";
+		if (MediaFac.DATENFORMAT_MIMETYPE_IMAGE_TIFF.equals(datenformatCnr))
+			return "tiff";
+		if (MediaFac.DATENFORMAT_MIMETYPE_APP_PDF.equals(datenformatCnr))
+			return "pdf";
+		return "";
+	}
+
+	private String getEmailEmpfaenger(AuftragDto auftragDto, TheClientDto theClientDto) throws RemoteException {
+		String p = null;
+		if (auftragDto.getAnsprechparnterIId() != null) {
+			AnsprechpartnerDto anspDto = getAnsprechpartnerFac()
+					.ansprechpartnerFindByPrimaryKey(auftragDto.getAnsprechparnterIId(), theClientDto);
+
+			if (!Helper.isStringEmpty(anspDto.getCEmail())) {
+				p = anspDto.getCEmail().trim();
+			}
+		}
+
+		if (p == null && auftragDto.getKundeIIdAuftragsadresse() != null) {
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(auftragDto.getKundeIIdAuftragsadresse(),
+					theClientDto);
+			p = kundeDto.getPartnerDto().getCEmail();
+		}
+
+		return p;
+	}
 }

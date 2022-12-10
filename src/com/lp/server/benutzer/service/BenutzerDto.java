@@ -36,9 +36,12 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Arrays;
 
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
 import com.lp.util.Helper;
 
-public class BenutzerDto implements Serializable {
+@HvDtoLogClass(name = HvDtoLogClass.BENUTZER)
+public class BenutzerDto implements Serializable, IIId {
 	/**
 	 * 
 	 */

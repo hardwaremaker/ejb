@@ -35,6 +35,7 @@ package com.lp.server.artikel.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.util.HashSet;
 
 import javax.ejb.Remote;
 
@@ -48,6 +49,7 @@ public interface ReservierungFac {
 	public final static String REPORT_MODUL = "artikel";
 
 	public final static String REPORT_ARTIKELRESERVIERUNG = "ww_artikelreservierung.jasper";
+	public final static String REPORT_ARTIKELRESERVIERUNG_MONATSSTATISTIK = "ww_artikelreservierung_monatsstatistik.jasper";
 
 	public static final String FLR_ARTIKELRESERVIERUNG_FLRARTIKEL = "flrartikel";
 	public static final String FLR_ARTIKELRESERVIERUNG_I_BELEGARTPOSITIONID = "i_belegartpositionid";
@@ -72,10 +74,6 @@ public interface ReservierungFac {
 			ArtikelreservierungDto artikelreservierungDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateArtikelreservierungRelativ(
-			ArtikelreservierungDto artikelreservierungDto)
-			throws EJBExceptionLP, RemoteException;
-
 	public ArtikelreservierungDto artikelreservierungFindByPrimaryKey(
 			Integer iId) throws EJBExceptionLP, RemoteException;
 
@@ -91,19 +89,32 @@ public interface ReservierungFac {
 			Integer iIdBelegartpositionI) throws RemoteException,
 			EJBExceptionLP;
 
+	public void pruefeReservierungenPerSQL(TheClientDto theClientDto);
 	public void pruefeReservierungen(TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
 	public JasperPrintLP printArtikelreservierungen(Integer artikelIId,
-			Date dVon, Date dBis, TheClientDto theClientDto) throws EJBExceptionLP,
+			Date dVon, Date dBis, boolean bAlleMandanten, boolean bMonatsstatistik, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
 	public BigDecimal getAnzahlReservierungen(Integer artikelIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+	public BigDecimal getAnzahlReservierungen(Integer artikelIId,
+			java.sql.Timestamp tStichtag, String mandantCNr,
+			Integer partnerIIdStandort,boolean bNurInterne, String belegartCNr);
+	
+	public BigDecimal getAnzahlReservierungen(Integer artikelIId, java.sql.Timestamp tStichtag, String mandantCNr,
+			Integer partnerIIdStandort, boolean bNurInterne, String belegartCNr, boolean bAlle);
+	
 
 	public BigDecimal getAnzahlRahmenreservierungen(Integer artikelIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 	public BigDecimal getAnzahlReservierungen(Integer artikelIId,
 			java.sql.Timestamp tStichtag, String mandantCNr)
 			throws EJBExceptionLP;
+	public BigDecimal getAnzahlReservierungen(Integer artikelIId,
+			java.sql.Timestamp tStichtag, String mandantCNr,
+			Integer partnerIIdStandort);
+	
+	public HashSet getSetOfArtikelIdMitReservierungen() ;
 }

@@ -67,12 +67,12 @@ public class DocNodeMail extends DocNodeBase {
 	}
 	
 	@Override
-	protected void applyPropertiesSub(Node node) throws RepositoryException {
+	protected void loadFromImpl(Node node) throws RepositoryException {
 		literalValue = node.getProperty(NODEPROPERTY_LITERALVALUE).getString();
 	}
 
 	@Override
-	protected void persistSub(Node node) throws RepositoryException {
+	protected void persistToImpl(Node node) throws RepositoryException {
 		node.setProperty(NODEPROPERTY_LITERALVALUE, literalValue);
 	}
 

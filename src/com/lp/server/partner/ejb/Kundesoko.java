@@ -33,6 +33,7 @@
 package com.lp.server.partner.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
@@ -45,6 +46,7 @@ import javax.persistence.Table;
 
 @NamedQueries({
 		@NamedQuery(name = "KundesokofindByKundeIIdArtikelIId", query = "SELECT OBJECT (o) FROM Kundesoko o WHERE o.kundeIId=?1 AND o.artikelIId=?2"),
+		@NamedQuery(name = "KundesokofindByArtikelIId", query = "SELECT OBJECT (o) FROM Kundesoko o WHERE o.artikelIId=?1"),
 		@NamedQuery(name = "KundesokofindByKundeIIdArtgruIId", query = "SELECT OBJECT (o) FROM Kundesoko o WHERE o.kundeIId=?1 AND o.artgruIId=?2"),
 		@NamedQuery(name = "KundesokofindByKundeIIdArtikelIIdGueltigkeitsdatum", query = "SELECT OBJECT (o) FROM Kundesoko o WHERE o.kundeIId=?1 AND o.artikelIId=?2 AND ((o.tPreisgueltigab<=?3 AND o.tPreisgueltigbis>=?3) OR (o.tPreisgueltigab<=?3 AND o.tPreisgueltigbis IS NULL))"),
 		@NamedQuery(name = "KundesokofindByKundeIIdArtgruIIdGueltigkeitsdatum", query = "SELECT OBJECT (o) FROM Kundesoko o WHERE o.kundeIId=?1 AND o.artgruIId=?2 AND ((o.tPreisgueltigab<=?3 AND o.tPreisgueltigbis>=?3) OR (o.tPreisgueltigab<=?3 AND o.tPreisgueltigbis IS NULL))"),
@@ -79,6 +81,17 @@ public class Kundesoko implements Serializable {
 
 	@Column(name = "C_BEMERKUNG")
 	private String cBemerkung;
+
+	@Column(name = "N_STARTWERT_LIEFERMENGE")
+	private BigDecimal nStartwertLiefermenge;
+	
+	public BigDecimal getNStartwertLiefermenge() {
+		return nStartwertLiefermenge;
+	}
+
+	public void setNStartwertLiefermenge(BigDecimal nStartwertLiefermenge) {
+		this.nStartwertLiefermenge = nStartwertLiefermenge;
+	}
 
 	@Column(name = "B_BEMERKUNGDRUCKEN")
 	private Short bBemerkungdrucken;
@@ -129,6 +142,17 @@ public class Kundesoko implements Serializable {
 		this.cKundeartikelzbez = cKundeartikelzbez;
 	}
 
+	@Column(name = "B_KEINE_MENGENSTAFFEL")
+	private Short bKeineMengenstaffel;
+
+	public Short getBKeineMengenstaffel() {
+		return bKeineMengenstaffel;
+	}
+
+	public void setBKeineMengenstaffel(Short bKeineMengenstaffel) {
+		this.bKeineMengenstaffel = bKeineMengenstaffel;
+	}
+	
 	@Column(name = "KUNDE_I_ID")
 	private Integer kundeIId;
 
@@ -153,12 +177,13 @@ public class Kundesoko implements Serializable {
 		setBDrucken(new Short((short) 0));
 		setBRabattsichtbar(new Short((short) 0));
 		setBWirktNichtFuerPreisfindung(new Short((short) 0));
+		setBKeineMengenstaffel(new Short((short) 0));
 		setTAendern(new Timestamp(System.currentTimeMillis()));
 	}
 
 	public Kundesoko(Integer iId, Integer kundeIId, Timestamp tPreisgueltigab,
 			Short bemerkungdrucken, Short rabattsichtbar, Short drucken,
-			Integer personalIIdAendern,Short wirktnichtfuerpreisfindung) {
+			Integer personalIIdAendern,Short wirktnichtfuerpreisfindung, Short bKeineMengenstaffel) {
 		setIId(iId);
 		setKundeIId(kundeIId);
 		setTPreisgueltigab(new Date(tPreisgueltigab.getTime()));
@@ -168,6 +193,7 @@ public class Kundesoko implements Serializable {
 		setBRabattsichtbar(rabattsichtbar);
 		setTAendern(new Timestamp(System.currentTimeMillis()));
 		setBWirktNichtFuerPreisfindung(wirktnichtfuerpreisfindung);
+		setBKeineMengenstaffel(bKeineMengenstaffel);
 	}
 
 	public Integer getIId() {

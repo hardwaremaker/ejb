@@ -51,4 +51,8 @@ public class StuecklisteQueryResult extends QueryResult {
 	public IStuecklisteFLRData[] getFlrData() {
 		return flrData ;
 	}
+
+	public boolean hasFlrData() {
+		return flrData != null ;
+	}
 }

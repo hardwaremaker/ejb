@@ -55,13 +55,14 @@ import com.lp.server.system.service.KeyvalueDto;
 import com.lp.server.system.service.KeyvalueDtoAssembler;
 import com.lp.server.system.service.SystemServicesFac;
 import com.lp.server.system.service.TheClientDto;
-import com.lp.server.util.HelperServer;
+import com.lp.server.util.Facade;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.ServerConfiguration;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.LPDatenSubreport;
 
 @Stateless
-public class SystemServicesFacBean implements SystemServicesFac {
+public class SystemServicesFacBean extends Facade implements SystemServicesFac {
 	@PersistenceContext
 	private EntityManager em;
 
@@ -70,7 +71,8 @@ public class SystemServicesFacBean implements SystemServicesFac {
 	 * 
 	 * @param file
 	 *            File
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return String
 	 */
 	static public String getRelativePathtoLPDir(File file,
@@ -106,28 +108,50 @@ public class SystemServicesFacBean implements SystemServicesFac {
 		}
 		return sRelative;
 	}
-	
+
+	public LPDatenSubreport getSubreportLetzteEinstellungen(String cGruppe) {
+
+		KeyvalueDto[] dtos = keyvalueFindyByCGruppe(cGruppe);
+
+		String[] fieldnames = new String[] { "F_KEY", "F_VALUE" };
+
+		Object[][] dataSub = new Object[dtos.length][fieldnames.length];
+
+		for (int i = 0; i < dtos.length; i++) {
+			KeyvalueDto dto = dtos[i];
+			dataSub[i][0] = dto.getCKey();
+			dataSub[i][1] = dto.getCValue();
+
+		}
+
+		return new LPDatenSubreport(dataSub, fieldnames);
+	}
+
 	public String getPrinterNameForReport(String modulI, String filenameI,
-			Locale spracheI, String cSubdirectory, TheClientDto theClientDto){
-		String sReportdir = getPathFromLPDir(modulI, filenameI, theClientDto.getMandant(), spracheI, cSubdirectory, theClientDto);
-		if(sReportdir!=null){
-			String sPrintfile = sReportdir.substring(0,sReportdir.lastIndexOf(".")) + ".print";
+			Locale spracheI, String cSubdirectory, TheClientDto theClientDto) {
+		String sReportdir = getPathFromLPDir(modulI, filenameI,
+				theClientDto.getMandant(), spracheI, cSubdirectory,
+				theClientDto);
+		if (sReportdir != null) {
+			String sPrintfile = sReportdir.substring(0,
+					sReportdir.lastIndexOf("."))
+					+ ".print";
 			File file = new File(sPrintfile);
-			if(file.exists()){
+			if (file.exists()) {
 				try {
 					FileReader fr = new FileReader(file);
 					BufferedReader br = new BufferedReader(fr);
 					String sPrinterName = br.readLine();
-					
-					br.close() ;
+
+					br.close();
 					return sPrinterName;
 				} catch (FileNotFoundException e) {
 					// Can't happen because we check file.exists()
-				}	catch (IOException e) {
+				} catch (IOException e) {
 					return null;
 				}
 			}
-		} 
+		}
 		return null;
 	}
 
@@ -144,18 +168,19 @@ public class SystemServicesFacBean implements SystemServicesFac {
 	 *            Locale
 	 * @param cSubdirectory
 	 *            kostenstellenspezifisches Verzeichnis
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return String
 	 */
 	static public String getPathFromLPDir(String modulI, String filenameI,
 			String mandantCNrI, Locale spracheI, String cSubdirectory,
 			TheClientDto theClientDto) {
 		String reportRoot = LPReport.getReportDir();
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --
 		// Falls ein kostenstellenspezeifisches Verzeichnis definiert ist, dann
 		// zuerst dort suchen
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --
 		if (cSubdirectory != null) {
 			// erster Versuch fuer modul/mandant/locale
@@ -182,10 +207,10 @@ public class SystemServicesFacBean implements SystemServicesFac {
 				return f.getAbsolutePath();
 			}
 		}
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --
 		// ansonsten im "normalen" Reportverzeichnis
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --
 		// erster Versuch fuer modul/mandant/locale spracheLAND z.B en_US
 		String reportDir = reportRoot + modulI + File.separator + "anwender"
@@ -229,41 +254,74 @@ public class SystemServicesFacBean implements SystemServicesFac {
 		// wenn nicht vorhanden
 		return null;
 	}
-
 	
-	public KeyvalueDto[] keyvalueFindyByCGruppe(String cGruppe){
+	public static String getCopyPrintPathFromLPDir(String modulI,
+			String mandantCNr, Locale sprache, String cSubdirectory,
+			TheClientDto theClientDto) {
+		String filename = "kopie.jasper";
+		String copyPrintPath = getPathFromLPDir(modulI, filename, mandantCNr, sprache, cSubdirectory, theClientDto);
+		if (copyPrintPath != null) return copyPrintPath;
 		
+		String reportDir = LPReport.getReportDir() + File.separator + "allgemein";
+		File f = new File(reportDir + File.separator + filename);
+		if (f.exists()) {
+			return f.getAbsolutePath();
+		}
+		
+		return null;
+	}
+
+	public void replaceKeyvaluesEinerGruppe(String cGruppe,
+			ArrayList<KeyvalueDto> alDtos) {
+		Query query = em.createNamedQuery("KeyvaluefindByCGruppe");
+		query.setParameter(1, cGruppe);
+		Collection<?> cl = query.getResultList();
+		Iterator it = cl.iterator();
+
+		while (it.hasNext()) {
+			em.remove(it.next());
+		}
+
+		for (int i = 0; i < alDtos.size(); i++) {
+			alDtos.get(i).setCGruppe(cGruppe);
+			createKeyvalue(alDtos.get(i));
+		}
+	}
+
+	public KeyvalueDto[] keyvalueFindyByCGruppe(String cGruppe) {
+
 		Query query = em.createNamedQuery("KeyvaluefindByCGruppe");
 		query.setParameter(1, cGruppe);
 		Collection<?> cl = query.getResultList();
 
 		return assembleKeyvalueDtos(cl);
-		
+
 	}
-	
+
 	public void speichereKeyValueDtos(KeyvalueDto[] keyvalueDto) {
 		for (int i = 0; i < keyvalueDto.length; i++) {
 			// zuerst suchen
 			KeyvaluePK keyvaluePK = new KeyvaluePK(keyvalueDto[i].getCGruppe(),
 					keyvalueDto[i].getCKey());
 			Keyvalue keyvalue = em.find(Keyvalue.class, keyvaluePK);
-			if (keyvalue == null) {
-				// wenn nicht vorhanden, dann erstellen
-				keyvalue = new Keyvalue(keyvalueDto[i].getCGruppe(),
-						keyvalueDto[i].getCKey(), keyvalueDto[i].getCValue(),
-						keyvalueDto[i].getCDatentyp());
-			} 
-			setKeyvalueFromKeyvalueDto(keyvalue, keyvalueDto[i]);
+			if(keyvalue == null) {
+				createKeyvalue(keyvalueDto[i]);
+			} else {
+				setKeyvalueFromKeyvalueDto(keyvalue, keyvalueDto[i]);
+			}
 		}
-
 	}
 
 	public void createKeyvalue(KeyvalueDto keyvalueDto) throws EJBExceptionLP {
 		if (keyvalueDto == null) {
 			return;
 		}
-		Keyvalue keyvalue = new Keyvalue(keyvalueDto.getCGruppe(), keyvalueDto
-				.getCKey(), keyvalueDto.getCValue(), keyvalueDto.getCDatentyp());
+		//TODO Sollte man nicht das NOT-NULL CONSTRAINT von C_VALUE entfernen?
+		// (ghp, 27.7.2018) SP6410
+		Keyvalue keyvalue = new Keyvalue(keyvalueDto.getCGruppe(),
+				keyvalueDto.getCKey(), 
+				keyvalueDto.getCValue() != null ? keyvalueDto.getCValue() : "",
+				keyvalueDto.getCDatentyp());
 		em.persist(keyvalue);
 		em.flush();
 		setKeyvalueFromKeyvalueDto(keyvalue, keyvalueDto);
@@ -315,7 +373,7 @@ public class SystemServicesFacBean implements SystemServicesFac {
 
 	private void setKeyvalueFromKeyvalueDto(Keyvalue keyvalue,
 			KeyvalueDto keyvalueDto) {
-		keyvalue.setCValue(keyvalueDto.getCValue());
+		keyvalue.setCValue(keyvalueDto.getCValue() != null ? keyvalueDto.getCValue() : "");
 		keyvalue.setCDatentyp(keyvalueDto.getCDatentyp());
 		em.merge(keyvalue);
 		em.flush();
@@ -337,26 +395,26 @@ public class SystemServicesFacBean implements SystemServicesFac {
 		KeyvalueDto[] returnArray = new KeyvalueDto[list.size()];
 		return (KeyvalueDto[]) list.toArray(returnArray);
 	}
-	
+
 	static public String getPathFromSSLDir(String cZertifikatName) {
-		if(cZertifikatName.startsWith(File.separator)) {
-			return cZertifikatName ;
+		if (cZertifikatName.startsWith(File.separator)) {
+			return cZertifikatName;
 		}
 
-		String dir = ServerConfiguration.getSSLCertificateDir() ;
-		if(!dir.endsWith(File.separator)) {
-			dir += File.separator ;
+		String dir = ServerConfiguration.getSSLCertificateDir();
+		if (!dir.endsWith(File.separator)) {
+			dir += File.separator;
 		}
 
-		return dir + cZertifikatName ;
+		return dir + cZertifikatName;
 	}
-	
+
 	/**
 	 * Das Verzeichnis in dem die Scripts liegen
 	 * 
 	 * @return das Verzeichnis (kompletter Pfad) der Skripts
 	 */
 	static public String getScriptDir() {
-		return ServerConfiguration.getScriptDir() ;
+		return ServerConfiguration.getScriptDir();
 	}
 }

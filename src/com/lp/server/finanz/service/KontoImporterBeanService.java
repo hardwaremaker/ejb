@@ -84,11 +84,16 @@ public class KontoImporterBeanService implements IKontoImporterBeanServices, Ser
 	@Override
 	public KontoDto kontoFindByCnrMandant(String kontoCnr) throws RemoteException {
 		return finanzFac.kontoFindByCnrKontotypMandantOhneExc(
-			kontoCnr, finanzServiceFac.KONTOTYP_SACHKONTO, getTheClientDto().getMandant(), getTheClientDto()) ;
+			kontoCnr, FinanzServiceFac.KONTOTYP_SACHKONTO, getTheClientDto().getMandant(), getTheClientDto()) ;
 	}
 
 	@Override
 	public FinanzamtDto[] finanzamtFindAllByMandantCNr() throws RemoteException {
 		return finanzFac.finanzamtFindAllByMandantCNr(getTheClientDto());
+	}
+	
+	@Override
+	public KontoartDto kontoartFindByCnr(String kontoartCnr) throws RemoteException {
+		return finanzServiceFac.kontoartFindByPrimaryKeyOhneExc(kontoartCnr, getTheClientDto());
 	}
 }

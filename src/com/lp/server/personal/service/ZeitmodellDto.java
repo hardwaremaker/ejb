@@ -34,7 +34,10 @@ package com.lp.server.personal.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.sql.Timestamp;
+
+import javax.persistence.Column;
 
 import com.lp.util.Helper;
 
@@ -52,6 +55,37 @@ public class ZeitmodellDto implements Serializable {
 	private ZeitmodellsprDto zeitmodellsprDto;
 	private Short bVersteckt;
 	private Double fUrlaubstageprowoche;
+
+	
+	private Short bFeiertagAmNaechstenTag;
+
+	public Short getBFeiertagAmNaechstenTag() {
+		return bFeiertagAmNaechstenTag;
+	}
+
+	public void setBFeiertagAmNaechstenTag(Short bFeiertagAmNaechstenTag) {
+		this.bFeiertagAmNaechstenTag = bFeiertagAmNaechstenTag;
+	}
+	
+	private Short bUnproduktivAlsPause;
+
+	
+	public Short getBUnproduktivAlsPause() {
+		return bUnproduktivAlsPause;
+	}
+
+	public void setBUnproduktivAlsPause(Short bUnproduktivAlsPause) {
+		this.bUnproduktivAlsPause = bUnproduktivAlsPause;
+	}
+	private BigDecimal nMaximaleMehrzeit;
+
+	public BigDecimal getNMaximaleMehrzeit() {
+		return nMaximaleMehrzeit;
+	}
+
+	public void setNMaximaleMehrzeit(BigDecimal nMaximaleMehrzeit) {
+		this.nMaximaleMehrzeit = nMaximaleMehrzeit;
+	}
 
 	private BigDecimal nMaximalesWochenist;
 
@@ -101,6 +135,26 @@ public class ZeitmodellDto implements Serializable {
 		this.fUrlaubstageprowoche = fUrlaubstageprowoche;
 	}
 
+	private Time uGutschriftKommt;
+
+	private Time uGutschriftGeht;
+	
+	public Time getUGutschriftKommt() {
+		return uGutschriftKommt;
+	}
+
+	public void setUGutschriftKommt(Time uGutschriftKommt) {
+		this.uGutschriftKommt = uGutschriftKommt;
+	}
+
+	public Time getUGutschriftGeht() {
+		return uGutschriftGeht;
+	}
+
+	public void setUGutschriftGeht(Time uGutschriftGeht) {
+		this.uGutschriftGeht = uGutschriftGeht;
+	}
+	
 	public Integer getIId() {
 		return iId;
 	}
@@ -115,6 +169,16 @@ public class ZeitmodellDto implements Serializable {
 
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
+	}
+
+	private Integer schichtIId;
+
+	public Integer getSchichtIId() {
+		return schichtIId;
+	}
+
+	public void setSchichtIId(Integer schichtIId) {
+		this.schichtIId = schichtIId;
 	}
 
 	public String getCNr() {
@@ -142,8 +206,19 @@ public class ZeitmodellDto implements Serializable {
 	public void setBTeilzeit(Short bTeilzeit) {
 		this.bTeilzeit = bTeilzeit;
 	}
+
+	private Short bFirmenzeitmodell;
+
+	public Short getBFirmenzeitmodell() {
+		return bFirmenzeitmodell;
+	}
+
+	public void setBFirmenzeitmodell(Short bFirmenzeitmodell) {
+		this.bFirmenzeitmodell = bFirmenzeitmodell;
+	}
+
 	private Short bFixepauseTrotzkommtgeht;
-	
+
 	public Short getBFixepauseTrotzkommtgeht() {
 		return bFixepauseTrotzkommtgeht;
 	}
@@ -151,6 +226,7 @@ public class ZeitmodellDto implements Serializable {
 	public void setBFixepauseTrotzkommtgeht(Short bFixepauseTrotzkommtgeht) {
 		this.bFixepauseTrotzkommtgeht = bFixepauseTrotzkommtgeht;
 	}
+
 	public Integer getPersonalIIdAendern() {
 		return personalIIdAendern;
 	}

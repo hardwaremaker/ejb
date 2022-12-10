@@ -35,6 +35,7 @@ package com.lp.server.artikel.service;
 import java.io.Serializable;
 
 import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.system.service.HvDtoLogIgnore;
 
 public class HerstellerDto implements Serializable {
 	/**
@@ -45,6 +46,7 @@ public class HerstellerDto implements Serializable {
 	private Integer partnerIId;
 	private Integer iId;
 	private PartnerDto partnerDto;
+	private String cLeadIn;
 
 	public String getCNr() {
 		return cNr;
@@ -78,32 +80,58 @@ public class HerstellerDto implements Serializable {
 		this.partnerDto = partnerDto;
 	}
 
+	@HvDtoLogIgnore
+	public String getBezeichnung() {
+
+		String bezeichnung = getCNr();
+
+		if (getPartnerDto() != null) {
+			return bezeichnung += " " + getPartnerDto().getCName1nachnamefirmazeile1();
+		}
+		return bezeichnung;
+
+	}
+
+	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) {
+		if (this == obj)
 			return true;
-		}
-		if (!(obj instanceof HerstellerDto)) {
+		if (obj == null)
 			return false;
-		}
-		HerstellerDto that = (HerstellerDto) obj;
-		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr))) {
+		if (getClass() != obj.getClass())
 			return false;
-		}
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId))) {
+		HerstellerDto other = (HerstellerDto) obj;
+		if (cLeadIn == null) {
+			if (other.cLeadIn != null)
+				return false;
+		} else if (!cLeadIn.equals(other.cLeadIn))
 			return false;
-		}
-		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
+		if (cNr == null) {
+			if (other.cNr != null)
+				return false;
+		} else if (!cNr.equals(other.cNr))
 			return false;
-		}
+		if (iId == null) {
+			if (other.iId != null)
+				return false;
+		} else if (!iId.equals(other.iId))
+			return false;
+		if (partnerIId == null) {
+			if (other.partnerIId != null)
+				return false;
+		} else if (!partnerIId.equals(other.partnerIId))
+			return false;
 		return true;
 	}
 
+	@Override
 	public int hashCode() {
-		int result = 17;
-		result = 37 * result + this.cNr.hashCode();
-		result = 37 * result + this.partnerIId.hashCode();
-		result = 37 * result + this.iId.hashCode();
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((cLeadIn == null) ? 0 : cLeadIn.hashCode());
+		result = prime * result + ((cNr == null) ? 0 : cNr.hashCode());
+		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
+		result = prime * result + ((partnerIId == null) ? 0 : partnerIId.hashCode());
 		return result;
 	}
 
@@ -113,5 +141,18 @@ public class HerstellerDto implements Serializable {
 		returnString += ", " + partnerIId;
 		returnString += ", " + iId;
 		return returnString;
+	}
+
+	/**
+	 * Der Barcode-LeadIn dieses Herstellers
+	 * 
+	 * @return Barcode-LeadIn des Herstellers
+	 */
+	public String getCLeadIn() {
+		return cLeadIn;
+	}
+
+	public void setCLeadIn(String cLeadIn) {
+		this.cLeadIn = cLeadIn;
 	}
 }

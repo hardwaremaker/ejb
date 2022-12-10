@@ -62,9 +62,39 @@ public class MaterialbedarfDto implements Serializable {
 	private String cBelegnummer = null;
 	private boolean bTemporaererEintrag = false;
 
+	private String xAusloeser;
+
+	public String getXAusloeser() {
+		return xAusloeser;
+	}
+
+	public void setXAusloeser(String xAusloeser) {
+		this.xAusloeser = xAusloeser;
+	}
+
+	private Integer partnerIIdStandort = null;
+
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
+
+	private Integer auftragIIdKopfauftrag;
+
+	public Integer getAuftragIIdKopfauftrag() {
+		return auftragIIdKopfauftrag;
+	}
+
+	public void setAuftragIIdKopfauftrag(Integer auftragIIdKopfauftrag) {
+		this.auftragIIdKopfauftrag = auftragIIdKopfauftrag;
+	}
+
 	/**
-	 * um die stuecklistenhierarchie in die loshierarchie uebertragen zu
-	 * koennen. nur fuer das fertigungsmodul relevant.
+	 * um die stuecklistenhierarchie in die loshierarchie uebertragen zu koennen.
+	 * nur fuer das fertigungsmodul relevant.
 	 */
 	private Integer iInternebestellungIIdElternlos = null;
 	private Integer iStuecklisteIId = null;
@@ -121,8 +151,7 @@ public class MaterialbedarfDto implements Serializable {
 		this.iBelegpositionIId = iBelegpositionIId;
 	}
 
-	public void setIInternebestellungIIdElternlos(
-			Integer iInternebestellungIIdElternlos) {
+	public void setIInternebestellungIIdElternlos(Integer iInternebestellungIIdElternlos) {
 		this.iInternebestellungIIdElternlos = iInternebestellungIIdElternlos;
 	}
 
@@ -157,8 +186,9 @@ public class MaterialbedarfDto implements Serializable {
 	public void setBTemporaererEintrag(boolean bTemporaererEintrag) {
 		this.bTemporaererEintrag = bTemporaererEintrag;
 	}
-	
+
 	private Integer projektIId;
+
 	public Integer getProjektIId() {
 		return projektIId;
 	}
@@ -166,8 +196,9 @@ public class MaterialbedarfDto implements Serializable {
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
 	}
-	
+
 	private String xTextinhalt = null;
+
 	public final String getXTextinhalt() {
 		return this.xTextinhalt;
 	}
@@ -175,7 +206,9 @@ public class MaterialbedarfDto implements Serializable {
 	public final void setXTextinhalt(String xTextinhalt) {
 		this.xTextinhalt = xTextinhalt;
 	}
+
 	private BigDecimal nEinkaufpreis;
+
 	public BigDecimal getNEinkaufpreis() {
 		return nEinkaufpreis;
 	}
@@ -183,8 +216,9 @@ public class MaterialbedarfDto implements Serializable {
 	public void setNEinkaufpreis(BigDecimal bdEinkaufpreis) {
 		this.nEinkaufpreis = bdEinkaufpreis;
 	}
-	
+
 	private Integer lieferantIId;
+
 	public Integer getLieferantIId() {
 		return lieferantIId;
 	}
@@ -193,4 +227,15 @@ public class MaterialbedarfDto implements Serializable {
 		this.lieferantIId = lieferantIId;
 	}
 	
+	private Double fLagermindest;
+
+	public Double getFLagermindest() {
+		return this.fLagermindest;
+	}
+
+	public void setFLagermindest(Double fLagermindest) {
+		this.fLagermindest = fLagermindest;
+	}
+	
+
 }

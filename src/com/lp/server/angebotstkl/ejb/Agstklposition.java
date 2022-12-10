@@ -63,15 +63,51 @@ public class Agstklposition implements Serializable {
 	@Column(name = "C_ZBEZ")
 	private String cZbez;
 
+	@Column(name = "B_INITIAL")
+	private Short bInitial;
+	
+	public Short getBInitial() {
+		
+		return bInitial;
+	}
+
+	public void setBInitial(Short bInitial) {
+		this.bInitial = bInitial;
+	}
+	
 	@Column(name = "B_ARTIKELBEZEICHNUNGUEBERSTEUERT")
 	private Short bArtikelbezeichnunguebersteuert;
 
 	@Column(name = "B_AUFSCHLAGGESAMT_FIXIERT")
 	private Short bAufschlaggesamtFixiert;
 
+	@Column(name = "B_RUESTMENGE")
+	private Short bRuestmenge;
+	
+	public Short getBRuestmenge() {
+		return bRuestmenge;
+	}
+
+	public void setBRuestmenge(Short bRuestmenge) {
+		this.bRuestmenge = bRuestmenge;
+	}
+
+	
 	@Column(name = "N_MENGE")
 	private BigDecimal nMenge;
 
+
+	@Column(name = "C_POSITION")
+	private String cPosition;
+	
+	public String getCPosition() {
+		return this.cPosition;
+	}
+
+	public void setCPosition(String cPosition) {
+		this.cPosition = cPosition;
+	}
+	
 	@Column(name = "N_AUFSCHLAG")
 	private BigDecimal nAufschlag;
 
@@ -144,6 +180,18 @@ public class Agstklposition implements Serializable {
 	@Column(name = "B_DRUCKEN")
 	private Short bDrucken;
 
+	@Column(name = "B_MIT_PREISEN")
+	private Short bMitPreisen;
+
+	
+	public Short getBMitPreisen() {
+		return bMitPreisen;
+	}
+
+	public void setBMitPreisen(Short bMitPreisen) {
+		this.bMitPreisen = bMitPreisen;
+	}
+
 	@Column(name = "AGSTKL_I_ID")
 	private Integer agstklIId;
 
@@ -165,13 +213,15 @@ public class Agstklposition implements Serializable {
 	public Agstklposition(Integer id, Integer agstklIId,
 			String agstklpositionsartCNr, Short artikelbezeichnunguebersteuert,
 			Short rabattsatzuebersteuert, BigDecimal gestehungspreis,
-			Short drucken) {
+			Short drucken, Short mitPreisen, Short bRuestmenge,  Short bInitial) {
 		setIId(id);
 		setAgstklIId(agstklIId);
 		setAgstklpositionsartCNr(agstklpositionsartCNr);
 		setBArtikelbezeichnunguebersteuert(artikelbezeichnunguebersteuert);
 		setBRabattsatzuebersteuert(rabattsatzuebersteuert);
 		setBDrucken(drucken);
+		setBMitPreisen(mitPreisen);
+		setBRuestmenge(bRuestmenge);
 
 		// CMP alle NOT NULL und default felder hier setzen
 		setBArtikelbezeichnunguebersteuert(new Short((short) 0));
@@ -179,6 +229,7 @@ public class Agstklposition implements Serializable {
 		setBDrucken(new Short((short) 0));
 		setNGestehungspreis(gestehungspreis);
 		setBAufschlaggesamtFixiert(new Short((short) 0));
+		setBInitial(bInitial);
 	}
 
 	public Integer getIId() {

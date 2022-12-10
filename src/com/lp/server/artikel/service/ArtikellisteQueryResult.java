@@ -32,22 +32,13 @@
  *******************************************************************************/
 package com.lp.server.artikel.service;
 
-import com.lp.server.util.fastlanereader.service.query.QueryResult;
+import com.lp.server.fertigung.service.EnhancedQueryResult;
 
-public class ArtikellisteQueryResult extends QueryResult {
+public class ArtikellisteQueryResult extends EnhancedQueryResult<IArtikellisteFLRData> {
 	private static final long serialVersionUID = 1197172247696788761L;
-	private IArtikellisteFLRData[] flrData = null ;
 	
 	public ArtikellisteQueryResult(Object[][] rowData, long rowCount, long indexOfFirstRow,
 			long indexOfLastRow, long indexOfSelectedRow) {
 		super(rowData, rowCount, indexOfFirstRow, indexOfLastRow, indexOfSelectedRow) ;
-	}
-	
-	public void setFlrData(IArtikellisteFLRData[] additionalFlrData) {
-		flrData = additionalFlrData ;
-	}
-	
-	public IArtikellisteFLRData[] getFlrData() {
-		return flrData ;
-	}
+	}	
 }

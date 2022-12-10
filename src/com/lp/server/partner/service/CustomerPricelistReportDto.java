@@ -39,6 +39,10 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
+/**
+ * Enth&auml;lt Informationen f&uuml;r die Kundenpreisliste<br>
+ * @author gerold
+ */
 public class CustomerPricelistReportDto implements Serializable {
 	private static final long serialVersionUID = 8982294155002016054L;
 
@@ -49,7 +53,11 @@ public class CustomerPricelistReportDto implements Serializable {
 	private String artikelnrvon ;
 	private String artikelnrbis ;
 	private Boolean mitVersteckten ;
+	private Boolean mitGesperrten ;
 	private Boolean nurSoko ;
+	private Boolean bVKMengenstaffelAnstattSokoMengestaffel ;
+	private IdValueDto shopgruppe ;
+	
 	private Boolean mitMandantensprache ;
 //	private Date gueltigkeitsdatum ;
 	private Boolean onlyWebshopItems ;
@@ -59,54 +67,124 @@ public class CustomerPricelistReportDto implements Serializable {
 		items = new ArrayList<CustomerPricelistItemDto>() ;
 	}
 	
+	/**
+	 * Die (leere) Liste aller Artikel (mit Preisinformation) dieser Preisliste
+	 * @return die (leere) Liste aller Artikel (mit Preisinformation) 
+	 */
 	public List<CustomerPricelistItemDto> getItems() {
 		return items;
 	}
 	public void setItems(List<CustomerPricelistItemDto> items) {
 		this.items = items;
 	}
+	
+	/**
+	 * Die Kundeninformation<br>
+	 * <p>Enth&auml;lt die Id und den Namen des Kunden</p>
+	 * 
+	 * @return die Kundeninformation
+	 */
 	public IdValueDto getCustomer() {
 		return kunde;
 	}
 	public void setCustomer(IdValueDto kunde) {
 		this.kunde = kunde;
 	}
+	
+	/** 
+	 * Die Information &uuml;ber die Artikelgruppe<br>
+	 * <p>Die Information wird nur &uuml;bermittelt, wenn die Artikelgruppe
+	 * explizit eingeschr&auml;nkt worden ist</p>
+	 * @return die (optionale) Information &uuml;ber die Artikelgruppe.
+	 */
 	public IdValueDto getItemgroup() {
 		return artikelgruppe;
 	}
 	public void setItemgroup(IdValueDto artikelgruppe) {
 		this.artikelgruppe = artikelgruppe;
 	}
+	/** 
+	 * Die Information &uuml;ber die Shopgruppe<br>
+	 * <p>Die Information wird nur &uuml;bermittelt, wenn die Shopgruppe
+	 * explizit eingeschr&auml;nkt worden ist</p>
+	 * @return die (optionale) Information &uuml;ber die Shopgruppe.
+	 */
+	public IdValueDto getShopgroup() {
+		return shopgruppe;
+	}
+	public void setShoproup(IdValueDto shopgruppe) {
+		this.shopgruppe = shopgruppe;
+	}
+	
+	/** 
+	 * Die Information &uuml;ber die Artikelklasse<br>
+	 * <p>Die Information wird nur &uuml;bermittelt, wenn die Artikelklasse
+	 * explizit eingeschr&auml;nkt worden ist</p>
+	 * @return die (optionale) Information &uuml;ber die Artikelklasse.
+	 */
 	public IdValueDto getItemclass() {
 		return artikelklasse;
 	}
 	public void setItemclass(IdValueDto artikelklasse) {
 		this.artikelklasse = artikelklasse;
 	}
+	
+	/**
+	 * Die Vongrenze der Einschr&auml;nkung der Artikelnummern
+	 * @return die Vongrenze der Artikelnummer
+	 */
 	public String getItemRangeFrom() {
 		return artikelnrvon;
 	}
 	public void setItemRangeFrom(String artikelnrvon) {
 		this.artikelnrvon = artikelnrvon;
 	}
+	
+	/**
+	 * Die Bisgrenze der Einschr&auml;nkung der Artikelnummer
+	 * @return die Bisgrenze der Artikelnummer
+	 */
 	public String getItemRangeTo() {
 		return artikelnrbis;
 	}
 	public void setItemRangeTo(String artikelnrbis) {
 		this.artikelnrbis = artikelnrbis;
 	}
+	
+	/**
+	 * Sollen auch versteckte Artikel ausgegeben werden?
+	 * @return true wenn auch versteckte Artikel ausgegeben werden
+	 */
 	public Boolean getWithHidden() {
 		return mitVersteckten;
 	}
 	public void setWithHidden(Boolean mitVersteckten) {
 		this.mitVersteckten = mitVersteckten;
 	}
+	
+	public Boolean getWithBlocked() {
+		return mitGesperrten;
+	}
+	public void setWithBlocked(Boolean mitGesperrten) {
+		this.mitGesperrten = mitGesperrten;
+	}
+	
+	/**
+	 * Bei den Artikel nur die Soko (Sonderkonditionen) ausgeben? 
+	 * @return true wenn nur die Sonderkonditionspreise ausgegeben werden
+	 */
 	public Boolean getOnlySpecialCondition() {
 		return nurSoko;
 	}
 	public void setOnlySpecialCondition(Boolean nurSoko) {
 		this.nurSoko = nurSoko;
 	}
+	
+	/**
+	 * Werden Bezeichnungen zus&auml;tzlich zur Kundensprache auch in der
+	 * Mandantensprache ausgegeben?
+	 * @return true wenn auch die Mandantensprache ausgegeben wird
+	 */
 	public Boolean getWithClientLanguage() {
 		return mitMandantensprache;
 	}
@@ -120,6 +198,10 @@ public class CustomerPricelistReportDto implements Serializable {
 //		this.gueltigkeitsdatum = gueltigkeitsdatum;
 //	}
 	
+	/**
+	 * Das Datum (in ms seit 1.1.1970) ab dem die Preisliste g&uuml;ltig ist
+	 * @return das Datum der Preisg&uuml;ltigkeit in ms
+	 */
 	public Long getPriceValidityMs() {
 		return gueltigkeitsMs;
 	}
@@ -128,11 +210,32 @@ public class CustomerPricelistReportDto implements Serializable {
 		this.gueltigkeitsMs = gueltigkeitsMs;
 	}
 
+	/**
+	 * Wurden alle Artikel oder nur jene Artikel die im Webshop verf&uuml;gbar sein sollen
+	 * angefordert
+	 * @return true wenn nur Artikel enthalten sind, die f&uuml;r den Webshop zug&auml;nglich sind
+	 */
 	public Boolean getOnlyWebshopItems() {
 		return onlyWebshopItems;
 	}
 
 	public void setOnlyWebshopItems(Boolean onlyWebshopItems) {
 		this.onlyWebshopItems = onlyWebshopItems;
-	}	
+	}
+	
+	/**
+	 * Wurde die Mengenstaffel, oder die SonderkonditionenMengenstaffel angewandt?<br>
+	 * <p>Ob die Mengenstaffel verwendet wird, oder die Sonderkonditionenmengenstaffel
+	 * wird mittels Parameter direkt im ERP beeinflusst</p>
+	 * 
+	 * @return true wenn die Mengenstaffel angewandt wurde, ansonsten false.
+	 */
+	public Boolean getAppliedQuantityScale() {
+		return bVKMengenstaffelAnstattSokoMengestaffel;
+	}
+
+	public void setAppliedQuantityScale(
+			Boolean bVKMengenstaffelAnstattSokoMengestaffel) {
+		this.bVKMengenstaffelAnstattSokoMengestaffel = bVKMengenstaffelAnstattSokoMengestaffel;
+	}
 }

@@ -48,6 +48,7 @@ import javax.persistence.Query;
 
 import org.hibernate.Session;
 
+import com.lp.server.personal.ejb.Maschineleistungsfaktor;
 import com.lp.server.personal.ejb.Maschinemaschinenzm;
 import com.lp.server.personal.ejb.Maschinenzm;
 import com.lp.server.personal.ejb.Maschinenzmtagesart;
@@ -55,6 +56,8 @@ import com.lp.server.personal.ejb.Tagesart;
 import com.lp.server.personal.fastlanereader.generated.FLRMaschinemaschinenzm;
 import com.lp.server.personal.service.BetriebskalenderDto;
 import com.lp.server.personal.service.MaschineFac;
+import com.lp.server.personal.service.MaschineleistungsfaktorDto;
+import com.lp.server.personal.service.MaschineleistungsfaktorDtoAssembler;
 import com.lp.server.personal.service.MaschinemaschinenzmDto;
 import com.lp.server.personal.service.MaschinemaschinenzmDtoAssembler;
 import com.lp.server.personal.service.MaschinenVerfuegbarkeitsStundenDto;
@@ -80,17 +83,14 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		dto.setTGueltigab(Helper.cutTimestamp(dto.getTGueltigab()));
 
 		try {
-			Query query = em
-					.createNamedQuery("MaschinemaschinenzmfindByMaschineIIdMaschinezmIIdTGueltigab");
+			Query query = em.createNamedQuery("MaschinemaschinenzmfindByMaschineIIdMaschinezmIIdTGueltigab");
 			query.setParameter(1, dto.getMaschineIId());
 			query.setParameter(2, dto.getMaschinenzmIId());
 			query.setParameter(3, dto.getTGueltigab());
-			Maschinemaschinenzm doppelt = (Maschinemaschinenzm) query
-					.getSingleResult();
+			Maschinemaschinenzm doppelt = (Maschinemaschinenzm) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_MASCHINEMASCHINENZM.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_MASCHINEMASCHINENZM.UK"));
 			}
 		} catch (NoResultException ex1) {
 			// nothing here
@@ -102,13 +102,11 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 
 		try {
 
-			Maschinemaschinenzm maschinemaschinenzm = new Maschinemaschinenzm(
-					dto.getIId(), dto.getMaschineIId(),
+			Maschinemaschinenzm maschinemaschinenzm = new Maschinemaschinenzm(dto.getIId(), dto.getMaschineIId(),
 					dto.getMaschinenzmIId(), dto.getTGueltigab());
 			em.persist(maschinemaschinenzm);
 			em.flush();
-			setMaschinemaschinenzmFromMaschinemaschinenzmDto(
-					maschinemaschinenzm, dto);
+			setMaschinemaschinenzmFromMaschinemaschinenzmDto(maschinemaschinenzm, dto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -116,21 +114,26 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		return dto.getIId();
 	}
 
-	private void setMaschinemaschinenzmFromMaschinemaschinenzmDto(
-			Maschinemaschinenzm maschinemaschinenzm,
+	private void setMaschinemaschinenzmFromMaschinemaschinenzmDto(Maschinemaschinenzm maschinemaschinenzm,
 			MaschinemaschinenzmDto maschinemaschinenzmDto) {
-		maschinemaschinenzm.setMaschineIId(maschinemaschinenzmDto
-				.getMaschineIId());
-		maschinemaschinenzm.setMaschinezmIId(maschinemaschinenzmDto
-				.getMaschinenzmIId());
-		maschinemaschinenzm.setTGueltigab(maschinemaschinenzmDto
-				.getTGueltigab());
+		maschinemaschinenzm.setMaschineIId(maschinemaschinenzmDto.getMaschineIId());
+		maschinemaschinenzm.setMaschinezmIId(maschinemaschinenzmDto.getMaschinenzmIId());
+		maschinemaschinenzm.setTGueltigab(maschinemaschinenzmDto.getTGueltigab());
 		em.merge(maschinemaschinenzm);
 		em.flush();
 	}
 
-	private void setMaschinenzmFromMaschinenzmDto(Maschinenzm maschinenzm,
-			MaschinenzmDto maschinenzmDto) {
+	private void setMaschineleistungsfaktorFromMaschineleistungsfaktorDto(
+			Maschineleistungsfaktor maschineleistungsfaktor, MaschineleistungsfaktorDto maschineleistungsfaktorDto) {
+		maschineleistungsfaktor.setMaschineIId(maschineleistungsfaktorDto.getMaschineIId());
+		maschineleistungsfaktor.setMaterialIId(maschineleistungsfaktorDto.getMaterialIId());
+		maschineleistungsfaktor.setTGueltigab(maschineleistungsfaktorDto.getTGueltigab());
+		maschineleistungsfaktor.setNFaktorInProzent(maschineleistungsfaktorDto.getNFaktorInProzent());
+		em.merge(maschineleistungsfaktor);
+		em.flush();
+	}
+
+	private void setMaschinenzmFromMaschinenzmDto(Maschinenzm maschinenzm, MaschinenzmDto maschinenzmDto) {
 		maschinenzm.setMandantCNr(maschinenzmDto.getMandantCNr());
 
 		maschinenzm.setCBez(maschinenzmDto.getCBez());
@@ -138,15 +141,11 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		em.flush();
 	}
 
-	private void setMaschinenzmtagesartFromMaschinenzmtagesartDto(
-			Maschinenzmtagesart maschinenzmtagesart,
+	private void setMaschinenzmtagesartFromMaschinenzmtagesartDto(Maschinenzmtagesart maschinenzmtagesart,
 			MaschinenzmtagesartDto maschinenzmtagesartDto) {
-		maschinenzmtagesart.setLVerfuegbarkeit(maschinenzmtagesartDto
-				.getLVerfuegbarkeit());
-		maschinenzmtagesart.setTagesartIId(maschinenzmtagesartDto
-				.getTagesartIId());
-		maschinenzmtagesart.setMaschinenzmIId(maschinenzmtagesartDto
-				.getMaschinenzmIId());
+		maschinenzmtagesart.setLVerfuegbarkeit(maschinenzmtagesartDto.getLVerfuegbarkeit());
+		maschinenzmtagesart.setTagesartIId(maschinenzmtagesartDto.getTagesartIId());
+		maschinenzmtagesart.setMaschinenzmIId(maschinenzmtagesartDto.getMaschinenzmIId());
 
 		em.merge(maschinenzmtagesart);
 		em.flush();
@@ -158,28 +157,23 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 
 		Integer iId = dto.getIId();
 
-		Maschinemaschinenzm maschinemaschinenzm = em.find(
-				Maschinemaschinenzm.class, iId);
+		Maschinemaschinenzm maschinemaschinenzm = em.find(Maschinemaschinenzm.class, iId);
 
 		try {
-			Query query = em
-					.createNamedQuery("MaschinemaschinenzmfindByMaschineIIdMaschinezmIIdTGueltigab");
+			Query query = em.createNamedQuery("MaschinemaschinenzmfindByMaschineIIdMaschinezmIIdTGueltigab");
 			query.setParameter(1, dto.getMaschineIId());
 			query.setParameter(2, dto.getMaschinenzmIId());
 			query.setParameter(3, dto.getTGueltigab());
-			Integer iIdVorhanden = ((Maschinemaschinenzm) query
-					.getSingleResult()).getIId();
+			Integer iIdVorhanden = ((Maschinemaschinenzm) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_MASCHINEMASCHINENZM.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_MASCHINEMASCHINENZM.UK"));
 			}
 		} catch (NoResultException ex) {
 			//
 		}
 
-		setMaschinemaschinenzmFromMaschinemaschinenzmDto(maschinemaschinenzm,
-				dto);
+		setMaschinemaschinenzmFromMaschinemaschinenzmDto(maschinemaschinenzm, dto);
 
 	}
 
@@ -187,11 +181,9 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 
 		Maschinemaschinenzm maschinemaschinenzm = null;
 		try {
-			maschinemaschinenzm = em.find(Maschinemaschinenzm.class,
-					dto.getIId());
+			maschinemaschinenzm = em.find(Maschinemaschinenzm.class, dto.getIId());
 			if (maschinemaschinenzm == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
 			em.remove(maschinemaschinenzm);
@@ -201,8 +193,7 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		}
 	}
 
-	private MaschinemaschinenzmDto assembleMaschinemaschinenzmDto(
-			Maschinemaschinenzm maschinemaschinenzm) {
+	private MaschinemaschinenzmDto assembleMaschinemaschinenzmDto(Maschinemaschinenzm maschinemaschinenzm) {
 		return MaschinemaschinenzmDtoAssembler.createDto(maschinemaschinenzm);
 	}
 
@@ -210,15 +201,12 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		return MaschinenzmDtoAssembler.createDto(maschinenzm);
 	}
 
-	private MaschinenzmtagesartDto assembleMaschinenzmtagesartDto(
-			Maschinenzmtagesart maschinenzmtagesart) {
+	private MaschinenzmtagesartDto assembleMaschinenzmtagesartDto(Maschinenzmtagesart maschinenzmtagesart) {
 		return MaschinenzmtagesartDtoAssembler.createDto(maschinenzmtagesart);
 	}
 
-	public MaschinemaschinenzmDto maschinemaschinenzmFindByPrimaryKey(
-			Integer iId, TheClientDto theClientDto) {
-		Maschinemaschinenzm maschinemaschinenzm = em.find(
-				Maschinemaschinenzm.class, iId);
+	public MaschinemaschinenzmDto maschinemaschinenzmFindByPrimaryKey(Integer iId, TheClientDto theClientDto) {
+		Maschinemaschinenzm maschinemaschinenzm = em.find(Maschinemaschinenzm.class, iId);
 		MaschinemaschinenzmDto personalzeitmodellDto = assembleMaschinemaschinenzmDto(maschinemaschinenzm);
 		return personalzeitmodellDto;
 	}
@@ -241,8 +229,7 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		}
 	}
 
-	public Integer createMaschinenzm(MaschinenzmDto dto,
-			TheClientDto theClientDto) {
+	public Integer createMaschinenzm(MaschinenzmDto dto, TheClientDto theClientDto) {
 
 		try {
 			Query query = em.createNamedQuery("MaschinenzmfindByMandantCBez");
@@ -250,9 +237,7 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 			query.setParameter(2, dto.getCBez());
 			Maschinenzm doppelt = (Maschinenzm) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_MASCHINENZM.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("PERS_MASCHINENZM.UK"));
 			}
 		} catch (NoResultException ex1) {
 			// nothing here
@@ -264,11 +249,44 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 
 		try {
 
-			Maschinenzm maschinenzm = new Maschinenzm(dto.getIId(),
-					dto.getMandantCNr(), dto.getCBez());
+			Maschinenzm maschinenzm = new Maschinenzm(dto.getIId(), dto.getMandantCNr(), dto.getCBez());
 			em.persist(maschinenzm);
 			em.flush();
 			setMaschinenzmFromMaschinenzmDto(maschinenzm, dto);
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+
+		return dto.getIId();
+	}
+
+	public Integer createMaschineleistungsfaktor(MaschineleistungsfaktorDto dto, TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("MaschineleistungsfaktorfindByMaschineIIdMaterialIIdTGueltigab");
+			query.setParameter(1, dto.getMaschineIId());
+			query.setParameter(2, dto.getMaterialIId());
+			query.setParameter(3, dto.getTGueltigab());
+			Maschineleistungsfaktor doppelt = (Maschineleistungsfaktor) query.getSingleResult();
+			if (doppelt != null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_MASCHINELEISTUNGSFAKTOR.UK"));
+			}
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj();
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_MASCHINELEISTUNGSFAKTOR);
+		dto.setIId(pk);
+
+		try {
+
+			Maschineleistungsfaktor maschineleistungsfaktor = new Maschineleistungsfaktor(dto.getIId(),
+					dto.getMaschineIId(), dto.getMaterialIId(), dto.getTGueltigab(), dto.getNFaktorInProzent());
+			em.persist(maschineleistungsfaktor);
+			em.flush();
+			setMaschineleistungsfaktorFromMaschineleistungsfaktorDto(maschineleistungsfaktor, dto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -287,12 +305,10 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 			query.setParameter(1, dto.getMandantCNr());
 			query.setParameter(2, dto.getCBez());
 
-			Integer iIdVorhanden = ((Maschinenzm) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Maschinenzm) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_MASCHINEMASCHINENZM.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_MASCHINEMASCHINENZM.UK"));
 			}
 		} catch (NoResultException ex) {
 			//
@@ -302,20 +318,41 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 
 	}
 
-	public Integer createMaschinenzmtagesart(MaschinenzmtagesartDto dto,
-			TheClientDto theClientDto) {
+	public void updateMaschineleistungsfaktor(MaschineleistungsfaktorDto dto) {
+
+		Integer iId = dto.getIId();
+
+		Maschineleistungsfaktor bean = em.find(Maschineleistungsfaktor.class, iId);
 
 		try {
-			Query query = em
-					.createNamedQuery("MaschinenzmtagesartfindByMaschinenzmIIdTagesartIId");
+			Query query = em.createNamedQuery("MaschineleistungsfaktorfindByMaschineIIdMaterialIIdTGueltigab");
+			query.setParameter(1, dto.getMaschineIId());
+			query.setParameter(2, dto.getMaterialIId());
+			query.setParameter(3, dto.getTGueltigab());
+
+			Integer iIdVorhanden = ((Maschineleistungsfaktor) query.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_MASCHINELEISTUNGSFAKTOR.UK"));
+			}
+		} catch (NoResultException ex) {
+			//
+		}
+
+		setMaschineleistungsfaktorFromMaschineleistungsfaktorDto(bean, dto);
+
+	}
+
+	public Integer createMaschinenzmtagesart(MaschinenzmtagesartDto dto, TheClientDto theClientDto) {
+
+		try {
+			Query query = em.createNamedQuery("MaschinenzmtagesartfindByMaschinenzmIIdTagesartIId");
 			query.setParameter(1, dto.getMaschinenzmIId());
 			query.setParameter(2, dto.getTagesartIId());
-			Maschinenzmtagesart doppelt = (Maschinenzmtagesart) query
-					.getSingleResult();
+			Maschinenzmtagesart doppelt = (Maschinenzmtagesart) query.getSingleResult();
 			if (doppelt != null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_MASCHINENZMTAGESART.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_MASCHINENZMTAGESART.UK"));
 			}
 		} catch (NoResultException ex1) {
 			// nothing here
@@ -327,13 +364,11 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 
 		try {
 
-			Maschinenzmtagesart maschinenzmtagesart = new Maschinenzmtagesart(
-					dto.getIId(), dto.getMaschinenzmIId(),
+			Maschinenzmtagesart maschinenzmtagesart = new Maschinenzmtagesart(dto.getIId(), dto.getMaschinenzmIId(),
 					dto.getTagesartIId(), dto.getLVerfuegbarkeit());
 			em.persist(maschinenzmtagesart);
 			em.flush();
-			setMaschinenzmtagesartFromMaschinenzmtagesartDto(
-					maschinenzmtagesart, dto);
+			setMaschinenzmtagesartFromMaschinenzmtagesartDto(maschinenzmtagesart, dto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -345,37 +380,43 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 
 		Integer iId = dto.getIId();
 
-		Maschinenzmtagesart maschinenzmtagesart = em.find(
-				Maschinenzmtagesart.class, iId);
+		Maschinenzmtagesart maschinenzmtagesart = em.find(Maschinenzmtagesart.class, iId);
 
 		try {
-			Query query = em
-					.createNamedQuery("MaschinenzmtagesartfindByMaschinenzmIIdTagesartIId");
+			Query query = em.createNamedQuery("MaschinenzmtagesartfindByMaschinenzmIIdTagesartIId");
 			query.setParameter(1, dto.getMaschinenzmIId());
 			query.setParameter(2, dto.getTagesartIId());
 
-			Integer iIdVorhanden = ((Maschinenzmtagesart) query
-					.getSingleResult()).getIId();
+			Integer iIdVorhanden = ((Maschinenzmtagesart) query.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"PERS_MASCHINEMASCHINENZM.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+						new Exception("PERS_MASCHINEMASCHINENZM.UK"));
 			}
 		} catch (NoResultException ex) {
 			//
 		}
 
-		setMaschinenzmtagesartFromMaschinenzmtagesartDto(maschinenzmtagesart,
-				dto);
+		setMaschinenzmtagesartFromMaschinenzmtagesartDto(maschinenzmtagesart, dto);
 
+	}
+
+	public void removeMaschineleistungsfaktor(MaschineleistungsfaktorDto dto) {
+
+		Maschineleistungsfaktor maschineleistungsfaktor = null;
+		try {
+			maschineleistungsfaktor = em.find(Maschineleistungsfaktor.class, dto.getIId());
+			em.remove(maschineleistungsfaktor);
+			em.flush();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
+		}
 	}
 
 	public void removeMaschinenzmtagesart(MaschinenzmtagesartDto dto) {
 
 		Maschinenzmtagesart maschinenzmtagesart = null;
 		try {
-			maschinenzmtagesart = em.find(Maschinenzmtagesart.class,
-					dto.getIId());
+			maschinenzmtagesart = em.find(Maschinenzmtagesart.class, dto.getIId());
 			em.remove(maschinenzmtagesart);
 			em.flush();
 		} catch (EntityExistsException e) {
@@ -383,15 +424,19 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		}
 	}
 
+	public MaschineleistungsfaktorDto maschineleistungsfaktorFindByPrimaryKey(Integer iId) {
+		Maschineleistungsfaktor maschinenzmtagesart = em.find(Maschineleistungsfaktor.class, iId);
+		MaschineleistungsfaktorDto dto = MaschineleistungsfaktorDtoAssembler.createDto(maschinenzmtagesart);
+		return dto;
+	}
+
 	public MaschinenzmtagesartDto maschinezmtagesartFindByPrimaryKey(Integer iId) {
-		Maschinenzmtagesart maschinenzmtagesart = em.find(
-				Maschinenzmtagesart.class, iId);
+		Maschinenzmtagesart maschinenzmtagesart = em.find(Maschinenzmtagesart.class, iId);
 		MaschinenzmtagesartDto maschinenzmtagesartDto = assembleMaschinenzmtagesartDto(maschinenzmtagesart);
 		return maschinenzmtagesartDto;
 	}
 
-	private Integer getTagesartZuDatum(
-			java.sql.Date d_datum, TheClientDto theClientDto) throws EJBExceptionLP {
+	private Integer getTagesartZuDatum(java.sql.Date d_datum, TheClientDto theClientDto) throws EJBExceptionLP {
 		d_datum = Helper.cutDate(d_datum);
 
 		Calendar c = Calendar.getInstance();
@@ -399,15 +444,12 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		Integer tagesartIId = null;
 		try {
 			Query query = em.createNamedQuery("TagesartfindByCNr");
-			query.setParameter(1,
-					Helper.holeTagbezeichnungLang(c.get(Calendar.DAY_OF_WEEK)));
+			query.setParameter(1, Helper.holeTagbezeichnungLang(c.get(Calendar.DAY_OF_WEEK)));
 			Tagesart tagesart = (Tagesart) query.getSingleResult();
 			tagesartIId = tagesart.getIId();
 
-			BetriebskalenderDto dto = getPersonalFac()
-					.betriebskalenderFindByMandantCNrDDatum(
-							new Timestamp(d_datum.getTime()),
-							theClientDto.getMandant(), theClientDto);
+			BetriebskalenderDto dto = getPersonalFac().betriebskalenderFindByMandantCNrDDatum(
+					new Timestamp(d_datum.getTime()), theClientDto.getMandant(), theClientDto);
 			if (dto != null) {
 				tagesartIId = dto.getTagesartIId();
 			}
@@ -418,9 +460,9 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 		return tagesartIId;
 	}
 
-	public BigDecimal getVerfuegbarkeitInStundenZuDatum(Integer maschineIId,
-			java.sql.Date dDatum, TheClientDto theClientDto) {
-		return getVerfuegbarkeitInStunden(maschineIId, dDatum, theClientDto).getVerfuegbarkeitH() ;
+	public BigDecimal getVerfuegbarkeitInStundenZuDatum(Integer maschineIId, java.sql.Date dDatum,
+			TheClientDto theClientDto) {
+		return getVerfuegbarkeitInStunden(maschineIId, dDatum, theClientDto).getVerfuegbarkeitH();
 //		
 //		BigDecimal verf = java.math.BigDecimal.ZERO;
 //
@@ -470,63 +512,54 @@ public class MaschineFacBean extends Facade implements MaschineFac {
 //
 	}
 
+	private MaschinenVerfuegbarkeitsStundenDto getVerfuegbarkeitInStunden(Integer maschineIId, java.sql.Date dDatum,
+			TheClientDto theClientDto) {
+		MaschinenVerfuegbarkeitsStundenDto dto = new MaschinenVerfuegbarkeitsStundenDto(maschineIId, dDatum);
 
-	private MaschinenVerfuegbarkeitsStundenDto getVerfuegbarkeitInStunden(Integer maschineIId,
-			java.sql.Date dDatum, TheClientDto theClientDto) {		
-		MaschinenVerfuegbarkeitsStundenDto dto = 
-			new MaschinenVerfuegbarkeitsStundenDto(maschineIId, dDatum) ;
-		
-		String sQuery = "select zm FROM FLRMaschinemaschinenzm zm WHERE zm.maschine_i_id="
-				+ maschineIId
-				+ " AND zm.t_gueltigab<='"
-				+ Helper.formatDateWithSlashes(dDatum)
-				+ "' ORDER BY zm.t_gueltigab DESC";
+		String sQuery = "select zm FROM FLRMaschinemaschinenzm zm WHERE zm.maschine_i_id=" + maschineIId
+				+ " AND zm.t_gueltigab<='" + Helper.formatDateWithSlashes(dDatum) + "' ORDER BY zm.t_gueltigab DESC";
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 		org.hibernate.Query letztesZeitmodell = session.createQuery(sQuery);
 		letztesZeitmodell.setMaxResults(1);
 		List<?> resultList = letztesZeitmodell.list();
 
-		if(resultList.size() > 0){
-			FLRMaschinemaschinenzm zm = (FLRMaschinemaschinenzm) resultList.get(0) ;
-			dto.setTagesartId(getTagesartZuDatum(dDatum, theClientDto)) ;
+		if (resultList.size() > 0) {
+			FLRMaschinemaschinenzm zm = (FLRMaschinemaschinenzm) resultList.get(0);
+			dto.setTagesartId(getTagesartZuDatum(dDatum, theClientDto));
 			if (dto.getTagesartId() != null) {
 				try {
-					Query query = em
-							.createNamedQuery("MaschinenzmtagesartfindByMaschinenzmIIdTagesartIId");
+					Query query = em.createNamedQuery("MaschinenzmtagesartfindByMaschinenzmIIdTagesartIId");
 					query.setParameter(1, zm.getFlrzeitmodell().getI_id());
 					query.setParameter(2, dto.getTagesartId());
-					Maschinenzmtagesart zmtagesart = (Maschinenzmtagesart) query
-							.getSingleResult();
+					Maschinenzmtagesart zmtagesart = (Maschinenzmtagesart) query.getSingleResult();
 
-					dto.setVerfuegbarkeitH(Helper
-							.verfuegbarkeitvonLongNachStundenEinesTages(zmtagesart
-									.getLVerfuegbarkeit()));
+					dto.setVerfuegbarkeitH(
+							Helper.verfuegbarkeitvonLongNachStundenEinesTages(zmtagesart.getLVerfuegbarkeit()));
 				} catch (NoResultException ex1) {
 				}
 			}
-			
+
 		}
 
-		session.close() ;
-		return dto ;
+		session.close();
+		return dto;
 	}
-	
-	
-	public List<MaschinenVerfuegbarkeitsStundenDto> getVerfuegbarkeitInStunden(
-			Integer maschineId, Date startDate, int days, TheClientDto theClientDto) {
-		List<MaschinenVerfuegbarkeitsStundenDto> dtos = new ArrayList<MaschinenVerfuegbarkeitsStundenDto>() ;
-		
-		Calendar c = Calendar.getInstance() ;
-		Date d = startDate ;
-		c.setTime(d) ;
+
+	public List<MaschinenVerfuegbarkeitsStundenDto> getVerfuegbarkeitInStunden(Integer maschineId, Date startDate,
+			int days, TheClientDto theClientDto) {
+		List<MaschinenVerfuegbarkeitsStundenDto> dtos = new ArrayList<MaschinenVerfuegbarkeitsStundenDto>();
+
+		Calendar c = Calendar.getInstance();
+		Date d = startDate;
+		c.setTime(d);
 		do {
-			dtos.add(getVerfuegbarkeitInStunden(maschineId, d, theClientDto)) ;
+			dtos.add(getVerfuegbarkeitInStunden(maschineId, d, theClientDto));
 
 			c.add(Calendar.DAY_OF_YEAR, 1);
-			d = new Date(c.getTime().getTime()) ;
-		} while(--days > 0) ;
-		
-		return dtos ;
- 	}
+			d = new Date(c.getTime().getTime());
+		} while (--days > 0);
+
+		return dtos;
+	}
 }

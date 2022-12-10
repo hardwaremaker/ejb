@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.artikel.fastlanereader;
 
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -43,6 +44,9 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRLager;
 import com.lp.server.artikel.service.LagerFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -55,8 +59,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikelgruppen implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikelgruppen
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -75,6 +79,8 @@ public class LagerGrunddatenHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+
+	boolean bLagerminJeLager = false;
 
 	/**
 	 * the size of the data page returned in QueryResult.
@@ -112,11 +118,23 @@ public class LagerGrunddatenHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRLager lager = (FLRLager) resultListIterator.next();
+				Object[] o = (Object[]) resultListIterator.next();
+				FLRLager lager = (FLRLager) o[0];
 				rows[row][col++] = lager.getI_id();
 				rows[row][col++] = lager.getC_nr();
 				rows[row][col++] = lager.getLagerart_c_nr();
-				rows[row++][col++] = lager.getMandant_c_nr();
+				rows[row][col++] = lager.getMandant_c_nr();
+				
+
+				if (bLagerminJeLager
+						&& lager.getParnter_i_id_standort() != null) {
+					rows[row][col++] = lager.getFlrpartner()
+							.getC_kbez();
+				}
+				
+				row++;
+				
+				
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -234,10 +252,10 @@ public class LagerGrunddatenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("lager.c_nr ASC ");
+				orderBy.append("lager.i_sort ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("lager.c_nr") < 0) {
+			if (orderBy.indexOf("lager.i_sort") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -246,7 +264,7 @@ public class LagerGrunddatenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" lager.c_nr ");
+				orderBy.append(" lager.i_sort ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -262,7 +280,7 @@ public class LagerGrunddatenHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "from FLRLager lager ";
+		return "from FLRLager lager left join lager.flrpartner as flrpartner  ";
 	}
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -322,65 +340,71 @@ public class LagerGrunddatenHandler extends UseCaseHandler {
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
 
-			setTableInfo(new TableInfo(
-					new Class[] {
-							Integer.class,
-							String.class,
-							String.class,
-							String.class
-					},
-					
-					new String[] {
-							"ID",
-							getTextRespectUISpr("lp.lager",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.lagerart",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("report.mandant",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()) },
-					
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					},
-									
-					new String[] {
-							"i_id",
-							"c_nr",
-							LagerFac.FLR_LAGER_LAGERART_C_NR,
-							"mandant_c_nr"
-					}
-			));
+			try {
+				ParametermandantDto param = getParameterFac()
+						.getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ARTIKEL,
+								ParameterFac.PARAMETER_LAGERMIN_JE_LAGER);
+				bLagerminJeLager = (Boolean) param.getCWertAsObject();
+			} catch (RemoteException ex) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+			}
+
+			if (bLagerminJeLager) {
+				setTableInfo(new TableInfo(new Class[] { Integer.class,
+						String.class, String.class, String.class, String.class },
+
+				new String[] {
+						"ID",
+						getTextRespectUISpr("lp.lager",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()),
+						getTextRespectUISpr("lp.lagerart",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()),
+						getTextRespectUISpr("report.mandant",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()),getTextRespectUISpr("system.standort",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()) },
+
+				new int[] {
+						-1, // diese Spalte wird ausgeblendet
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,},
+
+				new String[] { "i_id", "c_nr",
+						LagerFac.FLR_LAGER_LAGERART_C_NR, "mandant_c_nr","flrpartner.c_kbez"}));
+			} else {
+
+				setTableInfo(new TableInfo(new Class[] { Integer.class,
+						String.class, String.class, String.class },
+
+				new String[] {
+						"ID",
+						getTextRespectUISpr("lp.lager",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()),
+						getTextRespectUISpr("lp.lagerart",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()),
+						getTextRespectUISpr("report.mandant",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()) },
+
+				new int[] {
+						-1, // diese Spalte wird ausgeblendet
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST, },
+
+				new String[] { "i_id", "c_nr",
+						LagerFac.FLR_LAGER_LAGERART_C_NR, "mandant_c_nr" }));
+
+			}
 		}
 		return super.getTableInfo();
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

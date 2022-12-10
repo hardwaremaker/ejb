@@ -47,9 +47,28 @@ public class BewegungsvorschauDto extends TabelleDto implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	private boolean bTemporaererEintrag = false;
-	/**
-	 * @todo MB->JE das ist ein Date, kein Timestamp!!! PJ 3968
-	 */
+	
+
+	private String ausloeser;
+	
+	public String getAusloeser() {
+		return ausloeser;
+	}
+
+	public void setAusloeser(String ausloeser) {
+		this.ausloeser = ausloeser;
+	}
+
+	private Integer auftragIIdKopfauftrag;
+	
+	public Integer getAuftragIIdKopfauftrag() {
+		return auftragIIdKopfauftrag;
+	}
+
+	public void setAuftragIIdKopfauftrag(Integer auftragIIdKopfauftrag) {
+		this.auftragIIdKopfauftrag = auftragIIdKopfauftrag;
+	}
+
 	private Timestamp tLiefertermin;
 	private BigDecimal nMenge;
 	private String cBelegartCNr;
@@ -57,7 +76,108 @@ public class BewegungsvorschauDto extends TabelleDto implements Serializable {
 	private String cProjekt;
 	private Integer iBelegPositionIId;
 	private Integer artikelIId;
+	private BigDecimal bdPreis;
+	private Timestamp tAbliefertermin;
 	
+	private Integer forecastpositionIId;
+	public Integer getForecastpositionIId() {
+		return forecastpositionIId;
+	}
+
+	public void setForecastpositionIId(Integer forecastpositionIId) {
+		this.forecastpositionIId = forecastpositionIId;
+	}
+
+	public String getForecastBemerkung() {
+		return forecastBemerkung;
+	}
+
+	public void setForecastBemerkung(String forecastBemerkung) {
+		this.forecastBemerkung = forecastBemerkung;
+	}
+
+	private String forecastBemerkung;
+	
+	private String forecastartCNr;
+	public String getForecastartCNr() {
+		return forecastartCNr;
+	}
+	
+	private BigDecimal bdFiktiverLagerstand;	
+
+	public BigDecimal getBdFiktiverLagerstand() {
+		return bdFiktiverLagerstand;
+	}
+
+	public void setBdFiktiverLagerstand(BigDecimal bdFiktiverLagerstand) {
+		this.bdFiktiverLagerstand = bdFiktiverLagerstand;
+	}
+
+	public void setForecastartCNr(String forecastartCNr) {
+		this.forecastartCNr = forecastartCNr;
+	}
+	private boolean bKommtAusInternerBstellung=false;
+	
+	private boolean bKommtAusBestellvorschlag=false;
+	
+	public boolean isBKommtAusBestellvorschlag() {
+		return bKommtAusBestellvorschlag;
+	}
+
+	public void setBKommtAusBestellvorschlag(boolean bKommtAusBestellvorschlag) {
+		this.bKommtAusBestellvorschlag = bKommtAusBestellvorschlag;
+	}
+
+	public boolean isbKommtAusInternerBstellung() {
+		return bKommtAusInternerBstellung;
+	}
+
+	public void setbKommtAusInternerBstellung(boolean bKommtAusInternerBstellung) {
+		this.bKommtAusInternerBstellung = bKommtAusInternerBstellung;
+	}
+
+	public Timestamp getTAbliefertermin() {
+		return tAbliefertermin;
+	}
+
+	public void setTAbliefertermin(Timestamp tAbliefertermin) {
+		this.tAbliefertermin = tAbliefertermin;
+	}
+	private Timestamp tAuftragsfreigabe;
+	private Integer personalIIdAuftragsfreigabe;
+
+	public Integer getPersonalIIdAuftragsfreigabe() {
+		return personalIIdAuftragsfreigabe;
+	}
+
+	public void setPersonalIIdAuftragsfreigabe(Integer personalIIdAuftragsfreigabe) {
+		this.personalIIdAuftragsfreigabe = personalIIdAuftragsfreigabe;
+	}
+
+	public Timestamp getTAuftragsfreigabe() {
+		return tAuftragsfreigabe;
+	}
+
+	public void setTAuftragsfreigabe(Timestamp tAuftragsfreigabe) {
+		this.tAuftragsfreigabe = tAuftragsfreigabe;
+	}
+
+	public BigDecimal getBdPreis() {
+		return bdPreis;
+	}
+
+	public void setBdPreis(BigDecimal bdPreis) {
+		this.bdPreis = bdPreis;
+	}
+	private Integer partnerIIdStandort;
+	
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
 	private String mandantCNr;
 	
 	public String getMandantCNr() {
@@ -113,6 +233,15 @@ public class BewegungsvorschauDto extends TabelleDto implements Serializable {
 		this.tABTerminBestellung = tABTerminBestellung;
 	}
 
+	private String cABNummerBestellung;
+	
+	public String getCABNummerBestellung() {
+		return cABNummerBestellung;
+	}
+
+	public void setCABNummerBestellung(String cABNummerBestellung) {
+		this.cABNummerBestellung = cABNummerBestellung;
+	}
 	private KundeDto kundeDto = null;
 	public KundeDto getKundeDto() {
 		return kundeDto;
@@ -155,6 +284,7 @@ public class BewegungsvorschauDto extends TabelleDto implements Serializable {
 
 	public void setCBelegartCNr(String cBelegartCNr) {
 		this.cBelegartCNr = cBelegartCNr;
+	
 	}
 
 	public Timestamp getTLiefertermin() {

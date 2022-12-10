@@ -53,6 +53,10 @@ public class LosgutschlechtDtoAssembler {
 			losgutschlechtDto.setNSchlecht(losgutschlecht.getNSchlecht());
 			losgutschlechtDto.setFehlerIId(losgutschlecht.getFehlerIId());
 			losgutschlechtDto.setCKommentar(losgutschlecht.getCKommentar());
+			losgutschlechtDto.setTZeitpunkt(losgutschlecht.getTZeitpunkt());
+			losgutschlechtDto.setPersonalIIdErfasst(losgutschlecht.getPersonalIIdErfasst());
+			losgutschlechtDto.setPersonalIIdAnlegen(losgutschlecht.getPersonalIIdAnlegen());
+			losgutschlechtDto.setTAnlegen(losgutschlecht.getTAnlegen());
 		}
 		return losgutschlechtDto;
 	}

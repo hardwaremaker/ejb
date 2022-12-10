@@ -54,6 +54,7 @@ public class AutoMahnungsversandDtoAssembler {
 					.getCDrucker());
 			autoMahnungsversandDto.setCVersandart(autoMahnungsversand
 					.getCVersandart());
+			autoMahnungsversandDto.setCEmailZusaetzlich(autoMahnungsversand.getCEmailZusaetzlich());
 		}
 		return autoMahnungsversandDto;
 	}

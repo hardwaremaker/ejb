@@ -46,7 +46,9 @@ import javax.persistence.Table;
 @NamedQueries( 
 		{ @NamedQuery(name = "BuchungResetUvaverprobung", query = "UPDATE Buchung o SET o.uvaverprobungIId=null WHERE o.uvaverprobungIId=?1"),
 		  @NamedQuery(name = Buchung.QueryBuchungfindByGeschaeftsjahrDatumAutomatik, query = "SELECT OBJECT(o) FROM Buchung o WHERE o.iGeschaeftsjahr=:geschaeftsjahr" +
-		  		" AND o.tBuchungsdatum=:buchungsDatum AND o.bAutomatischeBuchung=1 AND o.tStorniert IS NULL ORDER BY o.iId")	})
+		  		" AND o.tBuchungsdatum=:buchungsDatum AND o.bAutomatischeBuchung=1 AND o.tStorniert IS NULL ORDER BY o.iId"),
+		  @NamedQuery(name = Buchung.QueryBuchungfindByGeschaeftsjahrDatumAutomatikGV, query = "SELECT OBJECT(o) FROM Buchung o WHERE o.iGeschaeftsjahr=:geschaeftsjahr" +
+			  		" AND o.tBuchungsdatum=:buchungsDatum AND o.bAutomatischeBuchungGV=1 AND o.tStorniert IS NULL ORDER BY o.iId") })
 
 @Entity
 @Table(name = "FB_BUCHUNG")
@@ -56,6 +58,7 @@ public class Buchung implements Serializable {
 	public static final String QueryBuchungfindByGeschaeftsjahrDatumAutomatik = "QueryBuchungfindByGeschaeftsjahrDatumAutomatik";
 	public static final String QueryParameterGeschaeftsjahr = "geschaeftsjahr";
 	public static final String QueryParameterBuchungsDatum = "buchungsDatum";
+	public static final String QueryBuchungfindByGeschaeftsjahrDatumAutomatikGV = "QueryBuchungfindByGeschaeftsjahrDatumAutomatikGV";
 
 	@Id
 	@Column(name = "I_ID")
@@ -109,6 +112,9 @@ public class Buchung implements Serializable {
 	@Column(name = "B_AUTOMBUCHUNG_EB")
 	private Short bAutomatischeBuchungEB;
 
+	@Column(name = "B_AUTOMBUCHUNG_GV")
+	private Short bAutomatischeBuchungGV;
+
 	public Buchung() {
 		super();
 	}
@@ -133,6 +139,7 @@ public class Buchung implements Serializable {
 		
 		setbAutomatischeBuchung((short)0) ;
 		setbAutomatischeBuchungEB((short)0) ;
+		setbAutomatischeBuchungGV((short)0) ;
 	}
 
 	public Integer getIId() {
@@ -287,4 +294,21 @@ public class Buchung implements Serializable {
 	public boolean isAutomatischeBuchungEB() {
 		return 0 != bAutomatischeBuchungEB ;		
 	}	
+
+	public Short getbAutomatischeBuchungGV() {
+		return bAutomatischeBuchungGV;
+	}
+
+	public void setbAutomatischeBuchungGV(Short bAutomatischeBuchungGV) {
+		this.bAutomatischeBuchungGV = bAutomatischeBuchungGV;
+	}
+
+	public void setAutomatischeBuchungGV(boolean automatischeBuchungGV) {
+		this.bAutomatischeBuchungGV = new Short(automatischeBuchungGV ? (short)1 : (short) 0);
+	}
+	
+	public boolean isAutomatischeBuchungGV() {
+		return 0 != bAutomatischeBuchungGV ;		
+	}	
+
 }

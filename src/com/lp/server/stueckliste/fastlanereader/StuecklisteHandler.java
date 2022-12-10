@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.stueckliste.fastlanereader;
 
+import java.awt.Color;
+import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.HashMap;
@@ -42,7 +44,6 @@ import java.util.Map;
 
 import javax.swing.Icon;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -61,12 +62,14 @@ import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundesokoDto;
 import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklistetextsuche;
 import com.lp.server.stueckliste.service.IStuecklisteFLRData;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFLRDataDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklisteHandlerFeature;
 import com.lp.server.stueckliste.service.StuecklisteQueryResult;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeArtikel;
 import com.lp.server.system.jcr.service.docnode.DocPath;
@@ -85,6 +88,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -108,18 +112,22 @@ public class StuecklisteHandler extends UseCaseHandler {
 	boolean bTextsucheInklusiveArtikelnummer = false;
 	boolean bTextsucheInklusiveIndexRevision = false;
 	boolean bStuecklistenfreigabe = false;
+	private boolean bKurzbezeichnungAnzeigen = false;
 	private static final long serialVersionUID = 1L;
+	private static final String FLR_STUECKLISTE = "stueckliste.";
 	private MyFeature cachedFeature = null;
 
-	private static Map<String, Integer> statusPriorityMap = new HashMap<String, Integer>() {{
-		put(FertigungFac.STATUS_ANGELEGT, 0) ;
-		put(FertigungFac.STATUS_STORNIERT, 0) ;
-		put(FertigungFac.STATUS_AUSGEGEBEN, 1) ;
-		put(FertigungFac.STATUS_IN_PRODUKTION, 2) ;
-		put(FertigungFac.STATUS_GESTOPPT, 3) ;
-		put(FertigungFac.STATUS_TEILERLEDIGT, 4) ;
-		put(FertigungFac.STATUS_ERLEDIGT, 5) ;
-	}} ;
+	private static Map<String, Integer> statusPriorityMap = new HashMap<String, Integer>() {
+		{
+			put(FertigungFac.STATUS_ANGELEGT, 0);
+			put(FertigungFac.STATUS_STORNIERT, 0);
+			put(FertigungFac.STATUS_AUSGEGEBEN, 1);
+			put(FertigungFac.STATUS_IN_PRODUKTION, 2);
+			put(FertigungFac.STATUS_GESTOPPT, 3);
+			put(FertigungFac.STATUS_TEILERLEDIGT, 4);
+			put(FertigungFac.STATUS_ERLEDIGT, 5);
+		}
+	};
 
 	private class MyFeature extends QueryFeature<IStuecklisteFLRData> {
 		private boolean featureLosStatus = false;
@@ -171,28 +179,29 @@ public class StuecklisteHandler extends UseCaseHandler {
 		}
 
 		private void setLosStatus(int row, List<FLRLos> flrLose) {
-			if(flrLose.size() == 0) {
-				setFlrDataObject(row,  new StuecklisteFLRDataDto(0));
-				return ;
+			if (flrLose.size() == 0) {
+				setFlrDataObject(row, new StuecklisteFLRDataDto(0));
+				return;
 			}
-			
-			Integer highestStatus = -1 ;
-			String highestStatusCnr = null ;
+
+			Integer highestStatus = -1;
+			String highestStatusCnr = null;
 			for (FLRLos flrLos : flrLose) {
-				Integer status = statusPriorityMap.get(flrLos.getStatus_c_nr()) ;
-				if(status == null) {
-					highestStatus = Integer.MAX_VALUE ;
-					highestStatusCnr = FertigungFac.STATUS_ERLEDIGT ;
-					break ;
+				Integer status = statusPriorityMap.get(flrLos.getStatus_c_nr());
+				if (status == null) {
+					highestStatus = Integer.MAX_VALUE;
+					highestStatusCnr = FertigungFac.STATUS_ERLEDIGT;
+					break;
 				}
-				if(status > highestStatus) {
-					highestStatus = status ;
-					highestStatusCnr = flrLos.getStatus_c_nr() ;
+				if (status > highestStatus) {
+					highestStatus = status;
+					highestStatusCnr = flrLos.getStatus_c_nr();
 				}
 			}
-			setFlrDataObject(row, new StuecklisteFLRDataDto(flrLose.size(), highestStatusCnr)) ;
+			setFlrDataObject(row, new StuecklisteFLRDataDto(flrLose.size(),
+					highestStatusCnr));
 		}
-		
+
 		protected void buildLosStatus(int row, Integer stuecklisteId) {
 			Session session = null;
 			try {
@@ -205,15 +214,15 @@ public class StuecklisteHandler extends UseCaseHandler {
 				stati[2] = FertigungFac.STATUS_AUSGEGEBEN;
 				stati[3] = FertigungFac.STATUS_TEILERLEDIGT;
 				stati[4] = FertigungFac.STATUS_STORNIERT;
-				stati[5] = FertigungFac.STATUS_ERLEDIGT ;
-				stati[6] = FertigungFac.STATUS_GESTOPPT ;
+				stati[5] = FertigungFac.STATUS_ERLEDIGT;
+				stati[6] = FertigungFac.STATUS_GESTOPPT;
 
 				crit.add(Restrictions.in(FertigungFac.FLR_LOS_STATUS_C_NR,
 						stati));
 				crit.add(Restrictions.eq(
 						FertigungFac.FLR_INTERNE_BESTELLUNG_STUECKLISTE_I_ID,
 						stuecklisteId));
-				crit.addOrder(Order.desc(FertigungFac.FLR_LOS_STATUS_C_NR)) ;
+				crit.addOrder(Order.desc(FertigungFac.FLR_LOS_STATUS_C_NR));
 				List<FLRLos> flrLose = (List<FLRLos>) crit.list();
 				// setLosStatus(row, flrLose.size());
 				setLosStatus(row, flrLose);
@@ -265,12 +274,13 @@ public class StuecklisteHandler extends UseCaseHandler {
 			}
 		}
 
-		public void build(int row, Object[] o) {
+		public void build(int row, Integer stuecklisteIId, Integer artikelIId,
+				Integer partnerIId) {
 			if (hasFeatureLosStatus()) {
-				buildLosStatus(row, (Integer) o[0]);
+				buildLosStatus(row, stuecklisteIId);
 			}
 			if (hasFeatureKundenartikelnummer()) {
-				buildKundenartikelnummer(row, (Integer) o[6], (Integer) o[8]);
+				buildKundenartikelnummer(row, artikelIId, partnerIId);
 			}
 		}
 	}
@@ -309,13 +319,30 @@ public class StuecklisteHandler extends UseCaseHandler {
 			while (resultListIterator.hasNext()) {
 				Object o[] = (Object[]) resultListIterator.next();
 
-				Object[] rowToAddCandidate = new Object[colCount + 3];
-				rowToAddCandidate[0] = o[0];
-				rowToAddCandidate[1] = o[1];
-				rowToAddCandidate[2] = o[5] != null ? ((String) o[5]).trim()
-						: o[5];
-				rowToAddCandidate[3] = o[2];
-				rowToAddCandidate[4] = o[3];
+				Object[] rowToAddCandidate = new Object[colCount];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"i_id")] = o[0];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"artikel.artikelnummerlang")] = o[1];
+
+				if(bReferenznummerInPositionen) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"lp.referenznummer")] = o[12];
+				}
+				
+				if (bKurzbezeichnungAnzeigen) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"artikel.kurzbez")] = o[10];
+				}
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"stk.stuecklistenart")] = o[5] != null ? ((String) o[5])
+						.trim() : o[5];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"bes.artikelbezeichnung")] = o[2];
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"artikel.zusatzbez")] = o[3];
 
 				FLRArtikelsperren as = (FLRArtikelsperren) o[4];
 
@@ -326,22 +353,43 @@ public class StuecklisteHandler extends UseCaseHandler {
 						gesperrt = as.getFlrsperren().getC_bez();
 					}
 
-					rowToAddCandidate[5] = gesperrt;
+					rowToAddCandidate[getTableColumnInformation().getViewIndex(
+							"SperrenIcon")] = gesperrt;
 				}
 
-				rowToAddCandidate[6] = o[6];
-				rowToAddCandidate[7] = o[7];
-				rowToAddCandidate[8] = o[8];
+				boolean bMitFormeln = Helper.short2boolean((Short) o[9]);
+				boolean bVersteckt = Helper.short2boolean((Short) o[11]);
 
+				
+				if(bVersteckt){
+					rowToAddCandidate[getTableColumnInformation()
+										.getViewIndex("Color")] = Color.LIGHT_GRAY;
+				}
+				
 				if (bStuecklistenfreigabe) {
 					if (o[7] != null) {
-						rowToAddCandidate[6] = FertigungFac.STATUS_ERLEDIGT;
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("Icon")] = FertigungFac.STATUS_ERLEDIGT;
+					}
+
+					if (bMitFormeln) {
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("Color")] = new Color(88, 193,
+								218);
+					}
+
+				} else {
+					if (bMitFormeln) {
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("Color")] = new Color(88, 193,
+								218);
 					}
 				}
 
 				rows[row] = rowToAddCandidate;
 
-				getFeature().build(row, o);
+				getFeature().build(row, (Integer) o[0], (Integer) o[6],
+						(Integer) o[8]);
 				row++;
 			}
 
@@ -426,7 +474,7 @@ public class StuecklisteHandler extends UseCaseHandler {
 
 					if (filterKriterien[i].kritName.equals("c_volltext")) {
 
-						String suchstring = "lower(coalesce(aspr.c_bez,'')||' '||coalesce(aspr.c_kbez,'')||' '||coalesce(aspr.c_zbez,'')||' '||coalesce(aspr.c_zbez2,''))";
+						String suchstring = "lower(coalesce(aspr.c_bez,'')||' '||coalesce(aspr.c_kbez,'')||' '||coalesce(aspr.c_zbez,'')||' '||coalesce(aspr.c_zbez2,'')||' '||coalesce(stueckliste.flrartikel.c_referenznr,''))";
 
 						if (bTextsucheInklusiveArtikelnummer) {
 							suchstring += "||' '||lower(stueckliste.flrartikel.c_nr)";
@@ -516,24 +564,11 @@ public class StuecklisteHandler extends UseCaseHandler {
 								where.append(" " + filterKriterien[i].value);
 							}
 						}
-					} else if (filterKriterien[i].kritName
-							.equals("erweiterte_textsuche")) {
+					} else if (filterKriterien[i].kritName.equals("c_suche")) {
 
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower(stueckliste.flrstuecklistetextsuche.c_suche) ");
-						} else {
-							where.append(" "
-									+ "stueckliste.flrstuecklistetextsuche.c_suche");
-						}
-
-						where.append(" " + filterKriterien[i].operator);
-
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
-						} else {
-							where.append(" " + filterKriterien[i].value);
-						}
+						where.append(buildWhereClauseExtendedSearchWithoutDuplicates(
+								FLRStuecklistetextsuche.class.getSimpleName(),
+								FLR_STUECKLISTE, filterKriterien[i]));
 
 					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
@@ -621,7 +656,7 @@ public class StuecklisteHandler extends UseCaseHandler {
 	private String getFromClause() {
 		return "SELECT stueckliste.i_id, stueckliste.flrartikel.c_nr, aspr.c_bez, aspr.c_zbez, "
 				+ "(SELECT s FROM FLRArtikelsperren as s WHERE s.artikel_i_id=stueckliste.artikel_i_id AND s.i_sort=1) as sperren, "
-				+ "stueckliste.stuecklisteart_c_nr, stueckliste.flrartikel.i_id, stueckliste.t_freigabe, stueckliste.partner_i_id "
+				+ "stueckliste.stuecklisteart_c_nr, stueckliste.flrartikel.i_id, stueckliste.t_freigabe, stueckliste.partner_i_id, stueckliste.b_mitFormeln, aspr.c_kbez, stueckliste.flrartikel.b_versteckt, stueckliste.flrartikel.c_referenznr "
 				+ " FROM FLRStueckliste AS stueckliste"
 				+ " LEFT OUTER JOIN stueckliste.flrartikel.artikelsprset AS aspr ";
 	}
@@ -676,102 +711,104 @@ public class StuecklisteHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			try {
-				ParametermandantDto param = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ARTIKEL,
-								ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_ARTIKELNUMMER);
-				bTextsucheInklusiveArtikelnummer = (Boolean) param
-						.getCWertAsObject();
+	private TableColumnInformation createColumnInformation(String mandant,
+			Locale locUi) {
 
-				param = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_ARTIKEL,
-								ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_INDEX_REVISION);
-				bTextsucheInklusiveIndexRevision = (Boolean) param
-						.getCWertAsObject();
+		TableColumnInformation columns = new TableColumnInformation();
 
-				if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-						MandantFac.ZUSATZFUNKTION_STUECKLISTENFREIGABE,
-						theClientDto)) {
-					bStuecklistenfreigabe = true;
-				}
+		columns.add("i_id", Integer.class, "i_id", -1, "i_id");
+		columns.add(
+				"artikel.artikelnummerlang",
+				String.class,
+				getTextRespectUISpr("artikel.artikelnummerlang", mandant, locUi),
+				QueryParameters.FLR_BREITE_L, "stueckliste.flrartikel.c_nr");
+		columns.add(
+				"stk.stuecklistenart",
+				String.class,
+				getTextRespectUISpr("stk.stuecklistenart", mandant, locUi),
+				QueryParameters.FLR_BREITE_S,
+				"stueckliste.stuecklisteart_c_nr",
+				getTextRespectUISpr("stk.stuecklistenart.tooltip", mandant,
+						locUi));
+		
 
-			} catch (RemoteException ex) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-			}
-
-			if (bStuecklistenfreigabe == true) {
-				setTableInfo(new TableInfo(new Class[] { Integer.class,
-						String.class, String.class, String.class, String.class,
-						SperrenIcon.class, Icon.class },
-						new String[] {
-								"Id",
-								getTextRespectUISpr(
-										"artikel.artikelnummerlang",
-										mandantCNr, locUI),
-								getTextRespectUISpr("lp.stuecklistenart",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.artikelbezeichnung",
-										mandantCNr, locUI),
-								getTextRespectUISpr("artikel.zusatzbez",
-										mandantCNr, locUI),
-								"S",
-								getTextRespectUISpr("stk.freigabe", mandantCNr,
-										locUI) },
-
-						new int[] {
-								-1, // diese Spalte wird ausgeblendet
-								QueryParameters.FLR_BREITE_L,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_XL,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_S }
-
-						, new String[] { "i_id", "stueckliste.flrartikel.c_nr",
-								"stueckliste.stuecklisteart_c_nr",
-								"aspr.c_bez", "aspr.c_zbez",
-								Facade.NICHT_SORTIERBAR,
-								"stueckliste.t_freigabe" }));
-			} else {
-
-				setTableInfo(new TableInfo(new Class[] { Integer.class,
-						String.class, String.class, String.class, String.class,
-						SperrenIcon.class, }, new String[] {
-						"Id",
-						getTextRespectUISpr("artikel.artikelnummerlang",
-								mandantCNr, locUI),
-						getTextRespectUISpr("lp.stuecklistenart",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()),
-						getTextRespectUISpr("bes.artikelbezeichnung",
-								mandantCNr, locUI),
-						getTextRespectUISpr("artikel.zusatzbez", mandantCNr,
-								locUI), "S" },
-
-				new int[] {
-						-1, // diese Spalte wird ausgeblendet
-						QueryParameters.FLR_BREITE_L,
-						QueryParameters.FLR_BREITE_S,
-						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-						QueryParameters.FLR_BREITE_XL,
-						QueryParameters.FLR_BREITE_S }
-
-				, new String[] { "i_id", "stueckliste.flrartikel.c_nr",
-						"stueckliste.stuecklisteart_c_nr", "aspr.c_bez",
-						"aspr.c_zbez", Facade.NICHT_SORTIERBAR }));
-			}
+		if (bReferenznummerInPositionen) {
+			columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM,
+					"stueckliste.flrartikel.c_referenznr");
 		}
+		
+		if (bKurzbezeichnungAnzeigen) {
+			columns.add("artikel.kurzbez", String.class,
+					getTextRespectUISpr("artikel.kurzbez", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, "aspr.c_kbez");
+		}
+		columns.add("bes.artikelbezeichnung", String.class,
+				getTextRespectUISpr("bes.artikelbezeichnung", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "aspr.c_bez");
+		columns.add("artikel.zusatzbez", String.class,
+				getTextRespectUISpr("artikel.zusatzbez", mandant, locUi),
+				QueryParameters.FLR_BREITE_XL, "aspr.c_zbez");
 
-		return super.getTableInfo();
+		columns.add("SperrenIcon", SperrenIcon.class,
+				getTextRespectUISpr("stk.sperre", mandant, locUi),
+				QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR,
+				getTextRespectUISpr("stk.sperre.tooltip", mandant, locUi));
+		if (bStuecklistenfreigabe == true) {
+			columns.add("Icon", Icon.class,
+					getTextRespectUISpr("stk.freigabe", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, "stueckliste.t_freigabe");
+		}
+		columns.add("Color", Color.class, "", 1, Facade.NICHT_SORTIERBAR);
+
+		return columns;
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		String mandantCNr = theClientDto.getMandant();
+		Locale locUI = theClientDto.getLocUi();
+		try {
+			ParametermandantDto param = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_ARTIKELNUMMER);
+			bTextsucheInklusiveArtikelnummer = (Boolean) param
+					.getCWertAsObject();
+
+			param = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_INDEX_REVISION);
+			bTextsucheInklusiveIndexRevision = (Boolean) param
+					.getCWertAsObject();
+
+			param = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL,
+							ParameterFac.PARAMETER_ANZEIGEN_KURZBEZEICHNUNG_IN_AUSWAHLLISTE);
+			bKurzbezeichnungAnzeigen = (Boolean) param.getCWertAsObject();
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_STUECKLISTENFREIGABE,
+					theClientDto)) {
+				bStuecklistenfreigabe = true;
+			}
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+		setTableColumnInformation(createColumnInformation(
+				theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(),
+				c.getDbColumNames(), c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
+
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {

@@ -37,6 +37,7 @@ import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
 
+import com.lp.server.finanz.service.UstWarnungDto;
 import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.IAktivierbarControlled;
 import com.lp.server.system.service.TheClientDto;
@@ -60,6 +61,7 @@ public class BelegAktivierungController implements IAktivierbarControlled {
 		Validator.notNull(t, "t");
 		
 		facbean.pruefeAktivierbar(iid, theClientDto);
+		facbean.pruefeAktivierbarRecht(iid, theClientDto);
 		List<Timestamp> timestamps = facbean.getAenderungsZeitpunkte(iid);
 		timestamps.removeAll(Collections.singleton(null));
 		Timestamp tAendern = Collections.max(timestamps);
@@ -68,8 +70,7 @@ public class BelegAktivierungController implements IAktivierbarControlled {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_AKTIVIEREN_BELEG_WURDE_GEAENDERT,
 					"Berechnungszeitpunkt: " + t.toString());
 		}
-		facbean.aktiviereBeleg(iid, theClientDto);
-		return null ;
+		return facbean.aktiviereBeleg(iid, theClientDto);
 	}
 
 	@Override
@@ -89,7 +90,13 @@ public class BelegAktivierungController implements IAktivierbarControlled {
 	
 	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		BelegPruefungDto pruefungDto = berechneBelegControlled(iid, theClientDto) ;
-		aktiviereBelegControlled(iid, pruefungDto.getBerechnungsZeitpunkt(), theClientDto);
+		BelegPruefungDto aktivierungDto = aktiviereBelegControlled(
+				iid, pruefungDto.getBerechnungsZeitpunkt(), theClientDto);
+		if(aktivierungDto != null) {
+			for (UstWarnungDto warnungDto : aktivierungDto.getUstWarnungDtos()) {
+				pruefungDto.addUstWarnung(warnungDto);
+			}		
+		}
 		return pruefungDto ;
 	}
 	

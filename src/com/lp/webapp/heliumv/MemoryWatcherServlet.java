@@ -47,8 +47,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.lp.server.system.ejb.MemoryWatcherFacLocal;
 import com.lp.server.system.ejb.TimestampMemory;
+import com.lp.server.system.ejbfac.MemoryWatcherBean;
+import com.lp.server.system.ejbfac.MemoryWatcherFacLocal;
+import com.lp.server.util.FacLookup;
 
 public class MemoryWatcherServlet extends HttpServlet {
 
@@ -67,12 +69,8 @@ public class MemoryWatcherServlet extends HttpServlet {
 	
 	private MemoryWatcherFacLocal getMemoryFac() {
 		if(null == memoryWatcherFac) {
-			try {
-				memoryWatcherFac = (MemoryWatcherFacLocal) context
-						.lookup("lpserver/MemoryWatcherBean/local");
-			} catch (NamingException e) {
-				e.printStackTrace();
-			}		
+			memoryWatcherFac = FacLookup.lookupLocalBeanless(context, 
+					MemoryWatcherBean.class, MemoryWatcherFacLocal.class);
 		}
 
 		return memoryWatcherFac ;
@@ -97,18 +95,20 @@ public class MemoryWatcherServlet extends HttpServlet {
 						+ timestampMemory.getFreeMemory());
 			}
 		} else {
+	        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS") ;
+	        
 			PrintWriter out = resp.getWriter();
-
-			List<TimestampMemory> values = getMemoryFac().getTimestamps();
-
 			out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
 					+ "<HTML>\n"
-					+ "<HEAD><TITLE>Helium Memory Watcher</TITLE></HEAD>\n"
+					+ "<HEAD><TITLE>HELIUM V Memory Watcher</TITLE></HEAD>\n"
 					+ "<BODY>\n");
 
+			List<TimestampMemory> values = getMemoryFac().getTimestamps();
 			for (TimestampMemory timestampMemory : values) {
-				out.println("<p>" + timestampMemory.getTimestamp() + " "
-						+ timestampMemory.getFreeMemory() + "</p>");
+				Date d = new Date(timestampMemory.getTimestamp());
+				
+				out.println("<p>" + sdf.format(d) + ": "
+						+ timestampMemory.getFreeMemory() / 1024l / 1024l + "MB</p>");
 			}
 
 			out.println("</BODY></HTML>");

@@ -87,6 +87,15 @@ public class ArtikellieferantDtoAssembler {
 					.getZertifikatartIId());
 			artikellieferantDto.setCWeblink(artikellieferant.getCWeblink());
 			artikellieferantDto.setEinheitCNrVpe(artikellieferant.getEinheitCNrVpe());
+			artikellieferantDto.setGebindeIId(artikellieferant.getGebindeIId());
+			artikellieferantDto.setNGebindemenge(artikellieferant.getNGebindemenge());
+			artikellieferantDto.setXKommentarFixkosten(artikellieferant.getXKommentarFixkosten());
+			artikellieferantDto.setNWebabfrageBestand(artikellieferant.getNWebabfrageBestand());
+			artikellieferantDto.setTLetzteWebabfrage(artikellieferant.getTLetzteWebabfrage());
+			artikellieferantDto.setBNichtLieferbar(artikellieferant.getBNichtLieferbar());
+			artikellieferantDto.setXKommentarNichtLieferbar(artikellieferant.getXKommentarNichtLieferbar());
+			artikellieferantDto.setAnfragepositionlieferdatenIId(artikellieferant.getAnfragepositionlieferdatenIId());
+			artikellieferantDto.setNInitialkosten(artikellieferant.getNInitialkosten());
 		}
 		return artikellieferantDto;
 	}

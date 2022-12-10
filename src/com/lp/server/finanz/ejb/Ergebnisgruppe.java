@@ -93,6 +93,9 @@ public class Ergebnisgruppe implements Serializable, ICBez {
 	@Column(name = "B_BILANZGRUPPE")
 	private Short bBilanzgruppe;
 	
+	@Column(name = "B_JAHRESGEWINN")
+	private Short bJahresgewinn;
+	
 	public Short getBBilanzgruppe() {
 		return bBilanzgruppe;
 	}
@@ -110,7 +113,8 @@ public class Ergebnisgruppe implements Serializable, ICBez {
 	public Ergebnisgruppe(Integer id, java.lang.String mandantCNr,
 			java.lang.String bez, Integer reihung, Short summeNegativ,
 			Short invertiert, Integer personalIIdAnlegen,
-			Integer personalIIdAendern, Short prozentbasis, Integer typ, Short bBilanzgruppe) {
+			Integer personalIIdAendern, Short prozentbasis, Integer typ, Short bBilanzgruppe,
+			Short bJahresgewinn) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setCBez(bez);
@@ -126,7 +130,7 @@ public class Ergebnisgruppe implements Serializable, ICBez {
 		setBProzentbasis(prozentbasis);
 		setITyp(typ);
 		setBBilanzgruppe(bBilanzgruppe);
-
+		setBJahresgewinn(bJahresgewinn);
 	}
 
 	public Integer getIId() {
@@ -231,6 +235,14 @@ public class Ergebnisgruppe implements Serializable, ICBez {
 
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
+	}
+
+	public Short getBJahresgewinn() {
+		return bJahresgewinn;
+	}
+	
+	public void setBJahresgewinn(Short bJahresgewinn) {
+		this.bJahresgewinn = bJahresgewinn;
 	}
 
 }

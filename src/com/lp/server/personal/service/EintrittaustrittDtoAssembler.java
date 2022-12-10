@@ -51,6 +51,7 @@ public class EintrittaustrittDtoAssembler {
 			eintrittaustrittDto.setTAustritt(eintrittaustritt.getTAustritt());
 			eintrittaustrittDto.setCAustrittsgrund(eintrittaustritt
 					.getCAustrittsgrund());
+			eintrittaustrittDto.setBWiedereintritt(eintrittaustritt.getBWiedereintritt());
 		}
 		return eintrittaustrittDto;
 	}

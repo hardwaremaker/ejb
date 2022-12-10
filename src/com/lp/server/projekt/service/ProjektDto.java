@@ -37,6 +37,10 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.Arrays;
 
+import org.jfree.chart.block.BlockContainer;
+
+import com.lp.server.util.EditorContentIId;
+
 public class ProjektDto implements Serializable {
 	/**
 	 * 
@@ -59,7 +63,7 @@ public class ProjektDto implements Serializable {
 	private Timestamp tZielwunschdatum;
 	private Integer partnerIId;
 	private Integer ansprechpartnerIId;
-	private Short bVerrechenbar;
+	private Integer iVerrechenbar;
 	private Integer personalIIdAnlegen;
 	private Timestamp tAnlegen;
 	private Integer personalIIdAendern;
@@ -76,6 +80,49 @@ public class ProjektDto implements Serializable {
 	private String deployNumber;
 	private String buildNumber;
 
+	private Timestamp tRealisierung;
+	private Integer artikelIId;
+	private Integer vkfortschrittIId;
+	private Integer ansprechpartnerIIdBetreiber;
+	private Integer projekterledigungsgrundIId;
+	private Integer partnerIIdBetreiber;
+	private Integer personalIIdInternerledigt;
+	private Timestamp tInternerledigt;
+
+	private EditorContentIId contentId;
+	
+	public Integer getArtikelIId() {
+		return artikelIId;
+	}
+
+	public void setArtikelIId(Integer artikelIId) {
+		this.artikelIId = artikelIId;
+	}
+
+	public Timestamp getTRealisierung() {
+		return tRealisierung;
+	}
+
+	public void setTRealisierung(Timestamp tRealisierung) {
+		this.tRealisierung = tRealisierung;
+	}
+
+	public Integer getVkfortschrittIId() {
+		return vkfortschrittIId;
+	}
+
+	public void setVkfortschrittIId(Integer vkfortschrittIId) {
+		this.vkfortschrittIId = vkfortschrittIId;
+	}
+
+	public Integer getAnsprechpartnerIIdBetreiber() {
+		return ansprechpartnerIIdBetreiber;
+	}
+
+	public void setAnsprechpartnerIIdBetreiber(Integer ansprechpartnerIIdBetreiber) {
+		this.ansprechpartnerIIdBetreiber = ansprechpartnerIIdBetreiber;
+	}
+
 	public Integer getBereichIId() {
 		return bereichIId;
 	}
@@ -83,8 +130,7 @@ public class ProjektDto implements Serializable {
 	public void setBereichIId(Integer bereichIId) {
 		this.bereichIId = bereichIId;
 	}
-	
-	private Integer projekterledigungsgrundIId;
+
 
 	public Integer getProjekterledigungsgrundIId() {
 		return projekterledigungsgrundIId;
@@ -116,6 +162,15 @@ public class ProjektDto implements Serializable {
 
 	public void setIId(Integer iId) {
 		this.iId = iId;
+	}
+
+
+	public Integer getPartnerIIdBetreiber() {
+		return partnerIIdBetreiber;
+	}
+
+	public void setPartnerIIdBetreiber(Integer partnerIIdBetreiber) {
+		this.partnerIIdBetreiber = partnerIIdBetreiber;
 	}
 
 	public Integer getISort() {
@@ -198,7 +253,7 @@ public class ProjektDto implements Serializable {
 		this.oAttachments = oAttachments;
 	}
 
-	private Integer personalIIdInternerledigt;
+
 	public Integer getPersonalIIdInternerledigt() {
 		return personalIIdInternerledigt;
 	}
@@ -206,7 +261,8 @@ public class ProjektDto implements Serializable {
 	public void setPersonalIIdInternerledigt(Integer personalIIdInternerledigt) {
 		this.personalIIdInternerledigt = personalIIdInternerledigt;
 	}
-	private Timestamp  tInternerledigt;
+
+
 	public Timestamp getTInternerledigt() {
 		return tInternerledigt;
 	}
@@ -214,7 +270,7 @@ public class ProjektDto implements Serializable {
 	public void setTInternerledigt(Timestamp internerledigt) {
 		tInternerledigt = internerledigt;
 	}
-	
+
 	public String getCAttachmentsType() {
 		return cAttachmentsType;
 	}
@@ -255,12 +311,12 @@ public class ProjektDto implements Serializable {
 		this.ansprechpartnerIId = ansprechpartnerIId;
 	}
 
-	public Short getBVerrechenbar() {
-		return bVerrechenbar;
+	public Integer getIVerrechenbar() {
+		return this.iVerrechenbar;
 	}
 
-	public void setBVerrechenbar(Short bVerrechenbar) {
-		this.bVerrechenbar = bVerrechenbar;
+	public void setIVerrechenbar(Integer iVerrechenbar) {
+		this.iVerrechenbar = iVerrechenbar;
 	}
 	private Integer projektIIdNachfolger;
 
@@ -271,6 +327,7 @@ public class ProjektDto implements Serializable {
 	public void setProjektIIdNachfolger(Integer projektIIdNachfolger) {
 		this.projektIIdNachfolger = projektIIdNachfolger;
 	}
+
 	public Integer getPersonalIIdAnlegen() {
 		return personalIIdAnlegen;
 	}
@@ -373,12 +430,10 @@ public class ProjektDto implements Serializable {
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr))) {
 			return false;
 		}
-		if (!(that.kategorieCNr == null ? this.kategorieCNr == null
-				: that.kategorieCNr.equals(this.kategorieCNr))) {
+		if (!(that.kategorieCNr == null ? this.kategorieCNr == null : that.kategorieCNr.equals(this.kategorieCNr))) {
 			return false;
 		}
-		if (!(that.cTitel == null ? this.cTitel == null : that.cTitel
-				.equals(this.cTitel))) {
+		if (!(that.cTitel == null ? this.cTitel == null : that.cTitel.equals(this.cTitel))) {
 			return false;
 		}
 		if (!(that.personalIIdErzeuger == null ? this.personalIIdErzeuger == null
@@ -386,20 +441,17 @@ public class ProjektDto implements Serializable {
 			return false;
 		}
 		if (!(that.personalIIdZugewiesener == null ? this.personalIIdZugewiesener == null
-				: that.personalIIdZugewiesener
-						.equals(this.personalIIdZugewiesener))) {
+				: that.personalIIdZugewiesener.equals(this.personalIIdZugewiesener))) {
 			return false;
 		}
 		if (!(that.projekttypCNr == null ? this.projekttypCNr == null
 				: that.projekttypCNr.equals(this.projekttypCNr))) {
 			return false;
 		}
-		if (!(that.iPrio == null ? this.iPrio == null : that.iPrio
-				.equals(this.iPrio))) {
+		if (!(that.iPrio == null ? this.iPrio == null : that.iPrio.equals(this.iPrio))) {
 			return false;
 		}
-		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr
-				.equals(this.statusCNr))) {
+		if (!(that.statusCNr == null ? this.statusCNr == null : that.statusCNr.equals(this.statusCNr))) {
 			return false;
 		}
 		if (!(that.oAttachments == null ? this.oAttachments == null
@@ -410,81 +462,68 @@ public class ProjektDto implements Serializable {
 				: that.cAttachmentsType.equals(this.cAttachmentsType))) {
 			return false;
 		}
-		if (!(that.xFreetext == null ? this.xFreetext == null : that.xFreetext
-				.equals(this.xFreetext))) {
+		if (!(that.xFreetext == null ? this.xFreetext == null : that.xFreetext.equals(this.xFreetext))) {
 			return false;
 		}
 		if (!(that.tZielwunschdatum == null ? this.tZielwunschdatum == null
 				: that.tZielwunschdatum.equals(this.tZielwunschdatum))) {
 			return false;
 		}
-		if (!(that.partnerIId == null ? this.partnerIId == null
-				: that.partnerIId.equals(this.partnerIId))) {
+		if (!(that.partnerIId == null ? this.partnerIId == null : that.partnerIId.equals(this.partnerIId))) {
 			return false;
 		}
 		if (!(that.ansprechpartnerIId == null ? this.ansprechpartnerIId == null
 				: that.ansprechpartnerIId.equals(this.ansprechpartnerIId))) {
 			return false;
 		}
-		if (!(that.bVerrechenbar == null ? this.bVerrechenbar == null
-				: that.bVerrechenbar.equals(this.bVerrechenbar))) {
+		if (!(that.iVerrechenbar == null ? this.iVerrechenbar == null
+				: that.iVerrechenbar.equals(this.iVerrechenbar))) {
 			return false;
 		}
-		if (!(that.bFreigegeben == null ? this.bFreigegeben == null
-				: that.bFreigegeben.equals(this.bFreigegeben))) {
+		if (!(that.bFreigegeben == null ? this.bFreigegeben == null : that.bFreigegeben.equals(this.bFreigegeben))) {
 			return false;
 		}
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen))) {
 			return false;
 		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen))) {
 			return false;
 		}
-		if (!(that.dDauer == null ? this.dDauer == null : that.dDauer
-				.equals(this.dDauer))) {
+		if (!(that.dDauer == null ? this.dDauer == null : that.dDauer.equals(this.dDauer))) {
 			return false;
 		}
-		if (!(that.tZeit == null ? this.tZeit == null : that.tZeit
-				.equals(this.tZeit))) {
+		if (!(that.tZeit == null ? this.tZeit == null : that.tZeit.equals(this.tZeit))) {
 			return false;
 		}
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern))) {
 			return false;
 		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern))) {
 			return false;
 		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr))) {
 			return false;
 		}
-		if (!(that.cDateiname == null ? this.cDateiname == null
-				: that.cDateiname.equals(this.cDateiname))) {
+		if (!(that.cDateiname == null ? this.cDateiname == null : that.cDateiname.equals(this.cDateiname))) {
 			return false;
 		}
-		if (!(that.tErledigt == null ? this.tErledigt == null : that.tErledigt
-				.equals(this.tErledigt))) {
+		if (!(that.tErledigt == null ? this.tErledigt == null : that.tErledigt.equals(this.tErledigt))) {
 			return false;
 		}
 		if (!(that.personalIIdErlediger == null ? this.personalIIdErlediger == null
 				: that.personalIIdErlediger.equals(this.personalIIdErlediger))) {
 			return false;
 		}
-		if (!(that.iSort == null ? this.iSort == null : that.iSort
-				.equals(this.iSort))) {
+		if (!(that.iSort == null ? this.iSort == null : that.iSort.equals(this.iSort))) {
 			return false;
 		}
 
-		if (!(that.deployNumber == null ? this.deployNumber == null : that.deployNumber
-				.equals(this.deployNumber))) {
+		if (!(that.deployNumber == null ? this.deployNumber == null : that.deployNumber.equals(this.deployNumber))) {
 			return false;
 		}
-		if (!(that.buildNumber == null ? this.buildNumber == null : that.buildNumber
-				.equals(this.buildNumber))) {
+		if (!(that.buildNumber == null ? this.buildNumber == null : that.buildNumber.equals(this.buildNumber))) {
 			return false;
 		}
 		return true;
@@ -508,7 +547,7 @@ public class ProjektDto implements Serializable {
 		result = 37 * result + this.partnerIId.hashCode();
 		result = 37 * result + this.ansprechpartnerIId.hashCode();
 		result = 37 * result + this.mandantCNr.hashCode();
-		result = 37 * result + this.bVerrechenbar.hashCode();
+		result = 37 * result + this.iVerrechenbar.hashCode();
 		result = 37 * result + this.bFreigegeben.hashCode();
 		result = 37 * result + this.personalIIdAnlegen.hashCode();
 		result = 37 * result + this.tAnlegen.hashCode();
@@ -544,7 +583,7 @@ public class ProjektDto implements Serializable {
 		returnString += ", " + tZielwunschdatum;
 		returnString += ", " + partnerIId;
 		returnString += ", " + ansprechpartnerIId;
-		returnString += ", " + bVerrechenbar;
+		returnString += ", " + iVerrechenbar;
 		returnString += ", " + bFreigegeben;
 		returnString += ", " + personalIIdAnlegen;
 		returnString += ", " + tAnlegen;
@@ -574,4 +613,16 @@ public class ProjektDto implements Serializable {
 		this.buildNumber = buildNumber;
 	}
 
+	public EditorContentIId getContentId() {
+		return contentId;
+	}
+
+	public void setContentId(EditorContentIId contentId) {
+		this.contentId = contentId;
+	}
+	
+	public boolean hasContentId() {
+		return this.getContentId() != null &&
+				this.getContentId().isValid();
+	}
 }

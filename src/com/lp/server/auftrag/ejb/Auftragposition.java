@@ -43,6 +43,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.IBelegVerkaufEntity;
 import com.lp.server.util.IISort;
 import com.lp.server.util.IPositionIIdArtikelset;
 import com.lp.server.util.IZwsPosition;
@@ -62,12 +63,14 @@ import com.lp.server.util.IZwsPosition;
 		@NamedQuery(name = "AuftragpositionfindByAuftragIIdArtikelIId", query = "SELECT OBJECT (o) FROM Auftragposition o WHERE o.auftragIId=?1 AND o.artikelIId=?2 AND o.nMenge>0"),
 		@NamedQuery(name = "AuftragpositionfindByAuftragIIdAuftragpositionIIdRahmenposition", query = "SELECT OBJECT (o) FROM Auftragposition o WHERE o.auftragIId=?1 AND o.auftragpositionIIdRahmenposition=?2"),
 		@NamedQuery(name = "AuftragpositionfindByPositionIId", query = "SELECT OBJECT (o) FROM Auftragposition o WHERE o.positionIId=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0"),
+		@NamedQuery(name = "AuftragpositionfindByPositionIIdZugehoerig", query = "SELECT OBJECT (o) FROM Auftragposition o WHERE o.positionIIdZugehoerig=?1 AND o.nMenge IS NOT NULL ORDER BY o.iSort"),
+		@NamedQuery(name = "AuftragpositionfindByBestellpositionIId", query = "SELECT OBJECT (o) FROM Auftragposition o WHERE o.bestellpositionIId=?1"),
 		@NamedQuery(name = "getWertAuftragpositionartPosition", query = "SELECT sum(o.nMenge*o.nNettogesamtpreisplusversteckteraufschlag) FROM Auftragposition o WHERE o.positionIId=?1 AND o.auftragpositionartCNr IN (?2,?3)"),
 		@NamedQuery(name = "AuftragpositionfindByAuftragpositionIIdRahmenposition", query = "SELECT OBJECT (o) FROM Auftragposition o WHERE o.auftragpositionIIdRahmenposition=?1"),
 		@NamedQuery(name = Auftragposition.QueryFindIZwsByVonBisIId, query = "SELECT OBJECT (o) FROM Auftragposition o WHERE o.zwsVonPosition= :iid OR o.zwsBisPosition= :iid") })
 @Entity
 @Table(name = "AUFT_AUFTRAGPOSITION")
-public class Auftragposition implements Serializable, IISort, IPositionIIdArtikelset, IZwsPosition {
+public class Auftragposition implements Serializable, IISort, IPositionIIdArtikelset, IZwsPosition, IBelegVerkaufEntity {
 	
 	public final static String QueryFindIZwsByVonBisIId = "AuftragpositionFindIZwsByVonBisIId" ;
 	
@@ -104,7 +107,85 @@ public class Auftragposition implements Serializable, IISort, IPositionIIdArtike
 
 	@Column(name = "B_MWSTSATZUEBERSTEUERT")
 	private Short bMwstsatzuebersteuert;
+	
+	
+	@Column(name = "B_GESEHEN")
+	private Short bGesehen;
+	
+	@Column(name = "B_HVMAUEBERTRAGEN")
+	private Short bHvmauebertragen;
 
+	public Short getBHvmauebertragen() {
+		return bHvmauebertragen;
+	}
+
+	public void setBHvmauebertragen(Short bHvmauebertragen) {
+		this.bHvmauebertragen = bHvmauebertragen;
+	}
+
+	public Short getBGesehen() {
+		return bGesehen;
+	}
+
+	public void setBGesehen(Short bGesehen) {
+		this.bGesehen = bGesehen;
+	}
+
+	@Column(name = "N_DIM_MENGE")
+	private BigDecimal nDimMenge;
+	public BigDecimal getNDimMenge() {
+		return nDimMenge;
+	}
+
+	public void setNDimMenge(BigDecimal nDimMenge) {
+		this.nDimMenge = nDimMenge;
+	}
+
+	public BigDecimal getNDimHoehe() {
+		return nDimHoehe;
+	}
+
+	public void setNDimHoehe(BigDecimal nDimHoehe) {
+		this.nDimHoehe = nDimHoehe;
+	}
+
+	public BigDecimal getNDimBreite() {
+		return nDimBreite;
+	}
+
+	public void setNDimBreite(BigDecimal nDimBreite) {
+		this.nDimBreite = nDimBreite;
+	}
+
+	public BigDecimal getNDimTiefe() {
+		return nDimTiefe;
+	}
+
+	public void setNDimTiefe(BigDecimal nDimTiefe) {
+		this.nDimTiefe = nDimTiefe;
+	}
+
+	@Column(name = "N_DIM_HOEHE")
+	private BigDecimal nDimHoehe;
+
+	@Column(name = "N_DIM_BREITE")
+	private BigDecimal nDimBreite;
+
+	@Column(name = "N_DIM_TIEFE")
+	private BigDecimal nDimTiefe;
+	
+	
+	@Column(name = "B_PAUSCHAL")
+	private Short bPauschal;
+
+	public Short getBPauschal() {
+		return bPauschal;
+	}
+
+	public void setBPauschal(Short bPauschal) {
+		this.bPauschal = bPauschal;
+	}
+	
 	@Column(name = "N_NETTOEINZELPREIS")
 	private BigDecimal nNettoeinzelpreis;
 
@@ -147,6 +228,17 @@ public class Auftragposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "POSITION_I_ID")
 	private Integer positionIId;
 
+	@Column(name = "POSITION_I_ID_ZUGEHOERIG")
+	private Integer positionIIdZugehoerig;
+
+	public Integer getPositionIIdZugehoerig() {
+		return positionIIdZugehoerig;
+	}
+
+	public void setPositionIIdZugehoerig(Integer positionIIdZugehoerig) {
+		this.positionIIdZugehoerig = positionIIdZugehoerig;
+	}
+	
 	@Column(name = "TYP_C_NR")
 	private String typCNr;
 
@@ -279,10 +371,23 @@ public class Auftragposition implements Serializable, IISort, IPositionIIdArtike
 	public void setCLvposition(String cLvposition) {
 		this.cLvposition = cLvposition;
 	}
+	
+	
+	@Column(name = "BESTELLPOSITION_I_ID")
+	private Integer bestellpositionIId;
+
+	public Integer getBestellpositionIId() {
+		return bestellpositionIId;
+	}
+
+	public void setBestellpositionIId(Integer bestellpositionIId) {
+		this.bestellpositionIId = bestellpositionIId;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public Auftragposition(Integer iId, Integer auftragIId, Integer iSort,
-			String auftragpositionartCNr, String auftragpositionstatusCNr, Short bNettopreisuebersteuert) {
+			String auftragpositionartCNr, String auftragpositionstatusCNr, Short bNettopreisuebersteuert, Short bGesehen, Short bHvmauebertragen,Short bPauschal) {
 		// iIdAuftragposition,auftragpositionDtoI.getAuftragIId(),
 		// auftragpositionDtoI.getISort(),
 		// auftragpositionDtoI.getAuftragpositionartCNr(),auftragpositionDtoI.
@@ -300,26 +405,11 @@ public class Auftragposition implements Serializable, IISort, IPositionIIdArtike
 	    setTUebersteuerterliefertermin(new Timestamp(System.currentTimeMillis()));
 	    setBDrucken(new Short( (short) 0));
 	    setBNettopreisuebersteuert(bNettopreisuebersteuert);
+	    setBGesehen(bGesehen);
+	    setBHvmauebertragen(bHvmauebertragen);
+	    setBPauschal(bPauschal);
 	}
-	
-	public Auftragposition(Integer iId,
-			Integer auftragIId,
-			String auftragpositionartCNr,
-			Short artikelbezeichnunguebersteuert,
-			Short rabattsatzuebersteuert,
-			Short mwstsatzuebersteuert,
-			Timestamp uebersteuerterliefertermin,
-			Short drucken) {
-		setIId(iId);
-		setAuftragIId(auftragIId);
-		setAuftragpositionartCNr(auftragpositionartCNr);
-	    setBArtikelbezeichnungUebersteuert(artikelbezeichnunguebersteuert);
-	    setBRabattsatzuebersteuert(rabattsatzuebersteuert);
-	    setBMwstsatzuebersteuert(mwstsatzuebersteuert);
-	    setTUebersteuerterliefertermin(uebersteuerterliefertermin);
-	    setBDrucken(drucken);
-	}
-	
+
 	public Auftragposition() {
 		
 	}

@@ -142,7 +142,7 @@ public interface AnfrageFac extends IAktivierbarControlled {
 
 	public void erzeugeAnfragenAusBestellvorschlag(
 			BestellvorschlagUeberleitungKriterienDto bestellvorschlagUeberleitungKriterienDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			TheClientDto theClientDto, Integer standortIId, ArrayList<Integer> alMarkierte) throws EJBExceptionLP, RemoteException;
 
 	public void setzeVersandzeitpunktAufJetzt(Integer iAnfrageIId,
 			String sDruckart);
@@ -153,5 +153,6 @@ public interface AnfrageFac extends IAktivierbarControlled {
 	public void updateAnfrageLieferKonditionen(Integer iIdAnfrageI,
 			TheClientDto theClientDto);
 	public Integer erzeugeAnfrageAusAnfrage(Integer anfrageIIdVorhanden,TheClientDto theClientDto);
+	public Long[] getAngefragteUndAngeboteneMenge(Integer artikelIId, TheClientDto theClientDto);
 
 }

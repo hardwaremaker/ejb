@@ -43,6 +43,7 @@ import java.util.TreeMap;
 import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.KundeUmsatzTabelleDto;
+import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
@@ -95,29 +96,24 @@ public class KundeUmsatzHandler extends UseCaseHandlerTabelle {
 		if (tableInfo == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			tableInfo = new TableInfo(new Class[] { Object.class, String.class,
-					BigDecimal.class, Integer.class }, new String[] {
-					"  ",
-					getTextRespectUISpr("lp.jahr", mandantCNr, locUI),
-					getTextRespectUISpr("rechnung.umsatz", mandantCNr, locUI),
-					getTextRespectUISpr("kunde.gelegterechnungen", mandantCNr,
-							locUI) }, new int[] {
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese Spalte wird
-													// ausgeblendet
-					QueryParameters.FLR_BREITE_M,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST }, new String[] { "", "", "",
-					"" });
+			tableInfo = new TableInfo(new Class[] { Object.class, String.class, BigDecimal.class, Integer.class },
+					new String[] { "  ",getTextRespectUISpr("lp.jahr", mandantCNr, locUI),
+							getTextRespectUISpr("rechnung.umsatz", mandantCNr, locUI),
+							getTextRespectUISpr("kunde.gelegterechnungen", mandantCNr, locUI) },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese Spalte wird
+							// ausgeblendet
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new String[] { "", "", "", "" });
 		}
 		return tableInfo;
 	}
 
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
 	 * 
-	 * @param rowIndex
-	 *            Integer
+	 * @param rowIndex Integer
 	 * @throws EJBExceptionLP
 	 * @return QueryResult
 	 */
@@ -131,18 +127,33 @@ public class KundeUmsatzHandler extends UseCaseHandlerTabelle {
 
 			FilterKriterium fkAuswertung = aFilterKriterium[KundeFac.IDX_KRIT_KUNDE_I_ID];
 
+			FilterKriterium fkJahr = aFilterKriterium[KundeFac.IDX_KRIT_JAHR];
+
+			boolean bGerschaeftsjahr = false;
+			if (fkJahr.kritName.equals(RechnungFac.KRIT_JAHR_GESCHAEFTSJAHR)) {
+				bGerschaeftsjahr = true;
+			}
+
 			Integer kundeIId = new Integer(fkAuswertung.value);
 			int iLaufendesJahr = new GregorianCalendar().get(Calendar.YEAR);
+
+			if (bGerschaeftsjahr) {
+				iLaufendesJahr = getBuchenFac().findGeschaeftsjahrFuerDatum(
+						new java.sql.Date(System.currentTimeMillis()), theClientDto.getMandant());
+
+			}
 
 			GregorianCalendar gcBerechnungsdatumVonI = null;
 			GregorianCalendar gcBerechnungsdatumBisI = null;
 
-/*			KundeDto kundeDto=getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
-			
-			//Kunde in Header einbauen:
-			tableInfo.getColumnHeaderValues()[0]=kundeDto.getPartnerDto().formatAnrede();
-			*/
-			
+			/*
+			 * KundeDto kundeDto=getKundeFac().kundeFindByPrimaryKey(kundeIId,
+			 * theClientDto);
+			 * 
+			 * //Kunde in Header einbauen:
+			 * tableInfo.getColumnHeaderValues()[0]=kundeDto.getPartnerDto().formatAnrede();
+			 */
+
 			// zuerste eine HashMap mit den darzustellenden Daten zusammenbauen
 			TreeMap<Integer, KundeUmsatzTabelleDto> hmSammelstelle = new TreeMap<Integer, KundeUmsatzTabelleDto>();
 
@@ -153,201 +164,382 @@ public class KundeUmsatzHandler extends UseCaseHandlerTabelle {
 				BigDecimal bdUmsatz = null;
 				Integer iAnzahlRechnungen = null;
 
-				switch (i) {
+				if (bGerschaeftsjahr) {
 
-				case 0:
+					switch (i) {
 
-					// in dieser Zeile stehen die Summen fuer das gesamte
-					// Vorjahr
-					sZeilenHeader = getTextRespectUISpr("lp.davor", mandantCNr,
-							locUI);
+					case 0:
 
-					// das Zeitintervall auf 1900 bis vor 10 jahren
-					gcBerechnungsdatumVonI = new GregorianCalendar(1900,
-							GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 9, GregorianCalendar.JANUARY, 1);
-					break;
+						GregorianCalendar[] gcVonBis = getVorjahr(iLaufendesJahr, -9, true);
+						// in dieser Zeile stehen die Summen fuer das gesamte
+						// Vorjahr
+						sZeilenHeader = getTextRespectUISpr("lp.davor", mandantCNr, locUI);
 
-				case 1:
+						// das Zeitintervall auf 1900 bis vor 10 jahren
+						gcBerechnungsdatumVonI = new GregorianCalendar(1900, GregorianCalendar.JANUARY, 1);
+						gcBerechnungsdatumBisI = gcVonBis[1];
+						break;
 
-					// das ist eine Leerzeile zur optischen Trennung
-					sZeilenHeader = null;
-					break;
+					case 1:
 
-				case 2:
+						// das ist eine Leerzeile zur optischen Trennung
+						sZeilenHeader = null;
+						break;
 
-					sZeilenHeader = (iLaufendesJahr - 9) + "";
+					case 2:
 
-					// das Zeitintervall auf den gesamten Januar des laufenden
-					// Jahres festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 9, GregorianCalendar.JANUARY, 1);
+						sZeilenHeader = (iLaufendesJahr - 9) + "";
 
-					// vorjahr: der erste des naechten monats (fuer alle
-					// monate!!!)
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 8, GregorianCalendar.JANUARY, 1);
+						gcVonBis = getVorjahr(iLaufendesJahr-8, 0, true);
 
-					break;
+						gcBerechnungsdatumVonI = gcVonBis[0];
 
-				case 3:
-					sZeilenHeader = (iLaufendesJahr - 8) + "";
+						// vorjahr: der erste des naechten monats (fuer alle
+						// monate!!!)
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 8, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 7, GregorianCalendar.JANUARY, 1);
+						break;
 
-					break;
+					case 3:
+						sZeilenHeader = (iLaufendesJahr - 8) + "";
 
-				case 4:
-					sZeilenHeader = (iLaufendesJahr - 7) + "";
+						gcVonBis = getVorjahr(iLaufendesJahr-7, 0, true);
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 7, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 6, GregorianCalendar.JANUARY, 1);
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-					break;
+						break;
 
-				case 5:
-					sZeilenHeader = (iLaufendesJahr - 6) + "";
+					case 4:
+						sZeilenHeader = (iLaufendesJahr - 7) + "";
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 6, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 5, GregorianCalendar.JANUARY, 1);
+						gcVonBis = getVorjahr(iLaufendesJahr-6, 0, true);
 
-					break;
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-				case 6:
-					sZeilenHeader = (iLaufendesJahr - 5) + "";
+						break;
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 5, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 4, GregorianCalendar.JANUARY, 1);
+					case 5:
+						sZeilenHeader = (iLaufendesJahr - 6) + "";
 
-					break;
+						gcVonBis = getVorjahr(iLaufendesJahr-5, 0, true);
 
-				case 7:
-					sZeilenHeader = (iLaufendesJahr - 4) + "";
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 4, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 3, GregorianCalendar.JANUARY, 1);
+						break;
 
-					break;
+					case 6:
+						sZeilenHeader = (iLaufendesJahr - 5) + "";
+						gcVonBis = getVorjahr(iLaufendesJahr-4, 0, true);
 
-				case 8:
-					sZeilenHeader = (iLaufendesJahr - 3) + "";
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 3, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 2, GregorianCalendar.JANUARY, 1);
+						break;
 
-					break;
+					case 7:
+						sZeilenHeader = (iLaufendesJahr - 4) + "";
 
-				case 9:
-					sZeilenHeader = (iLaufendesJahr - 2) + "";
+						gcVonBis = getVorjahr(iLaufendesJahr-3, 0, true);
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 2, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr - 1, GregorianCalendar.JANUARY, 1);
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-					break;
+						break;
 
-				case 10:
-					sZeilenHeader = (iLaufendesJahr - 1) + "";
+					case 8:
+						sZeilenHeader = (iLaufendesJahr - 3) + "";
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr - 1, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr, GregorianCalendar.JANUARY, 1);
+						gcVonBis = getVorjahr(iLaufendesJahr-2, 0, true);
 
-					break;
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-				case 11:
-					sZeilenHeader = iLaufendesJahr + "";
+						break;
 
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr + 1, GregorianCalendar.JANUARY, 1);
+					case 9:
+						sZeilenHeader = (iLaufendesJahr - 2) + "";
 
-					break;
+						gcVonBis = getVorjahr(iLaufendesJahr-1, 0, true);
 
-				case 12:
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-					// das ist eine Leerzeile zur optischen Trennung
-					sZeilenHeader = null;
-					break;
+						break;
 
-				case 13:
-					sZeilenHeader = getTextRespectUISpr("lp.summe", mandantCNr,
-							locUI);
+					case 10:
+						sZeilenHeader = (iLaufendesJahr - 1) + "";
 
-					// das Zeitintervall auf das gesamte laufende Jahr festlegen
-					gcBerechnungsdatumVonI = new GregorianCalendar(
-							iLaufendesJahr, GregorianCalendar.JANUARY, 1);
-					gcBerechnungsdatumBisI = new GregorianCalendar(
-							iLaufendesJahr + 1, GregorianCalendar.JANUARY, 1);
+						gcVonBis = getVorjahr(iLaufendesJahr, 0, true);
 
-					// Alle vorherigen Zeilen summieren
-					KundeUmsatzTabelleDto kundeUmsatzDto = new KundeUmsatzTabelleDto();
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
 
-					BigDecimal umsatzGesamt = new BigDecimal(0);
-					int rechnungenGesamt = 0;
-					for (int j = 0; j < hmSammelstelle.size(); j++) {
-						KundeUmsatzTabelleDto temp = hmSammelstelle.get(j);
+						break;
 
-						if (temp.getBdUmsatz() != null) {
-							umsatzGesamt = umsatzGesamt.add(temp.getBdUmsatz());
+					case 11:
+						sZeilenHeader = iLaufendesJahr + "";
+
+						gcVonBis = getAktuellesJahr(iLaufendesJahr, 0, true);
+
+						gcBerechnungsdatumVonI = gcVonBis[0];
+						gcBerechnungsdatumBisI = gcVonBis[1];
+
+						break;
+
+					case 12:
+
+						// das ist eine Leerzeile zur optischen Trennung
+						sZeilenHeader = null;
+						break;
+
+					case 13:
+						sZeilenHeader = getTextRespectUISpr("lp.summe", mandantCNr, locUI);
+
+						// das Zeitintervall auf das gesamte laufende Jahr festlegen
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr, GregorianCalendar.JANUARY, 1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr + 1, GregorianCalendar.JANUARY,
+								1);
+
+						// Alle vorherigen Zeilen summieren
+						KundeUmsatzTabelleDto kundeUmsatzDto = new KundeUmsatzTabelleDto();
+
+						BigDecimal umsatzGesamt = new BigDecimal(0);
+						int rechnungenGesamt = 0;
+						for (int j = 0; j < hmSammelstelle.size(); j++) {
+							KundeUmsatzTabelleDto temp = hmSammelstelle.get(j);
+
+							if (temp.getBdUmsatz() != null) {
+								umsatzGesamt = umsatzGesamt.add(temp.getBdUmsatz());
+							}
+
+							if (temp.getIAnzahlRechnungen() != null) {
+								rechnungenGesamt += temp.getIAnzahlRechnungen();
+							}
 						}
 
-						if (temp.getIAnzahlRechnungen() != null) {
-							rechnungenGesamt += temp.getIAnzahlRechnungen();
-						}
-					}
-
-					kundeUmsatzDto.setSZeilenheader(sZeilenHeader);
-					kundeUmsatzDto.setBdUmsatz(umsatzGesamt);
-					kundeUmsatzDto.setIAnzahlRechnungen(rechnungenGesamt);
-					hmSammelstelle.put(new Integer(i), kundeUmsatzDto);
-
-					break;
-
-				}
-
-				if (i != 13) {
-
-					java.sql.Date dVon = new java.sql.Date(
-							gcBerechnungsdatumVonI.getTime().getTime());
-					java.sql.Date dBis = new java.sql.Date(
-							gcBerechnungsdatumBisI.getTime().getTime());
-
-					// den Umsatz errechnen
-					bdUmsatz = getRechnungFac().getUmsatzVomKundenImZeitraum(
-							theClientDto, kundeIId, dVon, dBis, false);
-
-					// die Anzahl der rechnungen errechnen
-					iAnzahlRechnungen = getRechnungFac()
-							.getAnzahlDerRechnungenVomKundenImZeitraum(
-									theClientDto, kundeIId, dVon, dBis, false);
-
-					// die Zeilen fuer die Anzeige zusammenbauen
-					KundeUmsatzTabelleDto kundeUmsatzDto = new KundeUmsatzTabelleDto();
-					if (sZeilenHeader != null) {
 						kundeUmsatzDto.setSZeilenheader(sZeilenHeader);
-						kundeUmsatzDto.setBdUmsatz(bdUmsatz);
-						kundeUmsatzDto.setIAnzahlRechnungen(iAnzahlRechnungen);
+						kundeUmsatzDto.setBdUmsatz(umsatzGesamt);
+						kundeUmsatzDto.setIAnzahlRechnungen(rechnungenGesamt);
+						hmSammelstelle.put(new Integer(i), kundeUmsatzDto);
+
+						break;
+
 					}
 
-					hmSammelstelle.put(new Integer(i), kundeUmsatzDto);
+					if (i != 13) {
+
+						java.sql.Date dVon = new java.sql.Date(gcBerechnungsdatumVonI.getTime().getTime());
+						java.sql.Date dBis = new java.sql.Date(gcBerechnungsdatumBisI.getTime().getTime());
+
+						// den Umsatz errechnen
+						bdUmsatz = getRechnungFac().getUmsatzVomKundenImZeitraum(theClientDto, kundeIId, dVon, dBis,
+								false);
+
+						// die Anzahl der rechnungen errechnen
+						iAnzahlRechnungen = getRechnungFac().getAnzahlDerRechnungenVomKundenImZeitraum(theClientDto,
+								kundeIId, dVon, dBis, false);
+
+						// die Zeilen fuer die Anzeige zusammenbauen
+						KundeUmsatzTabelleDto kundeUmsatzDto = new KundeUmsatzTabelleDto();
+						if (sZeilenHeader != null) {
+							kundeUmsatzDto.setSZeilenheader(sZeilenHeader);
+							kundeUmsatzDto.setBdUmsatz(bdUmsatz);
+							kundeUmsatzDto.setIAnzahlRechnungen(iAnzahlRechnungen);
+						}
+
+						hmSammelstelle.put(new Integer(i), kundeUmsatzDto);
+					}
+				} else {
+					switch (i) {
+
+					case 0:
+
+						// in dieser Zeile stehen die Summen fuer das gesamte
+						// Vorjahr
+						sZeilenHeader = getTextRespectUISpr("lp.davor", mandantCNr, locUI);
+
+						// das Zeitintervall auf 1900 bis vor 10 jahren
+						gcBerechnungsdatumVonI = new GregorianCalendar(1900, GregorianCalendar.JANUARY, 1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 9, GregorianCalendar.JANUARY,
+								1);
+						break;
+
+					case 1:
+
+						// das ist eine Leerzeile zur optischen Trennung
+						sZeilenHeader = null;
+						break;
+
+					case 2:
+
+						sZeilenHeader = (iLaufendesJahr - 9) + "";
+
+						// das Zeitintervall auf den gesamten Januar des laufenden
+						// Jahres festlegen
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 9, GregorianCalendar.JANUARY,
+								1);
+
+						// vorjahr: der erste des naechten monats (fuer alle
+						// monate!!!)
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 8, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 3:
+						sZeilenHeader = (iLaufendesJahr - 8) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 8, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 7, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 4:
+						sZeilenHeader = (iLaufendesJahr - 7) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 7, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 6, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 5:
+						sZeilenHeader = (iLaufendesJahr - 6) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 6, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 5, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 6:
+						sZeilenHeader = (iLaufendesJahr - 5) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 5, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 4, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 7:
+						sZeilenHeader = (iLaufendesJahr - 4) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 4, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 3, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 8:
+						sZeilenHeader = (iLaufendesJahr - 3) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 3, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 2, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 9:
+						sZeilenHeader = (iLaufendesJahr - 2) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 2, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr - 1, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 10:
+						sZeilenHeader = (iLaufendesJahr - 1) + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr - 1, GregorianCalendar.JANUARY,
+								1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr, GregorianCalendar.JANUARY, 1);
+
+						break;
+
+					case 11:
+						sZeilenHeader = iLaufendesJahr + "";
+
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr, GregorianCalendar.JANUARY, 1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr + 1, GregorianCalendar.JANUARY,
+								1);
+
+						break;
+
+					case 12:
+
+						// das ist eine Leerzeile zur optischen Trennung
+						sZeilenHeader = null;
+						break;
+
+					case 13:
+						sZeilenHeader = getTextRespectUISpr("lp.summe", mandantCNr, locUI);
+
+						// das Zeitintervall auf das gesamte laufende Jahr festlegen
+						gcBerechnungsdatumVonI = new GregorianCalendar(iLaufendesJahr, GregorianCalendar.JANUARY, 1);
+						gcBerechnungsdatumBisI = new GregorianCalendar(iLaufendesJahr + 1, GregorianCalendar.JANUARY,
+								1);
+
+						// Alle vorherigen Zeilen summieren
+						KundeUmsatzTabelleDto kundeUmsatzDto = new KundeUmsatzTabelleDto();
+
+						BigDecimal umsatzGesamt = new BigDecimal(0);
+						int rechnungenGesamt = 0;
+						for (int j = 0; j < hmSammelstelle.size(); j++) {
+							KundeUmsatzTabelleDto temp = hmSammelstelle.get(j);
+
+							if (temp.getBdUmsatz() != null) {
+								umsatzGesamt = umsatzGesamt.add(temp.getBdUmsatz());
+							}
+
+							if (temp.getIAnzahlRechnungen() != null) {
+								rechnungenGesamt += temp.getIAnzahlRechnungen();
+							}
+						}
+
+						kundeUmsatzDto.setSZeilenheader(sZeilenHeader);
+						kundeUmsatzDto.setBdUmsatz(umsatzGesamt);
+						kundeUmsatzDto.setIAnzahlRechnungen(rechnungenGesamt);
+						hmSammelstelle.put(new Integer(i), kundeUmsatzDto);
+
+						break;
+
+					}
+
+					if (i != 13) {
+
+						java.sql.Date dVon = new java.sql.Date(gcBerechnungsdatumVonI.getTime().getTime());
+						java.sql.Date dBis = new java.sql.Date(gcBerechnungsdatumBisI.getTime().getTime());
+
+						// den Umsatz errechnen
+						bdUmsatz = getRechnungFac().getUmsatzVomKundenImZeitraum(theClientDto, kundeIId, dVon, dBis,
+								false);
+
+						// die Anzahl der rechnungen errechnen
+						iAnzahlRechnungen = getRechnungFac().getAnzahlDerRechnungenVomKundenImZeitraum(theClientDto,
+								kundeIId, dVon, dBis, false);
+
+						// die Zeilen fuer die Anzeige zusammenbauen
+						KundeUmsatzTabelleDto kundeUmsatzDto = new KundeUmsatzTabelleDto();
+						if (sZeilenHeader != null) {
+							kundeUmsatzDto.setSZeilenheader(sZeilenHeader);
+							kundeUmsatzDto.setBdUmsatz(bdUmsatz);
+							kundeUmsatzDto.setIAnzahlRechnungen(iAnzahlRechnungen);
+						}
+
+						hmSammelstelle.put(new Integer(i), kundeUmsatzDto);
+					}
 				}
 			}
 
@@ -359,13 +551,11 @@ public class KundeUmsatzHandler extends UseCaseHandlerTabelle {
 			int row = 0;
 			int col = 0;
 
-			Collection<KundeUmsatzTabelleDto> clKundeUmsatz = hmSammelstelle
-					.values();
+			Collection<KundeUmsatzTabelleDto> clKundeUmsatz = hmSammelstelle.values();
 			Iterator<KundeUmsatzTabelleDto> it = clKundeUmsatz.iterator();
 
 			while (it.hasNext()) {
-				KundeUmsatzTabelleDto kundeUmsatzDto = (KundeUmsatzTabelleDto) it
-						.next();
+				KundeUmsatzTabelleDto kundeUmsatzDto = (KundeUmsatzTabelleDto) it.next();
 
 				rows[row][col++] = null;
 				rows[row][col++] = kundeUmsatzDto.getSZeilenHeader();
@@ -375,8 +565,7 @@ public class KundeUmsatzHandler extends UseCaseHandlerTabelle {
 				col = 0;
 			}
 
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0);
+			result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(1, e);
 		}

@@ -34,9 +34,13 @@ package com.lp.server.artikel.service;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.ejb.Remote;
 
+import com.lp.server.artikel.ejb.Artikelkommentarspr;
+import com.lp.server.artikel.ejb.ArtikelkommentarsprPK;
+import com.lp.server.system.service.KeyvalueDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
@@ -71,7 +75,7 @@ public interface ArtikelkommentarFac {
 			Integer iId, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
-	public String[] getArtikelhinweise(Integer artikelIId, String belegartCNr,
+	public ArrayList<KeyvalueDto> getArtikelhinweise(Integer artikelIId, String belegartCNr,
 			TheClientDto theClientDto) throws RemoteException;
 
 	public Integer createArtikelkommentar(
@@ -107,7 +111,7 @@ public interface ArtikelkommentarFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public boolean kopiereArtikelkommentar(Integer artikelIId_alt,
-			Integer artikelIId_neu, TheClientDto theClientDto)
+			Integer artikelIId_neu, boolean bNurClientLocale, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public void removeArtikelkommentardruck(
@@ -148,4 +152,31 @@ public interface ArtikelkommentarFac {
 	public boolean sindTexteOderPDFsVorhanden(Integer artikelIId,
 			TheClientDto theClientDto);
 	
+	public ArtikelkommentarsprDto artikelkommentarsprFindByPrimaryKeyOhneExc(
+			Integer artikelkommentarIId, String localeCNr,
+			TheClientDto theClientDto);
+	
+	
+	public byte[] getPDFArtikelkommentar(String artikelCNr,
+			String artikelkommentarartCNr, String localeCNr, String mandantCNr);
+	
+	public byte[] getArtikelkommentarBild(String artikelCNr,
+			String artikelkommentarartCNr, String localeCNr, String mandantCNr);
+
+	/**
+	 * Liefert alle Artikelkommentare eines Artikels mit allen Dtos (sofern vorhanden)</br>
+	 * Auch z.B. die ArtikelkommentarDruckDtos
+	 * 
+	 * @param artikelIId IId des Artikels
+	 * @param theClientDto
+	 * @return eine (leere) Liste aller Artikelkommentare eines Artikels
+	 */
+	List<ArtikelkommentarDto> artikelkommentarFindByArtikelIIdFull(
+			Integer artikelIId, TheClientDto theClientDto);
+	
+	public String getArtikelkommentarFuerDetail(Integer artikelIId, TheClientDto theClientDto);
+	
+	public void textAusPdfInXKommentarAktualisieren(Integer artikelkommentarIId,String locUI);
+
+	public String dateiverweisLaufwerkDurchUNCErsetzen(String dateiname, TheClientDto theClientDto);
 }

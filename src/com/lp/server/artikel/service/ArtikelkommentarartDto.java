@@ -70,7 +70,27 @@ public class ArtikelkommentarartDto implements Serializable {
 	public void setBTooltip(Short bTooltip) {
 		this.bTooltip = bTooltip;
 	}
+	private Short bDetail;
 
+	public Short getBDetail() {
+		return bDetail;
+	}
+
+	public void setBDetail(Short bDetail) {
+		this.bDetail = bDetail;
+	}
+	public String getBezeichnung() {
+		if (getArtikelkommentartartsprDto() != null) {
+			if (getArtikelkommentartartsprDto().getCBez() != null) {
+				return getArtikelkommentartartsprDto().getCBez();
+			} else {
+				return getCNr().trim();
+			}
+		} else {
+			return getCNr().trim();
+		}
+	}
+	
 	/**
 	 * Ist es ein Kommentarart fuer den Webshop
 	 * 

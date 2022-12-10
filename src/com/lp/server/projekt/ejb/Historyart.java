@@ -41,7 +41,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "HistoryartFindByCBez", query = "SELECT OBJECT(o) FROM Historyart o WHERE o.cBez = ?1") })
+@NamedQueries({ @NamedQuery(name = "HistoryartFindByCBez", query = "SELECT OBJECT(o) FROM Historyart o WHERE o.cBez = ?1"),
+	 @NamedQuery(name = "HistoryartFindAllBInAuswahllisteAnzeigen", query = "SELECT OBJECT(o) FROM Historyart o WHERE o.bInAuswahllisteAnzeigen = 1") })
 @Entity
 @Table(name = "PROJ_HISTORYART")
 public class Historyart implements Serializable {
@@ -61,6 +62,17 @@ public class Historyart implements Serializable {
 	@Column(name = "I_BLAU")
 	private Integer iBlau;
 	
+	@Column(name = "B_IN_AUSWAHLLISTE_ANZEIGEN")
+	private Short bInAuswahllisteAnzeigen;
+	
+	public Short getBInAuswahllisteAnzeigen() {
+		return bInAuswahllisteAnzeigen;
+	}
+
+	public void setBInAuswahllisteAnzeigen(Short bInAuswahllisteAnzeigen) {
+		this.bInAuswahllisteAnzeigen = bInAuswahllisteAnzeigen;
+	}
+
 	@Column(name = "B_AKTUALISIEREZIELTERMIN")
 	private Short bAktualisierezieltermin;
 
@@ -103,13 +115,14 @@ public class Historyart implements Serializable {
 	}
 
 	public Historyart(Integer id, String cBez, Integer iRot, Integer iGruen,
-			Integer iBlau,Short bAktualisierezieltermin) {
+			Integer iBlau,Short bAktualisierezieltermin, Short bInAuswahllisteAnzeigen) {
 		setIId(id);
 		setCBez(cBez);
 		setIRot(iRot);
 		setIGruen(iGruen);
 		setIBlau(iBlau);
 		setBAktualisierezieltermin(bAktualisierezieltermin);
+		setBInAuswahllisteAnzeigen(bInAuswahllisteAnzeigen);
 	}
 
 	public Integer getIId() {

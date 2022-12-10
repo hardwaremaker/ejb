@@ -42,13 +42,18 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+import com.lp.server.util.IISort;
+import com.lp.server.util.IPositionIIdArtikelset;
+
+@NamedQueries({
 		@NamedQuery(name = "AnfragepositionfindByAnfrage", query = "SELECT OBJECT (o) FROM Anfrageposition o WHERE o.anfrageIId=?1 ORDER BY o.iSort"),
 		@NamedQuery(name = "AnfragepositionejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Anfrageposition o WHERE o.anfrageIId = ?1"),
+		@NamedQuery(name = "AnfragepositionFindByAnfragepositionIdZugehoerig", query = "SELECT o FROM Anfrageposition o WHERE o.anfragepositionIdZugehoerig = ?1 ORDER BY o.iSort"),
+		@NamedQuery(name = "AnfragepositionfindByLossollmaterialIId", query = "SELECT OBJECT (o) FROM Anfrageposition o WHERE o.lossollmaterialIId=?1"),
 		@NamedQuery(name = "AnfragepositionfindByAnfrageIIdArtikelIId", query = "SELECT OBJECT (o) FROM Anfrageposition o WHERE o.anfrageIId=?1 AND o.artikelIId=?2") })
 @Entity
 @Table(name = "ANF_ANFRAGEPOSITION")
-public class Anfrageposition implements Serializable {
+public class Anfrageposition implements Serializable, IPositionIIdArtikelset,  IISort {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -89,6 +94,28 @@ public class Anfrageposition implements Serializable {
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
 
+	@Column(name = "ANFRAGEPOSITION_I_ID_ZUGEHOERIG")
+	private Integer anfragepositionIdZugehoerig;
+
+	public Integer getAnfragepositionIdZugehoerig() {
+		return anfragepositionIdZugehoerig;
+	}
+
+	public void setAnfragepositionIdZugehoerig(
+			Integer anfragepositionIdZugehoerig) {
+		this.anfragepositionIdZugehoerig = anfragepositionIdZugehoerig;
+	}
+
+	@Column(name = "LOSSOLLMATERIAL_I_ID")
+	private Integer lossollmaterialIId;
+
+	public Integer getLossollmaterialIId() {
+		return lossollmaterialIId;
+	}
+
+	public void setLossollmaterialIId(Integer lossollmaterialIId) {
+		this.lossollmaterialIId = lossollmaterialIId;
+	}
 	
 	private static final long serialVersionUID = 1L;
 
@@ -96,23 +123,19 @@ public class Anfrageposition implements Serializable {
 		super();
 	}
 
-	public Anfrageposition(Integer idAnfrageposition,
-			Integer belegIId,
-			Integer sort, 
-			String anfragepositionartCNr) {
+	public Anfrageposition(Integer idAnfrageposition, Integer belegIId,
+			Integer sort, String anfragepositionartCNr) {
 		super();
 		setIId(idAnfrageposition);
 		setAnfrageIId(belegIId);
 		setISort(sort);
 		setAnfragepositionartCNr(anfragepositionartCNr);
-		setBArtikelbezeichnunguebersteuert(new Short( (short) 0));
-		
+		setBArtikelbezeichnunguebersteuert(new Short((short) 0));
+
 	}
-	
-	public Anfrageposition(Integer idAnfrageposition,
-			Integer belegIId,
-			Integer sort, 
-			String anfragepositionartCNr,
+
+	public Anfrageposition(Integer idAnfrageposition, Integer belegIId,
+			Integer sort, String anfragepositionartCNr,
 			Short artikelbezeichnunguebersteuert) {
 		super();
 		setIId(idAnfrageposition);
@@ -120,7 +143,7 @@ public class Anfrageposition implements Serializable {
 		setISort(sort);
 		setAnfragepositionartCNr(anfragepositionartCNr);
 		setBArtikelbezeichnunguebersteuert(artikelbezeichnunguebersteuert);
-		
+
 	}
 
 	public Integer getIId() {
@@ -226,6 +249,19 @@ public class Anfrageposition implements Serializable {
 
 	public void setArtikelIId(Integer artikeliId) {
 		this.artikelIId = artikeliId;
+	}
+
+	// SP5044
+	@Override
+	public Integer getPositionIIdArtikelset() {
+
+		return anfragepositionIdZugehoerig;
+	}
+
+	@Override
+	public void setPositionIIdArtikelset(Integer anfragepositionIdZugehoerig) {
+		this.anfragepositionIdZugehoerig = anfragepositionIdZugehoerig;
+
 	}
 
 }

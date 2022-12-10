@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.stueckliste.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.Iterator;
@@ -48,6 +49,7 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklistearbeitsplan;
 import com.lp.server.stueckliste.service.StuecklisteFac;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
@@ -85,6 +87,7 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private boolean pruefplan1 = false;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -146,6 +149,10 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 				rows[row][col++] = dto.getCNr();
 				rows[row][col++] = dto.formatBezeichnung();
 
+				if (pruefplan1) {
+					rows[row][col++] = stuecklistearbeitsplan.getN_ppm();
+				}
+
 				double lStueckzeit = stuecklistearbeitsplan.getL_stueckzeit()
 						.longValue();
 				double lRuestzeit = stuecklistearbeitsplan.getL_ruestzeit()
@@ -166,11 +173,11 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 				}
 
 				if (stuecklistearbeitsplan.getFlrstueckliste()
-						.getI_erfassungsfaktor() != 0) {
+						.getN_erfassungsfaktor().doubleValue() != 0) {
 					dStueckzeit = dStueckzeit
 							/ ((double) stuecklistearbeitsplan
 									.getFlrstueckliste()
-									.getI_erfassungsfaktor());
+									.getN_erfassungsfaktor().doubleValue());
 				}
 
 				rows[row][col++] = new BigDecimal(dRuestzeit);
@@ -184,12 +191,22 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 							.doubleValue())
 							+ dRuestzeit;
 
-					rows[row++][col++] = new BigDecimal(dGesamt);
+					rows[row][col++] = new BigDecimal(dGesamt);
 
 				} else {
-					rows[row++][col++] = null;
+					rows[row][col++] = null;
 
 				}
+				if (pruefplan1==false) {
+					if (stuecklistearbeitsplan.getX_formel()!=null && stuecklistearbeitsplan.getX_formel().length()>0) {
+						rows[row][col++] = new Color(88, 193, 218);
+					} else {
+						rows[row][col++] = null;
+					}
+				}
+				
+				
+				row++;
 
 				col = 0;
 			}
@@ -368,7 +385,7 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-//				boolean idFound = false;
+				// boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
@@ -421,67 +438,141 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 				}
 				String sEinheit = parameter.getCWert();
 
-				setTableInfo(new TableInfo(
-						new Class[] {
-								Integer.class,
-								Integer.class,
-								Integer.class,
-								Integer.class,
-								String.class,
-								String.class,
-								String.class,
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge) },
-						new String[] {
-								"Id",
-								"AG",
-								"UAG",
-								getTextRespectUISpr("stkl.agbeginn",
-										mandantCNr, locUI),
-								getTextRespectUISpr("lp.maschine", mandantCNr,
-										locUI),
-								getTextRespectUISpr("artikel.artikelnummer",
-										mandantCNr, locUI),
-								getTextRespectUISpr("lp.bezeichnung",
-										mandantCNr, locUI),
-								getTextRespectUISpr("stkl.ruestzeit",
-										mandantCNr, locUI)
-										+ " ("
-										+ sEinheit
-										+ ")",
-								getTextRespectUISpr("stkl.stueckzeit",
-										mandantCNr, locUI)
-										+ " ("
-										+ sEinheit
-										+ ")",
-								getTextRespectUISpr("stkl.gesamtzeit",
-										mandantCNr, locUI) },
-						new int[] {
-								-1, // diese Spalte wird ausgeblendet
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_L,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_M },
-						new String[] {
-								"id",
-								StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_ARBEITSGANG,
-								StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_UNTERARBEITSGANG,
-								StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_MASCHINENVERSATZTAGE,
-								StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_FLRMASCHINE
-										+ "."
-										+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
-								StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_FLRARTIKEL
-										+ ".c_nr",
-								Facade.NICHT_SORTIERBAR,
-								StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_L_RUESTZEIT,
-								StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_L_STUECKZEIT,
-								Facade.NICHT_SORTIERBAR }));
+				pruefplan1 = getMandantFac()
+						.darfAnwenderAufZusatzfunktionZugreifen(
+								MandantFac.ZUSATZFUNKTION_PRUEFPLAN1,
+								theClientDto);
+
+				if (pruefplan1 == false) {
+					setTableInfo(new TableInfo(
+							new Class[] {
+									Integer.class,
+									Integer.class,
+									Integer.class,
+									Integer.class,
+									String.class,
+									String.class,
+									String.class,
+									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+									Color.class },
+							new String[] {
+									"Id",
+									"AG",
+									"UAG",
+									getTextRespectUISpr("stkl.agbeginn",
+											mandantCNr, locUI),
+									getTextRespectUISpr("lp.maschine",
+											mandantCNr, locUI),
+									getTextRespectUISpr(
+											"artikel.artikelnummer",
+											mandantCNr, locUI),
+									getTextRespectUISpr("lp.bezeichnung",
+											mandantCNr, locUI),
+									getTextRespectUISpr("stkl.ruestzeit",
+											mandantCNr, locUI)
+											+ " ("
+											+ sEinheit + ")",
+									getTextRespectUISpr("stkl.stueckzeit",
+											mandantCNr, locUI)
+											+ " ("
+											+ sEinheit + ")",
+									getTextRespectUISpr("stkl.gesamtzeit",
+											mandantCNr, locUI), "" },
+							new int[] {
+									-1, // diese Spalte wird ausgeblendet
+									QueryParameters.FLR_BREITE_S,
+									QueryParameters.FLR_BREITE_S,
+									QueryParameters.FLR_BREITE_S,
+									QueryParameters.FLR_BREITE_M,
+									QueryParameters.FLR_BREITE_L,
+									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+									QueryParameters.FLR_BREITE_M,
+									QueryParameters.FLR_BREITE_M,
+									QueryParameters.FLR_BREITE_M, -1 },
+							new String[] {
+									"id",
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_ARBEITSGANG,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_UNTERARBEITSGANG,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_MASCHINENVERSATZTAGE,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_FLRMASCHINE
+											+ "."
+											+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_FLRARTIKEL
+											+ ".c_nr",
+									Facade.NICHT_SORTIERBAR,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_L_RUESTZEIT,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_L_STUECKZEIT,
+									Facade.NICHT_SORTIERBAR,
+									Facade.NICHT_SORTIERBAR }));
+				} else {
+					setTableInfo(new TableInfo(
+							new Class[] {
+									Integer.class,
+									Integer.class,
+									Integer.class,
+									Integer.class,
+									String.class,
+									String.class,
+									String.class,
+									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge) },
+							new String[] {
+									"Id",
+									"AG",
+									"UAG",
+									getTextRespectUISpr("stkl.agbeginn",
+											mandantCNr, locUI),
+									getTextRespectUISpr("lp.maschine",
+											mandantCNr, locUI),
+									getTextRespectUISpr(
+											"artikel.artikelnummer",
+											mandantCNr, locUI),
+									getTextRespectUISpr("lp.bezeichnung",
+											mandantCNr, locUI),
+									getTextRespectUISpr("stkl.arbeitsplan.ppm",
+											mandantCNr, locUI),
+									getTextRespectUISpr("stkl.ruestzeit",
+											mandantCNr, locUI)
+											+ " ("
+											+ sEinheit + ")",
+									getTextRespectUISpr("stkl.stueckzeit",
+											mandantCNr, locUI)
+											+ " ("
+											+ sEinheit + ")",
+									getTextRespectUISpr("stkl.gesamtzeit",
+											mandantCNr, locUI) },
+							new int[] {
+									-1, // diese Spalte wird ausgeblendet
+									QueryParameters.FLR_BREITE_S,
+									QueryParameters.FLR_BREITE_S,
+									QueryParameters.FLR_BREITE_S,
+									QueryParameters.FLR_BREITE_M,
+									QueryParameters.FLR_BREITE_L,
+									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+									QueryParameters.FLR_BREITE_M,
+									QueryParameters.FLR_BREITE_M,
+									QueryParameters.FLR_BREITE_M,
+									QueryParameters.FLR_BREITE_M },
+							new String[] {
+									"id",
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_ARBEITSGANG,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_UNTERARBEITSGANG,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_I_MASCHINENVERSATZTAGE,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_FLRMASCHINE
+											+ "."
+											+ ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_FLRARTIKEL
+											+ ".c_nr",
+									Facade.NICHT_SORTIERBAR,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_N_PPM,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_L_RUESTZEIT,
+									StuecklisteFac.FLR_STUECKLISTEARBEITSPLAN_L_STUECKZEIT,
+									Facade.NICHT_SORTIERBAR }));
+				}
 			}
 
 		} catch (RemoteException ex) {

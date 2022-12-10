@@ -41,7 +41,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "SystemrollefindByCBez", query = "SELECT OBJECT(C) FROM Systemrolle c WHERE c.cBez = ?1") })
+@NamedQueries( { @NamedQuery(name = "SystemrollefindByCBez", query = "SELECT OBJECT(C) FROM Systemrolle c WHERE c.cBez = ?1"),
+	@NamedQuery(name = "SystemrollefindAll", query = "SELECT OBJECT(C) FROM Systemrolle c ORDER BY c.cBez")})
 @Entity
 @Table(name = "PERS_SYSTEMROLLE")
 public class Systemrolle implements Serializable {

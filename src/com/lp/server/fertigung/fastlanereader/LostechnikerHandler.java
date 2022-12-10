@@ -103,7 +103,7 @@ public class LostechnikerHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
-//			Locale locUI = theClientDto.getLocUi();
+			// Locale locUI = theClientDto.getLocUi();
 			while (resultListIterator.hasNext()) {
 				FLRLostechniker losab = (FLRLostechniker) resultListIterator
 						.next();
@@ -225,16 +225,16 @@ public class LostechnikerHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_LOSTECHNIKER+FertigungFac.FLR_LOSTECHNIKER_FLRPERSONAL+"."
+				orderBy.append(FLR_LOSTECHNIKER
+						+ FertigungFac.FLR_LOSTECHNIKER_FLRPERSONAL + "."
 						+ PersonalFac.FLR_PERSONAL_FLRPARTNER + "."
 						+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1
 						+ " ASC ");
-				orderBy.append(FLR_LOSTECHNIKER).append("t_aendern").append(
-						" ASC ");
+			
 				sortAdded = true;
 			}
-			if (orderBy
-					.indexOf(FLR_LOSTECHNIKER + FertigungFac.FLR_LOSKLASSE_I_ID) < 0) {
+			if (orderBy.indexOf(FLR_LOSTECHNIKER
+					+ FertigungFac.FLR_LOSKLASSE_I_ID) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -243,8 +243,8 @@ public class LostechnikerHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_LOSTECHNIKER).append(
-						FertigungFac.FLR_LOSKLASSE_I_ID).append(" ");
+				orderBy.append(" ").append(FLR_LOSTECHNIKER)
+						.append(FertigungFac.FLR_LOSKLASSE_I_ID).append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -278,8 +278,8 @@ public class LostechnikerHandler extends UseCaseHandler {
 				session = factory.openSession();
 				String queryString = "select " + FLR_LOSTECHNIKER
 						+ FertigungFac.FLR_LOSKLASSE_I_ID
-						+ FLR_LOSTECHNIKER_FROM_CLAUSE + this.buildWhereClause()
-						+ this.buildOrderByClause();
+						+ FLR_LOSTECHNIKER_FROM_CLAUSE
+						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -333,6 +333,7 @@ public class LostechnikerHandler extends UseCaseHandler {
 
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,

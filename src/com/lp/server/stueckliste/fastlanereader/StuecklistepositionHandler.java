@@ -33,6 +33,7 @@
 package com.lp.server.stueckliste.fastlanereader;
 
 import java.awt.Color;
+import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
@@ -46,16 +47,28 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellistespr;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelsperren;
 import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.LagerFac;
+import com.lp.server.artikel.service.SperrenIcon;
+import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteposition;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeStuecklistePosition;
 import com.lp.server.system.jcr.service.docnode.DocPath;
+import com.lp.server.system.service.EinheitDto;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -92,6 +105,10 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	boolean bArtikelfreigabe = false;
+
+	boolean bLagerinfo = false;
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 
 		QueryResult result = null;
@@ -108,7 +125,11 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "SELECT stuecklisteposition,(SELECT distinct s.artikel_i_id FROM FLRArtikelsperren as s WHERE s.artikel_i_id=stuecklisteposition.flrartikel.i_id) as sperren, aspr from FLRStuecklisteposition stuecklisteposition  LEFT OUTER JOIN stuecklisteposition.flrartikel.artikelsprset AS aspr "
+			String queryString = "SELECT stuecklisteposition,(SELECT s FROM FLRArtikelsperren as s WHERE s.artikel_i_id=stuecklisteposition.flrartikel.i_id AND s.i_sort=1) as sperren, aspr,(SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=stuecklisteposition.flrartikel.i_id AND artikellager.flrlager.mandant_c_nr='"
+					+ theClientDto.getMandant()
+					+ "'  AND artikellager.flrlager.b_konsignationslager=0 AND artikellager.flrlager.lagerart_c_nr NOT IN('"
+					+ LagerFac.LAGERART_WERTGUTSCHRIFT
+					+ "')), (SELECT sum(fm.n_menge) FROM FLRFehlmenge AS fm WHERE fm.artikel_i_id=stuecklisteposition.flrartikel.i_id), (SELECT sum(ar.n_menge) FROM FLRArtikelreservierung AS ar WHERE ar.flrartikel.i_id=stuecklisteposition.flrartikel.i_id), (SELECT sum(bs.n_menge) FROM FLRArtikelbestellt AS bs WHERE bs.flrartikel.i_id=stuecklisteposition.flrartikel.i_id)  from FLRStuecklisteposition stuecklisteposition  LEFT OUTER JOIN stuecklisteposition.flrartikel.artikelsprset AS aspr "
 					+ this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -123,22 +144,18 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 				FLRStuecklisteposition stuecklisteposition = (FLRStuecklisteposition) o[0];
 				rows[row][col++] = stuecklisteposition.getI_id();
 
-				StuecklisteDto stuecklisteDto = getStuecklisteFac()
-						.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
-								stuecklisteposition.getFlrartikel().getI_id(),
-								theClientDto);
+				StuecklisteDto stuecklisteDto = getStuecklisteFac().stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+						stuecklisteposition.getFlrartikel().getI_id(), theClientDto);
 				if (stuecklisteDto == null) {
 					rows[row][col++] = null;
 				} else {
 					rows[row][col++] = stuecklisteDto.getStuecklisteartCNr().trim();
 				}
-				ArtikelDto dto = getArtikelFac().artikelFindByPrimaryKeySmall(
-						stuecklisteposition.getFlrartikel().getI_id(),
-						theClientDto);
+				ArtikelDto dto = getArtikelFac()
+						.artikelFindByPrimaryKeySmall(stuecklisteposition.getFlrartikel().getI_id(), theClientDto);
 
-				if (dto.getArtikelartCNr() != null
-						&& dto.getArtikelartCNr()
-								.equals(com.lp.server.artikel.service.ArtikelFac.ARTIKELART_HANDARTIKEL)) {
+				if (dto.getArtikelartCNr() != null && dto.getArtikelartCNr()
+						.equals(com.lp.server.artikel.service.ArtikelFac.ARTIKELART_HANDARTIKEL)) {
 					rows[row][col++] = "";
 
 				} else {
@@ -146,12 +163,15 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 
 				}
 
+				if (bReferenznummerInPositionen) {
+					rows[row][col++] = dto.getCReferenznr();
+				}
+
 				FLRArtikellistespr aspr = (FLRArtikellistespr) o[2];
 				if (aspr != null) {
 					String cBez = aspr.getC_bez();
 
-					if (cBez != null && cBez.length() > 0
-							&& aspr.getC_zbez() != null) {
+					if (cBez != null && cBez.length() > 0 && aspr.getC_zbez() != null) {
 						cBez += " " + aspr.getC_zbez();
 					}
 
@@ -161,27 +181,101 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 				}
 
 				rows[row][col++] = stuecklisteposition.getN_menge();
+
+				if (stuecklisteposition.getEinheit_c_nr() != null) {
+
+					try {
+						EinheitDto einheitDto = getSystemFac()
+								.einheitFindByPrimaryKey(stuecklisteposition.getEinheit_c_nr(), theClientDto);
+						if (einheitDto.getIDimension() > 0) {
+							rows[row][col++] = SystemFac.EINHEIT_STUECK.trim();
+						} else {
+							rows[row][col++] = stuecklisteposition.getEinheit_c_nr().trim();
+						}
+					}  catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+
+				} else {
+					rows[row][col++] = null;
+				}
+
+				if (Helper.short2boolean(stuecklisteposition.getB_ruestmenge())) {
+					rows[row][col++] = "R";
+				} else {
+					rows[row][col++] = null;
+				}
+
+				if (bLagerinfo) {
+
+					BigDecimal lagerstand = (BigDecimal) o[3];
+					if (lagerstand == null) {
+						lagerstand = BigDecimal.ZERO;
+					}
+
+					BigDecimal fehlmenge = (BigDecimal) o[4];
+					if (fehlmenge == null) {
+						fehlmenge = BigDecimal.ZERO;
+					}
+
+					BigDecimal reservierungen = (BigDecimal) o[5];
+					if (reservierungen == null) {
+						reservierungen = BigDecimal.ZERO;
+					}
+
+					BigDecimal bestellt = (BigDecimal) o[6];
+					if (bestellt == null) {
+						bestellt = BigDecimal.ZERO;
+					}
+
+					rows[row][col++] = lagerstand;
+					rows[row][col++] = lagerstand.subtract(fehlmenge.add(reservierungen));
+					rows[row][col++] = bestellt;
+
+				}
+
 				rows[row][col++] = stuecklisteposition.getC_position();
-				rows[row][col++] = new Boolean(
-						Helper.short2boolean(stuecklisteposition
-								.getB_mitdrucken()));
+				rows[row][col++] = new Boolean(Helper.short2boolean(stuecklisteposition.getB_mitdrucken()));
 
-				if (o[1] != null) {
-					rows[row][col++] = LocaleFac.STATUS_GESPERRT;
+				FLRArtikelsperren as = (FLRArtikelsperren) o[1];
+
+				if (as != null) {
+					rows[row][col++] = as.getFlrsperren().getC_bez();
 				} else {
 					rows[row][col++] = null;
 				}
 
-				if (stuecklisteposition.getPosersatzset().size() > 0) {
-					rows[row][col++] = new Color(89, 188, 41);
-				} else {
-					rows[row][col++] = null;
+				if (bArtikelfreigabe) {
+
+					if (dto.getTFreigabe() != null) {
+						rows[row][col++] = FertigungFac.STATUS_ERLEDIGT;
+					} else {
+						rows[row][col++] = null;
+					}
+
 				}
+
+				if (stuecklisteposition.getX_formel() != null && stuecklisteposition.getX_formel().length() > 0) {
+					rows[row][col++] = new Color(88, 193, 218);
+				} else {
+					if (stuecklisteposition.getPosersatzset().size() > 0) {
+						rows[row][col++] = new Color(89, 188, 41);
+					} else {
+						if (!stuecklisteposition.getFlrartikel().getArtikelart_c_nr()
+								.equals(ArtikelFac.ARTIKELART_HANDARTIKEL)
+								&& Helper.short2boolean(stuecklisteposition.getFlrartikel().getB_versteckt())) {
+							rows[row][col++] = Color.LIGHT_GRAY;
+						} else {
+							rows[row][col++] = null;
+						}
+
+					}
+				}
+
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -201,8 +295,7 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 		try {
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -221,8 +314,8 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -233,8 +326,7 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -245,16 +337,13 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" upper(stuecklisteposition."
-								+ filterKriterien[i].kritName + ")");
+						where.append(" upper(stuecklisteposition." + filterKriterien[i].kritName + ")");
 					} else {
-						where.append(" stuecklisteposition."
-								+ filterKriterien[i].kritName);
+						where.append(" stuecklisteposition." + filterKriterien[i].kritName);
 					}
 					where.append(" " + filterKriterien[i].operator);
 					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toUpperCase());
+						where.append(" " + filterKriterien[i].value.toUpperCase());
 					} else {
 						where.append(" " + filterKriterien[i].value);
 					}
@@ -281,15 +370,13 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(""
-									+ kriterien[i].kritName);
+							orderBy.append("" + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -300,13 +387,10 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("stuecklisteposition."
-						+ StuecklisteFac.FLR_STUECKLISTEPOSITION_I_SORT
-						+ " ASC ");
+				orderBy.append("stuecklisteposition." + StuecklisteFac.FLR_STUECKLISTEPOSITION_I_SORT + " ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("stuecklisteposition."
-					+ StuecklisteFac.FLR_STUECKLISTEPOSITION_I_SORT) < 0) {
+			if (orderBy.indexOf("stuecklisteposition." + StuecklisteFac.FLR_STUECKLISTEPOSITION_I_SORT) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -315,8 +399,7 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" stuecklisteposition."
-						+ StuecklisteFac.FLR_STUECKLISTEPOSITION_I_SORT + " ");
+				orderBy.append(" stuecklisteposition." + StuecklisteFac.FLR_STUECKLISTEPOSITION_I_SORT + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -335,8 +418,7 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 		return "from FLRStuecklisteposition stuecklisteposition   LEFT OUTER JOIN stuecklisteposition.flrartikel.artikelsprset AS aspr  ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -385,65 +467,100 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+
+		int iNachkommastellenMenge = 2;
 
 		try {
-			if (super.getTableInfo() == null) {
-				String mandantCNr = theClientDto.getMandant();
-				Locale locUI = theClientDto.getLocUi();
+			iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(theClientDto.getMandant());
 
-				int iNachkommastellenMenge = getMandantFac()
-						.getNachkommastellenMenge(mandantCNr);
-
-				setTableInfo(new TableInfo(
-						new Class[] {
-								Integer.class,
-								String.class,
-								String.class,
-								String.class,
-								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								String.class, Boolean.class, Icon.class,
-								Color.class },
-						new String[] {
-								"Id",
-								getTextRespectUISpr("stkl.unterstkl",
-										mandantCNr, locUI),
-								getTextRespectUISpr("artikel.artikelnummer",
-										mandantCNr, locUI),
-								getTextRespectUISpr("lp.bezeichnung",
-										mandantCNr, locUI),
-								getTextRespectUISpr("lp.menge", mandantCNr,
-										locUI),
-								getTextRespectUISpr("lp.position", mandantCNr,
-										locUI),
-								getTextRespectUISpr(
-										"stkl.pos.aufbelegmitdrucken",
-										mandantCNr, locUI), "S", "" },
-						new int[] {
-								-1, // diese Spalte wird ausgeblendet
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_L,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_S, // TRUE/FALSE
-								QueryParameters.FLR_BREITE_S, 1 },
-						new String[] {
-								"id",
-								Facade.NICHT_SORTIERBAR,
-								"stuecklisteposition."+StuecklisteFac.FLR_STUECKLISTEPOSITION_FLRARTIKEL
-										+ ".c_nr",
-								"aspr.c_bez",
-								"stuecklisteposition."+StuecklisteFac.FLR_STUECKLISTEPOSITION_N_MENGE,
-								"stuecklisteposition."+StuecklisteFac.FLR_STUECKLISTEPOSITION_C_POSITION,
-								"stuecklisteposition."+StuecklisteFac.FLR_STUECKLISTEPOSITION_B_MITDRUCKEN,
-								Facade.NICHT_SORTIERBAR, "" }));
-			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
-			return null;
 		}
-		return super.getTableInfo();
+
+		columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+		columns.add("stkl.unterstkl", String.class, getTextRespectUISpr("stkl.unterstkl", mandant, locUi),
+				QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+		columns.add("artikel.artikelnummer", String.class, getTextRespectUISpr("artikel.artikelnummer", mandant, locUi),
+				QueryParameters.FLR_BREITE_L,
+				"stuecklisteposition." + StuecklisteFac.FLR_STUECKLISTEPOSITION_FLRARTIKEL + ".c_nr");
+
+		if (bReferenznummerInPositionen) {
+			columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM,
+					"stuecklisteposition." + FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL + ".c_referenznr");
+		}
+
+		columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, "aspr.c_bez");
+		columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+				getTextRespectUISpr("lp.menge", mandant, locUi), QueryParameters.FLR_BREITE_M,
+				"stuecklisteposition." + StuecklisteFac.FLR_STUECKLISTEPOSITION_N_MENGE);
+		columns.add("lp.einheit", String.class, getTextRespectUISpr("lp.einheit", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, "stuecklisteposition.einheit_c_nr");
+		columns.add("stkl.ruestmenge", String.class, getTextRespectUISpr("stkl.ruestmenge", mandant, locUi),
+				QueryParameters.FLR_BREITE_XXS, "stuecklisteposition.b_ruestmenge");
+		// PJ21663
+		if (bLagerinfo) {
+			columns.add("lp.lagerstand", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.lagerstand", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.verfuegbar", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.verfuegbar", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.bestellt", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.bestellt", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+		}
+
+		columns.add("lp.position", String.class, getTextRespectUISpr("lp.position", mandant, locUi),
+				QueryParameters.FLR_BREITE_M,
+				"stuecklisteposition." + StuecklisteFac.FLR_STUECKLISTEPOSITION_C_POSITION);
+		columns.add("stk.aufbelegmitdrucken", Boolean.class,
+				getTextRespectUISpr("stk.aufbelegmitdrucken", mandant, locUi), QueryParameters.FLR_BREITE_S,
+				"stuecklisteposition." + StuecklisteFac.FLR_STUECKLISTEPOSITION_B_MITDRUCKEN,
+				getTextRespectUISpr("stk.aufbelegmitdrucken.tooltip", mandant, locUi));
+		columns.add("stk.sperre", SperrenIcon.class, getTextRespectUISpr("stk.sperre", mandant, locUi),
+				QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR,
+				getTextRespectUISpr("stk.sperre.tooltip", mandant, locUi));
+
+		if (bArtikelfreigabe == true) {
+			columns.add("IconFreigabe", Icon.class, getTextRespectUISpr("ww.freigabe", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, "stuecklisteposition.flrartikel.t_freigabe");
+		}
+
+		columns.add("Color", Color.class, "", 1, Facade.NICHT_SORTIERBAR);
+
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ARTIKELFREIGABE,
+				theClientDto)) {
+			bArtikelfreigabe = true;
+		}
+
+		try {
+			ParametermandantDto paramOhne = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_STUECKLISTE, ParameterFac.PARAMETER_LAGERINFO_IN_POSITIONEN);
+			bLagerinfo = (Boolean) paramOhne.getCWertAsObject();
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
@@ -451,13 +568,11 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 		StuecklisteDto stuecklisteDto = null;
 		ArtikelDto artikelDto = null;
 		try {
-			stuecklistepositionDto = getStuecklisteFac()
-					.stuecklistepositionFindByPrimaryKey((Integer) key,
-							theClientDto);
-			stuecklisteDto = getStuecklisteFac().stuecklisteFindByPrimaryKey(
-					stuecklistepositionDto.getStuecklisteIId(), theClientDto);
-			artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-					stuecklisteDto.getArtikelIId(), theClientDto);
+			stuecklistepositionDto = getStuecklisteFac().stuecklistepositionFindByPrimaryKey((Integer) key,
+					theClientDto);
+			stuecklisteDto = getStuecklisteFac().stuecklisteFindByPrimaryKey(stuecklistepositionDto.getStuecklisteIId(),
+					theClientDto);
+			artikelDto = getArtikelFac().artikelFindByPrimaryKey(stuecklisteDto.getArtikelIId(), theClientDto);
 			stuecklisteDto.setArtikelDto(artikelDto);
 		} catch (Exception e) {
 			// Nicht gefunden
@@ -470,8 +585,7 @@ public class StuecklistepositionHandler extends UseCaseHandler {
 			// + artikelDto.getCNr().replace("/", ".") + "/"
 			// + "Stuecklistenpositionen/" + "Position "
 			// + stuecklistepositionDto.getIId();
-			DocPath docPath = new DocPath(new DocNodeStuecklistePosition(
-					stuecklistepositionDto, artikelDto));
+			DocPath docPath = new DocPath(new DocNodeStuecklistePosition(stuecklistepositionDto, artikelDto));
 			return new PrintInfoDto(docPath, null, getSTable());
 		} else {
 			return null;

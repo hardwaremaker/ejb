@@ -47,7 +47,7 @@ public interface ProjektServiceFac {
 
 	public static final String PROJEKTKATEGORIE_PROJEKT = "Projekt        ";
 
-	public static final String PROJEKTTYP_BUG = "Bug";
+	public static final String PROJEKTTYP_TODO = "ToDo";
 
 	public static final String PROJEKTKONTAKTART_EMAIL = "Email";
 
@@ -58,6 +58,11 @@ public interface ProjektServiceFac {
 	public static final String PROJEKT_STATUS_ERLEDIGT = LocaleFac.STATUS_ERLEDIGT;
 	public static final String PROJEKT_STATUS_FERTIG = LocaleFac.STATUS_FERTIG;
 	public static final String PROJEKT_STATUS_STORNIERT = LocaleFac.STATUS_STORNIERT;
+	
+	public static final int PROJEKT_VERRECHENBAR_NICHT_DEFINIERT=0;
+	public static final int PROJEKT_VERRECHENBAR_VERRECHENBAR=1;
+	public static final int PROJEKT_VERRECHENBAR_NICHT_VERRECHENBAR=2;
+	
 
 	public boolean sindErledigugnsgruendeVorhanden(TheClientDto theclientDto);
 
@@ -189,4 +194,65 @@ public interface ProjektServiceFac {
 			Integer iId);
 
 	public void vertauscheBereich(Integer iId1I, Integer iId2I);
+
+	public ProjekttechnikerDto projekttechnikerFindByPrimaryKey(Integer iId);
+
+	public void removeProjekttechniker(ProjekttechnikerDto projekttechnikerDto);
+
+	public void updateProjekttechniker(ProjekttechnikerDto projekttechnikerDto,
+			TheClientDto theClientDto);
+
+	public Integer createProjekttechniker(
+			ProjekttechnikerDto projekttechnikerDto, TheClientDto theClientDto);
+
+	public Integer createProjekttaetigkeit(
+			ProjekttaetigkeitDto projekttaetigkeitDto, TheClientDto theClientDto);
+
+	public void removeProjekttaetigkeit(ProjekttaetigkeitDto dto);
+
+	public void updateProjekttaetigkeit(ProjekttaetigkeitDto dto,
+			TheClientDto theClientDto);
+
+	public ProjekttaetigkeitDto projekttaetigkeitFindByPrimaryKey(Integer iId);
+	public ProjekttaetigkeitDto[] projekttaetigkeitFindByProjektIId(Integer projektIId);
+
+	public static final String FLR_PROJEKTTECHNIKER_FLRPROJEKT = "flrprojekt";
+	public static final String FLR_PROJEKTTECHNIKER_FLRPERSONAL = "flrpersonal";
+
+	public static final String FLR_PROJEKTTAETIGKEIT_FLRPROJEKT = "flrprojekt";
+	public static final String FLR_PROJEKTTAETIGKEIT_FLRARTIKEL = "flrartikel";
+	
+	public boolean istTaetigkeitBeiProjekthinterlegt(Integer projektIId,
+			Integer artikelIId);
+	public boolean istMeinProjekt(Integer projektIId, Integer personalIId);
+	
+	public ProjektgruppeDto projektgruppeFindByPrimaryKey(Integer iId);
+	public void removeProjektgruppe(ProjektgruppeDto projektgruppeDto);
+	public void updateProjektgruppe(ProjektgruppeDto projektgruppeDto,
+			TheClientDto theClientDto);
+	public Integer createProjektgruppe(ProjektgruppeDto projektgruppeDto,
+			TheClientDto theClientDto);
+	
+	public Integer createVkfortschritt(VkfortschrittDto dto,
+			TheClientDto theClientDto);
+	public void updateVkfortschritt(VkfortschrittDto dto,
+			TheClientDto theClientDto);
+	public void removeVkfortschritt(VkfortschrittDto dto,
+			TheClientDto theClientDto);
+	public VkfortschrittDto vkfortschrittFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto);
+	
+	public void vertauscheVkfortschritt(Integer iId1I, Integer iId2I);
+	public Map getAllSprVkfortschritt(TheClientDto theClientDto);
+	public Map getAllLeadstatus(TheClientDto theClientDto);
+	
+	public boolean esGibtMindestensEinenBereichMitBetreiber(TheClientDto theClientDto);
+	
+	public boolean esGibtMindestensEinenBereichMitArtikel(TheClientDto theClientDto);
+	
+	public int getAnzahlTechniker(Integer projektIId);
+	public HistoryartDto getHistoryartInAuswahllisteAnzeigen( TheClientDto theClientDto);
+	public String getTextVerrechenbar(Integer iVerrechenbar,TheClientDto theClientDto);
+	public Map getAllVerrechenbar(TheClientDto theClientDto);
+	
 }

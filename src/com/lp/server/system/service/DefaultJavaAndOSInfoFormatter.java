@@ -37,7 +37,7 @@ public class DefaultJavaAndOSInfoFormatter implements IJavaAndOSInfoFormatter {
 	@Override
 	public String format(ServerJavaAndOSInfo javaInfo) {
 		StringBuffer sb = new StringBuffer();
-		sb.append(getLineInfo("java.vendor", javaInfo.getVmVendor()));
+		sb.append(getLineInfo("java.vendor", javaInfo.getVendor()));
 		sb.append(getLineInfo("java.version", javaInfo.getVmVersion()));
 		sb.append(getLineInfo("os.name", javaInfo.getOsName()));
 		sb.append(getLineInfo("os.version", javaInfo.getOsVersion())) ;

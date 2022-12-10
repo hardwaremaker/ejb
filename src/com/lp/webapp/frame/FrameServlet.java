@@ -40,6 +40,7 @@ import java.util.Date;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.SingleThreadModel;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -103,8 +104,19 @@ abstract public class FrameServlet extends HttpServlet implements
 
 		TheClient client = null;
 		HttpSession session = request.getSession(true);
+		
+		//WILDFLY SP7675
+		if (request.getParameter("JSESSIONID") != null) {
+		    Cookie userCookie = new Cookie("JSESSIONID", request.getParameter("JSESSIONID"));
+		    response.addCookie(userCookie);
+		} else {
+		    String sessionId = session.getId();
+		    Cookie userCookie = new Cookie("JSESSIONID", sessionId);
+		    response.addCookie(userCookie);
+		}
+		
 		System.out.println("session geholt: " + session);
-
+		System.out.println("CREATION_TIME:"+new java.sql.Timestamp( session.getCreationTime()));
 		try {
 			client = (TheClient) session.getAttribute(session.getId());
 			System.out.println("client geholt: " + client);

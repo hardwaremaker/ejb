@@ -41,8 +41,8 @@ import com.lp.server.system.service.HvDtoLogIdCBez;
 import com.lp.server.system.service.HvDtoLogIgnore;
 import com.lp.service.BelegpositionDto;
 
-@HvDtoLogClass(name=HvDtoLogClass.STUECKLISTE_ARBEITSPLAN, filtername=HvDtoLogClass.STUECKLISTE)
-public class StuecklistearbeitsplanDto  extends BelegpositionDto{
+@HvDtoLogClass(name = HvDtoLogClass.STUECKLISTE_ARBEITSPLAN, filtername = HvDtoLogClass.STUECKLISTE)
+public class StuecklistearbeitsplanDto extends BelegpositionDto {
 	/**
 	 * 
 	 */
@@ -50,7 +50,7 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 	private Integer iId;
 	private Integer stuecklisteIId;
 	private Integer iArbeitsgang;
-//	private Integer artikelIId;
+	// private Integer artikelIId;
 	private Long lStueckzeit;
 	private Long lRuestzeit;
 	private String cKommentar;
@@ -60,8 +60,49 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 	private Integer iUnterarbeitsgang;
 	private Short bNurmaschinenzeit;
 	private Integer iMaschinenversatztage;
+
+	private Integer iMitarbeitergleichzeitig;
+
+	public Integer getIMitarbeitergleichzeitig() {
+		return iMitarbeitergleichzeitig;
+	}
+
+	public void setIMitarbeitergleichzeitig(Integer iMitarbeitergleichzeitig) {
+		this.iMitarbeitergleichzeitig = iMitarbeitergleichzeitig;
+	}
+
+	private String xFormel;
+
+	public String getXFormel() {
+		return xFormel;
+	}
+
+	public void setXFormel(String formel) {
+		this.xFormel = formel;
+	}
+
+	private Integer apkommentarIId;
+
+	public Integer getApkommentarIId() {
+		return apkommentarIId;
+	}
+
+	public void setApkommentarIId(Integer apkommentarIId) {
+		this.apkommentarIId = apkommentarIId;
+	}
+
+	private BigDecimal nPpm;
+
+	public BigDecimal getNPpm() {
+		return nPpm;
+	}
+
+	public void setNPpm(BigDecimal nPpm) {
+		this.nPpm = nPpm;
+	}
+
 	private Integer stuecklistepositionIId;
-	
+
 	public Integer getStuecklistepositionIId() {
 		return stuecklistepositionIId;
 	}
@@ -94,9 +135,6 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 		iUnterarbeitsgang = unterarbeitsgang;
 	}
 
-	public BigDecimal nMengeWennHilfsstueckliste;
-	
-	
 	public String getAgartCNr() {
 		return agartCNr;
 	}
@@ -114,10 +152,9 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 	}
 
 	private Integer iAufspannung;
-	
 
 	private Integer maschineIId;
-	
+
 	public Integer getStuecklisteIId() {
 		return stuecklisteIId;
 	}
@@ -134,6 +171,15 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 		this.iArbeitsgang = iArbeitsgang;
 	}
 
+	
+	public Long getLStueckzeitDurchMitarbeitergleichzeitig(){
+		if(getIMitarbeitergleichzeitig()!=null && getIMitarbeitergleichzeitig()>0){
+			return lStueckzeit/getIMitarbeitergleichzeitig();
+		} else {
+			return lStueckzeit;
+		}
+	}
+	
 	public Long getLStueckzeit() {
 		return lStueckzeit;
 	}
@@ -167,7 +213,7 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 		return artikelDto;
 	}
 
-	@HvDtoLogIdCBez(entityClass=Maschine.class)
+	@HvDtoLogIdCBez(entityClass = Maschine.class)
 	public Integer getMaschineIId() {
 		return maschineIId;
 	}
@@ -184,6 +230,101 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 		this.maschineIId = maschineIId;
 	}
 
+	public boolean istGleich(StuecklistearbeitsplanDto obj) {
+		StuecklistearbeitsplanDto other = (StuecklistearbeitsplanDto) obj;
+
+		if (super.getArtikelIId() == null) {
+			if (other.getArtikelIId() != null)
+				return false;
+		} else if (!super.getArtikelIId().equals(other.getArtikelIId()))
+			return false;
+
+		if (cKommentar == null) {
+			if (other.cKommentar != null)
+				return false;
+		} else if (!cKommentar.equals(other.cKommentar))
+			return false;
+
+		if (xLangtext == null) {
+			if (other.xLangtext != null)
+				return false;
+		} else if (!xLangtext.equals(other.xLangtext))
+			return false;
+
+		if (lRuestzeit == null) {
+			if (other.lRuestzeit != null)
+				return false;
+		} else if (!lRuestzeit.equals(other.lRuestzeit))
+			return false;
+
+		if (lStueckzeit == null) {
+			if (other.lStueckzeit != null)
+				return false;
+		} else if (!lStueckzeit.equals(other.lStueckzeit))
+			return false;
+
+		if (maschineIId == null) {
+			if (other.maschineIId != null)
+				return false;
+		} else if (!maschineIId.equals(other.maschineIId))
+			return false;
+
+		if (agartCNr == null) {
+			if (other.agartCNr != null)
+				return false;
+		} else if (!agartCNr.equals(other.agartCNr))
+			return false;
+
+		if (iAufspannung == null) {
+			if (other.iAufspannung != null)
+				return false;
+		} else if (!iAufspannung.equals(other.iAufspannung))
+			return false;
+
+		if (iArbeitsgang == null) {
+			if (other.iArbeitsgang != null)
+				return false;
+		} else if (!iArbeitsgang.equals(other.iArbeitsgang))
+			return false;
+
+		if (iUnterarbeitsgang == null) {
+			if (other.iUnterarbeitsgang != null)
+				return false;
+		} else if (!iUnterarbeitsgang.equals(other.iUnterarbeitsgang))
+			return false;
+
+		if (bNurmaschinenzeit == null) {
+			if (other.bNurmaschinenzeit != null)
+				return false;
+		} else if (!bNurmaschinenzeit.equals(other.bNurmaschinenzeit))
+			return false;
+
+		if (iMaschinenversatztage == null) {
+			if (other.iMaschinenversatztage != null)
+				return false;
+		} else if (!iMaschinenversatztage.equals(other.iMaschinenversatztage))
+			return false;
+
+		if (apkommentarIId == null) {
+			if (other.apkommentarIId != null)
+				return false;
+		} else if (!apkommentarIId.equals(other.apkommentarIId))
+			return false;
+
+		if (nPpm == null) {
+			if (other.nPpm != null)
+				return false;
+		} else if (!nPpm.equals(other.nPpm))
+			return false;
+
+		if (xFormel == null) {
+			if (other.xFormel != null)
+				return false;
+		} else if (!xFormel.equals(other.xFormel))
+			return false;
+		return true;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -198,9 +339,9 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 		if (!(that.iArbeitsgang == null ? this.iArbeitsgang == null
 				: that.iArbeitsgang.equals(this.iArbeitsgang)))
 			return false;
-//		if (!(that.artikelIId == null ? this.artikelIId == null
-//				: that.artikelIId.equals(this.artikelIId)))
-//			return false;
+		// if (!(that.artikelIId == null ? this.artikelIId == null
+		// : that.artikelIId.equals(this.artikelIId)))
+		// return false;
 		if (!(that.lStueckzeit == null ? this.lStueckzeit == null
 				: that.lStueckzeit.equals(this.lStueckzeit)))
 			return false;
@@ -221,7 +362,7 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 		result = 37 * result + this.iId.hashCode();
 		result = 37 * result + this.stuecklisteIId.hashCode();
 		result = 37 * result + this.iArbeitsgang.hashCode();
-//		result = 37 * result + this.artikelIId.hashCode();
+		// result = 37 * result + this.artikelIId.hashCode();
 		result = 37 * result + this.lStueckzeit.hashCode();
 		result = 37 * result + this.lRuestzeit.hashCode();
 		result = 37 * result + this.cKommentar.hashCode();
@@ -234,7 +375,7 @@ public class StuecklistearbeitsplanDto  extends BelegpositionDto{
 		returnString += iId;
 		returnString += ", " + stuecklisteIId;
 		returnString += ", " + iArbeitsgang;
-//		returnString += ", " + artikelIId;
+		// returnString += ", " + artikelIId;
 		returnString += ", " + lStueckzeit;
 		returnString += ", " + lRuestzeit;
 		returnString += ", " + cKommentar;

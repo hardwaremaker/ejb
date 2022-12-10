@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.util.fastlanereader.service.query;
@@ -36,13 +36,13 @@ import java.io.Serializable;
 
 /**
  * This class holds result information of an executed query.
- * 
+ *
  * @author werner
  */
 public class QueryResult implements Serializable {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
@@ -80,9 +80,11 @@ public class QueryResult implements Serializable {
 	 */
 	private String[] tooltipData = null;
 
+	private IQueryResultData queryResultData ;
+
 	/**
 	 * Creates a new QueryResult instance with all attributes set.
-	 * 
+	 *
 	 * @param rowData
 	 *            the data page's rows.
 	 * @param rowCount
@@ -107,7 +109,7 @@ public class QueryResult implements Serializable {
 
 	/**
 	 * Creates a new QueryResult instance with all attributes set.
-	 * 
+	 *
 	 * @param rowData
 	 *            the data page's rows.
 	 * @param tooltipData
@@ -218,5 +220,22 @@ public class QueryResult implements Serializable {
 
 	public void setTooltipData(String[] tooltipData) {
 		this.tooltipData = tooltipData;
+	}
+
+	public IQueryResultData getResultData() {
+		return queryResultData ;
+	}
+
+	public void setResultData(IQueryResultData queryResultData) {
+		this.queryResultData = queryResultData ;
+	}
+	
+	/**
+	 * Gibt es zus&auml;tzliche - durch "Feature" im Handler eingebrachte - FLR-Daten?
+	 * 
+	 * @return false wenn es keine zus&auml;tzlichen FLR-Daten gibt (Standard)
+	 */
+	public boolean hasFlrData() {
+		return false ;
 	}
 }

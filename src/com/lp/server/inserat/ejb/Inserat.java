@@ -43,13 +43,15 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries({
 		@NamedQuery(name = "InseratfindByMandantCNrCnr", query = "SELECT OBJECT (o) FROM Inserat o WHERE o.mandantCNr=?1 AND o.cNr=?2"),
 		@NamedQuery(name = "InseratfindByLieferantIId", query = "SELECT OBJECT (o) FROM Inserat o WHERE o.lieferantIId=?1"),
 		@NamedQuery(name = "InseratfindByAnsprechpartnerIIdLieferant", query = "SELECT OBJECT (o) FROM Inserat o WHERE o.ansprechpartnerIIdLieferant=?1"),
 		@NamedQuery(name = "InseratfindByBestellpositionIId", query = "SELECT OBJECT (o) FROM Inserat o WHERE o.bestellpositionIId=?1") })
 @Entity
-@Table(name = "IV_INSERAT")
+@Table(name = ITablenames.IV_INSERAT)
 public class Inserat implements Serializable {
 	@Id
 	@Column(name = "I_ID")

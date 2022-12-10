@@ -51,6 +51,33 @@ public class EingangsrechnungAuftragszuordnungDto implements Serializable {
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
 
+	private Integer personalIIdErledigt;
+	private Timestamp tErledigt;
+	private Double fVerrechenbar;
+
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
+	
 	public Integer getIId() {
 		return iId;
 	}

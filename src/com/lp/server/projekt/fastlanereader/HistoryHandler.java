@@ -33,6 +33,7 @@
 package com.lp.server.projekt.fastlanereader;
 
 import java.awt.Color;
+import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -50,6 +51,8 @@ import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeProjektHistory;
 import com.lp.server.system.jcr.service.docnode.DocPath;
+import com.lp.server.util.Facade;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -101,8 +104,7 @@ public class HistoryHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 			session = setFilter(session);
@@ -119,32 +121,39 @@ public class HistoryHandler extends UseCaseHandler {
 			while (resultListIterator.hasNext()) {
 				FLRHistory history = (FLRHistory) resultListIterator.next();
 				rows[row][col++] = history.getI_id();
-				if (history.getFlrpersonal().getFlrpartner()
-						.getC_name2vornamefirmazeile2() == null) {
-					rows[row][col++] = history.getFlrpersonal().getFlrpartner()
-							.getC_name1nachnamefirmazeile1();
+
+				rows[row][col++] = HelperServer.formatPersonAusFLRPartner(history.getFlrpersonal().getFlrpartner());
+
+				if (history.getFlrpersonal_wirddurchgefuehrtvon() != null) {
+					rows[row][col++] = HelperServer
+							.formatPersonAusFLRPartner(history.getFlrpersonal_wirddurchgefuehrtvon().getFlrpartner());
 				} else {
-					rows[row][col++] = history.getFlrpersonal().getFlrpartner()
-							.getC_name1nachnamefirmazeile1()
-							+ " "
-							+ history.getFlrpersonal().getFlrpartner()
-									.getC_name2vornamefirmazeile2();
+					rows[row][col++] = null;
 				}
+
+				if (history.getFlrhistoryart() != null) {
+					rows[row][col++] = history.getFlrhistoryart().getC_bez();
+				} else {
+					rows[row][col++] = null;
+				}
+
 				rows[row][col++] = history.getC_titel();
 				rows[row][col++] = history.getT_belegdatum();
+				rows[row][col++] = history.getN_dauer_geplant();
+				rows[row][col++] = history.getT_aendern();
+
+				rows[row][col++] = history.getF_erledigungsgrad();
+
 				if (history.getFlrhistoryart() != null) {
-					rows[row][col++] = new Color(history.getFlrhistoryart()
-							.getI_rot(), history.getFlrhistoryart()
-							.getI_gruen(), history.getFlrhistoryart()
-							.getI_blau());
+					rows[row][col++] = new Color(history.getFlrhistoryart().getI_rot(),
+							history.getFlrhistoryart().getI_gruen(), history.getFlrhistoryart().getI_blau());
 				} else {
 					rows[row][col++] = null;
 				}
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		}
 
 		catch (Exception e) {
@@ -166,8 +175,7 @@ public class HistoryHandler extends UseCaseHandler {
 		try {
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -188,8 +196,8 @@ public class HistoryHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -200,8 +208,7 @@ public class HistoryHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -211,8 +218,7 @@ public class HistoryHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_HISTORY
-							+ filterKriterien[i].kritName);
+					where.append(" " + FLR_HISTORY + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -282,8 +288,7 @@ public class HistoryHandler extends UseCaseHandler {
 		return FLR_HISTORY_FROM_CLAUSE;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		this.getQuery().setSortKrit(sortierKriterien);
 
@@ -296,9 +301,8 @@ public class HistoryHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select flrhistory.i_id"
-						+ " from FLRHistory flrhistory "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "select flrhistory.i_id" + " from FLRHistory flrhistory " + this.buildWhereClause()
+						+ this.buildOrderByClause();
 
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -345,15 +349,15 @@ public class HistoryHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (projektDto != null) {
-//			String sPath = JCRDocFac.HELIUMV_NODE
-//					+ "/"
-//					+ theClientDto.getMandant()
-//					+ "/"
-//					+ LocaleFac.BELEGART_PROJEKT.trim()
-//					+ "/"
-//					+ getProjektServiceFac().bereichFindByPrimaryKey(
-//							projektDto.getBereichIId()).getCBez() + "/"
-//					+ projektDto.getCNr().replace("/", ".") + "/" + key;
+			// String sPath = JCRDocFac.HELIUMV_NODE
+			// + "/"
+			// + theClientDto.getMandant()
+			// + "/"
+			// + LocaleFac.BELEGART_PROJEKT.trim()
+			// + "/"
+			// + getProjektServiceFac().bereichFindByPrimaryKey(
+			// projektDto.getBereichIId()).getCBez() + "/"
+			// + projektDto.getCNr().replace("/", ".") + "/" + key;
 			DocPath docPath = new DocPath(new DocNodeProjektHistory(historyDto, projektDto, bereichDto));
 			return new PrintInfoDto(docPath, projektDto.getPartnerIId(), getSTable());
 		} else {
@@ -369,22 +373,27 @@ public class HistoryHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, java.sql.Timestamp.class,
-					Color.class }, new String[] {
-					"i_id",
-					getTextRespectUISpr("proj.label.angelegt", mandantCNr,
-							locUI),
-					getTextRespectUISpr("lp.titel", mandantCNr, locUI),
-					getTextRespectUISpr("lp.wann", mandantCNr, locUI) },
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class,
+							java.sql.Timestamp.class, BigDecimal.class, java.sql.Timestamp.class, Double.class,
+							Color.class },
+					new String[] { "i_id", getTextRespectUISpr("proj.label.angelegt", mandantCNr, locUI),
+							getTextRespectUISpr("proj.history.wirddurchgefuehrtvon", mandantCNr, locUI),
+							getTextRespectUISpr("lp.art", mandantCNr, locUI),
+							getTextRespectUISpr("lp.titel", mandantCNr, locUI),
+							getTextRespectUISpr("lp.wann", mandantCNr, locUI),
+							getTextRespectUISpr("proj.dauer.geplant", mandantCNr, locUI),
+							getTextRespectUISpr("proj.history.aenderungsdatum", mandantCNr, locUI),
+							getTextRespectUISpr("proj.history.erledigungsgrad", mandantCNr, locUI) },
 
-			new int[] {
-					-1, // diese Spalte wird ausgeblendet
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_XS },
 
-			new String[] { "i_id", "flrpersonal", "c_titel", "t_belegdatum" }));
+					new String[] { "i_id", "flrpersonal", "flrpersonal_wirddurchgefuehrtvon", "flrhistoryart",
+							"c_titel", "t_belegdatum", "n_dauer_geplant", "t_aendern", "f_erledigungsgrad" }));
 		}
 		return super.getTableInfo();
 	}

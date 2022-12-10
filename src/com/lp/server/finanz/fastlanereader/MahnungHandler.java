@@ -2,38 +2,38 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -46,13 +46,11 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzMahnung;
 import com.lp.server.finanz.service.FinanzFac;
-import com.lp.server.finanz.service.MahnungDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.rechnung.service.RechnungFac;
-import com.lp.server.system.jcr.service.PrintInfoDto;
-import com.lp.server.system.jcr.service.docnode.DocNodeRechnung;
-import com.lp.server.system.jcr.service.docnode.DocPath;
+import com.lp.server.rechnung.service.RechnungzahlungDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -84,10 +82,7 @@ import com.lp.util.EJBExceptionLP;
 
 public class MahnungHandler extends UseCaseHandler {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -5772315664197548929L;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -117,6 +112,8 @@ public class MahnungHandler extends UseCaseHandler {
 				rows[row][col++] = mahnung.getFlrrechnungreport()
 						.getFlrrechnungart().getC_nr().substring(0, 1);
 				rows[row][col++] = mahnung.getFlrrechnungreport().getC_nr();
+				rows[row][col++] = mahnung.getFlrrechnungreport()
+						.getStatus_c_nr();
 				rows[row][col++] = mahnung.getFlrrechnungreport().getFlrkunde()
 						.getFlrpartner().getC_name1nachnamefirmazeile1();
 
@@ -145,7 +142,6 @@ public class MahnungHandler extends UseCaseHandler {
 								.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
 							bdBruttoGesamt = bdBruttoGesamt.negate();
 						}
-						
 
 						BigDecimal bdBezahltFw = getRechnungFac()
 								.getBereitsBezahltWertVonRechnungFw(
@@ -155,31 +151,32 @@ public class MahnungHandler extends UseCaseHandler {
 								.getBereitsBezahltWertVonRechnungUstFw(
 										mahnung.getFlrrechnungreport()
 												.getI_id(), null);
-						
 
-						
-						
 						BigDecimal bdUstAnzahlungFW = new BigDecimal(0);
 						BigDecimal bdNettoAnzahlungFW = new BigDecimal(0);
 						if (mahnung.getFlrrechnungreport().getFlrauftrag() != null
-								&& mahnung.getFlrrechnungreport().getFlrrechnungart().getC_nr().equals(
-										RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)) {
-							bdNettoAnzahlungFW = 
-											getRechnungFac()
-													.getAnzahlungenZuSchlussrechnungFw(
-															mahnung.getFlrrechnungreport().getI_id());
+								&& mahnung
+										.getFlrrechnungreport()
+										.getFlrrechnungart()
+										.getC_nr()
+										.equals(RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)) {
+							bdNettoAnzahlungFW = getRechnungFac()
+									.getAnzahlungenZuSchlussrechnungFw(
+											mahnung.getFlrrechnungreport()
+													.getI_id());
 							bdUstAnzahlungFW = getRechnungFac()
-													.getAnzahlungenZuSchlussrechnungUstFw(
-															mahnung.getFlrrechnungreport().getI_id());
+									.getAnzahlungenZuSchlussrechnungUstFw(
+											mahnung.getFlrrechnungreport()
+													.getI_id());
 
 						}
-						
-						
-						
-						
-						rows[row][col++] = bdBruttoGesamt.subtract(bdUstAnzahlungFW).subtract(bdNettoAnzahlungFW);
-						rows[row][col++] = bdBruttoGesamt.subtract(bdUstAnzahlungFW).subtract(bdNettoAnzahlungFW).subtract(bdBezahltFw
-								.add(bdBezahltUstFw));
+
+						rows[row][col++] = bdBruttoGesamt.subtract(
+								bdUstAnzahlungFW).subtract(bdNettoAnzahlungFW);
+						rows[row][col++] = bdBruttoGesamt
+								.subtract(bdUstAnzahlungFW)
+								.subtract(bdNettoAnzahlungFW)
+								.subtract(bdBezahltFw.add(bdBezahltUstFw));
 
 					} else {
 						rows[row][col++] = null;
@@ -192,15 +189,41 @@ public class MahnungHandler extends UseCaseHandler {
 
 				rows[row][col++] = mahnung.getFlrrechnungreport()
 						.getWaehrung_c_nr();
+
+				rows[row][col++] = getZahlungsziel(mahnung
+						.getFlrrechnungreport().getZahlungsziel_i_id(),
+						theClientDto.getMandant());
+
+				RechnungzahlungDto[] zDtos=getRechnungFac().zahlungFindByRechnungIIdAbsteigendSortiert(mahnung
+						.getFlrrechnungreport().getI_id());
+				
+				if(zDtos!=null && zDtos.length>0){
+					rows[row][col++] = zDtos[0].getDZahldatum();
+					//SP5848
+					rows[row][col++] = zDtos[0].getNBetrag().add(zDtos[0].getNBetragUst());
+				} else {
+					rows[row][col++] = null;
+					rows[row][col++] = null;
+				}
+				
+				
+				rows[row][col++] = mahnung.getFlrrechnungreport().getC_mahnungsanmerkung();
+
 				if (mahnung.getFlrrechnungreport().getFlrvertreter() != null) {
 					rows[row][col++] = mahnung.getFlrrechnungreport()
 							.getFlrvertreter().getC_kurzzeichen();
 				} else {
 					rows[row][col++] = "";
 				}
+
 				rows[row][col++] = mahnung.getMahnstufe_i_id();
-				
+
 				rows[row][col++] = new Boolean(mahnung.getT_gedruckt() != null);
+
+				if (!mahnung.getFlrrechnungreport().getStatus_c_nr()
+						.equals(RechnungFac.STATUS_OFFEN))
+					rows[row][col++] = Color.RED;
+
 				row++;
 				col = 0;
 			}
@@ -347,7 +370,7 @@ public class MahnungHandler extends UseCaseHandler {
 	 */
 	private String getFromClause() {
 		return "from FLRFinanzMahnung as mahnung "
-				+ " left join mahnung.flrrechnungreport.flrvertreter as flrvertreter ";
+				+ " left join mahnung.flrrechnungreport as flrrechnungreport ";
 	}
 
 	/**
@@ -416,34 +439,60 @@ public class MahnungHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class, BigDecimal.class, BigDecimal.class,
-							String.class, String.class, Integer.class, Boolean.class },
+							String.class, String.class, BigDecimal.class,
+							BigDecimal.class, String.class, String.class,
+							java.util.Date.class, BigDecimal.class, String.class,
+							String.class, Integer.class, Boolean.class,
+							Color.class },
 					new String[] {
 							"Id",
 							"",
 							getTextRespectUISpr("lp.rechnr", mandantCNr, locUI),
+							getTextRespectUISpr("lp.status", mandantCNr, locUI),
 							getTextRespectUISpr("lp.kunde", mandantCNr, locUI),
 							getTextRespectUISpr("lp.bruttowert", mandantCNr,
 									locUI),
 							getTextRespectUISpr("lp.bruttooffen", mandantCNr,
 									locUI),
 							getTextRespectUISpr("lp.whg", mandantCNr, locUI),
+							getTextRespectUISpr("system.zahlungsziel",
+									mandantCNr, locUI),
+							getTextRespectUISpr(
+									"rech.mahnung.letzteszahldatum",
+									mandantCNr, locUI),
+							getTextRespectUISpr(
+									"rech.mahnung.letzterzahlbetrag",
+									mandantCNr, locUI),
+							getTextRespectUISpr(
+									"rech.mahnung.mahnungsanmerkung",
+									mandantCNr, locUI),
 							getTextRespectUISpr("lp.vertreter", mandantCNr,
 									locUI),
-							getTextRespectUISpr("lp.m", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bereitsgemahnt",
-									mandantCNr, locUI) },
+							getTextRespectUISpr("rechnung.mahnstufe",
+									mandantCNr, locUI),
+							getTextRespectUISpr("finanz.bereitsgemahnt",
+									mandantCNr, locUI), "" },
 					new int[] { -1, QueryParameters.FLR_BREITE_XXS,
-							QueryParameters.FLR_BREITE_M, -1,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_PREIS,
 							QueryParameters.FLR_BREITE_PREIS,
 							QueryParameters.FLR_BREITE_WAEHRUNG,
-							QueryParameters.FLR_BREITE_XS, 2, 2 },
+							QueryParameters.FLR_BREITE_L,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_XS,
+							QueryParameters.FLR_BREITE_XXS,
+							QueryParameters.FLR_BREITE_XXS, 0 },
 					new String[] {
 							FinanzFac.FLR_MAHNUNG_I_ID,
 							Facade.NICHT_SORTIERBAR,
 							FinanzFac.FLR_MAHNUNG_FLRRECHNUNGREPORT + "."
 									+ RechnungFac.FLR_RECHNUNG_C_NR,
+							FinanzFac.FLR_MAHNUNG_FLRRECHNUNGREPORT + "."
+									+ RechnungFac.FLR_RECHNUNG_STATUS_C_NR,
 							FinanzFac.FLR_MAHNUNG_FLRRECHNUNGREPORT
 									+ "."
 									+ RechnungFac.FLR_RECHNUNG_FLRKUNDE
@@ -454,13 +503,70 @@ public class MahnungHandler extends UseCaseHandler {
 							Facade.NICHT_SORTIERBAR,
 							FinanzFac.FLR_MAHNUNG_FLRRECHNUNGREPORT + "."
 									+ RechnungFac.FLR_RECHNUNG_WAEHRUNG_C_NR,
+							SystemFac.FLR_ZAHLUNGSZIEL_I_ID,
+							Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR,
 							FinanzFac.FLR_MAHNUNG_FLRRECHNUNGREPORT + "."
 									+ RechnungFac.FLR_RECHNUNG_FLRVERTRETER
 									+ "."
 									+ PersonalFac.FLR_PERSONAL_C_KURZZEICHEN,
 							FinanzFac.FLR_MAHNUNG_MAHNSTUFE_I_ID,
-							FinanzFac.FLR_MAHNUNG_T_GEDRUCKT }));
+							FinanzFac.FLR_MAHNUNG_T_GEDRUCKT, "" },
+					new String[] {
+							null,
+							null,
+							null,
+							null,
+							null,
+							null,
+							null,
+							null,
+							null,
+							null,
+							null,
+							null,
+							getTextRespectUISpr("rechnung.mahnstufe.tooltip",
+									mandantCNr, locUI),
+							getTextRespectUISpr(
+									"finanz.bereitsgemahnt.tooltip",
+									mandantCNr, locUI), null }));
 		}
 		return super.getTableInfo();
+	}
+
+	private String getZahlungsziel(Integer zahlungszielIid, String mandantCNr) {
+		String zahlungsziel = "";
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		Session session = null;
+		try {
+			session = factory.openSession();
+			session = setFilter(session);
+
+			String queryString = "SELECT zahlungsziel.c_bez FROM FLRZahlungsziel AS zahlungsziel"
+					+ " WHERE zahlungsziel.id = "
+					+ zahlungszielIid
+					+ " AND zahlungsziel.mandant_c_nr = "
+					+ "'"
+					+ mandantCNr
+					+ "'";
+
+			Query query = session.createQuery(queryString);
+			List<?> rowCountResult = query.list();
+			if (rowCountResult != null && rowCountResult.size() > 0) {
+				zahlungsziel = rowCountResult.get(0).toString();
+			}
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
+		} finally {
+			if (session != null) {
+				try {
+					session.close();
+				} catch (HibernateException he) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
+				}
+			}
+		}
+		return zahlungsziel;
 	}
 }

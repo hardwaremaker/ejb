@@ -35,7 +35,6 @@ package com.lp.server.system.ejbfac;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.text.DecimalFormat;
@@ -56,27 +55,35 @@ import com.lp.server.angebotstkl.service.AgstklImportSpezifikation;
 import com.lp.server.angebotstkl.service.EinkaufsagstklImportSpezifikation;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.artikel.service.ArtikelsprDto;
 import com.lp.server.stueckliste.ejbfac.IImportColumnQueryBuilder;
-import com.lp.server.stueckliste.ejbfac.ImportQueryBuilder;
 import com.lp.server.stueckliste.ejbfac.StklImportSearchHelper;
+import com.lp.server.stueckliste.ejbfac.StklImportSearchHelperEinkauf;
+import com.lp.server.stueckliste.ejbfac.StklImportSearchHelperVerkauf;
+import com.lp.server.stueckliste.service.BestellungStklImportSpezifikation;
 import com.lp.server.stueckliste.service.CondensedResultList;
-import com.lp.server.stueckliste.service.IStklImportResult;
 import com.lp.server.stueckliste.service.FertigungsStklImportSpezifikation;
+import com.lp.server.stueckliste.service.IStklImportResult;
 import com.lp.server.stueckliste.service.StklImportResult;
-import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.system.service.IImportHead;
 import com.lp.server.system.service.IImportPositionen;
 import com.lp.server.system.service.IntelligenterStklImportFac;
 import com.lp.server.system.service.KeyvalueDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.SystemServicesFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HvOptional;
 import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.service.BelegpositionDto;
+import com.lp.service.DefaultReader;
+import com.lp.service.JsonReader;
 import com.lp.service.StklImportSpezifikation;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
@@ -108,6 +115,10 @@ public class IntelligenterStklImportFacBean extends Facade implements
 		NumberFormat format = DecimalFormat.getNumberInstance(theClientDto
 				.getLocUi());
 
+		boolean hasHerstellerkopplung = getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_HERSTELLERKOPPLUNG, theClientDto);
+		Integer maxArtikelnummerLaenge = getParameterFac().getMaximallaengeArtikelnummer(theClientDto.getMandant());
+		
 		for (List<String> columnValues : allColumnValues) {
 			Map<String, String> valueForDefinition = new HashMap<String, String>();
 			for (int i = 0; i < columnValues.size()
@@ -119,13 +130,17 @@ public class IntelligenterStklImportFacBean extends Facade implements
 						menge = format.parse(columnValues.get(i).trim());
 					} catch (ParseException e) {
 						menge = BigDecimal.ONE;
-						e.printStackTrace();
+						myLogger.warn("ParseException", e);
 						// throw new
 						// EJBExceptionLP(EJBExceptionLP.FEHLER_FORMAT_NUMBER,
 						// "Menge " + columnValues.get(i).trim() + " in Zeile "
 						// + i + " ist keine gueltige Zahl");
 					}
 					valueForDefinition.put(type, menge.toString());
+				} else if (hasHerstellerkopplung && 
+						StklImportSpezifikation.ARTIKELNUMMER.equals(type)) {
+					valueForDefinition.put(type, 
+							normiereArtikelnummerNachHerstellerkopplung(columnValues.get(i).trim(), maxArtikelnummerLaenge));
 				} else if (!StklImportSpezifikation.UNDEFINED.equals(type)) {
 					valueForDefinition.put(type, columnValues.get(i).trim());
 				}
@@ -144,7 +159,63 @@ public class IntelligenterStklImportFacBean extends Facade implements
 						BigDecimal.ONE.toString());
 			}
 		}
+		//wenn es sich um eine Einkaufsstkl handelt (Bestellung) und es eine Preis-Spalte
+		//gibt, dann Spalte mit "altem" Preis des Lieferanten anlegen, zum Vergleich
+		if(!spez.isStuecklisteMitBezugVerkauf() 
+				&& spez.getColumnTypes().contains(StklImportSpezifikation.BESTELLPREIS)) {
+			results = addLiefPreisColumn(spez, results, theClientDto);
+		}
 
+		return results;
+	}
+
+	private String normiereArtikelnummerNachHerstellerkopplung(
+			String artikelnummer, Integer maxArtikellaenge) {
+		if (Helper.isStringEmpty(artikelnummer))
+			return artikelnummer;
+
+		String[] splitted = artikelnummer.split("\\s+");
+		if (splitted.length != 2) {
+			return artikelnummer;
+		}
+
+		String artikelnummerNeu = Helper.fitString2Length(splitted[0], maxArtikellaenge, ' ');
+		return artikelnummerNeu + splitted[1];
+	}
+
+	/**
+	 * F&uuml;gt die Spalte des Lieferantenpreises hinzu, falls dieser f&uuml;r den 
+	 * betreffenden Artikel einen Eintrag im Artikellieferanten hat. Ansonsten 
+	 * bleibt das Feld leer.
+	 * 
+	 * @param spez Spezifikation der ImportResults
+	 * @param results Liste der ImportResults
+	 * @param theClientDto der aktuelle Benutzer
+	 * @return Liste der ImportResults mit der zugef&uuml;gten Spalte des 
+	 * Lieferantenpreises
+	 * @throws RemoteException
+	 */
+	private List<IStklImportResult> addLiefPreisColumn(StklImportSpezifikation spez, 
+			List<IStklImportResult> results, TheClientDto theClientDto) 
+			throws RemoteException {
+		
+		List<IStklImportResult> resultsMitLiefPreis = new ArrayList<IStklImportResult>();
+		
+		for(IStklImportResult result : results) {
+			Map<String, String> values = result.getValues();
+			String liefpreis = null;
+			if(result.isTotalMatch()) {
+				ArtikellieferantDto artliefDto = getArtikelFac().getArtikelEinkaufspreisEinesLieferantenEinerBestellung(
+						result.getSelectedArtikelDto().getIId(), spez.getStklIId(), 
+						new BigDecimal(result.getValues().get(StklImportSpezifikation.MENGE)), theClientDto);
+				if(artliefDto != null && artliefDto.getNEinzelpreis() != null) {
+					liefpreis = Helper.formatZahl(artliefDto.getNEinzelpreis(), 2, theClientDto.getLocUi());
+				}
+			}
+			values.put(StklImportSpezifikation.LIEFPREIS, liefpreis);
+			result.setValues(values);
+			resultsMitLiefPreis.add(result);
+		}
 		return results;
 	}
 
@@ -225,7 +296,7 @@ public class IntelligenterStklImportFacBean extends Facade implements
 	protected IStklImportResult searchByColumnValues(StklImportSearchHelper searchHelper) 
 			throws RemoteException, EJBExceptionLP {
 		String artikel = IImportColumnQueryBuilder.Artikel;
-		String queryFrom = "SELECT " + artikel + ".i_id FROM FLRArtikelliste "
+		String queryFrom = "SELECT DISTINCT " + artikel + ".i_id FROM FLRArtikelliste "
 				+ artikel;
 		String mandant = searchHelper.getTheClientDto().getMandant();
 		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
@@ -233,10 +304,11 @@ public class IntelligenterStklImportFacBean extends Facade implements
 			mandant = getSystemFac().getHauptmandant();
 		}
 
-		String queryWhere = artikel + ".mandant_c_nr='"
-				// + theClientDto.getMandant() + "' AND " + artikel
-				+ mandant + "' AND " + artikel + ".artikelart_c_nr='"
-				+ ArtikelFac.ARTIKELART_ARTIKEL + "'";
+		String queryWhere = artikel + ".mandant_c_nr='" + mandant 
+				+ "' AND " + artikel + ".artikelart_c_nr='" + ArtikelFac.ARTIKELART_ARTIKEL + "'";
+		if (!searchHelper.getSpez().isWithHiddenArticles()) {
+			queryWhere = queryWhere + " AND " + artikel + ".b_versteckt=0";
+		}
 
 		searchHelper.setBasicQueryFrom(queryFrom);
 		searchHelper.setBasicQueryWhere(queryWhere);
@@ -258,9 +330,12 @@ public class IntelligenterStklImportFacBean extends Facade implements
 	private StklImportSearchHelper getSearchHelper(StklImportSpezifikation spez, TheClientDto theClientDto) 
 			throws RemoteException, EJBExceptionLP {
 		Pair<IImportHead, IImportPositionen> importerPair = getImporterBeans(spez);
-		Integer kundeIId = importerPair.getKey().getKundeIIdDerStueckliste(spez, theClientDto);
-
-		return new StklImportSearchHelper(spez, theClientDto, kundeIId);
+		Integer bezugsobjektIId = importerPair.getKey().getBezugsobjektIIdDerStueckliste(spez, theClientDto);
+		
+		if(spez.isStuecklisteMitBezugVerkauf()) {
+			return new StklImportSearchHelperVerkauf(spez, theClientDto, bezugsobjektIId);
+		}
+		return new StklImportSearchHelperEinkauf(spez, theClientDto, bezugsobjektIId);
 	}
 
 	/**
@@ -279,39 +354,33 @@ public class IntelligenterStklImportFacBean extends Facade implements
 		IStklImportResult result = new StklImportResult();
 
 		for (String type : searchHelper.getColumnPriorityOrder()) {
-			String value = searchHelper.getValues().get(type);
-			if (value == null || value.isEmpty())
+			if (!searchHelper.canBuildQuery(type)) {
 				continue;
-
-			List<String> wheres = searchHelper.getWhereQuery(type);
-			if (wheres == null)
-				continue;
-
-			List<String> froms = searchHelper.getFromQuery(type);
-
+			}
+			String query = searchHelper.buildQuery(type);
 			@SuppressWarnings("unchecked")
 			// geht leider nicht anders
-			List<Integer> list = session.createQuery(
-					ImportQueryBuilder.buildQuery(froms, wheres)).list();
+			List<Integer> list = session.createQuery(query).list();
 			if (list.size() == 1) {
 				artikelIIds.add(list.get(0));
 				result.setTotalMatch(searchHelper.getImportColumns().get(type).isTotalMatch());
 				break;
 			} else if (list.size() > 1) {
-				artikelIIds.addAll(list);
-				break;
-//				List<String> subTypes = queryBuilder
-//						.getDeeperColumnQueryBuilders();
-//				if (subTypes != null)
-//					result = searchByColumn(subTypes, values, spez, froms,
-//							wheres, theClientDto);
-//				if (result.getFoundItems() != null
-//						&& result.getFoundItems().size() > 0) {
-//					return result;
-//				} else {
-//					artikelIIds.addAll(list);
-//					break;
-//				}
+				if (searchHelper.hasDeeperColumnQuery(type)) {
+					String deeperQuery = searchHelper.buildDeeperColumnQuery(type, list);
+					List<Integer> deeperList = session.createQuery(deeperQuery).list();
+					if (deeperList.size() > 0) {
+						artikelIIds.addAll(deeperList);
+						result.setTotalMatch(deeperList.size() == 1 && searchHelper.getImportColumns().get(type).isTotalMatch());
+						break;
+					} else {
+						artikelIIds.addAll(list);
+						break;
+					}
+				} else {
+					artikelIIds.addAll(list);
+					break;
+				}
 			}
 		}
 		
@@ -353,7 +422,8 @@ public class IntelligenterStklImportFacBean extends Facade implements
 		IImportPositionen positionImporter = importerPair.getValue();
 		IImportHead headImporter = importerPair.getKey();
 		
-		Integer kundeIId = headImporter.getKundeIIdDerStueckliste(spez, theClientDto);
+		Integer bezugsobjektIId = headImporter.getBezugsobjektIIdDerStueckliste(spez, theClientDto);
+		Integer laengeBez = getParameterFac().getArtikelLaengeBezeichungen(theClientDto.getMandant());
 		
 		if(results instanceof CondensedResultList) {
 			results = ((CondensedResultList) results).convertToNormalList();
@@ -363,7 +433,13 @@ public class IntelligenterStklImportFacBean extends Facade implements
 			BelegpositionDto posDto = positionImporter.getNewPositionDto();
 
 			ArtikelDto artikelDto = result.getSelectedArtikelDto();
-			if(artikelDto == null) {
+			
+			if (artikelDto != null && ArtikelFac.ARTIKELART_ARTIKEL.equals(artikelDto.getArtikelartCNr()) && artikelDto.getIId() == null) {
+				artikelDto = createArtikelFromImportResult(result, theClientDto);
+				result.getFoundItems().set(result.getSelectedIndex(), artikelDto);
+			}
+			
+			if(artikelDto == null || artikelDto.getIId() == null) {
 				artikelDto = new ArtikelDto();
 				artikelDto.setArtikelartCNr(ArtikelFac.ARTIKELART_HANDARTIKEL);
 			}
@@ -374,27 +450,78 @@ public class IntelligenterStklImportFacBean extends Facade implements
 			if(ArtikelFac.ARTIKELART_HANDARTIKEL.equals(artikelDto.getArtikelartCNr())) {
 				posDto.setPositionsartCNr(LocaleFac.POSITIONSART_HANDEINGABE);
 				posDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
-				posDto.setCBez(Helper.cutString(getHandartikelCBez(result), 
-						StuecklisteFac.FieldLength.STUECKLISTEPOSITION_CBEZ));
+				setHandartikelText(posDto, laengeBez, result);
+//				List<String> bezList = getHandartikelText(result, 
+//						StuecklisteFac.FieldLength.STUECKLISTEPOSITION_CBEZ - 10, 
+//						StuecklisteFac.FieldLength.STUECKLISTEPOSITION_CBEZ);
+//				posDto.setCBez(bezList != null && bezList.size() >= 1 ? bezList.get(0) : null);
+//				posDto.setCZusatzbez(bezList != null && bezList.size() >= 2 ? bezList.get(1) : null);
 			} else {
 				posDto.setPositionsartCNr(LocaleFac.POSITIONSART_IDENT);
 				posDto.setCBez(artikelDto.getArtikelsprDto().getCBez());
+				posDto.setCZusatzbez(artikelDto.getArtikelsprDto().getCZbez());
 				posDto.setArtikelIId(artikelDto.getIId());
 				posDto.setEinheitCNr(artikelDto.getEinheitCNr());
 
-				if(bZentralerArtikelstamm) {
-					updateArtikel(result, updateArtikel, theClientDto);
-				}
-				updateKundesoko(result, kundeIId, theClientDto);
+				updateMappingDerArtikelnummer(spez, result, bezugsobjektIId, theClientDto);
 			}
 			
 			posDto = positionImporter.preparePositionDtoAusImportResult(
 					posDto, spez, result, theClientDto);
+			if(bZentralerArtikelstamm
+					&& LocaleFac.POSITIONSART_IDENT.equals(posDto.getPositionsartCNr())) {
+				updateArtikel(result, updateArtikel, theClientDto);
+			}
 			posDtos.add(posDto);
 		}
 
 		positionImporter.createPositions(posDtos, theClientDto);
 		return posDtos.size();
+	}
+
+	private ArtikelDto createArtikelFromImportResult(IStklImportResult result, TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
+		String default_artikeleinheit = null;
+		Integer default_mwstsaztIId = null;
+
+		ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+				ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_DEFAULT_ARTIKEL_EINHEIT);
+		default_artikeleinheit = parameter.getCWert();
+
+		parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+				ParameterFac.PARAMETER_DEFAULT_ARTIKEL_MWSTSATZ);
+		if (parameter.getCWert() != null && parameter.getCWert().length() > 0) {
+			default_mwstsaztIId = (Integer) parameter.getCWertAsObject();
+		}
+
+		ArtikelDto artikelDto = new ArtikelDto();
+		String artikelnummer = result.getValues().get(StklImportSpezifikation.ARTIKELNUMMER);
+		if (!Helper.isStringEmpty(artikelnummer)) {
+			HvOptional<ArtikelDto> duplicate = HvOptional.ofNullable(getArtikelFac().artikelFindByCNrOhneExc(artikelnummer, theClientDto));
+			if (duplicate.isPresent()) {
+				return duplicate.get();
+			}
+		} else {
+			ParametermandantDto paramStartwert = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_STARTWERT_ARTIKELNUMMER);
+			artikelnummer = getArtikelFac().generiereNeueArtikelnummer(paramStartwert.getCWert(), theClientDto);
+		}
+		
+		artikelDto.setCNr(artikelnummer);
+		artikelDto.setBVersteckt(Helper.getShortFalse());
+		artikelDto.setArtikelartCNr(ArtikelFac.ARTIKELART_ARTIKEL);
+
+		ArtikelsprDto artikelsprDto = new ArtikelsprDto();
+		artikelsprDto.setCBez(result.getValues().get(StklImportSpezifikation.BEZEICHNUNG));
+		artikelsprDto.setCZbez(result.getValues().get(StklImportSpezifikation.BEZEICHNUNG1));
+		artikelsprDto.setCZbez2(result.getValues().get(StklImportSpezifikation.BEZEICHNUNG2));
+		artikelDto.setArtikelsprDto(artikelsprDto);
+
+		artikelDto.setEinheitCNr(default_artikeleinheit);
+		artikelDto.setMwstsatzbezIId(default_mwstsaztIId);
+		artikelDto.setCArtikelnrhersteller(result.getValues().get(StklImportSpezifikation.HERSTELLERARTIKELNUMMER));
+
+		Integer artikelIId = getArtikelFac().createArtikel(artikelDto, theClientDto);
+		return getArtikelFac().artikelFindByPrimaryKey(artikelIId, theClientDto);
 	}
 
 	/**
@@ -418,30 +545,47 @@ public class IntelligenterStklImportFacBean extends Facade implements
 	}
 
 	/**
-	 * Zust&auml;ndig f&uuml;r das Updaten eines Artikels und des KundeSoko-Eintrags
+	 * Zust&auml;ndig f&uuml;r das Updaten des Mapping-Eintrags, je nach
+	 * Einkaufs- (Artikellieferant) oder Verkaufsbezug (Kundesoko)
 	 * 
-	 * Ist das KundeSoko-Update aktiviert und eine Kundenartikelnummer vorhanden, 
-	 * wird, bei bestehendem KundeSoko-Eintrag, dieser aktualisiert. Ist noch keiner
-	 * vorhanden, wird ein neuer angelegt.
+	 * Ist das Mapping-Update aktiviert und ein Eintrag in der DB bereits
+	 * vorhanden dieser aktualisiert. Ist noch keiner vorhanden, wird ein 
+	 * neuer angelegt.
 	 * 
+	 * @param spez Spezifikation des ImportResults
 	 * @param result aktuelles ImportResult
-	 * @param kundeIId IId des Kunden, dem die St&uuml;ckliste zugeordnet ist
+	 * @param bezugsobjektIId IId des Kunden oder Lieferanten, dem die St&uuml;ckliste zugeordnet ist
 	 * @param theClientDto der aktuelle Benutzer
 	 * 
 	 * @throws RemoteException
 	 */
-	private void updateKundesoko(IStklImportResult result, Integer kundeIId,
-			TheClientDto theClientDto) throws RemoteException {
-		if (!ArtikelFac.ARTIKELART_ARTIKEL.equals(result.getSelectedArtikelDto().getArtikelartCNr()))
+	private void updateMappingDerArtikelnummer(StklImportSpezifikation spez, IStklImportResult result,
+			Integer bezugsobjektIId, TheClientDto theClientDto) throws RemoteException {
+		
+		if (!ArtikelFac.ARTIKELART_ARTIKEL.equals(result.getSelectedArtikelDto().getArtikelartCNr())
+				|| !result.isUpdateArtikelnummerMapping() || bezugsobjektIId == null)
 			return;
 
-		String kundeArtikelCNr = result.getValues().get(
-				StklImportSpezifikation.KUNDENARTIKELNUMMER);
-
-		if (result.getSokoUpdate() && kundeArtikelCNr != null 
-				&& !kundeArtikelCNr.isEmpty() && kundeIId != null) {
-			getKundesokoFac().updateKundesokoOrCreateIfNotExist(kundeIId, result.getSelectedArtikelDto().getIId(), 
-					kundeArtikelCNr, theClientDto);
+		if(spez.isStuecklisteMitBezugVerkauf()) {
+			String kundeArtikelCNr = result.getValues().get(
+					StklImportSpezifikation.KUNDENARTIKELNUMMER);
+	
+			if (kundeArtikelCNr != null && !kundeArtikelCNr.isEmpty()) {
+				getKundesokoFac().updateKundesokoOrCreateIfNotExist(bezugsobjektIId, 
+						result.getSelectedArtikelDto().getIId(), 
+						kundeArtikelCNr, theClientDto);
+			}
+		} else {
+			String lieferantenArtikelCNr = result.getValues().get(
+					StklImportSpezifikation.LIEFERANTENARTIKELNUMMER);
+			
+			if (lieferantenArtikelCNr != null && !lieferantenArtikelCNr.isEmpty() 
+					&& result.getValues().get(StklImportSpezifikation.BESTELLPREIS) != null) {
+				getArtikelFac().updateArtikellieferantOrCreateIfNotExist(
+						result.getSelectedArtikelDto().getIId(), bezugsobjektIId, 
+						lieferantenArtikelCNr, Helper.toBigDecimal(	result.getValues()
+								.get(StklImportSpezifikation.BESTELLPREIS)), theClientDto);
+			}
 		}
 	}
 
@@ -457,14 +601,21 @@ public class IntelligenterStklImportFacBean extends Facade implements
 				new Pair<IImportHead, IImportPositionen>(null, null);
 		
 		if(spez instanceof FertigungsStklImportSpezifikation) {
-			importerPair = new Pair<IImportHead, IImportPositionen>(getStuecklisteFac().asHeadImporter(), 
+			importerPair = new Pair<IImportHead, IImportPositionen>(
+					getStuecklisteFac().asHeadImporter(), 
 					getStuecklisteFac().asPositionImporter()) ;
 		} else if(spez instanceof EinkaufsagstklImportSpezifikation) {
-			importerPair = new Pair<IImportHead, IImportPositionen>(getAngebotstklFac().asHeadImporter(), 
+			importerPair = new Pair<IImportHead, IImportPositionen>(
+					getAngebotstklFac().asHeadImporter(), 
 					getAngebotstklFac().asPositionImporter()) ;
 		} else if(spez instanceof AgstklImportSpezifikation) {
-			importerPair = new Pair<IImportHead, IImportPositionen>(getAngebotstklpositionFac().asHeadImporter(), 
+			importerPair = new Pair<IImportHead, IImportPositionen>(
+					getAngebotstklpositionFac().asHeadImporter(), 
 					getAngebotstklpositionFac().asPositionImporter()) ;
+		} else if(spez instanceof BestellungStklImportSpezifikation) {
+			importerPair = new Pair<IImportHead, IImportPositionen>(
+					getBestellungFac().asHeadImporter(), 
+					getBestellpositionFac().asPositionImporter());
 		}
 		Validator.notNull(importerPair.getKey(), "positionImporter");
 		Validator.notNull(importerPair.getValue(), "headImporter");
@@ -492,8 +643,12 @@ public class IntelligenterStklImportFacBean extends Facade implements
 	@Override
 	public void createStklImportSpezifikation(StklImportSpezifikation spez) 
 			throws RemoteException, EJBExceptionLP {
-		KeyvalueDto kv = spezToKeyValueDto(spez);
-		getSystemServicesFac().createKeyvalue(kv);
+		try {
+			KeyvalueDto kv = spezToKeyValueDto(spez);
+			getSystemServicesFac().createKeyvalue(kv);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -505,8 +660,12 @@ public class IntelligenterStklImportFacBean extends Facade implements
 	@Override
 	public void updateStklImportSpezifikation(StklImportSpezifikation spez) 
 			throws RemoteException, EJBExceptionLP {
-		KeyvalueDto kv = spezToKeyValueDto(spez);
-		getSystemServicesFac().updateKeyvalue(kv);
+		try {
+			KeyvalueDto kv = spezToKeyValueDto(spez);
+			getSystemServicesFac().updateKeyvalue(kv);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -514,58 +673,131 @@ public class IntelligenterStklImportFacBean extends Facade implements
 	 * 
 	 * @param spez, die zu konvertierende Spezifikation
 	 * @return konvertiertes KeyValueDto
+	 * @throws IOException 
 	 */
-	private KeyvalueDto spezToKeyValueDto(StklImportSpezifikation spez) {
-		StringWriter sw = new StringWriter();
-		spez.writeString(sw);
-
+	private KeyvalueDto spezToKeyValueDto(StklImportSpezifikation spez) throws IOException {
 		KeyvalueDto kv = new KeyvalueDto();
 		kv.setCGruppe(spez.getKeyValueCGruppe());
 		kv.setCDatentyp("java.lang.String");
 		kv.setCKey(spez.getName() + ", " + spez.getMandantCnr());
-		kv.setCValue(sw.toString());
+		kv.setCValue(spez.writeString());
+
 		return kv;
 	}
 	
 	private StklImportSpezifikation keyValueDtoToSpez(KeyvalueDto kv) {
 		try {
 			StklImportSpezifikation spez = null;
+			
 			if(SystemServicesFac.KEYVALUE_STKL_IMPORT_SPEZ.equals(kv.getCGruppe())) {
 				spez = new FertigungsStklImportSpezifikation();
-				spez.readString(new BufferedReader(new StringReader(kv.getCValue())));
 			} else if(SystemServicesFac.KEYVALUE_AGSTKL_IMPORT_SPEZ.equals(kv.getCGruppe())) {
 				spez = new AgstklImportSpezifikation();
-				spez.readString(new BufferedReader(new StringReader(kv.getCValue())));
 			} else if(SystemServicesFac.KEYVALUE_EINKAUFSAGSTKL_IMPORT_SPEZ.equals(kv.getCGruppe())) {
 				spez = new EinkaufsagstklImportSpezifikation();
-				spez.readString(new BufferedReader(new StringReader(kv.getCValue())));
+			} else if(SystemServicesFac.KEYVALUE_BESTELLUNGSTKL_IMPORT_SPEZ.equals(kv.getCGruppe())) {
+				spez = new BestellungStklImportSpezifikation();
 			}
-
 			Validator.notNull(spez, "spez");
+
+			String cValue = kv.getCValue();
+			if (cValue != null && cValue.startsWith("{")) {
+				spez.readString(new JsonReader(cValue));
+			} else {
+				spez.readString(new DefaultReader(new BufferedReader(new StringReader(cValue))));
+			}
 			return spez;
 		} catch (IOException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
 		}
 	}
 
-	private String getHandartikelCBez(IStklImportResult r) {
-		Map<String, String> m = r.getValues();
-		String[] types = { StklImportSpezifikation.BEZEICHNUNG,
-				StklImportSpezifikation.BEZEICHNUNG1,
-				StklImportSpezifikation.BEZEICHNUNG2,
-				StklImportSpezifikation.BEZEICHNUNG3,
+	private void setHandartikelText(BelegpositionDto posDto, Integer laengeBez, IStklImportResult result) {
+		Map<String, String> m = result.getValues();
+		posDto.setCBez(Helper.cutString(m.get(StklImportSpezifikation.BEZEICHNUNG), laengeBez));
+		posDto.setCZusatzbez(Helper.cutString(m.get(StklImportSpezifikation.BEZEICHNUNG1), laengeBez));
+	}
+
+	public List<String> getHandartikelText(IStklImportResult result, Integer cutLimit, Integer partLength) {
+		Map<String, String> m = result.getValues();
+		StringBuilder builder = new StringBuilder();
+		String bez = m.get(StklImportSpezifikation.BEZEICHNUNG);
+		builder.append(bez != null && !bez.isEmpty() ? bez + " " : "");
+		
+		bez = m.get(StklImportSpezifikation.BEZEICHNUNG1);
+		builder.append(bez != null && !bez.isEmpty() ? bez + " ": "");
+		
+		bez = m.get(StklImportSpezifikation.BEZEICHNUNG2);
+		builder.append(bez != null && !bez.isEmpty() ? bez + " " : "");
+		
+		bez = m.get(StklImportSpezifikation.BEZEICHNUNG3);
+		builder.append(bez != null && !bez.isEmpty() ? bez : "");
+		
+		if (builder.toString() != null && !builder.toString().isEmpty()) {
+			return getStringCutInLength(builder.toString(), cutLimit, partLength);
+		}
+		
+		List<String> list = new ArrayList<String>();
+		String[] types = { 
 				StklImportSpezifikation.ARTIKELNUMMER,
 				StklImportSpezifikation.HERSTELLERARTIKELNUMMER,
 				StklImportSpezifikation.KUNDENARTIKELNUMMER,
 				StklImportSpezifikation.SI_WERT,
-				StklImportSpezifikation.BAUFORM,
-				StklImportSpezifikation.ARTIKELNUMMER };
+				StklImportSpezifikation.BAUFORM };
 		for (String type : types) {
-			String bez = m.get(type);
-			if (bez != null && !bez.isEmpty())
-				return bez;
+			bez = m.get(type);
+			if (bez != null && !bez.isEmpty()) {
+				list.add(bez);
+				return list;
+			}
 		}
-		return null;
+		
+		return list;
 	}
+	
+	private List<String> getStringCutInLength(String string, int cutLimit, int length) {
+		List<String> list = new ArrayList<String>();
+		String[] array = string.split(" +");
+		StringBuilder builder = new StringBuilder();
+		
+		for (int i=0; i < array.length; i++) {
+			int partsize = builder.toString().length() + array[i].length() + 1;
+			if (partsize <= length) {
+				if (!builder.toString().isEmpty()) builder.append(" ");
+				builder.append(array[i]);
+				continue;
+			}
+			
+			if (builder.toString().length() > cutLimit) {
+				list.add(builder.toString());
+				builder = new StringBuilder();
+				builder.append(array[i]);
+				builder = addSplittedParts(list, builder, length);
+				continue;
+			}
+			
+			if (!builder.toString().isEmpty()) builder.append(" ");
+			int cutIndex = length - builder.toString().length();
+			builder.append(array[i].substring(0, cutIndex));
+			list.add(builder.toString());
+			builder = new StringBuilder();
+			builder.append(array[i].substring(cutIndex));
+			addSplittedParts(list, builder, length);
+		}
 
+		if (!builder.toString().isEmpty())
+			list.add(builder.toString());
+		
+		return list;
+	}
+	
+	private StringBuilder addSplittedParts(List<String> list, StringBuilder builder, int length) {
+		while (builder.toString().length() > length) {
+			list.add(builder.toString().substring(0, length));
+			String rest = builder.toString().substring(length);
+			builder = new StringBuilder();
+			builder.append(rest);
+		}
+		return builder;
+	}
 }

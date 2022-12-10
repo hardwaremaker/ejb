@@ -45,10 +45,25 @@ public class WarenabgangsreferenzDto implements Serializable {
 	private String belegnummer = null;
 	private String zusatz = null;
 	private java.sql.Timestamp tBelegdatum = null;
+	
+	private java.sql.Timestamp tBuchungszeit = null;
 
+	private Integer belegartId=null;
 	
 	
-	
+	public Integer getBelegartId() {
+		return belegartId;
+	}
+	public void setBelegartId(Integer belegartId) {
+		this.belegartId = belegartId;
+	}
+	public java.sql.Timestamp getTBuchungszeit() {
+		return tBuchungszeit;
+	}
+	public void setTBuchungszeit(java.sql.Timestamp tBuchungszeit) {
+		this.tBuchungszeit = tBuchungszeit;
+	}
+
 	private BigDecimal nVKpreis = null;
 	
 	

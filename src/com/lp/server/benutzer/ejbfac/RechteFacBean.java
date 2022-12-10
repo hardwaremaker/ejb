@@ -48,15 +48,18 @@ import javax.persistence.Query;
 
 import com.lp.server.benutzer.ejb.Recht;
 import com.lp.server.benutzer.ejb.Rollerecht;
+import com.lp.server.benutzer.service.LagerrolleDto;
 import com.lp.server.benutzer.service.RechtDto;
 import com.lp.server.benutzer.service.RechtDtoAssembler;
 import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.benutzer.service.RollerechtDto;
 import com.lp.server.benutzer.service.RollerechtDtoAssembler;
+import com.lp.server.benutzer.service.SystemrolleDto;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.util.EJBExceptionLP;
 
 @Stateless
@@ -104,6 +107,11 @@ public class RechteFacBean extends Facade implements RechteFac {
 					rollerechtDto.getPersonalIIdAendern());
 			em.persist(rollerecht);
 			em.flush();
+			
+			HvDtoLogger<RollerechtDto> dtoLogger = new HvDtoLogger<RollerechtDto>(
+					em, rollerechtDto.getIId(), theClientDto);
+			dtoLogger.logInsert(rollerechtDto);
+			
 			setRollerechtFromRollerechtDto(rollerecht, rollerechtDto);
 
 		} catch (EntityExistsException e) {
@@ -113,7 +121,7 @@ public class RechteFacBean extends Facade implements RechteFac {
 		return rollerechtDto.getIId();
 	}
 
-	public void removeRollerecht(RollerechtDto rollerechtDto)
+	public void removeRollerecht(RollerechtDto rollerechtDto,TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		myLogger.entry();
 		if (rollerechtDto == null) {
@@ -132,6 +140,11 @@ public class RechteFacBean extends Facade implements RechteFac {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
+			RollerechtDto dto = assembleRollerechtDto(rollerecht);
+			HvDtoLogger<RollerechtDto> zsLogger = new HvDtoLogger<RollerechtDto>(
+					em, dto.getIId(), theClientDto);
+			zsLogger.logDelete(dto);
+			
 			em.remove(rollerecht);
 			em.flush();
 		}
@@ -158,6 +171,13 @@ public class RechteFacBean extends Facade implements RechteFac {
 							"rollerechtDto.getIId() == null || rollerechtDto.getRechtCNr() == null || rollerechtDto.getSystemrolleIId() == null"));
 		}
 
+		RollerechtDto rollerechtDto_Vorher = rollerechtFindByPrimaryKey(rollerechtDto
+				.getIId());
+		HvDtoLogger<RollerechtDto> logger = new HvDtoLogger<RollerechtDto>(
+				em, rollerechtDto.getIId(), theClientDto);
+		logger.log(rollerechtDto_Vorher, rollerechtDto);
+		
+		
 		Integer iId = rollerechtDto.getIId();
 		// try {
 		Rollerecht rollerecht = em.find(Rollerecht.class, iId);
@@ -246,19 +266,17 @@ public class RechteFacBean extends Facade implements RechteFac {
 				.createNamedQuery("RollerechtfindBySystemrolleIIdRechtCNr");
 		query.setParameter(1, systemrolleIId);
 		query.setParameter(2, rechtCNr);
-		// @todo getSingleResult oder getResultList ?
-		Rollerecht rollerecht = (Rollerecht) query.getSingleResult();
-		if (rollerecht == null) {
+		try {
+			Rollerecht rollerecht = (Rollerecht) query.getSingleResult();
+			if (rollerecht == null) {
+				return null;
+			}
+			return assembleRollerechtDto(rollerecht);
+
+		} catch (NoResultException ex1) {
 			return null;
 		}
-		return assembleRollerechtDto(rollerecht);
-		// }
-		// catch (ObjectNotFoundException e) {
-		// return null;
-		// }
-		// catch (FinderException e) {
-		// return null;
-		// }
+
 	}
 
 	private void setRollerechtFromRollerechtDto(Rollerecht rollerecht,

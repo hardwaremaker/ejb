@@ -89,8 +89,8 @@ public class MwstsatzbezHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit();
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -122,11 +122,7 @@ public class MwstsatzbezHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			sessionClose(session);
 		}
 		return result;
 	}
@@ -219,31 +215,9 @@ public class MwstsatzbezHandler extends UseCaseHandler {
 	}
 
 	protected long getRowCountFromDataBase() {
-		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
-		try {
-			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
-
-			Query query = session.createQuery(queryString);
-			List<?> rowCountResult = query.list();
-			if (rowCountResult != null && rowCountResult.size() > 0) {
-				rowCount = ((Long) rowCountResult.get(0)).longValue();
-			}
-		} catch (Exception e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
-		} finally {
-			if (session != null) {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
-			}
-		}
-		return rowCount;
+		String query = "select count(*) " + getFromClause()
+			+ buildWhereClause();
+		return getRowCountFromDataBaseByQuery(query);
 	}
 
 	public TableInfo getTableInfo() {
@@ -306,11 +280,7 @@ public class MwstsatzbezHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
+				sessionClose(session);
 			}
 		}
 
@@ -323,17 +293,4 @@ public class MwstsatzbezHandler extends UseCaseHandler {
 
 		return result;
 	}
-
-	// private String getMwstsatzSpr(String cNrMwstsatzI, String sLocUII) {
-	//
-	// String retVal = "";
-	// try {
-	// retVal = getLocaleFac().getMwstsatzspr(
-	// cNrMwstsatzI, sLocUII, sCurrentUser).getCBez();
-	// }
-	// catch (Throwable t) {
-	// //etwas hart, aber OK.
-	// }
-	// return retVal;
-	// }
 }

@@ -34,7 +34,6 @@ package com.lp.server.system.jcr.service;
 
 import java.io.Serializable;
 
-import com.lp.server.system.jcr.ejb.Dokumentgruppierung;
 import com.lp.server.system.jcr.ejb.DokumentgruppierungPK;
 
 public class DokumentgruppierungDto implements Serializable {
@@ -53,10 +52,6 @@ public class DokumentgruppierungDto implements Serializable {
 		this.cNr = cNr;
 	}
 	
-	public DokumentgruppierungDto(Dokumentgruppierung dokumentgruppierung){
-		this.mandantCNr=dokumentgruppierung.getMandantCNr();
-		this.cNr = dokumentgruppierung.getCNr();
-	}
 	
 	public DokumentgruppierungDto() {
 		super();

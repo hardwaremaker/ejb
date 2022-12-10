@@ -1,40 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe;
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
@@ -65,6 +35,18 @@ public class FLRArtikel implements Serializable {
 
     /** nullable persistent field */
     private Short b_lagerbewirtschaftet;
+
+    /** nullable persistent field */
+    private Short b_kommissionieren;
+
+    /** nullable persistent field */
+    private Short b_vkpreispflichtig;
+
+    /** nullable persistent field */
+    private Short b_keine_lagerzubuchung;
+
+    /** nullable persistent field */
+    private Short b_kalkulatorisch;
 
     /** nullable persistent field */
     private Short b_seriennrtragend;
@@ -115,6 +97,24 @@ public class FLRArtikel implements Serializable {
     private Short b_bestellmengeneinheitinvers;
 
     /** nullable persistent field */
+    private Short b_meldepflichtig;
+
+    /** nullable persistent field */
+    private Short b_bewilligungspflichtig;
+
+    /** nullable persistent field */
+    private Date t_freigabe;
+
+    /** persistent field */
+    private String c_referenznr;
+
+    /** nullable persistent field */
+    private String c_verkaufseannr;
+
+    /** nullable persistent field */
+    private String c_verpackungseannr;
+
+    /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe;
 
     /** nullable persistent field */
@@ -122,6 +122,9 @@ public class FLRArtikel implements Serializable {
 
     /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonal_freigabe;
 
     /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse flrartikelklasse;
@@ -132,8 +135,11 @@ public class FLRArtikel implements Serializable {
     /** persistent field */
     private Set artikellagerplatzset;
 
+    /** persistent field */
+    private Set stuecklisten;
+
     /** full constructor */
-    public FLRArtikel(String c_nr, String mandant_c_nr, String einheit_c_nr, String artikelart_c_nr, Short b_lagerbewertet, Short b_dokumentenpflicht, Short b_lagerbewirtschaftet, Short b_seriennrtragend, Short b_versteckt, Short b_chargennrtragend, Double f_verschnittfaktor, Double f_verschnittbasis, Double f_vertreterprovisionmax, Double f_lagermindest, Double f_lagersoll, Double f_fertigungssatzgroesse, String c_artikelbezhersteller, String c_artikelnrhersteller, Integer i_sofortverbrauch, Integer i_wartungsintervall, String einheit_c_nr_bestellung, BigDecimal n_umrechnungsfaktor, Short b_bestellmengeneinheitinvers, com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe, com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe flrshopgruppe, com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial, com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse flrartikelklasse, FLRLiefergruppe flrliefergruppe, Set artikellagerplatzset) {
+    public FLRArtikel(String c_nr, String mandant_c_nr, String einheit_c_nr, String artikelart_c_nr, Short b_lagerbewertet, Short b_dokumentenpflicht, Short b_lagerbewirtschaftet, Short b_kommissionieren, Short b_vkpreispflichtig, Short b_keine_lagerzubuchung, Short b_kalkulatorisch, Short b_seriennrtragend, Short b_versteckt, Short b_chargennrtragend, Double f_verschnittfaktor, Double f_verschnittbasis, Double f_vertreterprovisionmax, Double f_lagermindest, Double f_lagersoll, Double f_fertigungssatzgroesse, String c_artikelbezhersteller, String c_artikelnrhersteller, Integer i_sofortverbrauch, Integer i_wartungsintervall, String einheit_c_nr_bestellung, BigDecimal n_umrechnungsfaktor, Short b_bestellmengeneinheitinvers, Short b_meldepflichtig, Short b_bewilligungspflichtig, Date t_freigabe, String c_referenznr, String c_verkaufseannr, String c_verpackungseannr, com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe, com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe flrshopgruppe, com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial, FLRPersonal flrpersonal_freigabe, com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse flrartikelklasse, FLRLiefergruppe flrliefergruppe, Set artikellagerplatzset, Set stuecklisten) {
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
         this.einheit_c_nr = einheit_c_nr;
@@ -141,6 +147,10 @@ public class FLRArtikel implements Serializable {
         this.b_lagerbewertet = b_lagerbewertet;
         this.b_dokumentenpflicht = b_dokumentenpflicht;
         this.b_lagerbewirtschaftet = b_lagerbewirtschaftet;
+        this.b_kommissionieren = b_kommissionieren;
+        this.b_vkpreispflichtig = b_vkpreispflichtig;
+        this.b_keine_lagerzubuchung = b_keine_lagerzubuchung;
+        this.b_kalkulatorisch = b_kalkulatorisch;
         this.b_seriennrtragend = b_seriennrtragend;
         this.b_versteckt = b_versteckt;
         this.b_chargennrtragend = b_chargennrtragend;
@@ -157,12 +167,20 @@ public class FLRArtikel implements Serializable {
         this.einheit_c_nr_bestellung = einheit_c_nr_bestellung;
         this.n_umrechnungsfaktor = n_umrechnungsfaktor;
         this.b_bestellmengeneinheitinvers = b_bestellmengeneinheitinvers;
+        this.b_meldepflichtig = b_meldepflichtig;
+        this.b_bewilligungspflichtig = b_bewilligungspflichtig;
+        this.t_freigabe = t_freigabe;
+        this.c_referenznr = c_referenznr;
+        this.c_verkaufseannr = c_verkaufseannr;
+        this.c_verpackungseannr = c_verpackungseannr;
         this.flrartikelgruppe = flrartikelgruppe;
         this.flrshopgruppe = flrshopgruppe;
         this.flrmaterial = flrmaterial;
+        this.flrpersonal_freigabe = flrpersonal_freigabe;
         this.flrartikelklasse = flrartikelklasse;
         this.flrliefergruppe = flrliefergruppe;
         this.artikellagerplatzset = artikellagerplatzset;
+        this.stuecklisten = stuecklisten;
     }
 
     /** default constructor */
@@ -170,10 +188,12 @@ public class FLRArtikel implements Serializable {
     }
 
     /** minimal constructor */
-    public FLRArtikel(String mandant_c_nr, BigDecimal n_umrechnungsfaktor, Set artikellagerplatzset) {
+    public FLRArtikel(String mandant_c_nr, BigDecimal n_umrechnungsfaktor, String c_referenznr, Set artikellagerplatzset, Set stuecklisten) {
         this.mandant_c_nr = mandant_c_nr;
         this.n_umrechnungsfaktor = n_umrechnungsfaktor;
+        this.c_referenznr = c_referenznr;
         this.artikellagerplatzset = artikellagerplatzset;
+        this.stuecklisten = stuecklisten;
     }
 
     public Integer getI_id() {
@@ -238,6 +258,38 @@ public class FLRArtikel implements Serializable {
 
     public void setB_lagerbewirtschaftet(Short b_lagerbewirtschaftet) {
         this.b_lagerbewirtschaftet = b_lagerbewirtschaftet;
+    }
+
+    public Short getB_kommissionieren() {
+        return this.b_kommissionieren;
+    }
+
+    public void setB_kommissionieren(Short b_kommissionieren) {
+        this.b_kommissionieren = b_kommissionieren;
+    }
+
+    public Short getB_vkpreispflichtig() {
+        return this.b_vkpreispflichtig;
+    }
+
+    public void setB_vkpreispflichtig(Short b_vkpreispflichtig) {
+        this.b_vkpreispflichtig = b_vkpreispflichtig;
+    }
+
+    public Short getB_keine_lagerzubuchung() {
+        return this.b_keine_lagerzubuchung;
+    }
+
+    public void setB_keine_lagerzubuchung(Short b_keine_lagerzubuchung) {
+        this.b_keine_lagerzubuchung = b_keine_lagerzubuchung;
+    }
+
+    public Short getB_kalkulatorisch() {
+        return this.b_kalkulatorisch;
+    }
+
+    public void setB_kalkulatorisch(Short b_kalkulatorisch) {
+        this.b_kalkulatorisch = b_kalkulatorisch;
     }
 
     public Short getB_seriennrtragend() {
@@ -368,6 +420,54 @@ public class FLRArtikel implements Serializable {
         this.b_bestellmengeneinheitinvers = b_bestellmengeneinheitinvers;
     }
 
+    public Short getB_meldepflichtig() {
+        return this.b_meldepflichtig;
+    }
+
+    public void setB_meldepflichtig(Short b_meldepflichtig) {
+        this.b_meldepflichtig = b_meldepflichtig;
+    }
+
+    public Short getB_bewilligungspflichtig() {
+        return this.b_bewilligungspflichtig;
+    }
+
+    public void setB_bewilligungspflichtig(Short b_bewilligungspflichtig) {
+        this.b_bewilligungspflichtig = b_bewilligungspflichtig;
+    }
+
+    public Date getT_freigabe() {
+        return this.t_freigabe;
+    }
+
+    public void setT_freigabe(Date t_freigabe) {
+        this.t_freigabe = t_freigabe;
+    }
+
+    public String getC_referenznr() {
+        return this.c_referenznr;
+    }
+
+    public void setC_referenznr(String c_referenznr) {
+        this.c_referenznr = c_referenznr;
+    }
+
+    public String getC_verkaufseannr() {
+        return this.c_verkaufseannr;
+    }
+
+    public void setC_verkaufseannr(String c_verkaufseannr) {
+        this.c_verkaufseannr = c_verkaufseannr;
+    }
+
+    public String getC_verpackungseannr() {
+        return this.c_verpackungseannr;
+    }
+
+    public void setC_verpackungseannr(String c_verpackungseannr) {
+        this.c_verpackungseannr = c_verpackungseannr;
+    }
+
     public com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe getFlrartikelgruppe() {
         return this.flrartikelgruppe;
     }
@@ -392,6 +492,14 @@ public class FLRArtikel implements Serializable {
         this.flrmaterial = flrmaterial;
     }
 
+    public FLRPersonal getFlrpersonal_freigabe() {
+        return this.flrpersonal_freigabe;
+    }
+
+    public void setFlrpersonal_freigabe(FLRPersonal flrpersonal_freigabe) {
+        this.flrpersonal_freigabe = flrpersonal_freigabe;
+    }
+
     public com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse getFlrartikelklasse() {
         return this.flrartikelklasse;
     }
@@ -414,6 +522,14 @@ public class FLRArtikel implements Serializable {
 
     public void setArtikellagerplatzset(Set artikellagerplatzset) {
         this.artikellagerplatzset = artikellagerplatzset;
+    }
+
+    public Set getStuecklisten() {
+        return this.stuecklisten;
+    }
+
+    public void setStuecklisten(Set stuecklisten) {
+        this.stuecklisten = stuecklisten;
     }
 
     public String toString() {

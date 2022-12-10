@@ -103,6 +103,7 @@ public class ReklamationbildHandler extends UseCaseHandler {
 						.next();
 				rows[row][col++] = reklamationbild.getI_id();
 				rows[row][col++] = reklamationbild.getC_bez();
+				rows[row][col++] = reklamationbild.getDatenformat_c_nr();
 				rows[row++][col++] = reklamationbild.getI_sort();
 
 				col = 0;
@@ -307,16 +308,18 @@ public class ReklamationbildHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, Integer.class }, new String[] {
+					String.class, String.class, Integer.class }, new String[] {
 					"Id",
 					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.datenformat", mandantCNr, locUI),
 					getTextRespectUISpr("lp.sort", mandantCNr, locUI) },
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_XL,
 							QueryParameters.FLR_BREITE_M},
 					
-					new String[] { "id", "c_bez","i_sort" }));
+					new String[] { "id", "c_bez", "datenformat_c_nr", "i_sort" }));
 		}
 
 		return super.getTableInfo();

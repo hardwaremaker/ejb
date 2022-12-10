@@ -47,6 +47,8 @@ public class CustomerPricelistPriceDto implements Serializable {
 	public final static String PREISTYP_VKPREISBASIS      = "VK-Preisbasis" ;
 	public final static String PREISTYP_SOKOARTIKEL       = "Soko-Artikel" ;
 	public final static String PREISTYP_SOKOARTIKELGRUPPE = "Soko-Artikelgruppe" ;
+	public final static String PREISTYP_SOKOARTIKELGRUPPEVKSTAFFEL = "Soko-Artgru/VK-Staffel" ;
+	public final static String PREISTYP_SOKOARTIKELVKSTAFFEL = "Soko-Artikel/VK-Staffel" ;
 	
 	private BigDecimal menge ;               // zeile 0 Menge
 	private String preistypKey ;             // zeile 1 Basis
@@ -58,7 +60,7 @@ public class CustomerPricelistPriceDto implements Serializable {
 	private Boolean    soko ;                // Zeile 7 Soko?
 
 	@Transient
-	private Integer scale ;
+	private transient Integer scale ;
 	
 	public CustomerPricelistPriceDto() {
 		soko = false ;
@@ -80,24 +82,51 @@ public class CustomerPricelistPriceDto implements Serializable {
 		return price == null ? null : price.setScale(scale, RoundingMode.HALF_EVEN);
 	}
 	
+	/**
+	 * Die Menge, ab der (einschlie&szlig;lich) der Preis gilt
+	 * @return die Menge, aber der - einschlie&szlig;lich der Preis gilt
+	 */
 	public BigDecimal getAmount() { 
 		return menge;
 	}
 	public void setAmount(BigDecimal menge) {
 		this.menge = menge;
 	}
+	
+	/**
+	 * Der Preistyp.<br>
+	 * <p><ul>
+	 * <li><b>"VK-Preisbasis"</b> wenn es der Basispreis ist
+	 * <li><b>"VK-Staffelpreis"</b> wenn es sich um einen Staffelpreis handelt
+	 * <li><b>"Soko-Artikel"</b> wenn es ein Preis aus einer Sonderkondition dieses Artikels ist
+	 * <li><b>"Soko-Artikelgruppe"</b> wenn es ein Preis aus der Sonderkondition der Artikelgruppe ist
+	 * <li><b>"Soko-Artgru/VK-Staffel"</b> wenn es ein Preis aus der Sonderkondition der Artikelgruppe mit Mengenstaffel ist 
+	 * <li><b>"Soko-Artikel/VK-Staffel"</b> wenn es ein Preis aus der Sonderkondition des Artikels mit Mengenstaffel ist 
+	 * </ul></p>
+	 * @return der Preistyp
+	 */
 	public String getPricetypKey() {
 		return preistypKey;
 	}
 	public void setPricetypKey(String preistypKey) {
 		this.preistypKey = preistypKey;
 	}
+	
+	/**
+	 * Die Preisbasis
+	 * @return die Preisbasis des Artikels
+	 */
 	public BigDecimal getBasePrice() {
 		return basispreis;
 	}
 	public void setBasePrice(BigDecimal basispreis) {
 		this.basispreis = scaledPrice(basispreis) ;
 	}
+	
+	/**
+	 * Der Fixpreis des Artikels
+	 * @return der (optionale) Fixpreis des Artikels 
+	 */
 	public BigDecimal getFixPrice() {
 		return fixpreis;
 	}
@@ -107,21 +136,41 @@ public class CustomerPricelistPriceDto implements Serializable {
 	public Double getDiscountRate() {
 		return rabattsatz;
 	}
+	
+	/** 
+	 * Rabattsatz
+	 * @param rabattsatz sind die (auch negative) Rabattprozent f&uuml;r diesen Preis
+	 */
 	public void setDiscountRate(Double rabattsatz) {
 		this.rabattsatz = rabattsatz;
 	}
+	
+	/**
+	 * Der berechnete Preis<br>
+	 * @return der berechnete Preis (inklusiver aller Rabatte)
+	 */
 	public BigDecimal getCalculatedPrice() {
 		return berechneterpreis;
 	}
 	public void setCalculatedPrice(BigDecimal berechneterpreis) {
 		this.berechneterpreis = scaledPrice(berechneterpreis);
 	}
+	
+	/**
+	 * Die W&auml;hrung des Preises
+	 * @return die W&auml;hrung 
+	 */
 	public String getCurrency() {
 		return waehrung;
 	}
 	public void setCurrency(String waehrung) {
 		this.waehrung = waehrung;
 	}
+	
+	/**
+	 * Handelt es sich um einen Preis aus einer Sonderkondition?
+	 * @return true wenn es ein Sonderkonditionenpreis ist
+	 */
 	public Boolean getSpecialCondition() {
 		return soko;
 	}

@@ -36,7 +36,17 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-public class KassenbuchDto implements Serializable {
+import com.lp.server.artikel.ejb.Material;
+import com.lp.server.finanz.ejb.Konto;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.util.ICBez;
+import com.lp.server.util.IIId;
+
+
+
+@HvDtoLogClass(name = HvDtoLogClass.KASSENBUCH)
+public class KassenbuchDto implements Serializable, IIId, ICBez {
 	/**
 	 * 
 	 */
@@ -78,6 +88,8 @@ public class KassenbuchDto implements Serializable {
 		this.cBez = cBez;
 	}
 
+	
+	@HvDtoLogIdCnr(entityClass = Konto.class)
 	public Integer getKontoIId() {
 		return kontoIId;
 	}

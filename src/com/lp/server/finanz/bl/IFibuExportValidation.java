@@ -33,6 +33,7 @@
 package com.lp.server.finanz.bl;
 
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.List;
 
 import com.lp.server.finanz.service.FibuExportKriterienDto;
@@ -41,6 +42,8 @@ import com.lp.server.finanz.service.KontolaenderartDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.service.RechnungDto;
+import com.lp.server.util.BelegDatumAdapter;
+import com.lp.server.util.HvOptional;
 import com.lp.util.EJBExceptionLP;
 
 public interface IFibuExportValidation {
@@ -50,12 +53,15 @@ public interface IFibuExportValidation {
 	boolean hasFailedValidations() ;
 	
 	boolean isValidRechnungStatus(RechnungDto rechnungDto) ;
-	boolean isValidLaenderartCnr(String laenderartCnr, Integer partnerId, Object belegDto) ;
+	boolean isValidLaenderartCnr(String laenderartCnr, Integer partnerId, BelegDatumAdapter belegAdapter) ;
 	boolean isValidFinanzamt(FinanzamtDto finanzamtDto) ;
 	boolean isValidKundeDebitorenKonto(KundeDto kundeDto, RechnungDto rechnungDto) ;
 	boolean isRechnungVollstaendigKontiert(RechnungDto rechnungDto, KundeDto kundeDto) throws RemoteException ;
 	boolean isValidExportZeitraumFuerBeleg(
 			FibuExportKriterienDto exportKriterienDto, Object belegDto, PartnerDto partnerDto) ;
-	boolean isValidKontolaenderart(KontolaenderartDto kontolaenderartDto, Integer kontoId, 
-			String laenderartCnr, Integer finanzamtId, Object belegDto, Integer mandantFinanzamtId) throws RemoteException ;
+	boolean isValidKontolaenderart(
+			HvOptional<KontolaenderartDto> kontolaenderartDto, Integer kontoId, 
+			String laenderartCnr, Integer finanzamtId, 
+			Integer reversechargeartId, Object belegDto, 
+			Integer mandantFinanzamtId, Timestamp gueltigZum) throws RemoteException ;
 }

@@ -32,8 +32,11 @@
  ******************************************************************************/
 package com.lp.server.system.automatikjob;
 
+import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.Calendar;
+import java.util.Iterator;
+import java.util.Map;
 
 import com.lp.server.system.ejb.ParametermandantPK;
 import com.lp.server.system.service.ParameterFac;
@@ -60,36 +63,30 @@ public class AutomatikjobBestellvorschlagberechnung extends AutomatikjobBasis {
 
 		Date today = new Date(Calendar.getInstance().getTimeInMillis());
 		ParametermandantPK parametermandantPK = new ParametermandantPK(
-				ParameterFac.PARAMETER_DEFAULT_VORLAUFZEIT_AUFTRAG,
-				theClientDto.getMandant(), ParameterFac.KATEGORIE_BESTELLUNG);
+				ParameterFac.PARAMETER_DEFAULT_VORLAUFZEIT_AUFTRAG, theClientDto.getMandant(),
+				ParameterFac.KATEGORIE_BESTELLUNG);
 		ParametermandantDto parametermandantDto = null;
 		try {
-			parametermandantDto = getParameterFac()
-					.parametermandantFindByPrimaryKey(parametermandantPK);
+			parametermandantDto = getParameterFac().parametermandantFindByPrimaryKey(parametermandantPK);
 		} catch (Throwable t) {
 			myLogger.error("Fehler beim suchen der Parameter");
 			errorInJob = true;
 		}
-		Integer mandantParameterTage = Integer.parseInt(parametermandantDto
-				.getCWert());
-		parametermandantPK = new ParametermandantPK(
-				ParameterFac.TOLERANZFRIST_BESTELLVORSCHLAG,
+		Integer mandantParameterTage = Integer.parseInt(parametermandantDto.getCWert());
+		parametermandantPK = new ParametermandantPK(ParameterFac.TOLERANZFRIST_BESTELLVORSCHLAG,
 				theClientDto.getMandant(), ParameterFac.KATEGORIE_BESTELLUNG);
 		try {
-			parametermandantDto = getParameterFac()
-					.parametermandantFindByPrimaryKey(parametermandantPK);
+			parametermandantDto = getParameterFac().parametermandantFindByPrimaryKey(parametermandantPK);
 		} catch (Throwable t) {
 			myLogger.error("Fehler beim suchen der Parameter");
 			errorInJob = true;
 		}
-		Integer mandantParameterToleranz = Integer.parseInt(parametermandantDto
-				.getCWert());
+		Integer mandantParameterToleranz = Integer.parseInt(parametermandantDto.getCWert());
 
 		// Checken ob gesperrt
 		boolean bIsLocked = false;
 		try {
-			getBestellvorschlagFac()
-					.pruefeBearbeitenDesBestellvorschlagsErlaubt(theClientDto);
+			getBestellvorschlagFac().pruefeBearbeitenDesBestellvorschlagsErlaubt(theClientDto);
 		} catch (Throwable t) {
 			myLogger.info("Bestellvorschlag ist von einem anderen Benutzer gesperrt. Job wird nicht durchgef\u00FChrt");
 			bIsLocked = true;
@@ -97,20 +94,43 @@ public class AutomatikjobBestellvorschlagberechnung extends AutomatikjobBasis {
 		}
 		try {
 			if (!bIsLocked) {
-				getBestellvorschlagFac().erstelleBestellvorschlag(
-						mandantParameterTage, mandantParameterToleranz, today,
-						null, null, false, false,true, theClientDto);
+
+				boolean lagerminJeLager = false;
+				try {
+					ParametermandantDto parameterDto = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_LAGERMIN_JE_LAGER);
+
+					lagerminJeLager = (Boolean) parameterDto.getCWertAsObject();
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
+				if (lagerminJeLager == false) {
+					getBestellvorschlagFac().erstelleBestellvorschlag(mandantParameterTage, mandantParameterToleranz,
+							today, null, null, false, false, true, true, false, theClientDto, null, false, false);
+				} else {
+					Map m = getLagerFac().getAlleStandorte(theClientDto);
+					Iterator it = m.keySet().iterator();
+					// Bei ersten Standort loeschen
+					boolean bBVLoeschen = true;
+
+					while (it.hasNext()) {
+						Integer partnerIIdStandortZeile = (Integer) it.next();
+						getBestellvorschlagFac().erstelleBestellvorschlag(mandantParameterTage, mandantParameterToleranz,
+								today, null, null, false, false, true, bBVLoeschen, false, theClientDto, partnerIIdStandortZeile, false,false);
+						bBVLoeschen = false;
+					}
+				}
 			}
 		} catch (Throwable t) {
 			myLogger.error("Fehler beim erstellen des Bestellvorschlags");
 			errorInJob = true;
 		}
 		try {
-			getBestellvorschlagFac()
-					.removeLockDesBestellvorschlagesWennIchIhnSperre(
-							theClientDto);
+			getBestellvorschlagFac().removeLockDesBestellvorschlagesWennIchIhnSperre(theClientDto);
 		} catch (Throwable t) {
-			myLogger.error("Fehler beim entfernen der Sperre... Bitte heben Sie die Sperre manuell \u00FCber einen Client auf.");
+			myLogger.error(
+					"Fehler beim entfernen der Sperre... Bitte heben Sie die Sperre manuell \u00FCber einen Client auf.");
 		}
 		myLogger.info("ende Bestellvorschlagberechnung");
 		return errorInJob;

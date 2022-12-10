@@ -60,100 +60,117 @@ import com.lp.util.Helper;
 public class ComparatorKD implements Comparator<Object> {
 
 	private int iSortierungNachWas = -1;
+	private boolean bNachArtikelGruppe = false;
 
-	public ComparatorKD(int iSortierungNachWasI) {
+	public ComparatorKD(int iSortierungNachWasI, boolean bNachArtikelGruppe) {
 		iSortierungNachWas = iSortierungNachWasI;
+		this.bNachArtikelGruppe = bNachArtikelGruppe;
 	}
 
 	/**
 	 * Compares its two arguments for order.
 	 * 
-	 * @param o1
-	 *            the first object to be compared.
-	 * @param o2
-	 *            the second object to be compared.
-	 * @return a negative integer, zero, or a positive integer as the first
-	 *         argument is less than, equal to, or greater than the second.
+	 * @param o1 the first object to be compared.
+	 * @param o2 the second object to be compared.
+	 * @return a negative integer, zero, or a positive integer as the first argument
+	 *         is less than, equal to, or greater than the second.
 	 * @todo Implement this java.util.Comparator method PJ 4178
 	 */
 	public int compare(Object o1, Object o2) {
 		if (iSortierungNachWas == Helper.SORTIERUNG_NACH_DATUM) {
 			KundeLieferstatistikDto k1 = (KundeLieferstatistikDto) o1;
 			KundeLieferstatistikDto k2 = (KundeLieferstatistikDto) o2;
-			if (k1 != null
-					&& k1.getDWarenausgangsdatum() != null
-					&& k2 != null
-					&& k2.getDWarenausgangsdatum() != null
-					&& k1.getDWarenausgangsdatum().before(
-							k2.getDWarenausgangsdatum())) {
-				return 1;
-			} else if (k1 != null
-					&& k1.getDWarenausgangsdatum() != null
-					&& k2 != null
-					&& k2.getDWarenausgangsdatum() != null
-					&& k1.getDWarenausgangsdatum().equals(
-							k2.getDWarenausgangsdatum())) {
 
-				String s1 = "               ";
-				String s2 = "               ";
+			String str1 = "";
+			String str2 = "";
 
-				if (k1.getSRechnungsnummer() != null) {
-					s1 = Helper.fitString2Length(k1.getSRechnungsnummer(), 15,
-							' ');
+			if (bNachArtikelGruppe) {
+				String ag1 = "";
+				if (k1.getSArtikelgruppe() != null) {
+					ag1 = k1.getSArtikelgruppe();
 				}
-				if (k2.getSRechnungsnummer() != null) {
-					s2 = Helper.fitString2Length(k2.getSRechnungsnummer(), 15,
-							' ');
+				String ag2 = "";
+				if (k2.getSArtikelgruppe() != null) {
+					ag2 = k2.getSArtikelgruppe();
 				}
-
-				if (k1.getSLieferscheinnummer() != null) {
-					s1 += Helper.fitString2Length(k1.getSLieferscheinnummer(),
-							15, ' ');
-				}
-				if (k2.getSLieferscheinnummer() != null) {
-					s2 += Helper.fitString2Length(k2.getSLieferscheinnummer(),
-							15, ' ');
-				}
-
-				return s1.compareTo(s2);
-
-			} else {
-				return -1;
+				str1 += Helper.fitString2Length(ag1, 40, ' ');
+				str2 += Helper.fitString2Length(ag2, 40, ' ');
 			}
+
+		
+			int i = str1.compareTo(str2);
+
+			if (i == 0) {
+
+				long l1 = 0;
+				long l2 = 0;
+
+				if (k1.getDWarenausgangsdatum() != null) {
+					l1 = k1.getDWarenausgangsdatum().getTime();
+				}
+				if (k2.getDWarenausgangsdatum() != null) {
+					l2 = k2.getDWarenausgangsdatum().getTime();
+				}
+
+				if (l1 == l2) {
+					return 0;
+				}
+
+				if (l1 < l2) {
+					return 1;
+				} else {
+					return -1;
+				}
+			}
+			return i;
 		} else {
 			// sortierung nach ident
 			KundeLieferstatistikDto k1 = (KundeLieferstatistikDto) o1;
 			KundeLieferstatistikDto k2 = (KundeLieferstatistikDto) o2;
-			if (k1 != null && k1.getSIdent() != null && k2 != null
-					&& k2.getSIdent() != null) {
-				
-				int i=k1.getSIdent().compareTo(k2.getSIdent());
-				
-				if(i==0){
+			if (k1 != null && k1.getSIdent() != null && k2 != null && k2.getSIdent() != null) {
+
+				String str1 = "";
+				String str2 = "";
+
+				if (bNachArtikelGruppe) {
+					String ag1 = "";
+					if (k1.getSArtikelgruppe() != null) {
+						ag1 = k1.getSArtikelgruppe();
+					}
+					String ag2 = "";
+					if (k2.getSArtikelgruppe() != null) {
+						ag2 = k2.getSArtikelgruppe();
+					}
+					str1 += Helper.fitString2Length(ag1, 40, ' ');
+					str2 += Helper.fitString2Length(ag2, 40, ' ');
+				}
+
+				str1 += Helper.fitString2Length(k1.getSIdent(), 25, ' ');
+				str2 += Helper.fitString2Length(k2.getSIdent(), 25, ' ');
+
+				int i = str1.compareTo(str2);
+
+				if (i == 0) {
 					String s1 = "               ";
 					String s2 = "               ";
 
 					if (k1.getSRechnungsnummer() != null) {
-						s1 = Helper.fitString2Length(k1.getSRechnungsnummer(), 15,
-								' ');
+						s1 = Helper.fitString2Length(k1.getSRechnungsnummer(), 15, ' ');
 					}
 					if (k2.getSRechnungsnummer() != null) {
-						s2 = Helper.fitString2Length(k2.getSRechnungsnummer(), 15,
-								' ');
+						s2 = Helper.fitString2Length(k2.getSRechnungsnummer(), 15, ' ');
 					}
 
 					if (k1.getSLieferscheinnummer() != null) {
-						s1 += Helper.fitString2Length(k1.getSLieferscheinnummer(),
-								15, ' ');
+						s1 += Helper.fitString2Length(k1.getSLieferscheinnummer(), 15, ' ');
 					}
 					if (k2.getSLieferscheinnummer() != null) {
-						s2 += Helper.fitString2Length(k2.getSLieferscheinnummer(),
-								15, ' ');
+						s2 += Helper.fitString2Length(k2.getSLieferscheinnummer(), 15, ' ');
 					}
 
 					return s1.compareTo(s2);
 				}
-				
+
 				return i;
 			}
 			/**

@@ -88,6 +88,40 @@ public class EingangsrechnungAuftragszuordnung implements Serializable {
 		this.bKeineAuftragswertung = bKeineAuftragswertung;
 	}
 
+	@Column(name = "PERSONAL_I_ID_ERLEDIGT")
+	private Integer personalIIdErledigt;
+	
+	@Column(name = "T_ERLEDIGT")
+	private Timestamp tErledigt;
+	
+	@Column(name = "F_VERRECHENBAR")
+	private Double fVerrechenbar;
+	
+
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public EingangsrechnungAuftragszuordnung() {

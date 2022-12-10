@@ -42,6 +42,36 @@ public class LohnartstundenfaktorDto implements Serializable {
 	private String lohnstundenartCNr;
 	private Double fFaktor;
 
+	private Integer taetigkeitIId;
+
+	public Integer getTaetigkeitIId() {
+		return taetigkeitIId;
+	}
+
+	public void setTaetigkeitIId(Integer taetigkeitIId) {
+		this.taetigkeitIId = taetigkeitIId;
+	}
+
+	private Integer schichtzeitIId;
+
+	public Integer getSchichtzeitIId() {
+		return schichtzeitIId;
+	}
+
+	public void setSchichtzeitIId(Integer schichtzeitIId) {
+		this.schichtzeitIId = schichtzeitIId;
+	}
+
+	private Integer zeitmodellIId;
+
+	public Integer getZeitmodellIId() {
+		return this.zeitmodellIId;
+	}
+
+	public void setZeitmodellIId(Integer zeitmodellIId) {
+		this.zeitmodellIId = zeitmodellIId;
+	}
+
 	private Integer tagesartIId;
 
 	public Integer getTagesartIId() {

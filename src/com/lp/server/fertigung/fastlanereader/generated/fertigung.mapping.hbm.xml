@@ -19,471 +19,932 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Diese Mappingdatei kuemmert sich um die Fertigungsauftragsverwaltung. 
-	Copyright Logistik Pur GmbH (c) 2005 Erstellungsdatum 21.07.05 @author Martin 
-	Bluehweis @version 1.0 -->
-<hibernate-mapping package="com.lp.server.fertigung.fastlanereader.generated">
+<!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">-->
+ <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd"> 
+<hibernate-mapping
+	package="com.lp.server.fertigung.fastlanereader.generated">
 	<class name="FLRLos" table="FERT_LOS">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
-		<property name="c_projekt" column="C_PROJEKT" type="java.lang.String" />
-		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
-			type="java.lang.Integer" />
-		<property name="personal_i_id_techniker" column="PERSONAL_I_ID_TECHNIKER"
-			type="java.lang.Integer" />
-		<property name="fertigungsgruppe_i_id" column="FERTIGUNGSGRUPPE_I_ID"
-			type="java.lang.Integer" insert="false" update="false" />
-		<property name="t_produktionsende" column="T_PRODUKTIONSENDE"
-			type="java.util.Date" />
-		<property name="t_produktionsbeginn" column="T_PRODUKTIONSBEGINN"
-			type="java.util.Date" />
-		<property name="t_ausgabe" column="T_AUSGABE" type="java.util.Date" />
-		<property name="t_erledigt" column="T_ERLEDIGT" type="java.util.Date" />
-		<property name="t_manuellerledigt" column="T_MANUELLERLEDIGT"
-			type="java.util.Date" />
-		<property name="t_produktionsstop" column="T_PRODUKTIONSSTOP"
-			type="java.util.Date" />
-		<property name="n_losgroesse" column="N_LOSGROESSE" type="java.math.BigDecimal" />
-		<property name="kostenstelle_i_id" column="KOSTENSTELLE_I_ID"
-			type="java.lang.Integer" />
-		<property name="f_bewertung" column="F_BEWERTUNG" type="java.lang.Double" />
-		<many-to-one name="flrstueckliste"
+		<property column="MANDANT_C_NR" generated="never"
+			lazy="false" name="mandant_c_nr" type="java.lang.String" />
+		<property column="C_NR" generated="never" lazy="false"
+			name="c_nr" type="java.lang.String" />
+		<property column="STATUS_C_NR" generated="never" lazy="false"
+			name="status_c_nr" type="java.lang.String" />
+		<property column="C_PROJEKT" generated="never" lazy="false"
+			name="c_projekt" type="java.lang.String" />
+		<property column="C_ABPOSNR" generated="never" lazy="false"
+			name="c_abposnr" type="java.lang.String" />
+		<property column="C_KOMMENTAR" generated="never" lazy="false"
+			name="c_kommentar" type="java.lang.String" />
+		<property column="X_TEXT" generated="never" lazy="false"
+			name="x_text" type="java.lang.String" />
+		<property column="STUECKLISTE_I_ID" generated="never"
+			lazy="false" name="stueckliste_i_id" type="java.lang.Integer" />
+		<property column="LAGER_I_ID_ZIEL" generated="never"
+			lazy="false" name="lager_i_id_ziel" type="java.lang.Integer" />
+		<property column="PERSONAL_I_ID_TECHNIKER" generated="never"
+			lazy="false" name="personal_i_id_techniker" type="java.lang.Integer" />
+		<property column="FERTIGUNGSGRUPPE_I_ID" generated="never"
+			insert="false" lazy="false" name="fertigungsgruppe_i_id"
+			type="java.lang.Integer" update="false" />
+		<property column="T_PRODUKTIONSENDE" generated="never"
+			lazy="false" name="t_produktionsende" type="java.util.Date" />
+		<property column="T_PRODUKTIONSBEGINN" generated="never"
+			lazy="false" name="t_produktionsbeginn" type="java.util.Date" />
+		<property column="T_AUSGABE" generated="never" lazy="false"
+			name="t_ausgabe" type="java.util.Date" />
+		<property column="T_ERLEDIGT" generated="never" lazy="false"
+			name="t_erledigt" type="java.util.Date" />
+		<property column="T_MANUELLERLEDIGT" generated="never"
+			lazy="false" name="t_manuellerledigt" type="java.util.Date" />
+		<property column="T_PRODUKTIONSSTOP" generated="never"
+			lazy="false" name="t_produktionsstop" type="java.util.Date" />
+		<property column="N_LOSGROESSE" generated="never"
+			lazy="false" name="n_losgroesse" type="java.math.BigDecimal" />
+		<property column="KOSTENSTELLE_I_ID" generated="never"
+			lazy="false" name="kostenstelle_i_id" type="java.lang.Integer" />
+		<property column="F_BEWERTUNG" generated="never" lazy="false"
+			name="f_bewertung" type="java.lang.Double" />
+		<property column="C_SCHACHTELPLAN" generated="never"
+			lazy="false" name="c_schachtelplan" type="java.lang.String" />
+		<property
+			formula="dbo.ADD2DATE('dd',-(SELECT KUND.I_LIEFERDAUER FROM AUFT_AUFTRAGPOSITION AP LEFT OUTER JOIN AUFT_AUFTRAG AUFT ON AP.AUFTRAG_I_ID=AUFT.I_ID LEFT OUTER JOIN PART_KUNDE KUND ON AUFT.KUNDE_I_ID_LIEFERADRESSE=KUND.I_ID WHERE AP.I_ID=AUFTRAGPOSITION_I_ID ) ,(SELECT AP.T_UEBERSTEUERTERLIEFERTERMIN  FROM AUFT_AUFTRAGPOSITION AP WHERE AP.I_ID =AUFTRAGPOSITION_I_ID))"
+			generated="never" lazy="false" name="t_abliefertermin"
+			type="java.sql.Timestamp" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
-			column="STUECKLISTE_I_ID" insert="false" update="false" />
-		<many-to-one name="flrauftrag"
+			column="STUECKLISTE_I_ID" insert="false" name="flrstueckliste"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport"
-			column="AUFTRAG_I_ID" insert="false" update="false" />
-		<many-to-one name="flrprojekt"
+			column="AUFTRAG_I_ID" insert="false" name="flrauftrag" update="false" />
+		<many-to-one
 			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
-			column="PROJEKT_I_ID" insert="false" update="false" />
-		<many-to-one name="flrfertigungsgruppe"
+			column="PROJEKT_I_ID" insert="false" name="flrprojekt" update="false" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID_ZIEL" insert="false" name="flrlager"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
-			column="FERTIGUNGSGRUPPE_I_ID" />
-		<many-to-one name="flrkunde"
+			column="FERTIGUNGSGRUPPE_I_ID" name="flrfertigungsgruppe" />
+		<many-to-one
 			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
-			column="KUNDE_I_ID" insert="false" update="false" />
-		<set name="ablieferungset" inverse="true">
+			column="KUNDE_I_ID" insert="false" name="flrkunde" update="false" />
+		<set inverse="true" name="ablieferungset" sort="unsorted">
 			<key column="LOS_I_ID" />
 			<one-to-many
 				class="com.lp.server.fertigung.fastlanereader.generated.FLRLosablieferung" />
 		</set>
-		<set name="technikerset" inverse="true">
+		<set inverse="true" name="lagerentnahmeset" order-by="I_SORT"
+			sort="unsorted">
+			<key column="LOS_I_ID" />
+			<one-to-many
+				class="com.lp.server.fertigung.fastlanereader.generated.FLRLoslagerentnahme" />
+		</set>
+
+		<set inverse="true" name="verfuegbarkei" sort="unsorted">
+			<key column="LOS_I_ID" />
+			<one-to-many
+				class="com.lp.server.fertigung.fastlanereader.generated.FLRVerfuegbarkeit" />
+		</set>
+
+		<set inverse="true" name="technikerset" sort="unsorted">
 			<key column="LOS_I_ID" />
 			<one-to-many
 				class="com.lp.server.fertigung.fastlanereader.generated.FLRLostechniker" />
 		</set>
+		<property column="FORECASTPOSITION_I_ID" generated="never"
+			lazy="false" name="forecastposition_i_id" type="java.lang.Integer" />
+		<many-to-one
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecastpositionProduktion"
+			column="FORECASTPOSITION_I_ID" insert="false"
+			name="flrforecastposition" update="false" />
+		<many-to-one
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition"
+			column="AUFTRAGPOSITION_I_ID" insert="false"
+			name="flrauftragposition" update="false" />
+		<property column="PARTNER_I_ID_FERTIGUNGSORT"
+			generated="never" lazy="false" name="partner_i_id_fertigungsort"
+			type="java.lang.Integer" />
+
+		<property name="lagerplatz_i_id" column="LAGERPLATZ_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrlagerplatz"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLagerplatz"
+			column="LAGERPLATZ_I_ID" insert="false" update="false" />
+
 	</class>
 	<class name="FLRLosReport" table="FERT_LOS">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
-		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
-		<property name="c_projekt" column="C_PROJEKT" type="java.lang.String" />
-		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
+		<property column="MANDANT_C_NR" generated="never"
+			lazy="false" name="mandant_c_nr" type="java.lang.String" />
+		<property column="C_NR" generated="never" lazy="false"
+			name="c_nr" type="java.lang.String" />
+		<property column="C_KOMMENTAR" generated="never" lazy="false"
+			name="c_kommentar" type="java.lang.String" />
+		<property column="STATUS_C_NR" generated="never" lazy="false"
+			name="status_c_nr" type="java.lang.String" />
+		<property column="C_PROJEKT" generated="never" lazy="false"
+			name="c_projekt" type="java.lang.String" />
+		<property column="STUECKLISTE_I_ID" generated="never"
+			lazy="false" name="stueckliste_i_id" type="java.lang.Integer" />
+		<property column="T_NACHTRAEGLICH_GEOEFFNET"
+			generated="never" lazy="false" name="t_nachtraeglich_geoeffnet"
+			type="java.util.Date" />
+		<property column="T_PRODUKTIONSENDE" generated="never"
+			lazy="false" name="t_produktionsende" type="java.util.Date" />
+		<property column="T_PRODUKTIONSBEGINN" generated="never"
+			lazy="false" name="t_produktionsbeginn" type="java.util.Date" />
+		<property column="T_AUSGABE" generated="never" lazy="false"
+			name="t_ausgabe" type="java.util.Date" />
+		<property column="T_ERLEDIGT" generated="never" lazy="false"
+			name="t_erledigt" type="java.util.Date" />
+		<property column="T_MANUELLERLEDIGT" generated="never"
+			lazy="false" name="t_manuellerledigt" type="java.util.Date" />
+		<property column="T_AKTUALISIERUNGSTUECKLISTE"
+			generated="never" lazy="false" name="t_aktualisierungstueckliste"
+			type="java.util.Date" />
+		<property column="T_AKTUALISIERUNGARBEITSZEIT"
+			generated="never" lazy="false" name="t_aktualisierungarbeitszeit"
+			type="java.util.Date" />
+		<property column="T_ANLEGEN" generated="never" lazy="false"
+			name="t_anlegen" type="java.util.Date" />
+		<property column="T_PRODUKTIONSSTOP" generated="never"
+			lazy="false" name="t_produktionsstop" type="java.util.Date" />
+		<property column="N_LOSGROESSE" generated="never"
+			lazy="false" name="n_losgroesse" type="java.math.BigDecimal" />
+		<property column="F_BEWERTUNG" generated="never" lazy="false"
+			name="f_bewertung" type="java.lang.Double" />
+		<property column="WIEDERHOLENDELOSE_I_ID" generated="never"
+			lazy="false" name="wiederholendelose_i_id" type="java.lang.Integer" />
+		<property column="KOSTENSTELLE_I_ID" generated="never"
+			lazy="false" name="kostenstelle_i_id" type="java.lang.Integer" />
+		<property column="FERTIGUNGSGRUPPE_I_ID" generated="never"
+			insert="false" lazy="false" name="fertigungsgruppe_i_id"
+			type="java.lang.Integer" update="false" />
+		<property column="FORECASTPOSITION_I_ID" generated="never"
+			insert="false" lazy="false" name="forecastposition_i_id"
+			type="java.lang.Integer" update="false" />
+		<property column="PARTNER_I_ID_FERTIGUNGSORT"
+			generated="never" lazy="false" name="partner_i_id_fertigungsort"
 			type="java.lang.Integer" />
-		<property name="t_produktionsende" column="T_PRODUKTIONSENDE"
-			type="java.util.Date" />
-		<property name="t_produktionsbeginn" column="T_PRODUKTIONSBEGINN"
-			type="java.util.Date" />
-		<property name="t_ausgabe" column="T_AUSGABE" type="java.util.Date" />
-		<property name="t_erledigt" column="T_ERLEDIGT" type="java.util.Date" />
-		<property name="t_manuellerledigt" column="T_MANUELLERLEDIGT"
-			type="java.util.Date" />
-		<property name="t_aktualisierungstueckliste" column="T_AKTUALISIERUNGSTUECKLISTE"
-			type="java.util.Date" />
-		<property name="t_aktualisierungarbeitszeit" column="T_AKTUALISIERUNGARBEITSZEIT"
-			type="java.util.Date" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.util.Date" />
-		<property name="t_produktionsstop" column="T_PRODUKTIONSSTOP"
-			type="java.util.Date" />
-		<property name="n_losgroesse" column="N_LOSGROESSE" type="java.math.BigDecimal" />
-		<property name="f_bewertung" column="F_BEWERTUNG" type="java.lang.Double" />
-		<property name="wiederholendelose_i_id" column="WIEDERHOLENDELOSE_I_ID"
-			type="java.lang.Integer" />
-		<property name="kostenstelle_i_id" column="KOSTENSTELLE_I_ID"
-			type="java.lang.Integer" />
-		<property name="fertigungsgruppe_i_id" column="FERTIGUNGSGRUPPE_I_ID"
-			type="java.lang.Integer" insert="false" update="false" />
-		<property name="partner_i_id_fertigungsort" column="PARTNER_I_ID_FERTIGUNGSORT"
-			type="java.lang.Integer" />
-		<many-to-one name="flrstueckliste"
+		<property column="T_MATERIAL_VOLLSTAENDIG" generated="never"
+			lazy="false" name="t_material_vollstaendig" type="java.util.Date" />
+		<many-to-one
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecastposition"
+			column="FORECASTPOSITION_I_ID" insert="false"
+			name="flrforecastposition" update="false" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
-			column="STUECKLISTE_I_ID" insert="false" update="false" />
-		<many-to-one name="flrkostenstelle"
+			column="STUECKLISTE_I_ID" insert="false" name="flrstueckliste"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.system.fastlanereader.generated.FLRKostenstelle"
-			column="KOSTENSTELLE_I_ID" insert="false" update="false" />
-		<many-to-one name="flrauftragposition"
+			column="KOSTENSTELLE_I_ID" insert="false" name="flrkostenstelle"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition"
-			column="AUFTRAGPOSITION_I_ID" insert="false" update="false" />
-		<many-to-one name="flrauftrag"
+			column="AUFTRAGPOSITION_I_ID" insert="false"
+			name="flrauftragposition" update="false" />
+		<many-to-one
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport"
-			column="AUFTRAG_I_ID" insert="false" update="false" />
-		<many-to-one name="flrkunde"
+			column="AUFTRAG_I_ID" insert="false" name="flrauftrag" update="false" />
+		<many-to-one
 			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
-			column="KUNDE_I_ID" insert="false" update="false" />
-		<many-to-one name="flrfertigungsgruppe"
+			column="KUNDE_I_ID" insert="false" name="flrkunde" update="false" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
-			column="FERTIGUNGSGRUPPE_I_ID" />
-		<many-to-one name="flrwiederholendelose"
+			column="FERTIGUNGSGRUPPE_I_ID" name="flrfertigungsgruppe" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
-			column="WIEDERHOLENDELOSE_I_ID" insert="false" update="false" />
-		<set name="ablieferungset" inverse="true">
+			column="WIEDERHOLENDELOSE_I_ID" insert="false"
+			name="flrwiederholendelose" update="false" />
+		<many-to-one
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" name="flrprojekt" update="false" />
+		<set inverse="true" name="ablieferungset" sort="unsorted">
 			<key column="LOS_I_ID" />
 			<one-to-many
 				class="com.lp.server.fertigung.fastlanereader.generated.FLRLosablieferung" />
 		</set>
 	</class>
 	<class name="FLRLosAuftrag" table="FERT_LOS">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
-		<property name="c_projekt" column="C_PROJEKT" type="java.lang.String" />
-		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
-			type="java.lang.Integer" />
-		<property name="t_produktionsende" column="T_PRODUKTIONSENDE"
-			type="java.util.Date" />
-		<property name="t_produktionsbeginn" column="T_PRODUKTIONSBEGINN"
-			type="java.util.Date" />
-		<property name="t_ausgabe" column="T_AUSGABE" type="java.util.Date" />
-		<property name="t_erledigt" column="T_ERLEDIGT" type="java.util.Date" />
-		<property name="t_manuellerledigt" column="T_MANUELLERLEDIGT"
-			type="java.util.Date" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.util.Date" />
-		<property name="t_produktionsstop" column="T_PRODUKTIONSSTOP"
-			type="java.util.Date" />
-		<property name="n_losgroesse" column="N_LOSGROESSE" type="java.math.BigDecimal" />
-		<property name="f_bewertung" column="F_BEWERTUNG" type="java.lang.Double" />
-		<property name="kostenstelle_i_id" column="KOSTENSTELLE_I_ID"
-			type="java.lang.Integer" />
-		<property name="fertigungsgruppe_i_id" column="FERTIGUNGSGRUPPE_I_ID"
-			type="java.lang.Integer" insert="false" update="false" />
-		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
-		<many-to-one name="flrstueckliste"
+		<property column="MANDANT_C_NR" generated="never"
+			lazy="false" name="mandant_c_nr" type="java.lang.String" />
+		<property column="C_NR" generated="never" lazy="false"
+			name="c_nr" type="java.lang.String" />
+		<property column="STATUS_C_NR" generated="never" lazy="false"
+			name="status_c_nr" type="java.lang.String" />
+		<property column="C_PROJEKT" generated="never" lazy="false"
+			name="c_projekt" type="java.lang.String" />
+		<property column="STUECKLISTE_I_ID" generated="never"
+			lazy="false" name="stueckliste_i_id" type="java.lang.Integer" />
+		<property column="T_PRODUKTIONSENDE" generated="never"
+			lazy="false" name="t_produktionsende" type="java.util.Date" />
+		<property column="T_PRODUKTIONSBEGINN" generated="never"
+			lazy="false" name="t_produktionsbeginn" type="java.util.Date" />
+		<property column="T_AUSGABE" generated="never" lazy="false"
+			name="t_ausgabe" type="java.util.Date" />
+		<property column="T_ERLEDIGT" generated="never" lazy="false"
+			name="t_erledigt" type="java.util.Date" />
+		<property column="T_MANUELLERLEDIGT" generated="never"
+			lazy="false" name="t_manuellerledigt" type="java.util.Date" />
+		<property column="T_ANLEGEN" generated="never" lazy="false"
+			name="t_anlegen" type="java.util.Date" />
+		<property column="T_PRODUKTIONSSTOP" generated="never"
+			lazy="false" name="t_produktionsstop" type="java.util.Date" />
+		<property column="N_LOSGROESSE" generated="never"
+			lazy="false" name="n_losgroesse" type="java.math.BigDecimal" />
+		<property column="F_BEWERTUNG" generated="never" lazy="false"
+			name="f_bewertung" type="java.lang.Double" />
+		<property column="KOSTENSTELLE_I_ID" generated="never"
+			lazy="false" name="kostenstelle_i_id" type="java.lang.Integer" />
+		<property column="FERTIGUNGSGRUPPE_I_ID" generated="never"
+			insert="false" lazy="false" name="fertigungsgruppe_i_id"
+			type="java.lang.Integer" update="false" />
+		<property column="PROJEKT_I_ID" generated="never"
+			lazy="false" name="projekt_i_id" type="java.lang.Integer" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
-			column="STUECKLISTE_I_ID" insert="false" update="false" />
-		<many-to-one name="flrkostenstelle"
+			column="STUECKLISTE_I_ID" insert="false" name="flrstueckliste"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.system.fastlanereader.generated.FLRKostenstelle"
-			column="KOSTENSTELLE_I_ID" insert="false" update="false" />
-		<many-to-one name="flrauftragposition"
+			column="KOSTENSTELLE_I_ID" insert="false" name="flrkostenstelle"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition"
-			column="AUFTRAGPOSITION_I_ID" insert="false" update="false" />
-		<many-to-one name="flrauftrag"
+			column="AUFTRAGPOSITION_I_ID" insert="false"
+			name="flrauftragposition" update="false" />
+		<many-to-one
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragOD"
-			column="AUFTRAG_I_ID" insert="false" update="false" />
-		<many-to-one name="flrfertigungsgruppe"
+			column="AUFTRAG_I_ID" insert="false" name="flrauftrag" update="false" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
-			column="FERTIGUNGSGRUPPE_I_ID" />
-		<many-to-one name="flrwiederholendelose"
+			column="FERTIGUNGSGRUPPE_I_ID" name="flrfertigungsgruppe" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
-			column="WIEDERHOLENDELOSE_I_ID" />
-		<set name="ablieferungset" inverse="true">
+			column="WIEDERHOLENDELOSE_I_ID" name="flrwiederholendelose" />
+		<set inverse="true" name="ablieferungset" sort="unsorted">
 			<key column="LOS_I_ID" />
 			<one-to-many
 				class="com.lp.server.fertigung.fastlanereader.generated.FLRLosablieferung" />
 		</set>
 	</class>
 	<class name="FLRLossollmaterial" table="FERT_LOSSOLLMATERIAL">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
-		<property name="i_beginnterminoffset" column="I_BEGINNTERMINOFFSET"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="I_SORT" generated="never" lazy="false"
+			name="i_sort" type="java.lang.Integer" />
+		<property column="I_BEGINNTERMINOFFSET" generated="never"
+			lazy="false" name="i_beginnterminoffset" type="java.lang.Integer" />
+		<property column="N_MENGE" generated="never" lazy="false"
+			name="n_menge" type="java.math.BigDecimal" />
+		<property column="N_SOLLPREIS" generated="never" lazy="false"
+			name="n_sollpreis" type="java.math.BigDecimal" />
+		<property column="B_NACHTRAEGLICH" generated="never"
+			lazy="false" name="b_nachtraeglich" type="java.lang.Short" />
+		<property column="B_DRINGEND" generated="never" lazy="false"
+			name="b_dringend" type="java.lang.Short" />
+		<property column="MONTAGEART_I_ID" generated="never"
+			lazy="false" name="montageart_i_id" type="java.lang.Integer" />
+		<property column="LOSSOLLMATERIAL_I_ID_ORIGINAL"
+			generated="never" lazy="false" name="lossollmaterial_i_id_original"
 			type="java.lang.Integer" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="n_sollpreis" column="N_SOLLPREIS" type="java.math.BigDecimal" />
-		<property name="b_nachtraeglich" column="B_NACHTRAEGLICH"
-			type="java.lang.Short" />
-		<property name="montageart_i_id" column="MONTAGEART_I_ID"
-			type="java.lang.Integer" />
-		<property name="lossollmaterial_i_id_original" column="LOSSOLLMATERIAL_I_ID_ORIGINAL"
-			type="java.lang.Integer" />
-		<property name="i_lfdnummer" column="I_LFDNUMMER" type="java.lang.Integer" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
-		<many-to-one name="flrartikel"
+		<property column="I_LFDNUMMER" generated="never" lazy="false"
+			name="i_lfdnummer" type="java.lang.Integer" />
+		<property column="T_AENDERN" generated="never" lazy="false"
+			name="t_aendern" type="java.sql.Timestamp" />
+		<many-to-one
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
-			column="ARTIKEL_I_ID" insert="false" update="false" />
-		<many-to-one name="flrlos"
+			column="ARTIKEL_I_ID" insert="false" name="flrartikel" update="false" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" name="flrartikelliste"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
-			column="LOS_I_ID" insert="false" update="false" />
-		<set name="istmaterialset" inverse="true">
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
+			column="LOSSOLLMATERIAL_I_ID_ORIGINAL" insert="false"
+			name="flrlossollmaterial_original" update="false" />
+		<set inverse="true" name="istmaterialset" sort="unsorted">
 			<key column="LOSSOLLMATERIAL_I_ID" />
 			<one-to-many
 				class="com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial" />
 		</set>
+		<property column="N_MENGE_STKLPOS" generated="never"
+			lazy="false" name="n_menge_stklpos" type="java.math.BigDecimal" />
+		<property column="EINHEIT_C_NR_STKLPOS" generated="never"
+			lazy="false" name="einheit_c_nr_stklpos" type="java.lang.String" />
+		<property column="C_POSITION" generated="never" lazy="false"
+			name="c_position" type="java.lang.String" />
+		<property column="C_KOMMENTAR" generated="never" lazy="false"
+			name="c_kommentar" type="java.lang.String" />
+		<property column="F_DIMENSION1" generated="never"
+			lazy="false" name="f_dimension1" type="java.lang.Double" />
+		<property column="F_DIMENSION2" generated="never"
+			lazy="false" name="f_dimension2" type="java.lang.Double" />
+		<property column="F_DIMENSION3" generated="never"
+			lazy="false" name="f_dimension3" type="java.lang.Double" />
+
+		<property column="C_FEHLERCODE" generated="never"
+			lazy="false" name="c_fehlercode" type="java.lang.String" />
+		<property column="C_FEHLERTEXT" generated="never"
+			lazy="false" name="c_fehlertext" type="java.lang.String" />
+
+		<property column="T_EXPORT_BEGINN" generated="never"
+			lazy="false" name="t_export_beginn" type="java.sql.Timestamp" />
+		<property column="T_EXPORT_ENDE" generated="never"
+			lazy="false" name="t_export_ende" type="java.sql.Timestamp" />
+
 	</class>
 	<class name="FLRLosistmaterial" table="FERT_LOSISTMATERIAL">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="lossollmaterial_i_id" column="LOSSOLLMATERIAL_I_ID"
-			type="java.lang.Integer" />
-		<property name="lager_i_id" column="LAGER_I_ID" type="java.lang.Integer" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="b_abgang" column="B_ABGANG" type="java.lang.Short" />
-		<many-to-one name="flrlossollmaterial"
+		<property column="LOSSOLLMATERIAL_I_ID" generated="never"
+			lazy="false" name="lossollmaterial_i_id" type="java.lang.Integer" />
+		<property column="LAGER_I_ID" generated="never" lazy="false"
+			name="lager_i_id" type="java.lang.Integer" />
+		<property column="N_MENGE" generated="never" lazy="false"
+			name="n_menge" type="java.math.BigDecimal" />
+		<property column="B_ABGANG" generated="never" lazy="false"
+			name="b_abgang" type="java.lang.Short" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
-			column="LOSSOLLMATERIAL_I_ID" insert="false" update="false" />
-		<many-to-one name="flrlager"
+			column="LOSSOLLMATERIAL_I_ID" insert="false"
+			name="flrlossollmaterial" update="false" />
+		<many-to-one
 			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
-			column="LAGER_I_ID" insert="false" update="false" />
+			column="LAGER_I_ID" insert="false" name="flrlager" update="false" />
 	</class>
-	<class name="FLRLossollarbeitsplan" table="FERT_LOSSOLLARBEITSPLAN">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+	<class name="FLRLossollarbeitsplan"
+		table="FERT_LOSSOLLARBEITSPLAN">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<property name="maschine_i_id" column="MASCHINE_I_ID" type="java.lang.Integer" />
-		<property name="personal_i_id_zugeordneter" column="PERSONAL_I_ID_ZUGEORDNETER"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="MASCHINE_I_ID" generated="never"
+			lazy="false" name="maschine_i_id" type="java.lang.Integer" />
+		<property column="PERSONAL_I_ID_ZUGEORDNETER"
+			generated="never" lazy="false" name="personal_i_id_zugeordneter"
 			type="java.lang.Integer" />
-		<property name="l_ruestzeit" column="L_RUESTZEIT" type="java.math.BigDecimal" />
-		<property name="l_stueckzeit" column="L_STUECKZEIT" type="java.math.BigDecimal" />
-		<property name="n_gesamtzeit" column="N_GESAMTZEIT" type="java.math.BigDecimal" />
-		<property name="i_arbeitsgangsnummer" column="I_ARBEITSGANGNUMMER"
-			type="java.lang.Integer" />
-		<property name="i_maschinenversatztage" column="I_MASCHINENVERSATZTAGE"
-			type="java.lang.Integer" />
-		<property name="i_unterarbeitsgang" column="I_UNTERARBEITSGANG"
-			type="java.lang.Integer" />
-		<property name="b_nachtraeglich" column="B_NACHTRAEGLICH"
-			type="java.lang.Short" />
-		<property name="b_fertig" column="B_FERTIG" type="java.lang.Short" />
-		<property name="agart_c_nr" column="AGART_C_NR" type="java.lang.String" />
-		<property name="c_kommentar" column="C_KOMENTAR" type="java.lang.String" />
-		<property name="i_aufspannung" column="I_AUFSPANNUNG" type="java.lang.Integer" />
-		<property name="b_autoendebeigeht" column="B_AUTOENDEBEIGEHT"
-			type="java.lang.Short" />
-		<many-to-one name="flrartikel"
+		<property column="L_RUESTZEIT" generated="never" lazy="false"
+			name="l_ruestzeit" type="java.math.BigDecimal" />
+		<property column="L_STUECKZEIT" generated="never"
+			lazy="false" name="l_stueckzeit" type="java.math.BigDecimal" />
+		<property column="N_GESAMTZEIT" generated="never"
+			lazy="false" name="n_gesamtzeit" type="java.math.BigDecimal" />
+		<property column="I_ARBEITSGANGNUMMER" generated="never"
+			lazy="false" name="i_arbeitsgangsnummer" type="java.lang.Integer" />
+		<property column="I_MASCHINENVERSATZTAGE" generated="never"
+			lazy="false" name="i_maschinenversatztage" type="java.lang.Integer" />
+		<property column="I_MASCHINENVERSATZ_MS" generated="never"
+			lazy="false" name="i_maschinenversatz_ms" type="java.lang.Integer" />
+		<property column="I_UNTERARBEITSGANG" generated="never"
+			lazy="false" name="i_unterarbeitsgang" type="java.lang.Integer" />
+		<property column="B_NACHTRAEGLICH" generated="never"
+			lazy="false" name="b_nachtraeglich" type="java.lang.Short" />
+		<property column="B_NURMASCHINENZEIT" generated="never"
+			lazy="false" name="b_nurmaschinenzeit" type="java.lang.Short" />
+		<property column="B_FERTIG" generated="never" lazy="false"
+			name="b_fertig" type="java.lang.Short" />
+		<property column="F_FORTSCHRITT" generated="never"
+			lazy="false" name="f_fortschritt" type="java.lang.Double" />
+		<property column="AGART_C_NR" generated="never" lazy="false"
+			name="agart_c_nr" type="java.lang.String" />
+		<property column="C_KOMENTAR" generated="never" lazy="false"
+			name="c_kommentar" type="java.lang.String" />
+		<property column="I_AUFSPANNUNG" generated="never"
+			lazy="false" name="i_aufspannung" type="java.lang.Integer" />
+		<property column="I_REIHUNG" generated="never" lazy="false"
+			name="i_reihung" type="java.lang.Integer" />
+
+		<property column="LOSSOLLMATERIAL_I_ID" generated="never"
+			lazy="false" name="lossollmaterial_i_id" type="java.lang.Integer" />
+
+		<property column="B_AUTOENDEBEIGEHT" generated="never"
+			lazy="false" name="b_autoendebeigeht" type="java.lang.Short" />
+		<many-to-one
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
-			column="ARTIKEL_I_ID_TAETIGKEIT" />
-		<many-to-one name="flrlos"
+			column="ARTIKEL_I_ID_TAETIGKEIT" name="flrartikel" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
-			column="LOS_I_ID" insert="false" update="false" />
-		<many-to-one name="flrmaschine"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
 			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
-			column="MASCHINE_I_ID" insert="false" update="false" />
-		<many-to-one name="flrpersonal_zugeordneter"
+			column="MASCHINE_I_ID" insert="false" name="flrmaschine"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
-			column="PERSONAL_I_ID_ZUGEORDNETER" insert="false" update="false" />
-		<many-to-one name="flrsollmaterial"
+			column="PERSONAL_I_ID_ZUGEORDNETER" insert="false"
+			name="flrpersonal_zugeordneter" update="false" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
-			column="LOSSOLLMATERIAL_I_ID" />
-
-
+			column="LOSSOLLMATERIAL_I_ID" name="flrsollmaterial" insert="false"
+			update="false" />
+		<many-to-one
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRApkommentar"
+			column="APKOMMENTAR_I_ID" name="flrapkommentar" />
 	</class>
-
-	<class name="FLROffeneags" table="FERT_OFFENEAGS">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+	<class name="FLRVerfuegbarkeit" table="FERT_VERFUEGBARKEIT">
+		<id column="ARTIKEL_I_ID" name="artikel_i_id"
+			type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="kunde_i_id" column="KUNDE_I_ID" type="java.lang.Integer" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<property name="maschine_i_id" column="MASCHINE_I_ID" type="java.lang.Integer" />
-		<property name="n_gesamtzeit" column="N_GESAMTZEIT" type="java.math.BigDecimal" />
-		<property name="i_arbeitsgangsnummer" column="I_ARBEITSGANGNUMMER"
-			type="java.lang.Integer" />
-		<property name="i_maschinenversatztage" column="I_MASCHINENVERSATZTAGE"
-			type="java.lang.Integer" />
-		<property name="i_maschinenversatz_ms" column="I_MASCHINENVERSATZ_MS"
-			type="java.lang.Integer" />
-		<property name="i_anzahlzeitdaten" column="I_ANZAHLZEITDATEN"
-			type="java.lang.Integer" />
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="N_SOLLMENGE" generated="never" lazy="false"
+			name="n_sollmenge" type="java.math.BigDecimal" />
+		<property column="N_LAGERSTAND" generated="never"
+			lazy="false" name="n_lagerstand" type="java.math.BigDecimal" />
+		<property column="N_SOLL_MINUS_LAGER_PLUS_BESTELLT"
+			generated="never" lazy="false"
+			name="n_soll_minus_lager_plus_bestellt" type="java.math.BigDecimal" />
 
-		<many-to-one name="flrartikel_taetigkeit"
+		<property column="N_FEHLMENGE_MINUS_LAGER_PLUS_BESTELLT"
+			generated="never" lazy="false"
+			name="n_fehlmenge_minus_lager_plus_bestellt"
+			type="java.math.BigDecimal" />
+		<property column="N_FEHLMENGE_MINUS_LAGER" generated="never"
+			lazy="false" name="n_fehlmenge_minus_lager"
+			type="java.math.BigDecimal" />
+
+		<property column="I_ANZAHLSPERREN" generated="never"
+			lazy="false" name="i_anzahlsperren" type="java.lang.Integer" />
+		<many-to-one
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
-			column="ARTIKEL_I_ID_TAETIGKEIT" />
-
-		<many-to-one name="flrartikel_sollmaterial"
-			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
-			column="ARTIKEL_I_ID_SOLLMATERIAL" />
-		<many-to-one name="flrartikel_stueckliste"
-			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
-			column="ARTIKEL_I_ID_STUECKLISTE" />
-
-		<many-to-one name="flrkunde"
-			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
-			column="KUNDE_I_ID" insert="false" update="false" />
-
-		<many-to-one name="flrlos"
+			column="ARTIKEL_I_ID" insert="false" name="flrartikelliste"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
-			column="LOS_I_ID" insert="false" update="false" />
-		<many-to-one name="flrmaschine"
-			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
-			column="MASCHINE_I_ID" insert="false" update="false" />
-		<property name="t_agbeginn"
-			formula="dbo.ADD2DATE('dd',I_MASCHINENVERSATZTAGE ,(SELECT L.T_PRODUKTIONSBEGINN  FROM FERT_LOS L WHERE L.I_ID =LOS_I_ID))"
-			type="java.sql.Timestamp" />
-
-		<many-to-one name="flrlossollarbeitsplan"
-			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan"
-			column="I_ID" insert="false" update="false" />
-
-
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
 	</class>
-
-	<class name="FLRWiederholendelose" table="FERT_WIEDERHOLENDELOSE">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+	<class name="FLRBedarfsuebernahme" table="FERT_BEDARFSUEBERNAHME">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_projekt" column="C_PROJEKT" type="java.lang.String" />
-		<property name="auftragwiederholungsintervall_c_nr" column="AUFTRAGWIEDERHOLUNGSINTERVALL_C_NR"
-			type="java.lang.String" />
-		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="ARTIKEL_I_ID" generated="never"
+			lazy="false" name="artikel_i_id" type="java.lang.Integer" />
+		<property column="N_WUNSCHMENGE" generated="never"
+			lazy="false" name="n_wunschmenge" type="java.math.BigDecimal" />
+		<property column="B_ABGANG" generated="never" lazy="false"
+			name="b_abgang" type="java.lang.Short" />
+		<property column="B_ZUSAETZLICH" generated="never"
+			lazy="false" name="b_zusaetzlich" type="java.lang.Short" />
+		<property column="T_AENDERN" generated="never" lazy="false"
+			name="t_aendern" type="java.sql.Timestamp" />
+		<property column="T_ANLEGEN" generated="never" lazy="false"
+			name="t_anlegen" type="java.sql.Timestamp" />
+		<property column="T_WUNSCHTERMIN" generated="never"
+			lazy="false" name="t_wunschtermin" type="java.sql.Timestamp" />
+		<property column="T_VERBUCHT_GEDRUCKT" generated="never"
+			lazy="false" name="t_verbucht_gedruckt" type="java.sql.Timestamp" />
+		<property column="PERSONAL_I_ID_VERBUCHT_GEDRUCKT"
+			generated="never" lazy="false" name="personal_i_id_verbucht_gedruckt"
 			type="java.lang.Integer" />
-		<property name="t_termin" column="T_TERMIN" type="java.util.Date" />
-		<property name="n_losgroesse" column="N_LOSGROESSE" type="java.math.BigDecimal" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
-		<property name="i_tagevoreilend" column="I_TAGEVOREILEND"
+		<property column="PERSONAL_I_ID_ANLEGEN" generated="never"
+			lazy="false" name="personal_i_id_anlegen" type="java.lang.Integer" />
+		<property column="LOSSOLLMATERIAL_I_ID" generated="never"
+			lazy="false" name="lossollmaterial_i_id" type="java.lang.Integer" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" name="flrartikel" update="false" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" name="flrartikelliste"
+			update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
+			column="LOSSOLLMATERIAL_I_ID" insert="false"
+			name="flrlossollmaterial" update="false" />
+		<property column="STATUS_C_NR" generated="never" lazy="false"
+			name="status_c_nr" type="java.lang.String" />
+		<property column="C_LOSNUMMER" generated="never" lazy="false"
+			name="c_losnummer" type="java.lang.String" />
+		<property column="C_ARTIKELNUMMER" generated="never"
+			lazy="false" name="c_artikelnummer" type="java.lang.String" />
+		<property column="C_ARTIKELBEZEICHNUNG" generated="never"
+			lazy="false" name="c_artikelbezeichnung" type="java.lang.String" />
+		<property column="C_KOMMENTAR" generated="never" lazy="false"
+			name="c_kommentar" type="java.lang.String" />
+		<many-to-one
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ANLEGEN" insert="false"
+			name="flrpersonal_anlegen" update="false" />
+	</class>
+	<class name="FLRLospruefplan" table="FERT_LOSPRUEFPLAN">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property column="LOSSOLLMATERIAL_I_ID_KONTAKT"
+			generated="never" lazy="false" name="lossollmaterial_i_id_kontakt"
 			type="java.lang.Integer" />
-		<many-to-one name="flrstueckliste"
+		<property column="LOSSOLLMATERIAL_I_ID_LITZE"
+			generated="never" lazy="false" name="lossollmaterial_i_id_litze"
+			type="java.lang.Integer" />
+		<property column="LOSSOLLMATERIAL_I_ID_LITZE2"
+			generated="never" lazy="false" name="lossollmaterial_i_id_litze2"
+			type="java.lang.Integer" />
+		<property column="WERKZEUG_I_ID" generated="never"
+			lazy="false" name="werkzeug_i_id" type="java.lang.Integer" />
+		<property column="VERSCHLEISSTEIL_I_ID" generated="never"
+			lazy="false" name="verschleissteil_i_id" type="java.lang.Integer" />
+		<property column="I_SORT" generated="never" lazy="false"
+			name="i_sort" type="java.lang.Integer" />
+		<property column="PRUEFKOMBINATION_I_ID" generated="never"
+			lazy="false" name="pruefkombination_i_id" type="java.lang.Integer" />
+		<property column="B_DOPPELANSCHLAG" generated="never"
+			lazy="false" name="b_doppelanschlag" type="java.lang.Short" />
+		<property column="LOS_I_ID" generated="never" insert="false"
+			lazy="false" name="los_i_id" type="java.lang.Integer" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
+			column="LOSSOLLMATERIAL_I_ID_KONTAKT" insert="false"
+			name="flrlossollmaterial_kontakt" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
+			column="LOSSOLLMATERIAL_I_ID_LITZE" insert="false"
+			name="flrlossollmaterial_litze" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
+			column="LOSSOLLMATERIAL_I_ID_LITZE2" insert="false"
+			name="flrlossollmaterial_litze2" update="false" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRWerkzeug"
+			column="WERKZEUG_I_ID" insert="false" name="flrwerkzeug"
+			update="false" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRVerschleissteil"
+			column="VERSCHLEISSTEIL_I_ID" insert="false"
+			name="flrverschleissteil" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefart"
+			column="PRUEFART_I_ID" insert="false" name="flrpruefart"
+			update="false" />
+		<many-to-one
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRPruefkombination"
+			column="PRUEFKOMBINATION_I_ID" insert="false"
+			name="flrpruefkombination" update="false" />
+	</class>
+	<class name="FLRPruefergebnis" table="FERT_PRUEFERGEBINS">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property column="LOSABLIEFERUNG_I_ID" generated="never"
+			insert="false" lazy="false" name="losablieferung_i_id"
+			type="java.lang.Integer" update="false" />
+		<property column="LOSPRUEFPLAN_I_ID" generated="never"
+			insert="false" lazy="false" name="lospruefplan_i_id"
+			type="java.lang.Integer" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLospruefplan"
+			column="LOSPRUEFPLAN_I_ID" insert="false" name="flrlospruefplan"
+			update="false" />
+		<property column="N_CRIMPHOEHE_DRAHT" generated="never"
+			lazy="false" name="n_crimphoehe_draht" type="java.math.BigDecimal" />
+		<property column="N_CRIMPHOEHE_ISOLATION" generated="never"
+			lazy="false" name="n_crimphoehe_isolation"
+			type="java.math.BigDecimal" />
+		<property column="N_CRIMPBREITE_DRAHT" generated="never"
+			lazy="false" name="n_crimpbreite_draht" type="java.math.BigDecimal" />
+		<property column="N_CRIMPBREITE_ISOLATION" generated="never"
+			lazy="false" name="n_crimpbreite_isolation"
+			type="java.math.BigDecimal" />
+		<property column="N_WERT" generated="never" lazy="false"
+			name="n_wert" type="java.math.BigDecimal" />
+		<property column="B_WERT" generated="never" lazy="false"
+			name="b_wert" type="java.lang.Short" />
+	</class>
+	<class name="FLROffeneags" table="FERT_OFFENEAGS">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property column="KUNDE_I_ID" generated="never" lazy="false"
+			name="kunde_i_id" type="java.lang.Integer" />
+		<property column="MANDANT_C_NR" generated="never"
+			lazy="false" name="mandant_c_nr" type="java.lang.String" />
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="MASCHINE_I_ID" generated="never"
+			lazy="false" name="maschine_i_id" type="java.lang.Integer" />
+		<property column="N_GESAMTZEIT" generated="never"
+			lazy="false" name="n_gesamtzeit" type="java.math.BigDecimal" />
+		<property column="I_ARBEITSGANGNUMMER" generated="never"
+			lazy="false" name="i_arbeitsgangsnummer" type="java.lang.Integer" />
+		<property column="I_MASCHINENVERSATZTAGE" generated="never"
+			lazy="false" name="i_maschinenversatztage" type="java.lang.Integer" />
+		<property column="I_MASCHINENVERSATZ_MS" generated="never"
+			lazy="false" name="i_maschinenversatz_ms" type="java.lang.Integer" />
+		<property column="I_ANZAHLZEITDATEN" generated="never"
+			lazy="false" name="i_anzahlzeitdaten" type="java.lang.Integer" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID_TAETIGKEIT" name="flrartikel_taetigkeit" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID_SOLLMATERIAL" name="flrartikel_sollmaterial" />
+		<many-to-one
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID_STUECKLISTE" name="flrartikel_stueckliste" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
+			column="MASCHINE_I_ID" insert="false" name="flrmaschine"
+			update="false" />
+		<property
+			formula="dbo.ADD2DATE('dd',I_MASCHINENVERSATZTAGE ,(SELECT L.T_PRODUKTIONSBEGINN  FROM FERT_LOS L WHERE L.I_ID =LOS_I_ID))"
+			generated="never" lazy="false" name="t_agbeginn"
+			type="java.sql.Timestamp" />
+		<many-to-one
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" name="flrkunde" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan"
+			column="I_ID" insert="false" name="flrlossollarbeitsplan"
+			update="false" />
+	</class>
+	<class name="FLRProduzieren" table="FERT_PRODUZIEREN">
+		<id column="LOS_I_ID" name="los_i_id" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property column="N_DAUER_OFFEN_PERSONAL" generated="never"
+			lazy="false" name="n_dauer_offen_personal"
+			type="java.math.BigDecimal" />
+		<property column="N_DAUER_OFFEN_MASCHINE" generated="never"
+			lazy="false" name="n_dauer_offen_maschine"
+			type="java.math.BigDecimal" />
+		<property column="KUNDE_I_ID" generated="never" lazy="false"
+			name="kunde_i_id" type="java.lang.Integer" />
+		<property column="LOSSOLLARBEITSPLAN_I_ID_ERSTERARBEITSGANG"
+			generated="never" lazy="false"
+			name="lossolllarbeitsplan_i_id_ersterarbeitsgang"
+			type="java.lang.Integer" />
+		<property column="I_MASCHINENVERSATZTAGE" generated="never"
+			lazy="false" name="i_maschinenversatztage" type="java.lang.Integer" />
+		<property
+			formula="dbo.ADD2DATE('dd',I_MASCHINENVERSATZTAGE ,(SELECT L.T_PRODUKTIONSBEGINN  FROM FERT_LOS L WHERE L.I_ID =LOS_I_ID))"
+			generated="never" lazy="false" name="t_agbeginn"
+			type="java.sql.Timestamp" />
+		<many-to-one
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" name="flrkunde" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan"
+			column="LOSSOLLARBEITSPLAN_I_ID_ERSTERARBEITSGANG" insert="false"
+			name="flrlossollarbeitsplan" update="false" />
+	</class>
+	<class name="FLRWiederholendelose" table="FERT_WIEDERHOLENDELOSE">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property column="MANDANT_C_NR" generated="never"
+			lazy="false" name="mandant_c_nr" type="java.lang.String" />
+		<property column="C_PROJEKT" generated="never" lazy="false"
+			name="c_projekt" type="java.lang.String" />
+		<property column="AUFTRAGWIEDERHOLUNGSINTERVALL_C_NR"
+			generated="never" lazy="false"
+			name="auftragwiederholungsintervall_c_nr" type="java.lang.String" />
+		<property column="STUECKLISTE_I_ID" generated="never"
+			lazy="false" name="stueckliste_i_id" type="java.lang.Integer" />
+		<property column="T_TERMIN" generated="never" lazy="false"
+			name="t_termin" type="java.util.Date" />
+		<property column="N_LOSGROESSE" generated="never"
+			lazy="false" name="n_losgroesse" type="java.math.BigDecimal" />
+		<property column="B_VERSTECKT" generated="never" lazy="false"
+			name="b_versteckt" type="java.lang.Short" />
+		<property column="I_SORT" generated="never" lazy="false"
+			name="i_sort" type="java.lang.Integer" />
+		<property column="I_TAGEVOREILEND" generated="never"
+			lazy="false" name="i_tagevoreilend" type="java.lang.Integer" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
-			column="STUECKLISTE_I_ID" insert="false" update="false" />
+			column="STUECKLISTE_I_ID" insert="false" name="flrstueckliste"
+			update="false" />
 	</class>
 	<class name="FLRLoslagerentnahme" table="FERT_LOSLAGERENTNAHME">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
-		<many-to-one name="flrlager"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="I_SORT" generated="never" lazy="false"
+			name="i_sort" type="java.lang.Integer" />
+		<many-to-one
 			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
-			column="LAGER_I_ID" />
+			column="LAGER_I_ID" name="flrlager" />
 	</class>
 	<class name="FLRLosstatus" table="FERT_LOSSTATUS">
-		<id name="status_c_nr" column="STATUS_C_NR" type="java.lang.String">
+		<id column="STATUS_C_NR" name="status_c_nr" type="java.lang.String">
 			<generator class="native" />
 		</id>
 	</class>
 	<class name="FLRLosklasse" table="FERT_LOSKLASSE">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property column="C_NR" generated="never" lazy="false"
+			name="c_nr" type="java.lang.String" />
 	</class>
 	<class name="FLRLosbereich" table="FERT_LOSBEREICH">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property column="C_BEZ" generated="never" lazy="false"
+			name="c_bez" type="java.lang.String" />
 	</class>
 	<class name="FLRLoslosklasse" table="FERT_LOSLOSKLASSE">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<many-to-one name="flrlosklasse"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLosklasse"
-			column="LOSKLASSE_I_ID" />
+			column="LOSKLASSE_I_ID" name="flrlosklasse" />
 	</class>
 	<class name="FLRLosablieferung" table="FERT_LOSABLIEFERUNG">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="n_gestehungspreis" column="N_GESTEHUNGSPREIS"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="N_MENGE" generated="never" lazy="false"
+			name="n_menge" type="java.math.BigDecimal" />
+		<property column="N_GESTEHUNGSPREIS" generated="never"
+			lazy="false" name="n_gestehungspreis" type="java.math.BigDecimal" />
+		<property column="N_MATERIALWERT" generated="never"
+			lazy="false" name="n_materialwert" type="java.math.BigDecimal" />
+		<property column="N_ARBEITSZEITWERT" generated="never"
+			lazy="false" name="n_arbeitszeitwert" type="java.math.BigDecimal" />
+		<property column="N_ARBEITSZEITWERTDETAILLIERT"
+			generated="never" lazy="false" name="n_arbeitszeitwertdetailliert"
 			type="java.math.BigDecimal" />
-		<property name="n_materialwert" column="N_MATERIALWERT" type="java.math.BigDecimal" />
-		<property name="n_arbeitszeitwert" column="N_ARBEITSZEITWERT"
-			type="java.math.BigDecimal" />
-		<property name="t_aendern" column="T_AENDERN" type="timestamp" />
-		<property name="c_snrchnr_mig" column="C_SNRCHNR_MIG" type="java.lang.String" />
-		<many-to-one name="flrlos"
+		<property column="T_AENDERN" generated="never" lazy="false"
+			name="t_aendern" type="timestamp" />
+		<property column="C_SNRCHNR_MIG" generated="never"
+			lazy="false" name="c_snrchnr_mig" type="java.lang.String" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
-			column="LOS_I_ID" insert="false" update="false" />
-		<many-to-one name="flrlosreport"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLosReport"
-			column="LOS_I_ID" insert="false" update="false" />
+			column="LOS_I_ID" insert="false" name="flrlosreport" update="false" />
 	</class>
 	<class name="FLRLostechniker" table="FERT_LOSTECHNIKER">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<many-to-one name="flrlos"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="PERSONAL_I_ID" generated="never"
+			lazy="false" name="personal_i_id" type="java.lang.Integer" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
-			column="LOS_I_ID" insert="false" update="false" />
-		<many-to-one name="flrpersonal"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
-			column="PERSONAL_I_ID" insert="false" update="false" />
+			column="PERSONAL_I_ID" insert="false" name="flrpersonal"
+			update="false" />
 	</class>
 	<class name="FLRLosgutschlecht" table="FERT_LOSGUTSCHLECHT">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="lossollarbeitsplan_i_id" column="LOSSOLLARBEITSPLAN_I_ID"
-			type="java.lang.Integer" />
-		<property name="n_gut" column="N_GUT" type="java.math.BigDecimal" />
-		<property name="n_schlecht" column="N_SCHLECHT" type="java.math.BigDecimal" />
-		<property name="n_inarbeit" column="N_INARBEIT" type="java.math.BigDecimal" />
-		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
-		<many-to-one name="flrzeitdaten"
+		<property column="LOSSOLLARBEITSPLAN_I_ID" generated="never"
+			lazy="false" name="lossollarbeitsplan_i_id" type="java.lang.Integer" />
+		<property column="N_GUT" generated="never" lazy="false"
+			name="n_gut" type="java.math.BigDecimal" />
+		<property column="N_SCHLECHT" generated="never" lazy="false"
+			name="n_schlecht" type="java.math.BigDecimal" />
+		<property column="N_INARBEIT" generated="never" lazy="false"
+			name="n_inarbeit" type="java.math.BigDecimal" />
+		<property column="C_KOMMENTAR" generated="never" lazy="false"
+			name="c_kommentar" type="java.lang.String" />
+		<many-to-one
 			class="com.lp.server.personal.fastlanereader.generated.FLRZeitdaten"
-			column="ZEITDATEN_I_ID" insert="false" update="false" />
-		<many-to-one name="flrmaschinenzeitdaten"
+			column="ZEITDATEN_I_ID" insert="false" name="flrzeitdaten"
+			update="false" />
+		<many-to-one
 			class="com.lp.server.personal.fastlanereader.generated.FLRMaschinenzeitdaten"
-			column="MASCHINENZEITDATEN_I_ID" insert="false" update="false" />
-		<many-to-one name="flrlossollarbeitsplan"
+			column="MASCHINENZEITDATEN_I_ID" insert="false"
+			name="flrmaschinenzeitdaten" update="false" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan"
-			column="LOSSOLLARBEITSPLAN_I_ID" insert="false" update="false" />
-		<many-to-one name="flrfehler"
+			column="LOSSOLLARBEITSPLAN_I_ID" insert="false"
+			name="flrlossollarbeitsplan" update="false" />
+		<many-to-one
 			class="com.lp.server.reklamation.fastlanereader.generated.FLRFehler"
-			column="FEHLER_I_ID" insert="false" update="false" />
+			column="FEHLER_I_ID" insert="false" name="flrfehler" update="false" />
+
+		<many-to-one
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERFASST" insert="false"
+			name="flrpersonal_erfasst" update="false" />
+
+		<many-to-one
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ANLEGEN" insert="false"
+			name="flrpersonal_anlegen" update="false" />
+		<property column="T_ANLEGEN" name="t_anlegen"
+			type="java.sql.Timestamp" lazy="false" />
+
+		<property column="T_ZEITPUNKT" name="t_zeitpunkt"
+			type="java.sql.Timestamp" lazy="false" />
 	</class>
 	<class name="FLRInternebestellung" table="FERT_INTERNEBESTELLUNG">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
-		<property name="i_belegiid" column="I_BELEGIID" type="java.lang.Integer" />
-		<property name="i_belegpositioniid" column="I_BELEGPOSITIONIID"
-			type="java.lang.Integer" />
-		<property name="stueckliste_i_id" column="STUECKLISTE_I_ID"
-			type="java.lang.Integer" />
-		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
-		<property name="t_liefertermin" column="T_LIEFERTERMIN" type="timestamp" />
-		<many-to-one name="flrstueckliste"
+		<property column="MANDANT_C_NR" generated="never"
+			lazy="false" name="mandant_c_nr" type="java.lang.String" />
+		<property column="BELEGART_C_NR" generated="never"
+			lazy="false" name="belegart_c_nr" type="java.lang.String" />
+		<property column="I_BELEGIID" generated="never" lazy="false"
+			name="i_belegiid" type="java.lang.Integer" />
+		<property column="I_BELEGPOSITIONIID" generated="never"
+			lazy="false" name="i_belegpositioniid" type="java.lang.Integer" />
+		<property column="AUFTRAG_I_ID_KOPFAUFTRAG" generated="never"
+			lazy="false" name="auftrag_i_id_kopfauftrag" type="java.lang.Integer" />
+		<property column="STUECKLISTE_I_ID" generated="never"
+			lazy="false" name="stueckliste_i_id" type="java.lang.Integer" />
+		<property column="N_MENGE" generated="never" lazy="false"
+			name="n_menge" type="java.math.BigDecimal" />
+		<property column="T_LIEFERTERMIN" generated="never"
+			lazy="false" name="t_liefertermin" type="timestamp" />
+		<property column="X_AUSLOESER" generated="never" lazy="false"
+			name="x_ausloeser" type="java.lang.String" />
+		<property column="F_LAGERMINDEST" generated="never"
+			lazy="false" name="f_lagermindest" type="java.lang.Double" />
+		<many-to-one
 			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
-			column="STUECKLISTE_I_ID" insert="false" update="false" />
+			column="STUECKLISTE_I_ID" insert="false" name="flrstueckliste"
+			update="false" />
+		<many-to-one
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID_STANDORT" insert="false"
+			name="flrpartner_standort" update="false" />
+		<many-to-one
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag"
+			column="AUFTRAG_I_ID_KOPFAUFTRAG" insert="false"
+			name="flrauftrag_kopfauftrag" update="false" />
 	</class>
 	<class name="FLRZusatzstatus" table="FERT_ZUSATZSTATUS">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property column="MANDANT_C_NR" generated="never"
+			lazy="false" name="mandant_c_nr" type="java.lang.String" />
+		<property column="C_BEZ" generated="never" lazy="false"
+			name="c_bez" type="java.lang.String" />
+		<property column="I_SORT" generated="never" lazy="false"
+			name="i_sort" type="java.lang.Integer" />
 	</class>
 	<class name="FLRLoszusatzstatus" table="FERT_LOSZUSATZSTATUS">
-		<id name="i_id" column="I_ID" type="java.lang.Integer">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="los_i_id" column="LOS_I_ID" type="java.lang.Integer" />
-		<property name="zusatzstatus_i_id" column="ZUSATZSTATUS_I_ID"
-			type="java.lang.Integer" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
-		<many-to-one name="flrlos"
+		<property column="LOS_I_ID" generated="never" lazy="false"
+			name="los_i_id" type="java.lang.Integer" />
+		<property column="ZUSATZSTATUS_I_ID" generated="never"
+			lazy="false" name="zusatzstatus_i_id" type="java.lang.Integer" />
+		<property column="T_AENDERN" generated="never" lazy="false"
+			name="t_aendern" type="java.sql.Timestamp" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
-			column="LOS_I_ID" insert="false" update="false" />
-		<many-to-one name="flrzusatzstatus"
+			column="LOS_I_ID" insert="false" name="flrlos" update="false" />
+		<many-to-one
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRZusatzstatus"
-			column="ZUSATZSTATUS_I_ID" insert="false" update="false" />
+			column="ZUSATZSTATUS_I_ID" insert="false" name="flrzusatzstatus"
+			update="false" />
 	</class>
 	<filter-def name="filterLocale">
 		<filter-param name="paramLocale" type="java.lang.String" />

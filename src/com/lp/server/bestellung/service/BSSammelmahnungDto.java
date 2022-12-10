@@ -57,6 +57,15 @@ import java.util.Date;
  */
 public class BSSammelmahnungDto {
 	private String sBestellnummer = null;
+	private String sAngebotsnummer = null;
+	public String getSAngebotsnummer() {
+		return sAngebotsnummer;
+	}
+
+	public void setSAngebotsnummer(String sAngebotsnummer) {
+		this.sAngebotsnummer = sAngebotsnummer;
+	}
+
 	private String sBestellpositionbezeichung = null;
 	private Date dBelegdatum = null;
 	private Date dFaelligkeitsdatum = null;

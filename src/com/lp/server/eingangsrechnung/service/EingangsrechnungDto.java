@@ -37,16 +37,19 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
+
 import com.lp.server.eingangsrechnung.ejb.Eingangsrechnung;
 import com.lp.server.system.service.HvDtoLogClass;
 import com.lp.server.system.service.HvDtoLogIdCnr;
 import com.lp.server.system.service.HvDtoLogIgnore;
 import com.lp.server.util.IIId;
-import com.lp.util.Helper;
+import com.lp.server.util.IModificationData;
+import com.lp.server.util.logger.LogEventPayload;
 
 
 @HvDtoLogClass(name = HvDtoLogClass.EINGANGSRECHNUNG)
-public class EingangsrechnungDto implements Serializable, IIId {
+public class EingangsrechnungDto implements Serializable, IIId, LogEventPayload, IModificationData {
 	/**
 	 * 
 	 */
@@ -86,7 +89,65 @@ public class EingangsrechnungDto implements Serializable, IIId {
 	private Timestamp tMahndatum;
 	private Integer mahnstufeIId;
 
+	private Short bMitpositionen;
 	private String cWeartikel;
+
+	private Timestamp tWiederholenderledigt;
+	private Integer personalIIdWiederholenderledigt;
+
+	private String cKopftextuebersteuert;
+	private String cFusstextuebersteuert;
+	
+	private String cZollimportpapier;
+	private Timestamp tZollimportpapier;
+	private Integer personalIIdZollimportpapier;
+	private Integer eingangsrechnungIdZollimport;
+	
+	private Short bReversecharge;
+	private Short bIgErwerb;
+	private Integer eingangsrechnungIIdNachfolger;
+	private String wiederholungsintervallCNr;
+
+	private java.sql.Timestamp tGeprueft;
+
+	public java.sql.Timestamp getTGeprueft() {
+		return tGeprueft;
+	}
+
+	public void setTGeprueft(java.sql.Timestamp tGeprueft) {
+		this.tGeprueft = tGeprueft;
+	}
+
+	public Integer getPersonalIIdGeprueft() {
+		return personalIIdGeprueft;
+	}
+
+	public void setPersonalIIdGeprueft(Integer personalIIdGeprueft) {
+		this.personalIIdGeprueft = personalIIdGeprueft;
+	}
+
+	@Column(name = "PERSONAL_I_ID_GEPRUEFT")
+	private Integer personalIIdGeprueft;
+	
+	private Integer reversechargeartId ;
+	
+	public Short getBMitpositionen() {
+		return bMitpositionen;
+	}
+
+	public void setBMitpositionen(Short bMitpositionen) {
+		this.bMitpositionen = bMitpositionen;
+	}
+	
+	private Integer personalIIdAbwBankverbindung;
+
+	public Integer getPersonalIIdAbwBankverbindung() {
+		return personalIIdAbwBankverbindung;
+	}
+
+	public void setPersonalIIdAbwBankverbindung(Integer personalIIdAbwBankverbindung) {
+		this.personalIIdAbwBankverbindung = personalIIdAbwBankverbindung;
+	}
 
 	public String getCWeartikel() {
 		return cWeartikel;
@@ -95,11 +156,22 @@ public class EingangsrechnungDto implements Serializable, IIId {
 	public void setCWeartikel(String cWeartikel) {
 		this.cWeartikel = cWeartikel;
 	}
+	
+	public String getCKopftextuebersteuert() {
+		return this.cKopftextuebersteuert;
+	}
 
-	private Timestamp tWiederholenderledigt;
-	private Integer personalIIdWiederholenderledigt;
+	public void setCKopftextuebersteuert(String cKopftextuebersteuert) {
+		this.cKopftextuebersteuert = cKopftextuebersteuert;
+	}
 
-	private String cZollimportpapier;
+	public String getCFusstextuebersteuert() {
+		return this.cFusstextuebersteuert;
+	}
+
+	public void setCFusstextuebersteuert(String cFusstextuebersteuert) {
+		this.cFusstextuebersteuert = cFusstextuebersteuert;
+	}
 
 	public String getCZollimportpapier() {
 		return cZollimportpapier;
@@ -109,9 +181,6 @@ public class EingangsrechnungDto implements Serializable, IIId {
 		this.cZollimportpapier = cZollimportpapier;
 	}
 
-	private Timestamp tZollimportpapier;
-
-	private Integer personalIIdZollimportpapier;
 
 	public Timestamp getTZollimportpapier() {
 		return tZollimportpapier;
@@ -129,8 +198,6 @@ public class EingangsrechnungDto implements Serializable, IIId {
 			Integer personalIIdZollimportpapier) {
 		this.personalIIdZollimportpapier = personalIIdZollimportpapier;
 	}
-
-	private Integer eingangsrechnungIdZollimport;
 
 	@HvDtoLogIdCnr(entityClass = Eingangsrechnung.class)
 	public Integer getEingangsrechnungIdZollimport() {
@@ -175,22 +242,25 @@ public class EingangsrechnungDto implements Serializable, IIId {
 		this.mahnstufeIId = mahnstufeIId;
 	}
 
-	private Short bReversecharge;
-	private Short bIgErwerb;
-
-	public Short getBReversecharge() {
-		return this.bReversecharge;
-	}
+//	public Short getBReversecharge() {
+//		return this.bReversecharge;
+//	}
 	
+	/**
+	 * @deprecated 
+	 */
 	public boolean isReversecharge() {
-		return Helper.short2boolean(this.bReversecharge);
+//		return Helper.short2boolean(this.bReversecharge);
+		return bReversecharge == null ? false : bReversecharge > 0 ;
 	}
 
+	/**
+	 * @deprecated 
+	 */
 	public void setBReversecharge(Short bReversecharge) {
 		this.bReversecharge = bReversecharge;
 	}
 
-	private Integer eingangsrechnungIIdNachfolger;
 
 	public Integer getEingangsrechnungIIdNachfolger() {
 		return eingangsrechnungIIdNachfolger;
@@ -201,7 +271,6 @@ public class EingangsrechnungDto implements Serializable, IIId {
 		this.eingangsrechnungIIdNachfolger = eingangsrechnungIIdNachfolger;
 	}
 
-	private String wiederholungsintervallCNr;
 
 	public void setWiederholungsintervallCNr(String wiederholungsintervallCNr) {
 		this.wiederholungsintervallCNr = wiederholungsintervallCNr;
@@ -666,4 +735,43 @@ public class EingangsrechnungDto implements Serializable, IIId {
 		return returnString;
 	}
 
+	public boolean isEingangsrechnung() {
+		return EingangsrechnungFac.EINGANGSRECHNUNGART_EINGANGSRECHNUNG.equals(getEingangsrechnungartCNr()) ;
+	}
+	
+	public boolean isZusatzkosten() {
+		return EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN.equals(getEingangsrechnungartCNr()) ;
+	}
+	
+	public boolean isGutschrift() {
+		return EingangsrechnungFac.EINGANGSRECHNUNGART_GUTSCHRIFT.equals(getEingangsrechnungartCNr()) ;
+	}
+	
+	public boolean isAnzahlung() {
+		return EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG.equals(getEingangsrechnungartCNr()) ;
+	}
+	
+	public boolean isSchlussrechnung() {
+		return EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG.equals(getEingangsrechnungartCNr()) ;
+	}
+	
+	public boolean isStorniert() {
+		return EingangsrechnungFac.STATUS_STORNIERT.equals(getStatusCNr());
+	}
+	
+	@Override
+	public String asString() {
+		return "ER: [" + getCNr() + " (id:" + getIId() + ")" 
+			+ ", Belegdatum:" + dBelegdatum 
+			+ ", Betrag:" + nBetrag
+			+ ", Art:" + getEingangsrechnungartCNr() + "]";
+	}
+
+	public Integer getReversechargeartId() {
+		return reversechargeartId;
+	}
+
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId;
+	}
 }

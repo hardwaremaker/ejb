@@ -50,12 +50,21 @@ public class IdValueDto implements Serializable {
 		this.value = value ;
 	}
 	
+	/**
+	 * die Id des Eintrags
+	 * @return die Id
+	 */
 	public Integer getId() {
 		return id;
 	}
 	public void setId(Integer id) {
 		this.id = id;
 	}
+	
+	/**
+	 * Der Wert des Eintrags
+	 * @return der Wert
+	 */
 	public String getValue() {
 		return value;
 	}

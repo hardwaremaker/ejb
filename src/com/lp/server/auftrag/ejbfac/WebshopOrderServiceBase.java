@@ -70,6 +70,7 @@ import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragpositionDto;
 import com.lp.server.auftrag.service.CreateOrderResult;
+import com.lp.server.auftrag.service.WebshopOrderServiceFacLocal;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.system.ejb.Lieferart;
@@ -92,7 +93,7 @@ import com.lp.server.util.Facade;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
-public abstract class WebshopOrderServiceBase extends Facade implements WebshopOrderServiceFacLocal {
+public abstract class WebshopOrderServiceBase extends Facade  {
 
 	private List<ChangeEntry<?>> changedEntries  = new ArrayList<ChangeEntry<?>>() ;	
 	private KundeFinder kundeFinder = null ;
@@ -106,8 +107,8 @@ public abstract class WebshopOrderServiceBase extends Facade implements WebshopO
 	private static final String TAG_CDATA_START = "<![CDATA[" ;
 	private final static String TAG_CDATA_END = "]]>" ;
 
-	@PersistenceContext
-	protected EntityManager em;
+//	@PersistenceContext
+//	protected EntityManager em;
 	
 	
 	protected boolean isEmptyString(String string) {
@@ -286,7 +287,19 @@ public abstract class WebshopOrderServiceBase extends Facade implements WebshopO
 		try {
 			kundeDto = getKundeFac()
 				.kundeFindByiIdPartnercNrMandantOhneExc(
-						partnerDtos[0].getIId(), webClientDto.getMandant(), webClientDto) ;
+						partnerDtos[0].getIId(), webClientDto.getMandant(), webClientDto);
+			if(kundeDto == null) {
+				addChangeEntry(
+						new ChangeEntry<String>(uidNummer, "", 
+							"ACHTUNG! Die UID {0} wird im Partner (" 
+							+ partnerDtos[0].getCKbez() + ") verwendet, "	
+							+ "der keinem Kunden zugeordnet ist. Es wurde keiner gew\u00E4hlt."));
+				return null;
+			}
+
+			if(Helper.isTrue(kundeDto.getBVersteckterlieferant())) {
+				return null;
+			}
 		} catch(RemoteException e) {					
 		}
 
@@ -343,7 +356,7 @@ public abstract class WebshopOrderServiceBase extends Facade implements WebshopO
 		
 		auftragDto.setMandantCNr(getAuthController().getWebClientDto().getMandant()) ;
 		String orderDate = getOrderAdapter().getDatum() ;
-		auftragDto.setTBelegdatum(new Timestamp(System.currentTimeMillis())) ;
+		auftragDto.setTBelegdatum(Helper.cut()) ;
 		auftragDto.setDBestelldatum(new Timestamp(getDateFromDateStringWithDefault(orderDate).getTime())) ;
 	    auftragDto.setAuftragartCNr(AuftragServiceFac.AUFTRAGART_FREI);
 	    auftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT);
@@ -515,7 +528,7 @@ public abstract class WebshopOrderServiceBase extends Facade implements WebshopO
 		return xmlOpenTransOrder ;
 	}
 	
-	@Override
+	@org.jboss.ejb3.annotation.TransactionTimeout(1200)
 	public CreateOrderResult createOrder(WebshopAuthHeader header, String xmlOpenTransOrder) {
 		if(isEmptyString(xmlOpenTransOrder)) {
 			myLogger.info("Leere Zeichenkette als Auftrag erhalten.") ;

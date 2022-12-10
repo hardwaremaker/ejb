@@ -36,21 +36,51 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.Validator;
+
 @NamedQueries( 
-		{ @NamedQuery(name = "KontolaenderartfindBykontoIIdUebersetzt", query = "SELECT OBJECT(o) FROM Kontolaenderart o WHERE o.kontoIIdUebersetzt=?1") })
+{
+	@NamedQuery(
+			name = KontolaenderartQuery.ByCompound,
+			query = "SELECT OBJECT(o) FROM Kontolaenderart o " +
+				"WHERE o.mandantCNr=?1 AND o.kontoIId=?2 AND o.finanzamtIId=?3 " +
+				"AND o.laenderartCNr=?4 AND o.reversechargeartId=?5 " +
+				"AND o.tGueltigAb=?6"),
+	@NamedQuery(
+			name = KontolaenderartQuery.ByDate,
+			query = "SELECT OBJECT(o) FROM Kontolaenderart o " +
+				"WHERE o.mandantCNr=?1 AND o.kontoIId=?2 AND o.finanzamtIId=?3 " +
+				"AND o.laenderartCNr=?4 AND o.reversechargeartId=?5 " +
+				"AND o.tGueltigAb<=?6 ORDER BY o.tGueltigAb DESC"),
+	@NamedQuery(
+			name = KontolaenderartQuery.ByUebersetzt,
+			query = "SELECT OBJECT(o) FROM Kontolaenderart o " +
+				"WHERE o.mandantCNr=?1 AND o.finanzamtIId =?2 " +
+				"AND o.reversechargeartId=?3 AND o.kontoIIdUebersetzt=?4 " +
+				"AND o.tGueltigAb<=?5 ORDER BY o.tGueltigAb DESC"),
+	@NamedQuery(
+			name = KontolaenderartQuery.ByAll,
+			query = "SELECT OBJECT(o) FROM Kontolaenderart o " +
+					"WHERE o.mandantCNr=?1 AND o.finanzamtIId =?2 " +
+					"AND o.kontoIId=?3 "),
+})
 
 @Entity
 @Table(name = "FB_KONTOLAENDERART")
 public class Kontolaenderart implements Serializable {
-	@EmbeddedId
-	private KontolaenderartPK pk;
+//	@EmbeddedId
+//	private KontolaenderartPK pk;
 
+	@Id
+	@Column(name = "I_ID")
+	private Integer iId;
+	
 	@Column(name = "T_ANLEGEN")
 	private Timestamp tAnlegen;
 
@@ -66,17 +96,46 @@ public class Kontolaenderart implements Serializable {
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
 
+	@Column(name = "KONTO_I_ID")
+	private Integer kontoIId;
+
+	@Column(name = "LAENDERART_C_NR")
+	private String laenderartCNr;
+
+	@Column(name = "FINANZAMT_I_ID")
+	private Integer finanzamtIId;
+	
+	@Column(name = "MANDANT_C_NR")
+	private String mandantCNr;
+
+	@Column(name = "REVERSECHARGEART_I_ID")
+	private Integer reversechargeartId ;
+	
+	@Column(name = "T_GUELTIGAB")
+	private Timestamp tGueltigAb;
+		
+	
 	private static final long serialVersionUID = 1L;
 
 	public Kontolaenderart() {
 		super();
 	}
 
+	public Kontolaenderart(Integer iId) {
+		this.iId = iId;
+	}
+	
 	public Kontolaenderart(Integer kontoIId, String laenderartCNr, Integer finanzamtIId, 
-			String mandantCNr, Integer kontoIIdUebersetzt, Integer personalIIdAnlegen,
-			Integer personalIIdAendern) {
-		setPk(new KontolaenderartPK(kontoIId, laenderartCNr, finanzamtIId, mandantCNr));
+			String mandantCNr, Integer reversechargeartId, Integer kontoIIdUebersetzt, Integer personalIIdAnlegen,
+			Integer personalIIdAendern, Timestamp gueltigAb) {
+//		setPk(new KontolaenderartPK(kontoIId, laenderartCNr, finanzamtIId, mandantCNr, reversechargeartId));
+		setKontoIId(kontoIId);
+		setLaenderartCNr(laenderartCNr);
+		setFinanzamtIId(finanzamtIId);
+		setMandantCNr(mandantCNr);
+		setReversechargeartId(reversechargeartId);
 		setKontoIIdUebersetzt(kontoIIdUebersetzt);
+		setTGueltigAb(gueltigAb);
 		setPersonalIIdAnlegen(personalIIdAnlegen);
 		setPersonalIIdAendern(personalIIdAendern);
 		// Setzen der NOT NULL felder
@@ -85,13 +144,13 @@ public class Kontolaenderart implements Serializable {
 		this.setTAnlegen(now);
 	}
 
-	public KontolaenderartPK getPk() {
-		return this.pk;
-	}
-
-	public void setPk(KontolaenderartPK pk) {
-		this.pk = pk;
-	}
+//	public KontolaenderartPK getPk() {
+//		return this.pk;
+//	}
+//
+//	public void setPk(KontolaenderartPK pk) {
+//		this.pk = pk;
+//	}
 
 	public Timestamp getTAnlegen() {
 		return this.tAnlegen;
@@ -109,14 +168,6 @@ public class Kontolaenderart implements Serializable {
 		this.tAendern = tAendern;
 	}
 
-	public Integer getKontoIId() {
-		return pk.getKontoIId();
-	}
-
-	public void setKontoIId(Integer kontoIId) {
-		pk.setKontoIId(kontoIId);
-	}
-
 	public Integer getKontoIIdUebersetzt() {
 		return this.kontoIIdUebersetzt;
 	}
@@ -125,27 +176,45 @@ public class Kontolaenderart implements Serializable {
 		this.kontoIIdUebersetzt = kontoIIdUebersetzt;
 	}
 
+	public Integer getKontoIId() {
+		return this.kontoIId;
+	}
+
+	public void setKontoIId(Integer kontoIId) {
+		this.kontoIId = kontoIId;
+	}
+
 	public String getLaenderartCNr() {
-		return pk.getLaenderartCNr();
+		return this.laenderartCNr;
 	}
 
 	public void setLaenderartCNr(String laenderartCNr) {
-		this.pk.setLaenderartCNr(laenderartCNr);
-	}
-
-	public Integer getFinanzamtIId() {
-		return pk.getFinanzamtIId();
+		this.laenderartCNr = laenderartCNr;
 	}
 
 	public void setFinanzamtIId(Integer finanzamtIId) {
-		this.pk.setFinanzamtIId(finanzamtIId);
+		this.finanzamtIId = finanzamtIId;
 	}
-	public String getMandantCNr() {
-		return pk.getMandantCNr();
+
+	public Integer getFinanzamtIId() {
+		return finanzamtIId;
 	}
 
 	public void setMandantCNr(String mandantCNr) {
-		this.pk.setMandantCNr(mandantCNr);
+		this.mandantCNr = mandantCNr;
+	}
+
+	public String getMandantCNr() {
+		return mandantCNr;
+	}
+
+	
+	public Integer getReversechargeartId() {
+		return reversechargeartId ;
+	}
+	
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId ;
 	}
 
 	public Integer getPersonalIIdAendern() {
@@ -163,5 +232,21 @@ public class Kontolaenderart implements Serializable {
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
 	}
+	
+	public Integer getIId() {
+		return this.iId;
+	}
 
+	public void setIId(Integer iId) {
+		this.iId = iId;
+	}
+
+	public Timestamp getTGueltigAb() {
+		return tGueltigAb;
+	}
+	
+	public void setTGueltigAb(Timestamp gueltigAb) {
+		Validator.notNull(gueltigAb, "gueltigAb");
+		tGueltigAb = gueltigAb;
+	}
 }

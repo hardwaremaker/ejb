@@ -57,8 +57,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die kolllektive implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die kolllektive implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -109,18 +109,32 @@ public class Kollektivuestd50Handler extends UseCaseHandler {
 				rows[row][col++] = kollektiv.getI_id();
 				rows[row][col++] = kollektiv.getFlrtagesart().getC_nr();
 
-				if (kollektiv.getU_bis() != null) {
-					rows[row][col++] = kollektiv.getU_bis().toString();
+				if (kollektiv.getFlrkollektiv().getI_berechnungsbasis() == PersonalFac.KOLLEKTIV_BERECHNUNGSBASIS_SOLLZEIT_ZEITMODEL) {
+
 				} else {
-					rows[row][col++] = null;
+					if (kollektiv.getU_bis() != null) {
+
+						if (kollektiv.getFlrkollektiv().getI_berechnungsbasis() == PersonalFac.KOLLEKTIV_BERECHNUNGSBASIS_FESTE_STUNDEN) {
+							rows[row][col++] = null;
+						} else {
+							rows[row][col++] = kollektiv.getU_bis().toString();
+						}
+
+					} else {
+						rows[row][col++] = null;
+					}
+
+					rows[row][col++] = kollektiv.getU_von().toString();
+
+					rows[row][col++] = new Boolean(
+							Helper.short2boolean(kollektiv.getB_restdestages()));
+					rows[row][col++] = new Boolean(
+							Helper.short2boolean(kollektiv
+									.getB_unterignorieren()));
+
 				}
 
-				rows[row][col++] = kollektiv.getU_von().toString();
-
-				rows[row][col++] = new Boolean(Helper.short2boolean(kollektiv
-						.getB_restdestages()));
-				rows[row++][col++] = new Boolean(Helper.short2boolean(kollektiv
-						.getB_unterignorieren()));
+				row++;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -292,7 +306,7 @@ public class Kollektivuestd50Handler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-//				boolean idFound = false;
+				// boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

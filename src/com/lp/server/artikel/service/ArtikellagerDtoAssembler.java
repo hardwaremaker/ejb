@@ -49,6 +49,8 @@ public class ArtikellagerDtoAssembler {
 					.getNGestehungspreis());
 			artikellagerDto.setNLagerstand(artikellager.getNLagerstand());
 			artikellagerDto.setMandantCNr(artikellager.getMandantCNr());
+			artikellagerDto.setFLagermindest(artikellager.getFLagermindest());
+			artikellagerDto.setFLagersoll(artikellager.getFLagersoll());
 		}
 		return artikellagerDto;
 	}

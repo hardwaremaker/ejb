@@ -144,6 +144,17 @@ public class StrukturierterImportDto implements Serializable {
 	Double dimension2 = null;
 	Double dimension3 = null;
 	
+	private ArrayList<Integer> artikelIIds_arbeitsgaenge = new ArrayList<Integer>();
+	
+	
+	public void addArbeitsgang(Integer artikelIId){
+		artikelIIds_arbeitsgaenge.add(artikelIId);
+	}
+	
+	public ArrayList<Integer> getArtikelIIds_arbeitsgaenge() {
+		return artikelIIds_arbeitsgaenge;
+	}
+
 	public Double getDimension1() {
 		return dimension1;
 	}

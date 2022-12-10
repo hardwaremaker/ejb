@@ -46,6 +46,7 @@ public class BankDtoAssembler {
 			bankDto.setPartnerIId(bank.getPartnerIId());
 			bankDto.setCBlz(bank.getCBlz());
 			bankDto.setCBic(bank.getCBic());
+			
 		}
 		return bankDto;
 	}

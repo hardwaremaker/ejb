@@ -34,6 +34,7 @@ package com.lp.server.finanz.bl;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -45,15 +46,19 @@ import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FinanzamtDto;
 import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.finanz.service.KontolaenderartDto;
+import com.lp.server.finanz.service.ReversechargeartDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnung;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungartDto;
+import com.lp.server.system.ejbfac.EJBExcFactory;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.BelegDatumAdapter;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HvOptional;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -200,7 +205,7 @@ public class FibuExportValidator extends Facade implements IFibuExportValidation
 	}
 	
 	@Override
-	public boolean isValidLaenderartCnr(String laenderartCnr, Integer partnerId, Object belegDto) {
+	public boolean isValidLaenderartCnr(String laenderartCnr, Integer partnerId, BelegDatumAdapter beleg) {
 		if (laenderartCnr == null) {
 			PartnerDto partnerDto = getPartnerFac()
 					.partnerFindByPrimaryKey(partnerId, theClientDto);
@@ -213,7 +218,7 @@ public class FibuExportValidator extends Facade implements IFibuExportValidation
 									+ partnerDto
 											.getCName1nachnamefirmazeile1()));
 			ArrayList<Object> a = new ArrayList<Object>();
-			a.addAll(getBelegInfo(belegDto)) ;
+			a.addAll(getBelegInfo(beleg.dto())) ;
 			a.addAll(getAllInfoForTheClient(partnerDto));
 			ex.setAlInfoForTheClient(a);
 			addFailedValidation(ex) ;
@@ -336,7 +341,10 @@ public class FibuExportValidator extends Facade implements IFibuExportValidation
 			tBelegdatum = ((EingangsrechnungDto) oBelegDto).getDBelegdatum();
 		} else if (oBelegDto instanceof FLREingangsrechnung) {
 			tBelegdatum = ((FLREingangsrechnung) oBelegDto).getT_belegdatum();
+		} else {
+			throw new IllegalArgumentException("Unknown Beleg-Type in " + oBelegDto.toString());
 		}
+		
 		GregorianCalendar cStichtag = new GregorianCalendar();
 		cStichtag.setTime(exportKriterienDto.getDStichtag());
 		GregorianCalendar cBelegdatum = new GregorianCalendar();
@@ -352,24 +360,29 @@ public class FibuExportValidator extends Facade implements IFibuExportValidation
 	
 	@Override
 	public boolean isValidKontolaenderart(
-			KontolaenderartDto kontolaenderartDto, Integer kontoId, String laenderartCnr, Integer finanzamtId,
-			Object belegDto, Integer mandantFinanzamtId) throws RemoteException {
-		if(kontolaenderartDto != null) return true ;
+			HvOptional<KontolaenderartDto> kontolaenderartDto, Integer kontoId, String laenderartCnr, Integer finanzamtId,
+			Integer reversechargeartId, Object belegDto, Integer mandantFinanzamtId, Timestamp gueltigZum) throws RemoteException {
+		if(kontolaenderartDto.isPresent()) return true ;
 	
 		KontoDto kontoDtoHelp = getFinanzFac().kontoFindByPrimaryKey(kontoId);
+		ReversechargeartDto rcartDto = reversechargeartId == null ? new ReversechargeartDto() : getFinanzServiceFac()
+				.reversechargeartFindByPrimaryKey(reversechargeartId, theClientDto) ;
 		EJBExceptionLP ex = new EJBExceptionLP(
 				EJBExceptionLP.FEHLER_FINANZ_EXPORT_KONTOLAENDERART_NICHT_DEFINIERT,
 				new Exception("Kontolaenderart fuer Konto i_id "
-						+ kontoDtoHelp.getIId() + ","
-						+ kontoDtoHelp.getCNr() + " "
-						+ kontoDtoHelp.getCBez() + ", "
-						+ laenderartCnr
+						+ kontoDtoHelp.getIId() 
+						+ ", " + kontoDtoHelp.getCNr() 
+						+ " " + kontoDtoHelp.getCBez() 
+						+ ", laenderart: " + laenderartCnr 
+						+ ", reversechargeart: " + rcartDto.getCNr()
 						+ " ist nicht definiert"));
 		ArrayList<Object> a = new ArrayList<Object>();
 		a.add(kontoDtoHelp.getCNr() + " "
 				+ kontoDtoHelp.getCBez() + ", " + laenderartCnr);
-		a.add("Finanzamt Mandant I_ID='" + (mandantFinanzamtId == null ? "" : mandantFinanzamtId.toString()) + "'") ;
-		a.add("Finanzamt I_ID='" + (finanzamtId == null ? "" : finanzamtId.toString()) + "'");
+		a.add("Reverse Charge I_ID='" + reversechargeartId + "', CNr='" + rcartDto.getCNr() + "'");
+		a.add("Finanzamt Mandant I_ID='" + (mandantFinanzamtId == null ? "?" : mandantFinanzamtId.toString()) + "'") ;
+		a.add("Finanzamt I_ID='" + (finanzamtId == null ? "?" : finanzamtId.toString()) + "'");
+		a.add("Gueltig Zum='" + (gueltigZum == null ? "?" : gueltigZum.toString()) + "'");
 		a.addAll(getBelegInfo(belegDto)) ;
 		ex.setAlInfoForTheClient(a);
 		addFailedValidation(ex) ;

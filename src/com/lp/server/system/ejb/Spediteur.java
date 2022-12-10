@@ -73,6 +73,13 @@ public class Spediteur implements Serializable {
 	@Column(name = "ANSPRECHPARTNER_I_ID")
 	private Integer ansprechpartnerIId;
 	
+	@Column(name = "PARTNER_I_ID")
+	private Integer partnerIId;
+
+	@Column(name = "C_VERKEHRSZWEIG")
+	private String cVerkehrszweig;
+	
+
 	public Integer getAnsprechpartnerIId() {
 		return ansprechpartnerIId;
 	}
@@ -81,10 +88,6 @@ public class Spediteur implements Serializable {
 		this.ansprechpartnerIId = ansprechpartnerIId;
 	}
 
-	@Column(name = "PARTNER_I_ID")
-	private Integer partnerIId;
-
-	
 	public Integer getPartnerIId() {
 		return partnerIId;
 	}
@@ -164,5 +167,13 @@ public class Spediteur implements Serializable {
 
 	public void setPersonalIIdAendern(Integer personalIIdAendern) {
 		this.personalIIdAendern = personalIIdAendern;
+	}
+	
+	public void setCVerkehrszweig(String cIntrastatVerkehrszweig) {
+		this.cVerkehrszweig = cIntrastatVerkehrszweig;
+	}
+	
+	public String getCVerkehrszweig() {
+		return this.cVerkehrszweig;
 	}
 }

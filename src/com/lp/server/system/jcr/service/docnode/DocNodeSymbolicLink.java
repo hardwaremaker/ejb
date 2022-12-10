@@ -95,12 +95,12 @@ public class DocNodeSymbolicLink extends DocNodeBase {
 	}
 
 	@Override
-	protected void applyPropertiesSub(Node node) throws RepositoryException {
+	protected void loadFromImpl(Node node) throws RepositoryException {
 		//Keine Properties, dieser DocNode Typ wird nicht ins CMS gespeichert
 	}
 
 	@Override
-	protected void persistSub(Node node) throws RepositoryException {
+	protected void persistToImpl(Node node) throws RepositoryException {
 		//Keine Properties, dieser DocNode Typ wird nicht ins CMS gespeichert
 	}
 

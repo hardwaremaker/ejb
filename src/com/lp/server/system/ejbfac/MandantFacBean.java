@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.system.ejbfac;
@@ -39,6 +39,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -57,21 +58,35 @@ import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+import javax.persistence.Transient;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Session;
+import org.modelmapper.ModelMapper;
 
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.LagerFac;
 import com.lp.server.artikel.service.VkpfartikelpreislisteDto;
+import com.lp.server.finanz.ejb.ReversechargeartQuery;
 import com.lp.server.finanz.service.FibuExportFac;
+import com.lp.server.finanz.service.FinanzServiceFac.ReversechargeArt;
+import com.lp.server.finanz.service.ReversechargeartDto;
+import com.lp.server.finanz.service.ReversechargeartsprDto;
 import com.lp.server.partner.ejb.Partner;
+import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.partner.service.PartnerbankDto;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.system.ejb.Dokumentenlink;
 import com.lp.server.system.ejb.Dokumentenlinkbeleg;
 import com.lp.server.system.ejb.Kostentraeger;
 import com.lp.server.system.ejb.Mandant;
+import com.lp.server.system.ejb.Mandantagbspr;
 import com.lp.server.system.ejb.Modulberechtigung;
 import com.lp.server.system.ejb.ModulberechtigungPK;
 import com.lp.server.system.ejb.Mwstsatz;
+import com.lp.server.system.ejb.MwstsatzCode;
+import com.lp.server.system.ejb.MwstsatzCodeQuery;
 import com.lp.server.system.ejb.Mwstsatzbez;
 import com.lp.server.system.ejb.Spediteur;
 import com.lp.server.system.ejb.Zahlungsziel;
@@ -83,6 +98,7 @@ import com.lp.server.system.ejb.ZusatzfunktionberechtigungPK;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.AnwenderDto;
+import com.lp.server.system.service.AutomatikjobDto;
 import com.lp.server.system.service.DokumentenlinkDto;
 import com.lp.server.system.service.DokumentenlinkDtoAssembler;
 import com.lp.server.system.service.DokumentenlinkbelegDto;
@@ -91,11 +107,12 @@ import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.KostentraegerDto;
 import com.lp.server.system.service.KostentraegerDtoAssembler;
 import com.lp.server.system.service.LieferartDto;
+import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
-import com.lp.server.system.service.MandantDtoAssembler;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ModulberechtigungDto;
 import com.lp.server.system.service.ModulberechtigungDtoAssembler;
+import com.lp.server.system.service.MwstsatzCodeDto;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.MwstsatzDtoAssembler;
 import com.lp.server.system.service.MwstsatzbezDto;
@@ -104,7 +121,6 @@ import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.ReportMandantDto;
 import com.lp.server.system.service.SpediteurDto;
-import com.lp.server.system.service.SpediteurDtoAssembler;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.ZahlungszielDto;
@@ -116,6 +132,13 @@ import com.lp.server.system.service.ZusatzfunktionDtoAssembler;
 import com.lp.server.system.service.ZusatzfunktionberechtigungDto;
 import com.lp.server.system.service.ZusatzfunktionberechtigungDtoAssembler;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HvOptional;
+import com.lp.server.util.MwstsatzCodeId;
+import com.lp.server.util.MwstsatzId;
+import com.lp.server.util.MwstsatzbezId;
+import com.lp.server.util.ReversechargeartId;
+import com.lp.server.util.Validator;
+import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -125,19 +148,26 @@ public class MandantFacBean extends Facade implements MandantFac {
 	@PersistenceContext
 	private EntityManager em;
 
-	public Integer createMwstsatz(MwstsatzDto mwstsatzDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	@Transient
+	private transient ModelMapper mapper = null;
+
+	protected ModelMapper getMapper() {
+		if (mapper == null) {
+			mapper = new ModelMapper();
+		}
+		return mapper;
+	}
+
+	public Integer createMwstsatz(MwstsatzDto mwstsatzDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		myLogger.entry();
 
 		// precondition
 		if (theClientDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"theClientDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("theClientDto == null"));
 		}
 		if (mwstsatzDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("mwstsatzDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("mwstsatzDtoI == null"));
 		}
 
 		// checkDoppelter(mwstsatzDtoI, null);
@@ -151,14 +181,12 @@ public class MandantFacBean extends Facade implements MandantFac {
 			mwstsatzDtoI.setIId(iIdMWSNew);
 			if (mwstsatzDtoI.getMwstsatzbezDto() != null) {
 
-				iIdMwstbez = createMwstsatzbez(
-						mwstsatzDtoI.getMwstsatzbezDto(), theClientDto);
+				iIdMwstbez = createMwstsatzbez(mwstsatzDtoI.getMwstsatzbezDto(), theClientDto);
 
 				mwstsatzDtoI.setIIMwstsatzbezId(iIdMwstbez);
 			}
-			Mwstsatz mwstsatz = new Mwstsatz(mwstsatzDtoI.getIId(),
-					mwstsatzDtoI.getFMwstsatz(), mwstsatzDtoI.getDGueltigab(),
-					mwstsatzDtoI.getIIMwstsatzbezId());
+			Mwstsatz mwstsatz = new Mwstsatz(mwstsatzDtoI.getIId(), mwstsatzDtoI.getFMwstsatz(),
+					mwstsatzDtoI.getDGueltigab(), mwstsatzDtoI.getIIMwstsatzbezId());
 			em.persist(mwstsatz);
 			em.flush();
 			setMwstsatzFromMwstsatzDto(mwstsatz, mwstsatzDtoI);
@@ -172,13 +200,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 	public Integer createKostentraeger(KostentraegerDto dto) {
 
 		try {
-			Query query = em
-					.createNamedQuery("KostentraegerFindByMandantCNrCBez");
+			Query query = em.createNamedQuery("KostentraegerFindByMandantCNrCBez");
 			query.setParameter(1, dto.getMandantCNr());
 			query.setParameter(2, dto.getCBez());
 			Kostentraeger doppelt = (Kostentraeger) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("LP_KOSTENTRAEGER.UK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_KOSTENTRAEGER.UK"));
 		} catch (NoResultException ex1) {
 			// nothing here
 		}
@@ -189,8 +215,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_KOSTENTRAEGER);
 			dto.setIId(pk);
 
-			Kostentraeger bean = new Kostentraeger(dto.getIId(),
-					dto.getMandantCNr(), dto.getCBez());
+			Kostentraeger bean = new Kostentraeger(dto.getIId(), dto.getMandantCNr(), dto.getCBez());
 			em.persist(bean);
 			em.flush();
 			setKostentraegerFromKostentraegerDto(bean, dto);
@@ -220,17 +245,13 @@ public class MandantFacBean extends Facade implements MandantFac {
 		Kostentraeger ialle = em.find(Kostentraeger.class, dto.getIId());
 
 		try {
-			Query query = em
-					.createNamedQuery("KostentraegerFindByMandantCNrCBez");
+			Query query = em.createNamedQuery("KostentraegerFindByMandantCNrCBez");
 			query.setParameter(1, dto.getMandantCNr());
 			query.setParameter(2, dto.getCBez());
 			// @todo getSingleResult oder getResultList ?
-			Integer iIdVorhanden = ((Kostentraeger) query.getSingleResult())
-					.getIId();
+			Integer iIdVorhanden = ((Kostentraeger) query.getSingleResult()).getIId();
 			if (ialle.getIId().equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"LP_KOSTENTRAEGER.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_KOSTENTRAEGER.UK"));
 			}
 		} catch (NoResultException ex) {
 
@@ -239,8 +260,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		setKostentraegerFromKostentraegerDto(ialle, dto);
 	}
 
-	private void setKostentraegerFromKostentraegerDto(Kostentraeger bean,
-			KostentraegerDto dto) {
+	private void setKostentraegerFromKostentraegerDto(Kostentraeger bean, KostentraegerDto dto) {
 		bean.setMandantCNr(dto.getMandantCNr());
 		bean.setCBez(dto.getCBez());
 		em.merge(bean);
@@ -250,58 +270,56 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Pruefe auf "doppelte" Mwsteintraege.
 	 * 
-	 * @param mwstsatzDtoI
-	 *            MwstsatzDto
-	 * @param theClientDto
-	 *            MwstsatzDto[]
-	 * @throws EJBExceptionLP
-	 *             / /* private void checkDoppelter(MwstsatzDto mwstsatzDtoI,
-	 *             Integer mwstIIdI) throws EJBExceptionLP { MwstsatzDto[]
-	 *             mwstDto = null; MwstsatzbezDto[] mwstbezDto = null; try { ///
-	 *             mwstDto =
-	 *             assembleMwstsatzDtos(mwstsatzHome.findAllByMandant(mwstsatzDtoI
-	 *             .getMandantCNr())); mwstbezDto =
-	 *             assembleMwstsatzbezDtos(mwstsatzbezHome
-	 *             .findAllByMandant(mwstsatzDtoI. getMandantCNr())); for (int i
-	 *             = 0; i < mwstbezDto.length; i++) {try { mwstDto[i] =*
-	 *             assembleMwstsatzDto (em.find(Mwstsatz.class, mwstbezDto[i].*
-	 *             getIId())); } catch (FinderException ex) { throw new*
-	 *             EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-	 *             ex); } } } catch (FinderException ex) { // nothing here } for
-	 *             (int i = 0; i < mwstDto.length; i++) {if (mwstIIdI != null) {
-	 *             if (mwstIIdI.compareTo(mwstDto[i].getIId()) != 0) { if (
-	 *             (mwstDto
-	 *             [i].getFMwstsatz().equals(mwstsatzDtoI.getFMwstsatz()) ||
-	 *             (mwstDto
-	 *             [i].getCBezeichnung().equals(mwstsatzDtoI.getCBezeichnung
-	 *             ())))) { throw new
-	 *             EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, null);
-	 *             } } } else { if (
-	 *             (mwstDto[i].getFMwstsatz().equals(mwstsatzDtoI
-	 *             .getFMwstsatz()) ||
-	 *             (mwstDto[i].getCBezeichnung().equals(mwstsatzDtoI
-	 *             .getCBezeichnung())))) { throw new
-	 *             EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, null);
-	 *             } } } }
+	 * @param mwstsatzDtoI MwstsatzDto
+	 * @param theClientDto MwstsatzDto[]
+	 * @throws EJBExceptionLP / /* private void checkDoppelter(MwstsatzDto
+	 *                        mwstsatzDtoI, Integer mwstIIdI) throws EJBExceptionLP
+	 *                        { MwstsatzDto[] mwstDto = null; MwstsatzbezDto[]
+	 *                        mwstbezDto = null; try { /// mwstDto =
+	 *                        assembleMwstsatzDtos(mwstsatzHome.findAllByMandant(mwstsatzDtoI
+	 *                        .getMandantCNr())); mwstbezDto =
+	 *                        assembleMwstsatzbezDtos(mwstsatzbezHome
+	 *                        .findAllByMandant(mwstsatzDtoI. getMandantCNr())); for
+	 *                        (int i = 0; i < mwstbezDto.length; i++) {try {
+	 *                        mwstDto[i] =* assembleMwstsatzDto
+	 *                        (em.find(Mwstsatz.class, mwstbezDto[i].* getIId())); }
+	 *                        catch (FinderException ex) { throw new*
+	 *                        EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+	 *                        ex); } } } catch (FinderException ex) { // nothing
+	 *                        here } for (int i = 0; i < mwstDto.length; i++) {if
+	 *                        (mwstIIdI != null) { if
+	 *                        (mwstIIdI.compareTo(mwstDto[i].getIId()) != 0) { if (
+	 *                        (mwstDto
+	 *                        [i].getFMwstsatz().equals(mwstsatzDtoI.getFMwstsatz())
+	 *                        || (mwstDto
+	 *                        [i].getCBezeichnung().equals(mwstsatzDtoI.getCBezeichnung
+	 *                        ())))) { throw new
+	 *                        EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+	 *                        null); } } } else { if (
+	 *                        (mwstDto[i].getFMwstsatz().equals(mwstsatzDtoI
+	 *                        .getFMwstsatz()) ||
+	 *                        (mwstDto[i].getCBezeichnung().equals(mwstsatzDtoI
+	 *                        .getCBezeichnung())))) { throw new
+	 *                        EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+	 *                        null); } } } }
 	 */
-	public void removeMwstsatz(MwstsatzDto mwstsatzDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeMwstsatz(MwstsatzDto mwstsatzDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (mwstsatzDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"mwstsatzDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("mwstsatzDtoI == null"));
 		}
 
 		Mwstsatz toRemove = em.find(Mwstsatz.class, mwstsatzDtoI.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
+
+		removeMwstsatzCode(new MwstsatzId(toRemove.getIId()));
+
 		try {
 			em.remove(toRemove);
 			em.flush();
@@ -310,19 +328,14 @@ public class MandantFacBean extends Facade implements MandantFac {
 		}
 	}
 
-	public boolean darfAnwenderAufZusatzfunktionZugreifen(
-			String zusatzfunktionCNr, TheClientDto theClientDto) {
-		return darfAnwenderAufZusatzfunktionZugreifen(zusatzfunktionCNr,
-				theClientDto.getMandant());
+	public boolean darfAnwenderAufZusatzfunktionZugreifen(String zusatzfunktionCNr, TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(zusatzfunktionCNr, theClientDto.getMandant());
 	}
 
-	public boolean darfAnwenderAufZusatzfunktionZugreifen(
-			String zusatzfunktionCNr, String mandantCNr) {
+	public boolean darfAnwenderAufZusatzfunktionZugreifen(String zusatzfunktionCNr, String mandantCNr) {
 
-		Zusatzfunktionberechtigung zusatzfunktionberechtigung = em
-				.find(Zusatzfunktionberechtigung.class,
-						new ZusatzfunktionberechtigungPK(zusatzfunktionCNr,
-								mandantCNr));
+		Zusatzfunktionberechtigung zusatzfunktionberechtigung = em.find(Zusatzfunktionberechtigung.class,
+				new ZusatzfunktionberechtigungPK(zusatzfunktionCNr, mandantCNr));
 
 		if (zusatzfunktionberechtigung == null) {
 			return false;
@@ -332,34 +345,28 @@ public class MandantFacBean extends Facade implements MandantFac {
 	}
 
 	/**
-	 * mwstsatz update nur erlaubt wenn noch nicht in verwendung sonst kann man
-	 * nur neu anlegen
+	 * mwstsatz update nur erlaubt wenn noch nicht in verwendung sonst kann man nur
+	 * neu anlegen
 	 * 
-	 * @param mwstsatzDtoI
-	 *            MwstsatzDto
-	 * @param theClientDto
-	 *            String
+	 * @param mwstsatzDtoI MwstsatzDto
+	 * @param theClientDto String
 	 * @throws EJBExceptionLP
 	 */
-	public void updateMwstsatz(MwstsatzDto mwstsatzDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateMwstsatz(MwstsatzDto mwstsatzDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (theClientDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (mwstsatzDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"mwstsatzDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("mwstsatzDtoI == null"));
 		}
 
-		Integer iId = mwstsatzDtoI.getIId();
+		// Integer iId = mwstsatzDtoI.getIId();
 		try {
 			Mwstsatz mwstsatz = em.find(Mwstsatz.class, mwstsatzDtoI.getIId());
 			if (mwstsatz == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			// em.remove(mwstsatz);
 			// em.flush();
@@ -371,40 +378,28 @@ public class MandantFacBean extends Facade implements MandantFac {
 		}
 	}
 
-	public MwstsatzDto mwstsatzFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		// precondition
-		if (theClientDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
-		}
-		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iId == null"));
-		}
+	public MwstsatzDto mwstsatzFindByPrimaryKey(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
+		Validator.dtoNotNull(theClientDto, "theClientDto");
+		Validator.pkFieldNotNull(iId, "iId");
+
 		// TheClientDto theClientDto = check(cNrUserI);
-		// try {
+
 		Mwstsatz mwstsatz = em.find(Mwstsatz.class, iId);
 		if (mwstsatz == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		return assembleMwstsatzDto(mwstsatz);
 
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
+		MwstsatzDto mwstsatzDto = assembleMwstsatzDto(mwstsatz);
+		mwstsatzDto.setMwstsatzbezDto(mwstsatzbezFindByPrimaryKey(mwstsatz.getMwstsatzbezIId(), theClientDto));
+
+		return mwstsatzDto;
 	}
 
-	private void setMwstsatzFromMwstsatzDto(Mwstsatz mwstsatz,
-			MwstsatzDto mwstsatzDto) {
+	private void setMwstsatzFromMwstsatzDto(Mwstsatz mwstsatz, MwstsatzDto mwstsatzDto) {
 
 		mwstsatz.setFMwstsatz(mwstsatzDto.getFMwstsatz());
 		mwstsatz.setMwstsatzbezIId(mwstsatzDto.getIIMwstsatzbezId());
 		mwstsatz.setDGueltigab(mwstsatzDto.getDGueltigab());
-		mwstsatz.setIFibumwstcode(mwstsatzDto.getIFibumwstcode());
 		em.merge(mwstsatz);
 		em.flush();
 	}
@@ -429,15 +424,13 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Finde alle MWST-Satzbezeichnungen eines Mandanten.
 	 * 
-	 * @param ssMandantI
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param ssMandantI   String
+	 * @param theClientDto String
 	 * @return Map: Key = I_ID der Bezeichnung, Value = Bezeichnung
 	 * @throws EJBExceptionLP
 	 */
-	public Map<Integer, String> mwstsatzbezFindAllByMandant(String ssMandantI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Map<Integer, String> mwstsatzbezFindAllByMandant(String ssMandantI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		MwstsatzbezDto[] mwstbezDto = null;
 		// TheClientDto theClientDto = super.check(cNrUserI);
 		LinkedHashMap<Integer, String> map = new LinkedHashMap<Integer, String>();
@@ -466,44 +459,23 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return map;
 	}
 
-	public MwstsatzbezDto[] mwstsatzbezFindAllByMandantAsDto(String ssMandantI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public MwstsatzbezDto[] mwstsatzbezFindAllByMandantAsDto(String ssMandantI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		MwstsatzbezDto[] mwstbezDtos = null;
-		Query query = em
-				.createNamedQuery("MwstsatzbezfindAllByMandantInklHandeingabe"); // "MwstsatzbezfindAllByMandant");
+		Query query = em.createNamedQuery("MwstsatzbezfindAllByMandantInklHandeingabe"); // "MwstsatzbezfindAllByMandant");
 		query.setParameter(1, ssMandantI);
 		Collection<?> cl = query.getResultList();
 		mwstbezDtos = assembleMwstsatzbezDtos(cl);
 		return mwstbezDtos;
 	}
 
-	/**
-	 * Alle MWST-Saetze eines Mandanten holen.
-	 * 
-	 * @deprecated MB: to get the ID's only: use mwstsatzIIdFindAllByMandant to
-	 *             get formatted Strings: mwstsatzFindAllByMandant(String
-	 *             ssMandantI, Timestamp tBelegdatum, TheClientDto theClientDto)
-	 * 
-	 * @param ssMandantI
-	 *            String
-	 * @param theClientDto
-	 *            String
-	 * @return Map: Key = I_ID des MWST-Satzes. Value = Formatierter Prozentsatz
-	 *         + Bezeichnung
-	 * @throws EJBExceptionLP
-	 */
-	public Map<Integer, String> mwstsatzFindAllByMandant(String ssMandantI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Map<Integer, String> mwstsatzFindAllByMandant(String ssMandantI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		LinkedHashMap<Integer, String> t = new LinkedHashMap<Integer, String>();
 		Collection<MwstsatzDto> c = mwstsatzfindAllByMandant(ssMandantI);
-		DecimalFormatSymbols dfs = new DecimalFormatSymbols(
-				theClientDto.getLocUi());
 		for (Iterator<MwstsatzDto> iter = c.iterator(); iter.hasNext();) {
 			MwstsatzDto mwst = iter.next();
-			// Prozentsatz und Bezeichnung formatieren.
-			String mwstValue = formatMwstValue(mwst, dfs.getPercent(),
-					theClientDto.getLocUi());
-			t.put(mwst.getIId(), mwstValue);
+			t.put(mwst.getIId(), mwst.formatMwstsatz(theClientDto));
 		}
 		return t;
 	}
@@ -511,15 +483,13 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Finde die I_ID's aller MWST-Saetze eines Mandanten.
 	 * 
-	 * @param ssMandantI
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param ssMandantI   String
+	 * @param theClientDto String
 	 * @return Collection
 	 * @throws EJBExceptionLP
 	 */
-	public Set<Integer> mwstsatzIIdFindAllByMandant(String ssMandantI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Set<Integer> mwstsatzIIdFindAllByMandant(String ssMandantI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		// TheClientDto theClientDto = super.check(cNrUserI);
 		Set<Integer> cIDs = new LinkedHashSet<Integer>();
 		Collection<MwstsatzDto> c = mwstsatzfindAllByMandant(ssMandantI);
@@ -533,28 +503,21 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Alle Aktuellen MWST-Saetze eines Mandanten finden.
 	 * 
-	 * @param ssMandantI
-	 *            String
-	 * @param tBelegdatum
-	 *            Timestamp: optional
-	 * @param theClientDto
-	 *            String
+	 * @param ssMandantI   String
+	 * @param tBelegdatum  Timestamp: optional
+	 * @param theClientDto String
 	 * @return Map
 	 * @throws EJBExceptionLP
 	 */
-	public Map<Integer, String> mwstsatzFindAllByMandant(String ssMandantI,
-			Timestamp tBelegdatum, boolean bInklHandeingabe,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Map<Integer, String> mwstsatzFindAllByMandant(String ssMandantI, Timestamp tBelegdatum,
+			boolean bInklHandeingabe, TheClientDto theClientDto) throws EJBExceptionLP {
 		LinkedHashMap<Integer, String> mapResult = new LinkedHashMap<Integer, String>();
-		MwstsatzDto[] mwstSaetze = mwstsatzfindAllByMandant(ssMandantI,
-				tBelegdatum, bInklHandeingabe);
+		MwstsatzDto[] mwstSaetze = mwstsatzfindAllByMandant(ssMandantI, tBelegdatum, bInklHandeingabe);
 		// zur richtigen Darstellung am Client
-		DecimalFormatSymbols dfs = new DecimalFormatSymbols(
-				theClientDto.getLocUi());
+		DecimalFormatSymbols dfs = new DecimalFormatSymbols(theClientDto.getLocUi());
 		for (int i = 0; i < mwstSaetze.length; i++) {
 			MwstsatzDto mwst = mwstSaetze[i];
-			String mwstValue = formatMwstValue(mwst, dfs.getPercent(),
-					theClientDto.getLocUi());
+			String mwstValue = formatMwstValue(mwst, dfs.getPercent(), theClientDto.getLocUi());
 			mapResult.put(mwst.getIId(), mwstValue);
 		}
 		return mapResult;
@@ -563,13 +526,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Alle MWST-Saetze finden. inklusive MWST-Satz-Bezeichnung.
 	 * 
-	 * @param theClientDto
-	 *            String
+	 * @param theClientDto String
 	 * @return Map
 	 * @throws EJBExceptionLP
 	 */
-	public Map<Integer, MwstsatzDto> mwstsatzFindAll(TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public Map<Integer, MwstsatzDto> mwstsatzFindAll(TheClientDto theClientDto) throws EJBExceptionLP {
 		// TheClientDto theClientDto = super.check(cNrUserI);
 		HashMap<Integer, MwstsatzDto> t = new HashMap<Integer, MwstsatzDto>();
 		// try {
@@ -581,8 +542,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
 			MwstsatzDto mwstDto = assembleMwstsatzDto((Mwstsatz) iter.next());
 			// Bezeichnung dazu holen
-			Mwstsatzbez mwstsatzbez = em.find(Mwstsatzbez.class,
-					mwstDto.getIIMwstsatzbezId());
+			Mwstsatzbez mwstsatzbez = em.find(Mwstsatzbez.class, mwstDto.getIIMwstsatzbezId());
 			if (mwstsatzbez == null) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "");
 			}
@@ -605,13 +565,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Alle MWST-Saetze eines Mandanten finden. inkl. MWST-Satz-Bezeichnung.
 	 * 
-	 * @param ssMandantI
-	 *            String
+	 * @param ssMandantI String
 	 * @return Collection
 	 * @throws EJBExceptionLP
 	 */
-	private Collection<MwstsatzDto> mwstsatzfindAllByMandant(String ssMandantI)
-			throws EJBExceptionLP {
+	private Collection<MwstsatzDto> mwstsatzfindAllByMandant(String ssMandantI) throws EJBExceptionLP {
 		ArrayList<MwstsatzDto> aMwst = new ArrayList<MwstsatzDto>();
 		MwstsatzbezDto[] mwstbezDto = null;
 		MwstsatzDto[] mwstDtos = null;
@@ -649,21 +607,15 @@ public class MandantFacBean extends Facade implements MandantFac {
 	}
 
 	/**
-	 * Alle MWST-Saetze eines Mandanten ab einem Datum finden.
+	 * MWST-Satz zur MwstBezeichnung und Datum finden.
 	 * 
-	 * @param mwstsatzbezIId
-	 *            die IId der Mehrwertsteuersatzbezeichnung String
-	 * @param tDatum
-	 *            Timestamp: optional
-	 * @return MwstsatzDto[]
-	 * @throws EJBExceptionLP
+	 * @param mwstsatzbezIId die IId der Mehrwertsteuersatzbezeichnung String
+	 * @param tDatum         zu dem der Mwstsatz ermittelt werden soll
+	 * @return der passende Mwstsatz oder null
 	 */
+	public MwstsatzDto mwstsatzFindZuDatum(Integer mwstsatzbezIId, Timestamp tDatum) {
 
-	public MwstsatzDto mwstsatzFindZuDatum(Integer mwstsatzbezIId,
-			Timestamp tDatum) {
-
-		Query query = em
-				.createNamedQuery("MwstsatzfindByTGueltigabMwstsatzbezIId");
+		Query query = em.createNamedQuery("MwstsatzfindByTGueltigabMwstsatzbezIId");
 		query.setParameter(1, tDatum);
 		query.setParameter(2, mwstsatzbezIId);
 		query.setMaxResults(1); // ist absteigend sortiert!
@@ -676,24 +628,53 @@ public class MandantFacBean extends Facade implements MandantFac {
 		} else {
 			return null;
 		}
-
 	}
 
-	public MwstsatzDto getMwstSatzVonBruttoBetragUndUst(String mandant,
-			Timestamp tBelegDatum, BigDecimal bruttoBetrag,
+	@Override
+	public MwstsatzDto mwstsatzZuDatumClient(Integer mwstsatzbezId, Timestamp datum, TheClientDto theClientDto) {
+		MwstsatzDto mwstsatzDto = mwstsatzFindZuDatum(mwstsatzbezId, datum);
+		if (mwstsatzDto == null)
+			return null;
+
+		if (theClientDto != null) {
+			mwstsatzDto.setMwstsatzbezDto(mwstsatzbezFindByPrimaryKey(mwstsatzbezId, theClientDto));
+		}
+
+		return mwstsatzDto;
+	}
+
+	@Override
+	public MwstsatzDto mwstsatzZuDatumValidate(Integer mwstsatzbezId, Timestamp datum, TheClientDto theClientDto) {
+		MwstsatzDto mwstsatzDto = mwstsatzFindZuDatum(mwstsatzbezId, datum);
+		if (mwstsatzDto == null) {
+			throw EJBExcFactory.mwstsatzFehlt(mwstsatzbezId, datum);
+		}
+
+		if (theClientDto != null) {
+			mwstsatzDto.setMwstsatzbezDto(mwstsatzbezFindByPrimaryKey(mwstsatzbezId, theClientDto));
+		}
+
+		return mwstsatzDto;
+	}
+
+	@Override
+	public MwstsatzDto mwstsatzZuDatumEvaluate(MwstsatzId satzId, Timestamp datum, TheClientDto theClientDto) {
+		MwstsatzDto dto = mwstsatzFindByPrimaryKey(satzId.id(), theClientDto);
+		return mwstsatzZuDatumValidate(dto.getIIMwstsatzbezId(), datum, theClientDto);
+	}
+
+	public MwstsatzDto getMwstSatzVonBruttoBetragUndUst(String mandant, Timestamp tBelegDatum, BigDecimal bruttoBetrag,
 			BigDecimal mwstBetrag) {
 		if (null == mwstBetrag || mwstBetrag.signum() == 0)
 			mwstBetrag = BigDecimal.ZERO;
 
-		MwstsatzDto[] mwstdtos = getMandantFac().mwstsatzfindAllByMandant(
-				mandant, tBelegDatum, false);
+		MwstsatzDto[] mwstdtos = getMandantFac().mwstsatzfindAllByMandant(mandant, tBelegDatum, false);
 
 		BigDecimal minDiff = null;
 		MwstsatzDto selectedMwstSatz = null;
 		for (MwstsatzDto mwstsatzDto : mwstdtos) {
 			BigDecimal satz = new BigDecimal(mwstsatzDto.getFMwstsatz());
-			BigDecimal mwst = Helper
-					.getMehrwertsteuerBetrag(bruttoBetrag, satz);
+			BigDecimal mwst = Helper.getMehrwertsteuerBetrag(bruttoBetrag, satz);
 			BigDecimal diff = mwstBetrag.subtract(mwst).abs();
 			if (minDiff == null || diff.compareTo(minDiff) < 0) {
 				minDiff = diff;
@@ -704,21 +685,19 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return selectedMwstSatz;
 	}
 
-	public MwstsatzDto getMwstSatzVonNettoBetragUndUst(String mandant,
-			Timestamp tBelegDatum, BigDecimal nettoBetrag, BigDecimal mwstBetrag) {
+	public MwstsatzDto getMwstSatzVonNettoBetragUndUst(String mandant, Timestamp tBelegDatum, BigDecimal nettoBetrag,
+			BigDecimal mwstBetrag) {
 		if (null == mwstBetrag || mwstBetrag.signum() == 0) {
 			mwstBetrag = BigDecimal.ZERO;
 		}
 
-		MwstsatzDto[] mwstdtos = getMandantFac().mwstsatzfindAllByMandant(
-				mandant, tBelegDatum, false);
+		MwstsatzDto[] mwstdtos = getMandantFac().mwstsatzfindAllByMandant(mandant, tBelegDatum, false);
 
 		BigDecimal minDiff = null;
 		MwstsatzDto selectedMwstSatz = null;
 		for (MwstsatzDto mwstsatzDto : mwstdtos) {
 			BigDecimal satz = new BigDecimal(mwstsatzDto.getFMwstsatz());
-			BigDecimal mwst = Helper.getMehrwertsteuerBetragFuerNetto(
-					nettoBetrag, satz);
+			BigDecimal mwst = Helper.getMehrwertsteuerBetragFuerNetto(nettoBetrag, satz);
 			BigDecimal diff = mwstBetrag.subtract(mwst).abs();
 			if (minDiff == null || diff.compareTo(minDiff) < 0) {
 				minDiff = diff;
@@ -729,83 +708,67 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return selectedMwstSatz;
 	}
 
-	public MwstsatzDto[] mwstsatzfindAllByMandant(String ssMandantI,
-			Timestamp tBelegdatum, boolean bInklHandeingabe)
+	public MwstsatzDto[] mwstsatzfindAllByMandant(String ssMandantI, Timestamp tBelegdatum, boolean bInklHandeingabe)
 			throws EJBExceptionLP {
-		ArrayList<MwstsatzDto> aMwst = new ArrayList<MwstsatzDto>();
-		MwstsatzDto[] mwstDtosResult = null;
-		// try {
 		// Alle Bezeichnungen des Mandanten finden.
-		Query query = null;
-		if (bInklHandeingabe) {
-			query = em
-					.createNamedQuery("MwstsatzbezfindAllByMandantInklHandeingabe");
-		} else {
-			query = em.createNamedQuery("MwstsatzbezfindAllByMandant");
-		}
+		Query query = em.createNamedQuery(
+				bInklHandeingabe ? "MwstsatzbezfindAllByMandantInklHandeingabe" : "MwstsatzbezfindAllByMandant");
 		query.setParameter(1, ssMandantI);
 		Collection<?> cl = query.getResultList();
-		// if(cl.isEmpty()){
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER,"");
-		// }
+
+		// SP8303 Wir wollen den Standard-Inlands-Satz als ersten haben
+		Mandant mandant = em.find(Mandant.class, ssMandantI);
+		Integer defaultMwstsatzBezId = mandant.getMwstsatzIIdStandardinlandmwstsatz();
+
+		List<MwstsatzDto> aMwst = new ArrayList<MwstsatzDto>();
 		MwstsatzbezDto[] mwstbezDtos = assembleMwstsatzbezDtos(cl);
 		for (int i = 0; i < mwstbezDtos.length; i++) {
 			// Die aktuellsten dazugehoerigen MWST-Saetze. optional ab
 			// Gueltigkeitsdatum.
 			MwstsatzDto[] mwstDtosZuBez;
 			if (tBelegdatum != null) {
-				query = em
-						.createNamedQuery("MwstsatzfindByTGueltigabMwstsatzbezIId");
+				query = em.createNamedQuery("MwstsatzfindByTGueltigabMwstsatzbezIId");
 				query.setParameter(1, tBelegdatum);
 				query.setParameter(2, mwstbezDtos[i].getIId());
 				query.setMaxResults(1); // ist absteigend sortiert!
 				cl = query.getResultList();
 				mwstDtosZuBez = assembleMwstsatzDtos(cl);
 			} else {
+				// TODO: SP8308 Macht es nicht mehr Sinn das aktuelle Datum zu nehmen?
 				query = em.createNamedQuery("MwstsatzfindByMwstbez");
 				query.setParameter(1, mwstbezDtos[i].getIId());
 				cl = query.getResultList();
 				mwstDtosZuBez = assembleMwstsatzDtos(cl);
 			}
-			// Gibt es einen Gueltigen?
+
+			// Gibt es einen gueltigen?
 			if (mwstDtosZuBez.length != 0) {
 				// den letzten nehmen, das ist der aktuellste.
 				MwstsatzDto mwstsatz = mwstDtosZuBez[mwstDtosZuBez.length - 1];
-				// Bezeichnung dazunehmen
 				mwstsatz.setMwstsatzbezDto(mwstbezDtos[i]);
-				// In die Liste aufnehmen.
-				aMwst.add(mwstsatz);
+
+				if (mwstbezDtos[i].getIId().equals(defaultMwstsatzBezId)) {
+					aMwst.add(0, mwstsatz);
+				} else {
+					aMwst.add(mwstsatz);
+				}
 			}
 		}
-		// Liste in ein Array umwandeln
-		mwstDtosResult = new MwstsatzDto[aMwst.size()];
-		for (int i = 0; i < aMwst.size(); i++) {
-			mwstDtosResult[i] = aMwst.get(i);
-		}
-		// }
-		// catch (ObjectNotFoundException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-		// }
-		return mwstDtosResult;
+
+		return aMwst.toArray(new MwstsatzDto[0]);
 	}
 
 	/**
 	 * Alle MWST-Saetze eines Mandanten als Dtos in einer Map zurueckgeben. Hier
 	 * sind auch die nicht mehr gueltigen enthalten.
 	 * 
-	 * @param ssMandantI
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param ssMandantI   String
+	 * @param theClientDto String
 	 * @return Map
 	 * @throws EJBExceptionLP
 	 */
-	public Map<Integer, MwstsatzDto> mwstsatzFindAllByMandantAsDto(
-			String ssMandantI, TheClientDto theClientDto) throws EJBExceptionLP {
+	public Map<Integer, MwstsatzDto> mwstsatzFindAllByMandantAsDto(String ssMandantI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		LinkedHashMap<Integer, MwstsatzDto> map = new LinkedHashMap<Integer, MwstsatzDto>();
 		// try {
 		// Alle Bezeichnungen des Mandanten
@@ -840,57 +803,42 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Den Aktuellen MWST-Satz zu einer MWST-Bezeichnung finden.
 	 * 
-	 * @param mwstsatzbezIId
-	 *            String
-	 * @param theClientDto
-	 *            Timestamp: optional
+	 * @param mwstsatzbezIId String
+	 * @param theClientDto   Timestamp: optional
 	 * @return MwstsatzDto[]
 	 * @throws EJBExceptionLP
 	 */
-	public MwstsatzDto mwstsatzFindByMwstsatzbezIIdAktuellster(
-			Integer mwstsatzbezIId, TheClientDto theClientDto)
+	public MwstsatzDto mwstsatzFindByMwstsatzbezIIdAktuellster(Integer mwstsatzbezIId, TheClientDto theClientDto)
 			throws EJBExceptionLP {
-		MwstsatzDto mwstsatzAktuell = null;
-		MwstsatzDto[] mwstsatzAlle = null;
-		// try {
+		myLogger.warn("mwstsatzAktuellster for bezId " + mwstsatzbezIId + " called");
+
 		Query query = em.createNamedQuery("MwstsatzfindByMwstbez");
 		query.setParameter(1, mwstsatzbezIId);
 		Collection<?> cl = query.getResultList();
-		// if (cl.isEmpty()) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER,"");
-		// }
-		mwstsatzAlle = assembleMwstsatzDtos(cl);
+
+		MwstsatzDto[] mwstsatzAlle = assembleMwstsatzDtos(cl);
+		MwstsatzDto mwstsatzAktuell = null;
+
 		// Gibt es einen Gueltigen?
 		if (mwstsatzAlle.length != 0) {
 			// den letzten nehmen, das ist der aktuellste.
 			mwstsatzAktuell = mwstsatzAlle[mwstsatzAlle.length - 1];
 			// Bezeichnung dazunehmen
-			mwstsatzAktuell.setMwstsatzbezDto(mwstsatzbezFindByPrimaryKey(
-					mwstsatzbezIId, theClientDto));
+			mwstsatzAktuell.setMwstsatzbezDto(mwstsatzbezFindByPrimaryKey(mwstsatzbezIId, theClientDto));
 		}
-		// }
-		// catch (ObjectNotFoundException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-		// }
+
 		return mwstsatzAktuell;
 	}
 
 	/**
 	 * 
-	 * @param mwstI
-	 *            der Mwstsatz
-	 * @param cPercentSymbol
-	 *            char
-	 * @param locale
-	 *            Locale
+	 * @param mwstI          der Mwstsatz
+	 * @param cPercentSymbol char
+	 * @param locale         Locale
 	 * @return String der formatierte Mwstsatz
 	 * @see com.lp.server.system.service#formatMwstValue()
 	 */
-	private String formatMwstValue(MwstsatzDto mwstI, char cPercentSymbol,
-			Locale locale) {
+	private String formatMwstValue(MwstsatzDto mwstI, char cPercentSymbol, Locale locale) {
 		StringBuffer s = new StringBuffer();
 		s.append(Helper.formatZahl(mwstI.getFMwstsatz(), 1, locale));
 		s.append(cPercentSymbol);
@@ -898,19 +846,73 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return s.toString();
 	}
 
+	public void updateAGBs_PDF(byte[] oPdf, TheClientDto theClientDto) {
+
+		Query query = em.createNamedQuery("MandantagbsprFindByMandantCNrLocaleCnr");
+		query.setParameter(1, theClientDto.getMandant());
+		query.setParameter(2, theClientDto.getLocMandantAsString());
+
+		try {
+			Mandantagbspr mandantagbspr = (Mandantagbspr) query.getSingleResult();
+
+			if (oPdf != null) {
+				mandantagbspr.setOPDF(oPdf);
+				em.merge(mandantagbspr);
+				em.flush();
+			} else {
+				em.remove(mandantagbspr);
+			}
+		} catch (NoResultException e) {
+
+			if (oPdf != null) {
+				Integer i_id = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_MANDANTAGBSPR);
+
+				Mandantagbspr mandantagbspr = new Mandantagbspr(i_id, theClientDto.getMandant(),
+						theClientDto.getLocUiAsString(), oPdf);
+
+				em.merge(mandantagbspr);
+				em.flush();
+			}
+		}
+
+	}
+
+	public byte[] getAGBs_PDF(Locale loc, TheClientDto theClientDto) {
+
+		Query query = em.createNamedQuery("MandantagbsprFindByMandantCNrLocaleCnr");
+		query.setParameter(1, theClientDto.getMandant());
+		query.setParameter(2, Helper.locale2String(loc));
+
+		try {
+			Mandantagbspr mandantagbspr = (Mandantagbspr) query.getSingleResult();
+			return mandantagbspr.getOPDF();
+		} catch (NoResultException e) {
+
+			try {
+				query = em.createNamedQuery("MandantagbsprFindByMandantCNrLocaleCnr");
+				query.setParameter(1, theClientDto.getMandant());
+				query.setParameter(2, theClientDto.getLocMandantAsString());
+			} catch (NoResultException e1) {
+				return null;
+			}
+		}
+
+		return null;
+
+	}
+
 	public Locale getLocaleDesHauptmandanten() throws EJBExceptionLP {
 
 		try {
-			AnwenderDto anwenderDto = getSystemFac().anwenderFindByPrimaryKey(
-					new Integer(SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER));
+			AnwenderDto anwenderDto = getSystemFac()
+					.anwenderFindByPrimaryKey(new Integer(SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER));
 
-			Mandant mandant = em.find(Mandant.class,
-					anwenderDto.getMandantCNrHauptmandant());
+			Mandant mandant = em.find(Mandant.class, anwenderDto.getMandantCNrHauptmandant());
 
 			Partner partner = em.find(Partner.class, mandant.getPartnerIId());
 
-			return new Locale(partner.getLocaleCNrKommunikation().substring(0,
-					2), partner.getLocaleCNrKommunikation().substring(2, 4));
+			return new Locale(partner.getLocaleCNrKommunikation().substring(0, 2),
+					partner.getLocaleCNrKommunikation().substring(2, 4));
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 			return null;
@@ -920,15 +922,13 @@ public class MandantFacBean extends Facade implements MandantFac {
 	// Spediteur
 	// -----------------------------------------------------------------
 
-	public Integer createSpediteur(SpediteurDto oSpediteurDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createSpediteur(SpediteurDto oSpediteurDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		myLogger.entry();
 		checkSpediteurDto(oSpediteurDtoI);
 
 		Integer iIdSpediteurO = null;
-		iIdSpediteurO = getPKGeneratorObj().getNextPrimaryKey(
-				PKConst.PK_SPEDITEUR);
+		iIdSpediteurO = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_SPEDITEUR);
 
 		if (oSpediteurDtoI.getBVersteckt() == null) {
 			oSpediteurDtoI.setBVersteckt(Helper.boolean2Short(false));
@@ -936,10 +936,8 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 		try {
 			oSpediteurDtoI.setPersonalIIdAendern(theClientDto.getIDPersonal());
-			Spediteur spediteur = new Spediteur(iIdSpediteurO,
-					oSpediteurDtoI.getMandantCNr(),
-					oSpediteurDtoI.getCNamedesspediteurs(),
-					theClientDto.getIDPersonal(),
+			Spediteur spediteur = new Spediteur(iIdSpediteurO, oSpediteurDtoI.getMandantCNr(),
+					oSpediteurDtoI.getCNamedesspediteurs(), theClientDto.getIDPersonal(),
 					oSpediteurDtoI.getBVersteckt());
 			em.persist(spediteur);
 			em.flush();
@@ -952,26 +950,27 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return iIdSpediteurO;
 	}
 
-	public Integer createDokumentenlink(DokumentenlinkDto dokumentenlinkDto,
-			TheClientDto theClientDto) {
-		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
-				PKConst.PK_DOKUMENTENLINK);
+	public Integer createDokumentenlink(DokumentenlinkDto dokumentenlinkDto, TheClientDto theClientDto) {
+		Integer iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_DOKUMENTENLINK);
 		dokumentenlinkDto.setIId(iId);
 		try {
 
-			Dokumentenlink dokumentenlink = new Dokumentenlink(
-					dokumentenlinkDto.getIId(),
-					dokumentenlinkDto.getBelegartCNr(),
-					dokumentenlinkDto.getCBasispfad(),
-					dokumentenlinkDto.getMandantCNr(),
-					dokumentenlinkDto.getCMenuetext(),
-					dokumentenlinkDto.getBPfadabsolut(),
-					dokumentenlinkDto.getBUrl());
+			if (dokumentenlinkDto.getBPfadAusArbeitsplatzparameter() == null) {
+				dokumentenlinkDto.setBPfadAusArbeitsplatzparameter(Helper.boolean2Short(false));
+			}
+			if (dokumentenlinkDto.getBTitel() == null) {
+				dokumentenlinkDto.setBTitel(Helper.boolean2Short(false));
+			}
+
+			Dokumentenlink dokumentenlink = new Dokumentenlink(dokumentenlinkDto.getIId(),
+					dokumentenlinkDto.getBelegartCNr(), dokumentenlinkDto.getCBasispfad(),
+					dokumentenlinkDto.getMandantCNr(), dokumentenlinkDto.getCMenuetext(),
+					dokumentenlinkDto.getBPfadabsolut(), dokumentenlinkDto.getBUrl(),
+					dokumentenlinkDto.getBPfadAusArbeitsplatzparameter(), dokumentenlinkDto.getBTitel());
 			em.persist(dokumentenlink);
 			em.flush();
 
-			setDokumentenlinkFromDokumentenlinkDto(dokumentenlink,
-					dokumentenlinkDto);
+			setDokumentenlinkFromDokumentenlinkDto(dokumentenlink, dokumentenlinkDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -979,27 +978,24 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return dokumentenlinkDto.getIId();
 	}
 
-	public DokumentenlinkbelegDto[] getDokumentenlinkbelegs(String belegartCNr,
-			Integer belegartIId, TheClientDto theClientDto) {
+	public DokumentenlinkbelegDto[] getDokumentenlinkbelegs(String belegartCNr, Integer belegartIId,
+			TheClientDto theClientDto) {
 
-		DokumentenlinkDto[] dtos = dokumentenlinkFindByBelegartCNrMandantCNrBPfadabsolut(
-				belegartCNr, theClientDto.getMandant(), true);
+		DokumentenlinkDto[] dtos = dokumentenlinkFindByBelegartCNrMandantCNrBPfadabsolut(belegartCNr,
+				theClientDto.getMandant(), true);
 
 		DokumentenlinkbelegDto[] dtosBeleg = new DokumentenlinkbelegDto[dtos.length];
 
 		for (int i = 0; i < dtos.length; i++) {
 
-			Query query = em
-					.createNamedQuery("DokumentenlinkbelegFindByDokumentenlinkIIdIIdBelegart");
+			Query query = em.createNamedQuery("DokumentenlinkbelegFindByDokumentenlinkIIdIIdBelegart");
 			query.setParameter(1, dtos[i].getIId());
 			query.setParameter(2, belegartIId);
 
 			try {
-				Dokumentenlinkbeleg dokumentenlinkbeleg = (Dokumentenlinkbeleg) query
-						.getSingleResult();
+				Dokumentenlinkbeleg dokumentenlinkbeleg = (Dokumentenlinkbeleg) query.getSingleResult();
 
-				dtosBeleg[i] = DokumentenlinkbelegDtoAssembler
-						.createDto(dokumentenlinkbeleg);
+				dtosBeleg[i] = DokumentenlinkbelegDtoAssembler.createDto(dokumentenlinkbeleg);
 
 			} catch (NoResultException e) {
 				dtosBeleg[i] = new DokumentenlinkbelegDto();
@@ -1012,31 +1008,23 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return dtosBeleg;
 	}
 
-	public void updateDokumentenlinkbeleg(String belegartCNr,
-			Integer iBelegartId,
-			DokumentenlinkbelegDto[] dokumentenlinkbelegDtos,
-			TheClientDto theClientDto) {
+	public void updateDokumentenlinkbeleg(String belegartCNr, Integer iBelegartId,
+			DokumentenlinkbelegDto[] dokumentenlinkbelegDtos, TheClientDto theClientDto) {
 
 		for (int i = 0; i < dokumentenlinkbelegDtos.length; i++) {
 			try {
-				Query query = em
-						.createNamedQuery("DokumentenlinkbelegFindByDokumentenlinkIIdIIdBelegart");
-				query.setParameter(1,
-						dokumentenlinkbelegDtos[i].getDokumentenlinkIId());
+				Query query = em.createNamedQuery("DokumentenlinkbelegFindByDokumentenlinkIIdIIdBelegart");
+				query.setParameter(1, dokumentenlinkbelegDtos[i].getDokumentenlinkIId());
 				query.setParameter(2, iBelegartId);
-				Dokumentenlinkbeleg dokumentenlinkbeleg = (Dokumentenlinkbeleg) query
-						.getSingleResult();
+				Dokumentenlinkbeleg dokumentenlinkbeleg = (Dokumentenlinkbeleg) query.getSingleResult();
 
-				dokumentenlinkbeleg.setCPfad(dokumentenlinkbelegDtos[i]
-						.getCPfad());
+				dokumentenlinkbeleg.setCPfad(dokumentenlinkbelegDtos[i].getCPfad());
 				em.merge(dokumentenlinkbeleg);
 				em.flush();
 			} catch (NoResultException e) {
-				Integer iId = getPKGeneratorObj().getNextPrimaryKey(
-						PKConst.PK_DOKUMENTENLINKBELEG);
+				Integer iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_DOKUMENTENLINKBELEG);
 
-				Dokumentenlinkbeleg d = new Dokumentenlinkbeleg(iId,
-						dokumentenlinkbelegDtos[i].getDokumentenlinkIId(),
+				Dokumentenlinkbeleg d = new Dokumentenlinkbeleg(iId, dokumentenlinkbelegDtos[i].getDokumentenlinkIId(),
 						iBelegartId);
 				d.setCPfad(dokumentenlinkbelegDtos[i].getCPfad());
 				em.merge(d);
@@ -1047,14 +1035,12 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 	}
 
-	public void removeSpediteur(SpediteurDto spediteurDto)
-			throws EJBExceptionLP {
+	public void removeSpediteur(SpediteurDto spediteurDto) throws EJBExceptionLP {
 
 		Integer iId = spediteurDto.getIId();
 		Spediteur toRemove = em.find(Spediteur.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1069,8 +1055,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		Integer iId = dokumentenlinkDto.getIId();
 		Dokumentenlink toRemove = em.find(Dokumentenlink.class, iId);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1080,20 +1065,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 		}
 	}
 
-	public void updateSpediteur(SpediteurDto spediteurDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateSpediteur(SpediteurDto spediteurDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (spediteurDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"spediteurDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("spediteurDto == null"));
 		}
 
 		Integer iId = spediteurDto.getIId();
 		// try {
 		Spediteur spediteur = em.find(Spediteur.class, iId);
 		if (spediteur == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		setSpediteurFromSpediteurDto(spediteur, spediteurDto);
 		// }
@@ -1105,54 +1087,44 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 	public void updateDokumentenlink(DokumentenlinkDto dokumentenlinkDto) {
 		if (dokumentenlinkDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"dokumentenlinkDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("dokumentenlinkDto == null"));
 		}
 		Integer iId = dokumentenlinkDto.getIId();
 		Dokumentenlink dokumentenlink = em.find(Dokumentenlink.class, iId);
 		if (dokumentenlink == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		setDokumentenlinkFromDokumentenlinkDto(dokumentenlink,
-				dokumentenlinkDto);
+		setDokumentenlinkFromDokumentenlinkDto(dokumentenlink, dokumentenlinkDto);
 	}
 
-	public SpediteurDto spediteurFindByMandantCNrCNamedesspediteursOhneExc(
-			String name, String mandant) {
+	public SpediteurDto spediteurFindByMandantCNrCNamedesspediteursOhneExc(String name, String mandant) {
 		try {
 			return spediteurFindByMandantCNrCNamedesspediteurs(name, mandant);
 		} catch (Throwable e) {
-			// TODO Auto-generated catch block
 			return null;
 		}
 	}
 
-	public SpediteurDto spediteurFindByMandantCNrCNamedesspediteurs(
-			String name, String mandant) {
-		Query query = em
-				.createNamedQuery("SpediteurfindByMandantSpediteurname");
+	public SpediteurDto spediteurFindByMandantCNrCNamedesspediteurs(String name, String mandant) {
+		Query query = em.createNamedQuery("SpediteurfindByMandantSpediteurname");
 		query.setParameter(1, mandant);
 		query.setParameter(2, name);
 		Spediteur s = (Spediteur) query.getSingleResult();
 		return assembleSpediteurDto(s);
 	}
 
-	public SpediteurDto spediteurFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public SpediteurDto spediteurFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 
 		// precondition
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iId == null"));
 		}
 
 		SpediteurDto spediteurDto = null;
 		// try {
 		Spediteur spediteur = em.find(Spediteur.class, iId);
 		if (spediteur == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		spediteurDto = assembleSpediteurDto(spediteur);
 
@@ -1166,34 +1138,29 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 	public DokumentenlinkDto dokumentenlinkFindByPrimaryKey(Integer iId) {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iId == null"));
 		}
 		DokumentenlinkDto dokumentenlinkDto = null;
 		Dokumentenlink dokumentenlink = em.find(Dokumentenlink.class, iId);
 		if (dokumentenlink == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		dokumentenlinkDto = assembleDokumentenlinkDto(dokumentenlink);
 
 		return dokumentenlinkDto;
 	}
 
-	public DokumentenlinkDto[] dokumentenlinkFindByBelegartCNrMandantCNr(
-			String belegartCNr, String mandantCNr) {
-		Query query = em
-				.createNamedQuery("DokumentenlinkfindByBelegartCNrMandantCNr");
+	public DokumentenlinkDto[] dokumentenlinkFindByBelegartCNrMandantCNr(String belegartCNr, String mandantCNr) {
+		Query query = em.createNamedQuery("DokumentenlinkfindByBelegartCNrMandantCNr");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, mandantCNr);
 		Collection<?> c = query.getResultList();
 		return assembleDokumentenlinkDtos(c);
 	}
 
-	public DokumentenlinkDto[] dokumentenlinkFindByBelegartCNrMandantCNrBPfadabsolut(
-			String belegartCNr, String mandantCNr, boolean bPfadAbsolut) {
-		Query query = em
-				.createNamedQuery("DokumentenlinkfindByBelegartCNrMandantCNrBPfadabsolut");
+	public DokumentenlinkDto[] dokumentenlinkFindByBelegartCNrMandantCNrBPfadabsolut(String belegartCNr,
+			String mandantCNr, boolean bPfadAbsolut) {
+		Query query = em.createNamedQuery("DokumentenlinkfindByBelegartCNrMandantCNrBPfadabsolut");
 		query.setParameter(1, belegartCNr);
 		query.setParameter(2, mandantCNr);
 		query.setParameter(3, Helper.boolean2Short(bPfadAbsolut));
@@ -1204,13 +1171,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Eine Liste aller Spediteure fuer einen bestimmten Mandanten holen.
 	 * 
-	 * @param ssMandantI
-	 *            String
+	 * @param ssMandantI String
 	 * @throws EJBExceptionLP
 	 * @return Map
 	 */
-	public Map<Integer, String> spediteurFindAllByMandant(String ssMandantI)
-			throws EJBExceptionLP {
+	public Map<Integer, String> spediteurFindAllByMandant(String ssMandantI) throws EJBExceptionLP {
 		TreeMap<Integer, String> t = new TreeMap<Integer, String>();
 		Query query = em.createNamedQuery("SpediteurfindAllByMandant");
 		query.setParameter(1, ssMandantI);
@@ -1232,8 +1197,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return t;
 	}
 
-	private void setSpediteurFromSpediteurDto(Spediteur spediteur,
-			SpediteurDto spediteurDto) {
+	private void setSpediteurFromSpediteurDto(Spediteur spediteur, SpediteurDto spediteurDto) {
 		spediteur.setMandantCNr(spediteurDto.getMandantCNr());
 		spediteur.setCNamedesspediteurs(spediteurDto.getCNamedesspediteurs());
 		spediteur.setPersonalIIdAendern(spediteurDto.getPersonalIIdAendern());
@@ -1242,12 +1206,13 @@ public class MandantFacBean extends Facade implements MandantFac {
 		spediteur.setCEmail(spediteurDto.getCEmail());
 		spediteur.setPartnerIId(spediteurDto.getPartnerIId());
 		spediteur.setAnsprechpartnerIId(spediteurDto.getAnsprechpartnerIId());
+		spediteur.setCVerkehrszweig(spediteurDto.getCVerkehrszweig());
 		em.merge(spediteur);
 		em.flush();
 	}
 
-	private void setDokumentenlinkFromDokumentenlinkDto(
-			Dokumentenlink dokumentenlink, DokumentenlinkDto dokumentenlinkDto) {
+	private void setDokumentenlinkFromDokumentenlinkDto(Dokumentenlink dokumentenlink,
+			DokumentenlinkDto dokumentenlinkDto) {
 		dokumentenlink.setMandantCNr(dokumentenlinkDto.getMandantCNr());
 		dokumentenlink.setCOrdner(dokumentenlinkDto.getCOrdner());
 		dokumentenlink.setCBasispfad(dokumentenlinkDto.getCBasispfad());
@@ -1255,6 +1220,9 @@ public class MandantFacBean extends Facade implements MandantFac {
 		dokumentenlink.setCMenuetext(dokumentenlinkDto.getCMenuetext());
 		dokumentenlink.setBPfadabsolut(dokumentenlinkDto.getBPfadabsolut());
 		dokumentenlink.setBUrl(dokumentenlinkDto.getBUrl());
+		dokumentenlink.setBPfadAusArbeitsplatzparameter(dokumentenlinkDto.getBPfadAusArbeitsplatzparameter());
+		dokumentenlink.setBTitel(dokumentenlinkDto.getBTitel());
+		dokumentenlink.setRechtCNr(dokumentenlinkDto.getRechtCNr());
 		em.merge(dokumentenlink);
 		em.flush();
 	}
@@ -1267,21 +1235,20 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return DokumentenlinkDtoAssembler.createDto(spediteur);
 	}
 
-	private SpediteurDto[] assembleSpediteurDtos(Collection<?> spediteurs) {
-		List<SpediteurDto> list = new ArrayList<SpediteurDto>();
-		if (spediteurs != null) {
-			Iterator<?> iterator = spediteurs.iterator();
-			while (iterator.hasNext()) {
-				Spediteur spediteur = (Spediteur) iterator.next();
-				list.add(assembleSpediteurDto(spediteur));
-			}
-		}
-		SpediteurDto[] returnArray = new SpediteurDto[list.size()];
-		return list.toArray(returnArray);
-	}
+	// private SpediteurDto[] assembleSpediteurDtos(Collection<?> spediteurs) {
+	// List<SpediteurDto> list = new ArrayList<SpediteurDto>();
+	// if (spediteurs != null) {
+	// Iterator<?> iterator = spediteurs.iterator();
+	// while (iterator.hasNext()) {
+	// Spediteur spediteur = (Spediteur) iterator.next();
+	// list.add(assembleSpediteurDto(spediteur));
+	// }
+	// }
+	// SpediteurDto[] returnArray = new SpediteurDto[list.size()];
+	// return list.toArray(returnArray);
+	// }
 
-	private DokumentenlinkDto[] assembleDokumentenlinkDtos(
-			Collection<?> dokumentenlinks) {
+	private DokumentenlinkDto[] assembleDokumentenlinkDtos(Collection<?> dokumentenlinks) {
 		List<DokumentenlinkDto> list = new ArrayList<DokumentenlinkDto>();
 		if (dokumentenlinks != null) {
 			Iterator<?> iterator = dokumentenlinks.iterator();
@@ -1294,12 +1261,101 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return list.toArray(returnArray);
 	}
 
-	private void checkSpediteurDto(SpediteurDto spediteurDto)
-			throws EJBExceptionLP {
+	private void checkSpediteurDto(SpediteurDto spediteurDto) throws EJBExceptionLP {
 		if (spediteurDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("spediteurDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("spediteurDto == null"));
 		}
+	}
+
+	public int istMandatsreferenzAbgelaufen(Integer zahlungszielIId, Integer kundeIId, Timestamp tBelegdatum,
+			TheClientDto theClientDto) {
+		int iReturn = MANDATSREFERENZ_GUELTIG;
+
+		ZahlungszielDto zzDto = zahlungszielFindByPrimaryKey(zahlungszielIId, theClientDto);
+
+		if (Helper.short2boolean(zzDto.getBLastschrift())) {
+
+			String cGlaeubiger = mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto).getCGlauebiger();
+
+			if (cGlaeubiger == null || cGlaeubiger.length() == 0) {
+				iReturn = MANDATSREFERENZ_KEINE_GLAEUBIGERNUMMER;
+			} else {
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
+
+				try {
+					PartnerbankDto[] bankverbindungDto = getBankFac()
+							.partnerbankFindByPartnerIIdOhneExc(kundeDto.getPartnerIId(), theClientDto);
+
+					if (bankverbindungDto != null && bankverbindungDto.length > 0) {
+
+						if (bankverbindungDto[0].getCSepamandatsnummer() == null
+								|| bankverbindungDto[0].getCSepamandatsnummer().length() == 0) {
+							iReturn = MANDATSREFERENZ_KEINE_MANDATSREFERENZNUMMER;
+						} else {
+
+							if (bankverbindungDto[0].getTSepaerteilt() == null) {
+								iReturn = MANDATSREFERENZ_KEIN_GUELTIGKEITSDATUM;
+							} else {
+
+								ParametermandantDto parameter = null;
+								parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+										ParameterFac.KATEGORIE_ALLGEMEIN,
+										ParameterFac.PARAMETER_GUELTIGKEIT_MANDATSREFERENZ);
+								Integer iGueltigkeitMonate = (Integer) parameter.getCWertAsObject();
+
+								Calendar c = Calendar.getInstance();
+
+								c.setTimeInMillis(tBelegdatum.getTime());
+
+								c.add(Calendar.MONTH, -iGueltigkeitMonate.intValue());
+
+								java.sql.Date dAnfang = new java.sql.Date(c.getTimeInMillis());
+
+								// Nachsehen ob dazwischen eine Rechnung gelegt
+								// wurde
+
+								String sQuery = "select re FROM FLRRechnung re WHERE re.status_c_nr<>'"
+										+ LocaleFac.STATUS_STORNIERT + "' AND re.d_belegdatum>='"
+										+ Helper.formatDateWithSlashes(dAnfang) + "' AND re.d_belegdatum<'"
+										+ Helper.formatDateWithSlashes(new java.sql.Date(tBelegdatum.getTime()))
+										+ "' AND re.flrkunde=" + kundeIId;
+
+								Session session = FLRSessionFactory.getFactory().openSession();
+
+								org.hibernate.Query q = session.createQuery(sQuery);
+								q.setMaxResults(1);
+
+								List<?> resultList = q.list();
+
+								Iterator<?> resultListIterator = resultList.iterator();
+
+								if (resultListIterator.hasNext()) {
+									// OK
+								} else {
+
+									if (bankverbindungDto[0].getTSepaerteilt().before(dAnfang)) {
+										iReturn = MANDATSREFERENZ_ABGELAUFEN;
+									}
+								}
+
+								session.close();
+
+							}
+
+						}
+
+					} else {
+						iReturn = MANDATSREFERENZ_KEIN_BANKVERBINDUNG;
+					}
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
+			}
+
+		}
+
+		return iReturn;
 	}
 
 	// *** Zahlungsziel
@@ -1308,45 +1364,41 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * stcrud: 2 create ...
 	 * 
-	 * @param oZahlungszielDtoI
-	 *            ZahlungszielDto
-	 * @param theClientDto
-	 *            String
+	 * @param oZahlungszielDtoI ZahlungszielDto
+	 * @param theClientDto      String
 	 * @return Integer
 	 * @throws EJBExceptionLP
 	 */
-	public Integer createZahlungsziel(ZahlungszielDto oZahlungszielDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createZahlungsziel(ZahlungszielDto oZahlungszielDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		myLogger.entry();
 
 		// precondition
 		if (theClientDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		if (oZahlungszielDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("oZahlungszielDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("oZahlungszielDtoI == null"));
 		}
 
 		if (oZahlungszielDtoI.getBVersteckt() == null) {
 			oZahlungszielDtoI.setBVersteckt(Helper.boolean2Short(false));
 		}
 		if (oZahlungszielDtoI.getBInzahlungsvorschlagberuecksichtigen() == null) {
-			oZahlungszielDtoI.setBInzahlungsvorschlagberuecksichtigen(Helper
-					.boolean2Short(true));
+			oZahlungszielDtoI.setBInzahlungsvorschlagberuecksichtigen(Helper.boolean2Short(true));
 		}
 		if (oZahlungszielDtoI.getBStichtag() == null) {
 			oZahlungszielDtoI.setBStichtag(Helper.boolean2Short(false));
 		}
+		if (oZahlungszielDtoI.getBLastschrift() == null) {
+			oZahlungszielDtoI.setBLastschrift(Helper.boolean2Short(false));
+		}
 		if (oZahlungszielDtoI.getBStichtagMonatsletzter() == null) {
-			oZahlungszielDtoI.setBStichtagMonatsletzter(Helper
-					.boolean2Short(false));
+			oZahlungszielDtoI.setBStichtagMonatsletzter(Helper.boolean2Short(false));
 		}
 		if (oZahlungszielDtoI.getBInzahlungsvorschlagberuecksichtigen() == null) {
-			oZahlungszielDtoI.setBInzahlungsvorschlagberuecksichtigen(Helper
-					.boolean2Short(true));
+			oZahlungszielDtoI.setBInzahlungsvorschlagberuecksichtigen(Helper.boolean2Short(true));
 		}
 		if (oZahlungszielDtoI.getAnzahlZieltageFuerNetto() == null) {
 			oZahlungszielDtoI.setAnzahlZieltageFuerNetto(0);
@@ -1354,42 +1406,35 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 		try {
 			// duplicateunique: Pruefung: Artikelgruppe bereits vorhanden.
-			Query query = em
-					.createNamedQuery("ZahlungszielfindByCBezMandantCNr");
+			Query query = em.createNamedQuery("ZahlungszielfindByCBezMandantCNr");
 			query.setParameter(1, oZahlungszielDtoI.getMandantCNr());
 			query.setParameter(2, oZahlungszielDtoI.getCBez());
-			Zahlungsziel zahlungsziel = (Zahlungsziel) query.getSingleResult();
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("LP_ZAHLUNGSZIEL.UK"));
+			// Zahlungsziel zahlungsziel = (Zahlungsziel)
+			// query.getSingleResult();
+			query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_ZAHLUNGSZIEL.UK"));
 		} catch (NoResultException ex) {
 			//
 		} catch (NonUniqueResultException ex1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-					ex1);
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
 		}
 
 		Integer iIdZahlungszielO = null;
 		try {
-			iIdZahlungszielO = getPKGeneratorObj().getNextPrimaryKey(
-					PKConst.PK_ZAHLUNGSZIEL);
+			iIdZahlungszielO = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_ZAHLUNGSZIEL);
 
-			Zahlungsziel zahlungsziel = new Zahlungsziel(
-					iIdZahlungszielO,
-					oZahlungszielDtoI.getMandantCNr(),
-					oZahlungszielDtoI.getCBez(),
-					oZahlungszielDtoI.getBVersteckt(),
+			Zahlungsziel zahlungsziel = new Zahlungsziel(iIdZahlungszielO, oZahlungszielDtoI.getMandantCNr(),
+					oZahlungszielDtoI.getCBez(), oZahlungszielDtoI.getBVersteckt(),
 					oZahlungszielDtoI.getAnzahlZieltageFuerNetto(),
-					oZahlungszielDtoI.getBInzahlungsvorschlagberuecksichtigen(),
-					oZahlungszielDtoI.getBStichtag(), oZahlungszielDtoI
-							.getBStichtagMonatsletzter());
+					oZahlungszielDtoI.getBInzahlungsvorschlagberuecksichtigen(), oZahlungszielDtoI.getBStichtag(),
+					oZahlungszielDtoI.getBStichtagMonatsletzter(), oZahlungszielDtoI.getBLastschrift());
 			em.persist(zahlungsziel);
 			em.flush();
 
 			setZahlungszielFromZahlungszielDto(zahlungsziel, oZahlungszielDtoI);
 
 			if (oZahlungszielDtoI.getZahlungszielsprDto() != null) {
-				oZahlungszielDtoI.getZahlungszielsprDto().setZahlungszielIId(
-						iIdZahlungszielO);
+				oZahlungszielDtoI.getZahlungszielsprDto().setZahlungszielIId(iIdZahlungszielO);
 				createZahlungszielspr(oZahlungszielDtoI.getZahlungszielsprDto());
 			}
 
@@ -1403,23 +1448,18 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * stcrud: 3 remove ...
 	 * 
-	 * @param zahlungszielDtoI
-	 *            ZahlungszielDto
-	 * @param theClientDto
-	 *            String
+	 * @param zahlungszielDtoI ZahlungszielDto
+	 * @param theClientDto     String
 	 * @throws EJBExceptionLP
 	 */
-	public void removeZahlungsziel(ZahlungszielDto zahlungszielDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeZahlungsziel(ZahlungszielDto zahlungszielDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (zahlungszielDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"zahlungszielDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("zahlungszielDtoI == null"));
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("ZahlungszielsprfindByZahlungszielIId");
+			Query query = em.createNamedQuery("ZahlungszielsprfindByZahlungszielIId");
 			query.setParameter(1, zahlungszielDtoI.getIId());
 			Collection<?> c = query.getResultList();
 			// Erst alle SPRs dazu loeschen.
@@ -1427,11 +1467,9 @@ public class MandantFacBean extends Facade implements MandantFac {
 				Zahlungszielspr item = (Zahlungszielspr) iter.next();
 				em.remove(item);
 			}
-			Zahlungsziel zahlungsziel = em.find(Zahlungsziel.class,
-					zahlungszielDtoI.getIId());
+			Zahlungsziel zahlungsziel = em.find(Zahlungsziel.class, zahlungszielDtoI.getIId());
 			if (zahlungsziel == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			em.remove(zahlungsziel);
 			em.flush();
@@ -1448,18 +1486,14 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * stcrud: 5 update ...
 	 * 
-	 * @param zahlungszielDtoI
-	 *            ZahlungszielDto
-	 * @param theClientDto
-	 *            String
+	 * @param zahlungszielDtoI ZahlungszielDto
+	 * @param theClientDto     String
 	 * @throws EJBExceptionLP
 	 */
-	public void updateZahlungsziel(ZahlungszielDto zahlungszielDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateZahlungsziel(ZahlungszielDto zahlungszielDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (zahlungszielDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"zahlungszielDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("zahlungszielDtoI == null"));
 		}
 
 		Integer iId = zahlungszielDtoI.getIId();
@@ -1467,22 +1501,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 		// try {
 		Zahlungsziel zahlungsziel = em.find(Zahlungsziel.class, iId);
 		if (zahlungsziel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		try {
-			Query query = em
-					.createNamedQuery("ZahlungszielfindByCBezMandantCNr");
+			Query query = em.createNamedQuery("ZahlungszielfindByCBezMandantCNr");
 			query.setParameter(1, zahlungszielDtoI.getMandantCNr());
 			query.setParameter(2, zahlungszielDtoI.getCBez());
-			Zahlungsziel duplicateHelper = (Zahlungsziel) query
-					.getSingleResult();
+			Zahlungsziel duplicateHelper = (Zahlungsziel) query.getSingleResult();
 			Integer iIdVorhanden = duplicateHelper.getIId();
 			if (iId.equals(iIdVorhanden) == false) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
-								"LP_ZAHLUNGSZIEL.UK"));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_ZAHLUNGSZIEL.UK"));
 			}
 		} catch (NoResultException ex) {
 			// Nothing to do here
@@ -1494,8 +1523,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 			if (zahlungszielDtoI.getZahlungszielsprDto().getZahlungszielIId() == null) {
 				// create
 				// Key(teil) setzen.
-				zahlungszielDtoI.getZahlungszielsprDto().setZahlungszielIId(
-						zahlungszielDtoI.getIId());
+				zahlungszielDtoI.getZahlungszielsprDto().setZahlungszielIId(zahlungszielDtoI.getIId());
 				createZahlungszielspr(zahlungszielDtoI.getZahlungszielsprDto());
 			} else {
 				// upd
@@ -1512,65 +1540,71 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * stcrud: 6 findByPrimary ...
 	 * 
-	 * @param iIdI
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param iIdI         Integer
+	 * @param theClientDto String
 	 * @return ZahlungszielDto
 	 * @throws EJBExceptionLP
 	 */
-	public ZahlungszielDto zahlungszielFindByPrimaryKey(Integer iIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public ZahlungszielDto zahlungszielFindByPrimaryKey(Integer iIdI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iIdI == null"));
 		}
 		if (theClientDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrUserI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNrUserI == null"));
 		}
 		ZahlungszielDto zahlungszielDto = null;
-		// try {
+
 		Zahlungsziel zahlungsziel = em.find(Zahlungsziel.class, iIdI);
 		if (zahlungsziel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		zahlungszielDto = assembleZahlungszielDto(zahlungsziel);
 
 		try {
 			Zahlungszielspr zahlungszielspr = em.find(Zahlungszielspr.class,
-					new ZahlungszielsprPK(zahlungszielDto.getIId(),
-							theClientDto.getLocUiAsString()));
+					new ZahlungszielsprPK(zahlungszielDto.getIId(), theClientDto.getLocUiAsString()));
 			if (zahlungszielspr != null) {
-				zahlungszielDto
-						.setZahlungszielsprDto(assembleZahlungszielsprDto(zahlungszielspr));
+				zahlungszielDto.setZahlungszielsprDto(assembleZahlungszielsprDto(zahlungszielspr));
 			}
 
 		} catch (Throwable t) {
-			// stcrud: 7 wenn nicht uebersetzt: null
 			zahlungszielDto.setZahlungszielsprDto(null);
 		}
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
 		return zahlungszielDto;
+	}
+
+	@Override
+	public ZahlungszielDto zahlungszielFindByCBezMandantNull(String cbez, String mandantCnr,
+			TheClientDto theClientDto) {
+		Validator.notEmpty(cbez, "cbez");
+		Validator.notEmpty(mandantCnr, "mandantCnr");
+		Validator.notNull(theClientDto, "theClientDto");
+
+		try {
+			Query query = em.createNamedQuery("ZahlungszielfindByCBezMandantCNr");
+			query.setParameter(1, mandantCnr);
+			query.setParameter(2, cbez);
+			Zahlungsziel z = (Zahlungsziel) query.getSingleResult();
+			return zahlungszielFindByPrimaryKey(z.getIId(), theClientDto);
+		} catch (NoResultException ex) {
+			//
+		} catch (NonUniqueResultException ex1) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
+		}
+
+		return null;
 	}
 
 	/**
 	 * Eine Liste aller Zahlungsziele fuer einen bestimmten Mandanten holen.
 	 * 
-	 * @param sMandantI
-	 *            String
+	 * @param sMandantI String
 	 * @return Map
 	 * @throws EJBExceptionLP
 	 */
-	public Map<Integer, String> zahlungszielFindAllByMandant(String sMandantI)
-			throws EJBExceptionLP {
+	public Map<Integer, String> zahlungszielFindAllByMandant(String sMandantI) throws EJBExceptionLP {
 		TreeMap<Integer, String> t = new TreeMap<Integer, String>();
 		// try {
 		Query query = em.createNamedQuery("ZahlungszielfindAllByMandant");
@@ -1596,15 +1630,13 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Alle Zahlungsziel-Dtos fuer einen bestimmten Mandanten holen.
 	 * 
-	 * @param sMandantI
-	 *            String
-	 * @param theClientDto
-	 *            String
+	 * @param sMandantI    String
+	 * @param theClientDto String
 	 * @return Map
 	 * @throws EJBExceptionLP
 	 */
-	public Map<Integer, ZahlungszielDto> zahlungszielFindAllByMandantAsDto(
-			String sMandantI, TheClientDto theClientDto) throws EJBExceptionLP {
+	public Map<Integer, ZahlungszielDto> zahlungszielFindAllByMandantAsDto(String sMandantI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		LinkedHashMap<Integer, ZahlungszielDto> t = new LinkedHashMap<Integer, ZahlungszielDto>();
 		Query query = em.createNamedQuery("ZahlungszielfindAllByMandant");
 		query.setParameter(1, sMandantI);
@@ -1624,29 +1656,27 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return t;
 	}
 
-	private void setZahlungszielFromZahlungszielDto(Zahlungsziel zahlungsziel,
-			ZahlungszielDto zahlungszielDto) {
+	private void setZahlungszielFromZahlungszielDto(Zahlungsziel zahlungsziel, ZahlungszielDto zahlungszielDto) {
 		zahlungsziel.setMandantCNr(zahlungszielDto.getMandantCNr());
 		zahlungsziel.setCBez(zahlungszielDto.getCBez());
-		zahlungsziel.setIAnzahlzieltagefuernetto(zahlungszielDto
-				.getAnzahlZieltageFuerNetto());
-		zahlungsziel.setNSkontoprozentsatz1(zahlungszielDto
-				.getSkontoProzentsatz1());
-		zahlungsziel.setISkontoanzahltage1(zahlungszielDto
-				.getSkontoAnzahlTage1());
-		zahlungsziel.setNSkontoprozentsatz2(zahlungszielDto
-				.getSkontoProzentsatz2());
-		zahlungsziel.setISkontoanzahltage2(zahlungszielDto
-				.getSkontoAnzahlTage2());
+		zahlungsziel.setIAnzahlzieltagefuernetto(zahlungszielDto.getAnzahlZieltageFuerNetto());
+		zahlungsziel.setNSkontoprozentsatz1(zahlungszielDto.getSkontoProzentsatz1());
+		zahlungsziel.setISkontoanzahltage1(zahlungszielDto.getSkontoAnzahlTage1());
+		zahlungsziel.setNSkontoprozentsatz2(zahlungszielDto.getSkontoProzentsatz2());
+		zahlungsziel.setISkontoanzahltage2(zahlungszielDto.getSkontoAnzahlTage2());
 		zahlungsziel.setBVersteckt(zahlungszielDto.getBVersteckt());
-		zahlungsziel.setBInzahlungsvorschlagberuecksichtigen(zahlungszielDto
-				.getBInzahlungsvorschlagberuecksichtigen());
+		zahlungsziel.setBInzahlungsvorschlagberuecksichtigen(zahlungszielDto.getBInzahlungsvorschlagberuecksichtigen());
 
 		zahlungsziel.setBStichtag(zahlungszielDto.getBStichtag());
-		zahlungsziel.setBStichtagMonatsletzter(zahlungszielDto
-				.getBStichtagMonatsletzter());
+		zahlungsziel.setBStichtagMonatsletzter(zahlungszielDto.getBStichtagMonatsletzter());
 		zahlungsziel.setIFolgemonat(zahlungszielDto.getIFolgemonat());
 		zahlungsziel.setIStichtag(zahlungszielDto.getIStichtag());
+
+		zahlungsziel.setBLastschrift(zahlungszielDto.getBLastschrift());
+
+		zahlungsziel.setIFolgemonatSkontotage1(zahlungszielDto.getIFolgemonatSkontotage1());
+		zahlungsziel.setIFolgemonatSkontotage2(zahlungszielDto.getIFolgemonatSkontotage2());
+		zahlungsziel.setNAnzahlungProzent(zahlungszielDto.getNAnzahlungProzent());
 
 		em.merge(zahlungsziel);
 		em.flush();
@@ -1656,8 +1686,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return ZahlungszielDtoAssembler.createDto(zahlungsziel);
 	}
 
-	private ZahlungszielDto[] assembleZahlungszielDtos(
-			Collection<?> zahlungsziels) {
+	private ZahlungszielDto[] assembleZahlungszielDtos(Collection<?> zahlungsziels) {
 		List<ZahlungszielDto> list = new ArrayList<ZahlungszielDto>();
 		if (zahlungsziels != null) {
 			Iterator<?> iterator = zahlungsziels.iterator();
@@ -1672,13 +1701,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 	// *** Mandant
 	// ****************************************************************
-	public String createMandant(MandantDto mandantDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createMandant(MandantDto mandantDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (mandantDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("mandantDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("mandantDtoI == null"));
 		}
 		if (mandantDtoI.getCNr() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
@@ -1690,16 +1717,14 @@ public class MandantFacBean extends Facade implements MandantFac {
 		}
 		if (mandantDtoI.getAnwenderDto().getIId() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception(
-							"mandantDtoI.getAnwenderDto().getIId() == null"));
+					new Exception("mandantDtoI.getAnwenderDto().getIId() == null"));
 		}
 
 		Integer iIdPartner = null;
 		try {
 			if (mandantDtoI.getPartnerDto().getIId() == null) {
 				// Partner.
-				iIdPartner = getPartnerFac().createPartner(
-						mandantDtoI.getPartnerDto(), theClientDto);
+				iIdPartner = getPartnerFac().createPartner(mandantDtoI.getPartnerDto(), theClientDto);
 			} else {
 				iIdPartner = mandantDtoI.getPartnerDto().getIId();
 			}
@@ -1708,12 +1733,15 @@ public class MandantFacBean extends Facade implements MandantFac {
 				mandantDtoI.setPartnerIIdLieferadresse(iIdPartner);
 			}
 
+			if (mandantDtoI.getIMaxpersonen() == null) {
+				mandantDtoI.setIMaxpersonen(100);
+			}
+
 			// verbinde Partner mit Mandanten.
 			mandantDtoI.setPartnerIId(iIdPartner);
 
 			// Partner lesen wegen generierter Daten.
-			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(
-					iIdPartner, theClientDto);
+			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(iIdPartner, theClientDto);
 			mandantDtoI.setPartnerDto(partnerDto);
 
 			// Mandant.
@@ -1724,22 +1752,26 @@ public class MandantFacBean extends Facade implements MandantFac {
 			mandantDtoI.setIAendern(mandantDtoI.getIAendern());
 			mandantDtoI.setIAnlegen(mandantDtoI.getIAnlegen());
 
-			Mandant mandant = new Mandant(mandantDtoI.getCNr(),
-					mandantDtoI.getCKbez(), mandantDtoI.getPartnerIId(),
-					mandantDtoI.getWaehrungCNr(), mandantDtoI.getIAnlegen(),
-					mandantDtoI.getIAendern(),
-					mandantDtoI.getSpediteurIIdKunde(),
-					mandantDtoI.getLieferartIIdKunde(),
-					mandantDtoI.getZahlungszielIIdKunde(),
-					mandantDtoI.getVkpfArtikelpreislisteIId(),
+			Mandant mandant = new Mandant(mandantDtoI.getCNr(), mandantDtoI.getCKbez(), mandantDtoI.getPartnerIId(),
+					mandantDtoI.getWaehrungCNr(), mandantDtoI.getIAnlegen(), mandantDtoI.getIAendern(),
+					mandantDtoI.getSpediteurIIdKunde(), mandantDtoI.getLieferartIIdKunde(),
+					mandantDtoI.getZahlungszielIIdKunde(), mandantDtoI.getVkpfArtikelpreislisteIId(),
 					mandantDtoI.getMwstsatzbezIIdStandardinlandmwstsatz(),
-					mandantDtoI.getMwstsatzbezIIdStandardauslandmwstsatz(),
-					mandantDtoI.getLieferartIIdLF(),
-					mandantDtoI.getSpediteurIIdLF(),
-					mandantDtoI.getZahlungszielIIdLF(),
-					mandantDtoI.getPartnerIIdLieferadresse());
+					mandantDtoI.getMwstsatzbezIIdStandardauslandmwstsatz(), mandantDtoI.getLieferartIIdLF(),
+					mandantDtoI.getSpediteurIIdLF(), mandantDtoI.getZahlungszielIIdLF(),
+					mandantDtoI.getPartnerIIdLieferadresse(), mandantDtoI.getIMaxpersonen());
 			em.persist(mandant);
 			em.flush();
+
+			mandantDtoI.setBAgbAnfrage(mandant.getBAgbAnfrage());
+			mandantDtoI.setBAgbAngebot(mandant.getBAgbAngebot());
+			mandantDtoI.setBAgbAnhang(mandant.getBAgbAnhang());
+			mandantDtoI.setBAgbAuftrag(mandant.getBAgbAuftrag());
+			mandantDtoI.setBAgbBestellung(mandant.getBAgbBestellung());
+			mandantDtoI.setBAgbLieferschein(mandant.getBAgbLieferschein());
+			mandantDtoI.setBAgbRechnung(mandant.getBAgbRechnung());
+
+			mandantDtoI.setBPreislisteFuerNeukunde(mandant.getBPreislisteFuerNeukunde());
 
 			mandantDtoI.setTAendern(mandant.getTAendern());
 			mandantDtoI.setTAnlegen(mandant.getTAnlegen());
@@ -1771,8 +1803,8 @@ public class MandantFacBean extends Facade implements MandantFac {
 			// CK: Lager "Hauptlager" anlegen, weil bei jedem Mandant ein
 			// Hauptlager vorhanden sein muss (WH)
 			lagerDto = new LagerDto();
-			lagerDto.setCNr(getTextRespectUISpr("artikel.hauptlager",
-					theClientDto.getMandant(), theClientDto.getLocUi()));
+			lagerDto.setCNr(
+					getTextRespectUISpr("artikel.hauptlager", theClientDto.getMandant(), theClientDto.getLocUi()));
 			lagerDto.setLagerartCNr(LagerFac.LAGERART_HAUPTLAGER);
 			lagerDto.setBBestellvorschlag(Helper.boolean2Short(true));
 			lagerDto.setBInternebestellung(Helper.boolean2Short(true));
@@ -1792,20 +1824,58 @@ public class MandantFacBean extends Facade implements MandantFac {
 			getLagerFac().createLager(lagerDto);
 
 			// SP1011
-			PersonalDto personalDto = getPersonalFac()
-					.personalFindByPrimaryKey(theClientDto.getIDPersonal(),
-							theClientDto);
+			PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(theClientDto.getIDPersonal(),
+					theClientDto);
 			personalDto.setIId(null);
 			personalDto.setCAusweis(null);
 			personalDto.setMandantCNr(mandantDtoI.getCNr());
 			getPersonalFac().createPersonal(personalDto, theClientDto);
 
+			createReversechargeartenFuerNeuenMandanten(mandantDtoI.getCNr(), theClientDto);
+
+			// PJ22120 Automatikjobs fuer neuen Mandanten eintragen
+			createAutomatikjobsFuerNeuenMandanten(mandantDtoI.getCNr(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, ex);
 		}
 		return mandantDtoI.getCNr();
+	}
+
+	private void createReversechargeartenFuerNeuenMandanten(String mandantCnr, TheClientDto theClientDto) {
+		ReversechargeartDto rcartOhneDto = new ReversechargeartDto();
+		rcartOhneDto.setCNr(ReversechargeArt.OHNE);
+		rcartOhneDto.setMandantCNr(mandantCnr);
+		rcartOhneDto.setISort(0);
+		rcartOhneDto.setSprDto(new ReversechargeartsprDto());
+		rcartOhneDto.getSprDto().setcBez("Ohne Reverse Charge");
+		rcartOhneDto.getSprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+		getFinanzServiceFac().createReversechargeart(rcartOhneDto, theClientDto);
+
+		ReversechargeartDto rcartIgDto = new ReversechargeartDto();
+		rcartIgDto.setCNr(ReversechargeArt.IG);
+		rcartIgDto.setMandantCNr(mandantCnr);
+		rcartIgDto.setISort(1);
+		rcartIgDto.setBVersteckt(Boolean.TRUE);
+		rcartIgDto.setSprDto(new ReversechargeartsprDto());
+		rcartIgDto.getSprDto().setcBez("Innergemeinschaftlich");
+		rcartIgDto.getSprDto().setLocaleCNr(theClientDto.getLocUiAsString());
+		getFinanzServiceFac().createReversechargeart(rcartIgDto, theClientDto);
+	}
+
+	private void createAutomatikjobsFuerNeuenMandanten(String mandantCnr, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP {
+		String oldMandantCnr = theClientDto.getMandant();
+		AutomatikjobDto[] jobs = getAutomatikjobFac().automatikjobFindAllByCMandantCNr(oldMandantCnr);
+		for (AutomatikjobDto job : jobs) {
+			// Neuen Mandant setzen und auf nicht aktiviert stellen
+			job.setCMandantCNr(mandantCnr);
+			job.setBActive(0);
+			// IId auf null setzen, dadurch wird neuer Automatikjob angelegt
+			job.setIId(null);
+			getAutomatikjobFac().createAutomatikjob(job);
+		}
 	}
 
 	private void setMussFelder(MandantDto mandantDtoI, TheClientDto theClientDto)
@@ -1816,35 +1886,32 @@ public class MandantFacBean extends Facade implements MandantFac {
 		}
 
 		// Urmandat lesen und neue Mandantmussfelder vorbelegen.
-		MandantDto urmandant = mandantFindByPrimaryKey(
-				MandantFac.URMANDANT_C_NR, theClientDto);
+		MandantDto urmandant = mandantFindByPrimaryKey(MandantFac.URMANDANT_C_NR, theClientDto);
 
 		// Die Kostenstelle des Urmandanten wird kopiert und dem neuen Mandanten
 		// zugewiesen
-		KostenstelleDto k = getSystemFac().kostenstelleFindByPrimaryKey(
-				urmandant.getIIdKostenstelle());
+		KostenstelleDto k = getSystemFac().kostenstelleFindByPrimaryKey(urmandant.getIIdKostenstelle());
 		k.setMandantCNr(mandantDtoI.getCNr());
+		// SP3713 Sachkonto nicht mitkopieren, da Konto-IId mandantenabhaengig
+		k.setKontoIId(null);
 		Integer ik = getSystemFac().createKostenstelle(k, theClientDto);
 		mandantDtoI.setIIdKostenstelle(ik);
 
 		// Die Lieferart des Urmandanten wird kopiert und dem neuen Mandanten
 		// zugewiesen
 		if (urmandant.getLieferartIIdKunde() != null) {
-			LieferartDto lieferartDtoKunde = getLocaleFac()
-					.lieferartFindByPrimaryKey(
-							urmandant.getLieferartIIdKunde(), theClientDto);
+			LieferartDto lieferartDtoKunde = getLocaleFac().lieferartFindByPrimaryKey(urmandant.getLieferartIIdKunde(),
+					theClientDto);
 			lieferartDtoKunde.setIId(null);
 			lieferartDtoKunde.setMandantCNr(mandantDtoI.getCNr());
 			// Datensaetze duplizieren
-			Integer lieferartIIdKunde = getLocaleFac().createLieferart(
-					lieferartDtoKunde, theClientDto);
+			Integer lieferartIIdKunde = getLocaleFac().createLieferart(lieferartDtoKunde, theClientDto);
 			mandantDtoI.setLieferartIIdKunde(lieferartIIdKunde);
 			mandantDtoI.setLieferartIIdLF(lieferartIIdKunde);
 		}
 
 		// Spediteur Kunde neuer Mandant bekommt die vom Urmandanten vorbelegt
-		SpediteurDto sk = getMandantFac().spediteurFindByPrimaryKey(
-				urmandant.getSpediteurIIdKunde());
+		SpediteurDto sk = getMandantFac().spediteurFindByPrimaryKey(urmandant.getSpediteurIIdKunde());
 		sk.setMandantCNr(mandantDtoI.getCNr());
 		Integer isk = getMandantFac().createSpediteur(sk, theClientDto);
 		mandantDtoI.setSpediteurIIdKunde(isk);
@@ -1854,8 +1921,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 		// Zahlungsziel Kunde neuer Mandant bekommt die vom Urmandanten
 		// vorbelegt
-		ZahlungszielDto zk = zahlungszielFindByPrimaryKey(
-				urmandant.getZahlungszielIIdKunde(), theClientDto);
+		ZahlungszielDto zk = zahlungszielFindByPrimaryKey(urmandant.getZahlungszielIIdKunde(), theClientDto);
 		zk.setMandantCNr(mandantDtoI.getCNr());
 		Integer izk = getMandantFac().createZahlungsziel(zk, theClientDto);
 		mandantDtoI.setZahlungszielIIdKunde(izk);
@@ -1865,20 +1931,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 		// VKPFPreisliste neuer Mandant bekommt die vom Urmandanten vorbelegt
 		VkpfartikelpreislisteDto vkpl = getVkPreisfindungFac()
-				.vkpfartikelpreislisteFindByPrimaryKey(
-						urmandant.getVkpfArtikelpreislisteIId());
+				.vkpfartikelpreislisteFindByPrimaryKey(urmandant.getVkpfArtikelpreislisteIId());
 		vkpl.setMandantCNr(mandantDtoI.getCNr());
 		vkpl.setWaehrungCNr(mandantDtoI.getWaehrungCNr());
-		Integer iVKPL = getVkPreisfindungFac().createVkpfartikelpreisliste(
-				vkpl, theClientDto);
+		Integer iVKPL = getVkPreisfindungFac().createVkpfartikelpreisliste(vkpl, theClientDto);
 		mandantDtoI.setVkpfArtikelpreislisteIId(iVKPL);
 
 		// Standard MWST-Satz: Werte vom Urmandanten werden kopiert und
 		// vorbelegt.
 		try {
 			MwstsatzbezDto mwstbezDtoUrmandant = mwstsatzbezFindByPrimaryKey(
-					urmandant.getMwstsatzbezIIdStandardinlandmwstsatz(),
-					theClientDto);
+					urmandant.getMwstsatzbezIIdStandardinlandmwstsatz(), theClientDto);
 			// modifizieren und fuer den neuen Mandanten anlegen.
 			mwstbezDtoUrmandant.setIId(null);
 
@@ -1886,16 +1949,13 @@ public class MandantFacBean extends Facade implements MandantFac {
 			mwstbezDtoUrmandant.setFinanzamtIId(null);
 
 			mwstbezDtoUrmandant.setMandantCNr(mandantDtoI.getCNr());
-			Integer iIdMwstbezNeuerMandant = createMwstsatzbez(
-					mwstbezDtoUrmandant, theClientDto);
+			Integer iIdMwstbezNeuerMandant = createMwstsatzbez(mwstbezDtoUrmandant, theClientDto);
 			// Es muss auch der Steuersatz ein 2. mal angelegt werden :-(
-			Map<Integer, MwstsatzDto> mwst = mwstsatzFindAllByMandantAsDto(
-					urmandant.getCNr(), theClientDto);
+			Map<Integer, MwstsatzDto> mwst = mwstsatzFindAllByMandantAsDto(urmandant.getCNr(), theClientDto);
 			// die sind nach Gueltigkeitsdatum sortiert, wir brauchen den
 			// letzten = den aktuellsten.
 			if (mwst.size() > 0) {
-				for (Iterator<Integer> iter = mwst.keySet().iterator(); iter
-						.hasNext();) {
+				for (Iterator<Integer> iter = mwst.keySet().iterator(); iter.hasNext();) {
 					Integer key = iter.next();
 					MwstsatzDto item = mwst.get(key);
 					// wenn ich den letzten hab
@@ -1910,20 +1970,16 @@ public class MandantFacBean extends Facade implements MandantFac {
 					}
 				}
 			}
-			mandantDtoI
-					.setMwstsatzbezIIdStandardinlandmwstsatz(iIdMwstbezNeuerMandant);
+			mandantDtoI.setMwstsatzbezIIdStandardinlandmwstsatz(iIdMwstbezNeuerMandant);
 		} catch (EJBExceptionLP ex) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_SYSTEM_MWSTSATZ_IST_NULL,
-					new Exception("MWSTSATZ == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_SYSTEM_MWSTSATZ_IST_NULL, new Exception("MWSTSATZ == null"));
 		}
 	}
 
 	public void removeMandant(String cNr) throws EJBExceptionLP {
 		Mandant toRemove = em.find(Mandant.class, cNr);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1961,13 +2017,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 	// }
 	// }
 
-	public void updateMandant(MandantDto mandantDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void updateMandant(MandantDto mandantDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		// precondition
 		if (mandantDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("mandantDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("mandantDtoI == null"));
 		}
 		if (mandantDtoI.getPartnerDto() == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -1983,20 +2037,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 			// Mandant update.
 			Mandant mandant = em.find(Mandant.class, cNr);
 			if (mandant == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
 			// Aenderer wird nur hier gesetzt.
 			mandant.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			// Aenderertimestamp wird nur hier gesetzt.
-			mandant.setTAendern(new java.sql.Timestamp(System
-					.currentTimeMillis()));
+			mandant.setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
 			setMandantFromMandantDto(mandant, mandantDtoI);
 
 			// Partner update.
-			getPartnerFac().updatePartner(mandantDtoI.getPartnerDto(),
-					theClientDto);
+			getPartnerFac().updatePartner(mandantDtoI.getPartnerDto(), theClientDto);
 
 			// Anwendner update.
 			// getSystemFac().updateAnwender(mandantDtoI.getAnwenderDto());
@@ -2009,31 +2060,26 @@ public class MandantFacBean extends Facade implements MandantFac {
 		}
 	}
 
-	public MandantDto mandantFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public MandantDto mandantFindByPrimaryKey(String cNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 		MandantDto mandantDto = null;
 
 		// precondition
 		if (cNrI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception(
-							"cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, new Exception("cNrI == null"));
 		}
 
 		try {
 			Mandant mandant = em.find(Mandant.class, cNrI);
 			if (mandant == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			mandantDto = assembleMandantDto(mandant);
 
-			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(
-					mandantDto.getPartnerIId(), theClientDto);
+			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(mandantDto.getPartnerIId(), theClientDto);
 			mandantDto.setPartnerDto(partnerDto);
 
-			AnwenderDto anwenderDto = getSystemFac().anwenderFindByPrimaryKey(
-					new Integer(SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER));
+			AnwenderDto anwenderDto = getSystemFac()
+					.anwenderFindByPrimaryKey(new Integer(SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER));
 			mandantDto.setAnwenderDto(anwenderDto);
 			// }
 			// catch (FinderException ex) {
@@ -2055,24 +2101,35 @@ public class MandantFacBean extends Facade implements MandantFac {
 		mandant.setSpediteurIIdLieferant(mandantDto.getSpediteurIIdLF());
 		mandant.setLieferartIIdLieferant(mandantDto.getLieferartIIdLF());
 		mandant.setZahlungszielIIdLieferant(mandantDto.getZahlungszielIIdLF());
-		mandant.setVkpfartikelpreislisteIId(mandantDto
-				.getVkpfArtikelpreislisteIId());
+		mandant.setVkpfartikelpreislisteIId(mandantDto.getVkpfArtikelpreislisteIId());
 		mandant.setKostenstelleIId(mandantDto.getIIdKostenstelle());
 		mandant.setBankverbindungIIdMandant(mandantDto.getIBankverbindung());
-		mandant.setMwstsatzIIdStandardinlandmwstsatz(mandantDto
-				.getMwstsatzbezIIdStandardinlandmwstsatz());
-		mandant.setMwstsatzIIdStandardauslandmwstsatz(mandantDto
-				.getMwstsatzbezIIdStandardauslandmwstsatz());
-		mandant.setMwstsatzIIdStandarddrittlandmwstsatz(mandantDto
-				.getMwstsatzbezIIdStandarddrittlandmwstsatz());
-		mandant.setPartnerIIdLieferadresse(mandantDto
-				.getPartnerIIdLieferadresse());
+		mandant.setMwstsatzIIdStandardinlandmwstsatz(mandantDto.getMwstsatzbezIIdStandardinlandmwstsatz());
+		mandant.setMwstsatzIIdStandardauslandmwstsatz(mandantDto.getMwstsatzbezIIdStandardauslandmwstsatz());
+		mandant.setMwstsatzIIdStandarddrittlandmwstsatz(mandantDto.getMwstsatzbezIIdStandarddrittlandmwstsatz());
+		mandant.setPartnerIIdLieferadresse(mandantDto.getPartnerIIdLieferadresse());
 		mandant.setIBenutzerMax(mandantDto.getIBenutzermax());
 		mandant.setKundeIIdStueckliste(mandantDto.getKundeIIdStueckliste());
 		mandant.setPartnerIIdFinanzamt(mandantDto.getPartnerIIdFinanzamt());
-		mandant.setJahreRueckdatierbar(mandantDto.getJahreRueckdatierbar() == null ? 1
-				: mandantDto.getJahreRueckdatierbar());
+		mandant.setJahreRueckdatierbar(
+				mandantDto.getJahreRueckdatierbar() == null ? 1 : mandantDto.getJahreRueckdatierbar());
 		mandant.setKostenstelleIIdFibu(mandantDto.getKostenstelleIIdFibu());
+		mandant.setLagerIIdZiellager(mandantDto.getLagerIIdZiellager());
+		mandant.setCGlauebiger(mandantDto.getCGlauebiger());
+		mandant.setWaehrungCNrZusaetzlich(mandantDto.getWaehrungCNrZusaetzlich());
+		mandant.setVerrechnungsmodellIId(mandantDto.getVerrechnungsmodellIId());
+		mandant.setZahlungszielIIdAnzahlung(mandantDto.getZahlungszielIIdAnzahlung());
+
+		mandant.setBAgbAnfrage(mandantDto.getBAgbAnfrage());
+		mandant.setBAgbAngebot(mandantDto.getBAgbAngebot());
+		mandant.setBAgbAnhang(mandantDto.getBAgbAnhang());
+		mandant.setBAgbAuftrag(mandantDto.getBAgbAuftrag());
+		mandant.setBAgbBestellung(mandantDto.getBAgbBestellung());
+		mandant.setBAgbLieferschein(mandantDto.getBAgbLieferschein());
+		mandant.setBAgbRechnung(mandantDto.getBAgbRechnung());
+
+		mandant.setBPreislisteFuerNeukunde(mandantDto.getBPreislisteFuerNeukunde());
+		mandant.setIntrastatRegion(mandantDto.getCIntrastatRegion());
 		em.merge(mandant);
 		em.flush();
 	}
@@ -2094,62 +2151,69 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return list.toArray(returnArray);
 	}
 
-	public void createZahlungszielspr(ZahlungszielsprDto zahlungszielsprDto)
-			throws EJBExceptionLP {
-		if (zahlungszielsprDto == null) {
-
-		}
-		try {
-			Zahlungszielspr zahlungszielspr = new Zahlungszielspr(
-					zahlungszielsprDto.getZahlungszielIId(),
-					zahlungszielsprDto.getLocaleCNr());
-			em.persist(zahlungszielspr);
-			em.flush();
-			setZahlungszielsprFromZahlungszielsprDto(zahlungszielspr,
-					zahlungszielsprDto);
-		} catch (EntityExistsException ex) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
-		}
-	}
-
-	public void removeZahlungszielspr(ZahlungszielsprDto zahlungszielsprDto)
-			throws EJBExceptionLP {
-	}
-
-	public void updateZahlungszielspr(ZahlungszielsprDto zahlungszielsprDto)
-			throws EJBExceptionLP {
+	public void createZahlungszielspr(ZahlungszielsprDto zahlungszielsprDto) throws EJBExceptionLP {
 		if (zahlungszielsprDto != null) {
-			ZahlungszielsprPK zahlungszielsprPK = new ZahlungszielsprPK();
-			zahlungszielsprPK.setZahlungszielIId(zahlungszielsprDto
-					.getZahlungszielIId());
-			zahlungszielsprPK.setLocaleCNr(zahlungszielsprDto.getLocaleCNr());
-			// try {
-			Zahlungszielspr zahlungszielspr = em.find(Zahlungszielspr.class,
-					zahlungszielsprPK);
-			if (zahlungszielspr == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			if (zahlungszielsprDto.getCBezeichnung() != null && !zahlungszielsprDto.getCBezeichnung().startsWith(" ")) {
+				try {
+					Zahlungszielspr zahlungszielspr = new Zahlungszielspr(zahlungszielsprDto.getZahlungszielIId(),
+							zahlungszielsprDto.getLocaleCNr());
+					em.persist(zahlungszielspr);
+					em.flush();
+					setZahlungszielsprFromZahlungszielsprDto(zahlungszielspr, zahlungszielsprDto);
+				} catch (EntityExistsException ex) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+				}
 			}
-			setZahlungszielsprFromZahlungszielsprDto(zahlungszielspr,
-					zahlungszielsprDto);
-			// }
-			// catch (FinderException ex) {
-			// throw new
-			// EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-			// }
 		}
 	}
 
-	public ZahlungszielsprDto zahlungszielsprFindByPrimaryKey(
-			Integer zahlungszielIId, String localeCNr) throws EJBExceptionLP {
+	public void removeZahlungszielspr(ZahlungszielsprDto zahlungszielsprDto) throws EJBExceptionLP {
+
+		if (zahlungszielsprDto != null) {
+			ZahlungszielsprPK zahlungszielsprPK = getZahlungsZielsprPK(zahlungszielsprDto);
+			Zahlungszielspr toRemove = em.find(Zahlungszielspr.class, zahlungszielsprPK);
+			try {
+				em.remove(toRemove);
+				em.flush();
+			} catch (EntityExistsException er) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+			}
+		}
+	}
+
+	public void updateZahlungszielspr(ZahlungszielsprDto zahlungszielsprDto) throws EJBExceptionLP {
+		if (zahlungszielsprDto != null) {
+
+			if (zahlungszielsprDto.getCBezeichnung() == null || zahlungszielsprDto.getCBezeichnung().startsWith(" ")) {
+				removeZahlungszielspr(zahlungszielsprDto);
+			} else {
+				ZahlungszielsprPK zahlungszielsprPK = getZahlungsZielsprPK(zahlungszielsprDto);
+
+				Zahlungszielspr zahlungszielspr = em.find(Zahlungszielspr.class, zahlungszielsprPK);
+				if (zahlungszielspr == null) {
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				}
+				setZahlungszielsprFromZahlungszielsprDto(zahlungszielspr, zahlungszielsprDto);
+			}
+		}
+	}
+
+	private ZahlungszielsprPK getZahlungsZielsprPK(ZahlungszielsprDto zahlungszielsprDto) {
+		ZahlungszielsprPK zahlungszielsprPK = new ZahlungszielsprPK();
+		zahlungszielsprPK.setZahlungszielIId(zahlungszielsprDto.getZahlungszielIId());
+		zahlungszielsprPK.setLocaleCNr(zahlungszielsprDto.getLocaleCNr());
+		return zahlungszielsprPK;
+	}
+
+	public ZahlungszielsprDto zahlungszielsprFindByPrimaryKey(Integer zahlungszielIId, String localeCNr)
+			throws EJBExceptionLP {
 		ZahlungszielsprDto zahlungszielsprDto = null;
 
 		// try {
 		ZahlungszielsprPK zahlungszielsprPK = new ZahlungszielsprPK();
 		zahlungszielsprPK.setZahlungszielIId(zahlungszielIId);
 		zahlungszielsprPK.setLocaleCNr(localeCNr);
-		Zahlungszielspr zahlungszielspr = em.find(Zahlungszielspr.class,
-				zahlungszielsprPK);
+		Zahlungszielspr zahlungszielspr = em.find(Zahlungszielspr.class, zahlungszielsprPK);
 		if (zahlungszielspr != null) {
 			zahlungszielsprDto = assembleZahlungszielsprDto(zahlungszielspr);
 		}
@@ -2165,13 +2229,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return zahlungszielsprDto;
 	}
 
-	public ZahlungszielsprDto zahlungszielsprFindByPrimaryKeyOhneExc(
-			Integer iIdZahlungszielI, String sLocaleCNrI) {
+	public ZahlungszielsprDto zahlungszielsprFindByPrimaryKeyOhneExc(Integer iIdZahlungszielI, String sLocaleCNrI) {
 		ZahlungszielsprDto oSprDtoO = null;
 
 		try {
-			oSprDtoO = zahlungszielsprFindByPrimaryKey(iIdZahlungszielI,
-					sLocaleCNrI);
+			oSprDtoO = zahlungszielsprFindByPrimaryKey(iIdZahlungszielI, sLocaleCNrI);
 		} catch (Throwable t) {
 			// nothing here, das braucht zuviel Zeit und bringt bei OhneExc
 			// nichts
@@ -2180,36 +2242,33 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return oSprDtoO;
 	}
 
-	private void setZahlungszielsprFromZahlungszielsprDto(
-			Zahlungszielspr zahlungszielspr,
+	private void setZahlungszielsprFromZahlungszielsprDto(Zahlungszielspr zahlungszielspr,
 			ZahlungszielsprDto zahlungszielsprDto) {
 		zahlungszielspr.setCBezeichnung(zahlungszielsprDto.getCBezeichnung());
 		em.merge(zahlungszielspr);
 		em.flush();
 	}
 
-	private ZahlungszielsprDto assembleZahlungszielsprDto(
-			Zahlungszielspr zahlungszielspr) {
+	private ZahlungszielsprDto assembleZahlungszielsprDto(Zahlungszielspr zahlungszielspr) {
 		return ZahlungszielsprDtoAssembler.createDto(zahlungszielspr);
 	}
 
-	private ZahlungszielsprDto[] assembleZahlungszielsprDtos(
-			Collection<?> zahlungszielsprs) {
-		List<ZahlungszielsprDto> list = new ArrayList<ZahlungszielsprDto>();
-		if (zahlungszielsprs != null) {
-			Iterator<?> iterator = zahlungszielsprs.iterator();
-			while (iterator.hasNext()) {
-				Zahlungszielspr zahlungszielspr = (Zahlungszielspr) iterator
-						.next();
-				list.add(assembleZahlungszielsprDto(zahlungszielspr));
-			}
-		}
-		ZahlungszielsprDto[] returnArray = new ZahlungszielsprDto[list.size()];
-		return list.toArray(returnArray);
-	}
+	// private ZahlungszielsprDto[] assembleZahlungszielsprDtos(
+	// Collection<?> zahlungszielsprs) {
+	// List<ZahlungszielsprDto> list = new ArrayList<ZahlungszielsprDto>();
+	// if (zahlungszielsprs != null) {
+	// Iterator<?> iterator = zahlungszielsprs.iterator();
+	// while (iterator.hasNext()) {
+	// Zahlungszielspr zahlungszielspr = (Zahlungszielspr) iterator
+	// .next();
+	// list.add(assembleZahlungszielsprDto(zahlungszielspr));
+	// }
+	// }
+	// ZahlungszielsprDto[] returnArray = new ZahlungszielsprDto[list.size()];
+	// return list.toArray(returnArray);
+	// }
 
-	public MandantDto mandantFindByPrimaryKeyOhneExc(String cNrMandantI,
-			TheClientDto theClientDto) {
+	public MandantDto mandantFindByPrimaryKeyOhneExc(String cNrMandantI, TheClientDto theClientDto) {
 		MandantDto mandantDto = null;
 
 		// precondition
@@ -2225,12 +2284,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 			}
 			mandantDto = assembleMandantDto(mandant);
 
-			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(
-					mandantDto.getPartnerIId(), theClientDto);
+			PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(mandantDto.getPartnerIId(), theClientDto);
 			mandantDto.setPartnerDto(partnerDto);
 
-			AnwenderDto anwenderDto = getSystemFac().anwenderFindByPrimaryKey(
-					new Integer(SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER));
+			AnwenderDto anwenderDto = getSystemFac()
+					.anwenderFindByPrimaryKey(new Integer(SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER));
 			mandantDto.setAnwenderDto(anwenderDto);
 			// }
 			// catch (FinderException ex) {
@@ -2258,8 +2316,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return mandantDtos;
 	}
 
-	public MandantDto[] mandantFindByPartnerIIdOhneExc(Integer partnerIId,
-			TheClientDto theClientDto) {
+	public MandantDto[] mandantFindByPartnerIIdOhneExc(Integer partnerIId, TheClientDto theClientDto) {
 		MandantDto[] aMandantDtos = null;
 		try {
 			Query query = em.createNamedQuery("MandantfindByPartnerIId");
@@ -2271,8 +2328,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return aMandantDtos;
 	}
 
-	public MandantDto[] mandantFindByPartnerIId(Integer partnerIId,
-			TheClientDto theClientDto) {
+	public MandantDto[] mandantFindByPartnerIId(Integer partnerIId, TheClientDto theClientDto) {
 		MandantDto[] aMandantDtos = null;
 		// try {
 		Query query = em.createNamedQuery("MandantfindByPartnerIId");
@@ -2293,23 +2349,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * MB: Zieldatum eines Belegs berechnen.
 	 * 
-	 * @param dBelegdatum
-	 *            Date
-	 * @param zahlungszielIId
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param dBelegdatum     Date
+	 * @param zahlungszielIId Integer
+	 * @param theClientDto    String
 	 * @return Date
 	 * @throws EJBExceptionLP
 	 */
-	public java.sql.Date berechneZielDatumFuerBelegdatum(
-			java.util.Date dBelegdatum, Integer zahlungszielIId,
+	public java.sql.Date berechneZielDatumFuerBelegdatum(java.util.Date dBelegdatum, Integer zahlungszielIId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (zahlungszielIId != null) {
-			ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(
-					zahlungszielIId, theClientDto);
-			return berechneZielDatumFuerBelegdatum(dBelegdatum,
-					zahlungszielDto, theClientDto);
+			ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(zahlungszielIId, theClientDto);
+			return berechneZielDatumFuerBelegdatum(dBelegdatum, zahlungszielDto, theClientDto);
 		} else {
 			return new java.sql.Date(dBelegdatum.getTime());
 		}
@@ -2318,33 +2368,25 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * MB: Zieldatum eines Belegs berechnen.
 	 * 
-	 * @param dBelegdatum
-	 *            Date
-	 * @param zahlungszielDto
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param dBelegdatum     Date
+	 * @param zahlungszielDto Integer
+	 * @param theClientDto    String
 	 * @return Date
 	 * @throws EJBExceptionLP
 	 */
-	public java.sql.Date berechneZielDatumFuerBelegdatum(
-			java.util.Date dBelegdatum, ZahlungszielDto zahlungszielDto,
+	public java.sql.Date berechneZielDatumFuerBelegdatum(java.util.Date dBelegdatum, ZahlungszielDto zahlungszielDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (Helper.short2boolean(zahlungszielDto.getBStichtag()) == true) {
-			return berechneFaelligkeitAnhandStichtag(dBelegdatum,
-					zahlungszielDto, theClientDto);
-		} else if (zahlungszielDto != null
-				&& zahlungszielDto.getAnzahlZieltageFuerNetto() != null) {
-			return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
-					.getAnzahlZieltageFuerNetto().intValue());
+			return berechneFaelligkeitAnhandStichtag(dBelegdatum, zahlungszielDto, theClientDto);
+		} else if (zahlungszielDto != null && zahlungszielDto.getAnzahlZieltageFuerNetto() != null) {
+			return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto.getAnzahlZieltageFuerNetto().intValue());
 		} else {
 			return new java.sql.Date(dBelegdatum.getTime());
 		}
 	}
 
-	public java.sql.Date berechneFaelligkeitAnhandStichtag(
-			java.util.Date dBelegdatum, ZahlungszielDto zahlungszielDto,
+	public java.sql.Date berechneFaelligkeitAnhandStichtag(java.util.Date dBelegdatum, ZahlungszielDto zahlungszielDto,
 			TheClientDto theClientDto) {
 
 		java.sql.Date dFaellig = new java.sql.Date(dBelegdatum.getTime());
@@ -2356,21 +2398,16 @@ public class MandantFacBean extends Facade implements MandantFac {
 				cFaellig.setTime(dBelegdatum);
 				int iTagBelegdatum = cFaellig.get(Calendar.DAY_OF_MONTH);
 
-				if (Helper.short2boolean(zahlungszielDto
-						.getBStichtagMonatsletzter())) {
+				if (Helper.short2boolean(zahlungszielDto.getBStichtagMonatsletzter())) {
 					cFaellig.set(Calendar.DAY_OF_MONTH, 1);
 
-					cFaellig.add(Calendar.MONTH,
-							zahlungszielDto.getIFolgemonat());
-					cFaellig.set(Calendar.DAY_OF_MONTH,
-							cFaellig.getActualMaximum(Calendar.DAY_OF_MONTH));
+					cFaellig.add(Calendar.MONTH, zahlungszielDto.getIFolgemonat());
+					cFaellig.set(Calendar.DAY_OF_MONTH, cFaellig.getActualMaximum(Calendar.DAY_OF_MONTH));
 				} else {
 					cFaellig.set(Calendar.DAY_OF_MONTH, 1);
 
-					cFaellig.add(Calendar.MONTH,
-							zahlungszielDto.getIFolgemonat());
-					cFaellig.set(Calendar.DAY_OF_MONTH,
-							zahlungszielDto.getIStichtag());
+					cFaellig.add(Calendar.MONTH, zahlungszielDto.getIFolgemonat());
+					cFaellig.set(Calendar.DAY_OF_MONTH, zahlungszielDto.getIStichtag());
 
 					if (iTagBelegdatum > zahlungszielDto.getIStichtag()) {
 						cFaellig.add(Calendar.MONTH, 1);
@@ -2386,13 +2423,10 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return dFaellig;
 	}
 
-	public boolean hatZusatzfunktionberechtigung(String zusatzfunktionCNr,
-			TheClientDto theClientDto) {
+	public boolean hatZusatzfunktionberechtigung(String zusatzfunktionCNr, TheClientDto theClientDto) {
 		// try {
-		Zusatzfunktionberechtigung zusatzfunktionberechtigung = em.find(
-				Zusatzfunktionberechtigung.class,
-				new ZusatzfunktionberechtigungPK(zusatzfunktionCNr,
-						theClientDto.getMandant()));
+		Zusatzfunktionberechtigung zusatzfunktionberechtigung = em.find(Zusatzfunktionberechtigung.class,
+				new ZusatzfunktionberechtigungPK(zusatzfunktionCNr, theClientDto.getMandant()));
 		if (zusatzfunktionberechtigung == null) { // @ToDo null Pruefung?
 			return false;
 		}
@@ -2406,29 +2440,40 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * MB: Berechne das Datum, bis zu dem der Skonto 1 abziehbar ist.
 	 * 
-	 * @param dBelegdatum
-	 *            Date
-	 * @param zahlungszielIId
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param dBelegdatum     Date
+	 * @param zahlungszielIId Integer
+	 * @param theClientDto    String
 	 * @return Date
 	 * @throws EJBExceptionLP
 	 */
-	public java.sql.Date berechneSkontoTage1FuerBelegdatum(
-			java.sql.Date dBelegdatum, Integer zahlungszielIId,
+	public java.sql.Date berechneSkontoTage1FuerBelegdatum(java.sql.Date dBelegdatum, Integer zahlungszielIId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(
-				zahlungszielIId, theClientDto);
+		ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(zahlungszielIId, theClientDto);
 
 		if (Helper.short2boolean(zahlungszielDto.getBStichtag()) == true) {
-			java.sql.Date dFaellig = berechneFaelligkeitAnhandStichtag(
-					dBelegdatum, zahlungszielDto, theClientDto);
-			return Helper.addiereTageZuDatum(dFaellig, -zahlungszielDto
-					.getSkontoAnzahlTage1().intValue());
+			java.sql.Date dFaellig = berechneFaelligkeitAnhandStichtag(dBelegdatum, zahlungszielDto, theClientDto);
+			return Helper.addiereTageZuDatum(dFaellig, -zahlungszielDto.getSkontoAnzahlTage1().intValue());
 		} else {
-			return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
-					.getSkontoAnzahlTage1().intValue());
+
+			if (zahlungszielDto.getIFolgemonatSkontotage1() != null) {
+				Calendar cFaellig = Calendar.getInstance();
+				cFaellig.setTime(dBelegdatum);
+				int iTagBelegdatum = cFaellig.get(Calendar.DAY_OF_MONTH);
+
+				cFaellig.set(Calendar.DAY_OF_MONTH, 1);
+
+				cFaellig.add(Calendar.MONTH, zahlungszielDto.getIFolgemonatSkontotage1());
+				cFaellig.set(Calendar.DAY_OF_MONTH, zahlungszielDto.getSkontoAnzahlTage1());
+
+				if (iTagBelegdatum > zahlungszielDto.getSkontoAnzahlTage1()) {
+					cFaellig.add(Calendar.MONTH, 1);
+				}
+
+				return new java.sql.Date(cFaellig.getTime().getTime());
+			} else {
+				return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto.getSkontoAnzahlTage1().intValue());
+			}
+
 		}
 
 	}
@@ -2436,102 +2481,94 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * MB: Berechne das Datum, bis zu dem der Skonto 2 abziehbar ist.
 	 * 
-	 * @param dBelegdatum
-	 *            Date
-	 * @param zahlungszielIId
-	 *            Integer
-	 * @param theClientDto
-	 *            String
+	 * @param dBelegdatum     Date
+	 * @param zahlungszielIId Integer
+	 * @param theClientDto    String
 	 * @return Date
 	 * @throws EJBExceptionLP
 	 */
-	public java.sql.Date berechneSkontoTage2Belegdatum(
-			java.sql.Date dBelegdatum, Integer zahlungszielIId,
+	public java.sql.Date berechneSkontoTage2Belegdatum(java.sql.Date dBelegdatum, Integer zahlungszielIId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(
-				zahlungszielIId, theClientDto);
+		ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(zahlungszielIId, theClientDto);
 
 		if (Helper.short2boolean(zahlungszielDto.getBStichtag()) == true) {
-			java.sql.Date dFaellig = berechneFaelligkeitAnhandStichtag(
-					dBelegdatum, zahlungszielDto, theClientDto);
-			return Helper.addiereTageZuDatum(dFaellig, -zahlungszielDto
-					.getSkontoAnzahlTage2().intValue());
+			java.sql.Date dFaellig = berechneFaelligkeitAnhandStichtag(dBelegdatum, zahlungszielDto, theClientDto);
+			return Helper.addiereTageZuDatum(dFaellig, -zahlungszielDto.getSkontoAnzahlTage2().intValue());
 		} else {
-			return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
-					.getSkontoAnzahlTage2().intValue());
+
+			if (zahlungszielDto.getIFolgemonatSkontotage2() != null) {
+				Calendar cFaellig = Calendar.getInstance();
+				cFaellig.setTime(dBelegdatum);
+				int iTagBelegdatum = cFaellig.get(Calendar.DAY_OF_MONTH);
+
+				cFaellig.set(Calendar.DAY_OF_MONTH, 1);
+
+				cFaellig.add(Calendar.MONTH, zahlungszielDto.getIFolgemonatSkontotage2());
+				cFaellig.set(Calendar.DAY_OF_MONTH, zahlungszielDto.getSkontoAnzahlTage2());
+
+				if (iTagBelegdatum > zahlungszielDto.getSkontoAnzahlTage2()) {
+					cFaellig.add(Calendar.MONTH, 1);
+				}
+
+				return new java.sql.Date(cFaellig.getTime().getTime());
+			} else {
+				return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto.getSkontoAnzahlTage2().intValue());
+			}
 		}
 
 	}
 
-	public void createModulberechtigung(
-			ModulberechtigungDto modulberechtigungDto, TheClientDto theClientDto)
+	public void createModulberechtigung(ModulberechtigungDto modulberechtigungDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		if (modulberechtigungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("modulberechtigungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("modulberechtigungDto == null"));
 		}
-		if (modulberechtigungDto.getBelegartCNr() == null
-				|| modulberechtigungDto.getMandantCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"modulberechtigungDto.getBelegartCNr() == null || modulberechtigungDto.getMandantCNr() == null"));
+		if (modulberechtigungDto.getBelegartCNr() == null || modulberechtigungDto.getMandantCNr() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"modulberechtigungDto.getBelegartCNr() == null || modulberechtigungDto.getMandantCNr() == null"));
 		}
 		// try {
 		Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class,
-				new ModulberechtigungPK(modulberechtigungDto.getBelegartCNr(),
-						modulberechtigungDto.getMandantCNr()));
+				new ModulberechtigungPK(modulberechtigungDto.getBelegartCNr(), modulberechtigungDto.getMandantCNr()));
 		if (modulberechtigung != null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("LP_MODULBERECHTIGUNG.PK"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_MODULBERECHTIGUNG.PK"));
 		}
 		// catch (FinderException ex1) {
 		// nothing here
 		// }
 
 		try {
-			modulberechtigung = new Modulberechtigung(
-					modulberechtigungDto.getBelegartCNr(),
+			modulberechtigung = new Modulberechtigung(modulberechtigungDto.getBelegartCNr(),
 					modulberechtigungDto.getMandantCNr());
 			em.persist(modulberechtigung);
 			em.flush();
-			setModulberechtigungFromModulberechtigungDto(modulberechtigung,
-					modulberechtigungDto);
+			setModulberechtigungFromModulberechtigungDto(modulberechtigung, modulberechtigungDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
-	public void removeModulberechtigung(
-			ModulberechtigungDto modulberechtigungDto) throws EJBExceptionLP {
+	public void removeModulberechtigung(ModulberechtigungDto modulberechtigungDto) throws EJBExceptionLP {
 		myLogger.entry();
 		if (modulberechtigungDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("modulberechtigungDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("modulberechtigungDto == null"));
 		}
-		if (modulberechtigungDto.getBelegartCNr() == null
-				|| modulberechtigungDto.getMandantCNr() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"modulberechtigungDto.getBelegartCNr() == null || modulberechtigungDto.getMandantCNr() == null"));
+		if (modulberechtigungDto.getBelegartCNr() == null || modulberechtigungDto.getMandantCNr() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception(
+					"modulberechtigungDto.getBelegartCNr() == null || modulberechtigungDto.getMandantCNr() == null"));
 		}
 
 		if (modulberechtigungDto != null) {
 			try {
-				Modulberechtigung modulberechtigung = em.find(
-						Modulberechtigung.class, new ModulberechtigungPK(
-								modulberechtigungDto.getBelegartCNr(),
-								modulberechtigungDto.getMandantCNr()));
+				Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class, new ModulberechtigungPK(
+						modulberechtigungDto.getBelegartCNr(), modulberechtigungDto.getMandantCNr()));
 				if (modulberechtigung == null) {
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 				}
 				em.remove(modulberechtigung);
 				em.flush();
 			} catch (EntityExistsException ex) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						ex);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
 			}
 			// catch (FinderException ex) {
 			// throw new
@@ -2540,8 +2577,8 @@ public class MandantFacBean extends Facade implements MandantFac {
 		}
 	}
 
-	public ModulberechtigungDto modulberechtigungFindByPrimaryKey(
-			String belegartCNr, String mandantCNr) throws EJBExceptionLP {
+	public ModulberechtigungDto modulberechtigungFindByPrimaryKey(String belegartCNr, String mandantCNr)
+			throws EJBExceptionLP {
 		if (belegartCNr == null || mandantCNr == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("belegartCNr == null || mandantCNr == null"));
@@ -2550,11 +2587,9 @@ public class MandantFacBean extends Facade implements MandantFac {
 		ModulberechtigungPK modulberechtigungPK = new ModulberechtigungPK();
 		modulberechtigungPK.setBelegartCNr(belegartCNr);
 		modulberechtigungPK.setMandantCNr(mandantCNr);
-		Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class,
-				modulberechtigungPK);
+		Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class, modulberechtigungPK);
 		if (modulberechtigung == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleModulberechtigungDto(modulberechtigung);
 		// }
@@ -2564,24 +2599,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 		// }
 	}
 
-	public boolean darfAnwenderAufModulZugreifen(String belegart,
-			TheClientDto theClientDto) {
+	public boolean darfAnwenderAufModulZugreifen(String belegart, TheClientDto theClientDto) {
 		ModulberechtigungPK modulberechtigungPK = new ModulberechtigungPK();
 		modulberechtigungPK.setBelegartCNr(belegart);
 		modulberechtigungPK.setMandantCNr(theClientDto.getMandant());
-		Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class,
-				modulberechtigungPK);
+		Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class, modulberechtigungPK);
 
-		if (modulberechtigung != null) {
-			return true;
-		} else {
-			return false;
-		}
-
+		return modulberechtigung != null;
 	}
 
-	public ModulberechtigungDto modulberechtigungFindByPrimaryKeyOhneExc(
-			String belegartCNr, String mandantCNr) throws EJBExceptionLP {
+	public ModulberechtigungDto modulberechtigungFindByPrimaryKeyOhneExc(String belegartCNr, String mandantCNr)
+			throws EJBExceptionLP {
 		if (belegartCNr == null || mandantCNr == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("belegartCNr == null || mandantCNr == null"));
@@ -2590,19 +2618,16 @@ public class MandantFacBean extends Facade implements MandantFac {
 		ModulberechtigungPK modulberechtigungPK = new ModulberechtigungPK();
 		modulberechtigungPK.setBelegartCNr(belegartCNr);
 		modulberechtigungPK.setMandantCNr(mandantCNr);
-		Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class,
-				modulberechtigungPK);
+		Modulberechtigung modulberechtigung = em.find(Modulberechtigung.class, modulberechtigungPK);
 		if (modulberechtigung == null) {
 			return null;
 		}
 		return assembleModulberechtigungDto(modulberechtigung);
 	}
 
-	public ModulberechtigungDto[] modulberechtigungFindByMandantCNr(
-			String mandantCNr) throws EJBExceptionLP {
+	public ModulberechtigungDto[] modulberechtigungFindByMandantCNr(String mandantCNr) throws EJBExceptionLP {
 		if (mandantCNr == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("mandantCNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("mandantCNr == null"));
 		}
 
 		// try {
@@ -2622,80 +2647,67 @@ public class MandantFacBean extends Facade implements MandantFac {
 		// }
 	}
 
-	private void setModulberechtigungFromModulberechtigungDto(
-			Modulberechtigung modulberechtigung,
+	private void setModulberechtigungFromModulberechtigungDto(Modulberechtigung modulberechtigung,
 			ModulberechtigungDto modulberechtigungDto) {
 		em.merge(modulberechtigung);
 		em.flush();
 	}
 
-	private ModulberechtigungDto assembleModulberechtigungDto(
-			Modulberechtigung modulberechtigung) {
+	private ModulberechtigungDto assembleModulberechtigungDto(Modulberechtigung modulberechtigung) {
 		return ModulberechtigungDtoAssembler.createDto(modulberechtigung);
 	}
 
-	private ModulberechtigungDto[] assembleModulberechtigungDtos(
-			Collection<?> modulberechtigungs) {
+	private ModulberechtigungDto[] assembleModulberechtigungDtos(Collection<?> modulberechtigungs) {
 		List<ModulberechtigungDto> list = new ArrayList<ModulberechtigungDto>();
 		if (modulberechtigungs != null) {
 			Iterator<?> iterator = modulberechtigungs.iterator();
 			while (iterator.hasNext()) {
-				Modulberechtigung modulberechtigung = (Modulberechtigung) iterator
-						.next();
+				Modulberechtigung modulberechtigung = (Modulberechtigung) iterator.next();
 				list.add(assembleModulberechtigungDto(modulberechtigung));
 			}
 		}
-		ModulberechtigungDto[] returnArray = new ModulberechtigungDto[list
-				.size()];
+		ModulberechtigungDto[] returnArray = new ModulberechtigungDto[list.size()];
 		return list.toArray(returnArray);
 	}
 
 	/**
-	 * Im UI und auf Drucken soll das Zahlungsziel in einem bestimmten Locale
-	 * bzw. der bestmoeglichen Uebersetzung angezeigt werden.
+	 * Im UI und auf Drucken soll das Zahlungsziel in einem bestimmten Locale bzw.
+	 * der bestmoeglichen Uebersetzung angezeigt werden.
 	 * 
-	 * @param iIdZahlungszielI
-	 *            PK des Zahlungsziels
-	 * @param localeI
-	 *            das gewuenschte Locale
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdZahlungszielI PK des Zahlungsziels
+	 * @param localeI          das gewuenschte Locale
+	 * @param theClientDto     der aktuelle Benutzer
 	 * @return String die bestmoegliche Uebersetzung, null ist moeglich
 	 */
-	public String zahlungszielFindByIIdLocaleOhneExc(Integer iIdZahlungszielI,
-			Locale localeI, TheClientDto theClientDto) {
+	public String zahlungszielFindByIIdLocaleOhneExc(Integer iIdZahlungszielI, Locale localeI,
+			TheClientDto theClientDto) {
 
 		String cZahlungsziel = null;
 
 		if (iIdZahlungszielI != null) {
 			// Schritt 1: Uebersetzung in gewuenschtes Locale
-			ZahlungszielsprDto zahlungszielsprDto = zahlungszielsprFindByPrimaryKeyOhneExc(
-					iIdZahlungszielI, Helper.locale2String(localeI));
+			ZahlungszielsprDto zahlungszielsprDto = zahlungszielsprFindByPrimaryKeyOhneExc(iIdZahlungszielI,
+					Helper.locale2String(localeI));
 
-			if (zahlungszielsprDto != null
-					&& zahlungszielsprDto.getCBezeichnung() != null) {
+			if (zahlungszielsprDto != null && zahlungszielsprDto.getCBezeichnung() != null) {
 				cZahlungsziel = zahlungszielsprDto.getCBezeichnung();
 			} else {
 				// Schritt 2: Uebersetzung in die UI Sprache des Benutzers
-				zahlungszielsprDto = zahlungszielsprFindByPrimaryKeyOhneExc(
-						iIdZahlungszielI, theClientDto.getLocUiAsString());
+				zahlungszielsprDto = zahlungszielsprFindByPrimaryKeyOhneExc(iIdZahlungszielI,
+						theClientDto.getLocUiAsString());
 
-				if (zahlungszielsprDto != null
-						&& zahlungszielsprDto.getCBezeichnung() != null) {
+				if (zahlungszielsprDto != null && zahlungszielsprDto.getCBezeichnung() != null) {
 					cZahlungsziel = zahlungszielsprDto.getCBezeichnung();
 				} else {
 					// Schritt 3: Uebersetzung in Konzerndatensprache
-					zahlungszielsprDto = zahlungszielsprFindByPrimaryKeyOhneExc(
-							iIdZahlungszielI,
+					zahlungszielsprDto = zahlungszielsprFindByPrimaryKeyOhneExc(iIdZahlungszielI,
 							theClientDto.getLocKonzernAsString());
 
-					if (zahlungszielsprDto != null
-							&& zahlungszielsprDto.getCBezeichnung() != null) {
+					if (zahlungszielsprDto != null && zahlungszielsprDto.getCBezeichnung() != null) {
 						cZahlungsziel = zahlungszielsprDto.getCBezeichnung();
 					} else {
 						// Schritt 4: Die cNr der Lieferart
-						ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(
-								iIdZahlungszielI, theClientDto);
+						ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(iIdZahlungszielI, theClientDto);
 
 						cZahlungsziel = zahlungszielDto.getCBez();
 					}
@@ -2706,69 +2718,63 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return cZahlungsziel;
 	}
 
-	public Integer getNachkommastellenPreisAllgemein(String mandantCNr)
-			throws EJBExceptionLP, RemoteException {
+	public Integer getNachkommastellenPreisAllgemein(String mandantCNr) throws EJBExceptionLP, RemoteException {
 		ParametermandantDto parameter = null;
-		parameter = getParameterFac().getMandantparameter(mandantCNr,
-				ParameterFac.KATEGORIE_ALLGEMEIN,
+		parameter = getParameterFac().getMandantparameter(mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
 				ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN);
 		Integer iPreisRabatte = (Integer) parameter.getCWertAsObject();
 		return iPreisRabatte;
 	}
 
-	public Integer getNachkommastellenPreisEK(String mandantCNr)
-			throws EJBExceptionLP, RemoteException {
+	public Integer getNachkommastellenPreisEK(String mandantCNr) throws EJBExceptionLP, RemoteException {
 		ParametermandantDto parameter = null;
-		parameter = getParameterFac().getMandantparameter(mandantCNr,
-				ParameterFac.KATEGORIE_ALLGEMEIN,
+		parameter = getParameterFac().getMandantparameter(mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
 				ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_EK);
 		Integer iPreisRabatte = (Integer) parameter.getCWertAsObject();
 		return iPreisRabatte;
 	}
 
-	public Integer getNachkommastellenPreisWE(String mandantCNr)
-			throws EJBExceptionLP, RemoteException {
+	public Integer getNachkommastellenPreisWE(String mandantCNr) throws EJBExceptionLP, RemoteException {
 		ParametermandantDto parameter = null;
-		parameter = getParameterFac().getMandantparameter(mandantCNr,
-				ParameterFac.KATEGORIE_ALLGEMEIN,
+		parameter = getParameterFac().getMandantparameter(mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
 				ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_WE);
 		Integer iPreisRabatte = (Integer) parameter.getCWertAsObject();
 		return iPreisRabatte;
 	}
 
-	public Integer getNachkommastellenPreisVK(String mandantCNr)
-			throws EJBExceptionLP, RemoteException {
+	public Integer getNachkommastellenPreisVK(String mandantCNr) throws EJBExceptionLP, RemoteException {
 		ParametermandantDto parameter = null;
-		parameter = getParameterFac().getMandantparameter(mandantCNr,
-				ParameterFac.KATEGORIE_ALLGEMEIN,
+		parameter = getParameterFac().getMandantparameter(mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
 				ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_VK);
 		Integer iPreisRabatte = (Integer) parameter.getCWertAsObject();
 		return iPreisRabatte;
 	}
 
-	public Integer getNachkommastellenMenge(String mandantCNr)
-			throws EJBExceptionLP, RemoteException {
+	public Integer getNachkommastellenMenge(String mandantCNr) throws EJBExceptionLP, RemoteException {
 		ParametermandantDto parameter = null;
-		parameter = getParameterFac().getMandantparameter(mandantCNr,
-				ParameterFac.KATEGORIE_ALLGEMEIN,
+		parameter = getParameterFac().getMandantparameter(mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
 				ParameterFac.PARAMETER_MENGE_UI_NACHKOMMASTELLEN);
 		Integer iMenge = (Integer) parameter.getCWertAsObject();
 		return iMenge;
 	}
 
-	public void createZusatzfunktion(ZusatzfunktionDto zusatzfunktionDto)
-			throws EJBExceptionLP {
+	public Integer getNachkommastellenLosgroesse(String mandantCNr) throws EJBExceptionLP, RemoteException {
+		ParametermandantDto parameter = null;
+		parameter = getParameterFac().getMandantparameter(mandantCNr, ParameterFac.KATEGORIE_FERTIGUNG,
+				ParameterFac.PARAMETER_NACHKOMMASTELLEN_LOSGROESSE);
+		Integer iMenge = (Integer) parameter.getCWertAsObject();
+		return iMenge;
+	}
+
+	public void createZusatzfunktion(ZusatzfunktionDto zusatzfunktionDto) throws EJBExceptionLP {
 		if (zusatzfunktionDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("zusatzfunktionDto == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("zusatzfunktionDto == null"));
 		}
 		try {
-			Zusatzfunktion zusatzfunktion = new Zusatzfunktion(
-					zusatzfunktionDto.getCNr());
+			Zusatzfunktion zusatzfunktion = new Zusatzfunktion(zusatzfunktionDto.getCNr());
 			em.persist(zusatzfunktion);
 			em.flush();
-			setZusatzfunktionFromZusatzfunktionDto(zusatzfunktion,
-					zusatzfunktionDto);
+			setZusatzfunktionFromZusatzfunktionDto(zusatzfunktion, zusatzfunktionDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -2792,25 +2798,22 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 	}
 
-	private void setZusatzfunktionFromZusatzfunktionDto(
-			Zusatzfunktion zusatzfunktion, ZusatzfunktionDto zusatzfunktionDto) {
+	private void setZusatzfunktionFromZusatzfunktionDto(Zusatzfunktion zusatzfunktion,
+			ZusatzfunktionDto zusatzfunktionDto) {
 		em.merge(zusatzfunktion);
 		em.flush();
 	}
 
-	private ZusatzfunktionDto assembleZusatzfunktionDto(
-			Zusatzfunktion zusatzfunktion) {
+	private ZusatzfunktionDto assembleZusatzfunktionDto(Zusatzfunktion zusatzfunktion) {
 		return ZusatzfunktionDtoAssembler.createDto(zusatzfunktion);
 	}
 
-	private ZusatzfunktionDto[] assembleZusatzfunktionDtos(
-			Collection<?> zusatzfunktions) {
+	private ZusatzfunktionDto[] assembleZusatzfunktionDtos(Collection<?> zusatzfunktions) {
 		List<ZusatzfunktionDto> list = new ArrayList<ZusatzfunktionDto>();
 		if (zusatzfunktions != null) {
 			Iterator<?> iterator = zusatzfunktions.iterator();
 			while (iterator.hasNext()) {
-				Zusatzfunktion zusatzfunktion = (Zusatzfunktion) iterator
-						.next();
+				Zusatzfunktion zusatzfunktion = (Zusatzfunktion) iterator.next();
 				list.add(assembleZusatzfunktionDto(zusatzfunktion));
 			}
 		}
@@ -2818,8 +2821,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 		return list.toArray(returnArray);
 	}
 
-	public void createZusatzfunktionberechtigung(
-			ZusatzfunktionberechtigungDto zusatzfunktionberechtigungDto)
+	public void createZusatzfunktionberechtigung(ZusatzfunktionberechtigungDto zusatzfunktionberechtigungDto)
 			throws EJBExceptionLP {
 		if (zusatzfunktionberechtigungDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -2831,18 +2833,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 					zusatzfunktionberechtigungDto.getMandantCNr());
 			em.persist(zusatzfunktionberechtigung);
 			em.flush();
-			setZusatzfunktionberechtigungFromZusatzfunktionberechtigungDto(
-					zusatzfunktionberechtigung, zusatzfunktionberechtigungDto);
+			setZusatzfunktionberechtigungFromZusatzfunktionberechtigungDto(zusatzfunktionberechtigung,
+					zusatzfunktionberechtigungDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
-	public ZusatzfunktionberechtigungDto[] zusatzfunktionberechtigungFindByMandantCNr(
-			String mandantCNr) throws EJBExceptionLP {
+	public ZusatzfunktionberechtigungDto[] zusatzfunktionberechtigungFindByMandantCNr(String mandantCNr)
+			throws EJBExceptionLP {
 		// try {
-		Query query = em
-				.createNamedQuery("ZusatzfunktionberechtigungfindByMandantCNr");
+		Query query = em.createNamedQuery("ZusatzfunktionberechtigungfindByMandantCNr");
 		query.setParameter(1, mandantCNr);
 		Collection<?> cl = query.getResultList();
 		// if(cl.isEmpty()){ // @ToDo null Pruefung?
@@ -2858,13 +2859,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 		// }
 	}
 
-	public ZusatzfunktionberechtigungDto zusatzfunktionberechtigungFindByPrimaryKey(
-			String zusatzfunktionCNr, String mandantCNr) throws EJBExceptionLP {
+	public ZusatzfunktionberechtigungDto zusatzfunktionberechtigungFindByPrimaryKey(String zusatzfunktionCNr,
+			String mandantCNr) throws EJBExceptionLP {
 		// try {
-		Zusatzfunktionberechtigung zusatzfunktionberechtigung = em
-				.find(Zusatzfunktionberechtigung.class,
-						new ZusatzfunktionberechtigungPK(zusatzfunktionCNr,
-								mandantCNr));
+		Zusatzfunktionberechtigung zusatzfunktionberechtigung = em.find(Zusatzfunktionberechtigung.class,
+				new ZusatzfunktionberechtigungPK(zusatzfunktionCNr, mandantCNr));
 		if (zusatzfunktionberechtigung == null) {
 			return null;
 		}
@@ -2884,8 +2883,7 @@ public class MandantFacBean extends Facade implements MandantFac {
 
 	private ZusatzfunktionberechtigungDto assembleZusatzfunktionberechtigungDto(
 			Zusatzfunktionberechtigung zusatzfunktionberechtigung) {
-		return ZusatzfunktionberechtigungDtoAssembler
-				.createDto(zusatzfunktionberechtigung);
+		return ZusatzfunktionberechtigungDtoAssembler.createDto(zusatzfunktionberechtigung);
 	}
 
 	private ZusatzfunktionberechtigungDto[] assembleZusatzfunktionberechtigungDtos(
@@ -2894,18 +2892,15 @@ public class MandantFacBean extends Facade implements MandantFac {
 		if (zusatzfunktionberechtigungs != null) {
 			Iterator<?> iterator = zusatzfunktionberechtigungs.iterator();
 			while (iterator.hasNext()) {
-				Zusatzfunktionberechtigung zusatzfunktionberechtigung = (Zusatzfunktionberechtigung) iterator
-						.next();
+				Zusatzfunktionberechtigung zusatzfunktionberechtigung = (Zusatzfunktionberechtigung) iterator.next();
 				list.add(assembleZusatzfunktionberechtigungDto(zusatzfunktionberechtigung));
 			}
 		}
-		ZusatzfunktionberechtigungDto[] returnArray = new ZusatzfunktionberechtigungDto[list
-				.size()];
+		ZusatzfunktionberechtigungDto[] returnArray = new ZusatzfunktionberechtigungDto[list.size()];
 		return list.toArray(returnArray);
 	}
 
-	public Integer createMwstsatzbez(MwstsatzbezDto mwstsatzbezDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createMwstsatzbez(MwstsatzbezDto mwstsatzbezDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		Integer iId = null;
 		try {
@@ -2913,18 +2908,15 @@ public class MandantFacBean extends Facade implements MandantFac {
 			iId = pkGen.getNextPrimaryKey(PKConst.PK_MWSSATZBEZ);
 			mwstsatzbezDto.setIId(iId);
 
-			Mwstsatzbez mwstsatzbez = new Mwstsatzbez(mwstsatzbezDto.getIId(),
-					mwstsatzbezDto.getCBezeichnung(),
+			Mwstsatzbez mwstsatzbez = new Mwstsatzbez(mwstsatzbezDto.getIId(), mwstsatzbezDto.getCBezeichnung(),
 					mwstsatzbezDto.getMandantCNr(), null, "");
 			em.persist(mwstsatzbez);
 			em.flush();
 			setMwstsatzbezFromMwstsatzbezDto(mwstsatzbez, mwstsatzbezDto);
 		} catch (EntityExistsException ex) {
-			EJBExceptionLP e = new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEIM_ANLEGEN_ENTITY_EXISTS, ex);
+			EJBExceptionLP e = new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN_ENTITY_EXISTS, ex);
 			ArrayList<Object> alInfo = new ArrayList<Object>();
-			alInfo.add("Existierender Eintrag: "
-					+ mwstsatzbezDto.getCBezeichnung());
+			alInfo.add("Existierender Eintrag: " + mwstsatzbezDto.getCBezeichnung());
 			alInfo.add("Anzulegende ID: " + mwstsatzbezDto.getIId());
 			e.setAlInfoForTheClient(alInfo);
 			throw e;
@@ -2937,23 +2929,20 @@ public class MandantFacBean extends Facade implements MandantFac {
 		try {
 			Mwstsatzbez toRemove = em.find(Mwstsatzbez.class, iId);
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
 		}
 	}
 
-	public void removeMwstsatzbez(MwstsatzbezDto mwstsatzbezDto)
-			throws EJBExceptionLP {
+	public void removeMwstsatzbez(MwstsatzbezDto mwstsatzbezDto) throws EJBExceptionLP {
 		if (mwstsatzbezDto != null) {
 			Integer iId = mwstsatzbezDto.getIId();
 			removeMwstsatzbez(iId);
@@ -2963,14 +2952,11 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * MWST-Satz-Bezeichnung updaten.
 	 * 
-	 * @param mwstsatzbezDto
-	 *            MwstsatzbezDto
-	 * @param theClientDto
-	 *            String
+	 * @param mwstsatzbezDto MwstsatzbezDto
+	 * @param theClientDto   String
 	 * @throws EJBException
 	 */
-	public void updateMwstsatzbez(MwstsatzbezDto mwstsatzbezDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateMwstsatzbez(MwstsatzbezDto mwstsatzbezDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (mwstsatzbezDto != null) {
 			Integer iId = mwstsatzbezDto.getIId();
 			// try {
@@ -2989,36 +2975,31 @@ public class MandantFacBean extends Facade implements MandantFac {
 		// }
 	}
 
-	public MwstsatzbezDto mwstsatzbezFindByPrimaryKey(Integer iId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		// TheClientDto theClientDto = check(cNrUserI);
-		// precondition
-		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception("iId == null"));
-		}
-		// try {
+	public HvOptional<MwstsatzbezDto> mwstsatzbezFindByPrimaryKeyOhneExc(Integer iId, TheClientDto theClientDto) {
+		if (iId == null)
+			return HvOptional.empty();
 		Mwstsatzbez mwstsatzbez = em.find(Mwstsatzbez.class, iId);
-		if (mwstsatzbez == null) { // @ToDo null Pruefung?
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "");
-		}
-		return assembleMwstsatzbezDto(mwstsatzbez);
-
-		// }
-		// catch (ObjectNotFoundException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-		// }
+		if (mwstsatzbez == null)
+			return HvOptional.empty();
+		return HvOptional.of(assembleMwstsatzbezDto(mwstsatzbez));
 	}
 
-	private void setMwstsatzbezFromMwstsatzbezDto(Mwstsatzbez mwstsatzbez,
-			MwstsatzbezDto mwstsatzbezDto) {
+	public MwstsatzbezDto mwstsatzbezFindByPrimaryKey(Integer iId, TheClientDto theClientDto) throws EJBExceptionLP {
+		// precondition
+		if (iId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception("iId == null"));
+		}
+		HvOptional<MwstsatzbezDto> result = mwstsatzbezFindByPrimaryKeyOhneExc(iId, theClientDto);
+		if (!result.isPresent())
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "");
+		return result.get();
+	}
+
+	private void setMwstsatzbezFromMwstsatzbezDto(Mwstsatzbez mwstsatzbez, MwstsatzbezDto mwstsatzbezDto) {
 		mwstsatzbez.setMandantCNr(mwstsatzbezDto.getMandantCNr());
 		mwstsatzbez.setCBezeichnung(mwstsatzbezDto.getCBezeichnung());
 		mwstsatzbez.setFinanzamtIId(mwstsatzbezDto.getFinanzamtIId());
+		mwstsatzbez.setCDruckname(mwstsatzbezDto.getCDruckname());
 		em.merge(mwstsatzbez);
 		em.flush();
 	}
@@ -3054,11 +3035,375 @@ public class MandantFacBean extends Facade implements MandantFac {
 	}
 
 	@Override
-	public ReportMandantDto createReportMandantDto(TheClientDto theClient) {
-		MandantDto mandant = mandantFindByPrimaryKey(theClient.getMandant(),
-				theClient);
-		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
-				theClient.getIDPersonal(), theClient);
-		return new ReportMandantDto(theClient, mandant, personalDto);
+	public ReportMandantDto createReportMandantDto(TheClientDto theClient, Locale localeDruck) {
+		MandantDto mandant = mandantFindByPrimaryKey(theClient.getMandant(), theClient);
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(theClient.getIDPersonal(), theClient);
+
+		String signatur = getPersonalFac().getSignatur(theClient.getIDPersonal(), theClient.getLocUiAsString());
+		String sZessionstext = null;
+		String hautpmandant = null;
+
+		boolean bParametermandantArtikelgewichtGrammStattKilo = false;
+		try {
+			sZessionstext = getParameterFac().getMandantparameter(theClient.getMandant(),
+
+					ParameterFac.KATEGORIE_ALLGEMEIN, ParameterFac.PARAMETER_ZESSIONSTEXT).getCWert();
+
+			bParametermandantArtikelgewichtGrammStattKilo = (Boolean) getParameterFac()
+					.getMandantparameter(theClient.getMandant(),
+
+							ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_ARTIKELGEWICHT_GRAMM_STATT_KILO)
+					.getCWertAsObject();
+
+			hautpmandant = getSystemFac().getHauptmandant();
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		String personalAnrede = null;
+		if (localeDruck != null) {
+			personalAnrede = getPersonalFac().formatAnrede(personalDto.getPartnerDto(), localeDruck, theClient);
+		}
+
+		return new ReportMandantDto(theClient, mandant, personalDto, signatur, sZessionstext,
+				bParametermandantArtikelgewichtGrammStattKilo, hautpmandant, personalAnrede);
+	}
+
+	public boolean hatModulFinanzbuchhaltung(TheClientDto theClientDto) {
+		return darfAnwenderAufModulZugreifen(LocaleFac.BELEGART_FINANZBUCHHALTUNG, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktion4Vending(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_4VENDING_SCHNITTSTELLE, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionSepaLastschrift(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_SEPA_LASTSCHRIFT, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionHvmaZeiterfassung(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_HVMA_ZEITERFASSUNG, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionStuecklisteMitFormeln(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_STUECKLISTE_MIT_FORMELN, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionDebugmodus(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_DEBUGMODUS, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionEinkaufsEan(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_EINKAUFS_EAN, theClientDto);
+	}
+
+	@Override
+	public List<MwstsatzDto> mwstsatzFindJuengsteZuDatum(MwstsatzId mwstsatzId, Timestamp passendZuTimestamp,
+			TheClientDto theClientDto) {
+		Mwstsatz findSatz = em.find(Mwstsatz.class, mwstsatzId.id());
+		return mwstsatzFindJuengsteZuDatumByBez(new MwstsatzbezId(findSatz.getMwstsatzbezIId()), passendZuTimestamp,
+				theClientDto);
+	}
+
+	@Override
+	public List<MwstsatzDto> mwstsatzFindJuengsteZuDatumByBez(MwstsatzbezId mwstsatzbezId, Timestamp passendZuTimestamp,
+			TheClientDto theClientDto) {
+		MwstsatzbezDto bezDto = mwstsatzbezFindByPrimaryKey(mwstsatzbezId.id(), theClientDto);
+		Query query = em.createNamedQuery("MwstsatzfindByMwstbez");
+		query.setParameter(1, bezDto.getIId());
+		List<Mwstsatz> cl = query.getResultList();
+
+		// Die Liste ist aufsteigend sortiert. Jetzt die raussuchen die
+		// neuer(nach) sind, oder das letzte Datum davor.
+		List<MwstsatzDto> dtos = new ArrayList<MwstsatzDto>();
+		for (int i = cl.size() - 1; i >= 0; i--) {
+			MwstsatzDto dto = assembleMwstsatzDto(cl.get(i));
+			dto.setMwstsatzbezDto(bezDto);
+			dtos.add(0, dto);
+
+			if (dto.getDGueltigab().compareTo(passendZuTimestamp) < 0) {
+				break;
+			}
+		}
+
+		return dtos;
+	}
+
+	@Override
+	public MwstsatzbezDto mwstsatzbezFindByBezeichnung(String bezeichnung, String mandantCnr) throws EJBExceptionLP {
+		Validator.notEmpty(bezeichnung, "bezeichnung");
+		Validator.notEmpty(mandantCnr, "mandantCnr");
+
+		Query query = em.createNamedQuery("MwstsatzbezfindByMandantCBezeichnung");
+		query.setParameter(1, mandantCnr);
+		query.setParameter(2, bezeichnung);
+
+		Collection<Mwstsatzbez> cl = query.getResultList();
+		if (cl.size() == 0) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, bezeichnung);
+		}
+		if (cl.size() > 1) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("LP_MWSTSATZBEZ.UK"));
+		}
+		return assembleMwstsatzbezDto(cl.iterator().next());
+	}
+
+	@Override
+	public boolean hatZusatzfunktionZugferd(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_ZUGFERD, theClientDto);
+	}
+
+	@Override
+	public List<DokumentenlinkDto> getSichtbareDokumentenlinks(String belegartCnr, boolean bPfadAbsolut,
+			TheClientDto theClientDto) {
+		DokumentenlinkDto[] dokumentenlinks = dokumentenlinkFindByBelegartCNrMandantCNrBPfadabsolut(belegartCnr,
+				theClientDto.getMandant(), bPfadAbsolut);
+		if (dokumentenlinks.length < 1) {
+			return new ArrayList<DokumentenlinkDto>();
+		}
+
+		List<DokumentenlinkDto> visibleDoklinks = new ArrayList<DokumentenlinkDto>();
+		for (DokumentenlinkDto doklink : dokumentenlinks) {
+			if (doklink.getRechtCNr() == null || getTheJudgeFac().hatRecht(doklink.getRechtCNr(), theClientDto)) {
+				visibleDoklinks.add(doklink);
+			}
+		}
+
+		return visibleDoklinks;
+	}
+
+	@Override
+	public boolean hatZusatzfunktionForecastAuftragVerteilen(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_FORECAST_AUFTRAG_VERTEILUNG, theClientDto);
+	}
+
+	@Override
+	public boolean hatModulNachrichten(TheClientDto theClientDto) {
+		return darfAnwenderAufModulZugreifen(LocaleFac.BELEGART_NACHRICHTEN, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionPostPLCVersand(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_POST_PLC_VERSAND, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionLiquiditaetsvorschau(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_LIQUIDITAETSVORSCHAU, theClientDto);
+	}
+
+	@Override
+	public boolean hatZusatzfunktionZentralerArtikelstamm(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto);
+	}
+
+	@Override
+	public Integer createMwstsatzCode(MwstsatzCodeDto codeDto, TheClientDto theClientDto) {
+		Validator.dtoNotNull(codeDto, "mwstsatzCodeDto");
+		Validator.notNull(codeDto.getMwstsatzId(), "mwstsatzCodeDto.getMwstsatzId()");
+		Validator.notNull(codeDto.getReversechargeartId(), "mwstsatzCodeDto.getReversechargeartId()");
+
+		HvOptional<MwstsatzCode> duplicate = MwstsatzCodeQuery.findByMwstsatzIIdReversechargeartIId(em,
+				codeDto.getMwstsatzId(), codeDto.getReversechargeartId());
+		if (duplicate.isPresent())
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("UK_LP_MWSTSATZCODE"));
+
+		try {
+			Integer pk = new PKGeneratorObj().getNextPrimaryKey(PKConst.PK_MWSTSATZCODE);
+			codeDto.setIId(pk);
+
+			MwstsatzCode entity = getMapper().map(codeDto, MwstsatzCode.class);
+			em.persist(entity);
+			em.flush();
+			return pk;
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	@Override
+	public void removeMwstsatzCode(MwstsatzCodeId mwstsatzCodeId) {
+		Validator.pkFieldValid(mwstsatzCodeId, "mwstsatzCodeId");
+
+		removeMwstsatzCodeImpl(Collections.singleton(mwstsatzCodeId.id()));
+	}
+
+	public void removeMwstsatzCode(MwstsatzId mwstsatzId) {
+		Validator.notNull(mwstsatzId, "mwstsatzId");
+
+		Collection<Integer> iids = MwstsatzCodeQuery.findIIdByMwstsatzIId(em, mwstsatzId);
+		removeMwstsatzCodeImpl(iids);
+	}
+
+	private void removeMwstsatzCodeImpl(Collection<Integer> mwstsatzCodeIIds) {
+		try {
+			for (Integer iId : mwstsatzCodeIIds) {
+				MwstsatzCode entity = em.find(MwstsatzCode.class, iId);
+				Validator.entityFound(entity, iId);
+				em.remove(entity);
+				em.flush();
+			}
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+	}
+
+	@Override
+	public void updateMwstsatzCode(MwstsatzCodeDto codeDto) {
+		Validator.dtoNotNull(codeDto, "mwstsatzCodeDto");
+		Validator.notNull(codeDto.getMwstsatzId(), "mwstsatzCodeDto.getMwstsatzId()");
+		Validator.notNull(codeDto.getReversechargeartId(), "mwstsatzCodeDto.getReversechargeartId()");
+
+		MwstsatzCode entity = em.find(MwstsatzCode.class, codeDto.getIId());
+		Validator.entityFound(entity, codeDto.getIId());
+
+		HvOptional<MwstsatzCode> duplicate = MwstsatzCodeQuery.findByMwstsatzIIdReversechargeartIId(em,
+				codeDto.getMwstsatzId(), codeDto.getReversechargeartId());
+		if (duplicate.isPresent() && !duplicate.get().getIId().equals(codeDto.getIId()))
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception("UK_LP_MWSTSATZCODE"));
+
+		entity = getMapper().map(codeDto, MwstsatzCode.class);
+		em.merge(entity);
+		em.flush();
+	}
+
+	@Override
+	public HvOptional<MwstsatzCodeDto> mwstsatzCodeFindByPrimaryKeyOhneExc(MwstsatzCodeId mwstsatzCodeId) {
+		if (mwstsatzCodeId == null || !mwstsatzCodeId.isValid())
+			return HvOptional.empty();
+
+		MwstsatzCode entity = em.find(MwstsatzCode.class, mwstsatzCodeId.id());
+		if (entity == null)
+			return HvOptional.empty();
+
+		return HvOptional.of(getMapper().map(entity, MwstsatzCodeDto.class));
+	}
+
+	@Override
+	public MwstsatzCodeDto mwstsatzCodeFindByPrimaryKey(MwstsatzCodeId mwstsatzCodeId) {
+		Validator.pkFieldValid(mwstsatzCodeId, "mwstsatzCodeId");
+
+		HvOptional<MwstsatzCodeDto> codeOpt = mwstsatzCodeFindByPrimaryKeyOhneExc(mwstsatzCodeId);
+		if (codeOpt.isPresent())
+			return codeOpt.get();
+
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+				"mwstsatzCodeId=" + mwstsatzCodeId.id().toString());
+	}
+
+	@Override
+	public HvOptional<MwstsatzCodeDto> mwstsatzCodeFindByMwstsatzReversechargeart(MwstsatzId mwstsatzId,
+			ReversechargeartId reversechargeartId) {
+		Validator.notNull(mwstsatzId, "mwstsatzId");
+		Validator.notNull(reversechargeartId, "reversechargeartId");
+
+		HvOptional<MwstsatzCode> codeOpt = MwstsatzCodeQuery.findByMwstsatzIIdReversechargeartIId(em, mwstsatzId,
+				reversechargeartId);
+		if (codeOpt.isEmpty()) {
+			return HvOptional.empty();
+		}
+
+		return mwstsatzCodeFindByPrimaryKeyOhneExc(new MwstsatzCodeId(codeOpt.get().getIId()));
+	}
+
+	@Override
+	public HvOptional<SteuercodeInfo> getSteuercodeArDefault(MwstsatzId mwstsatzId)
+			throws RemoteException, EJBExceptionLP {
+		Validator.notNull(mwstsatzId, "mwstsatzId");
+
+		HvOptional<MwstsatzCodeDto> codeOpt = mwstsatzCodeReverschargeartOhneFindByMwstsatz(mwstsatzId);
+		if (codeOpt.isEmpty()) {
+			return HvOptional.empty();
+		}
+
+		MwstsatzCodeDto mwstsatzCode = codeOpt.get();
+		if (StringUtils.isEmpty(mwstsatzCode.getCSteuercodeAr())) {
+			return HvOptional.empty();
+		}
+
+		SteuercodeInfo codeInfo = getMapper().map(mwstsatzCode, SteuercodeInfo.class);
+		codeInfo.setCode(mwstsatzCode.getCSteuercodeAr());
+
+		return HvOptional.of(codeInfo);
+	}
+
+	public HvOptional<SteuercodeInfo> getSteuercodeErDefault(MwstsatzId mwstsatzId)
+			throws RemoteException, EJBExceptionLP {
+		Validator.notNull(mwstsatzId, "mwstsatzId");
+
+		HvOptional<MwstsatzCodeDto> codeOpt = mwstsatzCodeReverschargeartOhneFindByMwstsatz(mwstsatzId);
+		if (codeOpt.isEmpty()) {
+			return HvOptional.empty();
+		}
+		MwstsatzCodeDto mwstsatzCode = codeOpt.get();
+		if (StringUtils.isEmpty(mwstsatzCode.getCSteuercodeEr())) {
+			return HvOptional.empty();
+		}
+
+		SteuercodeInfo codeInfo = getMapper().map(mwstsatzCode, SteuercodeInfo.class);
+		codeInfo.setCode(mwstsatzCode.getCSteuercodeEr());
+
+		return HvOptional.of(codeInfo);
+	}
+
+	private HvOptional<MwstsatzCodeDto> mwstsatzCodeReverschargeartOhneFindByMwstsatz(MwstsatzId mwstsatzId)
+			throws RemoteException, EJBExceptionLP {
+		Mwstsatz entitySatz = em.find(Mwstsatz.class, mwstsatzId.id());
+		Mwstsatzbez entityBez = em.find(Mwstsatzbez.class, entitySatz.getMwstsatzbezIId());
+		ReversechargeartDto rcOhneDto = getFinanzServiceFac().reversechargeartFindOhne(entityBez.getMandantCNr());
+		return mwstsatzCodeFindByMwstsatzReversechargeart(mwstsatzId, new ReversechargeartId(rcOhneDto.getIId()));
+	}
+
+	@Override
+	public List<MwstsatzCodeDto> getAllReversechargeartMwstsatzCodeByMwstsatzId(MwstsatzId mwstsatzId,
+			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
+		Validator.notNull(mwstsatzId, "mwstsatzId");
+
+		return getAllReversechargeartMwstsatzCodeImpl(mwstsatzId, theClientDto);
+	}
+
+	private List<MwstsatzCodeDto> getAllReversechargeartMwstsatzCodeImpl(MwstsatzId mwstsatzId,
+			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
+		List<Integer> rcIIds = ReversechargeartQuery.listIIdsByMandant(em, theClientDto.getMandant(), Boolean.TRUE);
+
+		List<MwstsatzCodeDto> resultCodes = new ArrayList<MwstsatzCodeDto>();
+		for (Integer rcIId : rcIIds) {
+			HvOptional<MwstsatzCodeDto> codeOpt = mwstsatzId != null
+					? mwstsatzCodeFindByMwstsatzReversechargeart(mwstsatzId, new ReversechargeartId(rcIId))
+					: HvOptional.empty();
+			if (codeOpt.isPresent()) {
+				resultCodes.add(codeOpt.get());
+			} else {
+				MwstsatzCodeDto codeDto = new MwstsatzCodeDto();
+				codeDto.setReversechargeartIId(rcIId);
+				codeDto.setMwstsatzId(mwstsatzId);
+				resultCodes.add(codeDto);
+			}
+		}
+
+		return resultCodes;
+	}
+
+	@Override
+	public void updateOrCreateMwstsatzCodes(List<MwstsatzCodeDto> mwstsatzCodeDtos, TheClientDto theClientDto) {
+		for (MwstsatzCodeDto codeDto : mwstsatzCodeDtos) {
+			if (codeDto.getIId() == null) {
+				createMwstsatzCode(codeDto, theClientDto);
+			} else {
+				updateMwstsatzCode(codeDto);
+			}
+		}
+	}
+	
+	@Override
+	public boolean hatZusatzfunktionIntrastat(TheClientDto theClientDto) {
+		return darfAnwenderAufZusatzfunktionZugreifen(ZUSATZFUNKTION_INTRASTAT, theClientDto);		
 	}
 }

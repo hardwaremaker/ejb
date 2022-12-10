@@ -33,10 +33,13 @@
 package com.lp.server.system.jcr.service.docnode;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
+
+import com.lp.util.Pair;
 
 public abstract class DocNodeBase implements Serializable {
 
@@ -51,12 +54,15 @@ public abstract class DocNodeBase implements Serializable {
 	public static final int LAGERSTANDSLISTE = 6;
 	public static final int MAIL = 7;
 	public static final int SYMBOLIC_LINK = 8;
+	public static final int BEDARFSZUSAMMENSCHAU = 9;
 
 	public static final String BELEGART_ANFRAGE = "Anfrage        ";
 	public static final String BELEGART_ANGEBOT = "Angebot        ";
 	public static final String BELEGART_AGSTUECKLISTE = "AGStueckliste  ";
 	public static final String BELEGART_ARTIKEL = "Artikel        ";
 	public static final String BELEGART_AUFTRAG = "Auftrag        ";
+	public static final String BELEGART_BANK = "Bank           ";
+	public static final String BELEGART_BANKVERBINDUNG = "Bankverbindung ";
 	public static final String BELEGART_BENUTZER = "Benutzer       ";
 	public static final String BELEGART_BESTELLUNG = "Bestellung     ";
 	public static final String BELEGART_EINGANGSRECHNG = "Eingangsrechng ";
@@ -69,6 +75,7 @@ public abstract class DocNodeBase implements Serializable {
 	public static final String BELEGART_LIEFERSCHEIN = "Lieferschein   ";
 	public static final String BELEGART_LSPOSITION = "Lieferscheinpos";
 	public static final String BELEGART_LOS = "Los            ";
+	public static final String BELEGART_INTERNEBESTELLUNG = "IntBestellung";
 	public static final String BELEGART_LOSABLIEFERUNG = "Losablieferung ";
 	public static final String BELEGART_PARTNER = "Partner        ";
 	public static final String BELEGART_PERSONAL = "Personal       ";
@@ -98,6 +105,13 @@ public abstract class DocNodeBase implements Serializable {
 	public static final String BELEGART_KASSENBUCH = "Kassenbuch     ";
 	public static final String BELEGART_SALDENLISTE = "Saldenliste    ";
 	public static final String BELEGART_PROJHISTORY = "ProjektHistory ";
+	public static final String BELEGART_SEPA_EXPORT = "Sepa Export    ";
+	public static final String BELEGART_SEPA_IMPORT = "Sepa Import    ";
+	public static final String BELEGART_GESCHAEFTSJAHR = "Geschaeftsjahr ";
+	public static final String BELEGART_ZAHLUNGSVORSCHLAGLAUF = "Zhlngsvrschlglf";
+	public static final String BELEGART_MAHNLAUF = "Mahnlauf       ";
+	public static final String BELEGART_BILANZ =      "Bilanz            ";
+	public static final String BELEGART_ERFOLGSRECHNUNG =      "Erfolgsrechnung   ";
 
 	public static final String BELEGART_AGPOSITION = "AngebotPosition";
 	public static final String BELEGART_ANFPOSITION = "AnfragePosition";
@@ -116,7 +130,13 @@ public abstract class DocNodeBase implements Serializable {
 	public static final String BELEGART_ARTIKELKLASSE = "Artikelklasse";
 	public static final String BELEGART_BUCHUNGDETAIL = "Buchungdetail";
 	public static final String BELEGART_ARTIKELETIKETT = "Artikeletikett";
-
+	public static final String BELEGART_PRUEFKOMBINATION = "Pruefkombination";
+	public static final String BELEGART_WERKZEUG = "Werkzeug";
+	public static final String BELEGART_VERSCHLEISSTEIL = "Verschleissteil";
+	public static final String BELEGART_BEAUSKUNFTUNG = "Beauskunftung";
+	public static final String BELEGART_EDIFACT       = "Edifact      ";
+	public static final String BELEGART_EDIFACTORDERS = "Bestellung   ";
+	
 	public static final String NODEPROPERTY_IID = "NODEIID";
 	public static final String NODEPROPERTY_NODETYPE = "NODETYPE";
 	public static final String NODEPROPERTY_BELEGART = "NODEBELEGART";
@@ -126,12 +146,14 @@ public abstract class DocNodeBase implements Serializable {
 	public static final String NODEPROPERTY_MANDANTCNR = "NODEMANDANT";
 	public static final String NODEPROPERTY_HELPERCNR = "NODEHELPERCNR";
 	public static final String NODEPROPERTY_HELPERIID = "NODEHELPERIID";
+	public static final String NODEPROPERTY_GESCHAEFTSJAHR = "NODEGESCHAEFTSJAHR";
 
 	public static final String BELEGART_MEDIA_EMAIL      = "MediaEmail     ";
 	public static final String BELEGART_MEDIA_ATTACHMENT = "MediaEmailAttmt" ;
 	
 	private int nodeType;
 	private int version = 2;
+	private String uuid;
 
 	protected DocNodeBase(int nodeType) {
 		this.nodeType = nodeType;
@@ -139,7 +161,7 @@ public abstract class DocNodeBase implements Serializable {
 
 	protected DocNodeBase(Node node) {
 		try {
-			applyProperties(node);
+			loadFrom(node);
 		} catch (RepositoryException e) {
 		}
 	}
@@ -163,28 +185,29 @@ public abstract class DocNodeBase implements Serializable {
 
 	public abstract List<DocNodeBase> getHierarchy();
 
-	protected void applyProperties(Node node) throws RepositoryException {
+	protected void loadFrom(Node node) throws RepositoryException {
 		setNodeType(node.getProperty(NODEPROPERTY_NODETYPE).getLong());
-		applyPropertiesSub(node);
+		loadFromImpl(node);
+		initUUId(node);
 	}
 
-	public void persist(Node node) throws RepositoryException {
+	public void persistTo(Node node) throws RepositoryException {
 		node.setProperty(NODEPROPERTY_NODETYPE, getNodeType());
-		persistSub(node);
+		persistToImpl(node);
 	}
 
 	/**
 	 * Die DocNode Variablen-Werte aus den Properties laden. Nodetype muss nicht
 	 * geladen werden.
 	 */
-	protected abstract void applyPropertiesSub(Node node)
+	protected abstract void loadFromImpl(Node node)
 			throws RepositoryException;
 
 	/**
 	 * Die DocNode Variablen-Werte in die Properties des Node Object speichern
 	 * Nodetype muss nicht gespeichert werden
 	 */
-	protected abstract void persistSub(Node node) throws RepositoryException;
+	protected abstract void persistToImpl(Node node) throws RepositoryException;
 
 	@Override
 	public String toString() {
@@ -198,21 +221,56 @@ public abstract class DocNodeBase implements Serializable {
 	public void setVersion(int version) {
 		this.version = version;
 	}
+
+	private static List<Pair<String, String>> EscapedJCRCharPairs = Arrays.asList(
+			new Pair<String,String>("&", "&#38;"),
+			new Pair<String,String>(" ", "&#32;"),
+			new Pair<String,String>("/", "&#47;"),
+			new Pair<String,String>(":", "&#58;"),
+			new Pair<String,String>("<", "&#60;"),
+			new Pair<String,String>("=", "&#61;"),
+			new Pair<String,String>(">", "&#62;"),
+			new Pair<String,String>("?", "&#63;"),
+			new Pair<String,String>("[", "&#91;"),
+			new Pair<String,String>("]", "&#93;"));
 	
 	public static String escapeJCRChars(String s) {
 		if(s == null) return null;
-		s = s.replace("&", "&#38;");
-		s = s.replace(" ", "&#32;");
-		s = s.replace("/", "&#47;");
-		s = s.replace(":", "&#58;");
-		s = s.replace("<", "&#60;");
-		s = s.replace("=", "&#61;");
-		s = s.replace(">", "&#62;");
-		s = s.replace("?", "&#63;");
-		s = s.replace("[", "&#91;");
-		s = s.replace("]", "&#93;");
+		
+		for (Pair<String, String> pair : EscapedJCRCharPairs) {
+			s = s.replace(pair.getKey(), pair.getValue());
+		}
 		return s;
-//		return "<html>" + s + "</html>";
+//		s = s.replace("&", "&#38;");
+//		s = s.replace(" ", "&#32;");
+//		s = s.replace("/", "&#47;");
+//		s = s.replace(":", "&#58;");
+//		s = s.replace("<", "&#60;");
+//		s = s.replace("=", "&#61;");
+//		s = s.replace(">", "&#62;");
+//		s = s.replace("?", "&#63;");
+//		s = s.replace("[", "&#91;");
+//		s = s.replace("]", "&#93;");
+//		return s;
+////		return "<html>" + s + "</html>";
 	}
 	
+	public static String unescapeJCRChars(String s) {
+		if(s == null) return null;
+		
+		for (Pair<String, String> pair : EscapedJCRCharPairs) {
+			s = s.replace(pair.getValue(), pair.getKey());
+		}
+		return s;
+	}
+	
+	public String getUUId() {
+		return uuid;
+	}
+	
+	private void initUUId(Node node) throws RepositoryException {
+		if (node.isNodeType("mix:referenceable")) {
+			this.uuid = node.getUUID();
+		}
+	}
 }

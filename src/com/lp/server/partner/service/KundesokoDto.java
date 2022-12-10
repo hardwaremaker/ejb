@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
@@ -55,6 +56,17 @@ public class KundesokoDto implements Serializable {
 	private Timestamp tAendern;
 	private String cKundeartikelnummer;
 
+	private BigDecimal nStartwertLiefermenge;
+	
+	public BigDecimal getNStartwertLiefermenge() {
+		return nStartwertLiefermenge;
+	}
+
+	public void setNStartwertLiefermenge(BigDecimal nStartwertLiefermenge) {
+		this.nStartwertLiefermenge = nStartwertLiefermenge;
+	}
+
+	
 	private Short bWirktNichtFuerPreisfindung;
 
 	public Short getBWirktNichtFuerPreisfindung() {
@@ -65,6 +77,16 @@ public class KundesokoDto implements Serializable {
 		this.bWirktNichtFuerPreisfindung = bWirktNichtFuerPreisfindung;
 	}
 
+	private Short bKeineMengenstaffel;
+
+	public Short getBKeineMengenstaffel() {
+		return bKeineMengenstaffel;
+	}
+
+	public void setBKeineMengenstaffel(Short bKeineMengenstaffel) {
+		this.bKeineMengenstaffel = bKeineMengenstaffel;
+	}
+	
 	public Integer getIId() {
 		return iId;
 	}

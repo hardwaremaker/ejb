@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.auftrag.ejbfac;
 
+import com.lp.server.auftrag.service.WebshopPartner;
 import com.lp.server.partner.service.KundeDto;
 
 public interface KundeFinder {

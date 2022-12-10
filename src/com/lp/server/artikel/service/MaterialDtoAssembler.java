@@ -45,6 +45,7 @@ public class MaterialDtoAssembler {
 		if (material != null) {
 			materialDto.setCNr(material.getCNr());
 			materialDto.setIId(material.getIId());
+			materialDto.setNGewichtInKG(material.getNGewichtInKG());
 		}
 		return materialDto;
 	}

@@ -52,6 +52,7 @@ import javax.persistence.Query;
 import org.hibernate.Session;
 
 import com.lp.server.benutzer.ejb.Benutzer;
+import com.lp.server.benutzer.ejb.Systemrolle;
 import com.lp.server.benutzer.service.BenutzerDto;
 import com.lp.server.benutzer.service.BenutzermandantsystemrolleDto;
 import com.lp.server.benutzer.service.LogonFac;
@@ -61,9 +62,16 @@ import com.lp.server.partner.ejb.AnsprechpartnerQuery;
 import com.lp.server.partner.ejb.HvTypedQuery;
 import com.lp.server.partner.ejb.Kunde;
 import com.lp.server.partner.ejb.KundeQuery;
-import com.lp.server.stueckliste.ejb.Stueckliste;
+import com.lp.server.personal.service.HvmaLizenzEnum;
+import com.lp.server.personal.service.HvmabenutzerDto;
+import com.lp.server.personal.service.HvmalizenzDto;
+import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.system.ejb.LpUserCount;
 import com.lp.server.system.ejb.Theclient;
+import com.lp.server.system.ejbfac.EJBExcFactory;
+import com.lp.server.system.ejbfac.HvCreatingCachingProvider;
+import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.AnwenderDto;
 import com.lp.server.system.service.LocaleDto;
 import com.lp.server.system.service.MandantDto;
@@ -72,18 +80,17 @@ import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
-import com.lp.server.system.service.TheClientFac;
+import com.lp.server.system.service.TheClientLoggedInDto;
 import com.lp.server.system.service.ZusatzfunktionberechtigungDto;
 import com.lp.server.util.Facade;
-import com.lp.server.util.HelperServer;
 import com.lp.server.util.ServerConfiguration;
 import com.lp.server.util.ServiceLocator;
 import com.lp.server.util.Validator;
-import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
+//@RemoteBinding(jndiBinding="LogonFacXXX")
 public class LogonFacBean extends Facade implements LogonFac {
 
 	@PersistenceContext
@@ -251,101 +258,136 @@ public class LogonFacBean extends Facade implements LogonFac {
 			Timestamp tLogontimeClientI) throws EJBExceptionLP {
 		return logon(sFullUserNameI, cKennwortI, locUII, sMandantI, tLogontimeClientI);
 	}
+	
 
-	@Override
-	public TheClientDto logon(String sFullUserNameI, char[] cKennwortI,
-			Locale locUII, String sMandantI, Timestamp tLogontimeClientI)
-			throws EJBExceptionLP {
-
-		myLogger.logData("try logon > usr: " + sFullUserNameI);
-		
-		TheClientDto theClientDto = new TheClientDto();
-
-		StringTokenizer st = new StringTokenizer(sFullUserNameI,
-				LogonFac.USERNAMEDELIMITER);
-		String user = st.nextToken();
-		String cNrUser = null;
-		BenutzerDto benutzerDto = null;
-		String mandantenSprache = null;
-
-		// wird nur hier 1x pro client angelegt!
-		// an den client durchgereicht und bei jedem serveraufruf mitgegeben
-//		PKGeneratorObj pk = new PKGeneratorObj();
-		
-//		cNrUser = pk.getNextPrimaryKey(PKConst.PK_LOGIN) + sFullUserNameI;
-		// + sFullUserNameI;
-		TheClientFac theClientFac = getTheClientFac();
-
-		for(int i = 0; i < 5; i++) {
-			cNrUser = UUID.randomUUID().toString();
-			if(theClientFac.theClientFindByPrimaryKeyOhneExc(cNrUser) == null) break;
-			//TODO: (rk) nach dem 5. mal sollte wohl eine Exception kommen,
-			//jedoch ist es sehr unwahrscheinlich, dass hier ueberhaupt eine Kollision auftritt.
-		}
-		try {
-			benutzerDto = getBenutzerFac().benutzerFindByCBenutzerkennung(user,
-					new String(cKennwortI));
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
-
-		if (Helper.short2boolean(benutzerDto.getBGesperrt())) {
+	private void validateLogonBenutzerDto(BenutzerDto benutzerDto) {
+		if (Helper.isTrue(benutzerDto.getBGesperrt())) {
 			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BENUTZER_IST_GESPERRT, "");
+				EJBExceptionLP.FEHLER_BENUTZER_IST_GESPERRT, 
+				benutzerDto.getCBenutzerkennung());
 		}
+		
 		if (benutzerDto.getTGueltigbis() != null) {
-			if (benutzerDto.getTGueltigbis().before(
-					new java.sql.Timestamp(System.currentTimeMillis()))) {
+			if (benutzerDto.getTGueltigbis().before(getTimestamp())) {
 				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BENUTZER_IST_NICHT_MEHR_GUELTIG,
-						"");
+					EJBExceptionLP.FEHLER_BENUTZER_IST_NICHT_MEHR_GUELTIG,
+					benutzerDto.getCBenutzerkennung());
 			}
 		}
-
+	}
+	
+	private void validateBenutzerAnyMandant(BenutzerDto benutzerDto) {
 		try {
-			// Darf sich Benutzer bei bei irgendeinem Mandanten anmelden?
 			BenutzermandantsystemrolleDto[] dtos = getBenutzerFac()
 					.benutzermandantsystemrolleFindByBenutzerIId(
 							benutzerDto.getIId());
 			if (dtos == null || dtos.length < 1) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BENUTZER_KEIN_EINTRAG_IN_BENUTZERMANDANT,
-						new Exception("dtos==null || dtos.length <1"));
-
+						new Exception("Kein Eintrag in Benutzermandant fuer Benutzer '" + benutzerDto.getCBenutzerkennung() + "'"));
 			}
-
 		} catch (RemoteException ex) {
+			// TODO: Die Meldung stimmt so nicht, es gab eine RemoteException,
+			// hat aber nichts damit zu tun, dass an diesem Mandanten nicht erlaubt
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_BEI_DIESEM_MANDANTEN_NICHT_ANMELDEN,
 					new Exception(benutzerDto.getMandantCNrDefault()));
 		}
-
+	}
+	
+	private String createHvmaResource() {
+		PKGeneratorObj pkGen = new PKGeneratorObj();
+		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_HVMARESOURCE);
+		return pk.toString();
+	}
+	
+	private TheClientDto updateClientDtoFrom(BenutzerDto benutzerDto, 
+			String mandantCnr, HvmaLizenzEnum licence, String resource, TheClientDto theClientDto) {
 		try {
-			// Darf sich Benutzer bei Mandant XXX anmelden?
-			BenutzermandantsystemrolleDto benutzermandansystemrolleDto = getBenutzerFac()
+			// Darf sich Benutzer bei Mandant anmelden?
+			BenutzermandantsystemrolleDto bmsrDto = getBenutzerFac()
 					.benutzermandantsystemrolleFindByBenutzerIIdMandantCNr(
-							benutzerDto.getIId(),
-							sMandantI != null ? sMandantI : benutzerDto
-									.getMandantCNrDefault());
-			theClientDto.setIDPersonal(benutzermandansystemrolleDto
-					.getPersonalIIdZugeordnet());
+							benutzerDto.getIId(), mandantCnr);
+			theClientDto.setIDPersonal(bmsrDto.getPersonalIIdZugeordnet());
+			theClientDto.setMandant(mandantCnr);
+
+			if(licence == null) {
+				return theClientDto;
+			}
+			
+			HvmalizenzDto lizenzDto = getHvmaFac().hvmalizenzFindByEnum(licence);
+			if(lizenzDto.getIMaxUser() == 0) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_HVMABENUTZER_ANZAHL_UEBERSCHRITTEN, licence.getText());
+			}
+			
+			HvmabenutzerDto hvmaBenutzerDto = getHvmaFac()
+					.hvmabenutzerFindByBenutzerIdLizenzId(
+							benutzerDto.getIId(), lizenzDto.getIId());
+
+			if(bmsrDto.getSystemrolleIIdHvma() == null) {
+				throw EJBExcFactory.systemRolleHvmaFehlt(
+						benutzerDto.getCBenutzerkennung(),
+						bmsrDto.getSystemrolleIId());
+			}
+			theClientDto.setHvmaLizenzId(hvmaBenutzerDto.getHvmalizenzIId());
+			
+			if(Helper.isStringEmpty(resource)) {
+				resource = createHvmaResource();
+			}
+			theClientDto.setHvmaResource(resource);
+			return theClientDto;
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BENUTZER_DARF_SICH_BEI_DIESEM_MANDANTEN_NICHT_ANMELDEN,
 					new Exception(benutzerDto.getMandantCNrDefault()));
+		}		
+	}
+
+	private String getBenutzerFromFullUsername(String fullusername) {
+		StringTokenizer st = new StringTokenizer(fullusername,
+				LogonFac.USERNAMEDELIMITER);
+		return st.nextToken();
+	}
+	
+	private TheClientDto logonImpl(String sFullUserNameI,
+			char[] cKennwortI, Locale locUII, String sMandantI, 
+			Timestamp tLogontimeClientI, boolean desktopBenutzer,
+			HvmaLizenzEnum licence, String resource) {
+		myLogger.logData("try logon > usr: " + sFullUserNameI);
+		
+		String user = getBenutzerFromFullUsername(sFullUserNameI);
+		BenutzerDto benutzerDto = null;
+		
+		TheClientDto theClientDto = new TheClientDto();
+		theClientDto.setDesktopBenutzer(desktopBenutzer);
+
+		for(int i = 0; i < 5; i++) {
+			theClientDto.setIDUser(UUID.randomUUID().toString());
+			if(getTheClientFac().theClientFindByPrimaryKeyOhneExc(
+					theClientDto.getIDUser()) == null) break;
+			//TODO: (rk) nach dem 5. mal sollte wohl eine Exception kommen,
+			//jedoch ist es sehr unwahrscheinlich, dass hier ueberhaupt eine Kollision auftritt.
+		}
+		try {
+			benutzerDto = getBenutzerFac()
+					.benutzerFindByCBenutzerkennung(user, new String(cKennwortI));
+			validateLogonBenutzerDto(benutzerDto);
+			validateBenutzerAnyMandant(benutzerDto);
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
 		}
 
-		theClientDto.setIDUser(cNrUser);
+		if(sMandantI == null) {
+			sMandantI = benutzerDto.getMandantCNrDefault();
+		}
+		updateClientDtoFrom(benutzerDto, 
+				sMandantI, licence, resource, theClientDto);
 		theClientDto.setBenutzername(sFullUserNameI);
 		theClientDto.setKennwort(cKennwortI);
-		theClientDto.setMandant(sMandantI != null ? sMandantI : benutzerDto
-				.getMandantCNrDefault());
 
 		try {
-			// Konzernlocale = Locale des Hauptmandanten
-			MandantFac mandantFac = getMandantFac();
-			SystemFac systemFac = getSystemFac();
-			AnwenderDto anwenderDto = systemFac
+			AnwenderDto anwenderDto = getSystemFac()
 					.anwenderFindByPrimaryKey(SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER);
 
 			if(anwenderDto.getTAblauf() != null && anwenderDto.getTAblauf().before(getTimestamp())) {
@@ -354,19 +396,15 @@ public class LogonFacBean extends Facade implements LogonFac {
 						"Lizenz abgelaufen", format.format(anwenderDto.getTAblauf()));
 			}
 			
-//			if (anwenderDto.getTSubscription() != null && anwenderDto.getTSubscription().before(getTimestamp())) {
 			getBenutzerServicesFac().reloadRolleRechte();
-			// immer neu laden, damit die Rechte sofort nach dem naechsten Anmelden stimmen.
-//			}
 			
-			MandantDto mandantDto = mandantFac.mandantFindByPrimaryKey(
+			// Konzernlocale = Locale des Hauptmandanten
+			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 					anwenderDto.getMandantCNrHauptmandant(), theClientDto);
 			theClientDto.setLocKonzern(Helper.string2Locale(mandantDto
 					.getPartnerDto().getLocaleCNrKommunikation()));
 
-			mandantDto = getMandantFac().mandantFindByPrimaryKey(
-					sMandantI != null ? sMandantI
-							: benutzerDto.getMandantCNrDefault(), theClientDto);
+			mandantDto = getMandantFac().mandantFindByPrimaryKey(sMandantI, theClientDto);
 
 			theClientDto.setSystemrolleIId(getTheJudgeFac().getSystemrolleIId(theClientDto));
 			
@@ -388,7 +426,7 @@ public class LogonFacBean extends Facade implements LogonFac {
 			}
 
 			// CK: Projekt 8440
-			mandantenSprache = mandantDto.getPartnerDto()
+			String mandantenSprache = mandantDto.getPartnerDto()
 					.getLocaleCNrKommunikation();
 			theClientDto.setLocMandant(Helper.string2Locale(mandantenSprache));
 			theClientDto.setSMandantenwaehrung(mandantDto.getWaehrungCNr());
@@ -441,10 +479,9 @@ public class LogonFacBean extends Facade implements LogonFac {
 			theClientDto.setTsLoggedin(new java.sql.Timestamp(System
 					.currentTimeMillis() - 4));
 
-			theClientFac.createTheClient(theClientDto);
-
 			loescheAlteLogons(theClientDto);
-
+			
+			getTheClientFac().createTheClient(theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -456,25 +493,52 @@ public class LogonFacBean extends Facade implements LogonFac {
 			myLogger.logKritisch("|Minutenclientuhrzeit - Minutenserveruhrzeit| > 1 min; : user:"
 					+ user + " " + lDiff + "[ms]");
 		}
-
-		/*
-		 * // JVM Check: MR:bei JDK 1.6.0_05 ist java.vm.version 10.0-b19 die
-		 * java.version aber richtig 1.6.0_05 String sJVM =
-		 * System.getProperty("java.version"); String tmp = sJVM.substring(0,
-		 * 8); sJVM = tmp; if (!LogonFac.JVM_VERSION.equals(sJVM)) { String sM =
-		 * "Installed: " + sJVM + " To use: " + LogonFac.JVM_VERSION + "; " +
-		 * getTextRespectUISpr("lp.jvm.version", theClientDto.getMandant(),
-		 * theClientDto.getLocUi()); myLogger.logKritisch(sM);
-		 * theClientDto.setIStatus(new
-		 * Integer(EJBExceptionLP.WARNUNG_SERVER_JVM)); try {
-		 * getTheClientFac().updateTheClient(theClientDto); } catch
-		 * (RemoteException ex) { throwEJBExceptionLPRespectOld(ex); } }
-		 */
-
 		myLogger.logData("logged in > usr: " + theClientDto.getIDUser());
-		return theClientDto;
+		return theClientDto;		
+	}
+	
+	@Override
+	public TheClientDto logon(String sFullUserNameI, char[] cKennwortI,
+			Locale locUII, String sMandantI, Timestamp tLogontimeClientI)
+			throws EJBExceptionLP {
+		if(sFullUserNameI.contains(LPWEBAPPZEMECS)){
+			myLogger.warn("Anmeldung mit " + LPWEBAPPZEMECS +
+					" sollte ueber logonIntern() erfolgen");
+		}
+		return logonImpl(sFullUserNameI, cKennwortI,
+				locUII, sMandantI, tLogontimeClientI, true, null, null) ;
 	}
 
+	@Override
+	public TheClientDto logonMobil(String sFullUserNameI, char[] cKennwortI,
+			Locale locUII, String sMandantI, Timestamp tLogontimeClientI, String cAusweis)
+			throws EJBExceptionLP, RemoteException {
+		if (cAusweis == null) {
+			return logonImpl(sFullUserNameI, cKennwortI, locUII,
+					sMandantI, tLogontimeClientI, false, null, null) ;
+		}
+		
+		PersonalDto personalDto = getPersonalFac().personalFindByCAusweis(cAusweis);
+		if (personalDto == null || !personalDto.getMandantCNr().equals(sMandantI)) {
+			return null;
+		}
+		
+		TheClientDto theClientDto = logonImpl(sFullUserNameI, cKennwortI,
+				locUII, sMandantI, tLogontimeClientI, false, null, null) ;
+		theClientDto.setIDPersonal(personalDto.getIId()); 
+		getTheClientFac().updateTheClient(theClientDto);
+		
+		return theClientDto;
+	}
+	
+	@Override
+	public TheClientDto logonHvma(String fullUsername, char[] kennwort,
+			Locale locale, String mandantCnr, Timestamp logontime, 
+			HvmaLizenzEnum licence, String resource) {
+		return logonImpl(fullUsername, kennwort, locale, 
+				mandantCnr, logontime, false, licence, resource) ;
+	}
+	
 	private void loescheAlteLogons(TheClientDto theClientDto)
 			throws RemoteException {
 		Integer iTage = null;
@@ -484,24 +548,24 @@ public class LogonFacBean extends Facade implements LogonFac {
 					.getMandantparameter(theClientDto.getMandant(),
 							ParameterFac.KATEGORIE_ALLGEMEIN,
 							ParameterFac.PARAMETER_LOGON_LOESCHEN);
-
-			iTage = new Integer(parameter.getCWert());
+			iTage = parameter.asInteger();
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
 		// CK 3 Alte Logons loeschen
-		Session session = FLRSessionFactory.getFactory().openSession();
+		Session session = getNewSession();
 		// PJ 15986
 		Calendar c = Calendar.getInstance();
 		c.setTimeInMillis(System.currentTimeMillis());
 		c.set(Calendar.DAY_OF_MONTH, c.get(Calendar.DAY_OF_MONTH) - iTage.intValue());
-		String hql = "delete from FLRTheClient where t_loggedin < :zeitpunkt";
+		// PJ20611 HVMA Logons werden nicht entfernt
+		String hql = "delete from FLRTheClient where "
+				+ "hvmalizenz_IId is NULL AND "
+				+ "t_loggedin < :zeitpunkt ";
 		org.hibernate.Query query = session.createQuery(hql);
 		query.setDate("zeitpunkt", c.getTime());
-		//int rowCount = 
 		query.executeUpdate();
-		// System.out.println(String.format("%d Login-Eintraege geloescht",rowCount));
 	}
 
 	/**
@@ -514,11 +578,9 @@ public class LogonFacBean extends Facade implements LogonFac {
 	public void logout(TheClientDto theClientDto) throws EJBExceptionLP {
 		ServiceLocator.getInstance();
 		try {
-			TheClientFac theClient = getTheClientFac();
-
 			theClientDto.setTsLoggedout(new Timestamp(System
 					.currentTimeMillis()));
-			theClient.updateTheClient(theClientDto);
+			getTheClientFac().updateTheClient(theClientDto);
 			getFastLaneReader().cleanup(null, null, theClientDto);
 		} catch (RemoteException ex1) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex1);
@@ -610,9 +672,17 @@ public class LogonFacBean extends Facade implements LogonFac {
 	}
 	
 	public Integer getIBenutzerFrei(TheClientDto theClientDto)  throws EJBExceptionLP, RemoteException {
-		UserCountHelper uch = getBenutzerRolle(theClientDto) ;
+		if(theClientDto.getHvmaLizenzId() != null) {
+			return Integer.MAX_VALUE;
+		} else {
+			return getConcurrentUserFrei(theClientDto);
+		}
+	}
+	
+	private Integer getConcurrentUserFrei(TheClientDto theClientDto) throws RemoteException {
+		UserCountHelper uch = getBenutzerProRolle(theClientDto) ;
 		if(uch.getMaxUsers() == -1) {
-			uch = getBenutzerMandant(theClientDto) ;
+			uch = getBenutzerProMandant(theClientDto) ;
 		}
 		
 		int frei = uch.getMaxUsers() - uch.getLoggedOnUsersCount() ;
@@ -623,54 +693,58 @@ public class LogonFacBean extends Facade implements LogonFac {
 					", derzeit angemeldet: " + uch.getLoggedOnUsersCount() + 
 					". Versuch von " + theClientDto.getBenutzername() + " fuer Mandant " + theClientDto.getMandant() + ".") ;
 
-			HvTypedQuery<Theclient> currentUsers = new HvTypedQuery<Theclient>(
-					em.createNamedQuery("TheClientfindByTLoggedIn")) ;
-			Timestamp tVon = Helper.cutTimestamp(getTimestamp()) ;
-			Calendar c = Calendar.getInstance() ;
-			c.setTimeInMillis(tVon.getTime());
-			c.add(1, Calendar.DAY_OF_MONTH) ;
-			Timestamp tBis = new Timestamp(c.getTimeInMillis()) ;
-			
-			currentUsers.setParameter(1, tVon) ;
-			currentUsers.setParameter(2, tBis) ;
 			myLogger.warn(">>>>> Beginn angemeldete Benutzer") ;
-			List<Theclient> users = currentUsers.getResultList() ;
-			for (Theclient theclient : users) {
-				if(theclient.getTLoggedout() != null) continue ;
-				
-				myLogger.warn("Angemeldeter Benutzer: " + theclient.getCBenutzername().trim() + 
-					", seit: " + theclient.getTLoggedin() + 
-					", RolleId: " + theclient.getSystemrolleIId() + ".") ;
+			List<TheClientLoggedInDto> users = uch.getUsersAsLoggedIn();
+			for (TheClientLoggedInDto theclient : users) {				
+				myLogger.warn("Angemeldeter Benutzer: " + theclient.getBenutzername().trim() +
+					", #" + theclient.getConcurrentUserCount() + 
+					", seit: " + theclient.getDLoggedin() + 
+					", Rolle: " + theclient.getSystemrolleCBez() +
+						"(Id:"  + theclient.getSystemrolleIId() + ").") ;
 			}
 			myLogger.warn("<<<<< Ende angemeldete Benutzer") ;
 		}
 		return frei ;
-//		Integer frei = getIBenutzerFreiRolle(theClientDto);
-//		return frei == null ? getIBenutzerFreiMandant(theClientDto) : frei;
 	}
 	
-	private UserCountHelper getBenutzerRolle(TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		SystemrolleDto rolle = getBenutzerFac().systemrolleFindByPrimaryKey(theClientDto.getSystemrolleIId());
-		return new UserCountRolleHelper(rolle.getIId(), 
-				rolle.getIMaxUsers() == null ? -1 : rolle.getIMaxUsers(), getUseranzahl(rolle.getIId())) ;
+	private UserCountHelper getBenutzerProRolle(
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		SystemrolleDto rolle = getBenutzerFac()
+				.systemrolleFindByPrimaryKey(theClientDto.getSystemrolleIId());
+		return new UserCountRolleHelperNew(rolle.getIId(), 
+				rolle.getIMaxUsers() == null ? -1 : rolle.getIMaxUsers(),
+						getTheClientFac().getZaehlerAngemeldeteBenutzerRolle(rolle.getIId()));
+//		return new UserCountRolleHelper(rolle.getIId(), 
+//				rolle.getIMaxUsers() == null ? -1 : rolle.getIMaxUsers(), getUseranzahl(rolle.getIId())) ;
 //		if(rolle.getIMaxUsers() == null) return null;
 //		return rolle.getIMaxUsers() - getUseranzahl(rolle.getIId());
 	}
 	
-	private UserCountHelper getBenutzerMandant(TheClientDto theClientDto)
+	private UserCountHelper getBenutzerProMandant(TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 				theClientDto.getMandant(), theClientDto);
 
-		return new UserCountMandantHelper( 
-			mandantDto.getIBenutzermax() == null ? 0 : mandantDto.getIBenutzermax(), 
-					getUseranzahl(null)) ;
+		return new UserCountMandantHelperNew( 
+				mandantDto.getIBenutzermax() == null ? 0 : mandantDto.getIBenutzermax(), 
+						getTheClientFac().getZaehlerAngemeldeteBenutzer());
+		
+//		return new UserCountMandantHelper( 
+//			mandantDto.getIBenutzermax() == null ? 0 : mandantDto.getIBenutzermax(), 
+//					getUseranzahl(null)) ;
+
 //		int userangemeldet = getUseranzahl(null);
 //		if (mandantDto.getIBenutzermax() == null)
 //			return 0;
 //		return mandantDto.getIBenutzermax().intValue() - userangemeldet;
 	}
 
+	@Override
+	public List<TheClientLoggedInDto> getUsersLoggedInMandant(TheClientDto theClientDto) throws RemoteException {
+		UserCountHelper uch = getBenutzerProMandant(theClientDto);
+		return uch.getUsersAsLoggedIn();
+	}
+	
 	/**
 	 * Returns a hash code value for the object.
 	 * 
@@ -894,35 +968,41 @@ public class LogonFacBean extends Facade implements LogonFac {
 		return new String(Helper.getMD5Hash(password)) ;		
 	}
 	
-	private class UserCountHelper {
-		private int maxUsers ;
-		private List<LpUserCount> loggedInUsers ;
-		private Integer rolleId ;
-		private String account ;
+	public TheClientDto logonIntern(Locale locUII, String sMandantI){
+		return logonImpl(Helper.getFullUsername(LPWEBAPPZEMECS), 
+				Helper.getMD5Hash((LPWEBAPPZEMECS +LPWEBAPPZEMECS).toCharArray()), 
+				locUII, sMandantI, getTimestamp(), true, null, null);
+	}
+	
+	private class SystemrolleCache extends HvCreatingCachingProvider<Integer, String> {
+		@Override
+		protected String provideValue(Integer key, Integer transformedKey) {
+			Systemrolle r = em.find(Systemrolle.class, transformedKey);
+			return r == null ? "" : r.getCBez();				
+		}
+	}
+	
+	private abstract class UserCountHelper {
+		private int maxUsers;
+		private List<LpUserCount> loggedInUsers;
+		private Integer rolleId;
+		private String account;
 		
 		public UserCountHelper(int maxUsers, List<LpUserCount> users) {
-			this.maxUsers = maxUsers ;
-			this.loggedInUsers = users ;
-		}
-		
-		public UserCountHelper(List<LpUserCount> users) {
-			this.loggedInUsers = users ;
-		}
-
-		public void setMaxUsers(int maxUsers) {
-			this.maxUsers = maxUsers ;
+			this.maxUsers = maxUsers;
+			this.loggedInUsers = users;
 		}
 		
 		public int getMaxUsers() {
-			return maxUsers ;
+			return maxUsers;
 		}
 		
 		public List<LpUserCount> getLoggedOnUsers() {
-			return loggedInUsers ;
+			return loggedInUsers;
 		}
 		
 		public int getLoggedOnUsersCount() {
-			return loggedInUsers.size() > 0 ? loggedInUsers.get(0).getIAnzahl() : 0 ;
+			return loggedInUsers.size() > 0 ? loggedInUsers.get(0).getIAnzahl() : 0;
 		}
 
 		public Integer getRolleId() {
@@ -939,20 +1019,98 @@ public class LogonFacBean extends Facade implements LogonFac {
 
 		public void setAccount(String account) {
 			this.account = account;
-		}			
+		}
+		
+		public abstract List<Theclient> getUsers();
+		
+		public List<TheClientLoggedInDto> getUsersAsLoggedIn() throws RemoteException {
+			List<TheClientLoggedInDto> clients = new ArrayList<TheClientLoggedInDto>();
+			String lastUser = "";
+			int userCount = 0;
+			SystemrolleCache cache = new SystemrolleCache();
+			for (Theclient emClient : getUsers()) {
+				TheClientDto dto = getTheClientFac().theClientFindByPrimaryKey(emClient.getCNr());
+				if(!lastUser.equals(dto.getBenutzername())) {
+					++userCount;
+					lastUser = dto.getBenutzername();
+				}
+				TheClientLoggedInDto inDto = dto.asLoggedIn();
+				inDto.setConcurrentUserCount(userCount);
+				inDto.setSystemrolleCBez(cache.getValueOfKey(inDto.getSystemrolleIId()));
+				clients.add(inDto);
+			}
+			return clients;
+			
+		}
 	}
 	
 	private class UserCountMandantHelper extends UserCountHelper {
 		public UserCountMandantHelper(int maxUsers, List<LpUserCount> users) {
 			super(maxUsers, users);
-			setAccount("Mandant") ;
-		}		
+			setAccount("Mandant");
+		}
+		
+		@Override
+		public List<Theclient> getUsers() {
+			return new ArrayList<Theclient>();
+		}
 	}
 
+	private class UserCountMandantHelperNew extends UserCountHelper {
+		private final int loggedInUsers;
+		
+		public UserCountMandantHelperNew(int maxUsers, int loggedInUsers) {
+			super(maxUsers, new ArrayList<LpUserCount>());
+			setAccount("Mandant");
+			this.loggedInUsers = loggedInUsers;
+		}
+		
+		public int getLoggedOnUsersCount() {
+			return loggedInUsers;
+		}
+		
+		@Override
+		public List<Theclient> getUsers() {
+			HvTypedQuery<Theclient> q = new HvTypedQuery<Theclient>(
+					em.createNamedQuery("TheClientsMandantLoggedIn")
+						.setParameter("today", Helper.cutTimestamp(getTimestamp())));
+			return q.getResultList();
+		}
+	}
+	
 	private class UserCountRolleHelper extends UserCountHelper {
 		public UserCountRolleHelper(Integer rolleId, int maxUsers, List<LpUserCount> users) {
 			super(maxUsers, users);
-			setAccount("Rolle: " + rolleId) ;
+			setAccount("Rolle: " + rolleId);
+			setRolleId(rolleId);
 		}		
+		@Override
+		public List<Theclient> getUsers() {
+			return new ArrayList<Theclient>();
+		}
+	}
+	
+	private class UserCountRolleHelperNew extends UserCountHelper {
+		private final int loggedInUsers;
+		
+		public UserCountRolleHelperNew(Integer rolleId, int maxUsers, int loggedInUsers) {
+			super(maxUsers, new ArrayList<LpUserCount>());
+			setAccount("Rolle: " + rolleId);
+			setRolleId(rolleId);
+			this.loggedInUsers = loggedInUsers;
+		}
+
+		public int getLoggedOnUsersCount() {
+			return loggedInUsers;
+		}
+		
+		@Override
+		public List<Theclient> getUsers() {
+			HvTypedQuery<Theclient> q = new HvTypedQuery<Theclient>(
+					em.createNamedQuery("TheClientsRolleLoggedIn")
+						.setParameter("today", Helper.cutTimestamp(getTimestamp()))
+						.setParameter("rolle", getRolleId()));
+			return q.getResultList();
+		}
 	}
 }

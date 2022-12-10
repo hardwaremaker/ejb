@@ -45,6 +45,19 @@ public class ZahlungsartDto implements Serializable, DatenspracheIf {
 	private Integer iSort;
 	private ZahlungsartsprDto zahlungsartsprDto;
 
+	
+	public String getBezeichnung() {
+		if (getZahlungsartsprDto() != null) {
+			if (getZahlungsartsprDto().getCBez() != null) {
+				return getZahlungsartsprDto().getCBez();
+			} else {
+				return getCNr().trim();
+			}
+		} else {
+			return getCNr().trim();
+		}
+	}
+	
 	public String getCNr() {
 		return cNr;
 	}

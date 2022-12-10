@@ -1,57 +1,18 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.auftrag.fastlanereader.generated;
 
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
+import com.lp.server.artikel.fastlanereader.generated.FLRVerleih;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
-
 import org.apache.commons.lang.builder.ToStringBuilder;
-
-import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
-import com.lp.server.artikel.fastlanereader.generated.FLRVerleih;
 
 
 /** @author Hibernate CodeGenerator */
 public class FLRAuftragpositionReport implements Serializable {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 8892087080328079856L;
-
-	
-	/** identifier field */
+    /** identifier field */
     private Integer i_id;
 
     /** nullable persistent field */
@@ -97,24 +58,31 @@ public class FLRAuftragpositionReport implements Serializable {
     private BigDecimal n_einkaufpreis;
 
     /** nullable persistent field */
+    private Integer position_i_id_artikelset;
+
+    /** nullable persistent field */
+    private Integer zwsvonposition_i_id;
+
+    /** nullable persistent field */
+    private Integer zwsbisposition_i_id;
+
+    /** nullable persistent field */
+    private BigDecimal zwsnettosumme;
+
+    /** nullable persistent field */
     private com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag;
 
     /** nullable persistent field */
     private FLRArtikel flrartikel;
 
     /** nullable persistent field */
+    private FLRArtikelliste flrartikelliste;
+
+    /** nullable persistent field */
     private FLRVerleih flrverleih;
 
-	private Integer position_i_id_artikelset ;
-
-    private Integer zwsvonposition_i_id ;
-    
-    private Integer zwsbisposition_i_id ;
-    
-    private BigDecimal n_zwsnettosumme ;
-
     /** full constructor */
-    public FLRAuftragpositionReport(Integer i_sort, String auftragpositionart_c_nr, String auftragpositionstatus_c_nr, BigDecimal n_menge, String c_bez, String c_zbez, BigDecimal n_offenemenge, BigDecimal n_offenerahmenmenge, String einheit_c_nr, Integer artikel_i_id, Date t_uebersteuerterliefertermin, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, String c_seriennrchargennr, BigDecimal n_einkaufpreis, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag, FLRArtikel flrartikel, FLRVerleih flrverleih) {
+    public FLRAuftragpositionReport(Integer i_sort, String auftragpositionart_c_nr, String auftragpositionstatus_c_nr, BigDecimal n_menge, String c_bez, String c_zbez, BigDecimal n_offenemenge, BigDecimal n_offenerahmenmenge, String einheit_c_nr, Integer artikel_i_id, Date t_uebersteuerterliefertermin, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, String c_seriennrchargennr, BigDecimal n_einkaufpreis, Integer position_i_id_artikelset, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport flrauftrag, FLRArtikel flrartikel, FLRArtikelliste flrartikelliste, FLRVerleih flrverleih) {
         this.i_sort = i_sort;
         this.auftragpositionart_c_nr = auftragpositionart_c_nr;
         this.auftragpositionstatus_c_nr = auftragpositionstatus_c_nr;
@@ -129,8 +97,13 @@ public class FLRAuftragpositionReport implements Serializable {
         this.n_nettogesamtpreisplusversteckteraufschlagminusrabatte = n_nettogesamtpreisplusversteckteraufschlagminusrabatte;
         this.c_seriennrchargennr = c_seriennrchargennr;
         this.n_einkaufpreis = n_einkaufpreis;
+        this.position_i_id_artikelset = position_i_id_artikelset;
+        this.zwsvonposition_i_id = zwsvonposition_i_id;
+        this.zwsbisposition_i_id = zwsbisposition_i_id;
+        this.zwsnettosumme = zwsnettosumme;
         this.flrauftrag = flrauftrag;
         this.flrartikel = flrartikel;
+        this.flrartikelliste = flrartikelliste;
         this.flrverleih = flrverleih;
     }
 
@@ -258,6 +231,38 @@ public class FLRAuftragpositionReport implements Serializable {
         this.n_einkaufpreis = n_einkaufpreis;
     }
 
+    public Integer getPosition_i_id_artikelset() {
+        return this.position_i_id_artikelset;
+    }
+
+    public void setPosition_i_id_artikelset(Integer position_i_id_artikelset) {
+        this.position_i_id_artikelset = position_i_id_artikelset;
+    }
+
+    public Integer getZwsvonposition_i_id() {
+        return this.zwsvonposition_i_id;
+    }
+
+    public void setZwsvonposition_i_id(Integer zwsvonposition_i_id) {
+        this.zwsvonposition_i_id = zwsvonposition_i_id;
+    }
+
+    public Integer getZwsbisposition_i_id() {
+        return this.zwsbisposition_i_id;
+    }
+
+    public void setZwsbisposition_i_id(Integer zwsbisposition_i_id) {
+        this.zwsbisposition_i_id = zwsbisposition_i_id;
+    }
+
+    public BigDecimal getZwsnettosumme() {
+        return this.zwsnettosumme;
+    }
+
+    public void setZwsnettosumme(BigDecimal zwsnettosumme) {
+        this.zwsnettosumme = zwsnettosumme;
+    }
+
     public com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport getFlrauftrag() {
         return this.flrauftrag;
     }
@@ -274,6 +279,14 @@ public class FLRAuftragpositionReport implements Serializable {
         this.flrartikel = flrartikel;
     }
 
+    public FLRArtikelliste getFlrartikelliste() {
+        return this.flrartikelliste;
+    }
+
+    public void setFlrartikelliste(FLRArtikelliste flrartikelliste) {
+        this.flrartikelliste = flrartikelliste;
+    }
+
     public FLRVerleih getFlrverleih() {
         return this.flrverleih;
     }
@@ -282,41 +295,10 @@ public class FLRAuftragpositionReport implements Serializable {
         this.flrverleih = flrverleih;
     }
 
-	public Integer getPosition_i_id_artikelset() {
-		return position_i_id_artikelset;
-	}
-
-	public void setPosition_i_id_artikelset(Integer position_i_id_artikelset) {
-		this.position_i_id_artikelset = position_i_id_artikelset;
-	}
-
-	public Integer getZwsvonposition_i_id() {
-		return zwsvonposition_i_id;
-	}
-
-	public void setZwsvonposition_i_id(Integer zwsvonposition_i_id) {
-		this.zwsvonposition_i_id = zwsvonposition_i_id;
-	}
-
-	public Integer getZwsbisposition_i_id() {
-		return zwsbisposition_i_id;
-	}
-
-	public void setZwsbisposition_i_id(Integer zwsbisposition_i_id) {
-		this.zwsbisposition_i_id = zwsbisposition_i_id;
-	}
-
-	public BigDecimal getZwsnettosumme() {
-		return n_zwsnettosumme;
-	}
-
-	public void setZwsnettosumme(BigDecimal n_zwsnettosumme) {
-		this.n_zwsnettosumme = n_zwsnettosumme;
-	}
-	
-	public String toString() {
+    public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();
     }
+
 }

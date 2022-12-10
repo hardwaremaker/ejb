@@ -35,6 +35,7 @@ package com.lp.server.eingangsrechnung.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.util.Locale;
 
 import javax.ejb.Remote;
 
@@ -56,6 +57,9 @@ public interface EingangsrechnungReportFac {
 	public final static String REPORT_EINGANGSRECHNUNG_INLAND = "er_eingangsrechnung_inland.jasper";
 	public final static String REPORT_EINGANGSRECHNUNG_AUSLAND = "er_eingangsrechnung_ausland.jasper";
 	public final static String REPORT_EINGANGSRECHNUNG_ERFASSTE_ZOLLPAPIERE = "er_erfasste_zollimportpapiere.jasper";
+	public final static String REPORT_EINGANGSRECHNUNG_MIT_POSITIONEN = "er_eingangsrechnung_mit_positionen.jasper";
+	public final static String REPORT_EINGANGSRECHNUNG_NICHT_ABGERECHNETE_ANZAHLUNGEN = "er_nicht_abgerechnete_anzahlungen.jasper";
+	public final static String REPORT_EINGANGSRECHNUNG_DOKUMENTE = "er_eingangsrechnung_dokumente.jasper";
 	
 	public final static int REPORT_ZAHLUNGEN_SORT_ZAHLUNGSAUSGANG = 0;
 	public final static int REPORT_ZAHLUNGEN_SORT_RECHNUNGSNUMMER = 1;
@@ -83,9 +87,11 @@ public interface EingangsrechnungReportFac {
 			int iFilterER, Integer kostenstelleIId, int iKritDatum, Date dVon,
 			Date dBis, boolean bZusatzkosten);
 
-	public JasperPrintLP printOffene(TheClientDto theClientDto, int iSort,
-			Integer lieferantIId, Date dStichtag,
-			boolean bStichtagIstFreigabeDatum, boolean bZusatzkosten, boolean mitNichtZugeordnetenBelegen);
+//	public JasperPrintLP printOffene(TheClientDto theClientDto, int iSort,
+//			Integer lieferantIId, Date dStichtag,
+//			boolean bStichtagIstFreigabeDatum, boolean bZusatzkosten, boolean mitNichtZugeordnetenBelegen);
+//
+	JasperPrintLP printOffene(EingangsrechnungOffeneKriterienDto krit, TheClientDto theClientDto);
 
 	public JasperPrintLP printAlle(ReportJournalKriterienDto krit,
 			TheClientDto theClientDto, boolean bZusatzkosten, boolean bDatumIstFreigabedatum);
@@ -97,5 +103,14 @@ public interface EingangsrechnungReportFac {
 	
 	public JasperPrintLP printErfassteZollpapiere(Date dVon, Date dBis,
 			TheClientDto theClientDto);
+	
+	public JasperPrintLP[] printEingangsrechnungMitPositionen(
+			Integer iEingangsrechnungIId, Locale locale, Boolean bMitLogo,
+			Integer iAnzahlKopien, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+	
+	public JasperPrintLP printNichtabgerechneteAnzahlungen(java.sql.Date dStichtag, TheClientDto theClientDto);
+	
+	public JasperPrintLP printDokumente(Integer eingangsrechnungIId, TheClientDto theClientDto);
 	
 }

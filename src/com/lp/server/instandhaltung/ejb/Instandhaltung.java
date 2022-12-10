@@ -41,9 +41,11 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries({ @NamedQuery(name = "InstandhaltungFindyByKundeIId", query = "SELECT o FROM Instandhaltung AS o WHERE o.kundeIId=?1") })
 @Entity
-@Table(name = "IS_INSTANDHALTUNG")
+@Table(name = ITablenames.IS_INSTANDHALTUNG)
 public class Instandhaltung implements Serializable {
 	@Id
 	@Column(name = "I_ID")

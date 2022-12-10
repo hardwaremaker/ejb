@@ -113,6 +113,11 @@ public class RechnungDtoAssembler {
 			rechnungDto.setTZollpapier(rechnung.getTZollpapier());
 			rechnungDto.setCZollpapier(rechnung.getCZollpapier());
 			rechnungDto.setProjektIId(rechnung.getProjektIId());
+			rechnungDto.setReversechargeartId(rechnung.getRcArtId());
+			rechnungDto.setTElektronisch(rechnung.getTElektronisch());
+			rechnungDto.setPersonalIIdElektronisch(rechnung.getPersonalIIdElektronisch());
+			rechnungDto.setCMahnungsanmerkung(rechnung.getCMahnungsanmerkung());
+			rechnungDto.setZahlungsartCNr(rechnung.getZahlungsartCNr());
 		}
 		return rechnungDto;
 	}

@@ -35,7 +35,13 @@ package com.lp.server.benutzer.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
-public class BenutzermandantsystemrolleDto implements Serializable {
+import javax.persistence.Column;
+
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.util.IIId;
+
+@HvDtoLogClass(name = HvDtoLogClass.BENUTZERMANDANTSYSTEMROLLE)
+public class BenutzermandantsystemrolleDto implements Serializable,IIId{
 	/**
 	 * 
 	 */
@@ -49,12 +55,34 @@ public class BenutzermandantsystemrolleDto implements Serializable {
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
 	private Integer personalIIdZugeordnet;
+	private Integer systemrolleIIdRestapi;
 
+	public Integer getSystemrolleIIdRestapi() {
+		return systemrolleIIdRestapi;
+	}
+
+	public void setSystemrolleIIdRestapi(Integer systemrolleIIdRestapi) {
+		this.systemrolleIIdRestapi = systemrolleIIdRestapi;
+	}
+
+	public Integer getSystemrolleIIdHvma() {
+		return systemrolleIIdHvma;
+	}
+
+	public void setSystemrolleIIdHvma(Integer systemrolleIIdHvma) {
+		this.systemrolleIIdHvma = systemrolleIIdHvma;
+	}
+
+	
+	private Integer systemrolleIIdHvma;
+
+	private SystemrolleDto systemrolleDto;
+	private SystemrolleDto systemrolleDtoRestapi ;
+	
 	public Integer getIId() {
 		return iId;
 	}
 
-	private SystemrolleDto systemrolleDto;
 
 	public void setIId(Integer iId) {
 		this.iId = iId;
@@ -142,6 +170,17 @@ public class BenutzermandantsystemrolleDto implements Serializable {
 		this.personalIIdZugeordnet = personalIIdZugeordnet;
 	}
 
+
+	
+	public SystemrolleDto getSystemrolleDtoRestapi() {
+		return systemrolleDtoRestapi;
+	}
+	
+	public void setSystemrolleDtoRestapi(SystemrolleDto systemrolleDtoRestapi) {
+		this.systemrolleDtoRestapi = systemrolleDtoRestapi ;
+	}
+	
+	
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -181,6 +220,10 @@ public class BenutzermandantsystemrolleDto implements Serializable {
 				: that.personalIIdAendern.equals(this.personalIIdAendern))) {
 			return false;
 		}
+		if (!(that.systemrolleIIdRestapi == null ? this.systemrolleIIdRestapi == null
+				: that.systemrolleIIdRestapi.equals(this.systemrolleIIdRestapi))) {
+			return false;
+		}
 		return true;
 	}
 
@@ -194,6 +237,7 @@ public class BenutzermandantsystemrolleDto implements Serializable {
 		result = 37 * result + this.personalIIdAnlegen.hashCode();
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
+		result = 37 * result + this.systemrolleIIdRestapi.hashCode() ;
 		return result;
 	}
 
@@ -202,6 +246,7 @@ public class BenutzermandantsystemrolleDto implements Serializable {
 		returnString += iId;
 		returnString += ", " + benutzerIId;
 		returnString += ", " + systemrolleIId;
+		returnString += ", " + systemrolleIIdRestapi;
 		returnString += ", " + mandantCNr;
 		returnString += ", " + tAnlegen;
 		returnString += ", " + personalIIdAnlegen;

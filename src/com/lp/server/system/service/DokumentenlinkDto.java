@@ -44,7 +44,26 @@ public class DokumentenlinkDto implements Serializable {
 	private String cBasispfad;
 	private String cOrdner;
 
+	private String rechtCNr;
+
+	public String getRechtCNr() {
+		return rechtCNr;
+	}
+
+	public void setRechtCNr(String rechtCNr) {
+		this.rechtCNr = rechtCNr;
+	}
+	
 	private Short bUrl;
+	private Short bTitel;
+	
+	public Short getBTitel() {
+		return bTitel;
+	}
+	
+	public void setBTitel(Short bTitel) {
+		this.bTitel = bTitel;
+	}
 
 	public Short getBUrl() {
 		return bUrl;
@@ -115,4 +134,13 @@ public class DokumentenlinkDto implements Serializable {
 		this.bPfadabsolut = bPfadabsolut;
 	}
 
+	private Short bPfadAusArbeitsplatzparameter;
+
+	public Short getBPfadAusArbeitsplatzparameter() {
+		return bPfadAusArbeitsplatzparameter;
+	}
+
+	public void setBPfadAusArbeitsplatzparameter(Short bPfadAusArbeitsplatzparameter) {
+		this.bPfadAusArbeitsplatzparameter = bPfadAusArbeitsplatzparameter;
+	}
 }

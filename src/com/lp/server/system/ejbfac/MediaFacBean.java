@@ -37,11 +37,14 @@ import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
@@ -50,14 +53,25 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import org.apache.commons.collections4.map.HashedMap;
+
+import com.lp.server.system.assembler.EditorContentDtoAssembler;
 import com.lp.server.system.ejb.Datenformat;
+import com.lp.server.system.ejb.EditorBaseBlock;
+import com.lp.server.system.ejb.EditorContent;
+import com.lp.server.system.ejb.HvImage;
 import com.lp.server.system.ejb.Mediaart;
 import com.lp.server.system.ejb.Mediaartspr;
 import com.lp.server.system.ejb.MediaartsprPK;
 import com.lp.server.system.ejb.Mediastandard;
+import com.lp.server.system.ejb.MediastandardQuery;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.service.DatenformatDto;
 import com.lp.server.system.service.DatenformatDtoAssembler;
+import com.lp.server.system.service.EditorBaseBlockDto;
+import com.lp.server.system.service.EditorContentDto;
+import com.lp.server.system.service.HvImageDto;
+import com.lp.server.system.service.HvImageDtoAssembler;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.MediaartDto;
 import com.lp.server.system.service.MediaartDtoAssembler;
@@ -66,7 +80,12 @@ import com.lp.server.system.service.MediaartsprDtoAssembler;
 import com.lp.server.system.service.MediastandardDto;
 import com.lp.server.system.service.MediastandardDtoAssembler;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.EditorBlockIId;
+import com.lp.server.util.EditorContentIId;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HvImageIId;
+import com.lp.server.util.HvOptional;
+import com.lp.server.util.Validator;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -75,16 +94,14 @@ public class MediaFacBean extends Facade implements MediaFac {
 	@PersistenceContext
 	private EntityManager em;
 
-	public void createDatenformat(DatenformatDto datenformatDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void createDatenformat(DatenformatDto datenformatDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		// logg: wenn der PK bereits bekannt ist: xyDto
 		myLogger.logData(datenformatDto);
 		if (datenformatDto == null) {
 			return;
 		}
 		try {
-			Datenformat datenformat = new Datenformat(datenformatDto.getCNr(),
-					datenformatDto.getISort());
+			Datenformat datenformat = new Datenformat(datenformatDto.getCNr(), datenformatDto.getISort());
 			em.persist(datenformat);
 			em.flush();
 			setDatenformatFromDatenformatDto(datenformat, datenformatDto);
@@ -94,30 +111,26 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	public void removeDatenformat(DatenformatDto datenformatDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeDatenformat(DatenformatDto datenformatDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		// logg: removeXY: mit xyDto.toString()
 		myLogger.logData(datenformatDto);
 		if (datenformatDto != null) {
 			String cNr = datenformatDto.getCNr();
 			Datenformat toRemove = em.find(Datenformat.class, cNr);
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 		}
 
 	}
 
-	public void updateDatenformat(DatenformatDto datenformatDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateDatenformat(DatenformatDto datenformatDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		// logg: updateXY: mit xyDto.toString()
 		myLogger.logData(datenformatDto);
 
@@ -126,8 +139,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 			// try {
 			Datenformat datenformat = em.find(Datenformat.class, cNr);
 			if (datenformat == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setDatenformatFromDatenformatDto(datenformat, datenformatDto);
 			// }
@@ -139,14 +151,12 @@ public class MediaFacBean extends Facade implements MediaFac {
 		}
 	}
 
-	public DatenformatDto datenformatFindByPrimaryKey(String cNr)
-			throws EJBExceptionLP {
+	public DatenformatDto datenformatFindByPrimaryKey(String cNr) throws EJBExceptionLP {
 		// logg: xyFindByPrimaryKey loggt nicht
 		// try {
 		Datenformat datenformat = em.find(Datenformat.class, cNr);
 		if (datenformat == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleDatenformatDto(datenformat);
 
@@ -158,8 +168,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	private void setDatenformatFromDatenformatDto(Datenformat datenformat,
-			DatenformatDto datenformatDto) {
+	private void setDatenformatFromDatenformatDto(Datenformat datenformat, DatenformatDto datenformatDto) {
 		datenformat.setISort(datenformatDto.getISort());
 		datenformat.setCBez(datenformatDto.getCBez());
 		em.merge(datenformat);
@@ -183,100 +192,75 @@ public class MediaFacBean extends Facade implements MediaFac {
 		return (DatenformatDto[]) list.toArray(returnArray);
 	}
 
-	public MediastandardDto createMediastandard(
-			MediastandardDto mediastandardDto, TheClientDto theClientDto)
+	public MediastandardDto createMediastandard(MediastandardDto mediastandardDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
-		myLogger.logData(mediastandardDto);
-
-		// logg: createXY wenn der PK noch nicht bekannt ist, der PKGenerator
-		// loggt den neuen PK
-		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
-				PKConst.PK_MEDIASTANDARD);
-		mediastandardDto.setIId(iId);
 		mediastandardDto.setMandantCNr(theClientDto.getMandant());
-		// Falls kein Locale definiert ist, zieht das UI-Locale.
+
 		if (mediastandardDto.getLocaleCNr() == null) {
 			mediastandardDto.setLocaleCNr(theClientDto.getLocUiAsString());
 		}
-		// b_versteckt muss gesetzt sein
+
 		if (mediastandardDto.getBVersteckt() == null) {
-			mediastandardDto.setBVersteckt(Helper.boolean2Short(false));
+			mediastandardDto.setBVersteckt(Helper.getShortFalse());
 		}
 
-		// NOT NULL
-		Timestamp now = new Timestamp(System.currentTimeMillis());
-
 		try {
+			Integer iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_MEDIASTANDARD);
+			mediastandardDto.setIId(iId);
+
+			Timestamp now = getTimestamp();
 			mediastandardDto.setTAendern(now);
 			mediastandardDto.setTAnlegen(now);
-			mediastandardDto
-					.setPersonalIIdAendern(theClientDto.getIDPersonal());
-			mediastandardDto
-					.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
-			Mediastandard mediastandard = new Mediastandard(
-					mediastandardDto.getIId(), mediastandardDto.getCNr(),
-					mediastandardDto.getOMediaImage(),
-					mediastandardDto.getDatenformatCNr(),
-					mediastandardDto.getCDateiname(),
-					mediastandardDto.getPersonalIIdAnlegen(),
-					mediastandardDto.getTAnlegen(),
-					mediastandardDto.getPersonalIIdAendern(),
-					mediastandardDto.getTAendern(),
-					mediastandardDto.getMandantCNr(),
-					mediastandardDto.getLocaleCNr(),
+			mediastandardDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			mediastandardDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
+			Mediastandard mediastandard = new Mediastandard(mediastandardDto.getIId(), mediastandardDto.getCNr(),
+					mediastandardDto.getOMediaImage(), mediastandardDto.getDatenformatCNr(),
+					mediastandardDto.getCDateiname(), mediastandardDto.getPersonalIIdAnlegen(),
+					mediastandardDto.getTAnlegen(), mediastandardDto.getPersonalIIdAendern(),
+					mediastandardDto.getTAendern(), mediastandardDto.getMandantCNr(), mediastandardDto.getLocaleCNr(),
 					mediastandardDto.getBVersteckt());
 			em.persist(mediastandard);
 			em.flush();
-			setMediastandardFromMediastandardDto(mediastandard,
-					mediastandardDto);
+			setMediastandardFromMediastandardDto(mediastandard, mediastandardDto);
 			return mediastandardDto;
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-
 	}
 
-	public void removeMediastandard(MediastandardDto mediastandardDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeMediastandard(MediastandardDto mediastandardDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		myLogger.logData(mediastandardDto);
 
 		if (mediastandardDto != null) {
-			Mediastandard toRemove = em.find(Mediastandard.class,
-					mediastandardDto.getIId());
+			Mediastandard toRemove = em.find(Mediastandard.class, mediastandardDto.getIId());
 			if (toRemove == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
-						er);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 			}
 		}
 
 	}
 
-	public MediastandardDto updateMediastandard(
-			MediastandardDto mediastandardDto, TheClientDto theClientDto)
+	public MediastandardDto updateMediastandard(MediastandardDto mediastandardDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		// logg: updateXY der PK wird geloggt
 		myLogger.logData(mediastandardDto);
 
 		if (mediastandardDto != null) {
 			// try {
-			mediastandardDto
-					.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			mediastandardDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			mediastandardDto.setTAendern(super.getTimestamp());
-			Mediastandard mediastandard = em.find(Mediastandard.class,
-					mediastandardDto.getIId());
+			Mediastandard mediastandard = em.find(Mediastandard.class, mediastandardDto.getIId());
 			if (mediastandard == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			setMediastandardFromMediastandardDto(mediastandard,
-					mediastandardDto);
+			setMediastandardFromMediastandardDto(mediastandard, mediastandardDto);
 			return mediastandardDto;
 			// }
 			// catch (FinderException ex) {
@@ -290,24 +274,20 @@ public class MediaFacBean extends Facade implements MediaFac {
 	}
 
 	/**
-	 * @deprecated MB: use createDefaultMediastandard(String cNrMediaartI,
-	 *             String localeCNr, String cNrUserI)
+	 * @deprecated MB: use createDefaultMediastandard(String cNrMediaartI, String
+	 *             localeCNr, String cNrUserI)
 	 * 
 	 *             Einen Default Mediastandard anlegen.
-	 * @param cNrMediaartI
-	 *            Mediaart Eigentumsvorbehalt oder Lieferbedingungen
-	 * @param theClientDto
-	 *            String der aktuelle Benutzer
+	 * @param cNrMediaartI Mediaart Eigentumsvorbehalt oder Lieferbedingungen
+	 * @param theClientDto String der aktuelle Benutzer
 	 * @return MediastandardDto Mediastandard
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public MediastandardDto createDefaultMediastandard(String cNrMediaartI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public MediastandardDto createDefaultMediastandard(String cNrMediaartI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (cNrMediaartI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrMediaartI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrMediaartI == null"));
 		}
 
 		myLogger.logData(cNrMediaartI);
@@ -319,14 +299,12 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 		if (cNrMediaartI.equals(MediaFac.MEDIASTANDARD_EIGENTUMSVORBEHALT)) {
 			text = MediaFac.DEFAULT_EIGENTUMSVORBEHALT;
-		} else if (cNrMediaartI
-				.equals(MediaFac.MEDIASTANDARD_LIEFERBEDINGUNGEN)) {
+		} else if (cNrMediaartI.equals(MediaFac.MEDIASTANDARD_LIEFERBEDINGUNGEN)) {
 			text = MediaFac.DEFAULT_LIEFERBEDINGUNGEN;
 		}
 
 		mediastandardDto.setOMediaText(text);
-		mediastandardDto
-				.setDatenformatCNr(MediaFac.DATENFORMAT_MIMETYPE_TEXT_HTML);
+		mediastandardDto.setDatenformatCNr(MediaFac.DATENFORMAT_MIMETYPE_TEXT_HTML);
 
 		mediastandardDto = createMediastandard(mediastandardDto, theClientDto);
 
@@ -334,22 +312,17 @@ public class MediaFacBean extends Facade implements MediaFac {
 	}
 
 	/**
-	 * @param cNrMediaartI
-	 *            Mediaart Eigentumsvorbehalt oder Lieferbedingungen
-	 * @param localeCNr
-	 *            String
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param cNrMediaartI Mediaart Eigentumsvorbehalt oder Lieferbedingungen
+	 * @param localeCNr    String
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return MediastandardDto Mediastandard
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public MediastandardDto createDefaultMediastandard(String cNrMediaartI,
-			String localeCNr, TheClientDto theClientDto) throws EJBExceptionLP {
+	public MediastandardDto createDefaultMediastandard(String cNrMediaartI, String localeCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (cNrMediaartI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrMediaartI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrMediaartI == null"));
 		}
 
 		myLogger.logData(cNrMediaartI);
@@ -362,27 +335,23 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 		if (cNrMediaartI.equals(MediaFac.MEDIASTANDARD_EIGENTUMSVORBEHALT)) {
 			text = MediaFac.DEFAULT_EIGENTUMSVORBEHALT;
-		} else if (cNrMediaartI
-				.equals(MediaFac.MEDIASTANDARD_LIEFERBEDINGUNGEN)) {
+		} else if (cNrMediaartI.equals(MediaFac.MEDIASTANDARD_LIEFERBEDINGUNGEN)) {
 			text = MediaFac.DEFAULT_LIEFERBEDINGUNGEN;
 		}
 
 		mediastandardDto.setOMediaText(text);
-		mediastandardDto
-				.setDatenformatCNr(MediaFac.DATENFORMAT_MIMETYPE_TEXT_HTML);
+		mediastandardDto.setDatenformatCNr(MediaFac.DATENFORMAT_MIMETYPE_TEXT_HTML);
 
 		mediastandardDto = createMediastandard(mediastandardDto, theClientDto);
 
 		return mediastandardDto;
 	}
 
-	public MediastandardDto[] mediastandardFindByDatenformatCNrMandantCNr(
-			String datenformatCNrI, String mandantCNrI,
+	public MediastandardDto[] mediastandardFindByDatenformatCNrMandantCNr(String datenformatCNrI, String mandantCNrI,
 			TheClientDto theClientDto) {
 
 		// try {
-		Query query = em
-				.createNamedQuery("MediastandardfindByDatenformatCNrMandantCNr");
+		Query query = em.createNamedQuery("MediastandardfindByDatenformatCNrMandantCNr");
 		query.setParameter(1, datenformatCNrI);
 		query.setParameter(2, mandantCNrI);
 
@@ -390,12 +359,10 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	public String mediastandardTextHtmlFindByCNrMandantCNrLocale(String cNrI,
-			String mandantCNrI, Locale locale) {
+	public String mediastandardTextHtmlFindByCNrMandantCNrLocale(String cNrI, String mandantCNrI, Locale locale) {
 
 		// try {
-		Query query = em
-				.createNamedQuery("MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr");
+		Query query = em.createNamedQuery("MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr");
 		query.setParameter(1, cNrI);
 		query.setParameter(2, MediaFac.DATENFORMAT_MIMETYPE_TEXT_HTML);
 		query.setParameter(3, mandantCNrI);
@@ -415,18 +382,15 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	public MediastandardDto mediastandardFindByCNrDatenformatCNrMandantCNr(
-			String cNrI, String datenformatCNrI, String mandantCNrI,
-			String localeCNrI, TheClientDto theClientDto) throws EJBExceptionLP {
+	public MediastandardDto mediastandardFindByCNrDatenformatCNrMandantCNr(String cNrI, String datenformatCNrI,
+			String mandantCNrI, String localeCNrI, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("cNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("cNrI == null"));
 		}
 
 		if (datenformatCNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("datenformatCNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("datenformatCNrI == null"));
 		}
 
 		myLogger.info("CNr: " + cNrI + ", datenformatCNr: " + datenformatCNrI);
@@ -434,8 +398,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 		MediastandardDto mediastandardDto = null;
 
 		// try {
-		Query query = em
-				.createNamedQuery("MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr");
+		Query query = em.createNamedQuery("MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr");
 		query.setParameter(1, cNrI);
 		query.setParameter(2, datenformatCNrI);
 		query.setParameter(3, mandantCNrI);
@@ -448,12 +411,10 @@ public class MediaFacBean extends Facade implements MediaFac {
 		}
 		if (mediastandard == null) {
 			if (cNrI.equals(MediaFac.MEDIASTANDARD_EIGENTUMSVORBEHALT)) {
-				mediastandardDto = createDefaultMediastandard(
-						MediaFac.MEDIAART_EIGENTUMSVORBEHALT, localeCNrI,
+				mediastandardDto = createDefaultMediastandard(MediaFac.MEDIAART_EIGENTUMSVORBEHALT, localeCNrI,
 						theClientDto);
 			} else if (cNrI.equals(MediaFac.MEDIASTANDARD_LIEFERBEDINGUNGEN)) {
-				mediastandardDto = createDefaultMediastandard(
-						MediaFac.MEDIASTANDARD_LIEFERBEDINGUNGEN, localeCNrI,
+				mediastandardDto = createDefaultMediastandard(MediaFac.MEDIASTANDARD_LIEFERBEDINGUNGEN, localeCNrI,
 						theClientDto);
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "");
@@ -464,34 +425,56 @@ public class MediaFacBean extends Facade implements MediaFac {
 		return mediastandardDto;
 	}
 
-	public MediastandardDto mediastandardFindByPrimaryKey(
-			Integer mediastandardIId) throws EJBExceptionLP {
-		// try {
-		Mediastandard mediastandard = em.find(Mediastandard.class,
-				mediastandardIId);
-		if (mediastandard == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+	@Override
+	public MediastandardDto mediastandardFindByCnrMandantCNr(String cnr, String mandantCnr, HvOptional<String> locale,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		HvOptional<MediastandardDto> dto = mediastandardOptFindByCnrMandantCnr(cnr, mandantCnr, locale, theClientDto);
+		if (!dto.isPresent()) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, cnr);
 		}
-		return assembleMediastandardDto(mediastandard);
 
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
+		return dto.get();
 	}
 
-	private void setMediastandardFromMediastandardDto(
-			Mediastandard mediastandard, MediastandardDto mediastandardDto) {
+	@Override
+	public HvOptional<MediastandardDto> mediastandardOptFindByCnrMandantCnr(String cnr, String mandantCnr,
+			HvOptional<String> locale, TheClientDto theClientDto) {
+		Validator.notEmpty(cnr, "cnr");
+		Validator.notEmpty(mandantCnr, "mandantCnr");
+
+		MediastandardQuery q = new MediastandardQuery(em);
+		HvOptional<Mediastandard> media = q.find(mandantCnr, cnr, locale.orElse(theClientDto.getLocUiAsString()));
+		if (media.isPresent()) {
+			return HvOptional.of(assembleMediastandardDto(media.get()));
+		}
+
+		return HvOptional.empty();
+	}
+
+	@Override
+	public MediastandardDto mediastandardFindByPrimaryKey(Integer mediastandardIId) throws EJBExceptionLP {
+		HvOptional<MediastandardDto> dto = mediastandardOptFindByPrimaryKey(mediastandardIId);
+		return Validator.entityFound(dto, mediastandardIId);
+	}
+
+	@Override
+	public HvOptional<MediastandardDto> mediastandardOptFindByPrimaryKey(Integer mediastandardIId) {
+		Validator.pkFieldNotNull(mediastandardIId, "mediastandardIId");
+
+		Mediastandard mediastandard = em.find(Mediastandard.class, mediastandardIId);
+		if (mediastandard == null)
+			return HvOptional.empty();
+
+		return HvOptional.of(assembleMediastandardDto(mediastandard));
+	}
+
+	private void setMediastandardFromMediastandardDto(Mediastandard mediastandard, MediastandardDto mediastandardDto) {
 		mediastandard.setCNr(mediastandardDto.getCNr());
 		mediastandard.setOMedia(mediastandardDto.getOMediaImage());
 		mediastandard.setDatenformatCNr(mediastandardDto.getDatenformatCNr());
-		mediastandard.setPersonalIIdAnlegen(mediastandardDto
-				.getPersonalIIdAnlegen());
+		mediastandard.setPersonalIIdAnlegen(mediastandardDto.getPersonalIIdAnlegen());
 		mediastandard.setTAnlegen(mediastandardDto.getTAnlegen());
-		mediastandard.setPersonalIIdAendern(mediastandardDto
-				.getPersonalIIdAendern());
+		mediastandard.setPersonalIIdAendern(mediastandardDto.getPersonalIIdAendern());
 		mediastandard.setTAendern(mediastandardDto.getTAendern());
 		mediastandard.setCDateiname(mediastandardDto.getCDateiname());
 		mediastandard.setMandantCNr(mediastandardDto.getMandantCNr());
@@ -500,13 +483,11 @@ public class MediaFacBean extends Facade implements MediaFac {
 		em.flush();
 	}
 
-	private MediastandardDto assembleMediastandardDto(
-			Mediastandard mediastandard) {
+	private MediastandardDto assembleMediastandardDto(Mediastandard mediastandard) {
 		return MediastandardDtoAssembler.createDto(mediastandard);
 	}
 
-	private MediastandardDto[] assembleMediastandardDtos(
-			Collection<?> mediastandards) {
+	private MediastandardDto[] assembleMediastandardDtos(Collection<?> mediastandards) {
 		List<MediastandardDto> list = new ArrayList<MediastandardDto>();
 		if (mediastandards != null) {
 			Iterator<?> iterator = mediastandards.iterator();
@@ -531,8 +512,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 	/**
 	 * Hole alle ER-Arten nach Spr.
 	 * 
-	 * @param cNrSpracheI
-	 *            String
+	 * @param cNrSpracheI String
 	 * @throws EJBExceptionLP
 	 * @return Map
 	 */
@@ -566,8 +546,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 	// Mediaart
 	// ------------------------------------------------------------------
 
-	public String createMediaart(MediaartDto oMediaartDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createMediaart(MediaartDto oMediaartDtoI, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkMediaartDto(oMediaartDtoI);
 
 		Mediaart mediaart = null;
@@ -578,10 +557,8 @@ public class MediaFacBean extends Facade implements MediaFac {
 			em.flush();
 
 			if (oMediaartDtoI.getMediaartsprDto() != null) {
-				oMediaartDtoI.getMediaartsprDto().setMediaartCNr(
-						oMediaartDtoI.getCNr());
-				createMediaartspr(oMediaartDtoI.getMediaartsprDto(),
-						theClientDto);
+				oMediaartDtoI.getMediaartsprDto().setMediaartCNr(oMediaartDtoI.getCNr());
+				createMediaartspr(oMediaartDtoI.getMediaartsprDto(), theClientDto);
 			}
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -590,8 +567,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 		return mediaart.getCNr();
 	}
 
-	public void removeMediaart(MediaartDto mediaartDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeMediaart(MediaartDto mediaartDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkMediaartDto(mediaartDto);
 
 		try {
@@ -600,8 +576,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 			Collection<?> cl = query.getResultList();
 			Mediaart mediaart = em.find(Mediaart.class, mediaartDto.getCNr());
 			if (mediaart == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			// Erst alle SPRs dazu loeschen.
 			for (Iterator<?> iter = cl.iterator(); iter.hasNext();) {
@@ -620,8 +595,8 @@ public class MediaFacBean extends Facade implements MediaFac {
 		}
 	}
 
-	public void updateMediaart(MediaartDto mediaartDto,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	public void updateMediaart(MediaartDto mediaartDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		checkMediaartDto(mediaartDto);
 
 		String cNr = mediaartDto.getCNr();
@@ -629,19 +604,16 @@ public class MediaFacBean extends Facade implements MediaFac {
 		// try {
 		Mediaart mediaart = em.find(Mediaart.class, cNr);
 		if (mediaart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		if (mediaartDto.getMediaartsprDto() != null) {
-			mediaartDto.getMediaartsprDto().setLocaleCNr(
-					theClientDto.getLocUiAsString());
+			mediaartDto.getMediaartsprDto().setLocaleCNr(theClientDto.getLocUiAsString());
 
 			// create
 			if (mediaartDto.getMediaartsprDto().getMediaartCNr() == null) {
 				// zuerst Key setzen
-				mediaartDto.getMediaartsprDto().setMediaartCNr(
-						mediaartDto.getCNr());
+				mediaartDto.getMediaartsprDto().setMediaartCNr(mediaartDto.getCNr());
 
 				createMediaartspr(mediaartDto.getMediaartsprDto(), theClientDto);
 			}
@@ -659,13 +631,11 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	public MediaartDto mediaartFindByPrimaryKey(String cNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public MediaartDto mediaartFindByPrimaryKey(String cNr, TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.logData(cNr);
 
 		if (cNr == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("cNr == null"));
 		}
 
 		MediaartDto mediaartDtoO = null;
@@ -673,16 +643,13 @@ public class MediaFacBean extends Facade implements MediaFac {
 		// try {
 		Mediaart mediaart = em.find(Mediaart.class, cNr);
 		if (mediaart == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		mediaartDtoO = assembleMediaartDto(mediaart);
 
 		try {
-			Mediaartspr mediaartspr = em.find(
-					Mediaartspr.class,
-					new MediaartsprPK(mediaartDtoO.getCNr(), theClientDto
-							.getLocUiAsString()));
+			Mediaartspr mediaartspr = em.find(Mediaartspr.class,
+					new MediaartsprPK(mediaartDtoO.getCNr(), theClientDto.getLocUiAsString()));
 			mediaartDtoO.setMediaartsprDto(assembleMediaartsprDto(mediaartspr));
 		} catch (Throwable t) {
 			// nothing here.
@@ -713,27 +680,23 @@ public class MediaFacBean extends Facade implements MediaFac {
 		return (MediaartDto[]) list.toArray(returnArray);
 	}
 
-	private void checkMediaartDto(MediaartDto oMediaartDtoI)
-			throws EJBExceptionLP {
+	private void checkMediaartDto(MediaartDto oMediaartDtoI) throws EJBExceptionLP {
 		if (oMediaartDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("oMediaartDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("oMediaartDtoI == null"));
 		}
 	}
 
 	// Mediaartspr
 	// ---------------------------------------------------------------
 
-	public String createMediaartspr(MediaartsprDto mediaartsprDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String createMediaartspr(MediaartsprDto mediaartsprDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkMediaartsprDto(mediaartsprDto);
 
 		Mediaartspr mediaartspr = null;
 
 		try {
-			mediaartspr = new Mediaartspr(mediaartsprDto.getMediaartCNr(),
-					mediaartsprDto.getLocaleCNr());
+			mediaartspr = new Mediaartspr(mediaartsprDto.getMediaartCNr(), mediaartsprDto.getLocaleCNr());
 			em.persist(mediaartspr);
 			em.flush();
 			setMediaartsprFromMediaartsprDto(mediaartspr, mediaartsprDto);
@@ -744,8 +707,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 		return mediaartspr.getPk().getMediaartCNr();
 	}
 
-	public void removeMediaartspr(MediaartsprDto mediaartsprDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeMediaartspr(MediaartsprDto mediaartsprDto, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkMediaartsprDto(mediaartsprDto);
 
@@ -755,8 +717,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 		Mediaartspr toRemove = em.find(Mediaartspr.class, mediaartsprPK);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -767,8 +728,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	public void updateMediaartspr(MediaartsprDto mediaartsprDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateMediaartspr(MediaartsprDto mediaartsprDto, TheClientDto theClientDto) throws EJBExceptionLP {
 		checkMediaartsprDto(mediaartsprDto);
 
 		MediaartsprPK mediaartsprPK = new MediaartsprPK();
@@ -778,8 +738,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 		// try {
 		Mediaartspr mediaartspr = em.find(Mediaartspr.class, mediaartsprPK);
 		if (mediaartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
 		setMediaartsprFromMediaartsprDto(mediaartspr, mediaartsprDto);
@@ -791,12 +750,11 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	public MediaartsprDto mediaartsprFindByPrimaryKey(String mediaartCNr,
-			String localeCNr, TheClientDto theClientDto) throws EJBExceptionLP {
+	public MediaartsprDto mediaartsprFindByPrimaryKey(String mediaartCNr, String localeCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (mediaartCNr == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("mediaartCNr == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("mediaartCNr == null"));
 		}
 
 		// try {
@@ -805,8 +763,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 		mediaartsprPK.setLocaleCNr(localeCNr);
 		Mediaartspr mediaartspr = em.find(Mediaartspr.class, mediaartsprPK);
 		if (mediaartspr == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleMediaartsprDto(mediaartspr);
 
@@ -818,14 +775,12 @@ public class MediaFacBean extends Facade implements MediaFac {
 
 	}
 
-	public MediaartsprDto getMediaartspr(String cNrI, String sLocUiI,
-			TheClientDto theClientDto) {
+	public MediaartsprDto getMediaartspr(String cNrI, String sLocUiI, TheClientDto theClientDto) {
 
 		MediaartsprDto mediaartsprDto = null;
 
 		try {
-			mediaartsprDto = mediaartsprFindByPrimaryKey(cNrI, sLocUiI,
-					theClientDto);
+			mediaartsprDto = mediaartsprFindByPrimaryKey(cNrI, sLocUiI, theClientDto);
 		} catch (Exception ex) {
 			// nothing here.
 		}
@@ -833,8 +788,7 @@ public class MediaFacBean extends Facade implements MediaFac {
 		return mediaartsprDto;
 	}
 
-	private void setMediaartsprFromMediaartsprDto(Mediaartspr mediaartspr,
-			MediaartsprDto mediaartsprDto) {
+	private void setMediaartsprFromMediaartsprDto(Mediaartspr mediaartspr, MediaartsprDto mediaartsprDto) {
 		mediaartspr.setCBez(mediaartsprDto.getCBez());
 		em.merge(mediaartspr);
 		em.flush();
@@ -857,12 +811,132 @@ public class MediaFacBean extends Facade implements MediaFac {
 		return (MediaartsprDto[]) list.toArray(returnArray);
 	}
 
-	private void checkMediaartsprDto(MediaartsprDto oMediaartsprDtoI)
-			throws EJBExceptionLP {
+	private void checkMediaartsprDto(MediaartsprDto oMediaartsprDtoI) throws EJBExceptionLP {
 		if (oMediaartsprDtoI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("oMediaartsprDtoI == null"));
 		}
 	}
 
+	@Override
+	public HvOptional<EditorContentDto> editorContentFindByPrimaryKey(EditorContentIId id, TheClientDto theClientDto) {
+		Objects.requireNonNull(id.id());
+		Objects.requireNonNull(theClientDto);
+		EditorContent content = em.find(EditorContent.class, id.id());
+		if(content == null) {
+			return HvOptional.empty();
+		}
+		return HvOptional.of(EditorContentDtoAssembler.assembleEditorContentDto(content));
+	}
+
+	@Override
+	public EditorContentDto createEditorContent(EditorContentDto dto, TheClientDto theClientDto) {
+		Objects.requireNonNull(dto);
+		Objects.requireNonNull(theClientDto);
+		if (dto.getId() != null && dto.getId().isValid()) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("ID im Dto bei create bereits gesetzt"));
+		}
+		EditorContent content = EditorContent.fromDto(dto);
+		em.persist(content);
+		return EditorContentDtoAssembler.assembleEditorContentDto(content);
+	}
+
+	@Override
+	public EditorContentDto updateEditorContent(EditorContentDto dto, TheClientDto theClientDto) {
+		Objects.requireNonNull(theClientDto);
+		Validator.dtoNotNull(dto, "EditorContentDto");
+		Objects.requireNonNull(dto.getId().id());
+		EditorContent oldContent = em.find(EditorContent.class, dto.getId().id());
+		//Map fuer Lookup
+		Map<EditorBlockIId, EditorBaseBlock> oldBlockMap = new HashMap<>();
+		for(EditorBaseBlock block : oldContent.getBlocks()) {
+			oldBlockMap.put(block.getIid(), block);
+		}
+		EditorContent newContent = EditorContent.fromDto(dto);
+		for(EditorBaseBlock block : newContent.getBlocks()) {
+			if(!block.getIid().isValid()) {
+				//Neuer Block
+				em.persist(block);
+			}
+			else {
+				block = em.merge(block);
+			}
+			oldBlockMap.remove(block.getIid());
+		}
+		em.merge(newContent);
+		for(EditorBaseBlock orphan : oldBlockMap.values()) {
+			em.remove(orphan);
+		}
+		em.flush();
+		return EditorContentDtoAssembler.assembleEditorContentDto(newContent);
+	}
+	
+	@Override
+	public HvOptional<EditorBaseBlockDto> editorBlockFindByPrimaryKey(EditorBlockIId id, TheClientDto theClientDto) {
+		EditorBaseBlock block = em.find(EditorBaseBlock.class, id.id());
+		if(block == null)
+			return HvOptional.empty();
+		return HvOptional.of(block.toDto());
+	}
+
+	@Override
+	public void deleteEditorContent(EditorContentIId id, TheClientDto theClientDto) {
+		Objects.requireNonNull(theClientDto);
+		EditorContent ref = em.getReference(EditorContent.class, id.id());
+		if(ref != null)
+			em.remove(ref);
+	}
+
+	@Override
+	public void deleteEditorBlock(EditorBlockIId id, TheClientDto theClientDto) {
+		Objects.requireNonNull(id);
+		Objects.requireNonNull(theClientDto);
+		EditorBaseBlock blockRef = em.getReference(EditorBaseBlock.class, id.id());
+		if(blockRef != null)
+			em.remove(blockRef);
+	}
+	@Override
+	public HvImageDto createHvImage(HvImageDto imageDto, TheClientDto theClientDto) {
+		Validator.dtoNotNull(imageDto, "image");
+		Validator.dtoNotNull(theClientDto, "theClient");
+		HvImage image = new HvImage();
+		image.setImageData(imageDto.getImageBinaryData());
+		image.setImageType(imageDto.getImageFormat());
+		em.persist(image);
+		em.flush();
+		imageDto.setId(image.getId());
+		return imageDto;
+	}
+
+	@Override
+	public void updateHvImage(HvImageDto imageDto, TheClientDto theClientDto) {
+		Validator.dtoNotNull(imageDto, "imageDto");
+		Validator.pkFieldValid(imageDto.getId(), "imageDto.id");
+		Validator.dtoNotNull(theClientDto, "theClientDto");
+
+		HvImage image = em.find(HvImage.class, imageDto.getId().id());
+		image.setImageType(imageDto.getImageFormat());
+		image.setImageData(imageDto.getImageBinaryData());
+		em.flush();
+	}
+
+	@Override
+	public void deleteHvImage(HvImageIId imageIId, TheClientDto theClientDto) {
+		Validator.pkFieldValid(imageIId, "imageDto.id");
+		Validator.dtoNotNull(theClientDto, "theClientDto");
+
+		HvImage ref = em.getReference(HvImage.class, imageIId.id());
+		if(ref != null)
+			em.remove(ref);
+	}
+
+	@Override
+	public HvOptional<HvImageDto> hvImageFindByPrimaryKey(HvImageIId imageIId) {
+		Validator.pkFieldValid(imageIId, "imageIId");
+		HvImage img = em.find(HvImage.class, imageIId.id());
+		if (img == null)
+			return HvOptional.empty();
+		else
+			return HvOptional.of(HvImageDtoAssembler.assembleHvImageDto(img));
+	}
 }

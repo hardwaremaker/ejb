@@ -39,50 +39,60 @@ import java.io.ObjectOutput;
 
 public class ServerJavaAndOSInfo implements Externalizable {
 	
-	private String vmVendor;
+	private String vendor;
 	private String vmVersion;
 	private String osName;
 	private String osVersion;
+	private String vmVendor;
+	private String vmName;
 	
 	public ServerJavaAndOSInfo() {
-		setVmVendor("<undefined>");
+		setVendor("<undefined>");
 		setVmVersion("<undefined>");
 		setOsName("<undefined>");
 		setOsVersion("<undefined>");
+		setVmVendor("<undefined>");
+		setVmName("<undefined>");
 	}
 	
 	/**
 	 * Es werden dabei die Properties der JVM verwendet, in der diese Methode aufgerufen wird.
 	 */
 	public void initProperties() {
-		setVmVendor(System.getProperty("java.vendor"));
+		setVendor(System.getProperty("java.vendor"));
 		setVmVersion(System.getProperty("java.version"));
 		setOsName(System.getProperty("os.name"));
 		setOsVersion(System.getProperty("os.version"));
+		setVmVendor(System.getProperty("java.vm.vendor"));
+		setVmName(System.getProperty("java.vm.name"));
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		setVmVendor(in.readUTF());
+		setVendor(in.readUTF());
 		setVmVersion(in.readUTF());
 		setOsName(in.readUTF());
 		setOsVersion(in.readUTF());
+		setVmVendor(in.readUTF());
+		setVmName(in.readUTF());
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-		out.writeUTF(getVmVendor());
+		out.writeUTF(getVendor());
 		out.writeUTF(getVmVersion());
 		out.writeUTF(getOsName());
 		out.writeUTF(getOsVersion());
+		out.writeUTF(getVmVendor());
+		out.writeUTF(getVmName());
 	}
 
-	public String getVmVendor() {
-		return vmVendor;
+	public String getVendor() {
+		return vendor;
 	}
 
-	public void setVmVendor(String vendor) {
-		this.vmVendor = vendor;
+	public void setVendor(String vendor) {
+		this.vendor = vendor;
 	}
 
 	public String getVmVersion() {
@@ -111,10 +121,27 @@ public class ServerJavaAndOSInfo implements Externalizable {
 	
 	public String formatString() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("java.vendor = " + getVmVendor() + "\n");
+		sb.append("java.vendor = " + getVendor() + "\n");
 		sb.append("java.version = " + getVmVersion() + "\n");
 		sb.append("os.name = " + getOsName() + "\n");
 		sb.append("os.version = " + getOsVersion() + "\n");
+		sb.append("java.vm.vendor = " + getVmVendor() + "\n");
 		return sb.toString();
+	}
+
+	public String getVmVendor() {
+		return vmVendor;
+	}
+
+	public void setVmVendor(String vmVendor) {
+		this.vmVendor = vmVendor;
+	}
+
+	public String getVmName() {
+		return vmName;
+	}
+
+	public void setVmName(String vmName) {
+		this.vmName = vmName;
 	}
 }

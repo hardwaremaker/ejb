@@ -36,6 +36,8 @@ import java.rmi.RemoteException;
 
 import javax.ejb.Remote;
 
+import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -50,7 +52,7 @@ public interface AuftragteilnehmerFac {
 	public static final String FLR_AUFTRAGTEILNEHMER_FLRPERSONAL = "flrpersonal";
 
 	public Integer createAuftragteilnehmer(
-			AuftragteilnehmerDto auftragteilnehmerDto, String pUser)
+			AuftragteilnehmerDto auftragteilnehmerDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public AuftragteilnehmerDto[] auftragteilnehmerFindByPartnerIIdAuftragteilnehmer(
@@ -79,4 +81,8 @@ public interface AuftragteilnehmerFac {
 
 	public void vertauscheAuftragteilnehmer(Integer iIdPosition1I,
 			Integer iIdPosition2I) throws EJBExceptionLP, RemoteException;
+	public String getErstenAuftragsteilnehmer(Integer auftragIId,
+			TheClientDto theClientDto);
+	public PartnerDto getErstenAuftragsteilnehmerPartnerDto(Integer auftragIId,
+			TheClientDto theClientDto);
 }

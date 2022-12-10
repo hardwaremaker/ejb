@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.rmi.RemoteException;
+import java.util.List;
 
 import javax.ejb.Remote;
 
@@ -98,7 +99,7 @@ public interface BankFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public BankDto bankFindByPrimaryKeyOhneExc(Integer partnerIIdI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			TheClientDto theClientDto);
 
 	public PartnerbankDto[] partnerbankFindByPartnerIId(Integer partnerIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -113,4 +114,9 @@ public interface BankFac {
 	public PartnerbankDto[] partnerbankFindByPartnerBankIIdOhneExc(
 			Integer partnerIId, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
+	
+	public List<BankDto> bankFindByBIC(String bic, TheClientDto theClientDto);
+	public List<PartnerbankDto> partnerbankFindByESRUndKontonummer(String esr,String kontonummer, TheClientDto theClientDto);
+	
+	public PartnerbankDto[] partnerbankfindByPartnerbankIIdCKtonr(Integer partnerbankIId, String cktonr, TheClientDto theClientDto);
 }

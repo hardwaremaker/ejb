@@ -68,6 +68,17 @@ public class Uvaart implements Serializable, ICNr {
 	
 	@Column(name = "B_INVERTIERT")
 	private short bInvertiert;
+	
+	@Column(name = "B_KEINE_AUSWAHL_BEI_ER")
+	private short bKeineAuswahlBeiEr;
+
+	public short getBKeineAuswahlBeiEr() {
+		return bKeineAuswahlBeiEr;
+	}
+
+	public void setBKeineAuswahlBeiEr(short bKeineAuswahlBeiEr) {
+		this.bKeineAuswahlBeiEr = bKeineAuswahlBeiEr;
+	}
 
 	private static final long serialVersionUID = 1L;
 

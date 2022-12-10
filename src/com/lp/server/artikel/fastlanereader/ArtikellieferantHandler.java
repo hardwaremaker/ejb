@@ -32,11 +32,15 @@
  ******************************************************************************/
 package com.lp.server.artikel.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+
+import javax.swing.Icon;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -48,9 +52,15 @@ import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.benutzer.service.RechteFac;
+import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.personal.service.PersonalFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.service.MandantFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -65,8 +75,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikellieferant implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikellieferant
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -87,6 +97,7 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	private boolean bZentralerArtikelstamm = false;
+	private boolean bMaterialzuschlagAnstattNettopreisBsMngEht = false;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -94,116 +105,153 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = this.getTableInfo().getColumnClasses().length;
-			int pageSize = this.PAGE_SIZE;
+			int pageSize = PAGE_SIZE;
 			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
-			Object[][] rows = new Object[resultList.size()][colCount];
+			Object[][] rows = new Object[resultList.size()][bZentralerArtikelstamm ? colCount + 1 : colCount];
 			int row = 0;
 			int col = 0;
 
 			// darf Preise sehen.
-			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
-					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF, theClientDto);
+			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF,
+					theClientDto);
 
 			while (resultListIterator.hasNext()) {
-				FLRArtikellieferant artikellieferant = (FLRArtikellieferant) ((Object[]) resultListIterator
-						.next())[0];
-				rows[row][col++] = artikellieferant.getI_id();
-				rows[row][col++] = artikellieferant.getFlrlieferant()
-						.getFlrpartner().getC_name1nachnamefirmazeile1();
+				FLRArtikellieferant artikellieferant = (FLRArtikellieferant) ((Object[]) resultListIterator.next())[0];
+
+				Object[] rowToAddCandidate = new Object[colCount];
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("i_id")] = artikellieferant.getI_id();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.firma")] = artikellieferant
+						.getFlrlieferant().getFlrpartner().getC_name1nachnamefirmazeile1();
 
 				com.lp.server.system.fastlanereader.generated.FLRLandplzort anschrift = artikellieferant
 						.getFlrlieferant().getFlrpartner().getFlrlandplzort();
 				if (anschrift != null) {
-					rows[row][col++] = anschrift.getFlrland().getC_lkz() + "-"
-							+ anschrift.getC_plz() + " "
-							+ anschrift.getFlrort().getC_name();
-				} else {
-					rows[row][col++] = "";
+
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.ort")] = anschrift.getFlrland()
+							.getC_lkz() + "-" + anschrift.getC_plz() + " " + anschrift.getFlrort().getC_name();
+
 				}
 
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(
-								artikellieferant.getArtikel_i_id(),
-								theClientDto);
+				ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(artikellieferant.getArtikel_i_id(),
+						theClientDto);
 
 				if (bZentralerArtikelstamm == true) {
-					rows[row][col++] = artikellieferant.getFlrlieferant()
-							.getMandant_c_nr();
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("report.mandant")] = artikellieferant
+							.getFlrlieferant().getMandant_c_nr();
 				}
 
 				if (bDarfPreiseSehen) {
 
 					if (artikellieferant.getN_nettopreis() != null) {
 
-						rows[row][col++] = getLocaleFac()
-								.rechneUmInAndereWaehrungZuDatum(
-										artikellieferant.getN_nettopreis(),
-										artikellieferant.getFlrlieferant().getWaehrung_c_nr(),
-										theClientDto.getSMandantenwaehrung(),
-										new Date(System.currentTimeMillis()),
-										theClientDto);
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("bes.nettogesamtpreisminusrabatte")] = getLocaleFac()
+										.rechneUmInAndereWaehrungZuDatum(artikellieferant.getN_nettopreis(),
+												artikellieferant.getFlrlieferant().getWaehrung_c_nr(),
+												theClientDto.getSMandantenwaehrung(),
+												new Date(System.currentTimeMillis()), theClientDto);
 					} else {
-						rows[row][col++] = artikellieferant.getN_nettopreis();
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("bes.nettogesamtpreisminusrabatte")] = artikellieferant.getN_nettopreis();
 					}
 
 				} else {
-					rows[row][col++] = new BigDecimal(0);
+					rowToAddCandidate[getTableColumnInformation()
+							.getViewIndex("bes.nettogesamtpreisminusrabatte")] = new BigDecimal(0);
 				}
-				rows[row][col++] =theClientDto.getSMandantenwaehrung();
-				rows[row][col++] = artikelDto.getEinheitCNr().trim();
-				if (artikelDto.getEinheitCNrBestellung() != null
-						&& artikellieferant.getN_nettopreis() != null) {
-					if (artikelDto.getNUmrechnungsfaktor().doubleValue() != 0) {
-						
-						if(Helper.short2boolean(artikelDto.getbBestellmengeneinheitInvers())){
-							rows[row][col++] = getLocaleFac()
-									.rechneUmInAndereWaehrungZuDatum(
-											artikellieferant.getN_nettopreis(),
-											artikellieferant.getFlrlieferant().getWaehrung_c_nr(),
-											theClientDto.getSMandantenwaehrung(),
-											new Date(System.currentTimeMillis()),
-											theClientDto).multiply(
-											artikelDto.getNUmrechnungsfaktor());
-						} else {
-							rows[row][col++] = getLocaleFac()
-									.rechneUmInAndereWaehrungZuDatum(
-											artikellieferant.getN_nettopreis(),
-											artikellieferant.getFlrlieferant().getWaehrung_c_nr(),
-											theClientDto.getSMandantenwaehrung(),
-											new Date(System.currentTimeMillis()),
-											theClientDto).divide(
-											artikelDto.getNUmrechnungsfaktor(), 4,
-											BigDecimal.ROUND_HALF_EVEN);
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("whg")] = theClientDto
+						.getSMandantenwaehrung();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("eht")] = artikelDto.getEinheitCNr().trim();
+
+				if (bMaterialzuschlagAnstattNettopreisBsMngEht == false) {
+
+					if (bDarfPreiseSehen && artikelDto.getEinheitCNrBestellung() != null
+							&& artikellieferant.getN_nettopreis() != null) {
+						if (artikelDto.getNUmrechnungsfaktor().doubleValue() != 0) {
+
+							if (Helper.short2boolean(artikelDto.getbBestellmengeneinheitInvers())) {
+								rowToAddCandidate[getTableColumnInformation()
+										.getViewIndex("bes.nettogesamtpreisminusrabatte2")] = getLocaleFac()
+												.rechneUmInAndereWaehrungZuDatum(artikellieferant.getN_nettopreis(),
+														artikellieferant.getFlrlieferant().getWaehrung_c_nr(),
+														theClientDto.getSMandantenwaehrung(),
+														new Date(System.currentTimeMillis()), theClientDto)
+												.multiply(artikelDto.getNUmrechnungsfaktor());
+							} else {
+								rowToAddCandidate[getTableColumnInformation()
+										.getViewIndex("bes.nettogesamtpreisminusrabatte2")] = getLocaleFac()
+												.rechneUmInAndereWaehrungZuDatum(artikellieferant.getN_nettopreis(),
+														artikellieferant.getFlrlieferant().getWaehrung_c_nr(),
+														theClientDto.getSMandantenwaehrung(),
+														new Date(System.currentTimeMillis()), theClientDto)
+												.divide(artikelDto.getNUmrechnungsfaktor(), 4,
+														BigDecimal.ROUND_HALF_EVEN);
+							}
+
 						}
-						
-						
-					} else {
-						rows[row][col++] = new BigDecimal(0);
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("whg2")] = theClientDto
+								.getSMandantenwaehrung();
+						rowToAddCandidate[getTableColumnInformation().getViewIndex("eht2")] = artikelDto
+								.getEinheitCNrBestellung().trim();
 					}
-					rows[row][col++] =theClientDto.getSMandantenwaehrung();
-					rows[row][col++] = artikelDto.getEinheitCNrBestellung()
-							.trim();
 				} else {
-					rows[row][col++] = null;
-					rows[row][col++] = null;
-					rows[row][col++] = null;
+
+					if (artikellieferant.getN_nettopreis() != null) {
+
+						BigDecimal bdNettopreis = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+								artikellieferant.getN_nettopreis(),
+								artikellieferant.getFlrlieferant().getWaehrung_c_nr(),
+								theClientDto.getSMandantenwaehrung(), new Date(System.currentTimeMillis()),
+								theClientDto);
+
+						BigDecimal zus = getMaterialFac().getMaterialzuschlagEKInZielwaehrung(
+								artikellieferant.getArtikel_i_id(), artikellieferant.getLieferant_i_id(),
+								new java.sql.Date(artikellieferant.getT_preisgueltigab().getTime()),
+								theClientDto.getSMandantenwaehrung(), theClientDto);
+						if (zus != null) {
+							bdNettopreis = bdNettopreis.add(zus);
+						}
+
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("artikel.lieferant.preismitmatzusschlag")] = bdNettopreis;
+
+					}
+
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("whg2")] = theClientDto
+							.getSMandantenwaehrung();
 				}
-				rows[row][col++] =artikellieferant.getT_preisgueltigab();
+
+				rowToAddCandidate[getTableColumnInformation().getViewIndex("lp.gueltig_ab")] = artikellieferant
+						.getT_preisgueltigab();
+
+				if (artikellieferant.getFlrgebinde() != null) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("artikel.gebinde")] = artikellieferant
+							.getFlrgebinde().getC_bez();
+				}
+
+				// PJ20771
+				if (Helper.short2Boolean(artikellieferant.getB_nicht_lieferbar())) {
+					rowToAddCandidate[getTableColumnInformation().getViewIndex("Color")] = Color.RED;
+				}
+
+				rows[row] = rowToAddCandidate;
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -222,8 +270,7 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -242,8 +289,8 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -254,26 +301,29 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
-			boolean filterAdded = false;
 
 			for (int i = 0; i < filterKriterien.length; i++) {
 				if (filterKriterien[i].isKrit) {
-					if (filterAdded) {
-						where.append(" " + booleanOperator);
-					}
-					filterAdded = true;
-					where.append(" artikellieferant."
-							+ filterKriterien[i].kritName);
+
+					where.append(" " + booleanOperator);
+
+					where.append(" artikellieferant." + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
 			}
-			if (filterAdded) {
-				where.insert(0, " WHERE");
-			}
+
+			String benutzername = theClientDto.getBenutzername().trim().substring(0,
+					theClientDto.getBenutzername().indexOf("|"));
+
+			where.insert(0,
+					" WHERE artikellieferant.flrlieferant.mandant_c_nr IN (SELECT bs.flrmandant.c_nr FROM FLRBenutzermandantsystemrolle bs WHERE bs.flrbenutzer.c_benutzerkennung='"
+							+ benutzername
+							+ "' AND bs.flrsystemrolle.i_id IN ( SELECT rore.flrsystemrolle.i_id FROM FLRRollerecht rore WHERE rore.flrrecht.c_nr='"
+							+ RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF + "' ) ) ");
+
 		}
 
 		return where.toString();
@@ -292,15 +342,13 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("artikellieferant."
-									+ kriterien[i].kritName);
+							orderBy.append("artikellieferant." + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -311,12 +359,10 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("artikellieferant."
-						+ ArtikelFac.FLR_ARTIKELLIEFERANT_I_SORT+" ASC ");
+				orderBy.append("artikellieferant." + ArtikelFac.FLR_ARTIKELLIEFERANT_I_SORT + " ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("artikellieferant."
-					+ ArtikelFac.FLR_ARTIKELLIEFERANT_I_SORT) < 0) {
+			if (orderBy.indexOf("artikellieferant." + ArtikelFac.FLR_ARTIKELLIEFERANT_I_SORT) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -325,8 +371,7 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" artikellieferant."
-						+ ArtikelFac.FLR_ARTIKELLIEFERANT_I_SORT + " ");
+				orderBy.append(" artikellieferant." + ArtikelFac.FLR_ARTIKELLIEFERANT_I_SORT + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -345,11 +390,11 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 		return "from FLRArtikellieferant artikellieferant "
 				+ " left join artikellieferant.flrlieferant.flrpartner.flrlandplzort as flrlandplzort "
 				+ " left join artikellieferant.flrlieferant.flrpartner.flrlandplzort.flrort as flrort "
-				+ " left join artikellieferant.flrlieferant.flrpartner.flrlandplzort.flrland as flrland ";
+				+ " left join artikellieferant.flrlieferant.flrpartner.flrlandplzort.flrland as flrland "
+				+ " left join artikellieferant.flrgebinde as gebinde ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -402,188 +447,104 @@ public class ArtikellieferantHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
+		int iNachkommastellenPreis = 2;
 		try {
-			if (super.getTableInfo() == null) {
+			iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisEK(theClientDto.getMandant());
 
-				bZentralerArtikelstamm = getMandantFac()
-						.darfAnwenderAufZusatzfunktionZugreifen(
-								MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
-								theClientDto);
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_MATERIALZUSCHLAG_STATT_NETTOPREIS_BS_MNG_EHT);
+			bMaterialzuschlagAnstattNettopreisBsMngEht = (java.lang.Boolean) parameter.getCWertAsObject();
 
-				int iNachkommastellenPreis = getMandantFac()
-						.getNachkommastellenPreisEK(theClientDto.getMandant());
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
 
-				if (bZentralerArtikelstamm == false) {
-					setTableInfo(new TableInfo(
-							new Class[] {
-									Object.class,
-									String.class,
-									String.class,
-									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-									String.class,
-									String.class,
-									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-									String.class,
-									String.class, java.util.Date.class },
-							new String[] {
-									"PK",
-									getTextRespectUISpr("lp.firma",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.ort",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr(
-											"bes.nettogesamtpreisminusrabatte",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									"",
-									"",
-									getTextRespectUISpr(
-											"bes.nettogesamtpreisminusrabatte",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									"",
-									"",
-									getTextRespectUISpr("lp.gueltig_ab",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()) },
-							new int[] {
-									-1, // diese Spalte wird ausgeblendet
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_L,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_M },
-							new String[] {
-									"i_id",
-									ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT
-											+ "."
-											+ com.lp.server.partner.service.LieferantFac.FLR_PARTNER
-											+ "."
-											+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT
-											+ "."
-											+ LieferantFac.FLR_PARTNER
-											+ "."
-											+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-											+ "."
-											+ com.lp.server.system.service.SystemFac.FLR_LP_FLRLAND
-											+ "."
-											+ com.lp.server.system.service.SystemFac.FLR_LP_LANDLKZ
-											+ ", "
-											+ "artikellieferant."
-											+ ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT
-											+ "."
-											+ LieferantFac.FLR_PARTNER
-											+ "."
-											+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-											+ "."
-											+ com.lp.server.system.service.SystemFac.FLR_LP_LANDPLZORTPLZ,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_N_NETTOPREIS,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_N_NETTOPREIS,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_T_PREISGUELTIGAB
+		columns.add("i_id", Integer.class, "i_id", -1, "i_id");
 
-							}));
-				} else {
-					setTableInfo(new TableInfo(
-							new Class[] {
-									Object.class,
-									String.class,
-									String.class,
-									String.class,
-									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-									String.class,
-									String.class,
-									super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
-									String.class, String.class, java.util.Date.class },
-							new String[] {
-									"PK",
-									getTextRespectUISpr("lp.firma",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.ort",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr("report.mandant",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr(
-											"bes.nettogesamtpreisminusrabatte",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									"",
-									"",
-									getTextRespectUISpr(
-											"bes.nettogesamtpreisminusrabatte",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									"",
-									"",
-									getTextRespectUISpr("lp.gueltig_ab",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()) },
-							new int[] {
-									-1, // diese Spalte wird ausgeblendet
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_L,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_XS,
-									QueryParameters.FLR_BREITE_M },
-							new String[] {
-									"i_id",
-									ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT
-											+ "."
-											+ com.lp.server.partner.service.LieferantFac.FLR_PARTNER
-											+ "."
-											+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT
-											+ "."
-											+ LieferantFac.FLR_PARTNER
-											+ "."
-											+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-											+ "."
-											+ com.lp.server.system.service.SystemFac.FLR_LP_FLRLAND
-											+ "."
-											+ com.lp.server.system.service.SystemFac.FLR_LP_LANDLKZ
-											+ ", "
-											+ "artikellieferant."
-											+ ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT
-											+ "."
-											+ LieferantFac.FLR_PARTNER
-											+ "."
-											+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-											+ "."
-											+ com.lp.server.system.service.SystemFac.FLR_LP_LANDPLZORTPLZ,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT
-											+ ".mandant_c_nr",
-									ArtikelFac.FLR_ARTIKELLIEFERANT_N_NETTOPREIS,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_N_NETTOPREIS,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									ArtikelFac.FLR_ARTIKELLIEFERANT_T_PREISGUELTIGAB
+		columns.add("lp.firma", String.class, getTextRespectUISpr("lp.firma", mandant, locUi),
+				QueryParameters.FLR_BREITE_L + QueryParameters.FLR_BREITE_M,
+				ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT + "." + KundeFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
 
-							}));
-				}
+		columns.add("lp.ort", String.class, getTextRespectUISpr("lp.ort", mandant, locUi), QueryParameters.FLR_BREITE_L,
+				ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT + "." + LieferantFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+						+ com.lp.server.system.service.SystemFac.FLR_LP_FLRLAND + "."
+						+ com.lp.server.system.service.SystemFac.FLR_LP_LANDLKZ + ", " + "artikellieferant."
+						+ ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT + "." + LieferantFac.FLR_PARTNER + "."
+						+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+						+ com.lp.server.system.service.SystemFac.FLR_LP_LANDPLZORTPLZ
 
-			}
-			return super.getTableInfo();
+		);
+		if (bZentralerArtikelstamm) {
+			columns.add("report.mandant", String.class,
+					getTextRespectUISpr("report.mandant", theClientDto.getMandant(), theClientDto.getLocUi()),
+					QueryParameters.FLR_BREITE_XS, ArtikelFac.FLR_ARTIKELLIEFERANT_FLRLIEFERANT + ".mandant_c_nr");
+		}
+
+		columns.add("bes.nettogesamtpreisminusrabatte",
+				super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+				getTextRespectUISpr("bes.nettogesamtpreisminusrabatte", theClientDto.getMandant(),
+						theClientDto.getLocUi()),
+				QueryParameters.FLR_BREITE_M, ArtikelFac.FLR_ARTIKELLIEFERANT_N_NETTOPREIS);
+		columns.add("whg", String.class, "", QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+		columns.add("eht", String.class, "", QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+
+		if (bMaterialzuschlagAnstattNettopreisBsMngEht == false) {
+			columns.add("bes.nettogesamtpreisminusrabatte2",
+					super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("bes.nettogesamtpreisminusrabatte", theClientDto.getMandant(),
+							theClientDto.getLocUi()),
+					QueryParameters.FLR_BREITE_M, ArtikelFac.FLR_ARTIKELLIEFERANT_N_NETTOPREIS);
+			columns.add("whg2", String.class, "", QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+			columns.add("eht2", String.class, "", QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+		} else {
+			columns.add("artikel.lieferant.preismitmatzusschlag",
+					super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("artikel.lieferant.preismitmatzusschlag", theClientDto.getMandant(),
+							theClientDto.getLocUi()),
+					QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+			columns.add("whg2", String.class, "", QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+
+		}
+
+		columns.add("lp.gueltig_ab", java.util.Date.class,
+				getTextRespectUISpr("lp.gueltig_ab", theClientDto.getMandant(), theClientDto.getLocUi()),
+				QueryParameters.FLR_BREITE_M, ArtikelFac.FLR_ARTIKELLIEFERANT_T_PREISGUELTIGAB);
+		columns.add("artikel.gebinde", String.class,
+				getTextRespectUISpr("artikel.gebinde", theClientDto.getMandant(), theClientDto.getLocUi()),
+				QueryParameters.FLR_BREITE_M, "flrgebinde.c_bez");
+
+		columns.add("Color", Color.class, "", 1, "");
+
+		return columns;
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		try {
+
+			bZentralerArtikelstamm = getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto);
+
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_MATERIALZUSCHLAG_STATT_NETTOPREIS_BS_MNG_EHT);
+			bMaterialzuschlagAnstattNettopreisBsMngEht = (java.lang.Boolean) parameter.getCWertAsObject();
+
+			setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+			TableColumnInformation c = getTableColumnInformation();
+			info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames());
+			setTableInfo(info);
+			return info;
+
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 			return null;

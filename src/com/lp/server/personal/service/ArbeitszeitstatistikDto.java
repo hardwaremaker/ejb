@@ -32,6 +32,9 @@
  ******************************************************************************/
 package com.lp.server.personal.service;
 
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+
 import com.lp.server.auftrag.service.AuftragzeitenDto;
 
 public class ArbeitszeitstatistikDto {
@@ -47,7 +50,113 @@ public class ArbeitszeitstatistikDto {
 	private String sFertigungsgruppe;
 	private String sVertreter;
 	private String sBelegbezeichnung;
+	private String sKundenbestellnummer;
+	private String sProjektStatus = null;
+	private String sPersonalKurzzeichen = null;
+	public String getSPersonalKurzzeichen() {
+		return sPersonalKurzzeichen;
+	}
+
+	public void setSPersonalKurzzeichen(String sPersonalKurzzeichen) {
+		this.sPersonalKurzzeichen = sPersonalKurzzeichen;
+	}
+
+	private BigDecimal bdBereitsverrechnet = null;
 	
+	public BigDecimal getBdBereitsverrechnet() {
+		return bdBereitsverrechnet;
+	}
+
+	public void setBdBereitsverrechnet(BigDecimal bdBereitsverrechnet) {
+		this.bdBereitsverrechnet = bdBereitsverrechnet;
+	}
+
+	private BigDecimal bdProjektGesamtdauer = null;
+	
+	
+	private String sProjektTyp = null;
+	public String getSProjektTyp() {
+		return sProjektTyp;
+	}
+
+	public void setSProjektTyp(String sProjektTyp) {
+		this.sProjektTyp = sProjektTyp;
+	}
+
+	public Integer getSProjektVerrechenbar() {
+		return sProjektVerrechenbar;
+	}
+
+	public void setsProjektVerrechenbar(Integer sProjektVerrechenbar) {
+		this.sProjektVerrechenbar = sProjektVerrechenbar;
+	}
+
+	public Timestamp getTProjektInternErledigt() {
+		return tProjektInternErledigt;
+	}
+
+	public void setTProjektInternErledigt(Timestamp tProjektInternErledigt) {
+		this.tProjektInternErledigt = tProjektInternErledigt;
+	}
+
+	private Integer  sProjektVerrechenbar = null;
+	private Timestamp  tProjektInternErledigt = null;
+	
+	public BigDecimal getBdProjektGesamtdauer() {
+		return bdProjektGesamtdauer;
+	}
+
+	public void setBdProjektGesamtdauer(BigDecimal bdProjektGesamtdauer) {
+		this.bdProjektGesamtdauer = bdProjektGesamtdauer;
+	}
+
+	public String getSProjektStatus() {
+		return sProjektStatus;
+	}
+
+	public void setSProjektStatus(String sProjektStatus) {
+		this.sProjektStatus = sProjektStatus;
+	}
+
+	public String getSProjektKategorie() {
+		return sProjektKategorie;
+	}
+
+	public void setSProjektKategorie(String sProjektKategorie) {
+		this.sProjektKategorie = sProjektKategorie;
+	}
+
+	private Integer iProjektIId=null;
+	
+	public Integer getIProjektIId() {
+		return iProjektIId;
+	}
+
+	public void setIProjektIId(Integer iProjektIId) {
+		this.iProjektIId = iProjektIId;
+	}
+
+	public String getSProjektBereich() {
+		return sProjektBereich;
+	}
+
+	public void setSProjektBereich(String sProjektBereich) {
+		this.sProjektBereich = sProjektBereich;
+	}
+
+	private String sProjektBereich = null;
+	
+	private String sProjektKategorie = null;
+	
+	
+	public String getSKundenbestellnummer() {
+		return sKundenbestellnummer;
+	}
+
+	public void setSKundenbestellnummer(String sKundenbestellnummer) {
+		this.sKundenbestellnummer = sKundenbestellnummer;
+	}
+
 	public String getSVertreter() {
 		return sVertreter;
 	}

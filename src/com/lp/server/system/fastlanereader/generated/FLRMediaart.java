@@ -49,10 +49,10 @@ public class FLRMediaart implements Serializable {
 	private String c_nr;
 
 	/** persistent field */
-	private Set<?> mediaart_mediaartspr_set;
+	private Set<FLRMediaartspr> mediaart_mediaartspr_set;
 
 	/** full constructor */
-	public FLRMediaart(Set<?> mediaart_mediaartspr_set) {
+	public FLRMediaart(Set<FLRMediaartspr> mediaart_mediaartspr_set) {
 		this.mediaart_mediaartspr_set = mediaart_mediaartspr_set;
 	}
 
@@ -68,11 +68,11 @@ public class FLRMediaart implements Serializable {
 		this.c_nr = c_nr;
 	}
 
-	public Set<?> getMediaart_mediaartspr_set() {
+	public Set<FLRMediaartspr> getMediaart_mediaartspr_set() {
 		return this.mediaart_mediaartspr_set;
 	}
 
-	public void setMediaart_mediaartspr_set(Set<?> mediaart_mediaartspr_set) {
+	public void setMediaart_mediaartspr_set(Set<FLRMediaartspr> mediaart_mediaartspr_set) {
 		this.mediaart_mediaartspr_set = mediaart_mediaartspr_set;
 	}
 

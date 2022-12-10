@@ -32,7 +32,6 @@
  ******************************************************************************/
 package com.lp.server.kueche.ejbfac;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
@@ -40,6 +39,7 @@ import java.io.FileWriter;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -59,7 +59,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
 import org.hibernate.Session;
-import org.jboss.annotation.ejb.TransactionTimeout;
 
 import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.artikel.ejb.Einkaufsean;
@@ -68,7 +67,6 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.ArtikelreservierungDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
-import com.lp.server.artikel.service.VkPreisfindungEinzelverkaufspreisDto;
 import com.lp.server.artikel.service.VkPreisfindungPreislisteDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.fertigung.service.LosistmaterialDto;
@@ -597,7 +595,7 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 
 							BigDecimal benoetigteMenge = Helper
 									.rundeKaufmaennisch(position
-											.getNZielmenge().multiply(nMenge),
+											.getNZielmenge(nMenge),
 											4);
 							if (benoetigteMenge.doubleValue() > lagerstand
 									.doubleValue()) {
@@ -746,12 +744,16 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 							KundeDto kundeDto = getKundeFac()
 									.kundeFindByPrimaryKeyOhneExc(
 											flrKunde.getI_id(), theClientDto);
-
+/*
 							MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
 									.mwstsatzFindByMwstsatzbezIIdAktuellster(
 											kundeDto.getMwstsatzbezIId(),
 											theClientDto);
-
+*/
+							// TODO: Timestamp sollte fuer den ganzen Import gleich sein! (ghp, 12.06.2020)
+							MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
+									.mwstsatzZuDatumValidate(kundeDto.getMwstsatzbezIId(),
+											getTimestamp(), theClientDto);
 							if (abbuchungslagerIId == null) {
 								abbuchungslagerIId = flrKunde
 										.getLager_i_id_abbuchungslager();
@@ -930,16 +932,23 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 									alQueue.add(zeile);
 									continue;
 								} else {
+/*									
 									MwstsatzDto mwstsatzAktuell = getMandantFac()
 											.mwstsatzFindByMwstsatzbezIIdAktuellster(
 													artikel.getMwstsatzIId(),
 													theClientDto);
-
+*/
+									Timestamp ts = Helper.cutTimestamp(getTimestamp());
+									MwstsatzDto mwstsatzAktuell = getMandantFac()
+											.mwstsatzFindZuDatum(artikel.getMwstsatzIId(), ts);
+							
+// TODO SP8308 Da gehoert doch sicher mwstsatzAktuell (und nicht mwstsatzDtoAktuell) hin?! (ghp, 12.06.2020)									
 									mwstBetrag = preis.multiply(new BigDecimal(
 											mwstsatzDtoAktuell.getFMwstsatz())
 											.movePointLeft(2));
 
 									if (mwstsatzAktuell != null) {
+// TODO SP8308 weil jetzt Steuersatz und ID nicht mehr uebereinstimmen (muessen)! (ghp, 12.06.2020)										
 										lieferscheinposDto
 												.setMwstsatzIId(mwstsatzAktuell
 														.getIId());
@@ -1406,10 +1415,15 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 							// Ausser der Kunde hat MWST-Satz mit 0%, dann muss
 							// dieser
 							// verwendet werden
+/*							
 							MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
 									.mwstsatzFindByMwstsatzbezIIdAktuellster(
 											kundeDto.getMwstsatzbezIId(),
 											theClientDto);
+*/
+							Timestamp belegDatum = Helper.cutTimestamp(getTimestamp());
+							MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
+									.mwstsatzZuDatumValidate(kundeDto.getMwstsatzbezIId(), belegDatum, theClientDto);
 
 							if (mwstsatzDtoAktuell.getFMwstsatz().doubleValue() == 0) {
 								lieferscheinposDto
@@ -1427,11 +1441,20 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 									alQueue.add(zeile);
 									continue;
 								} else {
+/*									
 									MwstsatzDto mwstsatzAktuell = getMandantFac()
 											.mwstsatzFindByMwstsatzbezIIdAktuellster(
 													artikelDto
 															.getMwstsatzbezIId(),
 													theClientDto);
+*/
+									MwstsatzDto mwstsatzAktuell = getMandantFac()
+											.mwstsatzZuDatumValidate(artikelDto.getMwstsatzbezIId(), belegDatum, theClientDto);
+									lieferscheinposDto.setMwstsatzIId(mwstsatzAktuell.getIId());
+/*
+ * TODO SP8308 "Fehler" und dann still schlucken?
+ * Habs jetzt mal auf mwstsatzZuDatumValidate abgeaendert. (ghp, 12.06.2020)
+ 									
 									if (mwstsatzAktuell != null) {
 										lieferscheinposDto
 												.setMwstsatzIId(mwstsatzAktuell
@@ -1439,6 +1462,7 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 									} else {
 										// fehler
 									}
+ */
 								}
 							}
 
@@ -1448,6 +1472,9 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 												lieferscheinposDto, true,
 												theClientDto);
 							} catch (EJBExceptionLP e) {
+								
+								
+								
 								if (e.getCode() == EJBExceptionLP.FEHLER_ZUWENIG_AUF_LAGER) {
 									protokollDto
 											.setCText("'Zuwenig auf Lager' f\u00FCr  Artikelnummer "
@@ -1459,6 +1486,8 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 											theClientDto);
 									alQueue.add(zeile);
 									continue;
+								}else {
+									myLogger.error("UNBEKANNTER FEHLER",e);
 								}
 							}
 							protokollDto.setCArt(SystemFac.PROTOKOLL_ART_INFO);
@@ -1977,8 +2006,8 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 
 						BigDecimal menge =Helper
 								.rundeKaufmaennisch( strukt.getStuecklistepositionDto()
-								.getNZielmenge()
-								.multiply(speiseplanDto.getNMenge()),4);
+								.getNZielmenge(speiseplanDto.getNMenge())
+								,4);
 
 						if (menge.doubleValue() > 0) {
 
@@ -2049,7 +2078,7 @@ public class KuecheFacBean extends Facade implements KuecheFac {
 		return (SpeiseplanDto[]) list.toArray(returnArray);
 	}
 
-	@TransactionTimeout(1000)
+	@org.jboss.ejb3.annotation.TransactionTimeout(1000)
 	public int stiftdatenImportieren(Kdc100logDto[] kdc100logDtoI,
 			Integer lagerIId_Ziel, TheClientDto theClientDto) {
 

@@ -53,6 +53,7 @@ import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinpositi
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
+import com.lp.server.partner.service.HelperFuerPartnerGoto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.personal.service.PersonalDto;
@@ -60,6 +61,7 @@ import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
+import com.lp.server.system.fastlanereader.generated.FLRMandant;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
@@ -111,19 +113,14 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 		if (tableInfo == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			tableInfo = new TableInfo(new Class[] { Object.class, String.class,
-					String.class, },
-			// die Spaltenueberschriften werden durch die Kriterien
-			// bestimmt
-					new String[] {
-							" ",
-							getTextRespectUISpr("report.mandant", mandantCNr, locUI),
+			tableInfo = new TableInfo(new Class[] { Object.class, String.class, String.class, },
+					// die Spaltenueberschriften werden durch die Kriterien
+					// bestimmt
+					new String[] { " ", getTextRespectUISpr("report.mandant", mandantCNr, locUI),
 							getTextRespectUISpr("lp.art", mandantCNr, locUI), },
 					// die Breite der Spalten festlegen
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, }, // hidden
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_SHARE_WITH_REST, }, // hidden
 					new String[] { "", "", "", });
 		}
 
@@ -131,14 +128,12 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 	}
 
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
 	 * 
-	 * @param rowIndex
-	 *            Zeilenindex
+	 * @param rowIndex Zeilenindex
 	 * @return QueryResult Ergebnis
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -156,8 +151,7 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 			for (int row = 0; row < getAnzahlZeilen(); row++) {
 				rows[row] = hmDaten.get(row);
 			}
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0);
+			result = new QueryResult(rows, getRowCount(), startIndex, endIndex, 0);
 		} catch (Throwable t) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
 		}
@@ -177,8 +171,7 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 				throw (EJBExceptionLP) t.getCause();
 			} else {
 
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-						new Exception(t));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, new Exception(t));
 			}
 		}
 		return getAnzahlZeilen();
@@ -193,18 +186,11 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 
 		Integer partnerIId = new Integer(aFilterKriterium[0].value);
 
-	
-
-		int iLfd = 0;
-
-	
-
 		// Kunden
 
 		Session session = FLRSessionFactory.getFactory().openSession();
-		Query query = session
-				.createQuery("SELECT kd FROM FLRKunde kd WHERE kd.flrpartner.i_id="
-						+ partnerIId + " ORDER BY kd.mandant_c_nr");
+		Query query = session.createQuery(
+				"SELECT kd FROM FLRKunde kd WHERE kd.flrpartner.i_id=" + partnerIId + " ORDER BY kd.mandant_c_nr");
 
 		List<?> resultList = query.list();
 		Iterator<?> resultListIterator = resultList.iterator();
@@ -214,14 +200,11 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 
 			Object[] zeile = new Object[ANZAHL_SPALTEN];
 
-			zeile[0] = iLfd;
+			zeile[0] = new HelperFuerPartnerGoto(kd.getI_id(), HelperFuerPartnerGoto.KUNDE,kd.getMandant_c_nr());
 			zeile[SPALTE_MANDANT] = kd.getMandant_c_nr();
-			zeile[SPALTE_ART] = getTextRespectUISpr("lp.kunde",
-					theClientDto.getMandant(), theClientDto.getLocUi());
+			zeile[SPALTE_ART] = getTextRespectUISpr("lp.kunde", theClientDto.getMandant(), theClientDto.getLocUi());
 
 			hmDaten.add(zeile);
-
-			iLfd++;
 
 		}
 
@@ -230,9 +213,8 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 		// Lieferanten
 
 		session = FLRSessionFactory.getFactory().openSession();
-		query = session
-				.createQuery("SELECT lf FROM FLRLieferant lf WHERE lf.flrpartner.i_id="
-						+ partnerIId + " ORDER BY lf.mandant_c_nr");
+		query = session.createQuery(
+				"SELECT lf FROM FLRLieferant lf WHERE lf.flrpartner.i_id=" + partnerIId + " ORDER BY lf.mandant_c_nr");
 
 		resultList = query.list();
 		resultListIterator = resultList.iterator();
@@ -242,48 +224,60 @@ public class PartnerReferenzHandler extends UseCaseHandlerTabelle {
 
 			Object[] zeile = new Object[ANZAHL_SPALTEN];
 
-			zeile[0] = iLfd;
+			zeile[0] = new HelperFuerPartnerGoto(lf.getI_id(), HelperFuerPartnerGoto.LIEFERANT,lf.getMandant_c_nr());
 			zeile[SPALTE_MANDANT] = lf.getMandant_c_nr();
-			zeile[SPALTE_ART] = getTextRespectUISpr("lp.lieferant",
-					theClientDto.getMandant(), theClientDto.getLocUi());
+			zeile[SPALTE_ART] = getTextRespectUISpr("lp.lieferant", theClientDto.getMandant(), theClientDto.getLocUi());
 
 			hmDaten.add(zeile);
-
-			iLfd++;
 
 		}
 
 		session.close();
-		
-		
+
 		// Personal
 
-				session = FLRSessionFactory.getFactory().openSession();
-				query = session
-						.createQuery("SELECT p FROM FLRPersonal p WHERE p.flrpartner.i_id="
-								+ partnerIId + " ORDER BY p.mandant_c_nr");
+		session = FLRSessionFactory.getFactory().openSession();
+		query = session.createQuery(
+				"SELECT p FROM FLRPersonal p WHERE p.flrpartner.i_id=" + partnerIId + " ORDER BY p.mandant_c_nr");
 
-				resultList = query.list();
-				resultListIterator = resultList.iterator();
-				while (resultListIterator.hasNext()) {
+		resultList = query.list();
+		resultListIterator = resultList.iterator();
+		while (resultListIterator.hasNext()) {
 
 			FLRPersonal p = (FLRPersonal) resultListIterator.next();
 
-					Object[] zeile = new Object[ANZAHL_SPALTEN];
+			Object[] zeile = new Object[ANZAHL_SPALTEN];
 
-					zeile[0] = iLfd;
-					zeile[SPALTE_MANDANT] = p.getMandant_c_nr();
-					zeile[SPALTE_ART] = getTextRespectUISpr("lp.personal",
-							theClientDto.getMandant(), theClientDto.getLocUi());
+			zeile[0] = new HelperFuerPartnerGoto(p.getI_id(), HelperFuerPartnerGoto.PERSONAL, p.getMandant_c_nr());
+			zeile[SPALTE_MANDANT] = p.getMandant_c_nr();
+			zeile[SPALTE_ART] = getTextRespectUISpr("lp.personal", theClientDto.getMandant(), theClientDto.getLocUi());
 
-					hmDaten.add(zeile);
+			hmDaten.add(zeile);
 
-					iLfd++;
+		}
 
-				}
+		//Mandant
+		session = FLRSessionFactory.getFactory().openSession();
+		query = session.createQuery(
+				"SELECT p FROM FLRMandant p WHERE p.partner_i_id=" + partnerIId + " ORDER BY p.c_nr");
 
-				session.close();
+		resultList = query.list();
+		resultListIterator = resultList.iterator();
+		while (resultListIterator.hasNext()) {
+
+			FLRMandant p = (FLRMandant) resultListIterator.next();
+
+			Object[] zeile = new Object[ANZAHL_SPALTEN];
+
+			zeile[0] = new HelperFuerPartnerGoto(p.getPartner_i_id(), HelperFuerPartnerGoto.MANDANT, p.getC_nr());
+			zeile[SPALTE_MANDANT] = p.getC_nr();
+			zeile[SPALTE_ART] = getTextRespectUISpr("report.mandant", theClientDto.getMandant(), theClientDto.getLocUi());
+
+			hmDaten.add(zeile);
+
+		}
 		
+		session.close();
 
 		int iAnzahlZeilen = hmDaten.size();
 

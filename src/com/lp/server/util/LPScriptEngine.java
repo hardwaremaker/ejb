@@ -53,17 +53,22 @@ public abstract class LPScriptEngine extends ScriptEngine {
 
 	private SystemFac systemFac ;
 	private TheClientDto theClientDto ;
-
+	
+	private boolean optionalScript ;
+	private boolean processed ;
+	
 	public LPScriptEngine(SystemFac systemFac, TheClientDto theClientDto) {
 		this.systemFac = systemFac ;
 		this.theClientDto = theClientDto ;
 	}
 
 	public <T> T runEmbeddedLPScript(String scriptName) throws Throwable {
+		setProcessed(false) ;
 		T value = null ;
 		String fileContent = getFileContent(scriptName) ;
 		if(fileContent != null) {
 			value = (T) getEngine().runScriptlet(fileContent) ;
+			setProcessed(true) ;
 		}
 
 		return value ;
@@ -74,6 +79,45 @@ public abstract class LPScriptEngine extends ScriptEngine {
 	}
 
 	private String getFileContent(String filename) throws Throwable {
-		return systemFac.getScriptContentFromLPDir(getModule(), filename, theClientDto.getMandant(), theClientDto.getLocUi(), null) ;
+		return isOptionalScript() 
+				? systemFac.getOptionalScriptContentFromLPDir(getModule(), filename, theClientDto.getMandant(), theClientDto.getLocUi(), null)
+				: systemFac.getScriptContentFromLPDir(getModule(), filename, theClientDto.getMandant(), theClientDto.getLocUi(), null) ;
+	}
+
+	/**
+	 * Handelt es sich um ein optionales Script?
+	 * Ein optionales Script wirft wenn es nicht gefunden wird keine EJBException
+	 * 
+	 * @return true wenn es sich um ein optionales Script handelt
+	 */
+	public boolean isOptionalScript() {
+		return optionalScript;
+	}
+
+	public void beOptionalScript() {
+		setOptionalScript(true);
+	}
+	
+	public void beMandatoryScript() {
+		setOptionalScript(false);
+	}
+	
+	public void setOptionalScript(boolean optionalScript) {
+		this.optionalScript = optionalScript;
+	}
+
+	/**
+	 * Konnte das Script erfolgreich aufgerufen werden</br>
+	 * <p>Ist in F&auml;llen interessant, wenn im Script mehrere 
+	 * Methoden aufgerufen werden</p> 
+	 * @return true wenn das Script erfolgreich aufgerufen werden konnte. 
+	 * False wenn zum Beispiel kein Script gefunden worden ist
+	 */
+	public boolean isProcessed() {
+		return processed;
+	}
+
+	protected void setProcessed(boolean processed) {
+		this.processed = processed;
 	}
 }

@@ -58,11 +58,11 @@ public class FLRBelegart implements Serializable {
 	private Integer i_standarderledigungszeitintagen;
 
 	/** persistent field */
-	private Set<?> belegart_belegart_set;
+	private Set<FLRBelegartspr> belegart_belegart_set;
 
 	/** full constructor */
 	public FLRBelegart(Integer i_sort, String c_kbez,
-			Integer i_standarderledigungszeitintagen, Set<?> belegart_belegart_set) {
+			Integer i_standarderledigungszeitintagen, Set<FLRBelegartspr> belegart_belegart_set) {
 		this.i_sort = i_sort;
 		this.c_kbez = c_kbez;
 		this.i_standarderledigungszeitintagen = i_standarderledigungszeitintagen;
@@ -106,11 +106,11 @@ public class FLRBelegart implements Serializable {
 		this.i_standarderledigungszeitintagen = i_standarderledigungszeitintagen;
 	}
 
-	public Set<?> getBelegart_belegart_set() {
+	public Set<FLRBelegartspr> getBelegart_belegart_set() {
 		return this.belegart_belegart_set;
 	}
 
-	public void setBelegart_belegart_set(Set<?> belegart_belegart_set) {
+	public void setBelegart_belegart_set(Set<FLRBelegartspr> belegart_belegart_set) {
 		this.belegart_belegart_set = belegart_belegart_set;
 	}
 

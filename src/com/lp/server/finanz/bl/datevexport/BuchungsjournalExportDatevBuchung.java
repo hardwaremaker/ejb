@@ -47,6 +47,9 @@ public class BuchungsjournalExportDatevBuchung {
 	private String buchungstext;
 	private String uid;
 	private BigDecimal euSteuersatz;
+	private String belegInfo1;
+	private String belegInfo2;
+	
 	public BigDecimal getUmsatz() {
 		return umsatz;
 	}
@@ -107,6 +110,17 @@ public class BuchungsjournalExportDatevBuchung {
 	public void setEuSteuersatz(BigDecimal euSteuersatz) {
 		this.euSteuersatz = euSteuersatz;
 	}
-	
+	public String getBelegInfo1() {
+		return belegInfo1;
+	}
+	public void setBelegInfo1(String belegInfo1) {
+		this.belegInfo1 = belegInfo1;
+	}
+	public String getBelegInfo2() {
+		return belegInfo2;
+	}
+	public void setBelegInfo2(String belegInfo2) {
+		this.belegInfo2 = belegInfo2;
+	}
 	
 }

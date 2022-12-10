@@ -39,6 +39,8 @@ import javax.persistence.Embeddable;
 
 @Embeddable
 public class KontolaenderartPK implements Serializable {
+	private static final long serialVersionUID = -803818289261284555L;
+
 	@Column(name = "KONTO_I_ID", insertable = false, updatable = false)
 	private Integer kontoIId;
 
@@ -50,17 +52,20 @@ public class KontolaenderartPK implements Serializable {
 	
 	@Column(name = "MANDANT_C_NR", insertable = false, updatable = false)
 	private String mandantCNr;
+
+	@Column(name = "REVERSECHARGEART_I_ID", insertable = false, updatable = false)
+	private Integer reversechargeartId ;
 	
-	private static final long serialVersionUID = 1L;
 
 	public KontolaenderartPK() {
 	}
 	
-	public KontolaenderartPK(Integer kontoIId, String laenderartCNr, Integer finanzamtIId, String mandantCNr) {
+	public KontolaenderartPK(Integer kontoIId, String laenderartCNr, Integer finanzamtIId, String mandantCNr, Integer reversechargeartId) {
 		this.kontoIId = kontoIId;
 		this.laenderartCNr = laenderartCNr;
 		this.finanzamtIId = finanzamtIId;
 		this.mandantCNr = mandantCNr;
+		this.reversechargeartId = reversechargeartId ;
 	}
 	
 	public Integer getKontoIId() {
@@ -95,6 +100,15 @@ public class KontolaenderartPK implements Serializable {
 		return mandantCNr;
 	}
 
+	
+	public Integer getReversechargeartId() {
+		return reversechargeartId ;
+	}
+	
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId ;
+	}
+	
 	@Override
 	public boolean equals(Object o) {
 		if (o == this) {
@@ -107,7 +121,8 @@ public class KontolaenderartPK implements Serializable {
 		return this.kontoIId.equals(other.kontoIId)
 				&& this.laenderartCNr.equals(other.laenderartCNr)
 				&& this.finanzamtIId.equals(other.finanzamtIId)
-				&& this.mandantCNr.equals(other.mandantCNr);
+				&& this.mandantCNr.equals(other.mandantCNr)
+				&& this.reversechargeartId.equals(other.reversechargeartId);
 	}
 
 	@Override
@@ -118,6 +133,7 @@ public class KontolaenderartPK implements Serializable {
 		hash = hash * prime + this.laenderartCNr.hashCode();
 		hash = hash * prime + this.finanzamtIId.hashCode();
 		hash = hash * prime + this.mandantCNr.hashCode();
+		hash = hash * prime + this.reversechargeartId.hashCode() ;
 		return hash;
 	}
 

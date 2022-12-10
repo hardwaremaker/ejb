@@ -42,13 +42,15 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+import com.lp.server.system.service.ITablenames;
+
+@NamedQueries({
 		@NamedQuery(name = "InventurfindByTInventurdatumMandantCNr", query = "SELECT OBJECT (o) FROM Inventur o WHERE o.tInventurdatum=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "InventurfindDurchgefuehrteInventurenEinesZeitraums", query = "SELECT OBJECT (o) FROM Inventur o WHERE o.tInventurdatum>=?1 AND  o.tInventurdatum<?2 AND o.bInventurdurchgefuehrt=1 AND o.mandantCNr=?3 ORDER BY o.tInventurdatum ASC"),
 		@NamedQuery(name = "InventurfindInventurenNachDatum", query = "SELECT OBJECT (o) FROM Inventur o WHERE o.tInventurdatum > ?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = InventurQuery.ByMandantCNrOffeneInventuren, query="SELECT OBJECT (o) from Inventur o WHERE o.mandantCNr=:mandant AND o.bInventurdurchgefuehrt=0")})
+		@NamedQuery(name = InventurQuery.ByMandantCNrOffeneInventuren, query = "SELECT OBJECT (o) from Inventur o WHERE o.mandantCNr=:mandant AND o.bInventurdurchgefuehrt=0") })
 @Entity
-@Table(name = "WW_INVENTUR")
+@Table(name = ITablenames.WW_INVENTUR)
 public class Inventur implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -90,8 +92,21 @@ public class Inventur implements Serializable {
 	@Column(name = "LAGER_I_ID")
 	private Integer lagerIId;
 
+	@Column(name = "B_NICHTINVENTIERTE_SNRCHNR_ARTIKELABBUCHEN")
+	private Short bNichtinventierteSnrchnrArtikelabbuchen;
+
+	public Short getBNichtinventierteSnrchnrArtikelabbuchen() {
+		return bNichtinventierteSnrchnrArtikelabbuchen;
+	}
+
+	public void setBNichtinventierteSnrchnrArtikelabbuchen(
+			Short bNichtinventierteSnrchnrArtikelabbuchen) {
+		this.bNichtinventierteSnrchnrArtikelabbuchen = bNichtinventierteSnrchnrArtikelabbuchen;
+	}
+
 	@Column(name = "B_NICHTINVENTIERTEARTIKELABBUCHEN")
 	private Short bNichtinventierteartikelabbuchen;
+
 	public Short getBNichtinventierteartikelabbuchen() {
 		return bNichtinventierteartikelabbuchen;
 	}
@@ -107,13 +122,11 @@ public class Inventur implements Serializable {
 		super();
 	}
 
-	public Inventur(Integer id,
-			Timestamp inventurdatum, 
-			Short inventurdurchgefuehrt,
-			Short abwertungdurchgefuehrt,
-			String bez,
-			Integer personalIIdAendern2,
-			String mandantCNr2, Short bNichtinventierteartikelabbuchen) {
+	public Inventur(Integer id, Timestamp inventurdatum,
+			Short inventurdurchgefuehrt, Short abwertungdurchgefuehrt,
+			String bez, Integer personalIIdAendern2, String mandantCNr2,
+			Short bNichtinventierteartikelabbuchen,
+			Short bNichtinventierteSnrchnrArtikelabbuchen) {
 		setIId(id);
 		setTInventurdatum(inventurdatum);
 		setCBez(bez);
@@ -123,6 +136,7 @@ public class Inventur implements Serializable {
 		setBInventurdurchgefuehrt(inventurdurchgefuehrt);
 		setBAbwertungdurchgefuehrt(abwertungdurchgefuehrt);
 		setBNichtinventierteartikelabbuchen(bNichtinventierteartikelabbuchen);
+		setBNichtinventierteSnrchnrArtikelabbuchen(bNichtinventierteSnrchnrArtikelabbuchen);
 
 	}
 

@@ -41,10 +41,12 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICBez;
+
 @NamedQueries( { @NamedQuery(name = "BeruffindByCBez", query = "SELECT OBJECT(C) FROM Beruf c WHERE c.cBez = ?1") })
 @Entity
 @Table(name = "PERS_BERUF")
-public class Beruf implements Serializable {
+public class Beruf implements Serializable, ICBez {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;

@@ -41,10 +41,12 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICNr;
+
 @NamedQueries( { @NamedQuery(name = "ReligionfindByCNr", query = "SELECT OBJECT(o) FROM Religion o WHERE o.cNr = ?1") })
 @Entity
 @Table(name = "PERS_RELIGION")
-public class Religion implements Serializable {
+public class Religion implements Serializable , ICNr{
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;

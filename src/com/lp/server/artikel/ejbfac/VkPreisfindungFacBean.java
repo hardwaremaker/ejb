@@ -52,6 +52,7 @@ import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
+import javax.persistence.NamedQuery;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
@@ -60,7 +61,6 @@ import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.jboss.annotation.ejb.TransactionTimeout;
 
 import com.lp.server.artikel.ejb.VkPreisfindungEinzelverkaufspreis;
 import com.lp.server.artikel.ejb.VkPreisfindungPreisliste;
@@ -109,13 +109,11 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Neu anlegen einer Preisliste.
 	 * 
-	 * @param vkPreisfindungPreislisteDto
-	 *            VkPreisfindungPreislisteDto
+	 * @param vkPreisfindungPreislisteDto VkPreisfindungPreislisteDto
 	 * @throws EJBExceptionLP
 	 * @return Integer pk der preisliste
 	 */
-	public Integer createVkPreisfindungPreisliste(
-			VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto,
+	public Integer createVkPreisfindungPreisliste(VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		checkPreislistePreconditions(vkPreisfindungPreislisteDto);
@@ -125,11 +123,9 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		try {
 			Query query = em
 					.createNamedQuery("VkPreisfindungPreislistefindByVkpfartikelpreislisteIIdArtikelIIdPreisgueltigab");
-			query.setParameter(1,
-					vkPreisfindungPreislisteDto.getVkpfartikelpreislisteIId());
+			query.setParameter(1, vkPreisfindungPreislisteDto.getVkpfartikelpreislisteIId());
 			query.setParameter(2, vkPreisfindungPreislisteDto.getArtikelIId());
-			query.setParameter(3,
-					vkPreisfindungPreislisteDto.getTPreisgueltigab());
+			query.setParameter(3, vkPreisfindungPreislisteDto.getTPreisgueltigab());
 			preis = (VkPreisfindungPreisliste) query.getSingleResult();
 			// }
 			// catch (ObjectNotFoundException ex) {
@@ -140,8 +136,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		if (preis != null) {
 			// constraint verletzt
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
 		}
 
 		Integer keyPreisliste = new Integer(-1);
@@ -151,23 +146,18 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 			keyPreisliste = pkGen.getNextPrimaryKey(PKConst.PK_PREISLISTE);
 
-			vkPreisfindungPreislisteDto.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
-			vkPreisfindungPreislisteDto.setTAendern(new Timestamp(System
-					.currentTimeMillis()));
+			vkPreisfindungPreislisteDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			vkPreisfindungPreislisteDto.setTAendern(new Timestamp(System.currentTimeMillis()));
 
-			VkPreisfindungPreisliste vkPreisfindungPreisliste = new VkPreisfindungPreisliste(
-					keyPreisliste,
+			VkPreisfindungPreisliste vkPreisfindungPreisliste = new VkPreisfindungPreisliste(keyPreisliste,
 					vkPreisfindungPreislisteDto.getVkpfartikelpreislisteIId(),
-					vkPreisfindungPreislisteDto.getArtikelIId(),
-					vkPreisfindungPreislisteDto.getTPreisgueltigab(),
+					vkPreisfindungPreislisteDto.getArtikelIId(), vkPreisfindungPreislisteDto.getTPreisgueltigab(),
 					vkPreisfindungPreislisteDto.getNArtikelstandardrabattsatz(),
-					vkPreisfindungPreislisteDto.getTAendern(),
-					vkPreisfindungPreislisteDto.getPersonalIIdAendern());
+					vkPreisfindungPreislisteDto.getTAendern(), vkPreisfindungPreislisteDto.getPersonalIIdAendern());
 			em.persist(vkPreisfindungPreisliste);
 			em.flush();
-			setVkPreisfindungPreislisteFromVkPreisfindungPreislisteDto(
-					vkPreisfindungPreisliste, vkPreisfindungPreislisteDto);
+			setVkPreisfindungPreislisteFromVkPreisfindungPreislisteDto(vkPreisfindungPreisliste,
+					vkPreisfindungPreislisteDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -178,30 +168,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Preconditions pruefen.
 	 * 
-	 * @param vkPreisfindungPreislisteDto
-	 *            VkPreisfindungPreislisteDto
+	 * @param vkPreisfindungPreislisteDto VkPreisfindungPreislisteDto
 	 */
-	private void checkPreislistePreconditions(
-			VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto) {
+	private void checkPreislistePreconditions(VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto) {
 		if (vkPreisfindungPreislisteDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception());
 		}
 
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public void pflegeRabattsaetzeNachpflegen(Integer preislisteIId,
-			Date tPreisgueltigab, TheClientDto theClientDto) {
+	public void pflegeRabattsaetzeNachpflegen(Integer preislisteIId, Date tPreisgueltigab, TheClientDto theClientDto) {
 
 		// String query =
-		// "SELECT v FROM FLRVkpfartikelpreis v WHERE v.n_artikelfixpreis IS NULL AND v.n_artikelstandardrabattsatz IS NULL AND v.vkpfartikelpreisliste_i_id="
+		// "SELECT v FROM FLRVkpfartikelpreis v WHERE v.n_artikelfixpreis IS NULL AND
+		// v.n_artikelstandardrabattsatz IS NULL AND v.vkpfartikelpreisliste_i_id="
 		// +preislisteIId;
 
-		String queryString = "SELECT a FROM FLRArtikel a WHERE a.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' AND a.artikelart_c_nr not in('"
-				+ ArtikelFac.ARTIKELART_HANDARTIKEL + "')";
+		String queryString = "SELECT a FROM FLRArtikel a WHERE a.mandant_c_nr='" + theClientDto.getMandant()
+				+ "' AND a.artikelart_c_nr not in('" + ArtikelFac.ARTIKELART_HANDARTIKEL + "')";
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
@@ -220,33 +205,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				FLRArtikel a = (FLRArtikel) resultListIterator.next();
 
 				Session session2 = FLRSessionFactory.getFactory().openSession();
-				String queryString2 = "SELECT p FROM FLRVkpfartikelpreis p WHERE p.artikel_i_id="
-						+ a.getI_id()
-						+ " AND p.vkpfartikelpreisliste_i_id="
-						+ preislisteIId;
+				String queryString2 = "SELECT p FROM FLRVkpfartikelpreis p WHERE p.artikel_i_id=" + a.getI_id()
+						+ " AND p.vkpfartikelpreisliste_i_id=" + preislisteIId;
 				org.hibernate.Query q2 = session2.createQuery(queryString2);
 				List<?> resultList2 = q2.list();
 
 				if (resultList2.size() < 1) {
 
 					VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = new VkPreisfindungPreislisteDto();
-					vkPreisfindungPreislisteDto
-							.setVkpfartikelpreislisteIId(preislisteIId);
-					vkPreisfindungPreislisteDto
-							.setNArtikelstandardrabattsatz(preisliste
-									.getNStandardrabattsatz());
-					vkPreisfindungPreislisteDto
-							.setTPreisgueltigab(tPreisgueltigab);
+					vkPreisfindungPreislisteDto.setVkpfartikelpreislisteIId(preislisteIId);
+					vkPreisfindungPreislisteDto.setNArtikelstandardrabattsatz(preisliste.getNStandardrabattsatz());
+					vkPreisfindungPreislisteDto.setTPreisgueltigab(tPreisgueltigab);
 
 					vkPreisfindungPreislisteDto.setArtikelIId(a.getI_id());
-					vkPreisfindungPreislisteDto.setTAendern(new Timestamp(
-							System.currentTimeMillis()));
-					vkPreisfindungPreislisteDto
-							.setTPreisgueltigab(tPreisgueltigab);
+					vkPreisfindungPreislisteDto.setTAendern(new Timestamp(System.currentTimeMillis()));
+					vkPreisfindungPreislisteDto.setTPreisgueltigab(tPreisgueltigab);
 
 					try {
-						getVkPreisfindungFac().createVkPreisfindungPreisliste(
-								vkPreisfindungPreislisteDto, theClientDto);
+						getVkPreisfindungFac().createVkPreisfindungPreisliste(vkPreisfindungPreislisteDto,
+								theClientDto);
 					} catch (RemoteException e) {
 						throwEJBExceptionLPRespectOld(e);
 					}
@@ -260,12 +237,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Entfernen einer Preisliste ueber den technischen Schluessel.
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 */
-	public void removeVkPreisfindungPreisliste(Integer iId)
-			throws EJBExceptionLP {
+	public void removeVkPreisfindungPreisliste(Integer iId) throws EJBExceptionLP {
 		final String METHOD_NAME = "removeVkPreisfindungPreisliste";
 		myLogger.entry();
 
@@ -273,8 +248,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			throw new NullPointerException("PARAMTER NULL");
 		}
 
-		VkPreisfindungPreisliste vkPfPl = em.find(
-				VkPreisfindungPreisliste.class, iId);
+		VkPreisfindungPreisliste vkPfPl = em.find(VkPreisfindungPreisliste.class, iId);
 		em.remove(vkPfPl);
 		em.flush();
 	}
@@ -282,12 +256,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Entfernen einer Preiliste.
 	 * 
-	 * @param vkPreisfindungPreislisteDto
-	 *            VkPreisfindungPreislisteDto
+	 * @param vkPreisfindungPreislisteDto VkPreisfindungPreislisteDto
 	 * @throws EJBExceptionLP
 	 */
-	public void removeVkPreisfindungPreisliste(
-			VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto)
+	public void removeVkPreisfindungPreisliste(VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto)
 			throws EJBExceptionLP {
 		final String METHOD_NAME = "removeVkPreisfindungPreisliste";
 		myLogger.entry();
@@ -297,12 +269,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		// try {
-		VkPreisfindungPreisliste toRemove = em.find(
-				VkPreisfindungPreisliste.class,
+		VkPreisfindungPreisliste toRemove = em.find(VkPreisfindungPreisliste.class,
 				vkPreisfindungPreislisteDto.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -319,12 +289,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Aktualisieren einer Preisliste
 	 * 
-	 * @param vkPreisfindungPreislisteDto
-	 *            VkPreisfindungPreislisteDto
+	 * @param vkPreisfindungPreislisteDto VkPreisfindungPreislisteDto
 	 * @throws EJBExceptionLP
 	 */
-	public void updateVkPreisfindungPreisliste(
-			VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto,
+	public void updateVkPreisfindungPreisliste(VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		final String METHOD_NAME = "updateVkPreisfindungPreisliste";
 		myLogger.entry();
@@ -334,20 +302,16 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		Integer iId = vkPreisfindungPreislisteDto.getIId();
 
 		// try {
-		VkPreisfindungPreisliste vkPreisfindungPreisliste = em.find(
-				VkPreisfindungPreisliste.class, iId);
+		VkPreisfindungPreisliste vkPreisfindungPreisliste = em.find(VkPreisfindungPreisliste.class, iId);
 
-		vkPreisfindungPreislisteDto.setTAendern(new Timestamp(System
-				.currentTimeMillis()));
-		vkPreisfindungPreislisteDto.setPersonalIIdAendern(theClientDto
-				.getIDPersonal());
+		vkPreisfindungPreislisteDto.setTAendern(new Timestamp(System.currentTimeMillis()));
+		vkPreisfindungPreislisteDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 
 		if (vkPreisfindungPreisliste == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		setVkPreisfindungPreislisteFromVkPreisfindungPreislisteDto(
-				vkPreisfindungPreisliste, vkPreisfindungPreislisteDto);
+		setVkPreisfindungPreislisteFromVkPreisfindungPreislisteDto(vkPreisfindungPreisliste,
+				vkPreisfindungPreislisteDto);
 		// }
 		// catch (FinderException e) {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
@@ -358,13 +322,11 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Eine bestimmte Preisliste ueber ihren technischen Schluessel suchen
 	 * 
-	 * @param iId
-	 *            Integer
+	 * @param iId Integer
 	 * @throws EJBExceptionLP
 	 * @return VkPreisfindungPreislisteDto
 	 */
-	public VkPreisfindungPreislisteDto vkPreisfindungPreislisteFindByPrimaryKey(
-			Integer iId) throws EJBExceptionLP {
+	public VkPreisfindungPreislisteDto vkPreisfindungPreislisteFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		final String METHOD_NAME = "";
 		myLogger.entry();
 
@@ -375,11 +337,9 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		VkPreisfindungPreislisteDto dto = null;
 
 		// try {
-		VkPreisfindungPreisliste vkPreisfindungPreisliste = em.find(
-				VkPreisfindungPreisliste.class, iId);
+		VkPreisfindungPreisliste vkPreisfindungPreisliste = em.find(VkPreisfindungPreisliste.class, iId);
 		if (vkPreisfindungPreisliste == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		dto = assembleVkPreisfindungPreislisteDto(vkPreisfindungPreisliste);
 
@@ -392,22 +352,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return dto;
 	}
 
-	public VkPreisfindungPreislisteDto[] vkPreisfindungPreislisteFindByArtikelIId(
-			Integer artikelIId) throws EJBExceptionLP {
+	public VkPreisfindungPreislisteDto[] vkPreisfindungPreislisteFindByArtikelIId(Integer artikelIId)
+			throws EJBExceptionLP {
 		Validator.notNull(artikelIId, "artikelIId");
 
-		Query query = em
-				.createNamedQuery("VkPreisfindungPreislistefindByArtikelIId");
+		Query query = em.createNamedQuery("VkPreisfindungPreislistefindByArtikelIId");
 		query.setParameter(1, artikelIId);
-		VkPreisfindungPreislisteDto[] dtos = assembleVkPreisfindungPreislisteDtos(query
-				.getResultList());
+		VkPreisfindungPreislisteDto[] dtos = assembleVkPreisfindungPreislisteDtos(query.getResultList());
 
 		return dtos;
 	}
 
 	public VkPreisfindungPreislisteDto getVkPreisfindungPreislisteFindByArtikelIIdPreislisteIIdTPreisgueltigab(
-			Integer artikelIId, Integer preislisteIId,
-			Date datGueltikeitsdatumI, TheClientDto theClientDto) {
+			Integer artikelIId, Integer preislisteIId, Date datGueltikeitsdatumI, TheClientDto theClientDto) {
 
 		VkPreisfindungPreislisteDto dto = null;
 
@@ -422,10 +379,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		if (c.size() > 0) {
 			//
 
-			VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) c
-					.iterator().next();
-			dto = VkPreisfindungPreislisteDtoAssembler
-					.createDto(vkPreisfindungPreisliste);
+			VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) c.iterator().next();
+			dto = VkPreisfindungPreislisteDtoAssembler.createDto(vkPreisfindungPreisliste);
 		}
 
 		return dto;
@@ -434,32 +389,23 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	private void setVkPreisfindungPreislisteFromVkPreisfindungPreislisteDto(
 			VkPreisfindungPreisliste vkPreisfindungPreisliste,
 			VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto) {
+		vkPreisfindungPreisliste.setVkpfartikelpreislisteIId(vkPreisfindungPreislisteDto.getVkpfartikelpreislisteIId());
+		vkPreisfindungPreisliste.setArtikelIId(vkPreisfindungPreislisteDto.getArtikelIId());
+		vkPreisfindungPreisliste.setTPreisgueltigab(vkPreisfindungPreislisteDto.getTPreisgueltigab());
 		vkPreisfindungPreisliste
-				.setVkpfartikelpreislisteIId(vkPreisfindungPreislisteDto
-						.getVkpfartikelpreislisteIId());
-		vkPreisfindungPreisliste.setArtikelIId(vkPreisfindungPreislisteDto
-				.getArtikelIId());
-		vkPreisfindungPreisliste.setTPreisgueltigab(vkPreisfindungPreislisteDto
-				.getTPreisgueltigab());
-		vkPreisfindungPreisliste
-				.setNArtikelstandardrabattsatz(vkPreisfindungPreislisteDto
-						.getNArtikelstandardrabattsatz());
-		vkPreisfindungPreisliste
-				.setNArtikelfixpreis(vkPreisfindungPreislisteDto
-						.getNArtikelfixpreis());
-		vkPreisfindungPreisliste.setTAendern(vkPreisfindungPreislisteDto
-				.getTAendern());
-		vkPreisfindungPreisliste
-				.setPersonalIIdAendern(vkPreisfindungPreislisteDto
-						.getPersonalIIdAendern());
+				.setNArtikelstandardrabattsatz(vkPreisfindungPreislisteDto.getNArtikelstandardrabattsatz());
+		vkPreisfindungPreisliste.setNArtikelfixpreis(vkPreisfindungPreislisteDto.getNArtikelfixpreis());
+		vkPreisfindungPreisliste.setTAendern(vkPreisfindungPreislisteDto.getTAendern());
+		vkPreisfindungPreisliste.setPersonalIIdAendern(vkPreisfindungPreislisteDto.getPersonalIIdAendern());
+		vkPreisfindungPreisliste.setCBemerkung(vkPreisfindungPreislisteDto.getCBemerkung());
+
 		em.merge(vkPreisfindungPreisliste);
 		em.flush();
 	}
 
 	private VkPreisfindungPreislisteDto assembleVkPreisfindungPreislisteDto(
 			VkPreisfindungPreisliste vkPreisfindungPreisliste) {
-		return VkPreisfindungPreislisteDtoAssembler
-				.createDto(vkPreisfindungPreisliste);
+		return VkPreisfindungPreislisteDtoAssembler.createDto(vkPreisfindungPreisliste);
 	}
 
 	private VkPreisfindungPreislisteDto[] assembleVkPreisfindungPreislisteDtos(
@@ -468,28 +414,23 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		if (vkPreisfindungPreislistes != null) {
 			Iterator<?> iterator = vkPreisfindungPreislistes.iterator();
 			while (iterator.hasNext()) {
-				VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) iterator
-						.next();
+				VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) iterator.next();
 				list.add(assembleVkPreisfindungPreislisteDto(vkPreisfindungPreisliste));
 			}
 		}
-		VkPreisfindungPreislisteDto[] returnArray = new VkPreisfindungPreislisteDto[list
-				.size()];
+		VkPreisfindungPreislisteDto[] returnArray = new VkPreisfindungPreislisteDto[list.size()];
 		return (VkPreisfindungPreislisteDto[]) list.toArray(returnArray);
 	}
 
 	/**
-	 * Prueft ob ein Datum gleich oder spaeter als eine bestimmte Untergrenze
-	 * liegt. Das Datum darf nicht unter der Untergrenze liegen.
+	 * Prueft ob ein Datum gleich oder spaeter als eine bestimmte Untergrenze liegt.
+	 * Das Datum darf nicht unter der Untergrenze liegen.
 	 * 
-	 * @param pDatum
-	 *            Date
-	 * @param pUntergrenze
-	 *            Date
+	 * @param pDatum       Date
+	 * @param pUntergrenze Date
 	 * @return boolean
 	 */
-	private boolean datumGueltigInbezugAufUntergrenze(Date pDatum,
-			Date pUntergrenze) {
+	private boolean datumGueltigInbezugAufUntergrenze(Date pDatum, Date pUntergrenze) {
 		boolean gueltig = false;
 
 		if (pDatum.equals(pUntergrenze) || (pDatum.after(pUntergrenze))) {
@@ -500,17 +441,14 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Prueft ob ein Datum gleich oder vor einer bestimmten Obergrenze liegt.
-	 * Das Datum darf nicht ueber der Obergrenze liegen.
+	 * Prueft ob ein Datum gleich oder vor einer bestimmten Obergrenze liegt. Das
+	 * Datum darf nicht ueber der Obergrenze liegen.
 	 * 
-	 * @param pDatum
-	 *            Date
-	 * @param pObergrenze
-	 *            Date
+	 * @param pDatum      Date
+	 * @param pObergrenze Date
 	 * @return boolean
 	 */
-	private boolean datumGueltigInbezugAufObergrenze(Date pDatum,
-			Date pObergrenze) {
+	private boolean datumGueltigInbezugAufObergrenze(Date pDatum, Date pObergrenze) {
 		boolean gueltig = false;
 
 		if (pDatum.before(pObergrenze) || pDatum.equals(pObergrenze)) {
@@ -521,28 +459,24 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Holen der aktuell gueltigen Preisliste zu einem bestimmten Artikel. Gibt
-	 * null zurueck, wenn der Artikel in keiner Preisliste enthalten ist.
+	 * Holen der aktuell gueltigen Preisliste zu einem bestimmten Artikel. Gibt null
+	 * zurueck, wenn der Artikel in keiner Preisliste enthalten ist.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param iIdVkpfartikelpreislisteI
-	 *            PK der Preisliste
-	 * @param datGueltigabI
-	 *            Preis ist gueltig zu diesem Datum
+	 * @param iIdArtikelI               PK des Artikels
+	 * @param iIdVkpfartikelpreislisteI PK der Preisliste
+	 * @param datGueltigabI             Preis ist gueltig zu diesem Datum
 	 * @throws EJBExceptionLP
 	 * @return VkPreisfindungPreislisteDto
 	 */
-	public VkPreisfindungPreislisteDto getAktuellePreislisteByArtikelIIdPreislisteIId(
-			Integer iIdArtikelI, Integer iIdVkpfartikelpreislisteI,
-			Date datGueltigabI, String waehrungCNrZielwaehrung,
+	public VkPreisfindungPreislisteDto getAktuellePreislisteByArtikelIIdPreislisteIId(Integer iIdArtikelI,
+			Integer iIdVkpfartikelpreislisteI, Date datGueltigabI, String waehrungCNrZielwaehrung,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		long lUhrQuickDirty2 = System.currentTimeMillis();
 		long lUhrQuickDirty = System.currentTimeMillis();
 		myLogger.logData("ART>VK-Preise getAktuellePreislisteByArtikelIIdPreislisteIId: 0");
-		myLogger.logData("ART>VK-Preise getAktuellePreislisteByArtikelIIdPreislisteIId serverentrytime 0: "
-				+ lUhrQuickDirty);
+		myLogger.logData(
+				"ART>VK-Preise getAktuellePreislisteByArtikelIIdPreislisteIId serverentrytime 0: " + lUhrQuickDirty);
 
 		final String METHOD_NAME = "getAktuellePreislisteByArtikelIIdPreislisteIId";
 		myLogger.entry();
@@ -553,15 +487,13 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		VkPreisfindungPreislisteDto[] alleListen = null;
 
 		try {
-			Query query = em
-					.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIId");
+			Query query = em.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIId");
 			query.setParameter(1, iIdArtikelI);
 			query.setParameter(2, iIdVkpfartikelpreislisteI);
 			Collection<?> alleObjekte = query.getResultList();
 			alleListen = assembleVkPreisfindungPreislisteDtos(alleObjekte);
 		} catch (Exception ex) {
-			myLogger.warn(METHOD_NAME
-					+ " : Fuer diesen Artikel sind keine Preislisten definiert.");
+			myLogger.warn(METHOD_NAME + " : Fuer diesen Artikel sind keine Preislisten definiert.");
 			return preislisteDto;
 		}
 
@@ -571,8 +503,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			aktuellesDatum = datGueltigabI;
 		}
 
-		Date gueltigesDatum = new Date(
-				new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
+		Date gueltigesDatum = new Date(new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
 		// Grenze
 
 		for (int i = 0; i < alleListen.length; i++) {
@@ -581,29 +512,20 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			if (vkPreisfindungPreislisteDto.getNArtikelfixpreis() != null) {
 				VkpfartikelpreislisteDto plDto = vkpfartikelpreislisteFindByPrimaryKey(iIdVkpfartikelpreislisteI);
 				try {
-					vkPreisfindungPreislisteDto
-							.setNArtikelfixpreis(getLocaleFac()
-									.rechneUmInAndereWaehrungZuDatum(
-											vkPreisfindungPreislisteDto
-													.getNArtikelfixpreis(),
-											plDto.getWaehrungCNr(),
-											waehrungCNrZielwaehrung,
-											aktuellesDatum, theClientDto));
+					vkPreisfindungPreislisteDto.setNArtikelfixpreis(getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+							vkPreisfindungPreislisteDto.getNArtikelfixpreis(), plDto.getWaehrungCNr(),
+							waehrungCNrZielwaehrung, aktuellesDatum, theClientDto));
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
 
 			}
 
-			Date gueltigAb = new Date(vkPreisfindungPreislisteDto
-					.getTPreisgueltigab().getTime());
+			Date gueltigAb = new Date(vkPreisfindungPreislisteDto.getTPreisgueltigab().getTime());
 
-			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb,
-					gueltigesDatum)
-					&& this.datumGueltigInbezugAufObergrenze(gueltigAb,
-							aktuellesDatum)) {
-				gueltigesDatum = new Date(vkPreisfindungPreislisteDto
-						.getTPreisgueltigab().getTime());
+			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb, gueltigesDatum)
+					&& this.datumGueltigInbezugAufObergrenze(gueltigAb, aktuellesDatum)) {
+				gueltigesDatum = new Date(vkPreisfindungPreislisteDto.getTPreisgueltigab().getTime());
 				preislisteDto = (VkPreisfindungPreislisteDto) alleListen[i];
 			}
 		}
@@ -616,15 +538,13 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Die neuesten Preise zu einer Preisliste fuer einen Artikel finden.
 	 * 
-	 * @param iiArtikelI
-	 *            pk des Artikels
-	 * @param iiNameI
-	 *            pk der Preisliste
+	 * @param iiArtikelI pk des Artikels
+	 * @param iiNameI    pk der Preisliste
 	 * @throws EJBExceptionLP
 	 * @return VkPreisfindungPreislisteDto
 	 */
-	public VkPreisfindungPreislisteDto getNeuestePreislisteByArtikelPreislistenname(
-			Integer iiArtikelI, Integer iiNameI) throws EJBExceptionLP {
+	public VkPreisfindungPreislisteDto getNeuestePreislisteByArtikelPreislistenname(Integer iiArtikelI, Integer iiNameI)
+			throws EJBExceptionLP {
 		final String METHOD_NAME = "getAktuellePreislisteByArtikelPreislistenname";
 		myLogger.entry();
 
@@ -634,32 +554,26 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		VkPreisfindungPreislisteDto[] alleListen = null;
 
 		try {
-			Query query = em
-					.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIId");
+			Query query = em.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIId");
 			query.setParameter(1, iiArtikelI);
 			query.setParameter(2, iiNameI);
 			Collection<?> alleObjekte = query.getResultList();
 			alleListen = this.assembleVkPreisfindungPreislisteDtos(alleObjekte);
 		} catch (Exception ex) {
-			myLogger.warn(METHOD_NAME
-					+ " : Fuer diesen Artikel sind keine Preislisten definiert.");
+			myLogger.warn(METHOD_NAME + " : Fuer diesen Artikel sind keine Preislisten definiert.");
 			return preislisteDto;
 		}
 
 		// die preisliste zum gueltigkeitsdatum heraussuchen
-		Date gueltigesDatum = new Date(
-				new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
+		Date gueltigesDatum = new Date(new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
 		// Grenze
 
 		for (int i = 0; i < alleListen.length; i++) {
 			VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = alleListen[i];
-			Date gueltigAb = new Date(vkPreisfindungPreislisteDto
-					.getTPreisgueltigab().getTime());
+			Date gueltigAb = new Date(vkPreisfindungPreislisteDto.getTPreisgueltigab().getTime());
 
-			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb,
-					gueltigesDatum)) {
-				gueltigesDatum = new Date(vkPreisfindungPreislisteDto
-						.getTPreisgueltigab().getTime());
+			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb, gueltigesDatum)) {
+				gueltigesDatum = new Date(vkPreisfindungPreislisteDto.getTPreisgueltigab().getTime());
 				preislisteDto = (VkPreisfindungPreislisteDto) alleListen[i];
 			}
 		}
@@ -674,28 +588,22 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Anlegen einer kalenderaehigen Verkaufspreisbasis fuer einen Artikel. <br>
 	 * Die Verkaufspreisbasis ist mandantenabhaengig.
 	 * 
-	 * @param vkPreisfindungEinzelverkaufspreisDto
-	 *            VkPreisfindungEinzelverkaufspreisDto
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkPreisfindungEinzelverkaufspreisDto VkPreisfindungEinzelverkaufspreisDto
+	 * @param theClientDto                         der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return Integer PK der neuen Verkaufspreisbasis
 	 */
 	public Integer createVkPreisfindungEinzelverkaufspreis(
-			VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkVkPreisfindungEinzelverkaufspreisDto(vkPreisfindungEinzelverkaufspreisDto);
 		// unique key constraint pruefen
 		VkPreisfindungEinzelverkaufspreis preis = null;
 		try {
-			Query query = em
-					.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdGueltigab");
+			Query query = em.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdGueltigab");
 			query.setParameter(1, theClientDto.getMandant());
-			query.setParameter(2,
-					vkPreisfindungEinzelverkaufspreisDto.getArtikelIId());
-			query.setParameter(3, vkPreisfindungEinzelverkaufspreisDto
-					.getTVerkaufspreisbasisgueltigab());
+			query.setParameter(2, vkPreisfindungEinzelverkaufspreisDto.getArtikelIId());
+			query.setParameter(3, vkPreisfindungEinzelverkaufspreisDto.getTVerkaufspreisbasisgueltigab());
 			// @todo getSingleResult oder getResultList ?
 			preis = (VkPreisfindungEinzelverkaufspreis) query.getSingleResult();
 
@@ -708,8 +616,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		if (preis != null) {
 			// unique key constraint verletzt
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
 		}
 
 		Integer keyEinzelverkaufspreis = null;
@@ -717,30 +624,22 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		try {
 			// generieren von primary key
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
-			keyEinzelverkaufspreis = pkGen
-					.getNextPrimaryKey(PKConst.PK_EINZELVERKAUFSPREIS);
+			keyEinzelverkaufspreis = pkGen.getNextPrimaryKey(PKConst.PK_EINZELVERKAUFSPREIS);
 
-			vkPreisfindungEinzelverkaufspreisDto
-					.setPersonalIIdAendern(theClientDto.getIDPersonal());
-			vkPreisfindungEinzelverkaufspreisDto.setTAendern(new Timestamp(
-					System.currentTimeMillis()));
+			vkPreisfindungEinzelverkaufspreisDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			vkPreisfindungEinzelverkaufspreisDto.setTAendern(new Timestamp(System.currentTimeMillis()));
 
 			VkPreisfindungEinzelverkaufspreis vkPreisfindungEinzelverkaufspreis = new VkPreisfindungEinzelverkaufspreis(
-					keyEinzelverkaufspreis,
-					vkPreisfindungEinzelverkaufspreisDto.getMandantCNr(),
+					keyEinzelverkaufspreis, vkPreisfindungEinzelverkaufspreisDto.getMandantCNr(),
 					vkPreisfindungEinzelverkaufspreisDto.getArtikelIId(),
-					vkPreisfindungEinzelverkaufspreisDto
-							.getNVerkaufspreisbasis(),
-					vkPreisfindungEinzelverkaufspreisDto
-							.getTVerkaufspreisbasisgueltigab(),
+					vkPreisfindungEinzelverkaufspreisDto.getNVerkaufspreisbasis(),
+					vkPreisfindungEinzelverkaufspreisDto.getTVerkaufspreisbasisgueltigab(),
 					vkPreisfindungEinzelverkaufspreisDto.getTAendern(),
-					vkPreisfindungEinzelverkaufspreisDto
-							.getPersonalIIdAendern());
+					vkPreisfindungEinzelverkaufspreisDto.getPersonalIIdAendern());
 			em.persist(vkPreisfindungEinzelverkaufspreis);
 			em.flush();
 			setVkPreisfindungEinzelverkaufspreisFromVkPreisfindungEinzelverkaufspreisDto(
-					vkPreisfindungEinzelverkaufspreis,
-					vkPreisfindungEinzelverkaufspreisDto);
+					vkPreisfindungEinzelverkaufspreis, vkPreisfindungEinzelverkaufspreisDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -752,35 +651,28 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			VkPreisfindungEinzelverkaufspreisDto oVkPreisfindungEinzelverkaufspreisDtoI) {
 		if (oVkPreisfindungEinzelverkaufspreisDtoI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception(
-							"oVkPreisfindungEinzelverkaufspreisDtoI == null"));
+					new Exception("oVkPreisfindungEinzelverkaufspreisDtoI == null"));
 		}
 
-		myLogger.info("VkpfartikelverkaufspreisbasisDto: "
-				+ oVkPreisfindungEinzelverkaufspreisDtoI.toString());
+		myLogger.info("VkpfartikelverkaufspreisbasisDto: " + oVkPreisfindungEinzelverkaufspreisDtoI.toString());
 	}
 
 	/**
-	 * Entfernen einer kalenderfaehigen Verkaufspreisbasis fuer einen
-	 * bestimmeten Artikel von der DB.
+	 * Entfernen einer kalenderfaehigen Verkaufspreisbasis fuer einen bestimmeten
+	 * Artikel von der DB.
 	 * 
-	 * @param vkPreisfindungEinzelverkaufspreisDto
-	 *            VkPreisfindungEinzelverkaufspreisDto
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkPreisfindungEinzelverkaufspreisDto VkPreisfindungEinzelverkaufspreisDto
+	 * @param theClientDto                         der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	public void removeVkPreisfindungEinzelverkaufspreis(
-			VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkVkPreisfindungEinzelverkaufspreisDto(vkPreisfindungEinzelverkaufspreisDto);
-		VkPreisfindungEinzelverkaufspreis toRemove = em.find(
-				VkPreisfindungEinzelverkaufspreis.class,
+		VkPreisfindungEinzelverkaufspreis toRemove = em.find(VkPreisfindungEinzelverkaufspreis.class,
 				vkPreisfindungEinzelverkaufspreisDto.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -793,76 +685,132 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Aktualisieren der kalenderfaehigen Verkaufspreisbasis eines Artikels.
 	 * 
-	 * @param vkpfartikelverkaufspreisbasisDtoI
-	 *            die bestehende Verkaufspreisbasis
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkpfartikelverkaufspreisbasisDtoI die bestehende Verkaufspreisbasis
+	 * @param theClientDto                      der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	public void updateVkPreisfindungEinzelverkaufspreis(
-			VkPreisfindungEinzelverkaufspreisDto vkpfartikelverkaufspreisbasisDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			VkPreisfindungEinzelverkaufspreisDto vkpfartikelverkaufspreisbasisDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkVkPreisfindungEinzelverkaufspreisDto(vkpfartikelverkaufspreisbasisDtoI);
 		VkPreisfindungEinzelverkaufspreis vkPreisfindungEinzelverkaufspreis = em
-				.find(VkPreisfindungEinzelverkaufspreis.class,
-						vkpfartikelverkaufspreisbasisDtoI.getIId());
+				.find(VkPreisfindungEinzelverkaufspreis.class, vkpfartikelverkaufspreisbasisDtoI.getIId());
 
-		vkpfartikelverkaufspreisbasisDtoI.setPersonalIIdAendern(theClientDto
-				.getIDPersonal());
-		vkpfartikelverkaufspreisbasisDtoI.setTAendern(new Timestamp(System
-				.currentTimeMillis()));
+		vkpfartikelverkaufspreisbasisDtoI.setPersonalIIdAendern(theClientDto.getIDPersonal());
+		vkpfartikelverkaufspreisbasisDtoI.setTAendern(new Timestamp(System.currentTimeMillis()));
 
 		if (vkPreisfindungEinzelverkaufspreis == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, "");
 		}
-		setVkPreisfindungEinzelverkaufspreisFromVkPreisfindungEinzelverkaufspreisDto(
-				vkPreisfindungEinzelverkaufspreis,
+		setVkPreisfindungEinzelverkaufspreisFromVkPreisfindungEinzelverkaufspreisDto(vkPreisfindungEinzelverkaufspreis,
 				vkpfartikelverkaufspreisbasisDtoI);
 	}
 
 	public VkPreisfindungEinzelverkaufspreisDto[] vkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdAbGueltigab(
 			Integer artikelIId, Date tGueltigab, TheClientDto theClientDto) {
 
-		Query query = em
-				.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdAbGueltigab");
+		Query query = em.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdAbGueltigab");
 		query.setParameter(1, theClientDto.getMandant());
 		query.setParameter(2, artikelIId);
 		query.setParameter(3, tGueltigab);
 		// @todo getSingleResult oder getResultList ?
-		return assembleVkPreisfindungEinzelverkaufspreisDtos(query
-				.getResultList());
+		return assembleVkPreisfindungEinzelverkaufspreisDtos(query.getResultList());
 
 	}
 
-	public void pflegeVkpreise(Integer artikelgruppeIId,
-			Integer vkpfartikelpreislisteIId, Date tGueltigab,
+	public VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisfindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto) {
+
+		VkPreisfindungEinzelverkaufspreis vkPreisfindungEinzelverkaufspreis = em
+				.find(VkPreisfindungEinzelverkaufspreis.class, iId);
+		if (vkPreisfindungEinzelverkaufspreis == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return assembleVkPreisfindungEinzelverkaufspreisDto(vkPreisfindungEinzelverkaufspreis);
+
+	}
+
+	public void fixpreiseAllerMengenstaffelnEinesArtikelErhoehen(Integer artikelIId, Date tGueltigab,
 			BigDecimal nProzent, TheClientDto theClientDto) {
+		// VKSTAFFELPREISE
+
+		Session sessionStaffel = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "select distinct staffelmenge.n_menge from FLRVkpfStaffelmenge staffelmenge WHERE staffelmenge.t_preisgueltigab<='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tGueltigab.getTime()))
+				+ "' AND staffelmenge.artikel_i_id=" + artikelIId;
+		org.hibernate.Query staffeln = sessionStaffel.createQuery(sQuery);
+
+		List<?> resultList = staffeln.list();
+		int nachkommastellen = 2;
+		try {
+			nachkommastellen = getMandantFac().getNachkommastellenPreisVK(theClientDto.getMandant());
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		BigDecimal[] mengen = new BigDecimal[resultList.size()];
+		mengen = (BigDecimal[]) resultList.toArray(mengen);
+		for (int i = 0; i < mengen.length; i++) {
+
+			javax.persistence.Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdNMenge");
+			query.setParameter(1, artikelIId);
+			query.setParameter(2, mengen[i]);
+			// @todo getSingleResult oder getResultList ?
+			VkpfMengenstaffelDto vkpfMengenstaffelDtoVorher = assembleVkpfMengenstaffelDtos(query.getResultList(),
+					null)[0];
+
+			if (vkpfMengenstaffelDtoVorher.getNArtikelfixpreis() != null) {
+				BigDecimal preisNeu = Helper.getProzentWert(vkpfMengenstaffelDtoVorher.getNArtikelfixpreis(), nProzent,
+						nachkommastellen);
+
+				vkpfMengenstaffelDtoVorher
+						.setNArtikelfixpreis(vkpfMengenstaffelDtoVorher.getNArtikelfixpreis().add(preisNeu));
+				if (tGueltigab.equals(vkpfMengenstaffelDtoVorher.getTPreisgueltigab())) {
+					// Wenn gleich, dann update
+					updateVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
+				} else if (tGueltigab.after(vkpfMengenstaffelDtoVorher.getTPreisgueltigab())) {
+					// Wenn kleiner, dann Neueintrag
+					vkpfMengenstaffelDtoVorher.setIId(null);
+					vkpfMengenstaffelDtoVorher.setTPreisgueltigbis(null);
+					vkpfMengenstaffelDtoVorher.setTPreisgueltigab(tGueltigab);
+					createVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
+				}
+			}
+
+		}
+		sessionStaffel.close();
+	}
+
+	@org.jboss.ejb3.annotation.TransactionTimeout(20000)
+	public void pflegeVkpreise(Integer artikelgruppeIId, Integer vkpfartikelpreislisteIId, Date tGueltigab,
+			BigDecimal nProzent, String cBegruendung, TheClientDto theClientDto) {
 		if (artikelgruppeIId == null || tGueltigab == null || nProzent == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception(
-							"artikelgruppeIId == null || tGueltigab == null || nProzent == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("artikelgruppeIId == null || tGueltigab == null || nProzent == null"));
 		}
 		tGueltigab = Helper.cutDate(tGueltigab);
 		Session session = FLRSessionFactory.getFactory().openSession();
 		int nachkommastellen = 2;
-		ArrayList<Integer> listMeldung = new ArrayList<Integer>();
 
-		Criteria artikel = session.createCriteria(FLRArtikel.class);
-		artikel.createAlias(ArtikelFac.FLR_ARTIKEL_FLRARTIKELGRUPPE, "ag").add(
-				Restrictions.eq("ag.i_id", artikelgruppeIId));
+		org.hibernate.Query artikel = session.createQuery(
+				"SELECT a.i_id, (SELECT vkbasis2.i_id FROM FLRVkpfartikelverkaufspreisbasis vkbasis2 WHERE vkbasis2.artikel_i_id=a.i_id AND vkbasis2.t_verkaufspreisbasisgueltigab=   (SELECT max(vkbasis.t_verkaufspreisbasisgueltigab) FROM FLRVkpfartikelverkaufspreisbasis vkbasis WHERE vkbasis.mandant_c_nr='"
+						+ theClientDto.getMandant()
+						+ "' AND vkbasis.artikel_i_id=a.i_id AND vkbasis.t_verkaufspreisbasisgueltigab<='"
+						+ Helper.formatDateWithSlashes(tGueltigab)
+						+ "' )) FROM FLRArtikel AS a WHERE a.flrartikelgruppe.i_id=" + artikelgruppeIId);
+
+		// artikel.add(Restrictions.eq("c_nr", "HX-6421"));
+
 		// Alle Preislisten holen
 		VkpfartikelpreislisteDto[] preislistenDtos = null;
 		if (vkpfartikelpreislisteIId == null) {
 			// try {
-			Query query = em
-					.createNamedQuery("VkpfartikelpreislistefindByMandantCNrBPreislisteaktiv");
+			Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNrBPreislisteaktiv");
 			query.setParameter(1, theClientDto.getMandant());
 			query.setParameter(2, Helper.boolean2Short(true));
 			// @todo getSingleResult oder getResultList ?
-			preislistenDtos = assembleVkpfartikelpreislisteDtos(query
-					.getResultList());
+			preislistenDtos = assembleVkpfartikelpreislisteDtos(query.getResultList());
 			// }
 			// catch (FinderException ex1) {
 			// throw new
@@ -876,261 +824,279 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		Iterator<?> listIterator = list.iterator();
 
+		int x = 0;
+
 		while (listIterator.hasNext()) {
-			FLRArtikel flrArtikel = (FLRArtikel) listIterator.next();
-			// Preise erhoehen um nFaktor%
-			// try {
+			Object[] oArtikel = (Object[]) listIterator.next();
+			Integer artikelIId = (Integer) oArtikel[0];
 
+			Integer vkbasisIId = (Integer) oArtikel[1];
+
+			x++;
+			System.out.println(x + " von " + list.size());
 			// PREISBASIS
-			// Suche den letzen vkpreis, wenn vorhanden, von diesen um n-Prozent
-			// erhoehen, wenn keine vorhanden, dann neu anlegen
-			Query query = em
-					.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdAbGueltigab");
-			query.setParameter(1, theClientDto.getMandant());
-			query.setParameter(2, flrArtikel.getI_id());
-			query.setParameter(3, tGueltigab);
-			// @todo getSingleResult oder getResultList ?
-			VkPreisfindungEinzelverkaufspreisDto[] vkPreisfindungEinzelverkaufspreisDtosVorher = assembleVkPreisfindungEinzelverkaufspreisDtos(query
-					.getResultList());
 
-			if (vkPreisfindungEinzelverkaufspreisDtosVorher.length > 0) {
-				VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDtoVorher = vkPreisfindungEinzelverkaufspreisDtosVorher[0];
+			if (vkbasisIId != null) {
+
+				VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDtoVorher = assembleVkPreisfindungEinzelverkaufspreisDto(
+						em.find(VkPreisfindungEinzelverkaufspreis.class, vkbasisIId));
 
 				BigDecimal preisNeu = Helper.getProzentWert(
-						vkPreisfindungEinzelverkaufspreisDtoVorher
-								.getNVerkaufspreisbasis(), nProzent,
+						vkPreisfindungEinzelverkaufspreisDtoVorher.getNVerkaufspreisbasis(), nProzent,
 						nachkommastellen);
 
-				vkPreisfindungEinzelverkaufspreisDtoVorher
-						.setNVerkaufspreisbasis(vkPreisfindungEinzelverkaufspreisDtoVorher
-								.getNVerkaufspreisbasis().add(preisNeu));
+				vkPreisfindungEinzelverkaufspreisDtoVorher.setNVerkaufspreisbasis(
+						vkPreisfindungEinzelverkaufspreisDtoVorher.getNVerkaufspreisbasis().add(preisNeu));
 
-				if (tGueltigab
-						.equals(vkPreisfindungEinzelverkaufspreisDtoVorher
-								.getTVerkaufspreisbasisgueltigab())) {
+				vkPreisfindungEinzelverkaufspreisDtoVorher.setCBemerkung(cBegruendung);
+
+				if (tGueltigab.equals(vkPreisfindungEinzelverkaufspreisDtoVorher.getTVerkaufspreisbasisgueltigab())) {
 					// Wenn gleich, dann update
-					updateVkPreisfindungEinzelverkaufspreis(
-							vkPreisfindungEinzelverkaufspreisDtoVorher,
-							theClientDto);
+					updateVkPreisfindungEinzelverkaufspreis(vkPreisfindungEinzelverkaufspreisDtoVorher, theClientDto);
 				} else if (tGueltigab
-						.after(vkPreisfindungEinzelverkaufspreisDtoVorher
-								.getTVerkaufspreisbasisgueltigab())) {
+						.after(vkPreisfindungEinzelverkaufspreisDtoVorher.getTVerkaufspreisbasisgueltigab())) {
 					// Wenn kleiner, dann Neueintrag
 					vkPreisfindungEinzelverkaufspreisDtoVorher.setIId(null);
-					vkPreisfindungEinzelverkaufspreisDtoVorher
-							.setTVerkaufspreisbasisgueltigab(tGueltigab);
-					createVkPreisfindungEinzelverkaufspreis(
-							vkPreisfindungEinzelverkaufspreisDtoVorher,
-							theClientDto);
+					vkPreisfindungEinzelverkaufspreisDtoVorher.setTVerkaufspreisbasisgueltigab(tGueltigab);
+					createVkPreisfindungEinzelverkaufspreis(vkPreisfindungEinzelverkaufspreisDtoVorher, theClientDto);
 				}
 			}
-			// Wenn nachher noch Preise definiert sind, dann Meldung
-			query = em
-					.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdAbGueltigab");
-			query.setParameter(1, theClientDto.getMandant());
-			query.setParameter(2, flrArtikel.getI_id());
-			query.setParameter(3, tGueltigab);
-			// @todo getSingleResult oder getResultList ?
-			VkPreisfindungEinzelverkaufspreisDto[] vkPreisfindungEinzelverkaufspreisDtosNachher = assembleVkPreisfindungEinzelverkaufspreisDtos(query
-					.getResultList());
-			if (vkPreisfindungEinzelverkaufspreisDtosNachher.length > 0) {
-				listMeldung.add(flrArtikel.getI_id());
+
+			String inPreislisten = null;
+			if (preislistenDtos.length > 0) {
+				inPreislisten = "(";
+				for (int i = 0; i < preislistenDtos.length; i++) {
+					inPreislisten += preislistenDtos[i].getIId();
+					if (i != preislistenDtos.length) {
+						inPreislisten += ",";
+					}
+				}
+				inPreislisten += ")";
 			}
 
 			for (int i = 0; i < preislistenDtos.length; i++) {
 
 				// FIXPREISE IN ARTIKELPREIS
-				query = em
-						.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIIdBisTPreisgueltigab");
-				query.setParameter(1, flrArtikel.getI_id());
+				Query query = em.createNamedQuery(
+						"VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIIdBisTPreisgueltigab");
+				query.setParameter(1, artikelIId);
 				query.setParameter(2, preislistenDtos[i].getIId());
 				query.setParameter(3, tGueltigab);
 				// @todo getSingleResult oder getResultList ?
-				VkPreisfindungPreislisteDto[] vkPreisfindungPreislisteDtosVorher = assembleVkPreisfindungPreislisteDtos(query
-						.getResultList());
+				VkPreisfindungPreislisteDto[] vkPreisfindungPreislisteDtosVorher = assembleVkPreisfindungPreislisteDtos(
+						query.getResultList());
 				if (vkPreisfindungPreislisteDtosVorher.length > 0) {
 					VkPreisfindungPreislisteDto vkPreisfindungPreislisteDtoVorher = vkPreisfindungPreislisteDtosVorher[0];
 
 					if (vkPreisfindungPreislisteDtoVorher.getNArtikelfixpreis() != null) {
 
 						BigDecimal preisNeu = Helper.getProzentWert(
-								vkPreisfindungPreislisteDtoVorher
-										.getNArtikelfixpreis(), nProzent,
-								nachkommastellen);
+								vkPreisfindungPreislisteDtoVorher.getNArtikelfixpreis(), nProzent, nachkommastellen);
 
-						vkPreisfindungPreislisteDtoVorher
-								.setNArtikelfixpreis(vkPreisfindungPreislisteDtoVorher
-										.getNArtikelfixpreis().add(preisNeu));
+						vkPreisfindungPreislisteDtoVorher.setNArtikelfixpreis(
+								vkPreisfindungPreislisteDtoVorher.getNArtikelfixpreis().add(preisNeu));
 
-						if (tGueltigab.equals(vkPreisfindungPreislisteDtoVorher
-								.getTPreisgueltigab())) {
+						vkPreisfindungPreislisteDtoVorher.setCBemerkung(cBegruendung);
+
+						if (tGueltigab.equals(vkPreisfindungPreislisteDtoVorher.getTPreisgueltigab())) {
 							// Wenn gleich, dann update
-							updateVkPreisfindungPreisliste(
-									vkPreisfindungPreislisteDtoVorher,
-									theClientDto);
-						} else if (tGueltigab
-								.after(vkPreisfindungPreislisteDtoVorher
-										.getTPreisgueltigab())) {
+							updateVkPreisfindungPreisliste(vkPreisfindungPreislisteDtoVorher, theClientDto);
+						} else if (tGueltigab.after(vkPreisfindungPreislisteDtoVorher.getTPreisgueltigab())) {
 							// Wenn kleiner, dann Neueintrag
 							vkPreisfindungPreislisteDtoVorher.setIId(null);
-							vkPreisfindungPreislisteDtoVorher
-									.setTPreisgueltigab(tGueltigab);
-							createVkPreisfindungPreisliste(
-									vkPreisfindungPreislisteDtoVorher,
-									theClientDto);
+							vkPreisfindungPreislisteDtoVorher.setTPreisgueltigab(tGueltigab);
+							createVkPreisfindungPreisliste(vkPreisfindungPreislisteDtoVorher, theClientDto);
 						}
 					}
 
 				}
 			}
+
 			// VKSTAFFELPREISE
 
-			Session sessionStaffel = FLRSessionFactory.getFactory()
-					.openSession();
+			Session sessionStaffelMitPreisliste = FLRSessionFactory.getFactory().openSession();
 
-			String sQuery = "select distinct staffelmenge.n_menge from FLRVkpfStaffelmenge staffelmenge WHERE staffelmenge.t_preisgueltigab<='"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(tGueltigab
-							.getTime()))
-					+ "' AND staffelmenge.artikel_i_id="
-					+ flrArtikel.getI_id();
-			org.hibernate.Query staffeln = sessionStaffel.createQuery(sQuery);
+			String sQuery = "select distinct staffelmenge.n_menge,staffelmenge.vkpfartikelpreisliste_i_id  from FLRVkpfStaffelmenge staffelmenge WHERE staffelmenge.vkpfartikelpreisliste_i_id IS NOT NULL AND staffelmenge.t_preisgueltigab<='"
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tGueltigab.getTime()))
+					+ "' AND staffelmenge.artikel_i_id=" + artikelIId;
+			org.hibernate.Query staffelnMitPreisliste = sessionStaffelMitPreisliste.createQuery(sQuery);
 
-			List<?> resultList = staffeln.list();
+			List<?> resultList = staffelnMitPreisliste.list();
 
-			BigDecimal[] mengen = new BigDecimal[resultList.size()];
-			mengen = (BigDecimal[]) resultList.toArray(mengen);
-			for (int i = 0; i < mengen.length; i++) {
+			Iterator itStaffeln = resultList.iterator();
 
-				query = em
-						.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdNMenge");
-				query.setParameter(1, flrArtikel.getI_id());
-				query.setParameter(2, mengen[i]);
+			while (itStaffeln.hasNext()) {
+				Object[] oZeile = (Object[]) itStaffeln.next();
+
+				BigDecimal menge = (BigDecimal) oZeile[0];
+				Integer preislisteIId = (Integer) oZeile[1];
+
+				Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdNMengeVkpfartikelpreislisteIId");
+				query.setParameter(1, artikelIId);
+				query.setParameter(2, menge);
+				query.setParameter(3, preislisteIId);
 				// @todo getSingleResult oder getResultList ?
-				VkpfMengenstaffelDto vkpfMengenstaffelDtoVorher = assembleVkpfMengenstaffelDtos(
-						query.getResultList(), vkpfartikelpreislisteIId)[0];
+				VkpfMengenstaffelDto vkpfMengenstaffelDtoVorher = assembleVkpfMengenstaffelDtos(query.getResultList(),
+						preislisteIId)[0];
+
+				vkpfMengenstaffelDtoVorher.setCBemerkung(cBegruendung);
 
 				if (vkpfMengenstaffelDtoVorher.getNArtikelfixpreis() != null) {
-					BigDecimal preisNeu = Helper.getProzentWert(
-							vkpfMengenstaffelDtoVorher.getNArtikelfixpreis(),
+
+					if (vkpfMengenstaffelDtoVorher.getTPreisgueltigbis() != null
+							&& vkpfMengenstaffelDtoVorher.getTPreisgueltigbis().after(tGueltigab)) {
+						vkpfMengenstaffelDtoVorher.setTPreisgueltigbis(Helper.addiereTageZuDatum(tGueltigab, -1));
+						updateVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
+					}
+
+					BigDecimal preisNeu = Helper.getProzentWert(vkpfMengenstaffelDtoVorher.getNArtikelfixpreis(),
 							nProzent, nachkommastellen);
 
 					vkpfMengenstaffelDtoVorher
-							.setNArtikelfixpreis(vkpfMengenstaffelDtoVorher
-									.getNArtikelfixpreis().add(preisNeu));
-					if (tGueltigab.equals(vkpfMengenstaffelDtoVorher
-							.getTPreisgueltigab())) {
+							.setNArtikelfixpreis(vkpfMengenstaffelDtoVorher.getNArtikelfixpreis().add(preisNeu));
+					if (tGueltigab.equals(vkpfMengenstaffelDtoVorher.getTPreisgueltigab())) {
 						// Wenn gleich, dann update
-						updateVkpfMengenstaffel(vkpfMengenstaffelDtoVorher,
-								theClientDto);
-					} else if (tGueltigab.after(vkpfMengenstaffelDtoVorher
-							.getTPreisgueltigab())) {
+						updateVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
+					} else if (tGueltigab.after(vkpfMengenstaffelDtoVorher.getTPreisgueltigab())) {
 						// Wenn kleiner, dann Neueintrag
 						vkpfMengenstaffelDtoVorher.setIId(null);
 						vkpfMengenstaffelDtoVorher.setTPreisgueltigbis(null);
-						vkpfMengenstaffelDtoVorher
-								.setTPreisgueltigab(tGueltigab);
-						createVkpfMengenstaffel(vkpfMengenstaffelDtoVorher,
-								theClientDto);
+						vkpfMengenstaffelDtoVorher.setTPreisgueltigab(tGueltigab);
+						createVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
+					}
+				}
+
+			}
+			sessionStaffelMitPreisliste.close();
+
+			// SP9483 und fuer die Staffeln, wenn VKPREISBASIS, also PREISLISTE_I_ID = NULL
+			Session sessionStaffel = FLRSessionFactory.getFactory().openSession();
+
+			sQuery = "select distinct staffelmenge.n_menge  from FLRVkpfStaffelmenge staffelmenge WHERE staffelmenge.vkpfartikelpreisliste_i_id IS NULL AND staffelmenge.t_preisgueltigab<='"
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tGueltigab.getTime()))
+					+ "' AND staffelmenge.artikel_i_id=" + artikelIId;
+			org.hibernate.Query staffeln = sessionStaffel.createQuery(sQuery);
+
+			resultList = staffeln.list();
+
+			itStaffeln = resultList.iterator();
+
+			while (itStaffeln.hasNext()) {
+
+				BigDecimal menge = (BigDecimal) itStaffeln.next();
+
+				Query query = em.createQuery(
+						"SELECT OBJECT (o) FROM Vkpfmengenstaffel o WHERE o.artikelIId=?1 AND o.nMenge=?2 AND o.vkpfartikelpreislisteIId IS NULL AND tPreisgueltigab <=?3 ORDER BY o.nMenge, o.tPreisgueltigab DESC");
+				query.setParameter(1, artikelIId);
+				query.setParameter(2, menge);
+				query.setParameter(3, new java.sql.Date(tGueltigab.getTime()));
+
+				VkpfMengenstaffelDto vkpfMengenstaffelDtoVorher = assembleVkpfMengenstaffelDtos(query.getResultList(),
+						null)[0];
+
+				vkpfMengenstaffelDtoVorher.setCBemerkung(cBegruendung);
+
+				if (vkpfMengenstaffelDtoVorher.getNArtikelfixpreis() != null) {
+
+					if (vkpfMengenstaffelDtoVorher.getTPreisgueltigbis() != null
+							&& vkpfMengenstaffelDtoVorher.getTPreisgueltigbis().after(tGueltigab)) {
+						vkpfMengenstaffelDtoVorher.setTPreisgueltigbis(Helper.addiereTageZuDatum(tGueltigab, -1));
+						updateVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
+					}
+
+					BigDecimal preisNeu = Helper.getProzentWert(vkpfMengenstaffelDtoVorher.getNArtikelfixpreis(),
+							nProzent, nachkommastellen);
+
+					vkpfMengenstaffelDtoVorher
+							.setNArtikelfixpreis(vkpfMengenstaffelDtoVorher.getNArtikelfixpreis().add(preisNeu));
+					if (tGueltigab.equals(vkpfMengenstaffelDtoVorher.getTPreisgueltigab())) {
+						// Wenn gleich, dann update
+						updateVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
+					} else if (tGueltigab.after(vkpfMengenstaffelDtoVorher.getTPreisgueltigab())) {
+						// Wenn kleiner, dann Neueintrag
+						vkpfMengenstaffelDtoVorher.setIId(null);
+						vkpfMengenstaffelDtoVorher.setTPreisgueltigbis(null);
+						vkpfMengenstaffelDtoVorher.setTPreisgueltigab(tGueltigab);
+						createVkpfMengenstaffel(vkpfMengenstaffelDtoVorher, theClientDto);
 					}
 				}
 
 			}
 			sessionStaffel.close();
+
 		}
 		session.close();
 
 	}
 
 	/**
-	 * Finden einer kalenderfaehigen Verkaufspreisbasis fuer einen Artikel ueber
-	 * den PK.
+	 * Finden einer kalenderfaehigen Verkaufspreisbasis fuer einen Artikel ueber den
+	 * PK.
 	 * 
-	 * @param iIdVkpfartikelverkaufspreisbasisI
-	 *            PK der Verkaufspreisbasis
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdVkpfartikelverkaufspreisbasisI PK der Verkaufspreisbasis
+	 * @param theClientDto                      der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return VkPreisfindungEinzelverkaufspreisDto die Verkaufspreisbasis
 	 */
 	public VkPreisfindungEinzelverkaufspreisDto einzelverkaufspreisFindByPrimaryKey(
-			Integer iIdVkpfartikelverkaufspreisbasisI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			Integer iIdVkpfartikelverkaufspreisbasisI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdVkpfartikelverkaufspreisbasisI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception());
 		}
 		VkPreisfindungEinzelverkaufspreisDto dto = null;
 		VkPreisfindungEinzelverkaufspreis vkPreisfindungEinzelverkaufspreis = em
-				.find(VkPreisfindungEinzelverkaufspreis.class,
-						iIdVkpfartikelverkaufspreisbasisI);
+				.find(VkPreisfindungEinzelverkaufspreis.class, iIdVkpfartikelverkaufspreisbasisI);
 		if (vkPreisfindungEinzelverkaufspreis == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		dto = assembleVkPreisfindungEinzelverkaufspreisDto(vkPreisfindungEinzelverkaufspreis);
 		return dto;
 	}
 
 	/**
-	 * Finden der Verkaufspreisbasis eines Artikels ueber den PK des Artikels
-	 * bei einem bestimmten Mandanten.
+	 * Finden der Verkaufspreisbasis eines Artikels ueber den PK des Artikels bei
+	 * einem bestimmten Mandanten.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdArtikelI  PK des Artikels
+	 * @param theClientDto der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return VkPreisfindungEinzelverkaufspreisDto[] die Verkaufspreisbasiss
 	 */
-	public VkPreisfindungEinzelverkaufspreisDto[] einzelverkaufspreisFindByMandantCNrArtikelIId(
-			Integer iIdArtikelI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public VkPreisfindungEinzelverkaufspreisDto[] einzelverkaufspreisFindByMandantCNrArtikelIId(Integer iIdArtikelI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 		VkPreisfindungEinzelverkaufspreisDto[] dtos = null;
-		Query query = em
-				.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIId");
+		Query query = em.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIId");
 		query.setParameter(1, theClientDto.getMandant());
 		query.setParameter(2, iIdArtikelI);
 		Collection<?> alleObjekte = query.getResultList();
-		dtos = VkPreisfindungEinzelverkaufspreisDtoAssembler
-				.createDtos(alleObjekte);
+		dtos = VkPreisfindungEinzelverkaufspreisDtoAssembler.createDtos(alleObjekte);
 		return dtos;
 	}
 
 	/**
 	 * Eine Verkaufspreisbasis ueber ihren UK suchen.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param datGueltigabI
-	 *            gewuenschtes Gueltigkeitsdatum
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdArtikelI   PK des Artikels
+	 * @param datGueltigabI gewuenschtes Gueltigkeitsdatum
+	 * @param theClientDto  der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return VkPreisfindungEinzelverkaufspreisDto die Verkaufspreisbasis
 	 */
 	public VkPreisfindungEinzelverkaufspreisDto einzelverkaufspreisFindByMandantCNrArtikelIIdGueltigab(
-			Integer iIdArtikelI, Date datGueltigabI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			Integer iIdArtikelI, Date datGueltigabI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (datGueltigabI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("datGueltigabI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("datGueltigabI == null"));
 		}
 		VkPreisfindungEinzelverkaufspreisDto dto = null;
 		try {
-			Query query = em
-					.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdGueltigab");
+			Query query = em.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdGueltigab");
 			query.setParameter(1, theClientDto.getMandant());
 			query.setParameter(2, iIdArtikelI);
 			query.setParameter(3, Helper.cutDate(datGueltigabI));
@@ -1146,23 +1112,16 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	private void setVkPreisfindungEinzelverkaufspreisFromVkPreisfindungEinzelverkaufspreisDto(
 			VkPreisfindungEinzelverkaufspreis vkPreisfindungEinzelverkaufspreis,
 			VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto) {
+		vkPreisfindungEinzelverkaufspreis.setMandantCNr(vkPreisfindungEinzelverkaufspreisDto.getMandantCNr());
+		vkPreisfindungEinzelverkaufspreis.setArtikelIId(vkPreisfindungEinzelverkaufspreisDto.getArtikelIId());
 		vkPreisfindungEinzelverkaufspreis
-				.setMandantCNr(vkPreisfindungEinzelverkaufspreisDto
-						.getMandantCNr());
+				.setNVerkaufspreisbasis(vkPreisfindungEinzelverkaufspreisDto.getNVerkaufspreisbasis());
+		vkPreisfindungEinzelverkaufspreis.setTVerkaufspreisbasisgueltigab(
+				vkPreisfindungEinzelverkaufspreisDto.getTVerkaufspreisbasisgueltigab());
+		vkPreisfindungEinzelverkaufspreis.setTAendern(vkPreisfindungEinzelverkaufspreisDto.getTAendern());
 		vkPreisfindungEinzelverkaufspreis
-				.setArtikelIId(vkPreisfindungEinzelverkaufspreisDto
-						.getArtikelIId());
-		vkPreisfindungEinzelverkaufspreis
-				.setNVerkaufspreisbasis(vkPreisfindungEinzelverkaufspreisDto
-						.getNVerkaufspreisbasis());
-		vkPreisfindungEinzelverkaufspreis
-				.setTVerkaufspreisbasisgueltigab(vkPreisfindungEinzelverkaufspreisDto
-						.getTVerkaufspreisbasisgueltigab());
-		vkPreisfindungEinzelverkaufspreis
-				.setTAendern(vkPreisfindungEinzelverkaufspreisDto.getTAendern());
-		vkPreisfindungEinzelverkaufspreis
-				.setPersonalIIdAendern(vkPreisfindungEinzelverkaufspreisDto
-						.getPersonalIIdAendern());
+				.setPersonalIIdAendern(vkPreisfindungEinzelverkaufspreisDto.getPersonalIIdAendern());
+		vkPreisfindungEinzelverkaufspreis.setCBemerkung(vkPreisfindungEinzelverkaufspreisDto.getCBemerkung());
 
 		em.merge(vkPreisfindungEinzelverkaufspreis);
 		em.flush();
@@ -1171,53 +1130,43 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 	private VkPreisfindungEinzelverkaufspreisDto assembleVkPreisfindungEinzelverkaufspreisDto(
 			VkPreisfindungEinzelverkaufspreis vkPreisfindungEinzelverkaufspreis) {
-		return VkPreisfindungEinzelverkaufspreisDtoAssembler
-				.createDto(vkPreisfindungEinzelverkaufspreis);
+		return VkPreisfindungEinzelverkaufspreisDtoAssembler.createDto(vkPreisfindungEinzelverkaufspreis);
 	}
 
 	private VkPreisfindungEinzelverkaufspreisDto[] assembleVkPreisfindungEinzelverkaufspreisDtos(
 			Collection<?> vkPreisfindungEinzelverkaufspreiss) {
 		List<VkPreisfindungEinzelverkaufspreisDto> list = new ArrayList<VkPreisfindungEinzelverkaufspreisDto>();
 		if (vkPreisfindungEinzelverkaufspreiss != null) {
-			Iterator<?> iterator = vkPreisfindungEinzelverkaufspreiss
-					.iterator();
+			Iterator<?> iterator = vkPreisfindungEinzelverkaufspreiss.iterator();
 			while (iterator.hasNext()) {
 				VkPreisfindungEinzelverkaufspreis vkPreisfindungEinzelverkaufspreis = (VkPreisfindungEinzelverkaufspreis) iterator
 						.next();
 				list.add(assembleVkPreisfindungEinzelverkaufspreisDto(vkPreisfindungEinzelverkaufspreis));
 			}
 		}
-		VkPreisfindungEinzelverkaufspreisDto[] returnArray = new VkPreisfindungEinzelverkaufspreisDto[list
-				.size()];
-		return (VkPreisfindungEinzelverkaufspreisDto[]) list
-				.toArray(returnArray);
+		VkPreisfindungEinzelverkaufspreisDto[] returnArray = new VkPreisfindungEinzelverkaufspreisDto[list.size()];
+		return (VkPreisfindungEinzelverkaufspreisDto[]) list.toArray(returnArray);
 	}
 
 	/**
-	 * Die neuste Verkaufspreisbasis eines Artikels bei einem bestimmten
-	 * Mandanten holen.
+	 * Die neuste Verkaufspreisbasis eines Artikels bei einem bestimmten Mandanten
+	 * holen.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdArtikelI  PK des Artikels
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return VkPreisfindungEinzelverkaufspreisDto die Verkaufspreisbasis
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public VkPreisfindungEinzelverkaufspreisDto getNeuestenArtikeleinzelverkaufspreis(
-			Integer iIdArtikelI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public VkPreisfindungEinzelverkaufspreisDto getNeuestenArtikeleinzelverkaufspreis(Integer iIdArtikelI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 		VkPreisfindungEinzelverkaufspreisDto dto = null;
 		// alle Verkaufspreisbasiss zu diesem Artikel holen
 		VkPreisfindungEinzelverkaufspreisDto[] allePreise = null;
 		try {
-			allePreise = this.einzelverkaufspreisFindByMandantCNrArtikelIId(
-					iIdArtikelI, theClientDto);
+			allePreise = this.einzelverkaufspreisFindByMandantCNrArtikelIId(iIdArtikelI, theClientDto);
 		}
 		/**
 		 * @todo MB->.. saubere Fehlerbehandlung!
@@ -1228,19 +1177,16 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		// den Einzelverkaufspreis mit dem neuesten Datum heraussuchen
-		Date gueltigesDatum = new Date(
-				new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
+		Date gueltigesDatum = new Date(new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
 		// Grenze
 
 		for (int i = 0; i < allePreise.length; i++) {
 			VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto = allePreise[i];
-			Date gueltigAb = new Date(vkPreisfindungEinzelverkaufspreisDto
-					.getTVerkaufspreisbasisgueltigab().getTime());
+			Date gueltigAb = new Date(vkPreisfindungEinzelverkaufspreisDto.getTVerkaufspreisbasisgueltigab().getTime());
 
-			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb,
-					gueltigesDatum)) {
-				gueltigesDatum = new Date(vkPreisfindungEinzelverkaufspreisDto
-						.getTVerkaufspreisbasisgueltigab().getTime());
+			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb, gueltigesDatum)) {
+				gueltigesDatum = new Date(
+						vkPreisfindungEinzelverkaufspreisDto.getTVerkaufspreisbasisgueltigab().getTime());
 				dto = (VkPreisfindungEinzelverkaufspreisDto) allePreise[i];
 			}
 		}
@@ -1251,45 +1197,35 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Preisliste mit aktuellem Gueltigkeitsdatum suchen.
 	 * 
-	 * @param pkPreislistenname
-	 *            Integer
+	 * @param pkPreislistenname Integer
 	 * @return VkPreisfindungPreislisteDto
 	 * @throws EJBExceptionLP
 	 */
-	public VkPreisfindungPreislisteDto getAktuellePreislisteByPreislistenname(
-			Integer pkPreislistenname) throws EJBExceptionLP {
+	public VkPreisfindungPreislisteDto getAktuellePreislisteByPreislistenname(Integer pkPreislistenname)
+			throws EJBExceptionLP {
 		final String METHOD_NAME = "getAktuellePreislisteByPreislistenname";
 		myLogger.entry();
 		if (pkPreislistenname == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL, new Exception());
 		}
 
 		VkPreisfindungPreislisteDto dto = null;
 		// alle Preislisten zu diesem Preislistennamen holen
-		Query query = em
-				.createNamedQuery("VkPreisfindungPreislistefindByVkpfartikelpreislisteIId");
+		Query query = em.createNamedQuery("VkPreisfindungPreislistefindByVkpfartikelpreislisteIId");
 		query.setParameter(1, pkPreislistenname);
-		VkPreisfindungPreislisteDto[] alleListen = assembleVkPreisfindungPreislisteDtos(query
-				.getResultList());
+		VkPreisfindungPreislisteDto[] alleListen = assembleVkPreisfindungPreislisteDtos(query.getResultList());
 		// aktuelle Preisliste suchen
-		Date aktuellesDatum = new Date(
-				new GregorianCalendar().getTimeInMillis()); // obere Grenze
-		Date gueltigesDatum = new Date(
-				new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
+		Date aktuellesDatum = new Date(new GregorianCalendar().getTimeInMillis()); // obere Grenze
+		Date gueltigesDatum = new Date(new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
 		// Grenze
 
 		for (int i = 0; i < alleListen.length; i++) {
 			VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = alleListen[i];
-			Date gueltigAb = new Date(vkPreisfindungPreislisteDto
-					.getTPreisgueltigab().getTime());
+			Date gueltigAb = new Date(vkPreisfindungPreislisteDto.getTPreisgueltigab().getTime());
 
-			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb,
-					gueltigesDatum)
-					&& this.datumGueltigInbezugAufObergrenze(gueltigAb,
-							aktuellesDatum)) {
-				gueltigesDatum = new Date(vkPreisfindungPreislisteDto
-						.getTPreisgueltigab().getTime());
+			if (this.datumGueltigInbezugAufUntergrenze(gueltigAb, gueltigesDatum)
+					&& this.datumGueltigInbezugAufObergrenze(gueltigAb, aktuellesDatum)) {
+				gueltigesDatum = new Date(vkPreisfindungPreislisteDto.getTPreisgueltigab().getTime());
 				dto = (VkPreisfindungPreislisteDto) alleListen[i];
 			}
 		}
@@ -1300,40 +1236,33 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Ausgehend vom Verkaufspreis in Mandantenwaehrung wird ueber den
 	 * Umrechnungsfaktor der Verkaufspreis in Fremdwaehrung bestimmt.
 	 * 
-	 * @param pPreisInMandantenwhg
-	 *            in Mandantenwaehrung VerkaufspreisDto
-	 * @param pKurs
-	 *            fuer Umrechnung Mandantenwaherung nach Fremdwaehrung
-	 *            BigDecimal
+	 * @param pPreisInMandantenwhg in Mandantenwaehrung VerkaufspreisDto
+	 * @param pKurs                fuer Umrechnung Mandantenwaherung nach
+	 *                             Fremdwaehrung BigDecimal
 	 * @return VerkaufspreisDto in Fremdwaehrung
 	 */
-	public VerkaufspreisDto getVerkaufspreisInFremdwaehrung(
-			VerkaufspreisDto pPreisInMandantenwhg, BigDecimal pKurs) {
+	public VerkaufspreisDto getVerkaufspreisInFremdwaehrung(VerkaufspreisDto pPreisInMandantenwhg, BigDecimal pKurs) {
 		if (pPreisInMandantenwhg == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("pPreisInMandantenwhg == null"));
 		}
 
 		if (pKurs == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("pKurs == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("pKurs == null"));
 		}
 
 		VerkaufspreisDto fremdwhg = new VerkaufspreisDto();
 
 		fremdwhg.rabattsatz = pPreisInMandantenwhg.rabattsatz;
-		fremdwhg.setDdZusatzrabattsatz(pPreisInMandantenwhg
-				.getDdZusatzrabattsatz());
+		fremdwhg.setDdZusatzrabattsatz(pPreisInMandantenwhg.getDdZusatzrabattsatz());
 		fremdwhg.mwstsatzIId = pPreisInMandantenwhg.mwstsatzIId;
 
 		fremdwhg.einzelpreis = pPreisInMandantenwhg.einzelpreis.multiply(pKurs);
 		fremdwhg.rabattsumme = pPreisInMandantenwhg.rabattsumme.multiply(pKurs);
 		if (pPreisInMandantenwhg.bdMaterialzuschlag != null) {
-			fremdwhg.bdMaterialzuschlag = pPreisInMandantenwhg.bdMaterialzuschlag
-					.multiply(pKurs);
+			fremdwhg.bdMaterialzuschlag = pPreisInMandantenwhg.bdMaterialzuschlag.multiply(pKurs);
 		}
-		fremdwhg.setNZusatzrabattsumme(pPreisInMandantenwhg
-				.getNZusatzrabattsumme().multiply(pKurs));
+		fremdwhg.setNZusatzrabattsumme(pPreisInMandantenwhg.getNZusatzrabattsumme().multiply(pKurs));
 		fremdwhg.nettopreis = pPreisInMandantenwhg.nettopreis.multiply(pKurs);
 		fremdwhg.mwstsumme = pPreisInMandantenwhg.mwstsumme.multiply(pKurs);
 		fremdwhg.bruttopreis = pPreisInMandantenwhg.bruttopreis.multiply(pKurs);
@@ -1342,51 +1271,40 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Ausgehend vom Verkaufspreis in Fremdwaehrung wird ueber den
-	 * Umrechnungsfaktor der Verkaufspreis in Mandantenwaehrung bestimmt.
+	 * Ausgehend vom Verkaufspreis in Fremdwaehrung wird ueber den Umrechnungsfaktor
+	 * der Verkaufspreis in Mandantenwaehrung bestimmt.
 	 * 
-	 * @param pPreisInFremdwhg
-	 *            in Fremdwaehrung VerkaufspreisDto
-	 * @param pKurs
-	 *            fuer Umrechnung Mandantenwaherung nach Fremdwaehrung
-	 *            BigDecimal
+	 * @param pPreisInFremdwhg in Fremdwaehrung VerkaufspreisDto
+	 * @param pKurs            fuer Umrechnung Mandantenwaherung nach Fremdwaehrung
+	 *                         BigDecimal
 	 * @return VerkaufspreisDto in Mandantenwaherung
 	 */
-	public VerkaufspreisDto getVerkaufspreisInMandantenwaehrung(
-			VerkaufspreisDto pPreisInFremdwhg, BigDecimal pKurs) {
+	public VerkaufspreisDto getVerkaufspreisInMandantenwaehrung(VerkaufspreisDto pPreisInFremdwhg, BigDecimal pKurs) {
 		if (pPreisInFremdwhg == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("pPreisInFremdwhg == null"));
 		}
 
 		if (pKurs == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("pKurs == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("pKurs == null"));
 		}
 
 		VerkaufspreisDto mandantenwhg = new VerkaufspreisDto();
 
 		mandantenwhg.rabattsatz = pPreisInFremdwhg.rabattsatz;
-		mandantenwhg.setDdZusatzrabattsatz(pPreisInFremdwhg
-				.getDdZusatzrabattsatz());
+		mandantenwhg.setDdZusatzrabattsatz(pPreisInFremdwhg.getDdZusatzrabattsatz());
 		mandantenwhg.mwstsatzIId = pPreisInFremdwhg.mwstsatzIId;
 		if (pPreisInFremdwhg.bdMaterialzuschlag != null) {
-			mandantenwhg.bdMaterialzuschlag = pPreisInFremdwhg.bdMaterialzuschlag
-					.divide(pKurs, 4, BigDecimal.ROUND_HALF_EVEN);
+			mandantenwhg.bdMaterialzuschlag = pPreisInFremdwhg.bdMaterialzuschlag.divide(pKurs, 4,
+					BigDecimal.ROUND_HALF_EVEN);
 		}
-		mandantenwhg.einzelpreis = pPreisInFremdwhg.einzelpreis.divide(pKurs,
-				4, BigDecimal.ROUND_HALF_EVEN);
-		mandantenwhg.rabattsumme = pPreisInFremdwhg.rabattsumme.divide(pKurs,
-				4, BigDecimal.ROUND_HALF_EVEN);
-		mandantenwhg.setNZusatzrabattsumme(pPreisInFremdwhg
-				.getNZusatzrabattsumme().divide(pKurs, 4,
-						BigDecimal.ROUND_HALF_EVEN));
-		mandantenwhg.nettopreis = pPreisInFremdwhg.nettopreis.divide(pKurs, 4,
-				BigDecimal.ROUND_HALF_EVEN);
-		mandantenwhg.mwstsumme = pPreisInFremdwhg.mwstsumme.divide(pKurs, 4,
-				BigDecimal.ROUND_HALF_EVEN);
-		mandantenwhg.bruttopreis = pPreisInFremdwhg.bruttopreis.divide(pKurs,
-				4, BigDecimal.ROUND_HALF_EVEN);
+		mandantenwhg.einzelpreis = pPreisInFremdwhg.einzelpreis.divide(pKurs, 4, BigDecimal.ROUND_HALF_EVEN);
+		mandantenwhg.rabattsumme = pPreisInFremdwhg.rabattsumme.divide(pKurs, 4, BigDecimal.ROUND_HALF_EVEN);
+		mandantenwhg.setNZusatzrabattsumme(
+				pPreisInFremdwhg.getNZusatzrabattsumme().divide(pKurs, 4, BigDecimal.ROUND_HALF_EVEN));
+		mandantenwhg.nettopreis = pPreisInFremdwhg.nettopreis.divide(pKurs, 4, BigDecimal.ROUND_HALF_EVEN);
+		mandantenwhg.mwstsumme = pPreisInFremdwhg.mwstsumme.divide(pKurs, 4, BigDecimal.ROUND_HALF_EVEN);
+		mandantenwhg.bruttopreis = pPreisInFremdwhg.bruttopreis.divide(pKurs, 4, BigDecimal.ROUND_HALF_EVEN);
 
 		return mandantenwhg;
 	}
@@ -1394,23 +1312,15 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Eine Preisliste ueber ihren uniquey key finden
 	 * 
-	 * @param iiPreislisteI
-	 *            pk der Preisliste
-	 * @param iiArtikelI
-	 *            pk des Artikels
-	 * @param datGueltigabI
-	 *            ab wann gilt der Preis
+	 * @param iiPreislisteI pk der Preisliste
+	 * @param iiArtikelI    pk des Artikels
+	 * @param datGueltigabI ab wann gilt der Preis
 	 * @return VkPreisfindungPreislisteDto
 	 */
-	public VkPreisfindungPreislisteDto preislisteFindByUniqueKey(
-			Integer iiPreislisteI, Integer iiArtikelI, Date datGueltigabI) {
-		final String METHOD_NAME = "einzelverkaufspreisFindByUniqueKey";
-		myLogger.entry();
-		if (iiPreislisteI == null || iiArtikelI == null
-				|| datGueltigabI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception());
+	public VkPreisfindungPreislisteDto preislisteFindByUniqueKey(Integer iiPreislisteI, Integer iiArtikelI,
+			Date datGueltigabI) {
+		if (iiPreislisteI == null || iiArtikelI == null || datGueltigabI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN, new Exception());
 		}
 		VkPreisfindungPreislisteDto dto = null;
 		Query query = em
@@ -1418,68 +1328,59 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		query.setParameter(1, iiPreislisteI);
 		query.setParameter(2, iiArtikelI);
 		query.setParameter(3, datGueltigabI);
-
-		VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) query
-				.getSingleResult();
-		if (vkPreisfindungPreisliste == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "");
+		try {
+			VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) query.getSingleResult();
+			dto = assembleVkPreisfindungPreislisteDto(vkPreisfindungPreisliste);
+			return dto;
+		} catch (NoResultException ex) {
+			return null;
 		}
-		dto = assembleVkPreisfindungPreislisteDto(vkPreisfindungPreisliste);
-		return dto;
+
 	}
 
 	/**
 	 * Den Einzelverkaufpreis fuer einen Artikel holen, der zu einem bestimmten
 	 * Datum gueltig ist.
 	 * 
-	 * @param iIdArtikelI
-	 *            pk des Artikels
-	 * @param datGueltikeitsdatumI
-	 *            Gueltigkeitsdatum, wenn null wird das aktuelle Datum verwendet
-	 * @param theClientDto
-	 *            String
+	 * @param iIdArtikelI          pk des Artikels
+	 * @param datGueltikeitsdatumI Gueltigkeitsdatum, wenn null wird das aktuelle
+	 *                             Datum verwendet
+	 * @param theClientDto         String
 	 * @throws EJBExceptionLP
 	 * @return VkPreisfindungEinzelverkaufspreisDto der Einzelverkaufspreis
 	 */
-	public VkPreisfindungEinzelverkaufspreisDto getArtikeleinzelverkaufspreis(
-			Integer iIdArtikelI, Date datGueltikeitsdatumI,
-			String waehrungCNrZielwaehrung, TheClientDto theClientDto)
+	public VkPreisfindungEinzelverkaufspreisDto getArtikeleinzelverkaufspreis(Integer iIdArtikelI,
+			Date datGueltikeitsdatumI, String waehrungCNrZielwaehrung, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 
 		long lUhrQuickDirty2 = System.currentTimeMillis();
 		long lUhrQuickDirty = System.currentTimeMillis();
 		myLogger.logData("ART>VK-Preise getArtikeleinzelverkaufspreis: 0");
-		myLogger.logData("ART>VK-Preise getArtikeleinzelverkaufspreis serverentrytime 0: "
-				+ lUhrQuickDirty);
+		myLogger.logData("ART>VK-Preise getArtikeleinzelverkaufspreis serverentrytime 0: " + lUhrQuickDirty);
 
 		final String METHOD_NAME = "getArtikeleinzelverkaufspreis";
 		myLogger.entry();
 
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		// alle Einzelverkaufspreise zu diesem Artikel holen
 		VkPreisfindungEinzelverkaufspreisDto[] allePreise = null;
 
 		try {
-			allePreise = einzelverkaufspreisFindByMandantCNrArtikelIId(
-					iIdArtikelI, theClientDto);
+			allePreise = einzelverkaufspreisFindByMandantCNrArtikelIId(iIdArtikelI, theClientDto);
 		}
 		/**
 		 * @todo saubere fehlerbehandlung
 		 */
 		catch (Throwable t) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FIND,
-					new Exception(
-							"Fuer diesen Artikel sind keine Einzelverkaufspreise definiert."));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
+					new Exception("Fuer diesen Artikel sind keine Einzelverkaufspreise definiert."));
 		}
 
 		// den aktuell gueltigen Einzelverkaufspreis heraussuchen
-		Date datUntereGrenze = new Date(
-				new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
+		Date datUntereGrenze = new Date(new GregorianCalendar(0, 0, 0).getTimeInMillis()); // untere
 		// Grenze
 
 		Date datGueltigkeitsdatum = null;
@@ -1496,31 +1397,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		for (int i = 0; i < allePreise.length; i++) {
 			VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto = allePreise[i];
-			Date datGueltigAb = new Date(vkPreisfindungEinzelverkaufspreisDto
-					.getTVerkaufspreisbasisgueltigab().getTime());
+			Date datGueltigAb = new Date(
+					vkPreisfindungEinzelverkaufspreisDto.getTVerkaufspreisbasisgueltigab().getTime());
 
 			myLogger.info("Ist Gueltig ab:   "
-					+ Helper.formatTimestamp(new java.sql.Timestamp(
-							datGueltigAb.getTime()), Locale.GERMAN));
+					+ Helper.formatTimestamp(new java.sql.Timestamp(datGueltigAb.getTime()), Locale.GERMAN));
 			myLogger.info("Soll Gueltig zum: "
-					+ Helper.formatTimestamp(new java.sql.Timestamp(
-							datGueltigkeitsdatum.getTime()), Locale.GERMAN));
+					+ Helper.formatTimestamp(new java.sql.Timestamp(datGueltigkeitsdatum.getTime()), Locale.GERMAN));
 
 			if (datumGueltigInbezugAufUntergrenze(datGueltigAb, datUntereGrenze)
-					&& datumGueltigInbezugAufObergrenze(datGueltigAb,
-							datGueltigkeitsdatum)) {
-				datUntereGrenze = new Date(vkPreisfindungEinzelverkaufspreisDto
-						.getTVerkaufspreisbasisgueltigab().getTime());
+					&& datumGueltigInbezugAufObergrenze(datGueltigAb, datGueltigkeitsdatum)) {
+				datUntereGrenze = new Date(
+						vkPreisfindungEinzelverkaufspreisDto.getTVerkaufspreisbasisgueltigab().getTime());
 
 				// Umrechnen von Mandantenwaehrung auf ziewaehrung
 
 				try {
-					allePreise[i].setNVerkaufspreisbasis(getLocaleFac()
-							.rechneUmInAndereWaehrungZuDatum(
-									allePreise[i].getNVerkaufspreisbasis(),
-									theClientDto.getSMandantenwaehrung(),
-									waehrungCNrZielwaehrung,
-									datGueltikeitsdatumI, theClientDto));
+					allePreise[i].setNVerkaufspreisbasis(getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+							allePreise[i].getNVerkaufspreisbasis(), theClientDto.getSMandantenwaehrung(),
+							waehrungCNrZielwaehrung, datGueltikeitsdatumI, theClientDto));
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -1537,28 +1432,24 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	// ---------------
 
 	/**
-	 * Das maximale iSort bei den Preislistennamen fuer einen bestimmten
-	 * Mandanten bestimmen.
+	 * Das maximale iSort bei den Preislistennamen fuer einen bestimmten Mandanten
+	 * bestimmen.
 	 * 
-	 * @param sMandantI
-	 *            der aktuelle Mandant
+	 * @param sMandantI der aktuelle Mandant
 	 * @return Integer das maximale iSort
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 	public Integer getMaxISort(String sMandantI) throws EJBExceptionLP {
 		Integer iiMaxISortO = null;
 		try {
-			Query query = em
-					.createNamedQuery("VkpfartikelpreislisteejbSelectMaxISort");
+			Query query = em.createNamedQuery("VkpfartikelpreislisteejbSelectMaxISort");
 			query.setParameter(1, sMandantI);
 			iiMaxISortO = (Integer) query.getSingleResult();
 			if (iiMaxISortO == null) {
 				iiMaxISortO = new Integer(0);
 			}
 		} catch (Throwable e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_EJBSELECT,
-					new Exception(e));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_EJBSELECT, new Exception(e));
 		}
 		return iiMaxISortO;
 	}
@@ -1566,24 +1457,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Zwei bestehende Preislisten in Bezug auf ihr iSort umreihen.
 	 * 
-	 * @param iIdPreisliste1I
-	 *            PK der ersten Preisliste
-	 * @param iIdPreisliste2I
-	 *            PK der zweiten Preisliste
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdPreisliste1I PK der ersten Preisliste
+	 * @param iIdPreisliste2I PK der zweiten Preisliste
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void vertauscheVkpfartikelpreisliste(Integer iIdPreisliste1I,
-			Integer iIdPreisliste2I) throws EJBExceptionLP {
+	public void vertauscheVkpfartikelpreisliste(Integer iIdPreisliste1I, Integer iIdPreisliste2I)
+			throws EJBExceptionLP {
 		final String METHOD_NAME = "vertauscheVkpfartikelpreisliste";
 		myLogger.entry();
-		Vkpfartikelpreisliste oPreisliste1 = em.find(
-				Vkpfartikelpreisliste.class, iIdPreisliste1I);
+		Vkpfartikelpreisliste oPreisliste1 = em.find(Vkpfartikelpreisliste.class, iIdPreisliste1I);
 		if (oPreisliste1 == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "");
 		}
-		Vkpfartikelpreisliste oPreisliste2 = em.find(
-				Vkpfartikelpreisliste.class, iIdPreisliste2I);
+		Vkpfartikelpreisliste oPreisliste2 = em.find(Vkpfartikelpreisliste.class, iIdPreisliste2I);
 		Integer iSort1 = oPreisliste1.getISort();
 		Integer iSort2 = oPreisliste2.getISort();
 		// iSort der zweiten Preisliste auf ungueltig setzen, damit UK
@@ -1600,24 +1486,18 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Diese Methode wird am Client aufgerufen, bevor die neue Position
 	 * abgespeichert wird.
 	 * 
-	 * @param sMandantI
-	 *            der aktuelle Mandant
-	 * @param iSortierungNeuePositionI
-	 *            die Stelle, an der eingefuegt werden soll
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param sMandantI                der aktuelle Mandant
+	 * @param iSortierungNeuePositionI die Stelle, an der eingefuegt werden soll
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(
-			String sMandantI, int iSortierungNeuePositionI)
+	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(String sMandantI, int iSortierungNeuePositionI)
 			throws EJBExceptionLP {
-		Query query = em
-				.createNamedQuery("VkpfartikelpreislistefindByMandantCNr");
+		Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNr");
 		query.setParameter(1, sMandantI);
 		Collection<?> cl = query.getResultList();
 		Iterator<?> it = cl.iterator();
 		while (it.hasNext()) {
-			Vkpfartikelpreisliste oPreisliste = (Vkpfartikelpreisliste) it
-					.next();
+			Vkpfartikelpreisliste oPreisliste = (Vkpfartikelpreisliste) it.next();
 
 			if (oPreisliste.getISort().intValue() >= iSortierungNeuePositionI) {
 				iSortierungNeuePositionI++;
@@ -1629,29 +1509,23 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Wenn eine Preisliste geloescht wurde, dann muss die Sortierung angepasst
 	 * werden, damit keine Luecken entstehen. <br>
-	 * Diese Methode wird im Zuge des Loeschens der Position am Server
-	 * aufgerufen.
+	 * Diese Methode wird im Zuge des Loeschens der Position am Server aufgerufen.
 	 * 
-	 * @param sMandantI
-	 *            String
-	 * @param iSortierungGeloeschtePreislisteI
-	 *            die Position der geloschten Position
+	 * @param sMandantI                        String
+	 * @param iSortierungGeloeschtePreislisteI die Position der geloschten Position
 	 * @throws EJBExceptionLP
 	 */
-	private void sortierungAnpassenBeiLoeschenEinerPreisliste(String sMandantI,
-			int iSortierungGeloeschtePreislisteI) throws EJBExceptionLP {
-		Query query = em
-				.createNamedQuery("VkpfartikelpreislistefindByMandantCNr");
+	private void sortierungAnpassenBeiLoeschenEinerPreisliste(String sMandantI, int iSortierungGeloeschtePreislisteI)
+			throws EJBExceptionLP {
+		Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNr");
 		query.setParameter(1, sMandantI);
 		Collection<?> cl = query.getResultList();
 		Iterator<?> it = cl.iterator();
 		while (it.hasNext()) {
-			Vkpfartikelpreisliste oPreisliste = (Vkpfartikelpreisliste) it
-					.next();
+			Vkpfartikelpreisliste oPreisliste = (Vkpfartikelpreisliste) it.next();
 
 			if (oPreisliste.getISort().intValue() > iSortierungGeloeschtePreislisteI) {
-				oPreisliste.setISort(new Integer(
-						iSortierungGeloeschtePreislisteI));
+				oPreisliste.setISort(new Integer(iSortierungGeloeschtePreislisteI));
 				iSortierungGeloeschtePreislisteI++;
 			}
 		}
@@ -1661,41 +1535,32 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Einen Artikelpreis daraufhin pruefen, ob er unter dem minimalen
 	 * Gestehungspreis auf einem bestimmten Lager liegt.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param iIdLagerI
-	 *            PK des Lagers
-	 * @param bdPreisI
-	 *            BigDecimal der vorgeschlagene Verkaufpreis
-	 * @param ddWechselkursMandantZuBelegwaehrungI
-	 *            Wechselkurs zum Umrechnen auf Mandantenwaehrung
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdArtikelI                          PK des Artikels
+	 * @param iIdLagerI                            PK des Lagers
+	 * @param bdPreisI                             BigDecimal der vorgeschlagene
+	 *                                             Verkaufpreis
+	 * @param ddWechselkursMandantZuBelegwaehrungI Wechselkurs zum Umrechnen auf
+	 *                                             Mandantenwaehrung
+	 * @param theClientDto                         der aktuelle Benutzer
 	 * @return boolean true, wenn der Verkaufspreis unter dem minimalen
 	 *         Gestehungspreis liegt
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public boolean liegtVerkaufspreisUnterMinVerkaufspreis(Integer iIdArtikelI,
-			Integer iIdLagerI, BigDecimal bdPreisI,
-			Double ddWechselkursMandantZuBelegwaehrungI, BigDecimal nMenge,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public boolean liegtVerkaufspreisUnterMinVerkaufspreis(Integer iIdArtikelI, Integer iIdLagerI, BigDecimal bdPreisI,
+			Double ddWechselkursMandantZuBelegwaehrungI, BigDecimal nMenge, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 		if (iIdLagerI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdLagerI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdLagerI == null"));
 		}
 		if (bdPreisI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("bdPreisI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("bdPreisI == null"));
 		}
 		if (ddWechselkursMandantZuBelegwaehrungI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception(
-							"ddWechselkursMandantZuBelegwaehrungI == null"));
+					new Exception("ddWechselkursMandantZuBelegwaehrungI == null"));
 		}
 
 		BigDecimal minVK = null;
@@ -1708,8 +1573,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			// (sieht man an Buchung) -> return minVK
 			// 4. Den Einkaufspreis des bevorzugten Lieferanten (= der Erste)
 			// 5. Sonst 0
-			minVK = getLagerFac().getMindestverkaufspreis(iIdArtikelI,
-					iIdLagerI, nMenge, theClientDto);
+			minVK = getLagerFac().getMindestverkaufspreis(iIdArtikelI, iIdLagerI, nMenge, theClientDto);
 
 			// IMS 818 Verhindern, dass minVK == null
 			if (minVK == null) {
@@ -1727,8 +1591,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		if (ddWechselkursMandantZuBelegwaehrungI != 0) {
 			// den vorgeschlagenen Verkaufspreis in Mandantenwaehrung umrechnen
 			// und auf zwei Stellen runden
-			bdPreisI = bdPreisI.divide(new BigDecimal(
-					ddWechselkursMandantZuBelegwaehrungI.doubleValue()),
+			bdPreisI = bdPreisI.divide(new BigDecimal(ddWechselkursMandantZuBelegwaehrungI.doubleValue()),
 					BigDecimal.ROUND_HALF_EVEN);
 		}
 		// beim Preisvergleich muss sichergestellt sein, dass beide Zahlen
@@ -1754,24 +1617,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Anlegen einer neuen Artikelpreisliste.
 	 * 
-	 * @param vkpfartikelpreislisteDto
-	 *            die Preisliste
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkpfartikelpreislisteDto die Preisliste
+	 * @param theClientDto             der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return Integer
 	 */
-	public Integer createVkpfartikelpreisliste(
-			VkpfartikelpreislisteDto vkpfartikelpreislisteDto,
+	public Integer createVkpfartikelpreisliste(VkpfartikelpreislisteDto vkpfartikelpreislisteDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.entry();
 		checkVkpfartikelpreislisteDto(vkpfartikelpreislisteDto);
 		// unique key constraint pruefen
 		Vkpfartikelpreisliste oPreisliste = null;
 		try {
-			Query query = em
-					.createNamedQuery("VkpfartikelpreislistefindByMandantCNrAndCNr");
+			Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNrAndCNr");
 			query.setParameter(1, vkpfartikelpreislisteDto.getMandantCNr());
 			query.setParameter(2, vkpfartikelpreislisteDto.getCNr());
 			oPreisliste = (Vkpfartikelpreisliste) query.getSingleResult();
@@ -1780,32 +1638,26 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		if (oPreisliste != null) {
 			// unique key constraint verletzt
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
 		}
 
 		// den PK erzeugen und setzen
 		Integer iIdPreisliste = null;
 
 		try {
-			iIdPreisliste = getPKGeneratorObj().getNextPrimaryKey(
-					PKConst.PK_VKPFARTIKELPREISLISTE);
+			iIdPreisliste = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_VKPFARTIKELPREISLISTE);
 			vkpfartikelpreislisteDto.setIId(iIdPreisliste);
 		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PK_GENERATOR,
-					new Exception(t));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PK_GENERATOR, new Exception(t));
 		}
 
 		try {
-			Vkpfartikelpreisliste oVkpfartikelpreisliste = new Vkpfartikelpreisliste(
-					iIdPreisliste, vkpfartikelpreislisteDto.getMandantCNr(),
-					vkpfartikelpreislisteDto.getISort(),
-					vkpfartikelpreislisteDto.getCNr(),
-					vkpfartikelpreislisteDto.getWaehrungCNr());
+			Vkpfartikelpreisliste oVkpfartikelpreisliste = new Vkpfartikelpreisliste(iIdPreisliste,
+					vkpfartikelpreislisteDto.getMandantCNr(), vkpfartikelpreislisteDto.getISort(),
+					vkpfartikelpreislisteDto.getCNr(), vkpfartikelpreislisteDto.getWaehrungCNr());
 			em.persist(oVkpfartikelpreisliste);
 			em.flush();
-			setVkpfartikelpreislisteFromVkpfartikelpreislisteDto(
-					oVkpfartikelpreisliste, vkpfartikelpreislisteDto);
+			setVkpfartikelpreislisteFromVkpfartikelpreislisteDto(oVkpfartikelpreisliste, vkpfartikelpreislisteDto);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -1816,23 +1668,17 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Loeschen einer Preisliste.
 	 * 
-	 * @param vkpfartikelpreislisteDto
-	 *            die Preisliste
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkpfartikelpreislisteDto die Preisliste
+	 * @param theClientDto             der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeVkpfartikelpreisliste(
-			VkpfartikelpreislisteDto vkpfartikelpreislisteDto,
+	public void removeVkpfartikelpreisliste(VkpfartikelpreislisteDto vkpfartikelpreislisteDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.entry();
 		checkVkpfartikelpreislisteDto(vkpfartikelpreislisteDto);
-		Vkpfartikelpreisliste toRemove = em.find(Vkpfartikelpreisliste.class,
-				vkpfartikelpreislisteDto.getIId());
+		Vkpfartikelpreisliste toRemove = em.find(Vkpfartikelpreisliste.class, vkpfartikelpreislisteDto.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -1848,48 +1694,37 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Aktualisieren einer bestehenden Preisliste
 	 * 
-	 * @param vkpfartikelpreislisteDto
-	 *            die Preisliste
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkpfartikelpreislisteDto die Preisliste
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void updateVkpfartikelpreisliste(
-			VkpfartikelpreislisteDto vkpfartikelpreislisteDto,
-			boolean bRabattsatzAendern, java.sql.Date datumGueltigNeu,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateVkpfartikelpreisliste(VkpfartikelpreislisteDto vkpfartikelpreislisteDto,
+			boolean bRabattsatzAendern, java.sql.Date datumGueltigNeu, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkVkpfartikelpreislisteDto(vkpfartikelpreislisteDto);
-		Vkpfartikelpreisliste oVkpfartikelpreisliste = em.find(
-				Vkpfartikelpreisliste.class, vkpfartikelpreislisteDto.getIId());
+		Vkpfartikelpreisliste oVkpfartikelpreisliste = em.find(Vkpfartikelpreisliste.class,
+				vkpfartikelpreislisteDto.getIId());
 
-		if (bRabattsatzAendern == true
-				&& oVkpfartikelpreisliste.getNStandardrabattsatz() != null
+		if (bRabattsatzAendern == true && oVkpfartikelpreisliste.getNStandardrabattsatz() != null
 				&& vkpfartikelpreislisteDto.getNStandardrabattsatz() != null) {
-			aendereVorhandeneRabatteEinerPreisliste(
-					vkpfartikelpreislisteDto.getIId(),
-					oVkpfartikelpreisliste.getNStandardrabattsatz(),
-					vkpfartikelpreislisteDto.getNStandardrabattsatz(),
+			aendereVorhandeneRabatteEinerPreisliste(vkpfartikelpreislisteDto.getIId(),
+					oVkpfartikelpreisliste.getNStandardrabattsatz(), vkpfartikelpreislisteDto.getNStandardrabattsatz(),
 					datumGueltigNeu, theClientDto);
 		}
 
 		if (oVkpfartikelpreisliste == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, "");
 		}
-		setVkpfartikelpreislisteFromVkpfartikelpreislisteDto(
-				oVkpfartikelpreisliste, vkpfartikelpreislisteDto);
+		setVkpfartikelpreislisteFromVkpfartikelpreislisteDto(oVkpfartikelpreisliste, vkpfartikelpreislisteDto);
 	}
 
-	public VkpfartikelpreislisteDto vkpfartikelpreislisteFindByPrimaryKey(
-			Integer iId) throws EJBExceptionLP {
+	public VkpfartikelpreislisteDto vkpfartikelpreislisteFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iId == null"));
 		}
 		VkpfartikelpreislisteDto oDto = null;
-		Vkpfartikelpreisliste vkpfartikelpreisliste = em.find(
-				Vkpfartikelpreisliste.class, iId);
+		Vkpfartikelpreisliste vkpfartikelpreisliste = em.find(Vkpfartikelpreisliste.class, iId);
 		if (vkpfartikelpreisliste == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		oDto = assembleVkpfartikelpreislisteDto(vkpfartikelpreisliste);
 		return oDto;
@@ -1897,29 +1732,24 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 	public VkpfartikelpreislisteDto[]
 
-	vkpfartikelpreislisteFindByMandantCNr(String mandantCNrI)
-			throws EJBExceptionLP {
+			vkpfartikelpreislisteFindByMandantCNr(String mandantCNrI) throws EJBExceptionLP {
 		final String METHOD_NAME = "vkpfartikelpreislisteFindByMandantCNr";
 		myLogger.entry();
 		VkpfartikelpreislisteDto[] dtos = null;
-		Query query = em
-				.createNamedQuery("VkpfartikelpreislistefindByMandantCNr");
+		Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNr");
 		query.setParameter(1, mandantCNrI);
 		dtos = assembleVkpfartikelpreislisteDtos(query.getResultList());
 		return dtos;
 	}
 
-	public VkpfartikelpreislisteDto vkpfartikelpreislisteFindByMandantCNrAndCNr(
-			String mandantCNrI, String cNrI) throws EJBExceptionLP {
+	public VkpfartikelpreislisteDto vkpfartikelpreislisteFindByMandantCNrAndCNr(String mandantCNrI, String cNrI)
+			throws EJBExceptionLP {
 		try {
 			// @ToDo Ungueltiger Prozeduraufruf oder ungueltiges Argument
-			Query query = em
-					.createNamedQuery("VkpfartikelpreislistefindByMandantCNrAndCNr");
+			Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNrAndCNr");
 			query.setParameter(1, mandantCNrI);
 			query.setParameter(2, cNrI);
-			return this
-					.assembleVkpfartikelpreislisteDto((Vkpfartikelpreisliste) query
-							.getSingleResult());
+			return this.assembleVkpfartikelpreislisteDto((Vkpfartikelpreisliste) query.getSingleResult());
 		} catch (NoResultException ex) {
 			// @ToDo FinderException
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "");
@@ -1928,14 +1758,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 	}
 
-	public VkpfartikelpreislisteDto[] getAlleAktivenPreislisten(
-			Short bPreislisteaktivI, TheClientDto theClientDto)
+	public VkpfartikelpreislisteDto[] getAlleAktivenPreislisten(Short bPreislisteaktivI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		Validator.notNull(bPreislisteaktivI, "bPreislisteaktivI");
 
 		VkpfartikelpreislisteDto[] aVkpfartikelpreislisteDtoO = null;
-		Query query = em
-				.createNamedQuery("VkpfartikelpreislistefindByMandantCNrBPreislisteaktiv");
+		Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNrBPreislisteaktiv");
 		query.setParameter(1, theClientDto.getMandant());
 		query.setParameter(2, bPreislisteaktivI);
 		Collection<?> cl = query.getResultList();
@@ -1943,13 +1771,11 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return aVkpfartikelpreislisteDtoO;
 	}
 
-	public Map getAlleAktivenPreislistenMitVkPreisbasis(
-			TheClientDto theClientDto) {
+	public Map getAlleAktivenPreislistenMitVkPreisbasis(TheClientDto theClientDto) {
 
 		TreeMap<Integer, String> m = new TreeMap<Integer, String>();
 
-		VkpfartikelpreislisteDto[] pDtos = getAlleAktivenPreislisten(
-				Helper.boolean2Short(true), theClientDto);
+		VkpfartikelpreislisteDto[] pDtos = getAlleAktivenPreislisten(Helper.boolean2Short(true), theClientDto);
 
 		for (int i = 0; i < pDtos.length; i++) {
 			m.put(pDtos[i].getIId(), pDtos[i].getCNr());
@@ -1958,20 +1784,14 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		// Nun noch VKPreisbasis hinzufuegen oder LiefPreis
 
 		try {
-			ParametermandantDto p = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
-					ParameterFac.PARAMETER_VKPREISBASIS_IST_LIEF1PREIS);
+			ParametermandantDto p = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_VKPREISBASIS_IST_LIEF1PREIS);
 			if (p != null && p.getCWert().equals("1")) {
-				m.put(new Integer(-1),
-						getTextRespectUISpr("artikel.label.lief1Preis",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()));
+				m.put(new Integer(-1), getTextRespectUISpr("artikel.label.lief1Preis", theClientDto.getMandant(),
+						theClientDto.getLocUi()));
 			} else {
-				m.put(new Integer(-1),
-						getTextRespectUISpr(
-								"artikel.label.einzelverkaufspreis",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()));
+				m.put(new Integer(-1), getTextRespectUISpr("artikel.label.einzelverkaufspreis",
+						theClientDto.getMandant(), theClientDto.getLocUi()));
 			}
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
@@ -1980,19 +1800,15 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		// PJ 17302 und ALLE PREISLISTEN
 
 		m.put(new Integer(-2),
-				getTextRespectUISpr("artikel.allepreislisten",
-						theClientDto.getMandant(), theClientDto.getLocUi()));
+				getTextRespectUISpr("artikel.allepreislisten", theClientDto.getMandant(), theClientDto.getLocUi()));
 
 		return m;
 	}
 
-	public VkpfartikelpreislisteDto[] getAlleAktivenPreislistenMitHinterlegtemArtikelpreis(
-			Integer iIdArtikelI, Short bPreislisteaktivI,
-			String waehrungCNrZielwaehrung, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public VkpfartikelpreislisteDto[] getAlleAktivenPreislistenMitHinterlegtemArtikelpreis(Integer iIdArtikelI,
+			Short bPreislisteaktivI, String waehrungCNrZielwaehrung, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (bPreislisteaktivI == null) {
@@ -2003,23 +1819,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		VkpfartikelpreislisteDto[] aVkpfartikelpreislisteDtoO = null;
 
 		ArrayList<Vkpfartikelpreisliste> alVkpfartikelpreisliste = new ArrayList<Vkpfartikelpreisliste>();
-		Query query = em
-				.createNamedQuery("VkpfartikelpreislistefindByMandantCNrBPreislisteaktiv");
+		Query query = em.createNamedQuery("VkpfartikelpreislistefindByMandantCNrBPreislisteaktiv");
 		query.setParameter(1, theClientDto.getMandant());
 		query.setParameter(2, bPreislisteaktivI);
 		Collection<?> cl = query.getResultList();
 		Iterator<?> it = cl.iterator();
 		while (it.hasNext()) {
-			Vkpfartikelpreisliste oPreisliste = (Vkpfartikelpreisliste) it
-					.next();
+			Vkpfartikelpreisliste oPreisliste = (Vkpfartikelpreisliste) it.next();
 
 			VkPreisfindungPreislisteDto oPreisDto = null;
 
 			try {
-				oPreisDto = getAktuellePreislisteByArtikelIIdPreislisteIId(
-						iIdArtikelI, oPreisliste.getIId(),
-						new Date(System.currentTimeMillis()),
-						waehrungCNrZielwaehrung, theClientDto);
+				oPreisDto = getAktuellePreislisteByArtikelIIdPreislisteIId(iIdArtikelI, oPreisliste.getIId(),
+						new Date(System.currentTimeMillis()), waehrungCNrZielwaehrung, theClientDto);
 			}
 			/**
 			 * @todo saubere fehlerbehandlung!
@@ -2033,61 +1845,47 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			}
 		}
 
-		aVkpfartikelpreislisteDtoO = new VkpfartikelpreislisteDto[alVkpfartikelpreisliste
-				.size()];
+		aVkpfartikelpreislisteDtoO = new VkpfartikelpreislisteDto[alVkpfartikelpreisliste.size()];
 
 		for (int i = 0; i < alVkpfartikelpreisliste.size(); i++) {
-			aVkpfartikelpreislisteDtoO[i] = assembleVkpfartikelpreislisteDto((Vkpfartikelpreisliste) alVkpfartikelpreisliste
-					.get(i));
+			aVkpfartikelpreislisteDtoO[i] = assembleVkpfartikelpreislisteDto(
+					(Vkpfartikelpreisliste) alVkpfartikelpreisliste.get(i));
 		}
 		return aVkpfartikelpreislisteDtoO;
 	}
 
-	private void setVkpfartikelpreislisteFromVkpfartikelpreislisteDto(
-			Vkpfartikelpreisliste vkpfartikelpreisliste,
+	private void setVkpfartikelpreislisteFromVkpfartikelpreislisteDto(Vkpfartikelpreisliste vkpfartikelpreisliste,
 			VkpfartikelpreislisteDto vkpfartikelpreislisteDto) {
-		vkpfartikelpreisliste.setMandantCNr(vkpfartikelpreislisteDto
-				.getMandantCNr());
+		vkpfartikelpreisliste.setMandantCNr(vkpfartikelpreislisteDto.getMandantCNr());
 		vkpfartikelpreisliste.setISort(vkpfartikelpreislisteDto.getISort());
 		vkpfartikelpreisliste.setCNr(vkpfartikelpreislisteDto.getCNr());
-		vkpfartikelpreisliste.setBPreislisteaktiv(vkpfartikelpreislisteDto
-				.getBPreislisteaktiv());
-		vkpfartikelpreisliste.setWaehrungCNr(vkpfartikelpreislisteDto
-				.getWaehrungCNr());
-		vkpfartikelpreisliste.setCFremdsystemnr(vkpfartikelpreislisteDto
-				.getCFremdsystemnr());
-		vkpfartikelpreisliste.setNStandardrabattsatz(vkpfartikelpreislisteDto
-				.getNStandardrabattsatz());
-		vkpfartikelpreisliste.setWebshopIId(vkpfartikelpreislisteDto
-				.getWebshopIId());
+		vkpfartikelpreisliste.setBPreislisteaktiv(vkpfartikelpreislisteDto.getBPreislisteaktiv());
+		vkpfartikelpreisliste.setWaehrungCNr(vkpfartikelpreislisteDto.getWaehrungCNr());
+		vkpfartikelpreisliste.setCFremdsystemnr(vkpfartikelpreislisteDto.getCFremdsystemnr());
+		vkpfartikelpreisliste.setNStandardrabattsatz(vkpfartikelpreislisteDto.getNStandardrabattsatz());
+		vkpfartikelpreisliste.setWebshopIId(vkpfartikelpreislisteDto.getWebshopIId());
 		em.merge(vkpfartikelpreisliste);
 		em.flush();
 	}
 
-	private VkpfartikelpreislisteDto assembleVkpfartikelpreislisteDto(
-			Vkpfartikelpreisliste vkpfartikelpreisliste) {
-		return VkpfartikelpreislisteDtoAssembler
-				.createDto(vkpfartikelpreisliste);
+	private VkpfartikelpreislisteDto assembleVkpfartikelpreislisteDto(Vkpfartikelpreisliste vkpfartikelpreisliste) {
+		return VkpfartikelpreislisteDtoAssembler.createDto(vkpfartikelpreisliste);
 	}
 
-	private VkpfartikelpreislisteDto[] assembleVkpfartikelpreislisteDtos(
-			Collection<?> vkpfartikelpreislistes) {
+	private VkpfartikelpreislisteDto[] assembleVkpfartikelpreislisteDtos(Collection<?> vkpfartikelpreislistes) {
 		List<VkpfartikelpreislisteDto> list = new ArrayList<VkpfartikelpreislisteDto>();
 		if (vkpfartikelpreislistes != null) {
 			Iterator<?> iterator = vkpfartikelpreislistes.iterator();
 			while (iterator.hasNext()) {
-				Vkpfartikelpreisliste vkpfartikelpreisliste = (Vkpfartikelpreisliste) iterator
-						.next();
+				Vkpfartikelpreisliste vkpfartikelpreisliste = (Vkpfartikelpreisliste) iterator.next();
 				list.add(assembleVkpfartikelpreislisteDto(vkpfartikelpreisliste));
 			}
 		}
-		VkpfartikelpreislisteDto[] returnArray = new VkpfartikelpreislisteDto[list
-				.size()];
+		VkpfartikelpreislisteDto[] returnArray = new VkpfartikelpreislisteDto[list.size()];
 		return (VkpfartikelpreislisteDto[]) list.toArray(returnArray);
 	}
 
-	private void checkVkpfartikelpreislisteDto(
-			VkpfartikelpreislisteDto vkpfartikelpreislisteDtoI)
+	private void checkVkpfartikelpreislisteDto(VkpfartikelpreislisteDto vkpfartikelpreislisteDtoI)
 			throws EJBExceptionLP {
 		if (vkpfartikelpreislisteDtoI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
@@ -2098,24 +1896,18 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Alle Verkaufspreisbasen zu einem bestimmten Artikel holen.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdArtikelI  PK des Artikels
+	 * @param theClientDto der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 * @return VkPreisfindungEinzelverkaufspreisDto[] die Verkaufspreisbasen
 	 */
-	public VkPreisfindungEinzelverkaufspreisDto[] vkpfartikelverkaufspreisbasisFindByArtikelIId(
-			Integer iIdArtikelI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public VkPreisfindungEinzelverkaufspreisDto[] vkpfartikelverkaufspreisbasisFindByArtikelIId(Integer iIdArtikelI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 		VkPreisfindungEinzelverkaufspreisDto[] aVkpfartikelverkaufspreisbasisDto = null;
-		Query query = em
-				.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByArtikelIId");
+		Query query = em.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByArtikelIId");
 		query.setParameter(1, iIdArtikelI);
 		Collection<?> cl = query.getResultList();
 		aVkpfartikelverkaufspreisbasisDto = assembleVkPreisfindungEinzelverkaufspreisDtos(cl);
@@ -2126,41 +1918,30 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Methode zur Berechnung des waehrungsunabhaengigen Verkaufspreises einer
 	 * Belegposition.
 	 * 
-	 * @param bdEinzelpreisI
-	 *            Nettoeinzelpreis
-	 * @param ddRabattsatzI
-	 *            Rabattsatz in Prozent z.B. 20
-	 * @param ddZusatzrabattsatzI
-	 *            Zusatzrabattsatz in Prozent z.B. 10
-	 * @param iIdMwstsatzI
-	 *            PK des Mwstsatzes
-	 * @param iAnzahlStellenI
-	 *            auf wieviele Stellen sollen die Preise kaufmaennisch gerundet
-	 *            werden, -1 ohne Rundung
-	 * @param theClientDto
-	 *            String
+	 * @param bdEinzelpreisI      Nettoeinzelpreis
+	 * @param ddRabattsatzI       Rabattsatz in Prozent z.B. 20
+	 * @param ddZusatzrabattsatzI Zusatzrabattsatz in Prozent z.B. 10
+	 * @param iIdMwstsatzI        PK des Mwstsatzes
+	 * @param iAnzahlStellenI     auf wieviele Stellen sollen die Preise
+	 *                            kaufmaennisch gerundet werden, -1 ohne Rundung
+	 * @param theClientDto        String
 	 * @return VerkaufspreisDto die berechneten Preisfolder
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public VerkaufspreisDto berechnePreisfelder(BigDecimal bdEinzelpreisI,
-			Double ddRabattsatzI, Double ddZusatzrabattsatzI,
-			Integer iIdMwstsatzI, int iAnzahlStellenI, TheClientDto theClientDto)
+	public VerkaufspreisDto berechnePreisfelder(BigDecimal bdEinzelpreisI, Double ddRabattsatzI,
+			Double ddZusatzrabattsatzI, Integer iIdMwstsatzI, int iAnzahlStellenI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		// TheClientDto theClientDto = check2(cNrUserI);
 		if (iAnzahlStellenI != -1 && iAnzahlStellenI <= 0) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"iAnzahlStellenI muss -1 oder positiv sein"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception("iAnzahlStellenI muss -1 oder positiv sein"));
 		}
 
 		if (bdEinzelpreisI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("bdEinzelpreisI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("bdEinzelpreisI == null"));
 		}
 
 		if (ddRabattsatzI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("ddRabattsatzI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("ddRabattsatzI == null"));
 		}
 
 		if (ddZusatzrabattsatzI == null) {
@@ -2169,68 +1950,51 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		if (iIdMwstsatzI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdMwstsatzI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdMwstsatzI == null"));
 		}
 
 		VerkaufspreisDto verkaufspreisDto = new VerkaufspreisDto();
 
-		try {
-			verkaufspreisDto.einzelpreis = bdEinzelpreisI;
-			verkaufspreisDto.rabattsatz = ddRabattsatzI;
+		// try {
+		verkaufspreisDto.einzelpreis = bdEinzelpreisI;
+		verkaufspreisDto.rabattsatz = ddRabattsatzI;
 
-			BigDecimal nRabattsumme = verkaufspreisDto.einzelpreis
-					.multiply(new BigDecimal(ddRabattsatzI.doubleValue())
-							.movePointLeft(2));
+		BigDecimal nRabattsumme = verkaufspreisDto.einzelpreis
+				.multiply(new BigDecimal(ddRabattsatzI.doubleValue()).movePointLeft(2));
 
-			verkaufspreisDto.rabattsumme = nRabattsumme;
+		verkaufspreisDto.rabattsumme = nRabattsumme;
 
-			verkaufspreisDto.setDdZusatzrabattsatz(ddZusatzrabattsatzI);
+		verkaufspreisDto.setDdZusatzrabattsatz(ddZusatzrabattsatzI);
 
-			BigDecimal nZusatzrabattsumme = verkaufspreisDto.einzelpreis
-					.subtract(verkaufspreisDto.rabattsumme)
-					.multiply(
-							new BigDecimal(verkaufspreisDto
-									.getDdZusatzrabattsatz().doubleValue()))
-					.movePointLeft(2);
+		BigDecimal nZusatzrabattsumme = verkaufspreisDto.einzelpreis.subtract(verkaufspreisDto.rabattsumme)
+				.multiply(new BigDecimal(verkaufspreisDto.getDdZusatzrabattsatz().doubleValue())).movePointLeft(2);
 
-			verkaufspreisDto.setNZusatzrabattsumme(nZusatzrabattsumme);
+		verkaufspreisDto.setNZusatzrabattsumme(nZusatzrabattsumme);
 
-			verkaufspreisDto.nettopreis = verkaufspreisDto.einzelpreis
-					.subtract(verkaufspreisDto.rabattsumme).subtract(
-							nZusatzrabattsumme);
+		verkaufspreisDto.nettopreis = verkaufspreisDto.einzelpreis.subtract(verkaufspreisDto.rabattsumme)
+				.subtract(nZusatzrabattsumme);
 
-			verkaufspreisDto.mwstsatzIId = iIdMwstsatzI;
+		verkaufspreisDto.mwstsatzIId = iIdMwstsatzI;
 
-			MwstsatzDto mwstsatzDto = getMandantFac().mwstsatzFindByPrimaryKey(
-					iIdMwstsatzI, theClientDto);
+		MwstsatzDto mwstsatzDto = getMandantFac().mwstsatzFindByPrimaryKey(iIdMwstsatzI, theClientDto);
 
-			verkaufspreisDto.mwstsumme = verkaufspreisDto.nettopreis
-					.multiply(new BigDecimal(mwstsatzDto.getFMwstsatz()
-							.doubleValue()).movePointLeft(2));
+		verkaufspreisDto.mwstsumme = verkaufspreisDto.nettopreis
+				.multiply(new BigDecimal(mwstsatzDto.getFMwstsatz().doubleValue()).movePointLeft(2));
 
-			verkaufspreisDto.bruttopreis = verkaufspreisDto.nettopreis
-					.add(verkaufspreisDto.mwstsumme);
+		verkaufspreisDto.bruttopreis = verkaufspreisDto.nettopreis.add(verkaufspreisDto.mwstsumme);
 
-			if (iAnzahlStellenI != -1) {
-				verkaufspreisDto.einzelpreis = Helper.rundeKaufmaennisch(
-						verkaufspreisDto.einzelpreis, iAnzahlStellenI);
-				verkaufspreisDto.rabattsumme = Helper.rundeKaufmaennisch(
-						verkaufspreisDto.rabattsumme, iAnzahlStellenI);
-				verkaufspreisDto.setNZusatzrabattsumme(Helper
-						.rundeKaufmaennisch(
-								verkaufspreisDto.getNZusatzrabattsumme(),
-								iAnzahlStellenI));
-				verkaufspreisDto.nettopreis = Helper.rundeKaufmaennisch(
-						verkaufspreisDto.nettopreis, iAnzahlStellenI);
-				verkaufspreisDto.mwstsumme = Helper.rundeKaufmaennisch(
-						verkaufspreisDto.mwstsumme, iAnzahlStellenI);
-				verkaufspreisDto.bruttopreis = Helper.rundeKaufmaennisch(
-						verkaufspreisDto.bruttopreis, iAnzahlStellenI);
-			}
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
+		if (iAnzahlStellenI != -1) {
+			verkaufspreisDto.einzelpreis = Helper.rundeKaufmaennisch(verkaufspreisDto.einzelpreis, iAnzahlStellenI);
+			verkaufspreisDto.rabattsumme = Helper.rundeKaufmaennisch(verkaufspreisDto.rabattsumme, iAnzahlStellenI);
+			verkaufspreisDto.setNZusatzrabattsumme(
+					Helper.rundeKaufmaennisch(verkaufspreisDto.getNZusatzrabattsumme(), iAnzahlStellenI));
+			verkaufspreisDto.nettopreis = Helper.rundeKaufmaennisch(verkaufspreisDto.nettopreis, iAnzahlStellenI);
+			verkaufspreisDto.mwstsumme = Helper.rundeKaufmaennisch(verkaufspreisDto.mwstsumme, iAnzahlStellenI);
+			verkaufspreisDto.bruttopreis = Helper.rundeKaufmaennisch(verkaufspreisDto.bruttopreis, iAnzahlStellenI);
 		}
+		// } catch (RemoteException ex) {
+		// throwEJBExceptionLPRespectOld(ex);
+		// }
 		return verkaufspreisDto;
 	}
 
@@ -2240,34 +2004,26 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Eine VK Mengenstaffel anlegen.
 	 * 
-	 * @param vkpfMengenstaffelDtoI
-	 *            die neue Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param vkpfMengenstaffelDtoI die neue Mengenstaffel
+	 * @param theClientDto          der aktuelle Benutzer
 	 * @return Integer PK der neuen Mengenstaffel
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public Integer createVkpfMengenstaffel(
-			VkpfMengenstaffelDto vkpfMengenstaffelDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public Integer createVkpfMengenstaffel(VkpfMengenstaffelDto vkpfMengenstaffelDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkVkpfMengenstaffelDto(vkpfMengenstaffelDtoI);
 		Integer iId = new Integer(-1);
 		try {
 			// Daten normieren
-			vkpfMengenstaffelDtoI.setTPreisgueltigab(Helper
-					.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigab()));
-			vkpfMengenstaffelDtoI.setTPreisgueltigbis(Helper
-					.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigbis()));
+			vkpfMengenstaffelDtoI.setTPreisgueltigab(Helper.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigab()));
+			vkpfMengenstaffelDtoI.setTPreisgueltigbis(Helper.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigbis()));
 
 			// UK pruefen
 			VkpfMengenstaffelDto vkpfMengenstaffelDto = null;
 
 			try {
-				vkpfMengenstaffelDto = vkpfMengenstaffelFindByUniqueKey(
-						vkpfMengenstaffelDtoI.getArtikelIId(),
-						vkpfMengenstaffelDtoI.getNMenge(),
-						vkpfMengenstaffelDtoI.getTPreisgueltigab(),
+				vkpfMengenstaffelDto = vkpfMengenstaffelFindByUniqueKey(vkpfMengenstaffelDtoI.getArtikelIId(),
+						vkpfMengenstaffelDtoI.getNMenge(), vkpfMengenstaffelDtoI.getTPreisgueltigab(),
 						vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId());
 			}
 			/**
@@ -2279,8 +2035,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 			if (vkpfMengenstaffelDto != null) {
 				// constraint verletzt
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception());
 			}
 
 			// generieren von primary key
@@ -2288,21 +2043,16 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			iId = pkGen.getNextPrimaryKey(PKConst.PK_VKPFMENGENSTAFFEL);
 
 			vkpfMengenstaffelDtoI.setIId(iId);
-			vkpfMengenstaffelDtoI.setPersonalIIdAendern(theClientDto
-					.getIDPersonal());
+			vkpfMengenstaffelDtoI.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			vkpfMengenstaffelDtoI.setTAendern(getTimestamp());
 			checkVkpfMengenstaffel(vkpfMengenstaffelDtoI, theClientDto);
-			Vkpfmengenstaffel vkpfMengenstaffel = new Vkpfmengenstaffel(
-					vkpfMengenstaffelDtoI.getIId(),
-					vkpfMengenstaffelDtoI.getArtikelIId(),
-					vkpfMengenstaffelDtoI.getNMenge(),
-					vkpfMengenstaffelDtoI.getTPreisgueltigab(),
-					vkpfMengenstaffelDtoI.getPersonalIIdAendern(),
+			Vkpfmengenstaffel vkpfMengenstaffel = new Vkpfmengenstaffel(vkpfMengenstaffelDtoI.getIId(),
+					vkpfMengenstaffelDtoI.getArtikelIId(), vkpfMengenstaffelDtoI.getNMenge(),
+					vkpfMengenstaffelDtoI.getTPreisgueltigab(), vkpfMengenstaffelDtoI.getPersonalIIdAendern(),
 					vkpfMengenstaffelDtoI.getBAllepreislisten());
 			em.persist(vkpfMengenstaffel);
 			em.flush();
-			setVkpfMengenstaffelFromVkpfMengenstaffelDto(vkpfMengenstaffel,
-					vkpfMengenstaffelDtoI);
+			setVkpfMengenstaffelFromVkpfMengenstaffelDto(vkpfMengenstaffel, vkpfMengenstaffelDtoI);
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
@@ -2310,13 +2060,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return iId;
 	}
 
-	@TransactionTimeout(1000)
-	private void aendereVorhandeneRabatteEinerPreisliste(Integer preislisteIId,
-			BigDecimal rabattsatzAlt, BigDecimal rabattsatzNeu,
-			java.sql.Date datumNeu, TheClientDto theClientDto) {
+	@org.jboss.ejb3.annotation.TransactionTimeout(1000)
+	private void aendereVorhandeneRabatteEinerPreisliste(Integer preislisteIId, BigDecimal rabattsatzAlt,
+			BigDecimal rabattsatzNeu, java.sql.Date datumNeu, TheClientDto theClientDto) {
 		Session session = FLRSessionFactory.getFactory().openSession();
-		String queryString = "SELECT a FROM FLRArtikel AS a WHERE a.mandant_c_nr='"
-				+ theClientDto.getMandant() + "' AND a.b_versteckt=0";
+		String queryString = "SELECT a FROM FLRArtikel AS a WHERE a.mandant_c_nr='" + theClientDto.getMandant()
+				+ "' AND a.b_versteckt=0";
 
 		datumNeu = Helper.cutDate(datumNeu);
 
@@ -2328,8 +2077,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		while (resultListIterator.hasNext()) {
 			FLRArtikel flrArtikel = (FLRArtikel) resultListIterator.next();
 
-			Query ejbquery = em
-					.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIIdBisTPreisgueltigab");
+			Query ejbquery = em.createNamedQuery(
+					"VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIIdBisTPreisgueltigab");
 			ejbquery.setParameter(1, flrArtikel.getI_id());
 			ejbquery.setParameter(2, preislisteIId);
 			ejbquery.setParameter(3, datumNeu);
@@ -2339,39 +2088,26 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			if (c.size() > 0) {
 				//
 
-				VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) c
-						.iterator().next();
+				VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) c.iterator().next();
 
-				if (vkPreisfindungPreisliste.getNArtikelstandardrabattsatz() != null
-						&& vkPreisfindungPreisliste
-								.getNArtikelstandardrabattsatz().doubleValue() == rabattsatzAlt
-								.doubleValue()) {
+				if (vkPreisfindungPreisliste.getNArtikelstandardrabattsatz() != null && vkPreisfindungPreisliste
+						.getNArtikelstandardrabattsatz().doubleValue() == rabattsatzAlt.doubleValue()) {
 
-					if (rabattsatzNeu.doubleValue() != rabattsatzAlt
-							.doubleValue()) {
+					if (rabattsatzNeu.doubleValue() != rabattsatzAlt.doubleValue()) {
 
-						if (vkPreisfindungPreisliste.getTPreisgueltigab()
-								.equals(datumNeu)) {
-							vkPreisfindungPreisliste
-									.setNArtikelstandardrabattsatz(rabattsatzNeu);
+						if (vkPreisfindungPreisliste.getTPreisgueltigab().equals(datumNeu)) {
+							vkPreisfindungPreisliste.setNArtikelstandardrabattsatz(rabattsatzNeu);
 							em.merge(vkPreisfindungPreisliste);
 							em.flush();
 						} else {
 							// Neu anlegen
 							VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = new VkPreisfindungPreislisteDto();
-							vkPreisfindungPreislisteDto
-									.setVkpfartikelpreislisteIId(preislisteIId);
-							vkPreisfindungPreislisteDto
-									.setArtikelIId(flrArtikel.getI_id());
-							vkPreisfindungPreislisteDto
-									.setNArtikelstandardrabattsatz(rabattsatzNeu);
-							vkPreisfindungPreislisteDto
-									.setTPreisgueltigab(new java.sql.Date(
-											datumNeu.getTime()));
-							vkPreisfindungPreislisteDto
-									.setVkpfartikelpreislisteIId(preislisteIId);
-							createVkPreisfindungPreisliste(
-									vkPreisfindungPreislisteDto, theClientDto);
+							vkPreisfindungPreislisteDto.setVkpfartikelpreislisteIId(preislisteIId);
+							vkPreisfindungPreislisteDto.setArtikelIId(flrArtikel.getI_id());
+							vkPreisfindungPreislisteDto.setNArtikelstandardrabattsatz(rabattsatzNeu);
+							vkPreisfindungPreislisteDto.setTPreisgueltigab(new java.sql.Date(datumNeu.getTime()));
+							vkPreisfindungPreislisteDto.setVkpfartikelpreislisteIId(preislisteIId);
+							createVkPreisfindungPreisliste(vkPreisfindungPreislisteDto, theClientDto);
 						}
 					}
 				}
@@ -2381,29 +2117,23 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Mengenstaffeln duerfen datumsmaessig nicht ueberlappen. Wenn eine Staffel
-	 * an eine bestehende Staffel anschliesst, die kein bis-Datum hat, wird
-	 * dieses automatisch ergaenzt. Wenn eine Staffel vor eine bestehende
-	 * Staffel kommt und kein bis-Datum hat, dann wird dieses automatisch
-	 * ergaenzt. Jede Staffel wird in dieser Art eingereiht, sodass lediglich
-	 * die letzte erfasste Staffel ein offenes Ende haben kann.
+	 * Mengenstaffeln duerfen datumsmaessig nicht ueberlappen. Wenn eine Staffel an
+	 * eine bestehende Staffel anschliesst, die kein bis-Datum hat, wird dieses
+	 * automatisch ergaenzt. Wenn eine Staffel vor eine bestehende Staffel kommt und
+	 * kein bis-Datum hat, dann wird dieses automatisch ergaenzt. Jede Staffel wird
+	 * in dieser Art eingereiht, sodass lediglich die letzte erfasste Staffel ein
+	 * offenes Ende haben kann.
 	 * 
-	 * @param vkpfMengenstaffelDtoI
-	 *            die zu pruefende Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkpfMengenstaffelDtoI die zu pruefende Mengenstaffel
+	 * @param theClientDto          der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private void checkVkpfMengenstaffel(
-			VkpfMengenstaffelDto vkpfMengenstaffelDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	private void checkVkpfMengenstaffel(VkpfMengenstaffelDto vkpfMengenstaffelDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		// Schritt 1: Alle bestehenden Mengenstaffeln zu diesem Artikel holen
 		VkpfMengenstaffelDto[] bestehendeDtos = vkpfMengenstaffelFindByArtikelIIdNMenge(
-				vkpfMengenstaffelDtoI.getArtikelIId(),
-				vkpfMengenstaffelDtoI.getNMenge(),
-				vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId(),
-				theClientDto);
+				vkpfMengenstaffelDtoI.getArtikelIId(), vkpfMengenstaffelDtoI.getNMenge(),
+				vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId(), theClientDto);
 
 		// Schritt 2: durch den vorhergegangen UK ist sichergestellt, dass
 		// Artikel, Menge,
@@ -2414,39 +2144,29 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		int iIndex = 0;
 
 		while (!bEnthalten && iIndex < bestehendeDtos.length) {
-			if (vkpfMengenstaffelDtoI.getIId().intValue() != bestehendeDtos[iIndex]
-					.getIId().intValue()) {
+			if (vkpfMengenstaffelDtoI.getIId().intValue() != bestehendeDtos[iIndex].getIId().intValue()) {
 
-				if ((vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId() == null && bestehendeDtos[iIndex]
-						.getVkpfartikelpreislisteIId() == null)
-						|| (vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId() != null && vkpfMengenstaffelDtoI
-								.getVkpfartikelpreislisteIId().equals(
-										bestehendeDtos[iIndex]
-												.getVkpfartikelpreislisteIId()))) {
+				if ((vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId() == null
+						&& bestehendeDtos[iIndex].getVkpfartikelpreislisteIId() == null)
+						|| (vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId() != null
+								&& vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId()
+										.equals(bestehendeDtos[iIndex].getVkpfartikelpreislisteIId()))) {
 
 					// PJ 14014
 					Date bis = null;
 					if (bestehendeDtos[iIndex].getTPreisgueltigbis() != null) {
-						bis = new Date(bestehendeDtos[iIndex]
-								.getTPreisgueltigbis().getTime());
+						bis = new Date(bestehendeDtos[iIndex].getTPreisgueltigbis().getTime());
 					}
 
-					bEnthalten = checkDatumInDatumsbereichEnthalten(new Date(
-							bestehendeDtos[iIndex].getTPreisgueltigab()
-									.getTime()), bis, new Date(
-							vkpfMengenstaffelDtoI.getTPreisgueltigab()
-									.getTime()), theClientDto);
+					bEnthalten = checkDatumInDatumsbereichEnthalten(
+							new Date(bestehendeDtos[iIndex].getTPreisgueltigab().getTime()), bis,
+							new Date(vkpfMengenstaffelDtoI.getTPreisgueltigab().getTime()), theClientDto);
 
-					if (vkpfMengenstaffelDtoI.getTPreisgueltigbis() != null
-							&& !bEnthalten) {
+					if (vkpfMengenstaffelDtoI.getTPreisgueltigbis() != null && !bEnthalten) {
 						bEnthalten = checkDatumInDatumsbereichEnthalten(
-								new Date(bestehendeDtos[iIndex]
-										.getTPreisgueltigab().getTime()),
-								new Date(bestehendeDtos[iIndex]
-										.getTPreisgueltigbis().getTime()),
-								new Date(vkpfMengenstaffelDtoI
-										.getTPreisgueltigbis().getTime()),
-								theClientDto);
+								new Date(bestehendeDtos[iIndex].getTPreisgueltigab().getTime()),
+								new Date(bestehendeDtos[iIndex].getTPreisgueltigbis().getTime()),
+								new Date(vkpfMengenstaffelDtoI.getTPreisgueltigbis().getTime()), theClientDto);
 					}
 				}
 			}
@@ -2455,16 +2175,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		if (bEnthalten) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
-					new Exception("ArtikelIId="
-							+ vkpfMengenstaffelDtoI.getArtikelIId()
-							+ ", Menge="
-							+ vkpfMengenstaffelDtoI.getNMenge()
-							+ ", gueltig bis="
-							+ Helper.formatDatum(
-									vkpfMengenstaffelDtoI.getTPreisgueltigab(),
-									theClientDto.getLocUi())));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
+					new Exception("ArtikelIId=" + vkpfMengenstaffelDtoI.getArtikelIId() + ", Menge="
+							+ vkpfMengenstaffelDtoI.getNMenge() + ", gueltig bis="
+							+ Helper.formatDatum(vkpfMengenstaffelDtoI.getTPreisgueltigab(), theClientDto.getLocUi())));
 		}
 
 		// Schritt 3: Den Vorgaenger und den Nachfolger der neuen Staffel
@@ -2475,45 +2189,27 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		if (bestehendeDtos != null && bestehendeDtos.length > 0) {
 			while (nachfolgerDto == null && iIndex < bestehendeDtos.length) {
-				if (vkpfMengenstaffelDtoI.getIId().intValue() != bestehendeDtos[iIndex]
-						.getIId().intValue()) {
+				if (vkpfMengenstaffelDtoI.getIId().intValue() != bestehendeDtos[iIndex].getIId().intValue()) {
 
 					if ((vkpfMengenstaffelDtoI.getBAllepreislisten()
-							.equals(bestehendeDtos[iIndex]
-									.getBAllepreislisten()))) {
+							.equals(bestehendeDtos[iIndex].getBAllepreislisten()))) {
 
-						if ((vkpfMengenstaffelDtoI
-								.getVkpfartikelpreislisteIId() == null && bestehendeDtos[iIndex]
-								.getVkpfartikelpreislisteIId() == null)
-								|| (vkpfMengenstaffelDtoI
-										.getVkpfartikelpreislisteIId() != null && vkpfMengenstaffelDtoI
-										.getVkpfartikelpreislisteIId()
-										.equals(bestehendeDtos[iIndex]
-												.getVkpfartikelpreislisteIId()))) {
-							if (vkpfMengenstaffelDtoI.getTPreisgueltigab()
-									.getTime() > bestehendeDtos[iIndex]
+						if ((vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId() == null
+								&& bestehendeDtos[iIndex].getVkpfartikelpreislisteIId() == null)
+								|| (vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId() != null
+										&& vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId()
+												.equals(bestehendeDtos[iIndex].getVkpfartikelpreislisteIId()))) {
+							if (vkpfMengenstaffelDtoI.getTPreisgueltigab().getTime() > bestehendeDtos[iIndex]
 									.getTPreisgueltigab().getTime()) {
 								iIndex++;
-							} else if (vkpfMengenstaffelDtoI
-									.getTPreisgueltigab().getTime() == bestehendeDtos[iIndex]
+							} else if (vkpfMengenstaffelDtoI.getTPreisgueltigab().getTime() == bestehendeDtos[iIndex]
 									.getTPreisgueltigab().getTime()) {
-								throw new EJBExceptionLP(
-										EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
-										new Exception(
-												"ArtikelIId="
-														+ vkpfMengenstaffelDtoI
-																.getArtikelIId()
-														+ ", Menge="
-														+ vkpfMengenstaffelDtoI
-																.getNMenge()
-														+ ", gueltig ab="
-														+ Helper.formatDatum(
-																vkpfMengenstaffelDtoI
-																		.getTPreisgueltigab(),
-																theClientDto
-																		.getLocUi())));
-							} else if (vkpfMengenstaffelDtoI
-									.getTPreisgueltigab().getTime() < bestehendeDtos[iIndex]
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_VKPF_MENGENSTAFFEL_EXISTIERT,
+										new Exception("ArtikelIId=" + vkpfMengenstaffelDtoI.getArtikelIId() + ", Menge="
+												+ vkpfMengenstaffelDtoI.getNMenge() + ", gueltig ab="
+												+ Helper.formatDatum(vkpfMengenstaffelDtoI.getTPreisgueltigab(),
+														theClientDto.getLocUi())));
+							} else if (vkpfMengenstaffelDtoI.getTPreisgueltigab().getTime() < bestehendeDtos[iIndex]
 									.getTPreisgueltigab().getTime()) {
 								nachfolgerDto = bestehendeDtos[iIndex];
 
@@ -2534,24 +2230,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 			// wenn die neue Mengenstaffel die letzte ist
 			if (iIndex > 0
-					&& vkpfMengenstaffelDtoI.getIId().intValue() != bestehendeDtos[iIndex - 1]
-							.getIId().intValue()
-					&& nachfolgerDto == null
-					&& vorgaengerDto == null
+					&& vkpfMengenstaffelDtoI.getIId().intValue() != bestehendeDtos[iIndex - 1].getIId().intValue()
+					&& nachfolgerDto == null && vorgaengerDto == null
 					&& ((vkpfMengenstaffelDtoI.getVkpfartikelpreislisteIId() + "")
-							.equals(bestehendeDtos[iIndex - 1]
-									.getVkpfartikelpreislisteIId() + ""))
+							.equals(bestehendeDtos[iIndex - 1].getVkpfartikelpreislisteIId() + ""))
 					&& (vkpfMengenstaffelDtoI.getBAllepreislisten()
-							.equals(bestehendeDtos[iIndex - 1]
-									.getBAllepreislisten()))) {
+							.equals(bestehendeDtos[iIndex - 1].getBAllepreislisten()))) {
 				vorgaengerDto = bestehendeDtos[iIndex - 1];
 			}
 		}
 
 		// Schritt 4: Wenn es einen Nachfolger gibt, muss der neue Bereich ev.
 		// ergaenzt werden
-		if (nachfolgerDto != null
-				&& vkpfMengenstaffelDtoI.getTPreisgueltigbis() == null) {
+		if (nachfolgerDto != null && vkpfMengenstaffelDtoI.getTPreisgueltigbis() == null) {
 			// den neuen Zeitraum ergaenzen, wenn es kein bis-Datum, aber einen
 			// Nachfolger gibt
 			if (vkpfMengenstaffelDtoI.getTPreisgueltigbis() == null) {
@@ -2559,21 +2250,18 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				cal.setTime(nachfolgerDto.getTPreisgueltigab());
 				cal.add(Calendar.DATE, -1); // den Tag davor festsetzen
 
-				vkpfMengenstaffelDtoI.setTPreisgueltigbis(new java.sql.Date(cal
-						.getTimeInMillis()));
+				vkpfMengenstaffelDtoI.setTPreisgueltigbis(new java.sql.Date(cal.getTimeInMillis()));
 			}
 		}
 
 		// Schritt 5: Wenn es einen Vorgaenger gibt, muss dieser ev. ergaenzt
 		// werden
-		if (vorgaengerDto != null
-				&& vorgaengerDto.getTPreisgueltigbis() == null) {
+		if (vorgaengerDto != null && vorgaengerDto.getTPreisgueltigbis() == null) {
 			Calendar cal = new GregorianCalendar();
 			cal.setTime(vkpfMengenstaffelDtoI.getTPreisgueltigab());
 			cal.add(Calendar.DATE, -1); // den Tag davor festsetzen
 
-			vorgaengerDto.setTPreisgueltigbis(new java.sql.Date(cal
-					.getTimeInMillis()));
+			vorgaengerDto.setTPreisgueltigbis(new java.sql.Date(cal.getTimeInMillis()));
 
 			updateVkpfMengenstaffel(vorgaengerDto, theClientDto);
 		}
@@ -2582,27 +2270,21 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Pruefen, ob ein Datum in einem Datumsbereich enthalten ist.
 	 * 
-	 * @param tDatumVonI
-	 *            Date
-	 * @param tDatumBisI
-	 *            Date
-	 * @param tDatumEnthaltenI
-	 *            Date
-	 * @param theClientDto
-	 *            String
+	 * @param tDatumVonI       Date
+	 * @param tDatumBisI       Date
+	 * @param tDatumEnthaltenI Date
+	 * @param theClientDto     String
 	 * @return boolean true, wenn das Datum enthalten ist
 	 * @throws EJBExceptionLP
 	 */
-	private boolean checkDatumInDatumsbereichEnthalten(Date tDatumVonI,
-			Date tDatumBisI, Date tDatumEnthaltenI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	private boolean checkDatumInDatumsbereichEnthalten(Date tDatumVonI, Date tDatumBisI, Date tDatumEnthaltenI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		Calendar calIt = new GregorianCalendar();
 		calIt.setTime(tDatumVonI);
 
 		boolean bEnthalten = false;
 
-		while (!bEnthalten && tDatumBisI != null
-				&& calIt.getTimeInMillis() <= tDatumBisI.getTime()) {
+		while (!bEnthalten && tDatumBisI != null && calIt.getTimeInMillis() <= tDatumBisI.getTime()) {
 			if (calIt.getTimeInMillis() == tDatumEnthaltenI.getTime()) {
 				bEnthalten = true;
 			} else {
@@ -2616,22 +2298,16 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Eine VK Mengenstaffel loeschen.
 	 * 
-	 * @param vkpfMengenstaffelDtoI
-	 *            die zu loeschende VK Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkpfMengenstaffelDtoI die zu loeschende VK Mengenstaffel
+	 * @param theClientDto          der aktuelle Benutzer
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public void removeVkpfMengenstaffel(
-			VkpfMengenstaffelDto vkpfMengenstaffelDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void removeVkpfMengenstaffel(VkpfMengenstaffelDto vkpfMengenstaffelDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkVkpfMengenstaffelDto(vkpfMengenstaffelDtoI);
-		Vkpfmengenstaffel toRemove = em.find(Vkpfmengenstaffel.class,
-				vkpfMengenstaffelDtoI.getIId());
+		Vkpfmengenstaffel toRemove = em.find(Vkpfmengenstaffel.class, vkpfMengenstaffelDtoI.getIId());
 		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -2644,85 +2320,64 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Eine bestehende VK Mengenstaffel mit neuen Werten aktualisieren.
 	 * 
-	 * @param vkpfMengenstaffelDtoI
-	 *            die VK Mengenstaffel
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param vkpfMengenstaffelDtoI die VK Mengenstaffel
+	 * @param theClientDto          der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
-	public void updateVkpfMengenstaffel(
-			VkpfMengenstaffelDto vkpfMengenstaffelDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public void updateVkpfMengenstaffel(VkpfMengenstaffelDto vkpfMengenstaffelDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkVkpfMengenstaffelDto(vkpfMengenstaffelDtoI);
-		Vkpfmengenstaffel vkpfMengenstaffel = em.find(Vkpfmengenstaffel.class,
-				vkpfMengenstaffelDtoI.getIId());
+		Vkpfmengenstaffel vkpfMengenstaffel = em.find(Vkpfmengenstaffel.class, vkpfMengenstaffelDtoI.getIId());
 		if (vkpfMengenstaffel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		if (vkpfMengenstaffelDtoI.getTPreisgueltigbis() == null) {
 			checkVkpfMengenstaffel(vkpfMengenstaffelDtoI, theClientDto);
 		}
 		// Daten normieren
-		vkpfMengenstaffelDtoI.setTPreisgueltigab(Helper
-				.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigab()));
-		vkpfMengenstaffelDtoI.setTPreisgueltigbis(Helper
-				.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigbis()));
+		vkpfMengenstaffelDtoI.setTPreisgueltigab(Helper.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigab()));
+		vkpfMengenstaffelDtoI.setTPreisgueltigbis(Helper.cutDate(vkpfMengenstaffelDtoI.getTPreisgueltigbis()));
 
-		vkpfMengenstaffelDtoI.setPersonalIIdAendern(theClientDto
-				.getIDPersonal());
+		vkpfMengenstaffelDtoI.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		vkpfMengenstaffelDtoI.setTAendern(getTimestamp());
 
-		setVkpfMengenstaffelFromVkpfMengenstaffelDto(vkpfMengenstaffel,
-				vkpfMengenstaffelDtoI);
+		setVkpfMengenstaffelFromVkpfMengenstaffelDto(vkpfMengenstaffel, vkpfMengenstaffelDtoI);
 	}
 
-	public VkpfMengenstaffelDto vkpfMengenstaffelFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public VkpfMengenstaffelDto vkpfMengenstaffelFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
 		if (iId == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iId == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iId == null"));
 		}
-		Vkpfmengenstaffel vkpfmengenstaffel = em.find(Vkpfmengenstaffel.class,
-				iId);
+		Vkpfmengenstaffel vkpfmengenstaffel = em.find(Vkpfmengenstaffel.class, iId);
 		if (vkpfmengenstaffel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleVkpfMengenstaffelDto(vkpfmengenstaffel);
 	}
 
-	private void setVkpfMengenstaffelFromVkpfMengenstaffelDto(
-			Vkpfmengenstaffel vkpfMengenstaffel,
+	private void setVkpfMengenstaffelFromVkpfMengenstaffelDto(Vkpfmengenstaffel vkpfMengenstaffel,
 			VkpfMengenstaffelDto vkpfMengenstaffelDto) {
 		vkpfMengenstaffel.setArtikelIId(vkpfMengenstaffelDto.getArtikelIId());
 		vkpfMengenstaffel.setNMenge(vkpfMengenstaffelDto.getNMenge());
-		vkpfMengenstaffel.setFArtikelstandardrabattsatz(vkpfMengenstaffelDto
-				.getFArtikelstandardrabattsatz());
-		vkpfMengenstaffel.setNArtikelfixpreis(vkpfMengenstaffelDto
-				.getNArtikelfixpreis());
-		vkpfMengenstaffel.setTPreisgueltigab(vkpfMengenstaffelDto
-				.getTPreisgueltigab());
-		vkpfMengenstaffel.setTPreisgueltigbis(vkpfMengenstaffelDto
-				.getTPreisgueltigbis());
-		vkpfMengenstaffel.setPersonalIIdAendern(vkpfMengenstaffelDto
-				.getPersonalIIdAendern());
+		vkpfMengenstaffel.setFArtikelstandardrabattsatz(vkpfMengenstaffelDto.getFArtikelstandardrabattsatz());
+		vkpfMengenstaffel.setNArtikelfixpreis(vkpfMengenstaffelDto.getNArtikelfixpreis());
+		vkpfMengenstaffel.setTPreisgueltigab(vkpfMengenstaffelDto.getTPreisgueltigab());
+		vkpfMengenstaffel.setTPreisgueltigbis(vkpfMengenstaffelDto.getTPreisgueltigbis());
+		vkpfMengenstaffel.setPersonalIIdAendern(vkpfMengenstaffelDto.getPersonalIIdAendern());
 		vkpfMengenstaffel.setTAendern(vkpfMengenstaffelDto.getTAendern());
-		vkpfMengenstaffel.setVkpfartikelpreislisteIId(vkpfMengenstaffelDto
-				.getVkpfartikelpreislisteIId());
-		vkpfMengenstaffel.setBAllepreislisten(vkpfMengenstaffelDto
-				.getBAllepreislisten());
+		vkpfMengenstaffel.setVkpfartikelpreislisteIId(vkpfMengenstaffelDto.getVkpfartikelpreislisteIId());
+		vkpfMengenstaffel.setBAllepreislisten(vkpfMengenstaffelDto.getBAllepreislisten());
+		vkpfMengenstaffel.setCBemerkung(vkpfMengenstaffelDto.getCBemerkung());
 		em.merge(vkpfMengenstaffel);
 		em.flush();
 	}
 
-	private VkpfMengenstaffelDto assembleVkpfMengenstaffelDto(
-			Vkpfmengenstaffel vkpfMengenstaffel) {
+	private VkpfMengenstaffelDto assembleVkpfMengenstaffelDto(Vkpfmengenstaffel vkpfMengenstaffel) {
 		return VkpfMengenstaffelDtoAssembler.createDto(vkpfMengenstaffel);
 	}
 
-	private VkpfMengenstaffelDto[] assembleVkpfMengenstaffelDtos(
-			Collection<?> vkpfMengenstaffels, Integer preislisteIId) {
+	private VkpfMengenstaffelDto[] assembleVkpfMengenstaffelDtos(Collection<?> vkpfMengenstaffels,
+			Integer preislisteIId) {
 
 		if (preislisteIId == null) {
 			List<VkpfMengenstaffelDto> vkpreisbasisPreisliste = new ArrayList<VkpfMengenstaffelDto>();
@@ -2730,8 +2385,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				ArrayList<BigDecimal> aVerwendeteStaffelmengenPreisliste = new ArrayList<BigDecimal>();
 				Iterator<?> iterator = vkpfMengenstaffels.iterator();
 				while (iterator.hasNext()) {
-					Vkpfmengenstaffel vkpfMengenstaffel = (Vkpfmengenstaffel) iterator
-							.next();
+					Vkpfmengenstaffel vkpfMengenstaffel = (Vkpfmengenstaffel) iterator.next();
 					// Pro Menge nur letztgueltige Mengenstaffel, Werte sind
 					// bereits
 					// nach Menge ASC und Gueltig ab DESC sortiert
@@ -2739,15 +2393,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 						// nur hinzufuegen, wenn diese Menge noch nicht
 						// vorhanden
 						// ist
-						if (!aVerwendeteStaffelmengenPreisliste
-								.contains(vkpfMengenstaffel.getNMenge())) {
+						if (!aVerwendeteStaffelmengenPreisliste.contains(vkpfMengenstaffel.getNMenge())) {
 
 							if (vkpfMengenstaffel.getVkpfartikelpreislisteIId() == null) {
 
-								aVerwendeteStaffelmengenPreisliste
-										.add(vkpfMengenstaffel.getNMenge());
-								vkpreisbasisPreisliste
-										.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
+								aVerwendeteStaffelmengenPreisliste.add(vkpfMengenstaffel.getNMenge());
+								vkpreisbasisPreisliste.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
 							}
 
 						}
@@ -2755,10 +2406,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 				}
 			}
-			VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[vkpreisbasisPreisliste
-					.size()];
-			return (VkpfMengenstaffelDto[]) vkpreisbasisPreisliste
-					.toArray(returnArray);
+			VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[vkpreisbasisPreisliste.size()];
+			return (VkpfMengenstaffelDto[]) vkpreisbasisPreisliste.toArray(returnArray);
 		} else {
 			List<VkpfMengenstaffelDto> listPreisliste = new ArrayList<VkpfMengenstaffelDto>();
 			List<VkpfMengenstaffelDto> listAllePreislisten = new ArrayList<VkpfMengenstaffelDto>();
@@ -2769,8 +2418,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				ArrayList<BigDecimal> aVerwendeteStaffelmengenVKpreisbasis = new ArrayList<BigDecimal>();
 				Iterator<?> iterator = vkpfMengenstaffels.iterator();
 				while (iterator.hasNext()) {
-					Vkpfmengenstaffel vkpfMengenstaffel = (Vkpfmengenstaffel) iterator
-							.next();
+					Vkpfmengenstaffel vkpfMengenstaffel = (Vkpfmengenstaffel) iterator.next();
 					// Pro Menge nur letztgueltige Mengenstaffel, Werte sind
 					// bereits
 					// nach Menge ASC und Gueltig ab DESC sortiert
@@ -2778,46 +2426,33 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 						// nur hinzufuegen, wenn diese Menge noch nicht
 						// vorhanden
 						// ist
-						if (!aVerwendeteStaffelmengenPreisliste
-								.contains(vkpfMengenstaffel.getNMenge())) {
+						if (!aVerwendeteStaffelmengenPreisliste.contains(vkpfMengenstaffel.getNMenge())) {
 
-							if (preislisteIId.equals(vkpfMengenstaffel
-									.getVkpfartikelpreislisteIId())
-									&& Helper.short2boolean(vkpfMengenstaffel
-											.getBAllepreislisten()) == false) {
+							if (preislisteIId.equals(vkpfMengenstaffel.getVkpfartikelpreislisteIId())
+									&& Helper.short2boolean(vkpfMengenstaffel.getBAllepreislisten()) == false) {
 
-								aVerwendeteStaffelmengenPreisliste
-										.add(vkpfMengenstaffel.getNMenge());
-								listPreisliste
-										.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
+								aVerwendeteStaffelmengenPreisliste.add(vkpfMengenstaffel.getNMenge());
+								listPreisliste.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
 							}
 
 						}
 
-						if (!aVerwendeteStaffelmengenAllePreislisten
-								.contains(vkpfMengenstaffel.getNMenge())) {
+						if (!aVerwendeteStaffelmengenAllePreislisten.contains(vkpfMengenstaffel.getNMenge())) {
 
-							if (Helper.short2boolean(vkpfMengenstaffel
-									.getBAllepreislisten()) == true) {
+							if (Helper.short2boolean(vkpfMengenstaffel.getBAllepreislisten()) == true) {
 
-								aVerwendeteStaffelmengenAllePreislisten
-										.add(vkpfMengenstaffel.getNMenge());
-								listAllePreislisten
-										.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
+								aVerwendeteStaffelmengenAllePreislisten.add(vkpfMengenstaffel.getNMenge());
+								listAllePreislisten.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
 							}
 
 						}
-						if (!aVerwendeteStaffelmengenVKpreisbasis
-								.contains(vkpfMengenstaffel.getNMenge())) {
+						if (!aVerwendeteStaffelmengenVKpreisbasis.contains(vkpfMengenstaffel.getNMenge())) {
 
 							if (vkpfMengenstaffel.getVkpfartikelpreislisteIId() == null
-									&& Helper.short2boolean(vkpfMengenstaffel
-											.getBAllepreislisten()) == false) {
+									&& Helper.short2boolean(vkpfMengenstaffel.getBAllepreislisten()) == false) {
 
-								aVerwendeteStaffelmengenVKpreisbasis
-										.add(vkpfMengenstaffel.getNMenge());
-								listVKpreisbasis
-										.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
+								aVerwendeteStaffelmengenVKpreisbasis.add(vkpfMengenstaffel.getNMenge());
+								listVKpreisbasis.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
 							}
 
 						}
@@ -2828,20 +2463,14 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			}
 
 			if (listPreisliste.size() > 0) {
-				VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[listPreisliste
-						.size()];
-				return (VkpfMengenstaffelDto[]) listPreisliste
-						.toArray(returnArray);
+				VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[listPreisliste.size()];
+				return (VkpfMengenstaffelDto[]) listPreisliste.toArray(returnArray);
 			} else if (listVKpreisbasis.size() > 0) {
-				VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[listVKpreisbasis
-						.size()];
-				return (VkpfMengenstaffelDto[]) listVKpreisbasis
-						.toArray(returnArray);
+				VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[listVKpreisbasis.size()];
+				return (VkpfMengenstaffelDto[]) listVKpreisbasis.toArray(returnArray);
 			} else {
-				VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[listAllePreislisten
-						.size()];
-				return (VkpfMengenstaffelDto[]) listAllePreislisten
-						.toArray(returnArray);
+				VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[listAllePreislisten.size()];
+				return (VkpfMengenstaffelDto[]) listAllePreislisten.toArray(returnArray);
 			}
 
 		}
@@ -2850,49 +2479,40 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Preconditions pruefen.
 	 * 
-	 * @param vkpfMengenstaffelDtoI
-	 *            VkpfMengenstaffelDto
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param vkpfMengenstaffelDtoI VkpfMengenstaffelDto
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private void checkVkpfMengenstaffelDto(
-			VkpfMengenstaffelDto vkpfMengenstaffelDtoI) throws EJBExceptionLP {
+	private void checkVkpfMengenstaffelDto(VkpfMengenstaffelDto vkpfMengenstaffelDtoI) throws EJBExceptionLP {
 		if (vkpfMengenstaffelDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception());
 		}
 	}
 
-	public VkpfMengenstaffelDto vkpfMengenstaffelFindByUniqueKey(
-			Integer iIdArtikelI, BigDecimal nMengeI, Date datGueltigAbI,
-			Integer vkpfartikelpreislisteIId) throws EJBExceptionLP {
+	public VkpfMengenstaffelDto vkpfMengenstaffelFindByUniqueKey(Integer iIdArtikelI, BigDecimal nMengeI,
+			Date datGueltigAbI, Integer vkpfartikelpreislisteIId) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (nMengeI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("nMengeI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("nMengeI == null"));
 		}
 
 		if (datGueltigAbI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("datGueltigAbI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("datGueltigAbI == null"));
 		}
 		Vkpfmengenstaffel vkpfmengenstaffel = null;
 		if (vkpfartikelpreislisteIId != null) {
-			Query query = em
-					.createNamedQuery("VkpfMengenstaffelfindByUniqueKey");
+			Query query = em.createNamedQuery("VkpfMengenstaffelfindByUniqueKey");
 			query.setParameter(1, iIdArtikelI);
-			query.setParameter(2, nMengeI.doubleValue());
+			query.setParameter(2, nMengeI);
 			query.setParameter(3, datGueltigAbI);
+			query.setParameter(4, vkpfartikelpreislisteIId);
 			vkpfmengenstaffel = (Vkpfmengenstaffel) query.getSingleResult();
 		} else {
-			Query query = em
-					.createNamedQuery("VkpfMengenstaffelfindByUniqueKey2");
+			Query query = em.createNamedQuery("VkpfMengenstaffelfindByUniqueKey2");
 			query.setParameter(1, iIdArtikelI);
-			query.setParameter(2, nMengeI.doubleValue());
+			query.setParameter(2, nMengeI);
 			query.setParameter(3, datGueltigAbI);
 			vkpfmengenstaffel = (Vkpfmengenstaffel) query.getSingleResult();
 		}
@@ -2902,33 +2522,26 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return assembleVkpfMengenstaffelDto(vkpfmengenstaffel);
 	}
 
-	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdNMenge(
-			Integer iIdArtikelI, BigDecimal nMengeI, Integer preislisteIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdNMenge(Integer iIdArtikelI, BigDecimal nMengeI,
+			Integer preislisteIId, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
-		Query query = em
-				.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdNMenge");
+		Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdNMenge");
 		query.setParameter(1, iIdArtikelI);
 		query.setParameter(2, nMengeI);
 
 		return assembleVkpfMengenstaffelDtos(query.getResultList(), null);
 	}
 
-	public VkpfMengenstaffelDto vkpfMengenstaffelFindByArtikelIIdNMengeGueltigkeitsdatum(
-			Integer iIdArtikelI, BigDecimal nMengeI,
-			Date datGueltigkeitsdatumI, Integer preislisteIId,
-			TheClientDto theClientDto) {
+	public VkpfMengenstaffelDto vkpfMengenstaffelFindByArtikelIIdNMengeGueltigkeitsdatum(Integer iIdArtikelI,
+			BigDecimal nMengeI, Date datGueltigkeitsdatumI, Integer preislisteIId, TheClientDto theClientDto) {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (nMengeI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("nMengeI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("nMengeI == null"));
 		}
 
 		if (datGueltigkeitsdatumI == null) {
@@ -2936,13 +2549,11 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 					new Exception("datGueltigkeitsdatumI == null"));
 		}
 		VkpfMengenstaffelDto vkpfMengenstaffel = null;
-		Query query = em
-				.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdNMengeGueltigkeitsdatum");
+		Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdNMengeGueltigkeitsdatum");
 		query.setParameter(1, iIdArtikelI);
 		query.setParameter(2, nMengeI);
 		query.setParameter(3, datGueltigkeitsdatumI);
-		VkpfMengenstaffelDto[] dtos = assembleVkpfMengenstaffelDtos(
-				query.getResultList(), preislisteIId);
+		VkpfMengenstaffelDto[] dtos = assembleVkpfMengenstaffelDtos(query.getResultList(), preislisteIId);
 		// ORDER BY nMenge
 		if (dtos != null && dtos.length > 0) {
 			// Kriterium <= nMenge, d.h. die letzte Staffel im Array ist
@@ -2952,12 +2563,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return vkpfMengenstaffel;
 	}
 
-	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(
-			Integer iIdArtikelI, Date datGueltigkeitI, Integer preislisteIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(Integer iIdArtikelI,
+			Date datGueltigkeitI, Integer preislisteIId, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (datGueltigkeitI == null) {
@@ -2965,24 +2574,17 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 					new Exception("datGueltigkeitsdatumI == null"));
 		}
 
-		myLogger.logData("ArtikelIId, Gueltigkeitsdatum: "
-				+ iIdArtikelI
-				+ ", "
-				+ DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.GERMAN)
-						.format(datGueltigkeitI));
-		Query query = em
-				.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdGueltigkeitsdatum");
+		myLogger.logData("ArtikelIId, Gueltigkeitsdatum: " + iIdArtikelI + ", "
+				+ DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.GERMAN).format(datGueltigkeitI));
+		Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIIdGueltigkeitsdatum");
 		query.setParameter(1, iIdArtikelI);
 		query.setParameter(2, datGueltigkeitI);
-		return assembleVkpfMengenstaffelDtos(query.getResultList(),
-				preislisteIId);
+		return assembleVkpfMengenstaffelDtos(query.getResultList(), preislisteIId);
 	}
 
-	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIId(
-			Integer iIdArtikelI, TheClientDto theClientDto) {
+	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIId(Integer iIdArtikelI, TheClientDto theClientDto) {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIId");
@@ -2990,11 +2592,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return assembleVkpfMengenstaffelDtos(query.getResultList(), null);
 	}
 
-	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdFuerVKPreisentwicklung(
-			Integer iIdArtikelI, TheClientDto theClientDto) {
+	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdFuerVKPreisentwicklung(Integer iIdArtikelI,
+			TheClientDto theClientDto) {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIId");
@@ -3006,8 +2607,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			ArrayList<BigDecimal> aVerwendeteStaffelmengenPreisliste = new ArrayList<BigDecimal>();
 			Iterator<?> iterator = vkpfMengenstaffels.iterator();
 			while (iterator.hasNext()) {
-				Vkpfmengenstaffel vkpfMengenstaffel = (Vkpfmengenstaffel) iterator
-						.next();
+				Vkpfmengenstaffel vkpfMengenstaffel = (Vkpfmengenstaffel) iterator.next();
 				// Pro Menge nur letztgueltige Mengenstaffel, Werte sind
 				// bereits
 				// nach Menge ASC und Gueltig ab DESC sortiert
@@ -3015,49 +2615,39 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 					// nur hinzufuegen, wenn diese Menge noch nicht
 					// vorhanden
 					// ist
-					if (!aVerwendeteStaffelmengenPreisliste
-							.contains(vkpfMengenstaffel.getNMenge())) {
+					if (!aVerwendeteStaffelmengenPreisliste.contains(vkpfMengenstaffel.getNMenge())) {
 
-						aVerwendeteStaffelmengenPreisliste
-								.add(vkpfMengenstaffel.getNMenge());
-						vkpreisbasisPreisliste
-								.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
+						aVerwendeteStaffelmengenPreisliste.add(vkpfMengenstaffel.getNMenge());
+						vkpreisbasisPreisliste.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
 
 					}
 				}
 
 			}
 		}
-		VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[vkpreisbasisPreisliste
-				.size()];
-		return (VkpfMengenstaffelDto[]) vkpreisbasisPreisliste
-				.toArray(returnArray);
+		VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[vkpreisbasisPreisliste.size()];
+		return (VkpfMengenstaffelDto[]) vkpreisbasisPreisliste.toArray(returnArray);
 
 	}
 
 	/**
-	 * Preisbasis als Bezugsgroesse fuer die Ermittlung von Preisen aufgrund
-	 * eines Rabattsatzes. <br>
-	 * Es gilt: Aktueller VK-Preis des Artikels > Gestehungspreis am Hauptlager
-	 * des Mandanten > 0.0
+	 * Preisbasis als Bezugsgroesse fuer die Ermittlung von Preisen aufgrund eines
+	 * Rabattsatzes. <br>
+	 * Es gilt: Aktueller VK-Preis des Artikels > Gestehungspreis am Hauptlager des
+	 * Mandanten > 0.0
 	 * 
 	 * PJ 15000: Ist Mandantenparameter PARAMETER_VKPREISBASIS_IST_LIEF1PREIS==1
 	 * kommt die Preisbasis vom 1. Lieferantenpreis
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param datGueltigkeitsdatumVkbasisII
-	 *            Gueltigkeitsdatum der VK-Basis
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdArtikelI                   PK des Artikels
+	 * @param datGueltigkeitsdatumVkbasisII Gueltigkeitsdatum der VK-Basis
+	 * @param theClientDto                  der aktuelle Benutzer
 	 * @return BigDecimal die Preisbasis des Artikels
 	 */
-	public BigDecimal ermittlePreisbasis(Integer iIdArtikelI,
-			Date datGueltigkeitsdatumVkbasisII, Integer preislisteIId,
+	public BigDecimal ermittlePreisbasis(Integer iIdArtikelI, Date datGueltigkeitsdatumVkbasisII, Integer preislisteIId,
 			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (datGueltigkeitsdatumVkbasisII == null) {
@@ -3069,18 +2659,15 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		BigDecimal nPreisbasis = null;
 
 		try {
-			ParametermandantDto p = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
-					ParameterFac.PARAMETER_VKPREISBASIS_IST_LIEF1PREIS);
+			ParametermandantDto p = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_VKPREISBASIS_IST_LIEF1PREIS);
 
 			// Abhaengig vom Parameter
 			if (p != null && p.getCWert().equals("1")) {
 				// Schritt 2: Preis vom Artikellieferanten
-				ArtikellieferantDto alDto = getArtikelFac()
-						.getArtikelEinkaufspreis(iIdArtikelI, null,
-								new BigDecimal(0),
-								theClientDto.getSMandantenwaehrung(),
-								datGueltigkeitsdatumVkbasisII, theClientDto);
+				ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(iIdArtikelI, null,
+						new BigDecimal(0), theClientDto.getSMandantenwaehrung(), datGueltigkeitsdatumVkbasisII,
+						theClientDto);
 
 				if (alDto != null && alDto.getLief1Preis() != null) {
 					nPreisbasis = alDto.getLief1Preis();
@@ -3088,16 +2675,13 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 					// Schritt 3: Wenn es keine gueltige VK-Basis gibt, dann
 					// gilt
 					// der Gestehungspreis.
-					nPreisbasis = getGemittelterGestehungspreisAmHauptlagerDesMandanten(
-							iIdArtikelI, theClientDto);
+					nPreisbasis = getGemittelterGestehungspreisAmHauptlagerDesMandanten(iIdArtikelI, theClientDto);
 				}
 
 				try {
-					nPreisbasis = getLocaleFac()
-							.rechneUmInAndereWaehrungZuDatum(nPreisbasis,
-									theClientDto.getSMandantenwaehrung(),
-									waehrungCNrZielwaehrung,
-									datGueltigkeitsdatumVkbasisII, theClientDto);
+					nPreisbasis = getLocaleFac().rechneUmInAndereWaehrungZuDatum(nPreisbasis,
+							theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung,
+							datGueltigkeitsdatumVkbasisII, theClientDto);
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -3106,9 +2690,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				// Schritt 2: Wurde fuer den gewuenschten Zeitpunkt eine
 				// VK-Basis
 				// hinterlegt?
-				VkPreisfindungEinzelverkaufspreisDto vkbasisDto = getArtikeleinzelverkaufspreis(
-						iIdArtikelI, datGueltigkeitsdatumVkbasisII,
-						waehrungCNrZielwaehrung, theClientDto);
+				VkPreisfindungEinzelverkaufspreisDto vkbasisDto = getArtikeleinzelverkaufspreis(iIdArtikelI,
+						datGueltigkeitsdatumVkbasisII, waehrungCNrZielwaehrung, theClientDto);
 
 				if (preislisteIId == null) {
 
@@ -3131,25 +2714,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 				} else {
 					VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = getVkPreisfindungPreislisteFindByArtikelIIdPreislisteIIdTPreisgueltigab(
-							iIdArtikelI, preislisteIId,
-							datGueltigkeitsdatumVkbasisII, theClientDto);
+							iIdArtikelI, preislisteIId, datGueltigkeitsdatumVkbasisII, theClientDto);
 
 					VkpfartikelpreislisteDto plDto = vkpfartikelpreislisteFindByPrimaryKey(preislisteIId);
 
 					if (vkPreisfindungPreislisteDto != null) {
 
 						if (vkPreisfindungPreislisteDto.getNArtikelfixpreis() != null) {
-							nPreisbasis = vkPreisfindungPreislisteDto
-									.getNArtikelfixpreis();
+							nPreisbasis = vkPreisfindungPreislisteDto.getNArtikelfixpreis();
 
 							try {
-								nPreisbasis = getLocaleFac()
-										.rechneUmInAndereWaehrungZuDatum(
-												nPreisbasis,
-												plDto.getWaehrungCNr(),
-												waehrungCNrZielwaehrung,
-												datGueltigkeitsdatumVkbasisII,
-												theClientDto);
+								nPreisbasis = getLocaleFac().rechneUmInAndereWaehrungZuDatum(nPreisbasis,
+										plDto.getWaehrungCNr(), waehrungCNrZielwaehrung, datGueltigkeitsdatumVkbasisII,
+										theClientDto);
 							} catch (RemoteException e) {
 								throwEJBExceptionLPRespectOld(e);
 							}
@@ -3157,15 +2734,9 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 						} else {
 							if (vkbasisDto != null) {
 
-								BigDecimal rabattsumme = vkbasisDto
-										.getNVerkaufspreisbasis()
-										.multiply(
-												vkPreisfindungPreislisteDto
-														.getNArtikelstandardrabattsatz()
-														.movePointLeft(2));
-								BigDecimal nettopreis = vkbasisDto
-										.getNVerkaufspreisbasis().subtract(
-												rabattsumme);
+								BigDecimal rabattsumme = vkbasisDto.getNVerkaufspreisbasis().multiply(
+										vkPreisfindungPreislisteDto.getNArtikelstandardrabattsatz().movePointLeft(2));
+								BigDecimal nettopreis = vkbasisDto.getNVerkaufspreisbasis().subtract(rabattsumme);
 
 								nPreisbasis = nettopreis;
 
@@ -3194,31 +2765,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Preisbasis als Bezugsgroesse fuer die Ermittlung von Preisen aufgrund
-	 * eines Rabattsatzes in Abh&auml;ngigkeit von der Menge. <br>
+	 * Preisbasis als Bezugsgroesse fuer die Ermittlung von Preisen aufgrund eines
+	 * Rabattsatzes in Abh&auml;ngigkeit von der Menge. <br>
 	 * 
 	 * PJ 15000: Ist Mandantenparameter PARAMETER_VKPREISBASIS_IST_LIEF1PREIS==1
 	 * kommt die Preisbasis vom 1. Lieferantenpreis
 	 * 
 	 * PJ 15314: auch die Lieferaneten EK Staffel wird ber&uuml;cksichtigt
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param datGueltigkeitsdatumVkbasisII
-	 *            Gueltigkeitsdatum der VK-Basis
-	 * @param nMengeI
-	 *            Menge bei Preisbasis aus Lieferantenpreis
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdArtikelI                   PK des Artikels
+	 * @param datGueltigkeitsdatumVkbasisII Gueltigkeitsdatum der VK-Basis
+	 * @param nMengeI                       Menge bei Preisbasis aus
+	 *                                      Lieferantenpreis
+	 * @param theClientDto                  der aktuelle Benutzer
 	 * @return BigDecimal die Preisbasis des Artikels
 	 */
-	public BigDecimal ermittlePreisbasis(Integer iIdArtikelI,
-			Date datGueltigkeitsdatumVkbasisII, BigDecimal nMengeI,
-			Integer preislisteIId, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto) {
+	public BigDecimal ermittlePreisbasis(Integer iIdArtikelI, Date datGueltigkeitsdatumVkbasisII, BigDecimal nMengeI,
+			Integer preislisteIId, String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (datGueltigkeitsdatumVkbasisII == null) {
@@ -3227,30 +2792,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		if (nMengeI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("nMengeI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("nMengeI == null"));
 		}
 
 		ParametermandantDto p = null;
 		try {
-			p = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+			p = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_VKPREISBASIS_IST_LIEF1PREIS);
 		} catch (RemoteException e) {
 			//
 		} catch (EJBExceptionLP e) {
 			//
 		}
-		if ((p == null) || p.getCWert().equals("0")
-				|| (nMengeI.doubleValue() == 1)) {
+		if ((p == null) || p.getCWert().equals("0") || (nMengeI.doubleValue() == 1)) {
 
 			int preisbasisVerkauf = 0;
 
 			try {
-				ParametermandantDto p2 = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_KUNDEN,
-						ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
+				ParametermandantDto p2 = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_KUNDEN, ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
 
 				preisbasisVerkauf = (Integer) p2.getCWertAsObject();
 
@@ -3262,8 +2822,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				preislisteIId = null;
 			}
 
-			return ermittlePreisbasis(iIdArtikelI,
-					datGueltigkeitsdatumVkbasisII, preislisteIId,
+			return ermittlePreisbasis(iIdArtikelI, datGueltigkeitsdatumVkbasisII, preislisteIId,
 					waehrungCNrZielwaehrung, theClientDto);
 		}
 
@@ -3272,10 +2831,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		// Schritt 2: Preis vom Artikellieferanten
 		try {
-			ArtikellieferantDto alDto = getArtikelFac()
-					.getArtikelEinkaufspreis(iIdArtikelI, null, nMengeI,
-							theClientDto.getSMandantenwaehrung(),
-							datGueltigkeitsdatumVkbasisII, theClientDto);
+			ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(iIdArtikelI, null, nMengeI,
+					theClientDto.getSMandantenwaehrung(), datGueltigkeitsdatumVkbasisII, theClientDto);
 
 			if (alDto != null && alDto.getLief1Preis() != null) {
 				nPreisbasis = alDto.getLief1Preis();
@@ -3283,8 +2840,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				// Schritt 3: Wenn es keine gueltige VK-Basis gibt, dann
 				// gilt
 				// der Gestehungspreis.
-				nPreisbasis = getGemittelterGestehungspreisAmHauptlagerDesMandanten(
-						iIdArtikelI, theClientDto);
+				nPreisbasis = getGemittelterGestehungspreisAmHauptlagerDesMandanten(iIdArtikelI, theClientDto);
 			}
 		} catch (Throwable t) {
 			myLogger.error("Die Preisbasis konnte nicht ermittelt werden.", t);
@@ -3293,9 +2849,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		// In Zielwaehrung umrechnen
 		if (nPreisbasis != null) {
 			try {
-				nPreisbasis = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
-						nPreisbasis, theClientDto.getSMandantenwaehrung(),
-						waehrungCNrZielwaehrung, datGueltigkeitsdatumVkbasisII,
+				nPreisbasis = getLocaleFac().rechneUmInAndereWaehrungZuDatum(nPreisbasis,
+						theClientDto.getSMandantenwaehrung(), waehrungCNrZielwaehrung, datGueltigkeitsdatumVkbasisII,
 						theClientDto);
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
@@ -3305,12 +2860,10 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return nPreisbasis;
 	}
 
-	public BigDecimal ermittlePreisbasisStaffelmenge(Integer iIdArtikelI,
-			Date datGueltigkeitsdatumVkbasisII, BigDecimal nMengeI,
-			TheClientDto theClientDto) {
+	public BigDecimal ermittlePreisbasisStaffelmenge(Integer iIdArtikelI, Date datGueltigkeitsdatumVkbasisII,
+			BigDecimal nMengeI, TheClientDto theClientDto) {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		if (datGueltigkeitsdatumVkbasisII == null) {
@@ -3319,14 +2872,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		if (nMengeI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("nMengeI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("nMengeI == null"));
 		}
 
 		ParametermandantDto p = null;
 		try {
-			p = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+			p = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_VKPREISBASIS_IST_LIEF1PREIS);
 		} catch (RemoteException e) {
 			//
@@ -3335,10 +2886,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		if ((p == null) || p.getCWert().equals("0")) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception(
-							"Parameter PARAMETER_VKPREISBASIS_IST_LIEF1PREIS nicht gesetzt oder 0"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
+					new Exception("Parameter PARAMETER_VKPREISBASIS_IST_LIEF1PREIS nicht gesetzt oder 0"));
 		}
 
 		// Schritt 1: Die Menge mit 1 initialisieren
@@ -3347,17 +2896,14 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		if (nMengeI.doubleValue() > 1) {
 			// Schritt 2: Menge vom Artikellieferanten
 			try {
-				ArtikellieferantDto alDto = getArtikelFac()
-						.getArtikelEinkaufspreis(iIdArtikelI, null, nMengeI,
-								theClientDto.getSMandantenwaehrung(),
-								datGueltigkeitsdatumVkbasisII, theClientDto);
+				ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(iIdArtikelI, null, nMengeI,
+						theClientDto.getSMandantenwaehrung(), datGueltigkeitsdatumVkbasisII, theClientDto);
 
 				if (alDto != null && alDto.getNStaffelmenge() != null) {
 					nMenge = alDto.getNStaffelmenge();
 				}
 			} catch (Throwable t) {
-				myLogger.error(
-						"Die Staffelmenge konnte nicht ermittelt werden.", t);
+				myLogger.error("Die Staffelmenge konnte nicht ermittelt werden.", t);
 			}
 		}
 		return nMenge;
@@ -3367,31 +2913,23 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Den gemittelten Gestehungspreis am Hauptlager des Mandanten fuer einen
 	 * bestimmten Artikel bestimmen.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdArtikelI  PK des Artikels
+	 * @param theClientDto der aktuelle Benutzer
 	 * @return BigDecimal der ermittelte Gestehungspreis
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private BigDecimal getGemittelterGestehungspreisAmHauptlagerDesMandanten(
-			Integer iIdArtikelI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	private BigDecimal getGemittelterGestehungspreisAmHauptlagerDesMandanten(Integer iIdArtikelI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		BigDecimal nGestehungspreis = new BigDecimal(0);
 		try {
-			LagerDto hauptlagerDto = getLagerFac().getHauptlagerDesMandanten(
-					theClientDto);
+			LagerDto hauptlagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
 
 			if (hauptlagerDto == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_LAGER_HAUPTLAGERDESMANDANTEN_NICHT_ANGELEGT,
-						new Exception(
-								"Das Hauptlager des Mandanten ist nicht definiert."));
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LAGER_HAUPTLAGERDESMANDANTEN_NICHT_ANGELEGT,
+						new Exception("Das Hauptlager des Mandanten ist nicht definiert."));
 			}
-			nGestehungspreis = getLagerFac()
-					.getGemittelterGestehungspreisEinesLagers(iIdArtikelI,
-							hauptlagerDto.getIId(), theClientDto);
+			nGestehungspreis = getLagerFac().getGemittelterGestehungspreisEinesLagers(iIdArtikelI,
+					hauptlagerDto.getIId(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -3400,103 +2938,92 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Aufruf der Helium V Verkaufspreisfindung. Ueber einen Algorithmus wird
-	 * der Vorschlagswert fuer den Verkaufspreis eines Artikels bestimmt. Die
-	 * VKPF besteht aus drei Stufen, das Ergebnis aller drei Stufen wird
-	 * bestimmt, da der Benutzer alternativ einen VK-Preis manuell waehlen kann.
+	 * Aufruf der Helium V Verkaufspreisfindung. Ueber einen Algorithmus wird der
+	 * Vorschlagswert fuer den Verkaufspreis eines Artikels bestimmt. Die VKPF
+	 * besteht aus drei Stufen, das Ergebnis aller drei Stufen wird bestimmt, da der
+	 * Benutzer alternativ einen VK-Preis manuell waehlen kann.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param iIdKundeI
-	 *            PK des Kunden, fuer den ein Preis ermittelt wird
-	 * @param nMengeI
-	 *            welche Menge des Artikls wird verkauft
-	 * @param datGueltigkeitsdatumI
-	 *            zu welchem Datum soll der VKP ermittelt werden
-	 * @param iIdPreislisteI
-	 *            PK der Preisliste, die der Benutzer gewaehlt hat
-	 * @param iIdMwstsatzI
-	 *            PK der Mwst, die der Benutzer gewaehlt hat
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdArtikelI           PK des Artikels
+	 * @param iIdKundeI             PK des Kunden, fuer den ein Preis ermittelt wird
+	 * @param nMengeI               welche Menge des Artikls wird verkauft
+	 * @param datGueltigkeitsdatumI zu welchem Datum soll der VKP ermittelt werden
+	 * @param iIdPreislisteI        PK der Preisliste, die der Benutzer gewaehlt hat
+	 * @param iIdMwstsatzI          PK der Mwst, die der Benutzer gewaehlt hat
+	 * @param theClientDto          der aktuelle Benutzer
 	 * @return VkpreisfindungDto die ermittelten VK Informationen
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
 
-	public VkpreisfindungDto verkaufspreisfindung(Integer iIdArtikelI,
-			Integer iIdKundeI, BigDecimal nMengeI, Date datGueltigkeitsdatumI,
-			Integer iIdPreislisteI, Integer iIdMwstsatzI,
-			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
-		return verkaufspreisfindung(iIdArtikelI, iIdKundeI, nMengeI,
-				datGueltigkeitsdatumI, iIdPreislisteI, iIdMwstsatzI,
-				waehrungCNrZielwaehrung, true, theClientDto);
+	public VkpreisfindungDto verkaufspreisfindung(Integer iIdArtikelI, Integer iIdKundeI, BigDecimal nMengeI,
+			Date datGueltigkeitsdatumI, Integer iIdPreislisteI, Integer iIdMwstsatzI, String waehrungCNrZielwaehrung,
+			TheClientDto theClientDto) {
+		return verkaufspreisfindung(iIdArtikelI, iIdKundeI, nMengeI, datGueltigkeitsdatumI, iIdPreislisteI,
+				iIdMwstsatzI, waehrungCNrZielwaehrung, true, theClientDto);
 	}
 
-	public VkpreisfindungDto verkaufspreisfindung(Integer iIdArtikelI,
-			Integer iIdKundeI, BigDecimal nMengeI, Date datGueltigkeitsdatumI,
-			Integer iIdPreislisteI, Integer iIdMwstsatzI,
-			String waehrungCNrZielwaehrung,
+	public VkpreisfindungDto verkaufspreisfindungOhneExc(Integer iIdArtikelI, Integer iIdKundeI, BigDecimal nMengeI,
+			Date datGueltigkeitsdatumI, Integer iIdPreislisteI, Integer iIdMwstsatzI, String waehrungCNrZielwaehrung,
+			TheClientDto theClientDto) {
+
+		try {
+			return verkaufspreisfindung(iIdArtikelI, iIdKundeI, nMengeI, datGueltigkeitsdatumI, iIdPreislisteI,
+					iIdMwstsatzI, waehrungCNrZielwaehrung, true, theClientDto);
+
+		} catch (Throwable e) {
+			return null;
+		}
+	}
+
+	public VkpreisfindungDto verkaufspreisfindung(Integer iIdArtikelI, Integer iIdKundeI, BigDecimal nMengeI,
+			Date datGueltigkeitsdatumI, Integer iIdPreislisteI, Integer iIdMwstsatzI, String waehrungCNrZielwaehrung,
 			boolean bMitMaterialzuschlagImNettopreis, TheClientDto theClientDto) {
 		Validator.notNull(iIdArtikelI, "iIdArtikelI");
 		Validator.notNull(iIdKundeI, "iIdKundeI");
 		Validator.notNull(iIdMwstsatzI, "iIdMwstsatzI");
 
-		return verkaufspreisfindungImpl(iIdArtikelI, iIdKundeI, nMengeI,
-				datGueltigkeitsdatumI, iIdPreislisteI, iIdMwstsatzI,
-				waehrungCNrZielwaehrung, bMitMaterialzuschlagImNettopreis,
-				theClientDto);
+		return verkaufspreisfindungImpl(iIdArtikelI, iIdKundeI, nMengeI, datGueltigkeitsdatumI, iIdPreislisteI,
+				iIdMwstsatzI, waehrungCNrZielwaehrung, bMitMaterialzuschlagImNettopreis, theClientDto);
 	}
 
-	public VkpreisfindungDto verkaufspreisfindungWeb(Integer iIdArtikelI,
-			Integer iIdKundeI, BigDecimal nMengeI, Date datGueltigkeitsdatumI,
-			Integer iIdPreislisteI, Integer iIdMwstsatzI,
-			String waehrungCNrZielwaehrung, TheClientDto theClientDto)
-			throws RemoteException {
+	public VkpreisfindungDto verkaufspreisfindungWeb(Integer iIdArtikelI, Integer iIdKundeI, BigDecimal nMengeI,
+			Date datGueltigkeitsdatumI, Integer iIdPreislisteI, Integer iIdMwstsatzBezI, String waehrungCNrZielwaehrung,
+			TheClientDto theClientDto) throws RemoteException {
 		Validator.notNull(iIdArtikelI, "iIdArtikelI");
 
-		if (iIdMwstsatzI == null) {
+		if (iIdMwstsatzBezI == null) {
 			if (iIdKundeI != null) {
 				Kunde kunde = em.find(Kunde.class, iIdKundeI);
-				iIdMwstsatzI = kunde.getMwstsatzIId();
+				iIdMwstsatzBezI = kunde.getMwstsatzIId();
 			} else {
-				MandantDto mandantDto = getMandantFac()
-						.mandantFindByPrimaryKey(theClientDto.getMandant(),
-								theClientDto);
-				iIdMwstsatzI = mandantDto
-						.getMwstsatzbezIIdStandardinlandmwstsatz();
+				MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(),
+						theClientDto);
+				iIdMwstsatzBezI = mandantDto.getMwstsatzbezIIdStandardinlandmwstsatz();
 			}
 		}
 
-		Validator.notNull(iIdMwstsatzI, "iIdMwstsatzI");
-		return verkaufspreisfindungImpl(iIdArtikelI, iIdKundeI, nMengeI,
-				datGueltigkeitsdatumI, iIdPreislisteI, iIdMwstsatzI,
-				waehrungCNrZielwaehrung, false, theClientDto);
+		Validator.notNull(iIdMwstsatzBezI, "iIdMwstsatzBezI");
+		MwstsatzDto mwstsatzDto = getMandantFac().mwstsatzZuDatumValidate(iIdMwstsatzBezI,
+				new Timestamp(datGueltigkeitsdatumI.getTime()), theClientDto);
+		return verkaufspreisfindungImpl(iIdArtikelI, iIdKundeI, nMengeI, datGueltigkeitsdatumI, iIdPreislisteI,
+				mwstsatzDto.getIId(), waehrungCNrZielwaehrung, false, theClientDto);
 	}
 
-	private VkpreisfindungDto verkaufspreisfindungImpl(Integer iIdArtikelI,
-			Integer iIdKundeI, BigDecimal nMengeI, Date datGueltigkeitsdatumI,
-			Integer iIdPreislisteI, Integer iIdMwstsatzI,
-			String waehrungCNrZielwaehrung,
+	private VkpreisfindungDto verkaufspreisfindungImpl(Integer iIdArtikelI, Integer iIdKundeI, BigDecimal nMengeI,
+			Date datGueltigkeitsdatumI, Integer iIdPreislisteI, Integer iIdMwstsatzI, String waehrungCNrZielwaehrung,
 			boolean bMitMaterialzuschlagImNettopreis, TheClientDto theClientDto) {
-		VkpreisfindungDto vkpreisfindungDto = new VkpreisfindungDto(
-				theClientDto.getLocUi());
+		VkpreisfindungDto vkpreisfindungDto = new VkpreisfindungDto(theClientDto.getLocUi());
 
 		try {
 			// Beim Artikel ist hinterlegt, ob ein eventueller Rabatt fuer den
 			// Kunden
 			// ausgewiesen werden soll
-			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
-					iIdArtikelI, theClientDto);
+			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(iIdArtikelI, theClientDto);
 
 			BigDecimal bdMaterialzuschlag = new BigDecimal(0);
 			if (bMitMaterialzuschlagImNettopreis == true) {
-				if (artikelDto.getMaterialIId() != null
-						&& artikelDto.getFMaterialgewicht() != null) {
-					bdMaterialzuschlag = getMaterialFac()
-							.getMaterialzuschlagVKInZielwaehrung(iIdArtikelI,
-									datGueltigkeitsdatumI,
-									waehrungCNrZielwaehrung, theClientDto);
+				if (artikelDto.getMaterialIId() != null && artikelDto.getFMaterialgewicht() != null) {
+					bdMaterialzuschlag = getMaterialFac().getMaterialzuschlagVKInZielwaehrung(iIdArtikelI, iIdKundeI,
+							datGueltigkeitsdatumI, waehrungCNrZielwaehrung, theClientDto);
 				}
 
 				vkpreisfindungDto.setNMaterialzuschlag(bdMaterialzuschlag);
@@ -3505,30 +3032,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			// VKPF 2: Stufe 3 = Ermittlung des VKP ueber die
 			// Kundensonderkonditionen
 			if (iIdKundeI != null) {
-				vkpreisfindungDto = verkaufspreisfindungStufe3(artikelDto,
-						iIdKundeI, nMengeI, datGueltigkeitsdatumI,
-						vkpreisfindungDto, iIdMwstsatzI, iIdPreislisteI,
-						waehrungCNrZielwaehrung, theClientDto);
+				vkpreisfindungDto = verkaufspreisfindungStufe3(artikelDto, iIdKundeI, nMengeI, datGueltigkeitsdatumI,
+						vkpreisfindungDto, iIdMwstsatzI, iIdPreislisteI, waehrungCNrZielwaehrung, theClientDto);
 			}
 
 			// VKPF 3: Stufe 2 = Ermittlung des VKP ueber die VK-Mengenstaffeln
-			vkpreisfindungDto = verkaufspreisfindungStufe2(artikelDto, nMengeI,
-					datGueltigkeitsdatumI, vkpreisfindungDto, iIdMwstsatzI,
-					iIdPreislisteI, waehrungCNrZielwaehrung, theClientDto);
+			vkpreisfindungDto = verkaufspreisfindungStufe2(artikelDto, nMengeI, datGueltigkeitsdatumI,
+					vkpreisfindungDto, iIdMwstsatzI, iIdPreislisteI, waehrungCNrZielwaehrung, theClientDto);
 
 			// VKPF 4: Stufe 1 = Ermittlung des VKP ueber die Kundepreisliste
 			if (iIdPreislisteI != null) {
-				vkpreisfindungDto = verkaufspreisfindungStufe1(artikelDto,
-						datGueltigkeitsdatumI, iIdPreislisteI,
-						vkpreisfindungDto, iIdMwstsatzI, nMengeI,
-						waehrungCNrZielwaehrung, theClientDto);
+				vkpreisfindungDto = verkaufspreisfindungStufe1(artikelDto.getIId(), datGueltigkeitsdatumI,
+						iIdPreislisteI, vkpreisfindungDto, iIdMwstsatzI, nMengeI, waehrungCNrZielwaehrung,
+						theClientDto);
 			}
 
 			// VKPF: 5 im schlimmsten Fall wird der VKPF mit 0 initialisiert
 			VerkaufspreisDto verkaufspreisDto = new VerkaufspreisDto();
 
-			BigDecimal nPreisbasis = ermittlePreisbasis(artikelDto.getIId(),
-					datGueltigkeitsdatumI, nMengeI, null,
+			BigDecimal nPreisbasis = ermittlePreisbasis(artikelDto.getIId(), datGueltigkeitsdatumI, nMengeI, null,
 					waehrungCNrZielwaehrung, theClientDto);
 
 			if (nPreisbasis != null) {
@@ -3540,14 +3062,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				verkaufspreisDto.rabattsumme = new BigDecimal(0);
 				verkaufspreisDto.nettopreis = verkaufspreisDto.einzelpreis;
 
-				verkaufspreisDto = berechneBruttopreis(verkaufspreisDto,
-						iIdMwstsatzI, theClientDto);
+				verkaufspreisDto = berechneBruttopreis(verkaufspreisDto, iIdMwstsatzI, theClientDto);
 
 				vkpreisfindungDto.setVkpPreisbasis(verkaufspreisDto);
 
 				if (vkpreisfindungDto.getVkpreisberechnetStufe() == null) {
-					vkpreisfindungDto
-							.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFPREISBASIS);
+					vkpreisfindungDto.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFPREISBASIS);
 				}
 			}
 
@@ -3555,53 +3075,39 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			// wenn er dem Benutzer angezeigt werden soll
 			ParametermandantDto pmGeringerenVKPreisVorschlagen = null;
 
-			pmGeringerenVKPreisVorschlagen = getParameterFac()
-					.getMandantparameter(
-							theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ARTIKEL,
-							ParameterFac.PARAMETER_GERINGEREN_VKPREIS_VORSCHLAGEN);
+			pmGeringerenVKPreisVorschlagen = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_GERINGEREN_VKPREIS_VORSCHLAGEN);
 
-			if (Helper.short2boolean(Short
-					.parseShort(pmGeringerenVKPreisVorschlagen.getCWert()))) {
+			if (Helper.short2boolean(Short.parseShort(pmGeringerenVKPreisVorschlagen.getCWert()))) {
 				// VKPF 8: die hinterlegten VK-Preise vergleichen
 				VerkaufspreisDto niedrigsterVKPreis = null;
 
 				if (vkpreisfindungDto.getVkpPreisbasis() != null) {
-					vkpreisfindungDto
-							.setVkpreisminimalStufe(VkpreisfindungDto.VKPFPREISBASIS);
+					vkpreisfindungDto.setVkpreisminimalStufe(VkpreisfindungDto.VKPFPREISBASIS);
 					niedrigsterVKPreis = vkpreisfindungDto.getVkpPreisbasis();
 				}
 
-				if ((niedrigsterVKPreis == null && vkpreisfindungDto
-						.getVkpStufe1() != null)
-						|| (vkpreisfindungDto.getVkpStufe1() != null && vkpreisfindungDto
-								.getVkpStufe1().getNetto2Compare()
-								.doubleValue() <= niedrigsterVKPreis
-								.getNetto2Compare().doubleValue())) {
-					vkpreisfindungDto
-							.setVkpreisminimalStufe(VkpreisfindungDto.VKPFSTUFE1);
+				if ((niedrigsterVKPreis == null && vkpreisfindungDto.getVkpStufe1() != null)
+						|| (vkpreisfindungDto.getVkpStufe1() != null
+								&& vkpreisfindungDto.getVkpStufe1().getNetto2Compare()
+										.doubleValue() <= niedrigsterVKPreis.getNetto2Compare().doubleValue())) {
+					vkpreisfindungDto.setVkpreisminimalStufe(VkpreisfindungDto.VKPFSTUFE1);
 					niedrigsterVKPreis = vkpreisfindungDto.getVkpStufe1();
 				}
 
-				if ((niedrigsterVKPreis == null && vkpreisfindungDto
-						.getVkpStufe2() != null)
-						|| (vkpreisfindungDto.getVkpStufe2() != null && vkpreisfindungDto
-								.getVkpStufe2().getNetto2Compare()
-								.doubleValue() <= niedrigsterVKPreis
-								.getNetto2Compare().doubleValue())) {
-					vkpreisfindungDto
-							.setVkpreisminimalStufe(VkpreisfindungDto.VKPFSTUFE2);
+				if ((niedrigsterVKPreis == null && vkpreisfindungDto.getVkpStufe2() != null)
+						|| (vkpreisfindungDto.getVkpStufe2() != null
+								&& vkpreisfindungDto.getVkpStufe2().getNetto2Compare()
+										.doubleValue() <= niedrigsterVKPreis.getNetto2Compare().doubleValue())) {
+					vkpreisfindungDto.setVkpreisminimalStufe(VkpreisfindungDto.VKPFSTUFE2);
 					niedrigsterVKPreis = vkpreisfindungDto.getVkpStufe2();
 				}
 
-				if ((niedrigsterVKPreis == null && vkpreisfindungDto
-						.getVkpStufe3() != null)
-						|| (vkpreisfindungDto.getVkpStufe3() != null && vkpreisfindungDto
-								.getVkpStufe3().getNetto2Compare()
-								.doubleValue() <= niedrigsterVKPreis
-								.getNetto2Compare().doubleValue())) {
-					vkpreisfindungDto
-							.setVkpreisminimalStufe(VkpreisfindungDto.VKPFSTUFE3);
+				if ((niedrigsterVKPreis == null && vkpreisfindungDto.getVkpStufe3() != null)
+						|| (vkpreisfindungDto.getVkpStufe3() != null
+								&& vkpreisfindungDto.getVkpStufe3().getNetto2Compare()
+										.doubleValue() <= niedrigsterVKPreis.getNetto2Compare().doubleValue())) {
+					vkpreisfindungDto.setVkpreisminimalStufe(VkpreisfindungDto.VKPFSTUFE3);
 					niedrigsterVKPreis = vkpreisfindungDto.getVkpStufe3();
 				}
 			}
@@ -3615,40 +3121,32 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Mwst beruecksichtigen und Bruttopreis berechnen; die Mwst muss am Server
 	 * berechnet werden, weil es moeglich ist, dass der Benutzer am Client keine
-	 * Neuberechnung der Preisfelder durch FocusLost ausloest, sondern gleich
-	 * zum Speichern geht.
+	 * Neuberechnung der Preisfelder durch FocusLost ausloest, sondern gleich zum
+	 * Speichern geht.
 	 * 
-	 * @param verkaufspreisDtoI
-	 *            VerkaufspreisDto
-	 * @param iIdMwstsatzI
-	 *            die zu beruecksichtigende Mwst
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param verkaufspreisDtoI VerkaufspreisDto
+	 * @param iIdMwstsatzI      die zu beruecksichtigende Mwst
+	 * @param theClientDto      der aktuelle Benutzer
 	 * @return VerkaufspreisDto
 	 * @throws EJBExceptionLP
 	 */
-	private VerkaufspreisDto berechneBruttopreis(
-			VerkaufspreisDto verkaufspreisDtoI, Integer iIdMwstsatzI,
+	private VerkaufspreisDto berechneBruttopreis(VerkaufspreisDto verkaufspreisDtoI, Integer iIdMwstsatzI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (verkaufspreisDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("verkaufspreisDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("verkaufspreisDtoI == null"));
 		}
 
-		try {
-			verkaufspreisDtoI.mwstsatzIId = iIdMwstsatzI;
+		// try {
+		verkaufspreisDtoI.mwstsatzIId = iIdMwstsatzI;
 
-			verkaufspreisDtoI.mwstsumme = verkaufspreisDtoI.nettopreis
-					.multiply(new BigDecimal(getMandantFac()
-							.mwstsatzFindByPrimaryKey(iIdMwstsatzI,
-									theClientDto).getFMwstsatz().doubleValue())
-							.movePointLeft(2));
+		verkaufspreisDtoI.mwstsumme = verkaufspreisDtoI.nettopreis.multiply(new BigDecimal(
+				getMandantFac().mwstsatzFindByPrimaryKey(iIdMwstsatzI, theClientDto).getFMwstsatz().doubleValue())
+						.movePointLeft(2));
 
-			verkaufspreisDtoI.bruttopreis = verkaufspreisDtoI.nettopreis
-					.add(verkaufspreisDtoI.mwstsumme);
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
+		verkaufspreisDtoI.bruttopreis = verkaufspreisDtoI.nettopreis.add(verkaufspreisDtoI.mwstsumme);
+		// } catch (RemoteException ex) {
+		// throwEJBExceptionLPRespectOld(ex);
+		// }
 
 		return verkaufspreisDtoI;
 	}
@@ -3657,41 +3155,22 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Verkaufspreisdfindung Stufe 1. <br>
 	 * Der VKP wird aufgrund einer Kundenpreisliste bestimmt.
 	 * 
-	 * @param artikelDtoI
-	 *            der aktuelle Artikel
-	 * @param tGueltigkeitsdatumI
-	 *            Gueltigkeitsdatum fuer die VK-Basis
-	 * @param iIdPreislisteI
-	 *            PK der Preisliste
-	 * @param vkpreisfindungDtoI
-	 *            die Preisdetails
-	 * @param iIdMwstsatzI
-	 *            PK des Mwstsatzes
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param artikelDtoI         der aktuelle Artikel
+	 * @param tGueltigkeitsdatumI Gueltigkeitsdatum fuer die VK-Basis
+	 * @param iIdPreislisteI      PK der Preisliste
+	 * @param vkpreisfindungDtoI  die Preisdetails
+	 * @param iIdMwstsatzI        PK des Mwstsatzes
+	 * @param theClientDto        der aktuelle Benutzer
 	 * @return VkpreisfindungDto die Preisdetails
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public VkpreisfindungDto verkaufspreisfindungStufe1(ArtikelDto artikelDtoI,
-			Date tGueltigkeitsdatumI, Integer iIdPreislisteI,
-			VkpreisfindungDto vkpreisfindungDtoI, Integer iIdMwstsatzI,
-			BigDecimal nMengeI, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto) {
-		if (iIdPreislisteI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdPreislisteI == null"));
-		}
-
-		if (tGueltigkeitsdatumI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("tGueltigkeitsdatumI == null"));
-		}
-
-		if (vkpreisfindungDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("vkpreisfindungDtoI == null"));
-		}
+	public VkpreisfindungDto verkaufspreisfindungStufe1(Integer artikelIId, Date tGueltigkeitsdatumI,
+			Integer iIdPreislisteI, VkpreisfindungDto vkpreisfindungDtoI, Integer iIdMwstsatzI, BigDecimal nMengeI,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
+		Validator.notNull(artikelIId, "artikelIId");
+		Validator.notNull(iIdPreislisteI, "iIdPreislisteI");
+		Validator.notNull(tGueltigkeitsdatumI, "tGueltigkeitsdatumI");
+		Validator.dtoNotNull(vkpreisfindungDtoI, "vkpreisfindungDtoI");
 
 		VerkaufspreisDto verkaufspreisDto = null;
 
@@ -3699,10 +3178,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		VkPreisfindungPreislisteDto artikelPreisliste = null;
 
 		try {
-			artikelPreisliste = getAktuellePreislisteByArtikelIIdPreislisteIId(
-					artikelDtoI.getIId(), iIdPreislisteI,
-					new Date(System.currentTimeMillis()),
-					waehrungCNrZielwaehrung, theClientDto);
+			artikelPreisliste = getAktuellePreislisteByArtikelIIdPreislisteIId(artikelIId, iIdPreislisteI,
+					tGueltigkeitsdatumI, waehrungCNrZielwaehrung, theClientDto);
 		}
 		/**
 		 * @todo saubere Fehlerbehandlung
@@ -3712,14 +3189,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 
 		if (artikelPreisliste != null) {
-			BigDecimal nPreisbasis = ermittlePreisbasis(artikelDtoI.getIId(),
-					tGueltigkeitsdatumI, nMengeI, iIdPreislisteI,
+			BigDecimal nPreisbasis = ermittlePreisbasis(artikelIId, tGueltigkeitsdatumI, nMengeI, iIdPreislisteI,
 					waehrungCNrZielwaehrung, theClientDto);
 
 			// Stufe1: 1 Preisliste Fixpreis > Rabattsatz
 			if (artikelPreisliste.getNArtikelfixpreis() != null) {
-				verkaufspreisDto = berechneVerkaufspreis(nPreisbasis,
-						artikelPreisliste.getNArtikelfixpreis(),
+				verkaufspreisDto = berechneVerkaufspreis(nPreisbasis, artikelPreisliste.getNArtikelfixpreis(),
 						vkpreisfindungDtoI.getNMaterialzuschlag());
 			} else {
 				// Stufe1: 2 Wenn ein Rabattsatz hinterlegt wurde, wird der
@@ -3727,10 +3202,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				int preisbasisVerkauf = 0;
 
 				try {
-					ParametermandantDto p2 = getParameterFac()
-							.getMandantparameter(theClientDto.getMandant(),
-									ParameterFac.KATEGORIE_KUNDEN,
-									ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
+					ParametermandantDto p2 = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_KUNDEN, ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
 
 					preisbasisVerkauf = (Integer) p2.getCWertAsObject();
 
@@ -3740,44 +3213,35 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 				if (preisbasisVerkauf == 0 || preisbasisVerkauf == 2) {
 					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis,
-							artikelPreisliste.getNArtikelstandardrabattsatz()
-									.doubleValue(),
-							vkpreisfindungDtoI.getNMaterialzuschlag());
+							artikelPreisliste.getNArtikelstandardrabattsatz().doubleValue(),
+							vkpreisfindungDtoI.getNMaterialzuschlag(), theClientDto);
 				} else {
-					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis, 0D,
-							vkpreisfindungDtoI.getNMaterialzuschlag());
+					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis, 0D, vkpreisfindungDtoI.getNMaterialzuschlag(),
+							theClientDto);
 				}
 			}
 
 			// Stufe1: 3 Wenn VKPF Stufe 1 ein Ergebnis liefert, dann wird das
 			// entsprechend hinterlegt
 			if (verkaufspreisDto != null) {
-				Vkpfartikelpreisliste vkpal = em.find(
-						Vkpfartikelpreisliste.class, iIdPreislisteI);
+				Vkpfartikelpreisliste vkpal = em.find(Vkpfartikelpreisliste.class, iIdPreislisteI);
 				if (vkpal != null)
-					if (!(vkpal.getWaehrungCNr().equals(theClientDto
-							.getSMandantenwaehrung()))) {
+					if (!(vkpal.getWaehrungCNr().equals(theClientDto.getSMandantenwaehrung()))) {
 						verkaufspreisDto.waehrungCNr = vkpal.getWaehrungCNr();
 						try {
-							verkaufspreisDto.tempKurs = getLocaleFac()
-									.getWechselkurs2(
-											theClientDto
-													.getSMandantenwaehrung(),
-											vkpal.getWaehrungCNr(),
-											theClientDto);
+							verkaufspreisDto.tempKurs = getLocaleFac().getWechselkurs2(
+									theClientDto.getSMandantenwaehrung(), vkpal.getWaehrungCNr(), theClientDto);
 						} catch (RemoteException e) {
 							e.printStackTrace();
 						}
 					}
 
-				verkaufspreisDto = berechneBruttopreis(verkaufspreisDto,
-						iIdMwstsatzI, theClientDto);
+				verkaufspreisDto = berechneBruttopreis(verkaufspreisDto, iIdMwstsatzI, theClientDto);
 
 				vkpreisfindungDtoI.setVkpStufe1(verkaufspreisDto);
 
 				if (vkpreisfindungDtoI.getVkpreisberechnetStufe() == null) {
-					vkpreisfindungDtoI
-							.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFSTUFE1);
+					vkpreisfindungDtoI.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFSTUFE1);
 				}
 			}
 		}
@@ -3791,35 +3255,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Gueltigkeitsdauer erfasst werden. Es gilt: Fixpreis > rabattbehaftete
 	 * Preisbasis.
 	 * 
-	 * @param artikelDtoI
-	 *            fuer welchen Artikel wird der VKPF ermittelt
-	 * @param nMengeI
-	 *            die gewaehlte Menge des Artikels
-	 * @param datGueltigkeitsdatumI
-	 *            zu welchem Datum wird der VKPF ermittelt
-	 * @param vkpreisfindungDtoI
-	 *            der Ergebniscontainer fuer die VKPF
-	 * @param iIdMwstsatzI
-	 *            der zu beruecksichtigende Mwstsatz
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param artikelDtoI           fuer welchen Artikel wird der VKPF ermittelt
+	 * @param nMengeI               die gewaehlte Menge des Artikels
+	 * @param datGueltigkeitsdatumI zu welchem Datum wird der VKPF ermittelt
+	 * @param vkpreisfindungDtoI    der Ergebniscontainer fuer die VKPF
+	 * @param iIdMwstsatzI          der zu beruecksichtigende Mwstsatz
+	 * @param theClientDto          der aktuelle Benutzer
 	 * @return VerkaufspreisDto der ermittelte VK-Preis
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public VkpreisfindungDto verkaufspreisfindungStufe2(ArtikelDto artikelDtoI,
-			BigDecimal nMengeI, Date datGueltigkeitsdatumI,
-			VkpreisfindungDto vkpreisfindungDtoI, Integer iIdMwstsatzI,
-			Integer preislisteIId, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto) {
+	public VkpreisfindungDto verkaufspreisfindungStufe2(ArtikelDto artikelDtoI, BigDecimal nMengeI,
+			Date datGueltigkeitsdatumI, VkpreisfindungDto vkpreisfindungDtoI, Integer iIdMwstsatzI,
+			Integer preislisteIId, String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 		if (datGueltigkeitsdatumI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("datGueltigkeitsdatumI == null"));
 		}
 
 		if (vkpreisfindungDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("vkpreisfindungDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("vkpreisfindungDtoI == null"));
 		}
 
 		VerkaufspreisDto verkaufspreisDto = null;
@@ -3828,23 +3282,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		// gewaehlte Menge eine Mengenstaffel hinterlegt?
 		VkpfMengenstaffelDto vkpfmengenstaffelDto = null;
 
-		vkpfmengenstaffelDto = vkpfMengenstaffelFindByArtikelIIdNMengeGueltigkeitsdatum(
-				artikelDtoI.getIId(), nMengeI, datGueltigkeitsdatumI,
-				preislisteIId, theClientDto);
+		vkpfmengenstaffelDto = vkpfMengenstaffelFindByArtikelIIdNMengeGueltigkeitsdatum(artikelDtoI.getIId(), nMengeI,
+				datGueltigkeitsdatumI, preislisteIId, theClientDto);
 
 		if (vkpfmengenstaffelDto != null) {
 			Integer preislisteIIdFuerBasis = preislisteIId;
 
 			if (vkpfmengenstaffelDto.getVkpfartikelpreislisteIId() != null) {
-				preislisteIIdFuerBasis = vkpfmengenstaffelDto
-						.getVkpfartikelpreislisteIId();
+				preislisteIIdFuerBasis = vkpfmengenstaffelDto.getVkpfartikelpreislisteIId();
 			}
 
 			ParametermandantDto p = null;
 			try {
-				p = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_KUNDEN,
+				p = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
 						ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
@@ -3854,42 +3304,31 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 			if (iPreisbasis == 2) {
 
-				BigDecimal nPreisbasisFuerEinStueck = ermittlePreisbasis(
-						artikelDtoI.getIId(), datGueltigkeitsdatumI,
-						new BigDecimal(1), null, waehrungCNrZielwaehrung,
-						theClientDto);
+				BigDecimal nPreisbasisFuerEinStueck = ermittlePreisbasis(artikelDtoI.getIId(), datGueltigkeitsdatumI,
+						new BigDecimal(1), null, waehrungCNrZielwaehrung, theClientDto);
 
-				BigDecimal nPreisbasisFuerGesamtmenge = ermittlePreisbasis(
-						artikelDtoI.getIId(), datGueltigkeitsdatumI,
+				BigDecimal nPreisbasisFuerGesamtmenge = ermittlePreisbasis(artikelDtoI.getIId(), datGueltigkeitsdatumI,
 						preislisteIId, waehrungCNrZielwaehrung, theClientDto);
 
 				// Stufe2: 1 Wenn ein Fixpreis hinterlegt wurde, wird der
 				// Rabattsatz
 				// berechnet
 				if (vkpfmengenstaffelDto.getNArtikelfixpreis() != null) {
-					verkaufspreisDto = berechneVerkaufspreis(
-							nPreisbasisFuerGesamtmenge,
-							vkpfmengenstaffelDto.getNArtikelfixpreis(),
-							vkpreisfindungDtoI.getNMaterialzuschlag());
+					verkaufspreisDto = berechneVerkaufspreis(nPreisbasisFuerGesamtmenge,
+							vkpfmengenstaffelDto.getNArtikelfixpreis(), vkpreisfindungDtoI.getNMaterialzuschlag());
 				} else {
 					// Stufe2: 2 Wenn ein Rabattsatz hinterlegt wurde, wird der
 					// Nettoeinzelpreis berechnet
-					verkaufspreisDto = berechneVerkaufspreis(
-							nPreisbasisFuerEinStueck,
-							nPreisbasisFuerGesamtmenge,
+					verkaufspreisDto = berechneVerkaufspreis(nPreisbasisFuerEinStueck, nPreisbasisFuerGesamtmenge,
 							vkpreisfindungDtoI.getNMaterialzuschlag());
 
 					VerkaufspreisDto verkaufspreisDtoFuerZusatzrabatt = berechneVerkaufspreis(
-							nPreisbasisFuerGesamtmenge,
-							vkpfmengenstaffelDto
-									.getFArtikelstandardrabattsatz());
+							nPreisbasisFuerGesamtmenge, vkpfmengenstaffelDto.getFArtikelstandardrabattsatz(),
+							theClientDto);
 
-					if (verkaufspreisDtoFuerZusatzrabatt != null
-							&& verkaufspreisDto != null) {
-						verkaufspreisDto
-								.setDdZusatzrabattsatz(verkaufspreisDtoFuerZusatzrabatt.rabattsatz);
-						verkaufspreisDto
-								.setNZusatzrabattsumme(verkaufspreisDtoFuerZusatzrabatt.rabattsumme);
+					if (verkaufspreisDtoFuerZusatzrabatt != null && verkaufspreisDto != null) {
+						verkaufspreisDto.setDdZusatzrabattsatz(verkaufspreisDtoFuerZusatzrabatt.rabattsatz);
+						verkaufspreisDto.setNZusatzrabattsumme(verkaufspreisDtoFuerZusatzrabatt.rabattsumme);
 
 						verkaufspreisDto.nettopreis = verkaufspreisDto.nettopreis
 								.subtract(verkaufspreisDtoFuerZusatzrabatt.rabattsumme);
@@ -3898,25 +3337,21 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 				}
 			} else {
-				BigDecimal nPreisbasis = ermittlePreisbasis(
-						artikelDtoI.getIId(), datGueltigkeitsdatumI, nMengeI,
-						preislisteIIdFuerBasis, waehrungCNrZielwaehrung,
-						theClientDto);
+				BigDecimal nPreisbasis = ermittlePreisbasis(artikelDtoI.getIId(), datGueltigkeitsdatumI, nMengeI,
+						preislisteIIdFuerBasis, waehrungCNrZielwaehrung, theClientDto);
 
 				// Stufe2: 1 Wenn ein Fixpreis hinterlegt wurde, wird der
 				// Rabattsatz
 				// berechnet
 				if (vkpfmengenstaffelDto.getNArtikelfixpreis() != null) {
-					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis,
-							vkpfmengenstaffelDto.getNArtikelfixpreis(),
+					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis, vkpfmengenstaffelDto.getNArtikelfixpreis(),
 							vkpreisfindungDtoI.getNMaterialzuschlag());
 				} else {
 					// Stufe2: 2 Wenn ein Rabattsatz hinterlegt wurde, wird der
 					// Nettoeinzelpreis berechnet
 					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis,
-							vkpfmengenstaffelDto
-									.getFArtikelstandardrabattsatz(),
-							vkpreisfindungDtoI.getNMaterialzuschlag());
+							vkpfmengenstaffelDto.getFArtikelstandardrabattsatz(),
+							vkpreisfindungDtoI.getNMaterialzuschlag(), theClientDto);
 				}
 			}
 		}
@@ -3924,14 +3359,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		// Stufe2: 3 Wenn VKPF Stufe 2 ein Ergebnis liefert, dann wird das
 		// entsprechend hinterlegt
 		if (verkaufspreisDto != null) {
-			verkaufspreisDto = berechneBruttopreis(verkaufspreisDto,
-					iIdMwstsatzI, theClientDto);
+			verkaufspreisDto = berechneBruttopreis(verkaufspreisDto, iIdMwstsatzI, theClientDto);
 
 			vkpreisfindungDtoI.setVkpStufe2(verkaufspreisDto);
 
 			if (vkpreisfindungDtoI.getVkpreisberechnetStufe() == null) {
-				vkpreisfindungDtoI
-						.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFSTUFE2);
+				vkpreisfindungDtoI.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFSTUFE2);
 			}
 		}
 		return vkpreisfindungDtoI;
@@ -3942,22 +3375,19 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Nettoeinzelpreis). Zu berechnen ist der Rabattsatz, der Zusatzrabattsatz
 	 * bleibt auf 0.
 	 * 
-	 * @param nPreisbasisI
-	 *            Einzelpreis
-	 * @param nFixpreisI
-	 *            Nettoeinzelpreis
+	 * @param nPreisbasisI Einzelpreis
+	 * @param nFixpreisI   Nettoeinzelpreis
 	 * @return VerkaufspreisDto VKP
 	 * @throws EJBExceptionLP
 	 */
-	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI,
-			BigDecimal nFixpreisI) throws EJBExceptionLP {
+	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI, BigDecimal nFixpreisI)
+			throws EJBExceptionLP {
 
 		return berechneVerkaufspreis(nPreisbasisI, nFixpreisI, null);
 	}
 
-	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI,
-			BigDecimal nFixpreisI, BigDecimal nMaterialzuschlag)
-			throws EJBExceptionLP {
+	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI, BigDecimal nFixpreisI,
+			BigDecimal nMaterialzuschlag) throws EJBExceptionLP {
 		VerkaufspreisDto verkaufspreisDto = new VerkaufspreisDto();
 
 		verkaufspreisDto.einzelpreis = nPreisbasisI;
@@ -3967,8 +3397,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 		// VF 02.01.08 Wenn keine VK-Preisbasis hinterlegt ist, dann gilt der
 		// Nettopreis auch als Einzelpreis.
-		if (verkaufspreisDto.einzelpreis != null
-				&& verkaufspreisDto.einzelpreis.compareTo(new BigDecimal(0)) == 0) {
+		if (verkaufspreisDto.einzelpreis != null && verkaufspreisDto.einzelpreis.compareTo(new BigDecimal(0)) == 0) {
 			verkaufspreisDto.einzelpreis = verkaufspreisDto.nettopreis;
 		}
 
@@ -3976,13 +3405,11 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			verkaufspreisDto.einzelpreis = nFixpreisI;
 		}
 
-		verkaufspreisDto.rabattsumme = verkaufspreisDto.einzelpreis
-				.subtract(verkaufspreisDto.nettopreis);
+		verkaufspreisDto.rabattsumme = verkaufspreisDto.einzelpreis.subtract(verkaufspreisDto.nettopreis);
 
 		if (verkaufspreisDto.einzelpreis.doubleValue() != 0.0) {
 			verkaufspreisDto.rabattsatz = new Double(
-					verkaufspreisDto.rabattsumme.doubleValue()
-							/ verkaufspreisDto.einzelpreis.doubleValue() * 100);
+					verkaufspreisDto.rabattsumme.doubleValue() / verkaufspreisDto.einzelpreis.doubleValue() * 100);
 		}
 
 		if (nMaterialzuschlag != null) {
@@ -3993,15 +3420,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return verkaufspreisDto;
 	}
 
-	public BigDecimal berechneEinzelVkpreisEinerMengenstaffel(
-			Integer vkpfstaffelmengeIId, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto) {
+	public BigDecimal berechneEinzelVkpreisEinerMengenstaffel(Integer vkpfstaffelmengeIId,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 		Vkpfmengenstaffel vkpfmengenstaffel = null;
-		vkpfmengenstaffel = em.find(Vkpfmengenstaffel.class,
-				vkpfstaffelmengeIId);
+		vkpfmengenstaffel = em.find(Vkpfmengenstaffel.class, vkpfstaffelmengeIId);
 		if (vkpfmengenstaffel == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		// der Preis muss an dieser Stelle berechnet werden
 		BigDecimal nBerechneterPreis = new BigDecimal(0);
@@ -4010,14 +3434,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		} else {
 			// WH 21.06.06 Es gilt die VK-Basis, die zu Beginn der Mengenstaffel
 			// gueltig ist
-			BigDecimal nPreisbasis = ermittlePreisbasis(
-					vkpfmengenstaffel.getArtikelIId(), new java.sql.Date(
-							vkpfmengenstaffel.getTPreisgueltigab().getTime()),
-					vkpfmengenstaffel.getVkpfartikelpreislisteIId(),
-					waehrungCNrZielwaehrung, theClientDto);
+			BigDecimal nPreisbasis = ermittlePreisbasis(vkpfmengenstaffel.getArtikelIId(),
+					new java.sql.Date(vkpfmengenstaffel.getTPreisgueltigab().getTime()),
+					vkpfmengenstaffel.getVkpfartikelpreislisteIId(), waehrungCNrZielwaehrung, theClientDto);
 
 			VerkaufspreisDto vkpfDto = berechneVerkaufspreis(nPreisbasis,
-					vkpfmengenstaffel.getFArtikelstandardrabattsatz());
+					vkpfmengenstaffel.getFArtikelstandardrabattsatz(), theClientDto);
 
 			if (vkpfDto != null) {
 				nBerechneterPreis = vkpfDto.nettopreis;
@@ -4029,42 +3451,51 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Gegeben ist eine Preisbasis (= Einzelpreis) und ein Rabattsatz. Zu
-	 * berechnen ist der Nettoeinzelpreis, der Zusatzrabattsatz bleibt auf 0.
+	 * Gegeben ist eine Preisbasis (= Einzelpreis) und ein Rabattsatz. Zu berechnen
+	 * ist der Nettoeinzelpreis, der Zusatzrabattsatz bleibt auf 0.
 	 * 
-	 * @param nPreisbasisI
-	 *            Einzelpreis
-	 * @param dRabattsatzI
-	 *            Rabattsatz
+	 * @param nPreisbasisI Einzelpreis
+	 * @param dRabattsatzI Rabattsatz
 	 * @return VerkaufspreisDto VKP
 	 * @throws EJBExceptionLP
 	 */
-	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI,
-			Double dRabattsatzI) throws EJBExceptionLP {
+	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI, Double dRabattsatzI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
-		return berechneVerkaufspreis(nPreisbasisI, dRabattsatzI, null);
+		return berechneVerkaufspreis(nPreisbasisI, dRabattsatzI, null, theClientDto);
 
 	}
 
-	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI,
-			Double dRabattsatzI, BigDecimal nMaterialzuschlag)
-			throws EJBExceptionLP {
+	public VerkaufspreisDto berechneVerkaufspreis(BigDecimal nPreisbasisI, Double dRabattsatzI,
+			BigDecimal nMaterialzuschlag, TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (nPreisbasisI != null) {
 			VerkaufspreisDto verkaufspreisDto = new VerkaufspreisDto();
 			verkaufspreisDto.einzelpreis = nPreisbasisI;
 			verkaufspreisDto.rabattsatz = dRabattsatzI;
-			verkaufspreisDto.rabattsumme = verkaufspreisDto.einzelpreis
-					.multiply(new BigDecimal(verkaufspreisDto.rabattsatz
-							.doubleValue()).movePointLeft(2));
+
+			// SP4215
+			int iUINachkommastellenPreiseVK = 2;
+			try {
+				ParametermandantDto parametermandantDto = getParameterFac().getMandantparameter(
+						theClientDto.getMandant(), ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_VK);
+
+				iUINachkommastellenPreiseVK = ((Integer) parametermandantDto.getCWertAsObject()).intValue();
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+			verkaufspreisDto.rabattsumme = Helper.rundeKaufmaennisch(
+					verkaufspreisDto.einzelpreis
+							.multiply(new BigDecimal(verkaufspreisDto.rabattsatz.doubleValue()).movePointLeft(2)),
+					iUINachkommastellenPreiseVK);
 			if (nMaterialzuschlag != null) {
-				verkaufspreisDto.nettopreis = verkaufspreisDto.einzelpreis
-						.subtract(verkaufspreisDto.rabattsumme).add(
-								nMaterialzuschlag);
+				verkaufspreisDto.nettopreis = verkaufspreisDto.einzelpreis.subtract(verkaufspreisDto.rabattsumme)
+						.add(nMaterialzuschlag);
 				verkaufspreisDto.bdMaterialzuschlag = nMaterialzuschlag;
 			} else {
-				verkaufspreisDto.nettopreis = verkaufspreisDto.einzelpreis
-						.subtract(verkaufspreisDto.rabattsumme);
+				verkaufspreisDto.nettopreis = verkaufspreisDto.einzelpreis.subtract(verkaufspreisDto.rabattsumme);
 			}
 
 			return verkaufspreisDto;
@@ -4077,57 +3508,72 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * v Verkaufspreisdfindung Stufe 3. <br>
 	 * Aufgrund des Kunden bzw. seiner Rechnungsadresse wird der VKP ermittelt.
-	 * KundeSOKOs koennen fuer einzelne Artikel oder Artikelgruppen erfasst
-	 * werden und werden in Form von Mengenstaffeln hinterlegt.
+	 * KundeSOKOs koennen fuer einzelne Artikel oder Artikelgruppen erfasst werden
+	 * und werden in Form von Mengenstaffeln hinterlegt.
 	 * 
-	 * @param artikelDtoI
-	 *            fuer welchen Artikel wird der VKP ermittelt
-	 * @param iIdKundeI
-	 *            PK des Kunden, fuer den der VKP ermittelt wird
-	 * @param nMengeI
-	 *            die Menge des Artikels, die verkauft werden soll
-	 * @param tGueltigkeitsdatumI
-	 *            zu welchem Zeitpunkt soll der VKP ermittelt werden
-	 * @param vkpreisfindungDtoI
-	 *            der Ergebniscontainer fuer die VKPF
-	 * @param iIdMwstsatzI
-	 *            der zu beruecksichtigende Mwstsatz
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param artikelDtoI         fuer welchen Artikel wird der VKP ermittelt
+	 * @param iIdKundeI           PK des Kunden, fuer den der VKP ermittelt wird
+	 * @param nMengeI             die Menge des Artikels, die verkauft werden soll
+	 * @param tGueltigkeitsdatumI zu welchem Zeitpunkt soll der VKP ermittelt werden
+	 * @param vkpreisfindungDtoI  der Ergebniscontainer fuer die VKPF
+	 * @param iIdMwstsatzI        der zu beruecksichtigende Mwstsatz
+	 * @param theClientDto        der aktuelle Benutzer
 	 * @return VerkaufspreisDto der ermittelte VKP
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public VkpreisfindungDto verkaufspreisfindungStufe3(ArtikelDto artikelDtoI,
-			Integer iIdKundeI, BigDecimal nMengeI, Date tGueltigkeitsdatumI,
-			VkpreisfindungDto vkpreisfindungDtoI, Integer iIdMwstsatzI,
-			Integer preislisteIId, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto) {
+	public VkpreisfindungDto verkaufspreisfindungStufe3(ArtikelDto artikelDtoI, Integer iIdKundeI, BigDecimal nMengeI,
+			Date tGueltigkeitsdatumI, VkpreisfindungDto vkpreisfindungDtoI, Integer iIdMwstsatzI, Integer preislisteIId,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
 		if (tGueltigkeitsdatumI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("tGueltigkeitsdatumI == null"));
 		}
 
 		if (vkpreisfindungDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("vkpreisfindungDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("vkpreisfindungDtoI == null"));
 		}
 
 		VerkaufspreisDto verkaufspreisDto = null;
 
 		if (Helper.short2boolean(artikelDtoI.getBRabattierbar())) {
 			// Stufe3: 0 die passende Mengenstaffel ermitteln
-			KundesokomengenstaffelDto mengenstaffelDto = ermittleKundesokomengenstaffel(
-					artikelDtoI, iIdKundeI, nMengeI, tGueltigkeitsdatumI,
-					theClientDto);
+
+			BigDecimal bdMengefuerSokoMengenstaffel = nMengeI;
+
+			boolean bVKMengenstaffelAnstattSokoMengestaffel = false;
+			try {
+				ParametermandantDto p = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ARTIKEL,
+						ParameterFac.PARAMETER_VK_MENGENSTAFFEL_ANSTATT_SOKO_MENGESTAFFEL);
+
+				bVKMengenstaffelAnstattSokoMengestaffel = (Boolean) p.getCWertAsObject();
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+			if (bVKMengenstaffelAnstattSokoMengestaffel == true) {
+				bdMengefuerSokoMengenstaffel = BigDecimal.ONE;
+			}
+
+			KundesokomengenstaffelDto mengenstaffelDto = ermittleKundesokomengenstaffel(artikelDtoI, iIdKundeI,
+					bdMengefuerSokoMengenstaffel, tGueltigkeitsdatumI, theClientDto);
 
 			if (mengenstaffelDto != null) {
+				boolean bKeineMngStf = false;
 
+				try {
+					KundesokoDto kundesokoDto = getKundesokoFac()
+							.kundesokoFindByPrimaryKey(mengenstaffelDto.getKundesokoIId());
+
+					bKeineMngStf = Helper.short2boolean(kundesokoDto.getBKeineMengenstaffel());
+
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
 				ParametermandantDto p = null;
 				try {
-					p = getParameterFac().getMandantparameter(
-							theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_KUNDEN,
+					p = getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
 							ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
@@ -4137,13 +3583,30 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 				BigDecimal nPreisbasis = null;
 				if (iPreisbasis == 0) {
-					nPreisbasis = ermittlePreisbasis(artikelDtoI.getIId(),
-							tGueltigkeitsdatumI, nMengeI, null,
+					nPreisbasis = ermittlePreisbasis(artikelDtoI.getIId(), tGueltigkeitsdatumI, nMengeI, null,
 							waehrungCNrZielwaehrung, theClientDto);
 				} else {
-					nPreisbasis = ermittlePreisbasis(artikelDtoI.getIId(),
-							tGueltigkeitsdatumI, nMengeI, preislisteIId,
+					nPreisbasis = ermittlePreisbasis(artikelDtoI.getIId(), tGueltigkeitsdatumI, nMengeI, preislisteIId,
 							waehrungCNrZielwaehrung, theClientDto);
+				}
+
+				Double dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz = null;
+				// SP6809
+				if (bVKMengenstaffelAnstattSokoMengestaffel == true && bKeineMngStf == false) {
+					VkpreisfindungDto vkStufe2 = verkaufspreisfindungStufe2(artikelDtoI, nMengeI, tGueltigkeitsdatumI,
+							new VkpreisfindungDto(theClientDto.getLocUi()), iIdMwstsatzI, preislisteIId,
+							waehrungCNrZielwaehrung, theClientDto);
+
+					if (vkStufe2 != null && vkStufe2.getVkpStufe2() != null) {
+
+						dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz = vkStufe2.getVkpStufe2().rabattsatz;
+
+						if (vkStufe2.getVkpStufe2().bKommtVonFixpreis && vkStufe2.getVkpStufe2().einzelpreis != null) {
+
+							mengenstaffelDto.setNArtikelfixpreis(vkStufe2.getVkpStufe2().nettopreis);
+
+						}
+					}
 				}
 
 				// Stufe3: 1 Wenn ein Fixpreis hinterlegt wurde, wird der
@@ -4151,35 +3614,69 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				if (mengenstaffelDto.getNArtikelfixpreis() != null
 						&& mengenstaffelDto.getNArtikelfixpreis().doubleValue() != 0) {
 
-					KundeDto kdDto = getKundeFac().kundeFindByPrimaryKeySmall(
-							iIdKundeI);
+					KundeDto kdDto = getKundeFac().kundeFindByPrimaryKeySmall(iIdKundeI);
 
 					try {
-						if (!kdDto.getCWaehrung().equals(
-								waehrungCNrZielwaehrung)) {
-							mengenstaffelDto.setNArtikelfixpreis(getLocaleFac()
-									.rechneUmInAndereWaehrungZuDatum(
-											mengenstaffelDto
-													.getNArtikelfixpreis(),
-											kdDto.getCWaehrung(),
-											waehrungCNrZielwaehrung,
-											tGueltigkeitsdatumI, theClientDto));
+						if (!kdDto.getCWaehrung().equals(waehrungCNrZielwaehrung)) {
+							mengenstaffelDto.setNArtikelfixpreis(getLocaleFac().rechneUmInAndereWaehrungZuDatum(
+									mengenstaffelDto.getNArtikelfixpreis(), kdDto.getCWaehrung(),
+									waehrungCNrZielwaehrung, tGueltigkeitsdatumI, theClientDto));
 						}
 					} catch (RemoteException e) {
 						throwEJBExceptionLPRespectOld(e);
 					}
-					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis,
-							mengenstaffelDto.getNArtikelfixpreis(),
+					verkaufspreisDto = berechneVerkaufspreis(nPreisbasis, mengenstaffelDto.getNArtikelfixpreis(),
 							vkpreisfindungDtoI.getNMaterialzuschlag());
+
+					// SP4209
+
+					if (bVKMengenstaffelAnstattSokoMengestaffel == true && bKeineMngStf == false) {
+
+						if (dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz != null
+								&& dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz.doubleValue() != 0) {
+
+							VerkaufspreisDto verkaufspreisDtoFuerZusatzrabatt = berechneVerkaufspreis(
+									verkaufspreisDto.nettopreis, dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz,
+									theClientDto);
+
+							verkaufspreisDto.setDdZusatzrabattsatz(dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz);
+
+							verkaufspreisDto.setNZusatzrabattsumme(verkaufspreisDtoFuerZusatzrabatt.rabattsumme);
+
+							verkaufspreisDto.nettopreis = verkaufspreisDto.nettopreis
+									.subtract(verkaufspreisDtoFuerZusatzrabatt.rabattsumme);
+
+						}
+					}
+
 				} else {
 
 					// Stufe3: 2 Wenn ein Rabattsatz hinterlegt wurde, wird der
 					// Nettoeinzelpreis berechnet
 					if (nPreisbasis != null) {
 						verkaufspreisDto = berechneVerkaufspreis(nPreisbasis,
-								mengenstaffelDto
-										.getFArtikelstandardrabattsatz(),
-								vkpreisfindungDtoI.getNMaterialzuschlag());
+								mengenstaffelDto.getFArtikelstandardrabattsatz(),
+								vkpreisfindungDtoI.getNMaterialzuschlag(), theClientDto);
+						if (bVKMengenstaffelAnstattSokoMengestaffel == true && bKeineMngStf == false) {
+
+							if (dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz != null
+									&& dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz.doubleValue() != 0) {
+
+								VerkaufspreisDto verkaufspreisDtoFuerZusatzrabatt = berechneVerkaufspreis(
+										verkaufspreisDto.nettopreis, dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz,
+										theClientDto);
+
+								verkaufspreisDto
+										.setDdZusatzrabattsatz(dRabattsatzAusVkMengenstaffelFuerZusatzrabattsatz);
+
+								verkaufspreisDto.setNZusatzrabattsumme(verkaufspreisDtoFuerZusatzrabatt.rabattsumme);
+
+								verkaufspreisDto.nettopreis = verkaufspreisDto.nettopreis
+										.subtract(verkaufspreisDtoFuerZusatzrabatt.rabattsumme);
+
+							}
+						}
+
 					}
 				}
 			}
@@ -4188,14 +3685,12 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		// Stufe3: 3 Wenn VKPF Stufe 3 ein Ergebnis liefert, dann wird das
 		// entsprechend hinterlegt
 		if (verkaufspreisDto != null) {
-			verkaufspreisDto = berechneBruttopreis(verkaufspreisDto,
-					iIdMwstsatzI, theClientDto);
+			verkaufspreisDto = berechneBruttopreis(verkaufspreisDto, iIdMwstsatzI, theClientDto);
 
 			vkpreisfindungDtoI.setVkpStufe3(verkaufspreisDto);
 
 			if (vkpreisfindungDtoI.getVkpreisberechnetStufe() == null) {
-				vkpreisfindungDtoI
-						.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFSTUFE3);
+				vkpreisfindungDtoI.setVkpreisberechnetStufe(VkpreisfindungDto.VKPFSTUFE3);
 			}
 		}
 
@@ -4207,32 +3702,25 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Diese Methode liefert nur dann ein Ergebnis, wenn der Partner der
 	 * Rechnungsadesse des Kunden selbst ein Kunde ist.
 	 * 
-	 * @param iIdKundeI
-	 *            PK des Kunden
-	 * @param theClientDtoI
-	 *            die aktuellen Benutzerdaten
-	 * @return Integer PK des Partners der Rechnungsadresse des Kunden, wenn
-	 *         dieser wiederum ein Kunde ist
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdKundeI     PK des Kunden
+	 * @param theClientDtoI die aktuellen Benutzerdaten
+	 * @return Integer PK des Partners der Rechnungsadresse des Kunden, wenn dieser
+	 *         wiederum ein Kunde ist
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private Integer ermittleKundeIIdDerRechnungsadresse(Integer iIdKundeI,
-			TheClientDto theClientDtoI) throws EJBExceptionLP {
+	private Integer ermittleKundeIIdDerRechnungsadresse(Integer iIdKundeI, TheClientDto theClientDtoI)
+			throws EJBExceptionLP {
 		Integer kundeIIdDerRechnungsadresse = null;
 
 		try {
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(iIdKundeI,
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(iIdKundeI, theClientDtoI);
+
+			PartnerDto partnerRechnungsadresseDto = getPartnerFac().partnerFindByPrimaryKey(kundeDto.getPartnerIId(),
 					theClientDtoI);
 
-			PartnerDto partnerRechnungsadresseDto = getPartnerFac()
-					.partnerFindByPrimaryKey(kundeDto.getPartnerIId(),
-							theClientDtoI);
-
 			// Ist der Partner beim aktuellen Mandanten ein Kunde?
-			KundeDto kundeRechnungsadresseDto = getKundeFac()
-					.kundeFindByiIdPartnercNrMandantOhneExc(
-							partnerRechnungsadresseDto.getIId(),
-							theClientDtoI.getMandant(), theClientDtoI);
+			KundeDto kundeRechnungsadresseDto = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(
+					partnerRechnungsadresseDto.getIId(), theClientDtoI.getMandant(), theClientDtoI);
 
 			if (kundeRechnungsadresseDto != null) {
 				kundeIIdDerRechnungsadresse = kundeRechnungsadresseDto.getIId();
@@ -4247,55 +3735,41 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	/**
 	 * Welche Kundesokomengenstaffel wird aufgrund von VKPF 3 verwendet.
 	 * 
-	 * @param artikelDtoI
-	 *            fuer welchen Artikel wird der VKP ermittelt
-	 * @param iIdKundeI
-	 *            PK des Kunden, fuer den der VKP ermittelt wird
-	 * @param nMengeI
-	 *            die Menge des Artikels, die verkauft werden soll
-	 * @param tGueltigkeitsdatumI
-	 *            zu welchem Zeitpunkt soll der VKP ermittelt werden
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param artikelDtoI         fuer welchen Artikel wird der VKP ermittelt
+	 * @param iIdKundeI           PK des Kunden, fuer den der VKP ermittelt wird
+	 * @param nMengeI             die Menge des Artikels, die verkauft werden soll
+	 * @param tGueltigkeitsdatumI zu welchem Zeitpunkt soll der VKP ermittelt werden
+	 * @param theClientDto        der aktuelle Benutzer
 	 * @return VerkaufspreisDto der ermittelte VKP
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	public KundesokomengenstaffelDto ermittleKundesokomengenstaffel(
-			ArtikelDto artikelDtoI, Integer iIdKundeI, BigDecimal nMengeI,
-			Date tGueltigkeitsdatumI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public KundesokomengenstaffelDto ermittleKundesokomengenstaffel(ArtikelDto artikelDtoI, Integer iIdKundeI,
+			BigDecimal nMengeI, Date tGueltigkeitsdatumI, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (artikelDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("artikelDtoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL, new Exception("artikelDtoI == null"));
 		}
 		if (iIdKundeI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdKundeI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdKundeI == null"));
 		}
 		if (nMengeI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("nMengeI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("nMengeI == null"));
 		}
 		if (tGueltigkeitsdatumI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("tGueltigkeitsdatumI == null"));
 		}
 
-		Integer kundeIIdDerRechnungsadresse = ermittleKundeIIdDerRechnungsadresse(
-				iIdKundeI, theClientDto);
+		Integer kundeIIdDerRechnungsadresse = ermittleKundeIIdDerRechnungsadresse(iIdKundeI, theClientDto);
 
 		// Kundesokomengenstaffel fuer Artikel
-		KundesokomengenstaffelDto mengenstaffelArtikelDto = ermittleMengenstaffelFuerArtikel(
-				iIdKundeI, kundeIIdDerRechnungsadresse, artikelDtoI.getIId(),
-				nMengeI, tGueltigkeitsdatumI);
+		KundesokomengenstaffelDto mengenstaffelArtikelDto = ermittleMengenstaffelFuerArtikel(iIdKundeI,
+				kundeIIdDerRechnungsadresse, artikelDtoI.getIId(), nMengeI, tGueltigkeitsdatumI);
 
 		KundesokomengenstaffelDto mengenstaffelArtgruDto = null;
 
 		// Kundesokomengenstaffel fuer Artikelgruppe
 		if (artikelDtoI.getArtgruIId() != null) {
-			mengenstaffelArtgruDto = ermittleMengenstaffelFuerArtikelgruppe(
-					iIdKundeI, kundeIIdDerRechnungsadresse,
+			mengenstaffelArtgruDto = ermittleMengenstaffelFuerArtikelgruppe(iIdKundeI, kundeIIdDerRechnungsadresse,
 					artikelDtoI.getArtgruIId(), nMengeI, tGueltigkeitsdatumI);
 		}
 
@@ -4319,32 +3793,26 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Liefert die passende Mengenstaffel, wenn fuer den Kunden zum besagten
-	 * Artikel zu einem bestimmten Zeitpunkt fuer eine bestimmte Menge eine
+	 * Liefert die passende Mengenstaffel, wenn fuer den Kunden zum besagten Artikel
+	 * zu einem bestimmten Zeitpunkt fuer eine bestimmte Menge eine
 	 * Kundesokomengenstaffel erfasst wurde, sonst null.
 	 * 
-	 * @param iIdKundeI
-	 *            PK des Kunden
-	 * @param iIdRechnungsadresseKundeI
-	 *            PK des Kunden der Kundegruppe von iIdKundeI
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param nMengeI
-	 *            BigDecimal die gewuenschte Menge des urspruenglichen Artikels
-	 * @param tGueltigkeitsdatumI
-	 *            das Datum, zu dem der VKP ermittelt werden soll
-	 * @return KundesokomengenstaffelDto null, wenn keine Mengenstaffel
-	 *         ermittelt werden konnte
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdKundeI                 PK des Kunden
+	 * @param iIdRechnungsadresseKundeI PK des Kunden der Kundegruppe von iIdKundeI
+	 * @param iIdArtikelI               PK des Artikels
+	 * @param nMengeI                   BigDecimal die gewuenschte Menge des
+	 *                                  urspruenglichen Artikels
+	 * @param tGueltigkeitsdatumI       das Datum, zu dem der VKP ermittelt werden
+	 *                                  soll
+	 * @return KundesokomengenstaffelDto null, wenn keine Mengenstaffel ermittelt
+	 *         werden konnte
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private KundesokomengenstaffelDto ermittleMengenstaffelFuerArtikel(
-			Integer iIdKundeI, Integer iIdRechnungsadresseKundeI,
-			Integer iIdArtikelI, BigDecimal nMengeI, Date tGueltigkeitsdatumI)
+	private KundesokomengenstaffelDto ermittleMengenstaffelFuerArtikel(Integer iIdKundeI,
+			Integer iIdRechnungsadresseKundeI, Integer iIdArtikelI, BigDecimal nMengeI, Date tGueltigkeitsdatumI)
 			throws EJBExceptionLP {
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 
 		KundesokomengenstaffelDto mengenstaffelDto = null;
@@ -4352,36 +3820,28 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		try {
 			// 0: Wurde fuer diesen Kunden fuer diesen Artikel fuer den
 			// fraglichen Zeitpunkt eine SOKO erfasst?
-			KundesokoDto kundesokoDto = getKundesokoFac()
-					.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
-							iIdKundeI, iIdArtikelI, tGueltigkeitsdatumI);
+			KundesokoDto kundesokoDto = getKundesokoFac().kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+					iIdKundeI, iIdArtikelI, tGueltigkeitsdatumI);
 
 			// PJ18867
-			if (kundesokoDto != null
-					&& Helper.short2boolean(kundesokoDto
-							.getBWirktNichtFuerPreisfindung()) == true) {
+			if (kundesokoDto != null && Helper.short2boolean(kundesokoDto.getBWirktNichtFuerPreisfindung()) == true) {
 				return null;
 			}
 
 			if (kundesokoDto != null) {
-				mengenstaffelDto = ermittleMengenstaffelAusKundesoko(
-						kundesokoDto.getIId(), nMengeI);
+				mengenstaffelDto = ermittleMengenstaffelAusKundesoko(kundesokoDto.getIId(), nMengeI);
 
 				if (mengenstaffelDto == null) {
 					// 1: Wurde fuer die Rechnungsadresse des Kunden fuer diesen
 					// Artikel
 					// fuer den fraglichen Zeitpunkt eine SOKO erfasst?
 					if (iIdRechnungsadresseKundeI != null
-							&& iIdRechnungsadresseKundeI.intValue() != iIdKundeI
-									.intValue()) {
-						kundesokoDto = getKundesokoFac()
-								.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
-										iIdRechnungsadresseKundeI, iIdArtikelI,
-										tGueltigkeitsdatumI);
+							&& iIdRechnungsadresseKundeI.intValue() != iIdKundeI.intValue()) {
+						kundesokoDto = getKundesokoFac().kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+								iIdRechnungsadresseKundeI, iIdArtikelI, tGueltigkeitsdatumI);
 
 						if (kundesokoDto != null) {
-							mengenstaffelDto = ermittleMengenstaffelAusKundesoko(
-									kundesokoDto.getIId(), nMengeI);
+							mengenstaffelDto = ermittleMengenstaffelAusKundesoko(kundesokoDto.getIId(), nMengeI);
 
 						}
 					}
@@ -4395,32 +3855,26 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	}
 
 	/**
-	 * Liefert eine Mengenstaffel, wenn fuer den Kunden zur besagten
-	 * Artikelgruppe zu einem bestimmten Zeitpunkt fuer eine bestimmte Menge
-	 * eine Kundesokomengenstaffel erfasst wurde, sonst null.
+	 * Liefert eine Mengenstaffel, wenn fuer den Kunden zur besagten Artikelgruppe
+	 * zu einem bestimmten Zeitpunkt fuer eine bestimmte Menge eine
+	 * Kundesokomengenstaffel erfasst wurde, sonst null.
 	 * 
-	 * @param iIdKundeI
-	 *            PK des Kunden
-	 * @param iIdRechnungsadresseKundeI
-	 *            PK des Kunden der Kundegruppe von iIdKundeI
-	 * @param iIdArtgruI
-	 *            PK der Artikelgruppe
-	 * @param nMengeI
-	 *            BigDecimal die gewuenschte Menge des urspruenglichen Artikels
-	 * @param tGueltigkeitsdatumI
-	 *            das Datum, zu dem der VKP ermittelt werden soll
-	 * @return KundesokomengenstaffelDto null, wenn keine Mengenstaffel
-	 *         ermittelt werden konnte
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdKundeI                 PK des Kunden
+	 * @param iIdRechnungsadresseKundeI PK des Kunden der Kundegruppe von iIdKundeI
+	 * @param iIdArtgruI                PK der Artikelgruppe
+	 * @param nMengeI                   BigDecimal die gewuenschte Menge des
+	 *                                  urspruenglichen Artikels
+	 * @param tGueltigkeitsdatumI       das Datum, zu dem der VKP ermittelt werden
+	 *                                  soll
+	 * @return KundesokomengenstaffelDto null, wenn keine Mengenstaffel ermittelt
+	 *         werden konnte
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private KundesokomengenstaffelDto ermittleMengenstaffelFuerArtikelgruppe(
-			Integer iIdKundeI, Integer iIdRechnungsadresseKundeI,
-			Integer iIdArtgruI, BigDecimal nMengeI, Date tGueltigkeitsdatumI)
+	private KundesokomengenstaffelDto ermittleMengenstaffelFuerArtikelgruppe(Integer iIdKundeI,
+			Integer iIdRechnungsadresseKundeI, Integer iIdArtgruI, BigDecimal nMengeI, Date tGueltigkeitsdatumI)
 			throws EJBExceptionLP {
 		if (iIdArtgruI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtgruI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtgruI == null"));
 		}
 
 		KundesokomengenstaffelDto mengenstaffelDto = null;
@@ -4428,29 +3882,23 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		try {
 			// 0: Wurde fuer diesen Kunden fuer diese Artikelgruppe fuer den
 			// fraglichen Zeitpunkt eine SOKO erfasst?
-			KundesokoDto kundesokoDto = getKundesokoFac()
-					.kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(
-							iIdKundeI, iIdArtgruI, tGueltigkeitsdatumI);
+			KundesokoDto kundesokoDto = getKundesokoFac().kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(
+					iIdKundeI, iIdArtgruI, tGueltigkeitsdatumI);
 
 			if (kundesokoDto != null) {
-				mengenstaffelDto = ermittleMengenstaffelAusKundesoko(
-						kundesokoDto.getIId(), nMengeI);
+				mengenstaffelDto = ermittleMengenstaffelAusKundesoko(kundesokoDto.getIId(), nMengeI);
 
 				if (mengenstaffelDto == null) {
 					// 1: Wurde fuer die Rechnungsadresse des Kunden fuer diese
 					// Artikelgruppe
 					// fuer den fraglichen Zeitpunkt eine SOKO erfasst?
 					if (iIdRechnungsadresseKundeI != null
-							&& iIdRechnungsadresseKundeI.intValue() != iIdKundeI
-									.intValue()) {
-						kundesokoDto = getKundesokoFac()
-								.kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(
-										iIdRechnungsadresseKundeI, iIdArtgruI,
-										tGueltigkeitsdatumI);
+							&& iIdRechnungsadresseKundeI.intValue() != iIdKundeI.intValue()) {
+						kundesokoDto = getKundesokoFac().kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(
+								iIdRechnungsadresseKundeI, iIdArtgruI, tGueltigkeitsdatumI);
 
 						if (kundesokoDto != null) {
-							mengenstaffelDto = ermittleMengenstaffelAusKundesoko(
-									kundesokoDto.getIId(), nMengeI);
+							mengenstaffelDto = ermittleMengenstaffelAusKundesoko(kundesokoDto.getIId(), nMengeI);
 
 						}
 					}
@@ -4467,20 +3915,16 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Zu einer Kundensoko und einer vorgegebenen Menge soll die passende
 	 * Mengenstaffel ermittelt werden.
 	 * 
-	 * @param iIdKundesokoI
-	 *            PK der Kundesoko
-	 * @param nMengeI
-	 *            die vorgegebene Menge eines Artikels
-	 * @return KundesokomengenstaffelDto null, wenn keine Mengenstaffel
-	 *         ermittelt werden konnte
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @param iIdKundesokoI PK der Kundesoko
+	 * @param nMengeI       die vorgegebene Menge eines Artikels
+	 * @return KundesokomengenstaffelDto null, wenn keine Mengenstaffel ermittelt
+	 *         werden konnte
+	 * @throws EJBExceptionLP Ausnahme
 	 */
-	private KundesokomengenstaffelDto ermittleMengenstaffelAusKundesoko(
-			Integer iIdKundesokoI, BigDecimal nMengeI) throws EJBExceptionLP {
+	private KundesokomengenstaffelDto ermittleMengenstaffelAusKundesoko(Integer iIdKundesokoI, BigDecimal nMengeI)
+			throws EJBExceptionLP {
 		if (iIdKundesokoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdKundesokoI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdKundesokoI == null"));
 		}
 
 		KundesokomengenstaffelDto mengenstaffelDto = null;
@@ -4488,8 +3932,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		try {
 			// 0: Welche Mengenstaffel wurde erfasst?
 			KundesokomengenstaffelDto[] aMengenstaffelDtos = getKundesokoFac()
-					.kundesokomengenstaffelFindByKundesokoIIdNMenge(
-							iIdKundesokoI, nMengeI);
+					.kundesokomengenstaffelFindByKundesokoIIdNMenge(iIdKundesokoI, nMengeI);
 
 			if (aMengenstaffelDtos != null && aMengenstaffelDtos.length > 0) {
 				mengenstaffelDto = aMengenstaffelDtos[aMengenstaffelDtos.length - 1];
@@ -4505,26 +3948,20 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 	 * Pruefen, ob der Verkaufspreis unter dem minimalen Gestehungspreis des
 	 * Artikels am Hauptlager des Mandanten liegt.
 	 * 
-	 * @param iIdArtikelI
-	 *            PK des Artikels
-	 * @param bdVerkaufspreisI
-	 *            der vorgeschlagene Verkaufspreis
-	 * @param ddWechselkursMandantZuBelegwaehrungI
-	 *            der Wechselkurs des Beleges
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
+	 * @param iIdArtikelI                          PK des Artikels
+	 * @param bdVerkaufspreisI                     der vorgeschlagene Verkaufspreis
+	 * @param ddWechselkursMandantZuBelegwaehrungI der Wechselkurs des Beleges
+	 * @param theClientDto                         der aktuelle Benutzer
 	 * @return boolean true, wenn der Verkaufspreis unter dem minimalen
 	 *         Gestehungspreis liegt
 	 * @throws EJBExceptionLP
 	 */
-	public boolean liegtVerkaufpreisUnterMinVerkaufpsreis(Integer iIdArtikelI,
-			BigDecimal bdVerkaufspreisI,
-			Double ddWechselkursMandantZuBelegwaehrungI, BigDecimal nMengeI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public boolean liegtVerkaufpreisUnterMinVerkaufpsreis(Integer iIdArtikelI, BigDecimal bdVerkaufspreisI,
+			Double ddWechselkursMandantZuBelegwaehrungI, BigDecimal nMengeI, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		if (iIdArtikelI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdArtikelI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL, new Exception("iIdArtikelI == null"));
 		}
 		if (bdVerkaufspreisI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
@@ -4532,16 +3969,14 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		}
 		if (ddWechselkursMandantZuBelegwaehrungI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception(
-							"ddWechselkursMandantZuBelegwaehrungI == null"));
+					new Exception("ddWechselkursMandantZuBelegwaehrungI == null"));
 		}
 		boolean bLiegtVerkaufspreisUnterMinGestehungspreis = false;
 		try {
-			LagerDto oHauptlagerDto = getLagerFac().getHauptlagerDesMandanten(
+			LagerDto oHauptlagerDto = getLagerFac().getHauptlagerDesMandanten(theClientDto);
+			bLiegtVerkaufspreisUnterMinGestehungspreis = liegtVerkaufspreisUnterMinVerkaufspreis(iIdArtikelI,
+					oHauptlagerDto.getIId(), bdVerkaufspreisI, ddWechselkursMandantZuBelegwaehrungI, nMengeI,
 					theClientDto);
-			bLiegtVerkaufspreisUnterMinGestehungspreis = liegtVerkaufspreisUnterMinVerkaufspreis(
-					iIdArtikelI, oHauptlagerDto.getIId(), bdVerkaufspreisI,
-					ddWechselkursMandantZuBelegwaehrungI, nMengeI, theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -4552,8 +3987,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		Session session = FLRSessionFactory.getFactory().openSession();
 		ArrayList<Integer> rids = new ArrayList<Integer>();
 		try {
-			org.hibernate.Criteria crit = session
-					.createCriteria(FLRVkpfStaffelmenge.class);
+			org.hibernate.Criteria crit = session.createCriteria(FLRVkpfStaffelmenge.class);
 			crit.add(Restrictions.isNull("t_preisgueltigbis"));
 			crit.addOrder(Order.asc("artikel_i_id"));
 			Integer artikel_i_id = null;
@@ -4571,8 +4005,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			BigDecimal tmpmenge = null;
 			for (int i = 0; i < rids.size(); i++) {
 				String queryString = "from FLRVkpfStaffelmenge flrvkpfstaffelmenge  WHERE flrvkpfstaffelmenge.artikel_i_id = "
-						+ rids.get(i)
-						+ " ORDER BY flrvkpfstaffelmenge.n_menge,flrvkpfstaffelmenge.t_preisgueltigab";
+						+ rids.get(i) + " ORDER BY flrvkpfstaffelmenge.n_menge,flrvkpfstaffelmenge.t_preisgueltigab";
 				org.hibernate.Query query = session.createQuery(queryString);
 				List<?> rList = query.list();
 				Iterator<?> rlIterator = rList.iterator();
@@ -4581,11 +4014,9 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				tmpmenge = tmpmenge.setScale(4);
 				BigDecimal menge = null;
 				while (rlIterator.hasNext()) {
-					FLRVkpfStaffelmenge item = (FLRVkpfStaffelmenge) rlIterator
-							.next();
+					FLRVkpfStaffelmenge item = (FLRVkpfStaffelmenge) rlIterator.next();
 					menge = item.getN_menge();
-					System.out.println(rids.get(i) + " " + item.getN_menge()
-							+ " " + item.getT_preisgueltigab() + " "
+					System.out.println(rids.get(i) + " " + item.getN_menge() + " " + item.getT_preisgueltigab() + " "
 							+ item.getT_preisgueltigbis());
 					if ((menge.compareTo(tmpmenge) != 0)) {
 						if (items != null) {
@@ -4594,16 +4025,13 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 								if (items.get(s - 2).getT_preisgueltigbis() == null) {
 									Vkpfmengenstaffel vkpfMengenstaffel = null;
 									// try {
-									vkpfMengenstaffel = em.find(
-											Vkpfmengenstaffel.class,
-											items.get(s - 2).getI_id());
+									vkpfMengenstaffel = em.find(Vkpfmengenstaffel.class, items.get(s - 2).getI_id());
 									if (vkpfMengenstaffel == null) {
 									}
 									// }
 									// catch (FinderException ex) {
 									// }
-									java.sql.Date d = new Date(items.get(s - 1)
-											.getT_preisgueltigab().getTime());
+									java.sql.Date d = new Date(items.get(s - 1).getT_preisgueltigab().getTime());
 									vkpfMengenstaffel.setTPreisgueltigbis(d);
 								}
 							}

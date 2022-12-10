@@ -39,6 +39,7 @@ import java.util.Locale;
 
 import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
 import com.lp.server.auftrag.service.AuftragzeitenDto;
+import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.projekt.service.ProjektFac;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
@@ -116,6 +117,13 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 		return tableInfo;
 	}
 
+	private int getSortierung() {
+		FilterKriterium fkAuswertung = aFilterKriterium[ProjektFac.IDX_KRIT_AUSWERTUNG];
+
+		return new Integer(fkAuswertung.value);
+
+	}
+
 	/**
 	 * gets the data page for the specified row using the current query. The row
 	 * at rowIndex will be located in the middle of the page.
@@ -144,22 +152,23 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 
 			for (int row = 0; row < getAnzahlZeilen(); row++) {
 
-				// enthaelt KRIT_PERSONAL = true || KRIT_IDENT = true
-				FilterKriterium fkAuswertung = aFilterKriterium[ProjektFac.IDX_KRIT_AUSWERTUNG];
-
 				AuftragzeitenDto oAuftragzeitenDto = aProjektzeitenDtos[iAktuellerAuftrag];
 
 				// die erste Zeile pro Auftrag ist der Kopf
 				boolean doAnzeige = false;
 
-				if (fkAuswertung.kritName.equals(ProjektFac.KRIT_PERSONAL)) {
+				if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_PERSONAL) {
 					if (hmKoepfe.containsKey(oAuftragzeitenDto
 							.getSPersonalnummer())) {
 						// in diesem Fall gibt es den Kopf noch nicht
 						doAnzeige = true;
 						hmKoepfe.remove(oAuftragzeitenDto.getSPersonalnummer());
 					}
-				} else if (fkAuswertung.kritName.equals(ProjektFac.KRIT_IDENT)) {
+				} else if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ZEITPUNKT_PERSONAL) {
+
+					doAnzeige = true;
+
+				} else if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL) {
 					if (hmKoepfe
 							.containsKey(oAuftragzeitenDto.getSArtikelcnr())) {
 						// in diesem Fall gibt es den Kopf noch nicht
@@ -172,14 +181,14 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 					rows[row][col++] = ""; // leerer Zeilenheader
 
 					// Anordnung der Spalten je nach Filterkriterien
-					if (fkAuswertung.kritName.equals(ProjektFac.KRIT_PERSONAL)) {
+					if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_PERSONAL
+							|| getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ZEITPUNKT_PERSONAL) {
 						rows[row][col++] = oAuftragzeitenDto
 								.getSPersonalnummer();
 						rows[row][col++] = oAuftragzeitenDto
 								.getSPersonalMaschinenname();
 						rows[row][col++] = null;
-					} else if (fkAuswertung.kritName
-							.equals(ProjektFac.KRIT_IDENT)) {
+					} else if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL) {
 						rows[row][col++] = oAuftragzeitenDto.getSArtikelcnr();
 						rows[row][col++] = oAuftragzeitenDto
 								.getSArtikelbezeichnung();
@@ -199,12 +208,13 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 				rows[row][col++] = ""; // leerer Zeilenheader
 
 				// Anordnung der Spalten je nach Filterkriterien
-				if (fkAuswertung.kritName.equals(ProjektFac.KRIT_PERSONAL)) {
+				if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_PERSONAL
+						|| getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ZEITPUNKT_PERSONAL) {
 					rows[row][col++] = "";
 					rows[row][col++] = oAuftragzeitenDto.getSArtikelcnr();
 					rows[row][col++] = oAuftragzeitenDto
 							.getSArtikelbezeichnung();
-				} else if (fkAuswertung.kritName.equals(ProjektFac.KRIT_IDENT)) {
+				} else if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL) {
 					rows[row][col++] = "";
 					rows[row][col++] = oAuftragzeitenDto.getSPersonalnummer();
 					rows[row][col++] = oAuftragzeitenDto
@@ -281,41 +291,26 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 		// enthaelt Auftrag = AUFTRAG_I_ID
 		FilterKriterium fkAuftrag = aFilterKriterium[ProjektFac.IDX_KRIT_LOS];
 
-		// enthaelt KRIT_PERSONAL = true || KRIT_IDENT = true
-		FilterKriterium fkAuswertung = aFilterKriterium[ProjektFac.IDX_KRIT_AUSWERTUNG];
-
 		AuftragzeitenDto[] personalZeitenDtos = null;
 
 		// Anordnung der Spalten je nach Filterkriterien
-		if (fkAuswertung.kritName.equals(ProjektFac.KRIT_PERSONAL)) {
-			personalZeitenDtos = getZeiterfassungFac()
-					.getAllZeitenEinesBeleges(LocaleFac.BELEGART_PROJEKT,
-							new Integer(Integer.parseInt(fkAuftrag.value)),
-							null, null, null, null, false, // order by
-							// artikelcnr
-							true, // order by personal
-							theClientDto);
-		} else if (fkAuswertung.kritName.equals(ProjektFac.KRIT_IDENT)) {
-			personalZeitenDtos = getZeiterfassungFac()
-					.getAllZeitenEinesBeleges(LocaleFac.BELEGART_PROJEKT,
-							new Integer(Integer.parseInt(fkAuftrag.value)),
-							null, null, null, null, true, // order by artikelcnr
-							false, // order by personal
-							theClientDto);
-		}
+
+		personalZeitenDtos = getZeiterfassungFac().getAllZeitenEinesBeleges(
+				LocaleFac.BELEGART_PROJEKT,
+				new Integer(Integer.parseInt(fkAuftrag.value)), null, null,
+				null, null, getSortierung(), // order
+												// by
+												// personal
+				theClientDto);
 
 		// Telefonzeiten hinzufuegen und sortieren
 		personalZeitenDtos = AuftragzeitenDto.add2BelegzeitenDtos(
 				getZeiterfassungFac().getAllTelefonzeitenEinesProjekts(
 						new Integer(Integer.parseInt(fkAuftrag.value)), null,
 						null, null, theClientDto), personalZeitenDtos);
-		if (fkAuswertung.kritName.equals(ProjektFac.KRIT_PERSONAL)) {
-			personalZeitenDtos = AuftragzeitenDto.sortiereBelegzeitDtos(
-					personalZeitenDtos, false);
-		} else {
-			personalZeitenDtos = AuftragzeitenDto.sortiereBelegzeitDtos(
-					personalZeitenDtos, true);
-		}
+
+		personalZeitenDtos = AuftragzeitenDto.sortiereBelegzeitDtos(
+				personalZeitenDtos, getSortierung());
 
 		aProjektzeitenDtos = new AuftragzeitenDto[personalZeitenDtos.length];
 
@@ -356,16 +351,22 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 		// hier werden die Koepfe gesammelt, in der HashMap gibt es keine
 		// doppelten Keys
 		hmKoepfe = new HashMap<String, String>();
+		int iAnzahlZeilen;
+		if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ZEITPUNKT_PERSONAL) {
+			iAnzahlZeilen = aProjektzeitenDtos.length * 3;
+		} else {
 
-		for (int i = 0; i < aProjektzeitenDtos.length; i++) {
-			if (fkAuswertung.kritName.equals(ProjektFac.KRIT_PERSONAL)) {
-				hmKoepfe.put(aProjektzeitenDtos[i].getSPersonalnummer(), null);
-			} else if (fkAuswertung.kritName.equals(ProjektFac.KRIT_IDENT)) {
-				hmKoepfe.put(aProjektzeitenDtos[i].getSArtikelcnr(), null);
+			for (int i = 0; i < aProjektzeitenDtos.length; i++) {
+				if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_PERSONAL) {
+					hmKoepfe.put(aProjektzeitenDtos[i].getSPersonalnummer(),
+							null);
+				} else if (getSortierung() == ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL) {
+					hmKoepfe.put(aProjektzeitenDtos[i].getSArtikelcnr(), null);
+				}
 			}
-		}
 
-		int iAnzahlZeilen = hmKoepfe.size() + aProjektzeitenDtos.length * 2;
+			iAnzahlZeilen = hmKoepfe.size() + aProjektzeitenDtos.length * 2;
+		}
 
 		setAnzahlZeilen(iAnzahlZeilen);
 	}

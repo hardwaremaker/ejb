@@ -34,7 +34,9 @@ package com.lp.server.artikel.fastlanereader;
 
 import java.awt.Color;
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -46,15 +48,27 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelsperren;
 import com.lp.server.artikel.fastlanereader.generated.FLRFehlmenge;
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ErsatztypenDto;
+import com.lp.server.artikel.service.LagerFac;
+import com.lp.server.artikel.service.SperrenIcon;
 import com.lp.server.bestellung.service.BestellpositionDto;
 import com.lp.server.bestellung.service.BestellpositionFac;
 import com.lp.server.bestellung.service.BestellungDto;
 import com.lp.server.bestellung.service.BestellungFac;
+import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LoslagerentnahmeDto;
+import com.lp.server.fertigung.service.LossollmaterialDto;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -90,7 +104,10 @@ public class FehlmengeHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	private static final String FLR_FEHLMENGE = "flrfehlmenge.";
-	private static final String FLR_FEHLMENGE_FROM_CLAUSE = "SELECT flrfehlmenge,(SELECT distinct s.artikel_i_id FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrfehlmenge.flrartikel.i_id) as sperren from FLRFehlmenge flrfehlmenge LEFT OUTER JOIN flrfehlmenge.flrlossollmaterial.flrlos.flrstueckliste AS stkl ";
+	private static final String FLR_FEHLMENGE_FROM_CLAUSE = "SELECT flrfehlmenge,(SELECT s FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrfehlmenge.flrartikel.i_id AND s.i_sort=1) as sperren from FLRFehlmenge flrfehlmenge LEFT OUTER JOIN flrfehlmenge.flrlossollmaterial.flrlos.flrstueckliste AS stkl ";
+
+	private boolean bLagerinfo = false;
+	boolean bErsatztypen = false;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 
@@ -104,8 +121,12 @@ public class FehlmengeHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = "SELECT flrfehlmenge,(SELECT s FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrfehlmenge.flrartikel.i_id AND s.i_sort=1) as sperren, (SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=flrfehlmenge.flrartikel.i_id AND artikellager.flrlager.mandant_c_nr='"
+					+ theClientDto.getMandant()
+					+ "'  AND artikellager.flrlager.b_konsignationslager=0 AND artikellager.flrlager.lagerart_c_nr NOT IN('"
+					+ LagerFac.LAGERART_WERTGUTSCHRIFT
+					+ "')), (SELECT sum(fm.n_menge) FROM FLRFehlmenge AS fm WHERE fm.artikel_i_id=flrfehlmenge.flrartikel.i_id), (SELECT sum(ar.n_menge) FROM FLRArtikelreservierung AS ar WHERE ar.flrartikel.i_id=flrfehlmenge.flrartikel.i_id), (SELECT sum(bs.n_menge) FROM FLRArtikelbestellt AS bs WHERE bs.flrartikel.i_id=flrfehlmenge.flrartikel.i_id)   from FLRFehlmenge flrfehlmenge LEFT OUTER JOIN flrfehlmenge.flrlossollmaterial.flrlos.flrstueckliste AS stkl "
+					+ this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -118,26 +139,32 @@ public class FehlmengeHandler extends UseCaseHandler {
 				Object[] o = (Object[]) resultListIterator.next();
 				FLRFehlmenge fm = (FLRFehlmenge) o[0];
 				rows[row][col++] = fm.getI_id();
-				rows[row][col++] = fm.getFlrlossollmaterial().getFlrlos()
-						.getC_nr();
+				rows[row][col++] = fm.getFlrlossollmaterial().getFlrlos().getC_nr();
 				rows[row][col++] = fm.getFlrartikel().getC_nr();
-				rows[row][col++] = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(
-								fm.getFlrartikel().getI_id(), theClientDto)
-						.formatBezeichnung();
+
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(fm.getFlrartikel().getI_id(),
+						theClientDto);
+				if (bReferenznummerInPositionen) {
+					rows[row][col++] = aDto.getCReferenznr();
+				}
+				rows[row][col++] = aDto.formatBezeichnung();
+
 				rows[row][col++] = fm.getN_menge();
+
+				if (fm.getFlrartikel() != null && fm.getFlrartikel().getEinheit_c_nr() != null) {
+					rows[row][col++] = fm.getFlrartikel().getEinheit_c_nr().trim();
+				} else {
+					rows[row][col++] = null;
+				}
+
 				rows[row][col++] = fm.getT_liefertermin();
 
-				rows[row][col++] = getFertigungFac()
-						.getFruehesterEintrefftermin(
-								fm.getFlrartikel().getI_id(), theClientDto);
+				rows[row][col++] = getFertigungFac().getFruehesterEintrefftermin(fm.getFlrartikel().getI_id(),
+						theClientDto);
 
 				if (fm.getFlrlossollmaterial() != null
-						&& fm.getFlrlossollmaterial().getFlrlos()
-								.getFlrstueckliste() != null) {
-					rows[row][col++] = Helper.short2Boolean(fm
-							.getFlrlossollmaterial().getFlrlos()
-							.getFlrstueckliste()
+						&& fm.getFlrlossollmaterial().getFlrlos().getFlrstueckliste() != null) {
+					rows[row][col++] = Helper.short2Boolean(fm.getFlrlossollmaterial().getFlrlos().getFlrstueckliste()
 							.getB_materialbuchungbeiablieferung());
 				} else {
 					rows[row][col++] = null;
@@ -147,18 +174,13 @@ public class FehlmengeHandler extends UseCaseHandler {
 				BigDecimal lagerstand = new BigDecimal(0);
 
 				LoslagerentnahmeDto[] lolaeDtos = getFertigungFac()
-						.loslagerentnahmeFindByLosIId(
-								fm.getFlrlossollmaterial().getFlrlos()
-										.getI_id());
+						.loslagerentnahmeFindByLosIId(fm.getFlrlossollmaterial().getFlrlos().getI_id());
 				for (int i = 0; i < lolaeDtos.length; i++) {
 
-					if (Helper.short2boolean(fm.getFlrartikel()
-							.getB_lagerbewirtschaftet())) {
+					if (Helper.short2boolean(fm.getFlrartikel().getB_lagerbewirtschaftet())) {
 
-						BigDecimal lagerstandEisneLagers = getLagerFac()
-								.getLagerstand(fm.getFlrartikel().getI_id(),
-										lolaeDtos[i].getLagerIId(),
-										theClientDto);
+						BigDecimal lagerstandEisneLagers = getLagerFac().getLagerstand(fm.getFlrartikel().getI_id(),
+								lolaeDtos[i].getLagerIId(), theClientDto);
 						if (lagerstandEisneLagers != null) {
 							lagerstand = lagerstand.add(lagerstandEisneLagers);
 						}
@@ -167,13 +189,70 @@ public class FehlmengeHandler extends UseCaseHandler {
 
 				rows[row][col++] = lagerstand;
 
-				if (o[1] != null) {
-					rows[row][col++] = LocaleFac.STATUS_GESPERRT;
+				if (bLagerinfo) {
+
+					if (bErsatztypen) {
+						BigDecimal bdLagerstandErsatztypen = BigDecimal.ZERO;
+						if (fm.getArtikel_i_id() != null
+								&& fm.getFlrlossollmaterial().getLossollmaterial_i_id_original() == null) {
+
+							HashSet<Integer> hsArtikelIIdsErsatztypen = new HashSet<Integer>();
+
+							LossollmaterialDto[] ersatzDtos = getFertigungFac()
+									.lossollmaterialFindByLossollmaterialIIdOriginal(
+											fm.getFlrlossollmaterial().getI_id());
+							for (LossollmaterialDto tempDto : ersatzDtos) {
+								hsArtikelIIdsErsatztypen.add(tempDto.getArtikelIId());
+							}
+
+							ErsatztypenDto[] ersatztypenAusArtikelDtos = getArtikelFac()
+									.ersatztypenFindByArtikelIId(fm.getFlrlossollmaterial().getFlrartikel().getI_id());
+
+							for (ErsatztypenDto tempDto : ersatztypenAusArtikelDtos) {
+								hsArtikelIIdsErsatztypen.add(tempDto.getArtikelIIdErsatz());
+							}
+
+							Iterator<Integer> itArtikelId = hsArtikelIIdsErsatztypen.iterator();
+							while (itArtikelId.hasNext()) {
+								bdLagerstandErsatztypen = bdLagerstandErsatztypen
+										.add(getLagerFac().getLagerstandAllerLagerAllerMandanten(itArtikelId.next(),
+												false, theClientDto));
+							}
+
+						}
+						rows[row][col++] = bdLagerstandErsatztypen;
+					}
+
+					BigDecimal fehlmenge = (BigDecimal) o[3];
+					if (fehlmenge == null) {
+						fehlmenge = BigDecimal.ZERO;
+					}
+
+					BigDecimal reservierungen = (BigDecimal) o[4];
+					if (reservierungen == null) {
+						reservierungen = BigDecimal.ZERO;
+					}
+
+					BigDecimal bestellt = (BigDecimal) o[5];
+					if (bestellt == null) {
+						bestellt = BigDecimal.ZERO;
+					}
+
+					rows[row][col++] = lagerstand.subtract(fehlmenge.add(reservierungen));
+					rows[row][col++] = bestellt;
+
+				}
+
+				FLRArtikelsperren as = (FLRArtikelsperren) o[1];
+
+				if (as != null) {
+					rows[row][col++] = as.getFlrsperren().getC_bez();
 				} else {
 					rows[row][col++] = null;
 				}
 
-				if (fm.getN_menge().doubleValue() > lagerstand.doubleValue()) {
+				if (Helper.short2boolean(fm.getFlrartikel().getB_lagerbewirtschaftet())
+						&& fm.getN_menge().doubleValue() > lagerstand.doubleValue()) {
 					rows[row][col++] = Color.RED;
 				} else {
 					rows[row][col++] = null;
@@ -183,8 +262,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 				col = 0;
 			}
 
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -215,8 +293,8 @@ public class FehlmengeHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -227,8 +305,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -238,8 +315,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_FEHLMENGE
-							+ filterKriterien[i].kritName);
+					where.append(" " + FLR_FEHLMENGE + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -264,8 +340,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -282,8 +357,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_FEHLMENGE)
-						.append(ArtikelFac.FLR_FEHLMENGE_I_ID).append(" DESC ");
+				orderBy.append(FLR_FEHLMENGE).append(ArtikelFac.FLR_FEHLMENGE_I_ID).append(" DESC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_I_ID) < 0) {
@@ -295,8 +369,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_FEHLMENGE)
-						.append(ArtikelFac.FLR_FEHLMENGE_I_ID).append(" ");
+				orderBy.append(" ").append(FLR_FEHLMENGE).append(ArtikelFac.FLR_FEHLMENGE_I_ID).append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -315,8 +388,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 		return FLR_FEHLMENGE_FROM_CLAUSE;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -328,9 +400,7 @@ public class FehlmengeHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select "
-						+ FLR_FEHLMENGE
-						+ ArtikelFac.FLR_FEHLMENGE_I_ID
+				String queryString = "select " + FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_I_ID
 						+ " from FLRFehlmenge flrfehlmenge LEFT OUTER JOIN flrfehlmenge.flrlossollmaterial.flrlos.flrstueckliste AS stkl"
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
@@ -362,59 +432,99 @@ public class FehlmengeHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, BigDecimal.class,
-							java.util.Date.class, java.util.Date.class,
-							Boolean.class, BigDecimal.class, Icon.class,
-							Color.class },
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 
-					new String[] {
-							"i_id",
-							getTextRespectUISpr("lp.losnr", mandantCNr, locUI),
-							getTextRespectUISpr("lp.artikel", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
-							getTextRespectUISpr("lp.begintermin", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.eintrefftermin",
-									mandantCNr, locUI),
-							getTextRespectUISpr(
-									"fert.materialbuchungbeiablieferung",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.lagerstand", mandantCNr,
-									locUI), "S", "" }, new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_S }, new String[] {
-							FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_I_ID,
-							FLR_FEHLMENGE
-									+ ArtikelFac.FLR_FEHLMENGE_C_BELEGARTNR,
-							FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_FLRARTIKEL
-									+ ".c_nr",
-							Facade.NICHT_SORTIERBAR,
-							FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_N_MENGE,
-							FLR_FEHLMENGE
-									+ ArtikelFac.FLR_FEHLMENGE_T_LIEFERTERMIN,
-							Facade.NICHT_SORTIERBAR, // FLR_FEHLMENGE +
-														// ArtikelFac.FLR_FEHLMENGE_AB_TERMIN,
-							"stkl.b_materialbuchungbeiablieferung",
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR }));
+		int iNachkommastellenMenge = 2;
+
+		try {
+			iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(theClientDto.getMandant());
+
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
 		}
-		return super.getTableInfo();
+
+		columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+		columns.add("lp.losnr", String.class, getTextRespectUISpr("lp.losnr", mandant, locUi), 3,
+				FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_C_BELEGARTNR);
+		columns.add("lp.artikel", String.class, getTextRespectUISpr("lp.artikel", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+				FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_FLRARTIKEL + ".c_nr");
+
+		if (bReferenznummerInPositionen) {
+			columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM,
+					FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_FLRARTIKEL + ".c_referenznr");
+		}
+
+		columns.add("lp.bezeichnung", String.class, getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+		columns.add("lp.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+				getTextRespectUISpr("lp.menge", mandant, locUi), QueryParameters.FLR_BREITE_PREIS,
+				FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_N_MENGE);
+		columns.add("lp.einheit", String.class, getTextRespectUISpr("lp.einheit", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_FLRARTIKEL + ".einheit_c_nr");
+		columns.add("lp.begintermin", java.util.Date.class, getTextRespectUISpr("lp.begintermin", mandant, locUi), 3,
+				FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_T_LIEFERTERMIN);
+		columns.add("lp.eintrefftermin", java.util.Date.class, getTextRespectUISpr("lp.eintrefftermin", mandant, locUi),
+				3, Facade.NICHT_SORTIERBAR);
+		columns.add("fert.materialbuchungbeiablieferung.short", Boolean.class,
+				getTextRespectUISpr("fert.materialbuchungbeiablieferung.short", mandant, locUi), 3,
+				"stkl.b_materialbuchungbeiablieferung", getTextRespectUISpr("fert.materialbuchung.tooltip",
+						theClientDto.getMandant(), theClientDto.getLocUi()));
+		columns.add("lp.lagerstand", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+				getTextRespectUISpr("lp.lagerstand", mandant, locUi), 3, Facade.NICHT_SORTIERBAR);
+
+		// PJ21663
+		if (bLagerinfo) {
+
+			if (bErsatztypen) {
+				columns.add("lp.lagerstand.ersatztypen",
+						super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+						getTextRespectUISpr("lp.lagerstand.ersatztypen", mandant, locUi), 3, Facade.NICHT_SORTIERBAR);
+			}
+
+			columns.add("lp.verfuegbar", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.verfuegbar", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+			columns.add("lp.bestellt", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("lp.bestellt", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+		}
+
+		columns.add("fert.sperre", SperrenIcon.class, getTextRespectUISpr("fert.sperre", mandant, locUi),
+				QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR,
+				getTextRespectUISpr("fert.sperre.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()));
+		columns.add("Color", Color.class, "", 1, Facade.NICHT_SORTIERBAR);
+
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		try {
+			ParametermandantDto parameter = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG, ParameterFac.PARAMETER_LAGERINFO_IN_POSITIONEN);
+			bLagerinfo = (Boolean) parameter.getCWertAsObject();
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ERSATZTYPENVERWALTUNG,
+					theClientDto)) {
+				bErsatztypen = true;
+			}
+
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 }

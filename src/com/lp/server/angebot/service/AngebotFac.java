@@ -34,11 +34,15 @@ package com.lp.server.angebot.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.ejb.Remote;
 
 import com.lp.server.system.service.IAktivierbarControlled;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.HvOptional;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -62,15 +66,14 @@ public interface AngebotFac extends IAktivierbarControlled {
 	public static final String FLR_ANGEBOT_FLRANGEBOTTEXTSUCHE = "flrangebottextsuche";
 	public static final String FLR_ANGEBOT_F_WECHSELKURSMANDANTWAEHRUNGZUANGEBOTSWAEHRUNG = "f_wechselkursmandantwaehrungzuangebotswaehrung";
 	public static final String FLR_ANGEBOT_FLRPERSONALANLEGER = "flrpersonalanleger";
-	
-	
+
 	// Arten von Angebotsgueltigkeit
 	public static final int ANGEBOTSGUELTIGKEIT_ENDEGESCHAEFTSJAHR = 0;
 	public static final int ANGEBOTSGUELTIGKEIT_PARAMETERMANDANT = 1;
 
 	/** Die Auswertung kann erfolgen nach ... */
 	public static String KRIT_UEBERSICHT_GESCHAEFTSJAHR = "Geschaeftsjahr";
-	public static String KRIT_UEBERSICHT_KALENDERJAHR= "Kalenderjahr";
+	public static String KRIT_UEBERSICHT_KALENDERJAHR = "Kalenderjahr";
 	public static String KRIT_UEBERSICHT_VERTRETER_I_ID = "Vertreter";
 
 	/** Die Eigenschaften fuer die FilterKriterien mussen festsetzen. */
@@ -92,83 +95,70 @@ public interface AngebotFac extends IAktivierbarControlled {
 	public void storniereAngebot(AngebotDto angebotDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void stornoAufheben(Integer iIdAngebotI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void stornoAufheben(Integer iIdAngebotI, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void angebotErledigen(Integer iIdAngebotI,
-			String cNrAngeboterledigungsgrundI, TheClientDto theClientDto)
+	public void angebotErledigen(Integer iIdAngebotI, String cNrAngeboterledigungsgrundI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public void erledigungAufheben(Integer iIdAngebotI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void angebotManuellErledigen(Integer iIdAngebotI,
-			String cNrAngeboterledigungsgrundI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void angebotManuellErledigen(Integer iIdAngebotI, String cNrAngeboterledigungsgrundI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public boolean angebotManuellErledigendurchAuftrag(Integer iIdAngebotI,
-			Integer iIdAuftragI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public String angebotManuellErledigendurchAuftrag(Integer iIdAngebotI, ArrayList<Integer> iIdAuftragIs,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void manuelleErledigungAufheben(Integer iIdAngebotI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public boolean updateAngebot(AngebotDto angebotDtoI, String waehrungOriCNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public boolean updateAngebot(AngebotDto angebotDtoI, String waehrungOriCNrI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
-	public void updateAngebotOhneWeitereAktion(AngebotDto angebotDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public void updateAngebotOhneWeitereAktion(AngebotDto angebotDtoI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
-	
-	public BigDecimal berechneVerkaufswertSoll(Integer iIAngebotI,
-			String sArtikelartI, TheClientDto theClientDto);
-	
-	public BigDecimal berechneGestehungswertSoll(Integer iIdAngebotI,
-			String sArtikelartI, boolean bMitEigengefertigtenStuecklisten,
-			TheClientDto theClientDto);
-	
+	public BigDecimal berechneVerkaufswertSoll(Integer iIAngebotI, String sArtikelartI, TheClientDto theClientDto);
+
+	public BigDecimal berechneGestehungswertSoll(Integer iIdAngebotI, String sArtikelartI,
+			boolean bMitEigengefertigtenStuecklisten, TheClientDto theClientDto);
+
 	/**
 	 * @deprecated MB:
-	 * @param iIdAngebotI
-	 *            Integer
+	 * @param iIdAngebotI  Integer
 	 * @param theClientDto der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	public void pruefeUndSetzeAngebotstatusBeiAenderung(Integer iIdAngebotI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public void pruefeUndSetzeAngebotstatusBeiAenderung(Integer iIdAngebotI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public String getAngebotkennung(Integer iIdAngebotI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
-	public void aktiviereAngebot(Integer iIdAngebotI, TheClientDto theClientDto)
+
+	public void aktiviereAngebot(Integer iIdAngebotI, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public AngebotDto angebotFindByPrimaryKey(Integer iIdAngebotI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public AngebotDto angebotFindByPrimaryKey(Integer iIdAngebotI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
 	public AngebotDto angebotFindByPrimaryKeyOhneExec(Integer iIdAngebotI);
 
 	public AngebotDto angebotFindByCNrMandantCNrOhneEx(String cnr, String mandantCnr);
-	
-	public AngebotDto[] angebotFindByKundeIIdAngebotsadresseMandantCNr(
-			Integer iIdKundeI, String cNrMandantI,TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
 
-	public AngebotDto[] angebotFindByKundeIIdAngebotsadresseMandantCNrOhneExc(
-			Integer iIdKundeI, String cNrMandantI, TheClientDto theClientDto)
-			throws RemoteException;
-
-	public AngebotDto[] angebotFindByAnsprechpartnerKundeIIdMandantCNr(
-			Integer iIdAnsprechpartnerI, String cNrMandantI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
-	public AngebotDto[] angebotFindByAnsprechpartnerKundeIIdMandantCNrOhneExc(
-			Integer iIdAnsprechpartnerI, String cNrMandantI,TheClientDto theClientDto)
-			throws RemoteException;
-
-	public BigDecimal berechneNettowertGesamt(Integer iIdAngebotI,
+	public AngebotDto[] angebotFindByKundeIIdAngebotsadresseMandantCNr(Integer iIdKundeI, String cNrMandantI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public AngebotDto[] angebotFindByKundeIIdAngebotsadresseMandantCNrOhneExc(Integer iIdKundeI, String cNrMandantI,
+			TheClientDto theClientDto) throws RemoteException;
+
+	public AngebotDto[] angebotFindByAnsprechpartnerKundeIIdMandantCNr(Integer iIdAnsprechpartnerI, String cNrMandantI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public AngebotDto[] angebotFindByAnsprechpartnerKundeIIdMandantCNrOhneExc(Integer iIdAnsprechpartnerI,
+			String cNrMandantI, TheClientDto theClientDto) throws RemoteException;
+
+	public BigDecimal berechneNettowertGesamt(Integer iIdAngebotI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public void updateAngebotKonditionen(Integer iIdAngebotI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -176,18 +166,38 @@ public interface AngebotFac extends IAktivierbarControlled {
 	public Integer erzeugeAngebotAusAngebot(Integer iIdAngebotI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public Integer erzeugeAuftragAusAngebot(Integer iIdAngebotI,
-			boolean bMitZeitDaten,boolean bRahmenauftrag, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public Integer erzeugeAuftragAusAngebot(Integer iIdAngebotI, boolean bMitZeitDaten, boolean bRahmenauftrag,
+			boolean bAlternativPositionenUebernehmen, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public Integer erzeugeLieferscheinAusAngebot(Integer iIdAngebotI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public Integer erzeugeLieferscheinAusAngebot(Integer iIdAngebotI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 //	public Integer erzeugeRechnungAusAngebot(Integer iIdAngebotI,
 //			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void setzeVersandzeitpunktAufJetzt(Integer iAngebotIId, String sDruckart);
-	
+
 	public void korrekturbetragZuruecknehmen(Integer iIdAngebotI);
 
+	public Integer erzeugeAngebotAusAuftrag(Integer auftragIId, TheClientDto theClientDto);
+
+	public Integer erzeugeAngebotAusRechnung(Integer rechnungIId, TheClientDto theClientDto);
+
+	void repairAngebotZws5524(Integer angebotId, TheClientDto theClientDto) throws RemoteException;
+
+	List<Integer> repairAngebotZws5524GetList(TheClientDto theClientDto);
+
+	AngebotDto erzeugeAenderungsangebot(Integer angebotIId, TheClientDto theClientDto);
+
+	public AngebotDto[] angebotfindByKundeIIdLieferadresseMandantCNrOhneExc(Integer iIdKundeI, String cNrMandantI,
+			TheClientDto theClientDto);
+
+	public AngebotDto[] angebotfindByKundeIIdRechnungsadresseMandantCNrOhneExc(Integer iIdKundeI, String cNrMandantI,
+			TheClientDto theClientDto);
+
+	public void uebersteuereIntelligenteZwischensumme(Integer angebotpositionIId,
+			BigDecimal bdBetragInBelegwaehrungUebersteuert, TheClientDto theClientDto);
+
+	Integer erzeugeAngebotAusAuftrag(Integer auftragId, 
+			HvOptional<Timestamp> belegDatum, TheClientDto theClientDto);
 }

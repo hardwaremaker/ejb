@@ -35,6 +35,9 @@ package com.lp.server.auftrag.service;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.HashMap;
+
+import com.lp.server.fertigung.service.LosInfosFuerWerteAusUnterlosen;
 
 public class AuftragNachkalkulationDto extends TabelleDto implements
 		Serializable {
@@ -48,10 +51,35 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 		this.auftragDto = auftragDto;
 	}
 
+	private HashMap<Integer, LosInfosFuerWerteAusUnterlosen> hmLosInfos = new HashMap<Integer, LosInfosFuerWerteAusUnterlosen>();
+	
+	public HashMap<Integer, LosInfosFuerWerteAusUnterlosen> getHmLosInfos() {
+		return hmLosInfos;
+	}
+
+	public void setHmLosInfos(HashMap<Integer, LosInfosFuerWerteAusUnterlosen> hmLosInfos) {
+		this.hmLosInfos = hmLosInfos;
+	}
+
+	private HashMap<Integer,Integer > hmAnzahlResults=new HashMap<Integer,Integer > ();
+	
+	public void add2Results(Integer losIId, Integer size) {
+		hmAnzahlResults.put(losIId, size);
+	}
+	
+	public boolean hasNoResults(Integer losIId) {
+		
+		if(hmAnzahlResults.containsKey(losIId) && ((Integer)hmAnzahlResults.get(losIId))==0) {
+			return true;
+		}
+		return false;
+	}
+	
 	private AuftragDto auftragDto;
 
 	private String sBelegart;
 	private String sBelegstatus;
+
 	public String getSBelegstatus() {
 		return sBelegstatus;
 	}
@@ -148,9 +176,8 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 	public void setSEingangsgrechnungsart(String sEingangsgrechnungsart) {
 		this.sEingangsgrechnungsart = sEingangsgrechnungsart;
 	}
-	
+
 	private String sErSchlussrechnungNr;
-	
 
 	public String getSErSchlussrechnungNr() {
 		return sErSchlussrechnungNr;
@@ -172,9 +199,8 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 		this.sRechnungsnummerLSVerrechnet = sRechnungsnummerLSVerrechnet;
 	}
 
-	
 	private String losnummerLiQuelle;
-	
+
 	public String getLosnummerLiQuelle() {
 		return losnummerLiQuelle;
 	}
@@ -183,16 +209,47 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 		this.losnummerLiQuelle = losnummerLiQuelle;
 	}
 
+	private BigDecimal bdBestellwert;
+	
+	public BigDecimal getBdBestellwert() {
+		return bdBestellwert;
+	}
+
+	public void setBdBestellwert(BigDecimal bdBestellwert) {
+		this.bdBestellwert = bdBestellwert;
+	}
+
 	private BigDecimal bdVkwArbeitsoll;
 	private BigDecimal bdVkwMaterialsoll;
 	private BigDecimal bdVkwArbeitist;
 	private BigDecimal bdVkwMaterialist;
 	private String cArtikelbezeichnungArbeitszeit;
 
+	private BigDecimal bdLosAblieferMenge;
+	
+
+	public BigDecimal getBdLosAblieferMenge() {
+		return bdLosAblieferMenge;
+	}
+
+	public void setBdLosAblieferMenge(BigDecimal bdLosAblieferMenge) {
+		this.bdLosAblieferMenge = bdLosAblieferMenge;
+	}
+
 	private BigDecimal bdGestehungswertarbeitsoll;
 	private BigDecimal bdGestehungswertmaterialsoll;
 	private BigDecimal bdGestehungswertarbeitist;
 	private BigDecimal bdGestehungswertmaterialist;
+	
+	private BigDecimal bdEinstandwertmaterialist;
+
+	public BigDecimal getBdEinstandwertmaterialist() {
+		return bdEinstandwertmaterialist;
+	}
+
+	public void setBdEinstandwertmaterialist(BigDecimal bdEinstandwertmaterialist) {
+		this.bdEinstandwertmaterialist = bdEinstandwertmaterialist;
+	}
 
 	private Double ddArbeitszeitsoll;
 	private Double ddArbeitszeitist;
@@ -269,6 +326,44 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 
 	private String sLoskommentar;
 	private String sLosprojekt;
+	private String sLoskostenstelle;
+
+	public String getSLoskostenstelle() {
+		return sLoskostenstelle;
+	}
+
+	public void setSLoskostenstelle(String sLoskostenstelle) {
+		this.sLoskostenstelle = sLoskostenstelle;
+	}
+
+	// PJ19098
+	private java.util.Date tLosBeginn;
+	private java.util.Date tLosEnde;
+	private String sLosFertigungsgruppe;
+
+	public java.util.Date getTLosBeginn() {
+		return tLosBeginn;
+	}
+
+	public void setTLosBeginn(java.util.Date tLosBeginn) {
+		this.tLosBeginn = tLosBeginn;
+	}
+
+	public java.util.Date getTLosEnde() {
+		return tLosEnde;
+	}
+
+	public void setTLosEnde(java.util.Date tLosEnde) {
+		this.tLosEnde = tLosEnde;
+	}
+
+	public String getSLosFertigungsgruppe() {
+		return sLosFertigungsgruppe;
+	}
+
+	public void setSLosFertigungsgruppe(String sLosFertigungsgruppe) {
+		this.sLosFertigungsgruppe = sLosFertigungsgruppe;
+	}
 
 	private Double dLosbewertung;
 	private Timestamp tLoserledigungsdatum;
@@ -445,4 +540,25 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 	public void setAuftragDto(AuftragDto auftragDto) {
 		this.auftragDto = auftragDto;
 	}
+	
+	
+	private BigDecimal bdBSEinstandswertGesamt;
+	public BigDecimal getBdBSEinstandswertGesamt() {
+		return bdBSEinstandswertGesamt;
+	}
+
+	public void setBdBSEinstandswertGesamt(BigDecimal bdBSEinstandswertGesamt) {
+		this.bdBSEinstandswertGesamt = bdBSEinstandswertGesamt;
+	}
+
+	public BigDecimal getBdBSEinstandswertHandeingaben() {
+		return bdBSEinstandswertHandeingaben;
+	}
+
+	public void setBdBSEinstandswertHandeingaben(BigDecimal bdBSEinstandswertHandeingaben) {
+		this.bdBSEinstandswertHandeingaben = bdBSEinstandswertHandeingaben;
+	}
+
+	private BigDecimal bdBSEinstandswertHandeingaben;
+	
 }

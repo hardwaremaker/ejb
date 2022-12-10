@@ -147,6 +147,7 @@ public class AutoMahnungsversandFacBean extends Facade implements AutoMahnungsve
 		autoMahnungsversand.setMahnlaufIId(autoMahnungsversandDto.getMahnlaufIId());
 		autoMahnungsversand.setCDrucker(autoMahnungsversandDto.getCDrucker());
 		autoMahnungsversand.setCVersandart(autoMahnungsversandDto.getCVersandart());
+		autoMahnungsversand.setCEmailZusaetzlich(autoMahnungsversandDto.getCEmailZusaetzlich());
 		return autoMahnungsversand;
 	}
 

@@ -43,6 +43,7 @@ import javax.persistence.Table;
 
 @NamedQueries({ @NamedQuery(name = "SperrenfindByCBezMandantCNr", query = "SELECT OBJECT(c) FROM Sperren c WHERE c.cBez = ?1 AND c.mandantCNr = ?2"),
 	 @NamedQuery(name = "SperrenfindBDurchfertigung", query = "SELECT OBJECT(c) FROM Sperren c WHERE c.bDurchfertigung = 1 AND c.mandantCNr = ?1"),
+	 @NamedQuery(name = "SperrenfindBDefaultBeiArtikelneuanlage", query = "SELECT OBJECT(c) FROM Sperren c WHERE c.bDefaultBeiArtikelneuanlage = 1 AND c.mandantCNr = ?1"),
 	 @NamedQuery(name = "SperrenfindByOBildMandantCNrNotNull", query = "SELECT OBJECT(o) FROM Sperren o WHERE o.oBild IS NOT NULL AND o.mandantCNr = ?1")})
 @Entity
 @Table(name = "WW_SPERREN")
@@ -65,6 +66,18 @@ public class Sperren implements Serializable {
 
 	@Column(name = "B_GESPERRTLOS")
 	private Short bGesperrtlos;
+
+	@Column(name = "B_DEFAULT_BEI_ARTIKELNEUANLAGE")
+	private Short bDefaultBeiArtikelneuanlage;
+	
+	public Short getBDefaultBeiArtikelneuanlage() {
+		return bDefaultBeiArtikelneuanlage;
+	}
+
+	public void setBDefaultBeiArtikelneuanlage(Short bDefaultBeiArtikelneuanlage) {
+		this.bDefaultBeiArtikelneuanlage = bDefaultBeiArtikelneuanlage;
+	}
+
 
 	@Column(name = "B_GESPERRTSTUECKLISTE")
 	private Short bGesperrtstueckliste;
@@ -102,7 +115,7 @@ public class Sperren implements Serializable {
 
 	public Sperren(Integer id, String bez, String mandantCNr, Short gesperrt,
 			Short gesperrteinkauf, Short gesperrtverkauf, Short gesperrtlos,
-			Short gesperrtstueckliste, Short durchfertigung) {
+			Short gesperrtstueckliste, Short durchfertigung, Short bDefaultBeiArtikelneuanlage) {
 		setIId(id);
 		setCBez(bez);
 		setMandantCNr(mandantCNr);
@@ -112,6 +125,7 @@ public class Sperren implements Serializable {
 		setBGesperrtlos(gesperrtlos);
 		setBGesperrtstueckliste(gesperrtstueckliste);
 		setBDurchfertigung(durchfertigung);
+		setBDefaultBeiArtikelneuanlage(bDefaultBeiArtikelneuanlage);
 	}
 
 	public Integer getIId() {

@@ -34,6 +34,7 @@ package com.lp.server.eingangsrechnung.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.List;
 
 import javax.ejb.Remote;
 
@@ -43,6 +44,9 @@ import com.lp.util.EJBExceptionLP;
 @Remote
 public interface ZahlungsvorschlagFac {
 	public final static int FORMAT_CSV = 0;
+	public final static int FORMAT_SEPA = 1;
+	public final static String ZV_EXPORT_SEPA_ORDNER = "Sepaexport";
+	public final static String ZV_EXPORT_SEPA_FILENAME = "zv_export_sepa.xml";
 
 	public Integer createZahlungsvorschlag(ZahlungsvorschlagkriterienDto krit,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -71,27 +75,45 @@ public interface ZahlungsvorschlagFac {
 			RemoteException;
 
 	/**
-	 * Flag "Bezahlen" auf diesem Datensatz invertieren.
+	 * Flag "Bezahlen" der Zahlungsvorschlaege setzen.
+	 * Alle Flags gleich, dann invertieren.
+	 * Sind die Flags unterschiedlich gesetzt, dann alle auf true
 	 * 
-	 * @param zahlungsvorschlagIId
-	 *            Integer
+	 * @param zahlungsvorschlagIIds Liste der Zahlungsvorschlag-IIds
 	 * @param theClientDto
-	 *            String
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	public void toggleZahlungsvorschlagBBezahlen(Integer zahlungsvorschlagIId,
+	public void updateZahlungsvorschlagBBezahlenMultiSelect(List<Integer> zahlungsvorschlagIIds,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal getGesamtwertEinesZahlungsvorschlaglaufsInMandantenwaehrung(
 			Integer zahlungsvorschlagleufIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public String exportiereZahlungsvorschlaglauf(
-			Integer zahlungsvorschlagleufIId, TheClientDto theClientDto)
+	public ZahlungsvorschlagExportResult exportiereZahlungsvorschlaglauf(
+			Integer zahlungsvorschlagleufIId, Integer iExportTyp, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public ZahlungsvorschlagDto updateZahlungsvorschlag(
 			ZahlungsvorschlagDto zahlungsvorschlagDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+
+	public boolean sindNegativeZuExportierendeZahlungenVorhanden(Integer zahlungsvorschlagleufIId, TheClientDto theClientDto);
+	
+	public String generateCAuftraggeberreferenzAndUpdateZV(
+			ZahlungsvorschlagDto zahlungsvorschlagDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+	
+	public String getZahlungsvorschlagSepaExportFilename(Integer bankverbindungIId, 
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	
+	public void archiviereSepaZahlungsvorschlag(String xmlZahlungsvorschlag, 
+			Integer zahlungsvorschlaglaufIId, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+	
+	boolean darfNeuerZahlungsvorschlaglaufErstelltWerden(TheClientDto theClientDto);
+
+	ZahlungsvorschlagDto zahlungsvorschlagFindByAuftraggeberreferenzOhneExc(
+			String cAuftraggeberreferenz) throws EJBExceptionLP;
 }

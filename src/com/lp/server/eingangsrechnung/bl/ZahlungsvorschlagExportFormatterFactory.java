@@ -59,18 +59,23 @@ import com.lp.util.EJBExceptionLP;
 public abstract class ZahlungsvorschlagExportFormatterFactory {
 	public static ZahlungsvorschlagExportFormatter getZahlungsvorschlagExportFormatter(
 			int iFormat, TheClientDto theClientDto) throws EJBExceptionLP {
+		
 		ZahlungsvorschlagExportFormatter exportFormatter;
+		
 		switch (iFormat) {
-		case ZahlungsvorschlagFac.FORMAT_CSV: {
-			exportFormatter = new ZahlungsvorschlagExportFormatterCSV(theClientDto);
-		}
-			break;
-		default: {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
-					new Exception(
-							"kein ExportFormatter definiert f\u00FCr Variante: "
-									+ iFormat));
-		}
+			case ZahlungsvorschlagFac.FORMAT_CSV: 
+				exportFormatter = new ZahlungsvorschlagExportFormatterCSV(theClientDto);
+				break;
+			case ZahlungsvorschlagFac.FORMAT_SEPA: 
+				exportFormatter = new ZahlungsvorschlagExportFormatterSepa(theClientDto);
+				break;
+	
+			default: {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
+						new Exception(
+								"kein ExportFormatter definiert f\u00FCr Variante: "
+										+ iFormat));
+			}
 		}
 		return exportFormatter;
 	}

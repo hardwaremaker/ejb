@@ -352,7 +352,7 @@ public class InventurstandHandler extends UseCaseHandler {
 				int iNachkommastellenMenge = getMandantFac()
 						.getNachkommastellenMenge(theClientDto.getMandant());
 				int iNachkommastellenPreis = getMandantFac()
-						.getNachkommastellenPreisAllgemein(
+						.getNachkommastellenPreisEK(
 								theClientDto.getMandant());
 
 				setTableInfo(new TableInfo(

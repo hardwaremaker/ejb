@@ -38,7 +38,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.partner.ejb.Ansprechpartner;
-import com.lp.util.Helper;
 
 public class AnsprechpartnerDtoAssembler {
 	public static AnsprechpartnerDto createDto(Ansprechpartner ansprechpartner) {
@@ -69,9 +68,10 @@ public class AnsprechpartnerDtoAssembler {
 			ansprechpartnerDto.setCFax(ansprechpartner.getCFax());
 			ansprechpartnerDto.setCHandy(ansprechpartner.getCHandy());
 			ansprechpartnerDto.setCTelefon(ansprechpartner.getCTelefon());
-			ansprechpartnerDto.setNewsletterEmpfaenger(Helper.short2boolean(ansprechpartner.getbNewsletterEmpfaenger()));
+			ansprechpartnerDto.setNewslettergrundIId(ansprechpartner.getNewslettergrundIId());
 			ansprechpartnerDto.setCAbteilung(ansprechpartner.getCAbteilung());
 			ansprechpartnerDto.setCKennwort(ansprechpartner.getCKennwort());
+			ansprechpartnerDto.setBDurchwahl(ansprechpartner.getBDurchwahl());
 		}
 		return ansprechpartnerDto;
 	}

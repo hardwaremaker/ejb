@@ -44,6 +44,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+import com.lp.server.util.IVersionable;
+
 @NamedQueries({
 		@NamedQuery(name = "BestellungfindByAnfrage", query = "SELECT OBJECT (o) FROM Bestellung o WHERE o.anfrageIId=?1"),
 		@NamedQuery(name = "BestellungfindByRahmenbestellung", query = "SELECT OBJECT (o) FROM Bestellung o WHERE o.bestellungIIdRahmenbestellung=?1 ORDER BY o.cNr"),
@@ -57,11 +60,13 @@ import javax.persistence.Table;
 		@NamedQuery(name = "BestellungfindByAnsprechpartnerIIdLieferadresseMandantCNr", query = "SELECT OBJECT (O) FROM Bestellung o WHERE o.mandantCNr=?2 AND o.ansprechpartnerIIdLieferadresse=?1"),
 		@NamedQuery(name = "BestellungfindByAnsprechpartnerIIdAbholadresseMandantCNr", query = "SELECT OBJECT (O) FROM Bestellung o WHERE o.mandantCNr=?2 AND o.ansprechpartnerIIdAbholadresse=?1"),
 		@NamedQuery(name = Bestellung.BestellungFindByAuftragIId, query = "SELECT OBJECT (O) FROM Bestellung o WHERE o.auftragIId=?1"),
-		@NamedQuery(name = "BestellungfindByCNrMandantCNr", query = "SELECT OBJECT (O) FROM Bestellung o WHERE o.cNr=?1 AND o.mandantCNr=?2")})
+		@NamedQuery(name = "BestellungfindByCNrMandantCNr", query = "SELECT OBJECT (O) FROM Bestellung o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
+		@NamedQuery(name = BestellungQuery.ByLieferantIdBestelladresseFilter,
+			query = "SELECT OBJECT (O) FROM Bestellung o WHERE o.mandantCNr= :mandant AND o.lieferantIIdBestelladresse= :lieferantId AND o.bestellungstatusCNr IN (:filter)")})
 @Entity
-@Table(name = "BES_BESTELLUNG")
-public class Bestellung implements Serializable {
-	
+@Table(name = ITablenames.BES_BESTELLUNG)
+public class Bestellung implements Serializable, IVersionable {
+
 	public static final String BestellungFindByAuftragIId = "BestellungFindByAuftragIId";
 	@Id
 	@Column(name = "I_ID")
@@ -70,8 +75,21 @@ public class Bestellung implements Serializable {
 	@Column(name = "C_NR")
 	private String cNr;
 
+	
+	
 	@Column(name = "T_BELEGDATUM")
 	private Date tBelegdatum;
+	
+	@Column(name = "T_VOLLSTAENDIG_GELIEFERT")
+	private Timestamp tVollstaendigGeliefert;
+
+	public Timestamp getTVollstaendigGeliefert() {
+		return tVollstaendigGeliefert;
+	}
+
+	public void setTTVollstaendigGeliefert(Timestamp tVollstaendigGeliefert) {
+		this.tVollstaendigGeliefert = tVollstaendigGeliefert;
+	}
 
 	@Column(name = "C_BEZPROJEKTBEZEICHNUNG")
 	private String cBezprojektbezeichnung;
@@ -126,6 +144,29 @@ public class Bestellung implements Serializable {
 
 	@Column(name = "N_BESTELLWERT")
 	private BigDecimal nBestellwert;
+
+	@Column(name = "N_TRANSPORTKOSTEN")
+	private BigDecimal nTransportkosten;
+
+	
+	public BigDecimal getNTransportkosten() {
+		return nTransportkosten;
+	}
+
+	public void setNTransportkosten(BigDecimal nTransportkosten) {
+		this.nTransportkosten = nTransportkosten;
+	}
+
+	@Column(name = "N_KORREKTURBETRAG")
+	private BigDecimal nKorrekturbetrag;
+
+	public BigDecimal getNKorrekturbetrag() {
+		return nKorrekturbetrag;
+	}
+
+	public void setNKorrekturbetrag(BigDecimal nKorrekturbetrag) {
+		this.nKorrekturbetrag = nKorrekturbetrag;
+	}
 
 	@Column(name = "C_KOPFTEXTUEBERSTEUERT")
 	private String cKopftextuebersteuert;
@@ -220,6 +261,18 @@ public class Bestellung implements Serializable {
 	@Column(name = "PERSONAL_I_ID_ANFORDERER")
 	private Integer personalIIdAnforderer;
 
+	@Column(name = "PERSONAL_I_ID_INTERNERANFORDERER")
+	private Integer personalIIdInterneranforderer;
+
+	
+	public Integer getPersonalIIdInterneranforderer() {
+		return personalIIdInterneranforderer;
+	}
+
+	public void setPersonalIIdInterneranforderer(Integer personalIIdInterneranforderer) {
+		this.personalIIdInterneranforderer = personalIIdInterneranforderer;
+	}
+
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
@@ -257,9 +310,10 @@ public class Bestellung implements Serializable {
 			Integer ansprechpartnerIIdAbholadresse) {
 		this.ansprechpartnerIIdAbholadresse = ansprechpartnerIIdAbholadresse;
 	}
+
 	@Column(name = "PROJEKT_I_ID")
 	private Integer projektIId;
-	
+
 	public Integer getProjektIId() {
 		return projektIId;
 	}
@@ -273,6 +327,40 @@ public class Bestellung implements Serializable {
 
 	@Column(name = "ANSPRECHPARTNER_I_ID_ABHOLADRESSE")
 	private Integer ansprechpartnerIIdAbholadresse;
+
+	@Column(name = "T_KOMISSIONIERUNG_GEPLANT")
+	private Timestamp tKommissionierungGeplant;
+	@Column(name = "T_KOMISSIONIERUNG_DURCHGEFUEHT")
+	private Timestamp tKommissionierungDurchgefuehrt;
+	@Column(name = "T_UEBERGABE_TECHNIK")
+	private Timestamp tUebergabeTechnik;
+	@Column(name = "I_AENDERUNGSBESTELLUNG_VERSION")
+	private Integer iAenderungsbestellungVersion;
+
+	public Timestamp getTKommissionierungGeplant() {
+		return tKommissionierungGeplant;
+	}
+
+	public void setTKommissionierungGeplant(Timestamp tKommissionierungGeplant) {
+		this.tKommissionierungGeplant = tKommissionierungGeplant;
+	}
+
+	public Timestamp getTKommissionierungDurchgefuehrt() {
+		return tKommissionierungDurchgefuehrt;
+	}
+
+	public void setTKommissionierungDurchgefuehrt(
+			Timestamp tKommissionierungDurchgefuehrt) {
+		this.tKommissionierungDurchgefuehrt = tKommissionierungDurchgefuehrt;
+	}
+
+	public Timestamp getTUebergabeTechnik() {
+		return tUebergabeTechnik;
+	}
+
+	public void setTUebergabeTechnik(Timestamp tUebergabeTechnik) {
+		this.tUebergabeTechnik = tUebergabeTechnik;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -694,4 +782,26 @@ public class Bestellung implements Serializable {
 		return cVersandtype;
 	}
 
+	public Integer getIVersion() {
+		return iAenderungsbestellungVersion;
+	}
+	
+	public void setIVersion(Integer iVersion) {
+		this.iAenderungsbestellungVersion = iVersion;
+	}
+
+	@Override
+	public boolean hasVersion() {
+		return getIVersion() != null;
+	}
+
+	@Override
+	public Timestamp getTVersion() {
+		return getTAenderungsbestellung();
+	}
+
+	@Override
+	public void setTVersion(Timestamp tVersion) {
+		setTAenderungsbestellung(tVersion);
+	}
 }

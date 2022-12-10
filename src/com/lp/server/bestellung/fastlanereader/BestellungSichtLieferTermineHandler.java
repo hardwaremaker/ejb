@@ -32,21 +32,28 @@
  ******************************************************************************/
 package com.lp.server.bestellung.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.anfrage.service.AnfragepositionFac;
+import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellungAuftragsbestaetigung;
 import com.lp.server.bestellung.service.BestellpositionFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -56,6 +63,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.HelperReport;
 
 /**
  * <p>
@@ -95,12 +103,13 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	private boolean bZentralerArtikelstamm = false;
+
 	/**
 	 * gets the page of data for the specified row using the current
 	 * queryParameters.
 	 * 
-	 * @param rowIndex
-	 *            the index of the row that should be contained in the page.
+	 * @param rowIndex the index of the row that should be contained in the page.
 	 * @return the data page for the specified row.
 	 * @throws EJBExceptionLP
 	 */
@@ -115,8 +124,7 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -124,8 +132,8 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 			// darf Preise sehen.
-			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
-					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF, theClientDto);
+			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(RechteFac.RECHT_LP_DARF_PREISE_SEHEN_EINKAUF,
+					theClientDto);
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
@@ -133,45 +141,75 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 				FLRBestellungAuftragsbestaetigung position = (FLRBestellungAuftragsbestaetigung) resultListIterator
 						.next();
 				// wenn Handeingabe oder Ident
-				if (position.getBestellpositionart_c_nr().equals(
-						BestellpositionFac.BESTELLPOSITIONART_HANDEINGABE)
-						|| position.getBestellpositionart_c_nr().equals(
-								BestellpositionFac.BESTELLPOSITIONART_IDENT)) {
+				if (position.getBestellpositionart_c_nr().equals(BestellpositionFac.BESTELLPOSITIONART_HANDEINGABE)
+						|| position.getBestellpositionart_c_nr().equals(BestellpositionFac.BESTELLPOSITIONART_IDENT)) {
+					rows[row][col++] = position.getI_id() == null ? null : position.getI_id();
+
 					rows[row][col++] = position.getI_id() == null ? null
-							: position.getI_id();
-					rows[row][col++] = position.getN_menge() == null ? null
-							: position.getN_menge();
+							: getBestellpositionFac().getPositionNummerReadOnly(position.getI_id());
+
+					if (position.getFlrartikel() != null && position.getN_menge() != null) {
+						ArtikellieferantDto artikellieferantDto = getArtikelFac().getArtikelEinkaufspreis(
+								position.getFlrartikel().getI_id(),
+								position.getFlrbestellung().getLieferant_i_id_bestelladresse(), position.getN_menge(),
+
+								theClientDto.getSMandantenwaehrung(),
+								new java.sql.Date(position.getFlrbestellung().getT_belegdatum().getTime()),
+								theClientDto);
+
+						if (artikellieferantDto != null) {
+							rows[row][col++] = artikellieferantDto.getCArtikelnrlieferant();
+						} else {
+							rows[row][col++] = null;
+						}
+
+					} else {
+						rows[row][col++] = null;
+					}
+
+					rows[row][col++] = position.getFlrartikel() == null ? null : position.getFlrartikel().getC_nr();
+					if (bReferenznummerInPositionen) {
+						rows[row][col++] = position.getFlrartikel() == null ? null
+								: position.getFlrartikel().getC_referenznr();
+					}
+
+					rows[row][col++] = position.getN_menge() == null ? null : position.getN_menge();
+
+					rows[row][col++] = position.getEinheit_c_nr();
 
 					// in der Spalte Bezeichnung koennen verschiedene Dinge
 					// stehen
 					String sBezeichnung = null;
 
-					if (position.getBestellpositionart_c_nr().equals(
-							LocaleFac.POSITIONSART_IDENT)) {
+					if (position.getBestellpositionart_c_nr().equals(LocaleFac.POSITIONSART_IDENT)) {
 						// die sprachabhaengig Artikelbezeichnung anzeigen
-						sBezeichnung = getArtikelFac()
-								.formatArtikelbezeichnungEinzeiligOhneExc(
-										position.getFlrartikel().getI_id(),
-										theClientDto.getLocUi());
+						sBezeichnung = getArtikelFac().formatArtikelbezeichnungEinzeiligOhneExc(
+								position.getFlrartikel().getI_id(), theClientDto.getLocUi());
 					} else {
 						// die uebersteuerte bezeichnung
 						if (position.getC_bezeichnung() != null) {
 							sBezeichnung = position.getC_bezeichnung();
 						}
 					}
-					rows[row][col++] = sBezeichnung == null ? null
-							: sBezeichnung;
+					rows[row][col++] = sBezeichnung == null ? null : sBezeichnung;
 					if (bDarfPreiseSehen) {
 						rows[row][col++] = position.getN_nettogesamtpreis() == null ? null
 								: position.getN_nettogesamtpreis();
 					} else {
 						rows[row][col++] = null;
 					}
-					rows[row][col++] = position
-							.getT_auftragsbestaetigungstermin() == null ? null
+
+					rows[row][col++] = position.getFlrbestellung().getWaehrung_c_nr_bestellwaehrung().trim();
+					rows[row][col++] = position.getT_uebersteuerterliefertermin();
+					rows[row][col++] = HelperReport.getCalendarWeekOfDate(position.getT_uebersteuerterliefertermin())
+							+ "";
+					rows[row][col++] = position.getT_auftragsbestaetigungstermin() == null ? null
 							: position.getT_auftragsbestaetigungstermin();
 
-					rows[row][col++] = null;
+					rows[row][col++] = position.getT_auftragsbestaetigungstermin() == null ? null
+							: HelperReport.getCalendarWeekOfDate(position.getT_auftragsbestaetigungstermin()) + "";
+
+					rows[row][col++] = position.getFlrbestellung().getMahnstufe_i_id();
 					rows[row][col++] = null;
 
 					Boolean b = Boolean.FALSE;
@@ -180,12 +218,16 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 					}
 					rows[row][col++] = b;
 
+					if (bZentralerArtikelstamm == true) {
+
+						rows[row][col++] = getArtikelbestelltFac()
+								.getWareUnterwegsEinerBestellposition(position.getI_id(), theClientDto);
+					}
 				}
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -205,8 +247,7 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -222,8 +263,8 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -234,8 +275,7 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -286,13 +326,10 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("position.").append(
-						BestellpositionFac.FLR_BESTELLPOSITION_I_SORT).append(
-						" ASC ");
+				orderBy.append("position.").append(BestellpositionFac.FLR_BESTELLPOSITION_I_SORT).append(" ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("position."
-					+ BestellpositionFac.FLR_BESTELLPOSITION_I_SORT) < 0) {
+			if (orderBy.indexOf("position." + BestellpositionFac.FLR_BESTELLPOSITION_I_SORT) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -301,9 +338,7 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" position.").append(
-						BestellpositionFac.FLR_BESTELLPOSITION_I_SORT).append(
-						" ");
+				orderBy.append(" position.").append(BestellpositionFac.FLR_BESTELLPOSITION_I_SORT).append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -322,93 +357,109 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 		return "from FLRBestellungAuftragsbestaetigung position ";
 	}
 
-	/**
-	 * gets information such as column names an column types used for the table
-	 * on the client side.
-	 * 
-	 * @return the information needed to create the client side table.
-	 */
-	public TableInfo getTableInfo() {
+	private TableColumnInformation createColumnInformation(String mandant, Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 		try {
-			if (super.getTableInfo() == null) {
-				int iNachkommastellenPreis = getMandantFac()
-						.getNachkommastellenPreisEK(theClientDto.getMandant());
-				int iNachkommastellenMenge = getMandantFac()
-						.getNachkommastellenMenge(theClientDto.getMandant());
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
-								String.class,super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis), Date.class,
-								Integer.class, Date.class, Boolean.class },
-						new String[] {
-								"i_id",
-								getTextRespectUISpr("bes.menge", theClientDto
-										.getMandant(), theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.bezeichnung",
-										theClientDto.getMandant(), theClientDto
-												.getLocUi()),
-								getTextRespectUISpr("lp.preis", theClientDto
-										.getMandant(), theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.termin", theClientDto
-										.getMandant(), theClientDto.getLocUi()),
-								"MS",
-								"Mahndatum",
-								getTextRespectUISpr(
-										"bes.lieferterminbestaetigt",
-										theClientDto.getMandant(), theClientDto
-												.getLocUi())
+			String mandantCNr = theClientDto.getMandant();
 
-						},
-						new int[] {
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-								// Spalte
-								// wird
-								// ausgeblendet
-								QueryParameters.FLR_BREITE_M, // z.B. Woche
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
-								// variabel
-								getUIBreiteAbhaengigvonNachkommastellen(
-										QueryParameters.PREIS,
-										iNachkommastellenPreis), // Preis
-								QueryParameters.FLR_BREITE_M, // Format
-																// 1234567.12
-								QueryParameters.FLR_BREITE_WAEHRUNG,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_XS,
+			int iNachkommastellenMenge = getMandantFac().getNachkommastellenMenge(mandantCNr);
+			int iNachkommastellenPreis = getMandantFac().getNachkommastellenPreisEK(mandantCNr);
 
-						},
+			bZentralerArtikelstamm = getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto);
 
-						new String[] {
-								"i_id",
-								BestellpositionFac.FLR_BESTELLPOSITION_N_MENGE,
-								BestellpositionFac.FLR_BESTELLPOSITION_C_BEZEICHNUNG,
-								BestellpositionFac.FLR_BESTELLPOSITION_N_NETTOGESAMTPREIS,
-								BestellpositionFac.FLR_BESTELLPOSITION_T_AUFTRAGSBESTAETIGUNGSTERMIN,
-								"bsmahnlauf_i_id", "bsmahnstufe_i_id",
-								"t_lieferterminbestaetigt", }));
+			columns.add("i_id", Integer.class, "i_id", QueryParameters.FLR_BREITE_SHARE_WITH_REST, "i_id");
+			columns.add("lp.nr", String.class, getTextRespectUISpr("lp.nr", mandant, locUi),
+					QueryParameters.FLR_BREITE_S, Facade.NICHT_SORTIERBAR);
+			columns.add("bes.lfartikelnr", String.class, getTextRespectUISpr("bes.lfartikelnr", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, Facade.NICHT_SORTIERBAR);
+			columns.add("lp.ident", String.class, getTextRespectUISpr("lp.ident", mandant, locUi), getUIBreiteIdent(),
+					AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL + ".c_nr");
 
+			if (bReferenznummerInPositionen) {
+				columns.add("lp.referenznummer", String.class, getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+						QueryParameters.FLR_BREITE_XM,
+						AnfragepositionFac.FLR_ANFRAGEPOSITION_FLRARTIKEL + ".c_referenznr");
 			}
-			return super.getTableInfo();
+
+			columns.add("bes.menge", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+					getTextRespectUISpr("bes.menge", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					BestellpositionFac.FLR_BESTELLPOSITION_N_MENGE);
+			columns.add("lp.einheit", String.class, getTextRespectUISpr("lp.einheit", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+
+			columns.add("bes.bezeichnung", String.class, getTextRespectUISpr("bes.bezeichnung", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, BestellpositionFac.FLR_BESTELLPOSITION_C_BEZEICHNUNG);
+			columns.add("lp.preis", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis),
+					getTextRespectUISpr("lp.preis", mandant, locUi), QueryParameters.FLR_BREITE_M,
+					BestellpositionFac.FLR_BESTELLPOSITION_N_NETTOGESAMTPREIS);
+
+			columns.add("er.whg", String.class, getTextRespectUISpr("er.whg", mandant, locUi),
+					QueryParameters.FLR_BREITE_WAEHRUNG, Facade.NICHT_SORTIERBAR);
+
+			columns.add("bes.postermin", Date.class, getTextRespectUISpr("bes.postermin", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, BestellpositionFac.FLR_BESTELLPOSITION_T_UEBERSTEUERTERLIEFERTERMIN);
+
+			columns.add("lp.kw", String.class, getTextRespectUISpr("lp.kw", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+
+			columns.add("bes.termin", Date.class, getTextRespectUISpr("bes.termin", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, BestellpositionFac.FLR_BESTELLPOSITION_T_AUFTRAGSBESTAETIGUNGSTERMIN);
+
+			columns.add("lp.kw2", String.class, getTextRespectUISpr("lp.kw", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+
+			columns.add("bes.mahnstufe", Integer.class, getTextRespectUISpr("bes.mahnstufe", mandant, locUi),
+					QueryParameters.FLR_BREITE_WAEHRUNG, "flrbestellung.mahnstufe_i_id");
+
+			columns.add("lp.mahndatum", Date.class, getTextRespectUISpr("lp.mahndatum", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, "bsmahnlauf_i_id");
+
+			columns.add("bes.lieferterminbest", Boolean.class,
+					getTextRespectUISpr("bes.lieferterminbest", mandant, locUi), QueryParameters.FLR_BREITE_XS,
+					"t_lieferterminbestaetigt", getTextRespectUISpr("bes.lieferterminbestaetigt.tooltip",
+							theClientDto.getMandant(), theClientDto.getLocUi()));
+
+			if (bZentralerArtikelstamm == true) {
+				columns.add("bes.unterwegs", super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+						getTextRespectUISpr("bes.unterwegs", mandant, locUi), QueryParameters.FLR_BREITE_M,
+						Facade.NICHT_SORTIERBAR);
+			}
+
 		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-			return null;
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
+
+		return columns;
+
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setTableColumnInformation(createColumnInformation(theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(), c.getDbColumNames(),
+				c.getHeaderToolTips());
+		setTableInfo(info);
+		return info;
 	}
 
 	/**
-	 * sorts the data of the current query using the specified criterias and
-	 * returns the page of data where the row of selectedId is contained.
+	 * sorts the data of the current query using the specified criterias and returns
+	 * the page of data where the row of selectedId is contained.
 	 * 
-	 * @param sortierKriterien
-	 *            the new sort criterias.
-	 * @param selectedId
-	 *            the id of the entity that should be included in the result
-	 *            page.
+	 * @param sortierKriterien the new sort criterias.
+	 * @param selectedId       the id of the entity that should be included in the
+	 *                         result page.
 	 * @return the sorted data containing the page where the entity with the
 	 *         specified id is located.
 	 * @throws EJBExceptionLP
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		this.getQuery().setSortKrit(sortierKriterien);
 
@@ -421,8 +472,7 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select position." + "i_id"
-						+ " from FLRBestellungAuftragsbestaetigung position "
+				String queryString = "select position." + "i_id" + " from FLRBestellungAuftragsbestaetigung position "
 						+ this.buildWhereClause() + this.buildOrderByClause();
 
 				Query query = session.createQuery(queryString);

@@ -48,10 +48,9 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
-import com.lp.server.personal.ejb.Zeitabschluss;
-import com.lp.server.personal.service.ZeitabschlussDto;
 import com.lp.server.system.ejb.Reportkonf;
 import com.lp.server.system.ejb.Reportvariante;
+import com.lp.server.system.ejb.ReportvarianteQuery;
 import com.lp.server.system.ejb.Standarddrucker;
 import com.lp.server.system.ejb.Text;
 import com.lp.server.system.pkgenerator.PKConst;
@@ -139,7 +138,7 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 		em.flush();
 
 		getBenutzerServicesFac().reloadUebersteuertenText();
-		
+
 		return token;
 
 	}
@@ -149,7 +148,7 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 
 		try {
 			Query query = em
-					.createNamedQuery("ReportvarianteFindByCReportnameCReportnamevariante");
+					.createNamedQuery(ReportvarianteQuery.ByCReportnameCReportnamevariante);
 			query.setParameter(1, reportvarianteDto.getCReportname());
 			query.setParameter(2, reportvarianteDto.getCReportnamevariante());
 
@@ -162,17 +161,14 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 
 		}
 
-
 		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
 				PKConst.PK_REPORTVARIANTE);
 		reportvarianteDto.setIId(iId);
-		
-		
+
 		reportvarianteDto.setCRessource(ressourceFuerReportvarianteAnlegen(
 				reportvarianteDto.getIId(), reportvarianteDto.getCRessource(),
 				theClientDto));
 
-		
 		try {
 
 			// create
@@ -201,7 +197,7 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 
 		try {
 			Query query = em
-					.createNamedQuery("ReportvarianteFindByCReportnameCReportnamevariante");
+					.createNamedQuery(ReportvarianteQuery.ByCReportnameCReportnamevariante);
 			query.setParameter(1, reportvarianteDto.getCReportname());
 			query.setParameter(2, reportvarianteDto.getCReportnamevariante());
 			Integer iIdVorhanden = ((Reportvariante) query.getSingleResult())
@@ -331,6 +327,25 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 			TheClientDto theClientDto) {
 		try {
 			Integer iId = dto.getIId();
+
+			// PJ19416 Vorhwer noch ReportKonf und Standarddrucker loeschen
+			Query query = em
+					.createNamedQuery("StandarddruckerfindByReportvarianteIId");
+			query.setParameter(1, iId);
+
+			Collection c = query.getResultList();
+
+			Iterator<?> iterator = c.iterator();
+			while (iterator.hasNext()) {
+
+				Standarddrucker std = (Standarddrucker) iterator.next();
+
+				deleteReportKonf(std.getIId(), theClientDto);
+				em.remove(std);
+				em.flush();
+
+			}
+
 			Reportvariante reportvariante = em.find(Reportvariante.class, iId);
 			em.remove(reportvariante);
 			em.flush();
@@ -604,6 +619,8 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 		standarddrucker.setCPc(standarddruckerDto.getCPc());
 		standarddrucker.setCReportname(standarddruckerDto.getCReportname());
 		standarddrucker.setCDrucker(standarddruckerDto.getCDrucker());
+		standarddrucker.setCDruckerKopien(standarddruckerDto
+				.getCDruckerKopien());
 		standarddrucker.setMandantCNr(standarddrucker.getMandantCNr());
 		standarddrucker.setReportvarianteIId(standarddruckerDto
 				.getReportvarianteIId());
@@ -677,5 +694,18 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 		}
 		ReportvarianteDto[] returnArray = new ReportvarianteDto[list.size()];
 		return (ReportvarianteDto[]) list.toArray(returnArray);
+	}
+
+	@Override
+	public ReportvarianteDto reportvarianteFindByCReportnameCReportnameVariante(
+			String cReportname, String cReportnameVariante) {
+		Reportvariante entity = ReportvarianteQuery
+				.resultByCReportnameCReportnamevariante(em, cReportname,
+						cReportnameVariante);
+		if (entity == null) {
+			throw EJBExcFactory.reportvarianteZuReportNichtGefunden(cReportname, cReportnameVariante);
+		}
+
+		return assembleReportvarianteDto(entity);
 	}
 }

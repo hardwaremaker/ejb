@@ -57,8 +57,17 @@ public class GleitzeitsaldoDto implements Serializable {
 	private Timestamp dAbrechnungstichtag;
 	private BigDecimal nSaldo;
 	private BigDecimal nSaldouest200;
-	
-	
+
+	private BigDecimal nGzSaldoMitUestdInNormalstunden;
+
+	public BigDecimal getNGzSaldoMitUestdInNormalstunden() {
+		return nGzSaldoMitUestdInNormalstunden;
+	}
+
+	public void setNGzSaldoMitUestdInNormalstunden(BigDecimal nGzSaldoMitUestdInNormalstunden) {
+		this.nGzSaldoMitUestdInNormalstunden = nGzSaldoMitUestdInNormalstunden;
+	}
+
 	public BigDecimal getNSaldouest200() {
 		return nSaldouest200;
 	}
@@ -140,8 +149,7 @@ public class GleitzeitsaldoDto implements Serializable {
 	}
 
 	/*
-	 * public BigDecimal getNSaldouestdpauschale() { return
-	 * nSaldouestdpauschale; }
+	 * public BigDecimal getNSaldouestdpauschale() { return nSaldouestdpauschale; }
 	 */
 
 	// public void setNSaldouestdpauschale(BigDecimal nSaldouestdpauschale) {
@@ -195,14 +203,11 @@ public class GleitzeitsaldoDto implements Serializable {
 		GleitzeitsaldoDto that = (GleitzeitsaldoDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.personalIId == null ? this.personalIId == null
-				: that.personalIId.equals(this.personalIId)))
+		if (!(that.personalIId == null ? this.personalIId == null : that.personalIId.equals(this.personalIId)))
 			return false;
-		if (!(that.iJahr == null ? this.iJahr == null : that.iJahr
-				.equals(this.iJahr)))
+		if (!(that.iJahr == null ? this.iJahr == null : that.iJahr.equals(this.iJahr)))
 			return false;
-		if (!(that.iMonat == null ? this.iMonat == null : that.iMonat
-				.equals(this.iMonat)))
+		if (!(that.iMonat == null ? this.iMonat == null : that.iMonat.equals(this.iMonat)))
 			return false;
 		if (!(that.nSaldomehrstunden == null ? this.nSaldomehrstunden == null
 				: that.nSaldomehrstunden.equals(this.nSaldomehrstunden)))
@@ -217,23 +222,18 @@ public class GleitzeitsaldoDto implements Serializable {
 				: that.nSaldouestfrei100.equals(this.nSaldouestfrei100)))
 			return false;
 		if (!(that.nSaldouestpflichtig100 == null ? this.nSaldouestpflichtig100 == null
-				: that.nSaldouestpflichtig100
-						.equals(this.nSaldouestpflichtig100)))
+				: that.nSaldouestpflichtig100.equals(this.nSaldouestpflichtig100)))
 			return false;
 		/*
-		 * if (! (that.nSaldouestdpauschale == null ? this.nSaldouestdpauschale
-		 * == null :
-		 * that.nSaldouestdpauschale.equals(this.nSaldouestdpauschale))) return
-		 * false;
+		 * if (! (that.nSaldouestdpauschale == null ? this.nSaldouestdpauschale == null
+		 * : that.nSaldouestdpauschale.equals(this.nSaldouestdpauschale))) return false;
 		 */
-		if (!(that.bGesperrt == null ? this.bGesperrt == null : that.bGesperrt
-				.equals(this.bGesperrt)))
+		if (!(that.bGesperrt == null ? this.bGesperrt == null : that.bGesperrt.equals(this.bGesperrt)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		if (!(that.dAbrechnungstichtag == null ? this.dAbrechnungstichtag == null
 				: that.dAbrechnungstichtag.equals(this.dAbrechnungstichtag)))

@@ -36,8 +36,6 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-import com.lp.server.artikel.ejb.Artkla;
-import com.lp.server.artikel.ejb.Material;
 import com.lp.server.finanz.ejb.Ergebnisgruppe;
 import com.lp.server.finanz.ejb.Uvaart;
 import com.lp.server.partner.service.PartnerDto;
@@ -46,9 +44,10 @@ import com.lp.server.system.service.HvDtoLogIdCBez;
 import com.lp.server.system.service.HvDtoLogIdCnr;
 import com.lp.server.util.IIId;
 import com.lp.server.util.IModificationData;
+import com.lp.server.util.logger.LogEventPayload;
 
 @HvDtoLogClass(name = HvDtoLogClass.KONTO)
-public class KontoDto implements Serializable, IIId, IModificationData {
+public class KontoDto implements Serializable, IIId, IModificationData, LogEventPayload {
 	private static final long serialVersionUID = -792343803475903366L;
 
 	private Integer iId;
@@ -91,7 +90,11 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 	private Timestamp tEBAnlegen;
 
 	private Short bOhneUst;
-	
+	private String steuerkategorieCnr;
+	private PartnerDto partnerDto = null;
+	private Integer ergebnisgruppeIId_negativ;
+	private int uvavariante;
+
 	public String getxBemerkung() {
 		return xBemerkung;
 	}
@@ -99,8 +102,6 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 	public void setxBemerkung(String xBemerkung) {
 		this.xBemerkung = xBemerkung;
 	}
-
-	private PartnerDto partnerDto = null;
 
 	public PartnerDto getPartnerDto() {
 		return partnerDto;
@@ -117,8 +118,6 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 	public void setPartnerDto(PartnerDto partnerDto) {
 		this.partnerDto = partnerDto;
 	}
-
-	private Integer ergebnisgruppeIId_negativ;
 
 	@HvDtoLogIdCBez(entityClass = Ergebnisgruppe.class)
 	public Integer getErgebnisgruppeIId_negativ() {
@@ -181,8 +180,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		return rechenregelCNrWeiterfuehrendUst;
 	}
 
-	public void setRechenregelCNrWeiterfuehrendUst(
-			String rechenregelCNrWeiterfuehrendUst) {
+	public void setRechenregelCNrWeiterfuehrendUst(String rechenregelCNrWeiterfuehrendUst) {
 		this.rechenregelCNrWeiterfuehrendUst = rechenregelCNrWeiterfuehrendUst;
 	}
 
@@ -190,8 +188,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		return kontoIIdWeiterfuehrendBilanz;
 	}
 
-	public void setKontoIIdWeiterfuehrendBilanz(
-			Integer kontoIIdWeiterfuehrendBilanz) {
+	public void setKontoIIdWeiterfuehrendBilanz(Integer kontoIIdWeiterfuehrendBilanz) {
 		this.kontoIIdWeiterfuehrendBilanz = kontoIIdWeiterfuehrendBilanz;
 	}
 
@@ -199,8 +196,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		return rechenregelCNrWeiterfuehrendBilanz;
 	}
 
-	public void setRechenregelCNrWeiterfuehrendBilanz(
-			String rechenregelCNrWeiterfuehrendBilanz) {
+	public void setRechenregelCNrWeiterfuehrendBilanz(String rechenregelCNrWeiterfuehrendBilanz) {
 		this.rechenregelCNrWeiterfuehrendBilanz = rechenregelCNrWeiterfuehrendBilanz;
 	}
 
@@ -208,8 +204,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		return kontoIIdWeiterfuehrendSkonto;
 	}
 
-	public void setKontoIIdWeiterfuehrendSkonto(
-			Integer kontoIIdWeiterfuehrendSkonto) {
+	public void setKontoIIdWeiterfuehrendSkonto(Integer kontoIIdWeiterfuehrendSkonto) {
 		this.kontoIIdWeiterfuehrendSkonto = kontoIIdWeiterfuehrendSkonto;
 	}
 
@@ -217,8 +212,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		return rechenregelCNrWeiterfuehrendSkonto;
 	}
 
-	public void setRechenregelCNrWeiterfuehrendSkonto(
-			String rechenregelCNrWeiterfuehrendSkonto) {
+	public void setRechenregelCNrWeiterfuehrendSkonto(String rechenregelCNrWeiterfuehrendSkonto) {
 		this.rechenregelCNrWeiterfuehrendSkonto = rechenregelCNrWeiterfuehrendSkonto;
 	}
 
@@ -241,7 +235,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 	public Integer getFinanzamtIId() {
 		return finanzamtIId;
 	}
-	
+
 	public void setFinanzamtIId(Integer finanzamtIId) {
 		this.finanzamtIId = finanzamtIId;
 	}
@@ -371,118 +365,50 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime
-				* result
-				+ ((bAllgemeinsichtbar == null) ? 0 : bAllgemeinsichtbar
-						.hashCode());
-		result = prime
-				* result
-				+ ((bAutomeroeffnungsbuchung == null) ? 0
-						: bAutomeroeffnungsbuchung.hashCode());
-		result = prime
-				* result
-				+ ((bManuellbebuchbar == null) ? 0 : bManuellbebuchbar
-						.hashCode());
-		result = prime * result
-				+ ((bOhneUst == null) ? 0 : bOhneUst.hashCode());
-		result = prime * result
-				+ ((bVersteckt == null) ? 0 : bVersteckt.hashCode());
+		result = prime * result + ((bAllgemeinsichtbar == null) ? 0 : bAllgemeinsichtbar.hashCode());
+		result = prime * result + ((bAutomeroeffnungsbuchung == null) ? 0 : bAutomeroeffnungsbuchung.hashCode());
+		result = prime * result + ((bManuellbebuchbar == null) ? 0 : bManuellbebuchbar.hashCode());
+		result = prime * result + ((bOhneUst == null) ? 0 : bOhneUst.hashCode());
+		result = prime * result + ((bVersteckt == null) ? 0 : bVersteckt.hashCode());
 		result = prime * result + ((cBez == null) ? 0 : cBez.hashCode());
-		result = prime
-				* result
-				+ ((cLetztesortierung == null) ? 0 : cLetztesortierung
-						.hashCode());
+		result = prime * result + ((cLetztesortierung == null) ? 0 : cLetztesortierung.hashCode());
 		result = prime * result + ((cNr == null) ? 0 : cNr.hashCode());
-		result = prime * result
-				+ ((cSteuerart == null) ? 0 : cSteuerart.hashCode());
-		result = prime * result
-				+ ((csortierung == null) ? 0 : csortierung.hashCode());
-		result = prime * result
-				+ ((dGueltigbis == null) ? 0 : dGueltigbis.hashCode());
-		result = prime * result
-				+ ((dGueltigvon == null) ? 0 : dGueltigvon.hashCode());
-		result = prime
-				* result
-				+ ((ergebnisgruppeIId == null) ? 0 : ergebnisgruppeIId
-						.hashCode());
-		result = prime
-				* result
-				+ ((ergebnisgruppeIId_negativ == null) ? 0
-						: ergebnisgruppeIId_negativ.hashCode());
-		result = prime * result
-				+ ((finanzamtIId == null) ? 0 : finanzamtIId.hashCode());
-		result = prime
-				* result
-				+ ((iGeschaeftsjahrEB == null) ? 0 : iGeschaeftsjahrEB
-						.hashCode());
+		result = prime * result + ((cSteuerart == null) ? 0 : cSteuerart.hashCode());
+		result = prime * result + ((csortierung == null) ? 0 : csortierung.hashCode());
+		result = prime * result + ((dGueltigbis == null) ? 0 : dGueltigbis.hashCode());
+		result = prime * result + ((dGueltigvon == null) ? 0 : dGueltigvon.hashCode());
+		result = prime * result + ((ergebnisgruppeIId == null) ? 0 : ergebnisgruppeIId.hashCode());
+		result = prime * result + ((ergebnisgruppeIId_negativ == null) ? 0 : ergebnisgruppeIId_negativ.hashCode());
+		result = prime * result + ((finanzamtIId == null) ? 0 : finanzamtIId.hashCode());
+		result = prime * result + ((iGeschaeftsjahrEB == null) ? 0 : iGeschaeftsjahrEB.hashCode());
 		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
-		result = prime
-				* result
-				+ ((iLetzteselektiertebuchung == null) ? 0
-						: iLetzteselektiertebuchung.hashCode());
-		result = prime
-				* result
-				+ ((kontoIIdWeiterfuehrendBilanz == null) ? 0
-						: kontoIIdWeiterfuehrendBilanz.hashCode());
-		result = prime
-				* result
-				+ ((kontoIIdWeiterfuehrendSkonto == null) ? 0
-						: kontoIIdWeiterfuehrendSkonto.hashCode());
-		result = prime
-				* result
-				+ ((kontoIIdWeiterfuehrendUst == null) ? 0
-						: kontoIIdWeiterfuehrendUst.hashCode());
+		result = prime * result + ((iLetzteselektiertebuchung == null) ? 0 : iLetzteselektiertebuchung.hashCode());
 		result = prime * result
-				+ ((kontoartCNr == null) ? 0 : kontoartCNr.hashCode());
+				+ ((kontoIIdWeiterfuehrendBilanz == null) ? 0 : kontoIIdWeiterfuehrendBilanz.hashCode());
 		result = prime * result
-				+ ((kontotypCNr == null) ? 0 : kontotypCNr.hashCode());
+				+ ((kontoIIdWeiterfuehrendSkonto == null) ? 0 : kontoIIdWeiterfuehrendSkonto.hashCode());
+		result = prime * result + ((kontoIIdWeiterfuehrendUst == null) ? 0 : kontoIIdWeiterfuehrendUst.hashCode());
+		result = prime * result + ((kontoartCNr == null) ? 0 : kontoartCNr.hashCode());
+		result = prime * result + ((kontotypCNr == null) ? 0 : kontotypCNr.hashCode());
+		result = prime * result + ((kostenstelleIId == null) ? 0 : kostenstelleIId.hashCode());
+		result = prime * result + ((mandantCNr == null) ? 0 : mandantCNr.hashCode());
+		result = prime * result + ((partnerDto == null) ? 0 : partnerDto.hashCode());
+		result = prime * result + ((personalIIdAendern == null) ? 0 : personalIIdAendern.hashCode());
+		result = prime * result + ((personalIIdAnlegen == null) ? 0 : personalIIdAnlegen.hashCode());
 		result = prime * result
-				+ ((kostenstelleIId == null) ? 0 : kostenstelleIId.hashCode());
+				+ ((rechenregelCNrWeiterfuehrendBilanz == null) ? 0 : rechenregelCNrWeiterfuehrendBilanz.hashCode());
 		result = prime * result
-				+ ((mandantCNr == null) ? 0 : mandantCNr.hashCode());
+				+ ((rechenregelCNrWeiterfuehrendSkonto == null) ? 0 : rechenregelCNrWeiterfuehrendSkonto.hashCode());
 		result = prime * result
-				+ ((partnerDto == null) ? 0 : partnerDto.hashCode());
-		result = prime
-				* result
-				+ ((personalIIdAendern == null) ? 0 : personalIIdAendern
-						.hashCode());
-		result = prime
-				* result
-				+ ((personalIIdAnlegen == null) ? 0 : personalIIdAnlegen
-						.hashCode());
-		result = prime
-				* result
-				+ ((rechenregelCNrWeiterfuehrendBilanz == null) ? 0
-						: rechenregelCNrWeiterfuehrendBilanz.hashCode());
-		result = prime
-				* result
-				+ ((rechenregelCNrWeiterfuehrendSkonto == null) ? 0
-						: rechenregelCNrWeiterfuehrendSkonto.hashCode());
-		result = prime
-				* result
-				+ ((rechenregelCNrWeiterfuehrendUst == null) ? 0
-						: rechenregelCNrWeiterfuehrendUst.hashCode());
-		result = prime
-				* result
-				+ ((steuerkategorieIId == null) ? 0 : steuerkategorieIId
-						.hashCode());
-		result = prime
-				* result
-				+ ((steuerkategorieIIdReverse == null) ? 0
-						: steuerkategorieIIdReverse.hashCode());
-		result = prime * result
-				+ ((tAendern == null) ? 0 : tAendern.hashCode());
-		result = prime * result
-				+ ((tAnlegen == null) ? 0 : tAnlegen.hashCode());
-		result = prime * result
-				+ ((tEBAnlegen == null) ? 0 : tEBAnlegen.hashCode());
-		result = prime * result
-				+ ((uvaartIId == null) ? 0 : uvaartIId.hashCode());
-		result = prime
-				* result
-				+ ((waehrungCNrDruck == null) ? 0 : waehrungCNrDruck.hashCode());
-		result = prime * result
-				+ ((xBemerkung == null) ? 0 : xBemerkung.hashCode());
+				+ ((rechenregelCNrWeiterfuehrendUst == null) ? 0 : rechenregelCNrWeiterfuehrendUst.hashCode());
+		result = prime * result + ((steuerkategorieIId == null) ? 0 : steuerkategorieIId.hashCode());
+		result = prime * result + ((steuerkategorieIIdReverse == null) ? 0 : steuerkategorieIIdReverse.hashCode());
+		result = prime * result + ((tAendern == null) ? 0 : tAendern.hashCode());
+		result = prime * result + ((tAnlegen == null) ? 0 : tAnlegen.hashCode());
+		result = prime * result + ((tEBAnlegen == null) ? 0 : tEBAnlegen.hashCode());
+		result = prime * result + ((uvaartIId == null) ? 0 : uvaartIId.hashCode());
+		result = prime * result + ((waehrungCNrDruck == null) ? 0 : waehrungCNrDruck.hashCode());
+		result = prime * result + ((xBemerkung == null) ? 0 : xBemerkung.hashCode());
 		return result;
 	}
 
@@ -503,8 +429,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		if (bAutomeroeffnungsbuchung == null) {
 			if (other.bAutomeroeffnungsbuchung != null)
 				return false;
-		} else if (!bAutomeroeffnungsbuchung
-				.equals(other.bAutomeroeffnungsbuchung))
+		} else if (!bAutomeroeffnungsbuchung.equals(other.bAutomeroeffnungsbuchung))
 			return false;
 		if (bManuellbebuchbar == null) {
 			if (other.bManuellbebuchbar != null)
@@ -564,8 +489,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		if (ergebnisgruppeIId_negativ == null) {
 			if (other.ergebnisgruppeIId_negativ != null)
 				return false;
-		} else if (!ergebnisgruppeIId_negativ
-				.equals(other.ergebnisgruppeIId_negativ))
+		} else if (!ergebnisgruppeIId_negativ.equals(other.ergebnisgruppeIId_negativ))
 			return false;
 		if (finanzamtIId == null) {
 			if (other.finanzamtIId != null)
@@ -585,26 +509,22 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		if (iLetzteselektiertebuchung == null) {
 			if (other.iLetzteselektiertebuchung != null)
 				return false;
-		} else if (!iLetzteselektiertebuchung
-				.equals(other.iLetzteselektiertebuchung))
+		} else if (!iLetzteselektiertebuchung.equals(other.iLetzteselektiertebuchung))
 			return false;
 		if (kontoIIdWeiterfuehrendBilanz == null) {
 			if (other.kontoIIdWeiterfuehrendBilanz != null)
 				return false;
-		} else if (!kontoIIdWeiterfuehrendBilanz
-				.equals(other.kontoIIdWeiterfuehrendBilanz))
+		} else if (!kontoIIdWeiterfuehrendBilanz.equals(other.kontoIIdWeiterfuehrendBilanz))
 			return false;
 		if (kontoIIdWeiterfuehrendSkonto == null) {
 			if (other.kontoIIdWeiterfuehrendSkonto != null)
 				return false;
-		} else if (!kontoIIdWeiterfuehrendSkonto
-				.equals(other.kontoIIdWeiterfuehrendSkonto))
+		} else if (!kontoIIdWeiterfuehrendSkonto.equals(other.kontoIIdWeiterfuehrendSkonto))
 			return false;
 		if (kontoIIdWeiterfuehrendUst == null) {
 			if (other.kontoIIdWeiterfuehrendUst != null)
 				return false;
-		} else if (!kontoIIdWeiterfuehrendUst
-				.equals(other.kontoIIdWeiterfuehrendUst))
+		} else if (!kontoIIdWeiterfuehrendUst.equals(other.kontoIIdWeiterfuehrendUst))
 			return false;
 		if (kontoartCNr == null) {
 			if (other.kontoartCNr != null)
@@ -644,20 +564,17 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		if (rechenregelCNrWeiterfuehrendBilanz == null) {
 			if (other.rechenregelCNrWeiterfuehrendBilanz != null)
 				return false;
-		} else if (!rechenregelCNrWeiterfuehrendBilanz
-				.equals(other.rechenregelCNrWeiterfuehrendBilanz))
+		} else if (!rechenregelCNrWeiterfuehrendBilanz.equals(other.rechenregelCNrWeiterfuehrendBilanz))
 			return false;
 		if (rechenregelCNrWeiterfuehrendSkonto == null) {
 			if (other.rechenregelCNrWeiterfuehrendSkonto != null)
 				return false;
-		} else if (!rechenregelCNrWeiterfuehrendSkonto
-				.equals(other.rechenregelCNrWeiterfuehrendSkonto))
+		} else if (!rechenregelCNrWeiterfuehrendSkonto.equals(other.rechenregelCNrWeiterfuehrendSkonto))
 			return false;
 		if (rechenregelCNrWeiterfuehrendUst == null) {
 			if (other.rechenregelCNrWeiterfuehrendUst != null)
 				return false;
-		} else if (!rechenregelCNrWeiterfuehrendUst
-				.equals(other.rechenregelCNrWeiterfuehrendUst))
+		} else if (!rechenregelCNrWeiterfuehrendUst.equals(other.rechenregelCNrWeiterfuehrendUst))
 			return false;
 		if (steuerkategorieIId == null) {
 			if (other.steuerkategorieIId != null)
@@ -667,8 +584,7 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		if (steuerkategorieIIdReverse == null) {
 			if (other.steuerkategorieIIdReverse != null)
 				return false;
-		} else if (!steuerkategorieIIdReverse
-				.equals(other.steuerkategorieIIdReverse))
+		} else if (!steuerkategorieIIdReverse.equals(other.steuerkategorieIIdReverse))
 			return false;
 		if (tAendern == null) {
 			if (other.tAendern != null)
@@ -745,6 +661,9 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		this.steuerkategorieIId = steuerkategorieIId;
 	}
 
+	/**
+	 * @deprecated
+	 */
 	public Integer getSteuerkategorieIId() {
 		return steuerkategorieIId;
 	}
@@ -753,6 +672,9 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 		this.steuerkategorieIIdReverse = steuerkategorieIIdReverse;
 	}
 
+	/**
+	 * @deprecated
+	 */
 	public Integer getSteuerkategorieIIdReverse() {
 		return steuerkategorieIIdReverse;
 	}
@@ -805,4 +727,28 @@ public class KontoDto implements Serializable, IIId, IModificationData {
 	public void setcSteuerart(String cSteuerart) {
 		this.cSteuerart = cSteuerart;
 	}
+
+	@Override
+	public String asString() {
+		return "Kto [" + cNr + ", \"" + cBez + "\" (id:" + iId + ")]";
+	}
+
+	public String getSteuerkategorieCnr() {
+		return steuerkategorieCnr;
+	}
+
+	public void setSteuerkategorieCnr(String steuerkategorieCnr) {
+		this.steuerkategorieCnr = steuerkategorieCnr;
+	}
+
+		private Integer mwstsatzIId;
+
+	public Integer getMwstsatzIId() {
+		return mwstsatzIId;
+	}
+
+	public void setMwstsatzIId(Integer mwstsatzIId) {
+		this.mwstsatzIId = mwstsatzIId;
+	}
+
 }

@@ -46,13 +46,17 @@ import javax.servlet.http.HttpServletResponse;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRExporter;
 import net.sf.jasperreports.engine.JRExporterParameter;
-import net.sf.jasperreports.engine.export.JRHtmlExporter;
+import net.sf.jasperreports.engine.export.HtmlExporter;
 import net.sf.jasperreports.engine.export.JRHtmlExporterParameter;
 
+import com.lp.server.benutzer.ejbfac.LogonFacBean;
 import com.lp.server.benutzer.service.LogonFac;
+import com.lp.server.personal.ejbfac.PersonalFacBean;
+import com.lp.server.personal.ejbfac.ZeiterfassungFacBean;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.FacLookup;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.Helper;
@@ -89,8 +93,8 @@ public class HeliumVServlet extends FrameServlet {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private static final String sUser = "lpwebappzemecs";
-	private static final String sPassword = "lpwebappzemecs";
+//	private static final String sUser = "lpwebappzemecs";
+//	private static final String sPassword = "lpwebappzemecs";
 	private ZeiterfassungFac zeiterfassungFac = null;
 	private LogonFac logonFac = null;
 	private String idUser = null;
@@ -100,17 +104,19 @@ public class HeliumVServlet extends FrameServlet {
 	public void init() throws ServletException {
 		try {
 			Context context = new InitialContext();
-			zeiterfassungFac = (ZeiterfassungFac) context
-					.lookup("lpserver/ZeiterfassungFacBean/remote");
-			logonFac = (LogonFac) context.lookup("lpserver/LogonFacBean/remote");
-			TheClientDto theClientDto = logonFac.logon( 
+			
+			zeiterfassungFac= FacLookup.lookup(context, ZeiterfassungFacBean.class, ZeiterfassungFac.class);
+			
+			logonFac= FacLookup.lookup(context, LogonFacBean.class, LogonFac.class);
+			/*TheClientDto theClientDto = logonFac.logon( 
 					Helper.getFullUsername(sUser),				
 					Helper.getMD5Hash((sUser + sPassword).toCharArray()),
 					new Locale("de", "AT"), null, new java.sql.Timestamp(
-							System.currentTimeMillis()));
+							System.currentTimeMillis()));*/
+			TheClientDto theClientDto = logonFac.logonIntern(new Locale("de", "AT"), null);
 			logonFac.logout(theClientDto);
 
-			personalFac = (PersonalFac) context.lookup("lpserver/PersonalFacBean/remote");
+			personalFac= FacLookup.lookup(context, PersonalFacBean.class, PersonalFac.class);
 		} catch (Exception e) {
 			myLogger.logKritisch("Fehler beim holen der Fac", e);
 		}
@@ -166,11 +172,12 @@ public class HeliumVServlet extends FrameServlet {
 		}
 
 		if (auswertung.equals("anwesenheitsliste")) {
-			TheClientDto theClientDto = logonFac.logon(
+			/*TheClientDto theClientDto = logonFac.logon(
 					Helper.getFullUsername(sUser),		
 					Helper.getMD5Hash((sUser + new String("lpwebappzemecs")).toCharArray()), 
 					new Locale("de", "AT"), mandant, 
-					new java.sql.Timestamp(System.currentTimeMillis()));
+					new java.sql.Timestamp(System.currentTimeMillis()));*/
+			TheClientDto theClientDto = logonFac.logonIntern(new Locale("de", "AT"), mandant);
 			jasperprint = zeiterfassungFac.printAnwesenheitsliste(theClientDto);
 			logonFac.logout(theClientDto);
 		} else {
@@ -184,19 +191,16 @@ public class HeliumVServlet extends FrameServlet {
 				response.setContentType("text/html");
 				//PrintWriter out = response.getWriter();
 				StringBuffer out = new StringBuffer();
-				JRExporter exporter = new JRHtmlExporter();
+				JRExporter exporter = new HtmlExporter();
 				Map<Object, Object> imagesMap = new HashMap<Object, Object>();
 				request.getSession().setAttribute("IMAGES_MAP", imagesMap);
 				exporter.setParameter(JRExporterParameter.JASPER_PRINT,
 						jasperprint.getPrint());
 				exporter.setParameter(JRExporterParameter.OUTPUT_STRING_BUFFER, out);
 
-				exporter.setParameter(
-						JRHtmlExporterParameter.IS_USING_IMAGES_TO_ALIGN,
-						Boolean.FALSE);
-
+				
 				exporter.exportReport();
-				out = HelperServer.removeScriptHtml(out);
+			//	out = HelperServer.removeScriptHtml(out);
 				response.getWriter().print(out);
 			} catch (JRException ex) {
 				response.sendError(

@@ -42,8 +42,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr", query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.cNr=?1 AND o.datenformatCNr=?2 AND o.mandantCNr = ?3 AND o.localeCNr = ?4"),
-	@NamedQuery(name = "MediastandardfindByDatenformatCNrMandantCNr", query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.datenformatCNr=?1 AND o.mandantCNr = ?2")})
+@NamedQueries( {
+	@NamedQuery(name = "MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr",
+			query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.cNr=?1 AND o.datenformatCNr=?2 AND o.mandantCNr = ?3 AND o.localeCNr = ?4"),
+	@NamedQuery(name = "MediastandardfindByDatenformatCNrMandantCNr", 
+			query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.datenformatCNr=?1 AND o.mandantCNr = ?2"),
+	@NamedQuery(name = MediastandardQuery.ByCnr,
+			query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.cNr=:cnr AND o.mandantCNr=:mandant AND o.localeCNr=:locale")
+	})
 @Entity
 @Table(name = "LP_MEDIASTANDARD")
 public class Mediastandard implements Serializable {

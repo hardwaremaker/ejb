@@ -37,6 +37,26 @@ import java.math.BigDecimal;
 public class ReportTheoretischeFehlmengenDto {
 	private Integer artikelIId = null;
 	private BigDecimal bdMenge = null;
+	
+	private java.sql.Date dTermin = null;
+	
+	public java.sql.Date getDTermin() {
+		return dTermin;
+	}
+
+	public void setDTermin(java.sql.Date dTermin) {
+		this.dTermin = dTermin;
+	}
+
+	private Integer iSortAusStueckliste=999999999;
+	public Integer getISortAusStueckliste() {
+		return iSortAusStueckliste;
+	}
+
+	public void setISortAusStueckliste(Integer iSortAusStueckliste) {
+		this.iSortAusStueckliste = iSortAusStueckliste;
+	}
+
 	private BigDecimal bdAusgegebeneMenge = null;
 	private Integer artikelIIdOriginal=null;
 	public Integer getArtikelIIdOriginal() {

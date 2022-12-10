@@ -99,17 +99,17 @@ public interface IStklImportResult {
 		public ArtikelDto getSelectedArtikelDto();
 		
 		/**
-		 * Setzt das SokoUpdate des Results
-		 * @param sokoUpdate
+		 * Setzt, ob das ArtikelnummerMapping des Results aktualisiert werden soll.
+		 * @param updateArtikelnummerMapping
 		 */
-		public void setSokoUpdate(boolean sokoUpdate);
+		public void setUpdateArtikelnummerMapping(boolean updateArtikelnummerMapping);
 		
 		/**
 		 * 
-		 * @return true, wenn ein SokoUpdate f&uuml;r dieses Result durchgef&uuml;hrt
-		 * werden soll
+		 * @return true, wenn ein Update des ArtikelnummerMapping f&uuml;r dieses 
+		 * Result durchgef&uuml;hrt werden soll
 		 */
-		public boolean getSokoUpdate();
+		public boolean isUpdateArtikelnummerMapping();
 		
 		/**
 		 *	
@@ -122,4 +122,22 @@ public interface IStklImportResult {
 		 * @return true, wenn zuviele Artikel f&uuml;r dieses Result gefunden wurden.
 		 */
 		public boolean foundTooManyArticles();
+
+		/**
+		 * 
+		 * @return true, wenn ein bereits existierender Preis des Lieferanten
+		 * aus dem Artikellieferanten anstatt des Preises aus der Bestellung 
+		 * &uuml;bernommen werden soll 
+		 */
+		public boolean uebernehmeLiefPreisInBestellung();
+		
+		/**
+		 * Setzt den Wert, wenn ein bereits existierender Preis des Lieferanten
+		 * aus dem Artikellieferanten anstatt des Preises aus der Bestellung 
+		 * &uuml;bernommen werden soll
+		 * 
+		 * @param uebernehmen true wenn der Lieferantenpreis &uuml;bernommen
+		 * werden soll
+		 */
+		public void setUebernehmeLiefPreisInBestellung(boolean uebernehmen);
 }

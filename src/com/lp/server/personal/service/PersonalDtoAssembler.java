@@ -105,6 +105,15 @@ public class PersonalDtoAssembler {
 			personalDto.setBTelefonzeitstarten(personal
 					.getBTelefonzeitstarten());
 			personalDto.setCImapInboxFolder(personal.getCImapInboxFolder());
+			personalDto.setBStartMitMeinenOffenenProjekten(personal
+					.getBStartMitMeinenOffenenProjekten());
+			personalDto.setBKommtAmTerminal(personal.getBKommtAmTerminal());
+			personalDto.setCBccempfaenger(personal.getCBccempfaenger());
+			personalDto.setBKeineAnzeigeAmTerminal(personal.getBKeineAnzeigeAmTerminal());
+			personalDto.setBWepInfo(personal.getBWepInfo());
+			personalDto.setMaschinengruppeIId(personal.getMaschinengruppeIId());
+			personalDto.setbSynchronisiereAlleKontakte(personal.getbSynchAlleKontakte());
+			personalDto.setCVersandkennwort(personal.getCVersandkennwort());
 		}
 		return personalDto;
 	}

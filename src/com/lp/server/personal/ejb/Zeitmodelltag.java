@@ -66,8 +66,31 @@ public class Zeitmodelltag implements Serializable {
 	@Column(name = "U_MINDESTPAUSE")
 	private Time uMindestpause;
 
+	@Column(name = "B_BEGINN_VORTAG")
+	private Short bBeginnVortag;
+
+
+	public Short getBBeginnVortag() {
+		return bBeginnVortag;
+	}
+
+	public void setBBeginnVortag(Short bBeginnVortag) {
+		this.bBeginnVortag = bBeginnVortag;
+	}
+
+
+	@Column(name = "U_SCHICHTERKENNUNG")
+	private Time uSchichterkennung;
 	
-	
+	public Time getUSchichterkennung() {
+		return uSchichterkennung;
+	}
+
+	public void setUSchichterkennung(Time uSchichterkennung) {
+		this.uSchichterkennung = uSchichterkennung;
+	}
+
+
 	@Column(name = "U_BEGINN")
 	private Time uBeginn;
 
@@ -89,11 +112,36 @@ public class Zeitmodelltag implements Serializable {
 	@Column(name = "U_MINDESTPAUSE2")
 	private Time uMindestpause2;
 
-	
 	@Column(name = "U_AUTOPAUSEAB2")
 	private Time uAutopauseab2;
 
 	
+	
+	@Column(name = "U_ENDE_AKZEPTIERT_AB")
+	private Time uEndeAkzeptiertAb;
+
+	
+	public Time getUEndeAkzeptiertAb() {
+		return uEndeAkzeptiertAb;
+	}
+
+	public void setUEndeAkzeptiertAb(Time uEndeAkzeptiertAb) {
+		this.uEndeAkzeptiertAb = uEndeAkzeptiertAb;
+	}
+
+	
+	@Column(name = "U_BEGINN_AKZEPTIERT_BIS")
+	private Time uBeginnAkzeptiertBis;
+
+	
+	public Time getUBeginnAkzeptiertBis() {
+		return uBeginnAkzeptiertBis;
+	}
+
+	public void setUBeginnAkzeptiertBis(Time uBeginnAkzeptiertBis) {
+		this.uBeginnAkzeptiertBis = uBeginnAkzeptiertBis;
+	}
+
 	public Time getUMindestpause2() {
 		return uMindestpause2;
 	}
@@ -169,7 +217,7 @@ public class Zeitmodelltag implements Serializable {
 			Time sollzeit, 
 			Integer rundungbeginn,
 			Integer rundungende,
-			Short rundesondertaetigkeiten) {
+			Short rundesondertaetigkeiten,Short beginnVortag) {
 		setIId(id);
 		setZeitmodellIId(zeitmodellIId);
 		setTagesartIId(tagesartIId);
@@ -179,6 +227,8 @@ public class Zeitmodelltag implements Serializable {
 		setIRundungbeginn(rundungbeginn);
 		setIRundungende(rundungende);
 		setBRundesondertaetigkeiten(rundesondertaetigkeiten);
+		setBBeginnVortag(beginnVortag);
+		
 	}
 
 	public Integer getIId() {

@@ -56,8 +56,12 @@ public class Sequence implements Serializable {
 	}
 
 	public Sequence(String name) {
+		this(name, new Integer(0));
+	}
+	
+	public Sequence(String name, Integer index) {
 		setCName(name);
-	    setIIndex(new Integer(0));
+		setIIndex(index);
 	}
 
 	public String getCName() {

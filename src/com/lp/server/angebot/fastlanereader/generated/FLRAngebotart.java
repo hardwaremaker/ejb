@@ -52,10 +52,10 @@ public class FLRAngebotart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> angebotart_angebotart_set;
+	private Set<FLRAngebotartspr> angebotart_angebotart_set;
 
 	/** full constructor */
-	public FLRAngebotart(Integer i_sort, Set<?> angebotart_angebotart_set) {
+	public FLRAngebotart(Integer i_sort, Set<FLRAngebotartspr> angebotart_angebotart_set) {
 		this.i_sort = i_sort;
 		this.angebotart_angebotart_set = angebotart_angebotart_set;
 	}
@@ -65,7 +65,7 @@ public class FLRAngebotart implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLRAngebotart(Set<?> angebotart_angebotart_set) {
+	public FLRAngebotart(Set<FLRAngebotartspr> angebotart_angebotart_set) {
 		this.angebotart_angebotart_set = angebotart_angebotart_set;
 	}
 
@@ -85,11 +85,11 @@ public class FLRAngebotart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getAngebotart_angebotart_set() {
+	public Set<FLRAngebotartspr> getAngebotart_angebotart_set() {
 		return this.angebotart_angebotart_set;
 	}
 
-	public void setAngebotart_angebotart_set(Set<?> angebotart_angebotart_set) {
+	public void setAngebotart_angebotart_set(Set<FLRAngebotartspr> angebotart_angebotart_set) {
 		this.angebotart_angebotart_set = angebotart_angebotart_set;
 	}
 

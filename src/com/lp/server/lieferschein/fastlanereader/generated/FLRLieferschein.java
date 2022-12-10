@@ -1,43 +1,13 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.lieferschein.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRLager;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnung;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
+import com.lp.server.system.fastlanereader.generated.FLRSpediteur;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -68,6 +38,12 @@ public class FLRLieferschein implements Serializable {
 
     /** nullable persistent field */
     private Date t_liefertermin;
+
+    /** nullable persistent field */
+    private Date t_rueckgabetermin;
+
+    /** nullable persistent field */
+    private Date t_manuellerledigt;
 
     /** nullable persistent field */
     private Date d_belegdatum;
@@ -127,6 +103,9 @@ public class FLRLieferschein implements Serializable {
     private Integer projekt_i_id;
 
     /** nullable persistent field */
+    private String x_internerkommentar;
+
+    /** nullable persistent field */
     private Date t_versandzeitpunkt;
 
     /** nullable persistent field */
@@ -137,6 +116,12 @@ public class FLRLieferschein implements Serializable {
 
     /** nullable persistent field */
     private Date t_zollexportpapier;
+
+    /** nullable persistent field */
+    private Integer ansprechpartner_i_id_kunde;
+
+    /** nullable persistent field */
+    private String laenderart_c_nr;
 
     /** nullable persistent field */
     private FLRAuftrag flrauftrag;
@@ -171,6 +156,15 @@ public class FLRLieferschein implements Serializable {
     /** nullable persistent field */
     private com.lp.server.lieferschein.fastlanereader.generated.FLRBegruendung flrbegruendung;
 
+    /** nullable persistent field */
+    private com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheintextsuche flrlieferscheintextsuche;
+
+    /** nullable persistent field */
+    private FLRProjekt flrprojekt;
+
+    /** nullable persistent field */
+    private FLRSpediteur flrspediteur;
+
     /** persistent field */
     private Set flrlieferscheinpositionen;
 
@@ -181,13 +175,15 @@ public class FLRLieferschein implements Serializable {
     private Set flrverkettet2;
 
     /** full constructor */
-    public FLRLieferschein(String mandant_c_nr, String c_nr, String lieferscheinart_c_nr, String c_bez_projektbezeichnung, String c_lieferartort, Date t_liefertermin, Date d_belegdatum, String lieferscheinstatus_status_c_nr, Integer lager_i_id, Integer ziellager_i_id, String waehrung_c_nr_lieferscheinwaehrung, Double f_wechselkursmandantwaehrungzulieferscheinwaehrung, Short b_verrechenbar, Integer kunde_i_id_lieferadresse, Integer kunde_i_id_rechnungsadresse, Integer zahlungsziel_i_id, Integer kostenstelle_i_id, Integer spediteur_i_id, Integer lieferart_i_id, Integer personal_i_id_vertreter, BigDecimal n_gesamtwertinlieferscheinwaehrung, String c_bestellnummer, String c_kommission, Integer auftrag_i_id, Integer projekt_i_id, Date t_versandzeitpunkt, String c_versandtype, Date t_aendern, Date t_zollexportpapier, FLRAuftrag flrauftrag, FLRRechnung flrrechnung, FLRKunde flrkunde, FLRKunde flrkunderechnungsadresse, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRLager flrlager, FLRLager flrziellager, com.lp.server.lieferschein.fastlanereader.generated.FLRBegruendung flrbegruendung, Set flrlieferscheinpositionen, Set flrverkettet, Set flrverkettet2) {
+    public FLRLieferschein(String mandant_c_nr, String c_nr, String lieferscheinart_c_nr, String c_bez_projektbezeichnung, String c_lieferartort, Date t_liefertermin, Date t_rueckgabetermin, Date t_manuellerledigt, Date d_belegdatum, String lieferscheinstatus_status_c_nr, Integer lager_i_id, Integer ziellager_i_id, String waehrung_c_nr_lieferscheinwaehrung, Double f_wechselkursmandantwaehrungzulieferscheinwaehrung, Short b_verrechenbar, Integer kunde_i_id_lieferadresse, Integer kunde_i_id_rechnungsadresse, Integer zahlungsziel_i_id, Integer kostenstelle_i_id, Integer spediteur_i_id, Integer lieferart_i_id, Integer personal_i_id_vertreter, BigDecimal n_gesamtwertinlieferscheinwaehrung, String c_bestellnummer, String c_kommission, Integer auftrag_i_id, Integer projekt_i_id, String x_internerkommentar, Date t_versandzeitpunkt, String c_versandtype, Date t_aendern, Date t_zollexportpapier, Integer ansprechpartner_i_id_kunde, String laenderart_c_nr, FLRAuftrag flrauftrag, FLRRechnung flrrechnung, FLRKunde flrkunde, FLRKunde flrkunderechnungsadresse, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRLager flrlager, FLRLager flrziellager, com.lp.server.lieferschein.fastlanereader.generated.FLRBegruendung flrbegruendung, com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheintextsuche flrlieferscheintextsuche, FLRProjekt flrprojekt, FLRSpediteur flrspediteur, Set flrlieferscheinpositionen, Set flrverkettet, Set flrverkettet2) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.lieferscheinart_c_nr = lieferscheinart_c_nr;
         this.c_bez_projektbezeichnung = c_bez_projektbezeichnung;
         this.c_lieferartort = c_lieferartort;
         this.t_liefertermin = t_liefertermin;
+        this.t_rueckgabetermin = t_rueckgabetermin;
+        this.t_manuellerledigt = t_manuellerledigt;
         this.d_belegdatum = d_belegdatum;
         this.lieferscheinstatus_status_c_nr = lieferscheinstatus_status_c_nr;
         this.lager_i_id = lager_i_id;
@@ -207,10 +203,13 @@ public class FLRLieferschein implements Serializable {
         this.c_kommission = c_kommission;
         this.auftrag_i_id = auftrag_i_id;
         this.projekt_i_id = projekt_i_id;
+        this.x_internerkommentar = x_internerkommentar;
         this.t_versandzeitpunkt = t_versandzeitpunkt;
         this.c_versandtype = c_versandtype;
         this.t_aendern = t_aendern;
         this.t_zollexportpapier = t_zollexportpapier;
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
+        this.laenderart_c_nr = laenderart_c_nr;
         this.flrauftrag = flrauftrag;
         this.flrrechnung = flrrechnung;
         this.flrkunde = flrkunde;
@@ -222,6 +221,9 @@ public class FLRLieferschein implements Serializable {
         this.flrlager = flrlager;
         this.flrziellager = flrziellager;
         this.flrbegruendung = flrbegruendung;
+        this.flrlieferscheintextsuche = flrlieferscheintextsuche;
+        this.flrprojekt = flrprojekt;
+        this.flrspediteur = flrspediteur;
         this.flrlieferscheinpositionen = flrlieferscheinpositionen;
         this.flrverkettet = flrverkettet;
         this.flrverkettet2 = flrverkettet2;
@@ -292,6 +294,22 @@ public class FLRLieferschein implements Serializable {
 
     public void setT_liefertermin(Date t_liefertermin) {
         this.t_liefertermin = t_liefertermin;
+    }
+
+    public Date getT_rueckgabetermin() {
+        return this.t_rueckgabetermin;
+    }
+
+    public void setT_rueckgabetermin(Date t_rueckgabetermin) {
+        this.t_rueckgabetermin = t_rueckgabetermin;
+    }
+
+    public Date getT_manuellerledigt() {
+        return this.t_manuellerledigt;
+    }
+
+    public void setT_manuellerledigt(Date t_manuellerledigt) {
+        this.t_manuellerledigt = t_manuellerledigt;
     }
 
     public Date getD_belegdatum() {
@@ -446,6 +464,14 @@ public class FLRLieferschein implements Serializable {
         this.projekt_i_id = projekt_i_id;
     }
 
+    public String getX_internerkommentar() {
+        return this.x_internerkommentar;
+    }
+
+    public void setX_internerkommentar(String x_internerkommentar) {
+        this.x_internerkommentar = x_internerkommentar;
+    }
+
     public Date getT_versandzeitpunkt() {
         return this.t_versandzeitpunkt;
     }
@@ -476,6 +502,22 @@ public class FLRLieferschein implements Serializable {
 
     public void setT_zollexportpapier(Date t_zollexportpapier) {
         this.t_zollexportpapier = t_zollexportpapier;
+    }
+
+    public Integer getAnsprechpartner_i_id_kunde() {
+        return this.ansprechpartner_i_id_kunde;
+    }
+
+    public void setAnsprechpartner_i_id_kunde(Integer ansprechpartner_i_id_kunde) {
+        this.ansprechpartner_i_id_kunde = ansprechpartner_i_id_kunde;
+    }
+
+    public String getLaenderart_c_nr() {
+        return this.laenderart_c_nr;
+    }
+
+    public void setLaenderart_c_nr(String laenderart_c_nr) {
+        this.laenderart_c_nr = laenderart_c_nr;
     }
 
     public FLRAuftrag getFlrauftrag() {
@@ -564,6 +606,30 @@ public class FLRLieferschein implements Serializable {
 
     public void setFlrbegruendung(com.lp.server.lieferschein.fastlanereader.generated.FLRBegruendung flrbegruendung) {
         this.flrbegruendung = flrbegruendung;
+    }
+
+    public com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheintextsuche getFlrlieferscheintextsuche() {
+        return this.flrlieferscheintextsuche;
+    }
+
+    public void setFlrlieferscheintextsuche(com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheintextsuche flrlieferscheintextsuche) {
+        this.flrlieferscheintextsuche = flrlieferscheintextsuche;
+    }
+
+    public FLRProjekt getFlrprojekt() {
+        return this.flrprojekt;
+    }
+
+    public void setFlrprojekt(FLRProjekt flrprojekt) {
+        this.flrprojekt = flrprojekt;
+    }
+
+    public FLRSpediteur getFlrspediteur() {
+        return this.flrspediteur;
+    }
+
+    public void setFlrspediteur(FLRSpediteur flrspediteur) {
+        this.flrspediteur = flrspediteur;
     }
 
     public Set getFlrlieferscheinpositionen() {

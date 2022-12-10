@@ -45,56 +45,71 @@ import com.lp.server.util.logger.LPLogService;
 
 public class HvQueue {
 	protected final ILPLogger log = LPLogService.getInstance().getLogger(this.getClass());
-	
-	private String queueName ;
-	private boolean ignoreJMSExceptions = false ;
-	
+
+	private String queueName;
+	private boolean ignoreJMSExceptions = false;
+
 	private Context context;
 	private QueueConnectionFactory queueFactory = null;
 	private QueueConnection queueConnection = null;
 	private QueueSession queueSession = null;
-	
+
 	public HvQueue(String queueName) {
-		this.queueName = queueName ;
+		this.queueName = queueName;
 		try {
-			queueFactory = (QueueConnectionFactory) getInitialContext().lookup("ConnectionFactory") ;
-			queueConnection = queueFactory.createQueueConnection() ;
-			queueSession = queueConnection.createQueueSession(false, QueueSession.AUTO_ACKNOWLEDGE) ;
-		} catch(NamingException e) {
-			log.warn("NamingException: ", e);
-		} catch(JMSException e) {
-			log.warn("JMSException", e) ;
+			try {
+				System.out.println("JBOSS");
+				queueFactory = (QueueConnectionFactory) getInitialContext().lookup("ConnectionFactory");
+				queueConnection = queueFactory.createQueueConnection();
+			} catch (Throwable e) {
+				log.error("FEHLER", e);
+				System.out.println("WILDFLY");
+				InitialContext initialContext = new InitialContext();
+				initialContext.addToEnvironment(Context.SECURITY_PRINCIPAL, "guest");
+				queueFactory = (QueueConnectionFactory) initialContext
+						.lookup("jms/RemoteConnectionFactory");
+				queueConnection = queueFactory.createQueueConnection("jmsuser", "jmsuser");
+			}
+
+			queueSession = queueConnection.createQueueSession(false, QueueSession.AUTO_ACKNOWLEDGE);
+		} catch (NamingException e) {
+			log.error("NAMING3", e);
+			e.printStackTrace();
+		} catch (JMSException e) {
+			log.error("JMS2", e);
+			e.printStackTrace();
 		}
 	}
-	
+
 	public void beIgnoreJMSExceptions() {
-		ignoreJMSExceptions = true ;
+		ignoreJMSExceptions = true;
 	}
-	
+
 	public boolean isIgnoreJMSExceptions() {
-		return ignoreJMSExceptions ;
+		return ignoreJMSExceptions;
 	}
-	
+
 	public String getQueueName() {
-		return queueName ;
+		return queueName;
 	}
-	
+
 	protected Context getInitialContext() {
-		if(context != null) return context ;
+		if (context != null)
+			return context;
 		try {
-			context = new InitialContext() ;
-		} catch(NamingException e) {
+			context = new InitialContext();
+		} catch (NamingException e) {
 			log.error("NamingException creating initialContext", e);
 		}
-		return context ;
+		return context;
 	}
-	
+
 	protected QueueSession getQueueSession() {
-		return queueSession ;
+		return queueSession;
 	}
-	
+
 	protected QueueConnection getQueueConnection() {
-		return queueConnection ;
+		return queueConnection;
 	}
 
 }

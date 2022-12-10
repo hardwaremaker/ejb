@@ -44,13 +44,27 @@ public class WebserviceCallInterceptor extends Facade  {
 
 	@AroundInvoke
 	public Object logging(InvocationContext ctx) throws Exception {
-		String name = "";
-		String meth = "";
+		long t1 = System.currentTimeMillis();
+
+		String name = ctx.getMethod().getDeclaringClass().getName();
+		String method = ctx.getMethod().getName();
+		String sig = name + "." + method;
+		String params = "\tParameter: (" +
+				paramsAsString(ctx.getParameters()) + ")";
 		try {
-			name = ctx.getClass().getName();
-			meth = ctx.getMethod().getName();
-			return ctx.proceed();
+			myLogger.info(sig + params + " ...");
+			
+			Object result = ctx.proceed();
+			long now = System.currentTimeMillis();
+
+			myLogger.info(sig + " => (" + asString(result) +
+					")" + params + "\tDauer: " + (now - t1) + "ms.");
+			return result;
+		} catch(Exception e) {
+			myLogger.error(sig + params + " throwed:", e);
+			throw e;
 		} finally {
+/*			
 			StringBuffer params = new StringBuffer();
 			Object[] o = ctx.getParameters();
 			for (int i=0; i<o.length; i++) {
@@ -61,6 +75,22 @@ public class WebserviceCallInterceptor extends Facade  {
 			if (s.length()>2)
 				s = s.substring(0, s.length()-2);
 			myLogger.info("" + name + "." + meth + "\tParameter: " + s);
+*/			
 		}
+	}
+	
+	private String asString(Object o) {
+		return o == null ? "null" : o.toString();
+	}
+	
+	private String paramsAsString(Object[] params) {
+		StringBuffer s = new StringBuffer();
+		for (Object param : params) {
+			if(s.length() > 0) {
+				s.append(", ");
+			}
+			s.append(asString(param));
+		}
+		return s.toString();
 	}
 }

@@ -276,7 +276,7 @@ public class InseratartikelHandler extends UseCaseHandler {
 					orderBy.append(", ");
 				}
 				orderBy.append(FLR_INSERATARTIKEL)
-						.append("flrartikel.c_nr ASC").append(" ASC ");
+						.append("flrartikel.c_nr ASC");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_INSERATARTIKEL + "i_id") < 0) {

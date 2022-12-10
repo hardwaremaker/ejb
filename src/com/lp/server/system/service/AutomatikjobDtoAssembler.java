@@ -58,6 +58,7 @@ public class AutomatikjobDtoAssembler {
 			automatikjobDto.setBPerformOnNonWOrkingDays(automatikjob
 					.getBPerformonnonworkingdays());
 			automatikjobDto.setCMandantCNr(automatikjob.getMandantCNr());
+			automatikjobDto.setIScheduler(automatikjob.getIScheduler());
 		}
 		return automatikjobDto;
 	}

@@ -32,9 +32,12 @@
  ******************************************************************************/
 package com.lp.server.personal.fastlanereader;
 
+import java.awt.Color;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -82,14 +85,6 @@ import com.lp.util.Helper;
  */
 
 public class PersonalZeiterfassungHandler extends UseCaseHandler {
-
-	/**
-	 * the size of the data page returned in QueryResult.
-	 */
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 	/**
 	 * The information needed for the Personal table.
@@ -100,17 +95,33 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 			+ " left join personal.flrpartner.flrlandplzort.flrort as flrort "
 			+ " left join personal.flrpartner.flrlandplzort.flrland as flrland ";
 
+	private boolean hasHVMAZeiterfassung;
+
+	private Set<Integer> getPersonalMitZeitdatenpruefen() {
+		Set<Integer> m = new HashSet<Integer>();
+		if(!hasHVMAZeiterfassung) return m;
+		
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String queryString = "SELECT DISTINCT(zd.flrpersonal.i_id) FROM FLRZeitdatenpruefen AS zd where zd.flrpersonal.mandant_c_nr = '" + theClientDto.getMandant() + "'";
+		Query query = session.createQuery(queryString);
+		List<Integer> resultList = query.list();
+		for (Integer flrPersonalId : resultList) {
+			m.add(flrPersonalId);
+		}
+		session.close();
+		return m;
+	}
+	
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
+		Session session = FLRSessionFactory.getFactory().openSession();
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
 			int pageSize = PAGE_SIZE;
 			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
 			int endIndex = startIndex + pageSize - 1;
 
-			session = factory.openSession();
 			String queryString = this.getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
@@ -118,6 +129,9 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 			query.setMaxResults(pageSize);
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
+			
+			Set<Integer> personalSet = getPersonalMitZeitdatenpruefen();
+			
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
@@ -131,9 +145,7 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 						.getC_name1nachnamefirmazeile1();
 				rows[row][col++] = personal.getFlrpartner()
 						.getC_name2vornamefirmazeile2();
-				rows[row][col++] = personal.getC_kurzzeichen();
-
-				
+				rows[row][col++] = personal.getC_kurzzeichen();	
 
 				PersonalzeitmodellDto zmDto = getPersonalFac()
 						.personalzeitmodellFindZeitmodellZuDatum(
@@ -147,8 +159,27 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 				} else {
 					rows[row][col++] = null;
 				}
-				rows[row][col++] = personal.getFlrkostenstellestamm()
-				.getC_bez();
+				rows[row][col++] = personal
+						.getFlrkostenstellestamm().getC_bez();
+
+				if(hasHVMAZeiterfassung) {
+					rows[row][col++] = new Boolean(
+							personalSet.contains(personal.getI_id()));			
+				}
+				
+//				if(hasHVMAZeiterfassung) {
+//					Session sessionPruefdaten = factory.openSession();
+//					String q = "SELECT COUNT(zd) FROM FLRZeitdatenpruefen AS zd WHERE zd.personal_i_id = " + personal.getI_id();
+//					List<Long> counts = sessionPruefdaten.createQuery(q).list();
+//					Long l = (counts == null || counts.size() == 0) ? 0l : counts.get(0);
+//					rows[row][col++] = new Boolean(l > 0l);
+//					sessionPruefdaten.close();
+//				}
+				
+				if (Helper.short2boolean(personal.getB_versteckt())) {
+					rows[row][col++] = Color.LIGHT_GRAY;
+				}
+								
 				row++;
 				col = 0;
 			}
@@ -168,10 +199,9 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 
 	public long getRowCountFromDataBase() {
 		long rowCount = 0;
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = null;
+		Session session = FLRSessionFactory.getFactory().openSession();
 		try {
-			session = factory.openSession();
+			
 			String queryString = "select count(*) " + this.getFromClause()
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
@@ -312,11 +342,10 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 
 		if (selectedId != null && selectedId instanceof Integer
 				&& ((Integer) selectedId).intValue() >= 0) {
-			SessionFactory factory = FLRSessionFactory.getFactory();
-			Session session = null;
+			Session session = FLRSessionFactory.getFactory().openSession();
 
 			try {
-				session = factory.openSession();
+				
 
 				String queryString = "select personal.i_id from FLRPersonal personal "
 						+ this.buildWhereClause() + this.buildOrderByClause();
@@ -358,10 +387,10 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
+			TableInfo tableInfo = new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
 							String.class, String.class, String.class,
-							String.class, String.class },
+							String.class, String.class},
 					new String[] {
 							"Id",
 							getTextRespectUISpr("lp.personalnr", mandantCNr,
@@ -383,7 +412,7 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_L,
-							QueryParameters.FLR_BREITE_L },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST},
 					new String[] {
 							"i_id",
 							PersonalFac.FLR_PERSONAL_C_PERSONALNUMMER,
@@ -398,8 +427,21 @@ public class PersonalZeiterfassungHandler extends UseCaseHandler {
 							Facade.NICHT_SORTIERBAR,
 							PersonalFac.FLR_PERSONAL_FLRKOSTENSTELLESTAMM
 									+ ".c_nr",
+					});
 
-					}));
+			hasHVMAZeiterfassung = getMandantFac()
+					.hatZusatzfunktionHvmaZeiterfassung(theClientDto);
+			if(hasHVMAZeiterfassung) {
+				tableInfo.spalteHinzufuegen(
+						Boolean.class, 
+						getTextRespectUISpr("pers.zeitdaten.hatpruefdaten", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_XXS,
+						Facade.NICHT_SORTIERBAR, 
+						getTextRespectUISpr("pers.zeitdaten.hatpruefdaten.tooltip", mandantCNr, locUI));
+			}
+			
+			tableInfo.farbspalteHinzufuegen();
+			setTableInfo(tableInfo);
 		}
 
 		return super.getTableInfo();

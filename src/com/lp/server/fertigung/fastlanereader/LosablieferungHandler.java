@@ -97,6 +97,8 @@ public class LosablieferungHandler extends UseCaseHandler {
 	private static final String FLR_LOSKLASSE = "flrlosablieferung.";
 	private static final String FLR_LOSKLASSE_FROM_CLAUSE = " from FLRLosablieferung flrlosablieferung ";
 
+	private int iNachkommastellenLosgroesse = 0;
+
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 
 		QueryResult result = null;
@@ -359,7 +361,7 @@ public class LosablieferungHandler extends UseCaseHandler {
 		QueryResult result = null;
 		int rowNumber = 0;
 
-		if (selectedId != null && ((Integer) selectedId).intValue() >= 0) {
+		if (selectedId != null && selectedId instanceof Integer && ((Integer) selectedId).intValue() >= 0) {
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			Session session = null;
 
@@ -408,12 +410,21 @@ public class LosablieferungHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+			try {
+				iNachkommastellenLosgroesse = getMandantFac()
+						.getNachkommastellenLosgroesse(
+								theClientDto.getMandant());
+			} catch (RemoteException ex) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+			}
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					Timestamp.class, BigDecimal.class, BigDecimal.class,
-					String.class },
-					new String[] {
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							Timestamp.class,
+							super.getUIClassBigDecimalNachkommastellen(iNachkommastellenLosgroesse),
+							BigDecimal.class, String.class }, new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
 							getTextRespectUISpr("lp.menge", mandantCNr, locUI),

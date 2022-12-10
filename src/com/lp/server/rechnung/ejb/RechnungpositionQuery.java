@@ -35,20 +35,36 @@ package com.lp.server.rechnung.ejb;
 import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.Query;
+
+import com.lp.server.partner.ejb.HvTypedQuery;
 
 
 public class RechnungpositionQuery {
-	public final static String  ByPositionIIdArtikelset = "RechnungPositionfindByPositionIIdArtikelset" ;
+	public final static String ByPositionIIdArtikelset = "RechnungPositionfindByPositionIIdArtikelset" ;
+	public final static String ByRechnungIIdLieferscheinpositionen = "RechnungfindByRechnungIIdLieferscheinpositionen";
 
-	public static Query byPositionIIdArtikelset(EntityManager em, Integer positionIIdArtikelset) {
-		Query q = em.createNamedQuery(ByPositionIIdArtikelset) ;
-		q.setParameter(1, positionIIdArtikelset) ;
-		return q ;
+	public static HvTypedQuery<Rechnungposition> byPositionIIdArtikelset(EntityManager em, Integer positionIIdArtikelset) {
+		HvTypedQuery<Rechnungposition> q = new HvTypedQuery<Rechnungposition>(em.createNamedQuery(ByPositionIIdArtikelset)) ;
+		return q.setParameter(1, positionIIdArtikelset) ;
 	}	
 
 	public static List<Rechnungposition> listByPositionIIdArtikelset(EntityManager em, Integer positionIIdArtikelset) {
 		return byPositionIIdArtikelset(em, positionIIdArtikelset).getResultList();
 	}
 
+	public static HvTypedQuery<Rechnungposition> byRechnungIdLieferscheinpositionen(EntityManager em, Integer rechnungId) {
+		HvTypedQuery<Rechnungposition> q = new HvTypedQuery<Rechnungposition>(
+				em.createNamedQuery(ByRechnungIIdLieferscheinpositionen)) ;
+		return q.setParameter("iid", rechnungId) ;
+	}
+	
+	/**
+	 * Eine Liste aller Rechnungspositionen, die eine Lieferscheinpositino sind
+	 * @param em
+	 * @param rechnungId die gewuenschte RechnungId
+	 * @return eine (leere) Liste aller Rechnungpositionen, die einen Lieferschein enthalten
+	 */
+	public static List<Rechnungposition> listByRechnungIdLieferscheinpositionen(EntityManager em, Integer rechnungId) {
+		return byRechnungIdLieferscheinpositionen(em, rechnungId).getResultList() ;
+	}
 }

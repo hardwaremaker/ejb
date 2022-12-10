@@ -49,6 +49,8 @@ public class VkpfartikelpreislisteDto implements Serializable {
 	private String waehrungCNr;
 	private String cFremdsystemnr;
 	
+	
+	
 	private Integer webshopIId;
 	
 	

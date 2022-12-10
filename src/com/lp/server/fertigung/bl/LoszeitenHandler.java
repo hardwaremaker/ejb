@@ -40,6 +40,7 @@ import java.util.Locale;
 import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
 import com.lp.server.auftrag.service.AuftragzeitenDto;
 import com.lp.server.fertigung.service.FertigungFac;
+import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
@@ -262,6 +263,9 @@ public class LoszeitenHandler extends UseCaseHandlerTabelle {
 				rows[row][col++] = null;
 				rows[row][col++] = null;
 
+				rows[row][0]=oAuftragzeitenDto;
+				
+				
 				// Variable row wird in der for-Schleife hochgezaehlt
 				col = 0;
 				iAktuellerAuftrag++; // den naechsten Auftrag der Liste
@@ -284,6 +288,7 @@ public class LoszeitenHandler extends UseCaseHandlerTabelle {
 
 			setTableProperties(false);
 		} catch (Throwable t) {
+			t.printStackTrace();
 			if (t.getCause() instanceof EJBExceptionLP) {
 				throw (EJBExceptionLP) t.getCause();
 			} else {
@@ -326,9 +331,7 @@ public class LoszeitenHandler extends UseCaseHandlerTabelle {
 				personalZeitenDtos = getZeiterfassungFac()
 						.getAllZeitenEinesBeleges(LocaleFac.BELEGART_LOS,
 								new Integer(Integer.parseInt(fkAuftrag.value)),
-								null, null, null, null, false, // order by
-								// artikelcnr
-								true, // order by personal
+								null, null, null, null, ZeiterfassungFac.SORTIERUNG_ZEITDATEN_PERSONAL, // order by personal
 								theClientDto);
 			}
 
@@ -337,9 +340,7 @@ public class LoszeitenHandler extends UseCaseHandlerTabelle {
 				personalZeitenDtos = getZeiterfassungFac()
 						.getAllZeitenEinesBeleges(LocaleFac.BELEGART_LOS,
 								new Integer(Integer.parseInt(fkAuftrag.value)),
-								null, null, null, null, true, // order by
-																// artikelcnr
-								false, // order by personal
+								null, null, null, null, ZeiterfassungFac.SORTIERUNG_ZEITDATEN_ARTIKEL, // order by personal
 								theClientDto);
 			}
 

@@ -38,6 +38,7 @@ import java.sql.Timestamp;
 import javax.ejb.Remote;
 
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.DatumsfilterVonBis;
 import com.lp.server.util.report.JasperPrintLP;
 
 @Remote
@@ -66,37 +67,35 @@ public interface ReklamationReportFac {
 	public static int SORTIERUNG_FEHLERART_MASCHINENGRUPPE_MITARBEITER = 3;
 	public static int SORTIERUNG_FEHLERART_MITARBEITER = 4;
 
-	public JasperPrintLP printReklamationsjournal(Integer kostenstelleIId,
-			java.sql.Timestamp tVon, java.sql.Timestamp tBis, boolean bKunde,
-			boolean bLieferant, boolean bFertigung, boolean bNurOffene,
+	public JasperPrintLP printReklamationsjournal(Integer kostenstelleIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tBis, boolean bKunde, boolean bLieferant, boolean bFertigung, boolean bNurOffene,
 			int iSortierung, TheClientDto theClientDto) throws RemoteException;
 
-	public JasperPrintLP printOffeneReklamationenEinesArtikels(
-			Integer artikelIId, TheClientDto theClientDto);
+	public JasperPrintLP printOffeneReklamationenEinesArtikels(Integer artikelIId, boolean bNurOffene,
+			DatumsfilterVonBis vonbis, TheClientDto theClientDto);
 
-	public JasperPrintLP printReklamation(Integer reklamationIId,boolean druckeUnterartLieferant,
+	public JasperPrintLP printReklamation(Integer reklamationIId, boolean druckeUnterartLieferant,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public JasperPrintLP printLieferantentermintreue(Timestamp tVon,
-			Timestamp tBis, Integer lieferantIId, TheClientDto theClientDto)
-			throws RemoteException;
+	public JasperPrintLP printLieferantentermintreue(Timestamp tVon, Timestamp tBis, Integer lieferantIId,
+			TheClientDto theClientDto) throws RemoteException;
 
-	public JasperPrintLP printLieferantenbeurteilung(Timestamp tVon,
-			Timestamp tBis, Integer LieferantIId, Integer brancheIId, Integer liefergruppeIId,  TheClientDto theClientDto)
-			throws RemoteException;
+	public JasperPrintLP printLieferantenbeurteilung(Timestamp tVon, Timestamp tBis, Integer LieferantIId,
+			Integer brancheIId, Integer liefergruppeIId, Integer partnerklasseIId, boolean bVerdichtet,
+			boolean bDokumentenablage, TheClientDto theClientDto) throws RemoteException;
 
-	public JasperPrintLP printFehlerarten(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, boolean bKunde, boolean bLieferant,
-			boolean bFertigung, Integer kundeIId, int iGruppierung,
-			boolean bNurBerechtigte, TheClientDto theClientDto);
+//	public JasperPrintLP printFehlerarten(java.sql.Timestamp tVon,
+//			java.sql.Timestamp tBis, boolean bKunde, boolean bLieferant,
+//			boolean bFertigung, Integer kundeIId, int iGruppierung,
+//			boolean bNurBerechtigte, TheClientDto theClientDto);
 
-	public JasperPrintLP printMitarbeiterreklamation(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, boolean bKunde, boolean bLieferant,
-			boolean bFertigung, Integer kundeIId, boolean bNurBerechtigte,
+	JasperPrintLP printFehlerarten(ReklamationFehlerartenJournalKriterienDto kritDto, TheClientDto theClientDto);
+
+	public JasperPrintLP printMitarbeiterreklamation(java.sql.Timestamp tVon, java.sql.Timestamp tBis, boolean bKunde,
+			boolean bLieferant, boolean bFertigung, Integer kundeIId, boolean bNurBerechtigte,
 			TheClientDto theClientDto);
 
-	public JasperPrintLP printMaschinenreklamation(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, boolean bKunde, boolean bLieferant,
-			boolean bFertigung, Integer kundeIId, boolean bNurBerechtigte,
+	public JasperPrintLP printMaschinenreklamation(java.sql.Timestamp tVon, java.sql.Timestamp tBis, boolean bKunde,
+			boolean bLieferant, boolean bFertigung, Integer kundeIId, boolean bNurBerechtigte,
 			TheClientDto theClientDto);
 }

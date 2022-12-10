@@ -47,7 +47,6 @@ public class MwstsatzDtoAssembler {
 			mwstsatzDto.setFMwstsatz(mwstsatz.getFMwstsatz());
 			mwstsatzDto.setIIMwstsatzbezId(mwstsatz.getMwstsatzbezIId());
 			mwstsatzDto.setDGueltigab(mwstsatz.getDGueltigab());
-			mwstsatzDto.setIFibumwstcode(mwstsatz.getIFibumwstcode());
 		}
 		return mwstsatzDto;
 	}

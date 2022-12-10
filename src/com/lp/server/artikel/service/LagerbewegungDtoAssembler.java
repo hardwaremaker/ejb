@@ -45,27 +45,39 @@ public class LagerbewegungDtoAssembler {
 		if (lagerbewegung != null) {
 			lagerbewegungDto.setIId(lagerbewegung.getIId());
 			lagerbewegungDto.setCBelegartnr(lagerbewegung.getCBelegartnr());
-			lagerbewegungDto.setIBelegartpositionid(lagerbewegung.getIBelegartpositionid());
+			lagerbewegungDto.setIBelegartpositionid(lagerbewegung
+					.getIBelegartpositionid());
 			lagerbewegungDto.setIBelegartid(lagerbewegung.getIBelegartid());
 			lagerbewegungDto.setIIdBuchung(lagerbewegung.getIIdBuchung());
 			lagerbewegungDto.setLagerIId(lagerbewegung.getLagerIId());
 			lagerbewegungDto.setArtikelIId(lagerbewegung.getArtikelIId());
 			lagerbewegungDto.setNMenge(lagerbewegung.getNMenge());
-			lagerbewegungDto.setPersonalIIdMengegeaendert(lagerbewegung.getPersonalIIdMengegeaendert());
+			lagerbewegungDto.setPersonalIIdMengegeaendert(lagerbewegung
+					.getPersonalIIdMengegeaendert());
 			lagerbewegungDto.setTBuchungszeit(lagerbewegung.getTBuchungszeit());
 			lagerbewegungDto.setTBelegdatum(lagerbewegung.getTBelegdatum());
-			lagerbewegungDto.setCSeriennrchargennr(lagerbewegung.getCSeriennrchargennr());
-			lagerbewegungDto.setNVerkaufspreis(lagerbewegung.getNVerkaufspreis());
-			lagerbewegungDto.setPersonalIIdVerkaufspreisgeaendert(lagerbewegung.getPersonalIIdVerkaufspreisgeaendert());
-			lagerbewegungDto.setNEinstandspreis(lagerbewegung.getNEinstandspreis());
-			lagerbewegungDto.setPersonalIIdEinstandspreisgeaendert(lagerbewegung.getPersonalIIdEinstandspreisgeaendert());
-			lagerbewegungDto.setNGestehungspreis(lagerbewegung.getNGestehungspreis());
+			lagerbewegungDto.setCSeriennrchargennr(lagerbewegung
+					.getCSeriennrchargennr());
+			lagerbewegungDto.setNVerkaufspreis(lagerbewegung
+					.getNVerkaufspreis());
+			lagerbewegungDto.setPersonalIIdVerkaufspreisgeaendert(lagerbewegung
+					.getPersonalIIdVerkaufspreisgeaendert());
+			lagerbewegungDto.setNEinstandspreis(lagerbewegung
+					.getNEinstandspreis());
+			lagerbewegungDto
+					.setPersonalIIdEinstandspreisgeaendert(lagerbewegung
+							.getPersonalIIdEinstandspreisgeaendert());
+			lagerbewegungDto.setNGestehungspreis(lagerbewegung
+					.getNGestehungspreis());
 			lagerbewegungDto.setBAbgang(lagerbewegung.getBAbgang());
-			lagerbewegungDto.setBVollstaendigverbraucht(lagerbewegung.getBVollstaendigverbraucht());
+			lagerbewegungDto.setBVollstaendigverbraucht(lagerbewegung
+					.getBVollstaendigverbraucht());
 			lagerbewegungDto.setBHistorie(lagerbewegung.getBHistorie());
 			lagerbewegungDto.setLandIId(lagerbewegung.getLandIId());
 			lagerbewegungDto.setHerstellerIId(lagerbewegung.getHerstellerIId());
 			lagerbewegungDto.setCVersion(lagerbewegung.getCVersion());
+			lagerbewegungDto.setNGebindemenge(lagerbewegung.getNGebindemenge());
+			lagerbewegungDto.setGebindeIId(lagerbewegung.getGebindeIId());
 		}
 		return lagerbewegungDto;
 	}

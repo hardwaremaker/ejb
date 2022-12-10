@@ -33,11 +33,47 @@
 package com.lp.server.projekt.service;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+
+import com.lp.server.personal.service.TelefonzeitenDto;
+import com.lp.service.BelegpositionDto;
 
 public class ProjektVerlaufHelperDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private Integer iEbene;
+	
+	private Integer partnerIId;
+
+	public Integer getPartnerIId() {
+		return partnerIId;
+	}
+
+	public void setPartnerIId(Integer partnerIId) {
+		this.partnerIId = partnerIId;
+	}
+
+	private ArrayList<BelegpositionDto> belegpositionenDtos;
+
+	public ArrayList<BelegpositionDto> getBelegpositionenDtos() {
+		return belegpositionenDtos;
+	}
+
+	public void setBelegpositionenDtos(
+			ArrayList<BelegpositionDto> belegpositionenDtos) {
+		this.belegpositionenDtos = belegpositionenDtos;
+	}
+
+	public void setBelegpositionenDtos(BelegpositionDto[] belegpositionenDtos) {
+		this.belegpositionenDtos = new ArrayList<BelegpositionDto>();
+
+		if (belegpositionenDtos != null) {
+			for (int i = 0; i < belegpositionenDtos.length; i++) {
+				this.belegpositionenDtos.add(belegpositionenDtos[i]);
+			}
+		}
+
+	}
 
 	public ProjektVerlaufHelperDto(Integer iEbene, Object oBelegDto) {
 		this.iEbene = iEbene;
@@ -50,6 +86,17 @@ public class ProjektVerlaufHelperDto implements Serializable {
 
 	public void setiEbene(Integer iEbene) {
 		this.iEbene = iEbene;
+	}
+
+	public ArrayList<TelefonzeitenDto> telefonzeitenZuBeleg;
+	
+	
+	public ArrayList<TelefonzeitenDto> getTelefonzeitenZuBeleg() {
+		return telefonzeitenZuBeleg;
+	}
+
+	public void setTelefonzeitenZuBeleg(ArrayList<TelefonzeitenDto> telefonzeitenZuBeleg) {
+		this.telefonzeitenZuBeleg = telefonzeitenZuBeleg;
 	}
 
 	public Object getBelegDto() {

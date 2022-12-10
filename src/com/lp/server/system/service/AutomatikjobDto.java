@@ -34,6 +34,7 @@ package com.lp.server.system.service;
 
 import java.io.Serializable;
 import java.sql.Date;
+import java.sql.Timestamp;
 
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
@@ -46,8 +47,8 @@ public class AutomatikjobDto implements Serializable {
 	private Integer iId;
 	private String cName;
 	private Integer bActive;
-	private Date dLastperformed;
-	private Date dNextperform;
+	private Timestamp dLastperformed;
+	private Timestamp dNextperform;
 	private Integer iIntervall;
 	private Integer bMonthjob;
 	private Integer iSort;
@@ -55,7 +56,8 @@ public class AutomatikjobDto implements Serializable {
 	private String cBeschreibung;
 	private Integer bPerformOnNonWOrkingDays;
 	private String cMandantCNr;
-
+	private Integer iScheduler;
+	
 	public Integer getIId() {
 		return iId;
 	}
@@ -80,19 +82,19 @@ public class AutomatikjobDto implements Serializable {
 		this.bActive = bActive;
 	}
 
-	public Date getDLastperformed() {
+	public Timestamp getDLastperformed() {
 		return dLastperformed;
 	}
 
-	public void setDLastperformed(Date dLastperformed) {
+	public void setDLastperformed(Timestamp dLastperformed) {
 		this.dLastperformed = dLastperformed;
 	}
 
-	public Date getDNextperform() {
+	public Timestamp getDNextperform() {
 		return dNextperform;
 	}
 
-	public void setDNextperform(Date dNextperform) {
+	public void setDNextperform(Timestamp dNextperform) {
 		this.dNextperform = dNextperform;
 	}
 
@@ -241,5 +243,13 @@ public class AutomatikjobDto implements Serializable {
 		returnStringBuffer.append("cMandantCNr:").append(cMandantCNr);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
+	}
+
+	public Integer getIScheduler() {
+		return iScheduler;
+	}
+
+	public void setIScheduler(Integer iScheduler) {
+		this.iScheduler = iScheduler;
 	}
 }

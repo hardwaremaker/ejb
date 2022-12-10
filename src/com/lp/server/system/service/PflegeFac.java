@@ -32,22 +32,49 @@
  *******************************************************************************/
 package com.lp.server.system.service;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 import javax.ejb.Remote;
+
+import com.lp.server.util.DatumsfilterVonBis;
 
 @Remote
 public interface PflegeFac {
 
 	public String sp2486(Set<Integer> artikelId, TheClientDto theClientDto);
+
 	public void sp2597(TheClientDto theClientDto);
+
 	public void pj18612(TheClientDto theClientDto);
+
 	public Integer holeKopiertenSpediteurPJ18612(Integer spediteurlIId_001,
 			TheClientDto theClientDto);
+
 	public Integer holeKopiertesZahlungszielPJ18612(
 			Integer zahlungszielIId_001, TheClientDto theClientDto);
+
 	public Integer holeKopiertenMwstsatzbezPJ18612(Integer mwstsatzbezIId_001,
 			TheClientDto theClientDto);
+
 	public Integer holeKopierteLieferartPJ18612(Integer lieferantIId_001,
 			TheClientDto theClientDto);
+
+	public ArrayList<String> loseMitErledigtenAuftraegenErledigen(
+			TheClientDto theClientDto);
+
+	public int migriereChargeneigenschaftenUndChargenDokumenteWgSP4129(
+			TheClientDto theClientDto);
+	
+	public void pj19519(TheClientDto theClientDto);
+	
+	public ArrayList<GeaenderteChargennummernDto> automatischeChargennummernAusWEPsNachtragen(String artikelNummerVon, String artikelnummerBis,DatumsfilterVonBis dVonBis,  TheClientDto theClientDto);
+	
+	public void telefonnummerntabelleSynchronisieren(TheClientDto theClientDto);
+
+	public void textAusPdfInXKommentarAktualisieren(TheClientDto theClientDto);
+	
+	public ArrayList<String> sp9000(boolean bFalscheAnsprechpartnerLeeren,TheClientDto theClientDto);
+	
+	
 }

@@ -40,10 +40,16 @@ import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
-@NamedQueries( { @NamedQuery(name = "BranchefindByCNr", query = "SELECT OBJECT(c) FROM Branche c WHERE c.cNr = ?1") })
+
+import com.lp.server.util.ICBez;
+import com.lp.server.util.ICNr;
+import com.lp.server.util.IIId;
+
+@NamedQueries({ @NamedQuery(name = "BranchefindByCNr", query = "SELECT OBJECT(c) FROM Branche c WHERE c.cNr = ?1"),
+		@NamedQuery(name = "BranchefindAll", query = "SELECT OBJECT(c) FROM Branche c") })
 @Entity
 @Table(name = "PART_BRANCHE")
-public class Branche implements Serializable {
+public class Branche implements Serializable, IIId, ICNr {
 
 	@Id
 	@Column(name = "I_ID")
@@ -53,10 +59,11 @@ public class Branche implements Serializable {
 	private String cNr;
 
 	private static final long serialVersionUID = 1L;
+
 	public Branche() {
 		// TODO Auto-generated constructor stub
 	}
-	
+
 	public Branche(String cNr, Integer iId) {
 		setCNr(cNr);
 		setIId(iId);

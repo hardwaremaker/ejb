@@ -97,13 +97,15 @@ public class TheClientHandler extends UseCaseHandler {
 				rows[row][col++] = theClient.getCnr();
 				rows[row][col++] = theClient.getC_benutzername().trim();
 				rows[row][col++] = theClient.getC_mandant();
-				rows[row][col++] = theClient.getFlrsystemrolle() != null ? theClient.getFlrsystemrolle().getC_bez() : "";
+				rows[row][col++] = theClient.getFlrsystemrolle() != null ? theClient
+						.getFlrsystemrolle().getC_bez() : "";
 				rows[row][col++] = theClient.getT_loggedin() == null ? null
 						: new java.sql.Timestamp(theClient.getT_loggedin()
 								.getTime());
 				rows[row][col++] = theClient.getT_loggedout() == null ? null
 						: new java.sql.Timestamp(theClient.getT_loggedout()
 								.getTime());
+				rows[row][col++] = theClient.getI_rmiport();
 				row++;
 				col = 0;
 			}
@@ -266,7 +268,7 @@ public class TheClientHandler extends UseCaseHandler {
 			// flr: 6 die javadatentypen der aller spalten
 					new Class[] { String.class, String.class, Locale.class,
 							Locale.class, java.sql.Timestamp.class,
-							java.sql.Timestamp.class },
+							java.sql.Timestamp.class, java.lang.Integer.class },
 					// flr: 7 die spaltenueberschriften - clienttabelle
 					new String[] {
 							"User-ID",
@@ -279,10 +281,13 @@ public class TheClientHandler extends UseCaseHandler {
 							getTextRespectUISpr("client.logondatum",
 									mandantCNr, locUI),
 							getTextRespectUISpr("client.logoutdatum",
-									mandantCNr, locUI), },
+									mandantCNr, locUI),
+							getTextRespectUISpr("client.rmiport", mandantCNr,
+									locUI), },
 
 					new int[] {
 							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -291,11 +296,10 @@ public class TheClientHandler extends UseCaseHandler {
 
 					// flr: 8 die hibernatespaltenname
 					new String[] { "cnr",
-							TheClientFac.FLRSPALTE_C_BENUTZERNAME,
-							"c_mandant",
+							TheClientFac.FLRSPALTE_C_BENUTZERNAME, "c_mandant",
 							TheClientFac.FLRSPALTE_SYSTEMROLLE_C_BEZ,
 							TheClientFac.FLRSPALTE_T_LOGGEDIN,
-							TheClientFac.FLRSPALTE_T_LOGGEDOUT }));
+							TheClientFac.FLRSPALTE_T_LOGGEDOUT, "i_rmiport" }));
 		}
 		return super.getTableInfo();
 	}

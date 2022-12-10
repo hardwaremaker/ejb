@@ -33,6 +33,7 @@
 package com.lp.server.benutzer.service;
 
 import java.util.Locale;
+import java.util.Set;
 
 import javax.ejb.Remote;
 
@@ -44,6 +45,9 @@ public interface BenutzerServicesFac {
 
 	public boolean hatRecht(String rechtCNr, TheClientDto theClientDto);
 
+	public boolean hatRechtInZielmandant(String rechtCNr,
+			String mandantCNrZiel, TheClientDto theClientDto);
+	
 	public void reloadRolleRechte();
 
 	public String getTextRespectUISpr(String sTokenI, String mandantCNr,
@@ -57,4 +61,12 @@ public interface BenutzerServicesFac {
 	public ParametermandantDto getMandantparameter(String mandant_c_nr,
 			String cKategorieI, String mandantparameter_c_nr,
 			java.sql.Timestamp tZeitpunkt);
+	
+	public boolean isMSSQL();
+	
+	/**
+	 * Set aller Parametermandaten_c_nr, die Zeitabhaenige Werte enthalten koennen
+	 * @return
+	 */
+	public Set<String> getMandantparameterZeitabhaenigCNr();
 }

@@ -77,7 +77,8 @@ public class PositionNumberHandlerPaged extends PositionNumberHandler {
 				boolean hasNumber = hasPositionNummer(adapter) ;
 				if(hasNumber) {
 					if(null == nr) {
-						nr = super.getPositionNummer(adapter.getIId(), adapter) ;
+						nr = initializeFirstPositionNummer(adapter) ;
+//						nr = super.getPositionNummer(adapter.getIId(), adapter) ;
 					} else {
 						++nr ;
 					}
@@ -85,5 +86,9 @@ public class PositionNumberHandlerPaged extends PositionNumberHandler {
 				}
 			}
 		}		
+	}
+	
+	protected Integer initializeFirstPositionNummer(PositionNumberAdapter  adapter) {
+		return super.getPositionNummer(adapter.getIId(), adapter) ;
 	}
 }

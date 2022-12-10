@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.eingangsrechnung.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Iterator;
@@ -47,11 +48,10 @@ import org.hibernate.SessionFactory;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLRZahlungsvorschlag;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
+import com.lp.server.eingangsrechnung.service.ErZahlungsempfaenger;
 import com.lp.server.finanz.service.FinanzFac;
-import com.lp.server.partner.service.BankDto;
 import com.lp.server.partner.service.LieferantFac;
-import com.lp.server.partner.service.PartnerbankDto;
-import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.EingangsrechnungId;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -111,6 +111,7 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount];
+			String[] tooltipData = new String[resultList.size()];
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
@@ -146,27 +147,33 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 				rows[row][col++] = new Boolean(Helper.short2Boolean(zv
 						.getB_bezahlen()));
 				// hat der LF eine Bankverbindung?
-				Integer iPartnerIId = er.getFlrlieferant().getFlrpartner()
-						.getI_id();
-				PartnerbankDto[] bvLF = getBankFac()
-						.partnerbankFindByPartnerIId(iPartnerIId, theClientDto);
-				if (bvLF == null || bvLF.length == 0) {
-					rows[row][col++] = "";
-				} else {
-					BankDto bankDto = getBankFac().bankFindByPrimaryKey(
-							bvLF[0].getBankPartnerIId(), theClientDto);
-					rows[row][col++] = bankDto.getPartnerDto()
+				ErZahlungsempfaenger empfaenger = getEingangsrechnungFac().getErZahlungsempfaenger(
+						new EingangsrechnungId(er.getI_id()), theClientDto);
+				if (empfaenger.exists()) {
+					rows[row][col++] = empfaenger.getBankDto().getPartnerDto()
 							.getCName1nachnamefirmazeile1();
-
-					rows[row][col++] = bvLF[0].getCIban();
-					rows[row][col++] = bankDto.getCBic();
-
+					rows[row][col++] = empfaenger.getPartnerbankDto().getCIban();
+					rows[row][col++] = empfaenger.getBankDto().getCBic();
+					if (empfaenger.isAbweichend()) {
+						tooltipData[row] = getTextRespectUISpr("er.zahlungsvorschlag.abweichendebankverbindung", 
+								theClientDto.getMandant(), theClientDto.getLocUi(), 
+								empfaenger.getPartnerDto().formatFixName2Name1());
+					}
+				} else {
+					rows[row][col++] = "";
+					rows[row][col++] = "";
+					rows[row][col++] = "";
 				}
+				
+				if (zv.getN_zahlbetrag().doubleValue() < 0 && Helper.short2Boolean(zv.getB_bezahlen())) {
+					rows[row][col++] = Color.RED;
+				}
+				
 				row++;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+					endIndex, 0, tooltipData);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -368,7 +375,7 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							java.util.Date.class, String.class,
 							BigDecimal.class, String.class, String.class,
 							Boolean.class, String.class, String.class,
-							String.class },
+							String.class,Color.class },
 					new String[] {
 							"i_id",
 							"",
@@ -392,7 +399,7 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.bankverbindung",
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.iban", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bic", mandantCNr, locUI) },
+							getTextRespectUISpr("lp.bic", mandantCNr, locUI),"" },
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, 1,
 							QueryParameters.FLR_BREITE_M, 3,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -402,7 +409,7 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST, 2,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 					new String[] {
 							EingangsrechnungFac.FLR_ZV_I_ID,
 							EingangsrechnungFac.FLR_ZV_FLREINGANGSRECHNUNG
@@ -425,7 +432,7 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
 							EingangsrechnungFac.FLR_ZV_B_BEZAHLEN,
 							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR }));
+							Facade.NICHT_SORTIERBAR,"" }));
 		}
 		return super.getTableInfo();
 	}

@@ -35,6 +35,8 @@ package com.lp.server.system.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import com.lp.server.util.ICNr;
+
 public class KostenstelleDto implements Serializable {
 	/**
 	 * 

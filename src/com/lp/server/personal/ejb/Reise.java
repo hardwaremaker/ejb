@@ -102,9 +102,18 @@ public class Reise implements Serializable {
 	@Column(name = "BELEGART_C_NR")
 	private String belegartCNr;
 	
-	@Column(name = "F_FAKTOR")
-	private Double fFaktor;
+	@Column(name = "I_MITFAHRER")
+	private Integer iMitfahrer;
 	
+	
+	public Integer getIMitfahrer() {
+		return iMitfahrer;
+	}
+
+	public void setIMitfahrer(Integer iMitfahrer) {
+		this.iMitfahrer = iMitfahrer;
+	}
+
 	public Integer getFahrzeugIId() {
 		return fahrzeugIId;
 	}
@@ -128,15 +137,41 @@ public class Reise implements Serializable {
 	public void setBelegartCNr(String belegartCNr) {
 		this.belegartCNr = belegartCNr;
 	}
+	
+	@Column(name = "PERSONAL_I_ID_ERLEDIGT")
+	private Integer personalIIdErledigt;
+	
+	@Column(name = "T_ERLEDIGT")
+	private Timestamp tErledigt;
+	
+	@Column(name = "F_VERRECHENBAR")
+	private Double fVerrechenbar;
+	
 
-	public Double getFFaktor() {
-		return fFaktor;
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
 	}
 
-	public void setFFaktor(Double fFaktor) {
-		this.fFaktor = fFaktor;
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
 	}
 
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
+	
 	private static final long serialVersionUID = 1L;
 
 	public Reise() {

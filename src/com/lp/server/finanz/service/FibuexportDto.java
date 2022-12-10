@@ -2,36 +2,37 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.service;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -46,23 +47,23 @@ import com.lp.server.system.service.ZahlungszielDto;
  * <p>
  * Diese Klasse kuemmert sich um den datenexport in eine externe fibu
  * </p>
- * 
+ *
  * <p>
  * Copyright Logistik Pur Software GmbH (c) 2004-2007
  * </p>
- * 
+ *
  * <p>
  * Erstellung: Martin Bluehweis; 30.09.05
  * </p>
- * 
+ *
  * <p>
- * 
+ *
  * @author $Author: adi $
  *         </p>
- * 
+ *
  * @version not attributable Date $Date: 2012/06/20 12:19:51 $
  */
-public class FibuexportDto {
+public class FibuexportDto implements Serializable{
 	private KontoDto konto = null;
 	private KontoDto gegenkonto = null;
 	private String belegnummer = null;
@@ -118,8 +119,16 @@ public class FibuexportDto {
 	private String sExterneBelegnummer = null;
 	private Integer debitorenKontoIIdUebersteuert = null;
 	private boolean bReverseCharge = false;
+	private String cKommentar = null;
+	private Integer reversechargeartId ;
+	private UstWarnungDto ustWarnungDto = null;
+	private Date faelligkeitsdatum = null;
+	private String bestellnummer = null;
+	private boolean bAnzahlungsbeleg = false;
+	private boolean bSchlussrechnungsbeleg = false;
 	
 	public FibuexportDto() {
+		setUstWarnungDto(new UstWarnungDto());
 	}
 
 	public void setGkto(KontoDto gkto) {
@@ -157,7 +166,7 @@ public class FibuexportDto {
 	public void setSteuer(BigDecimal steuer) {
 		this.steuerbetrag = steuer;
 	}
-	
+
 	public void setSteuerFW(BigDecimal steuerFW) {
 		this.steuerbetragFW = steuerFW;
 	}
@@ -377,7 +386,7 @@ public class FibuexportDto {
 			return "";
 		}
 	}
-	
+
 	public String getSteuerbetragFW() {
 		if (steuerbetragFW != null) {
 			return formatNumber(steuerbetragFW);
@@ -389,9 +398,10 @@ public class FibuexportDto {
 	public BigDecimal getSteuerBD() {
 		return steuerbetrag;
 	}
-	
+
 	public BigDecimal getSteuerFWBD() {
-		return steuerbetragFW;
+		return steuerbetragFW != null ? steuerbetragFW : BigDecimal.ZERO;
+//		return steuerbetragFW;
 	}
 
 	public String getPeriode() {
@@ -453,7 +463,7 @@ public class FibuexportDto {
 			return "";
 		}
 	}
-	
+
 	public String getPositionsbetragLeitwaehrung(){
 		if (habenbetrag != null) {
 			return formatNumber(habenbetrag.add(this.getSteuerBD()));
@@ -461,11 +471,11 @@ public class FibuexportDto {
 			return "";
 		}
 	}
-	
+
 	public BigDecimal getPositionsbetragLeitwaehrungBD(){
 			return habenbetrag.add(this.getSteuerBD());
 	}
-	
+
 	public String getPositionsbetragBelegwaehrung(){
 		if(habenbetragFW!=null){
 			return formatNumber(habenbetragFW.add(this.getSteuerFWBD()));
@@ -473,7 +483,7 @@ public class FibuexportDto {
 			return "";
 		}
 	}
-	
+
 
 
 	public String getHabenbetragFW() {
@@ -483,8 +493,8 @@ public class FibuexportDto {
 			return "";
 		}
 	}
-	
-	
+
+
 
 	public BigDecimal getHabenbetragFWBD() {
 		return habenbetragFW;
@@ -585,4 +595,59 @@ public class FibuexportDto {
 		return bReverseCharge;
 	}
 
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
+	public void setCKommentar(String cKommentar) {
+		this.cKommentar = cKommentar;
+	}
+
+	public Integer getReversechargeartId() {
+		return reversechargeartId;
+	}
+
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId;
+	}
+
+	public UstWarnungDto getUstWarnungDto() {
+		return ustWarnungDto;
+	}
+
+	public void setUstWarnungDto(UstWarnungDto ustWarnungDto) {
+		this.ustWarnungDto = ustWarnungDto;
+	}
+	
+	public Date getFaelligkeitsdatum() {
+		return faelligkeitsdatum;
+	}
+	
+	public void setFaelligkeitsdatum(Date faelligkeitsdatum) {
+		this.faelligkeitsdatum = faelligkeitsdatum;
+	}
+	
+	public String getBestellnummer() {
+		return bestellnummer;
+	}
+	
+	public void setBestellnummer(String bestellnummer) {
+		this.bestellnummer = bestellnummer;
+	}
+	
+	public void setAnzahlungsbeleg(boolean bAnzahlungsbeleg) {
+		this.bAnzahlungsbeleg = bAnzahlungsbeleg;
+	}
+	
+	public boolean isAnzahlungsbeleg() {
+		return bAnzahlungsbeleg;
+	}
+	
+	public void setSchlussrechnungsbeleg(boolean bSchlussrechnungsbeleg) {
+		this.bSchlussrechnungsbeleg = bSchlussrechnungsbeleg;
+	}
+	
+	public boolean isSchlussrechnungsbeleg() {
+		return bSchlussrechnungsbeleg;
+	}
 }

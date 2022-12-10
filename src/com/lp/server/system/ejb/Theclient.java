@@ -37,20 +37,42 @@ import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+
+import com.lp.server.benutzer.ejb.Systemrolle;
 
 @NamedQueries( {
 		@NamedQuery(name = "TheClientfindByUserLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.cNr=?1 AND o.tLoggedin <?2 AND o.tLoggedout IS NULL"),
 		@NamedQuery(name = "TheClientfindByTLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.tLoggedin>?1 AND o.tLoggedin <?2"),
 		@NamedQuery(name = "TheClientfindByCBenutzernameLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.cBenutzername=?1 AND o.tLoggedin >?2 AND o.tLoggedout IS NULL"),
-		@NamedQuery(name = "TheClientfindLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.tLoggedout IS NULL")
+		@NamedQuery(name = "TheClientfindLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.tLoggedout IS NULL"),
+		@NamedQuery(name = "TheClientsMandantLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o " +
+				"WHERE o.tLoggedout IS NULL AND o.systemrolle.iMaxUsers IS NULL " + 
+				"AND o.hvmalizenzId IS NULL AND o.tLoggedin >= :today " +
+				"ORDER BY o.cBenutzername, o.tLoggedin"),
+		@NamedQuery(name = "TheClientsRolleLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o " +
+				"WHERE o.tLoggedout IS NULL AND o.systemrolleIId = :rolle " + 
+				"AND o.hvmalizenzId IS NULL AND o.tLoggedin >= :today"),
+		@NamedQuery(name = "TheClientCountMandantLoggedIn", query = "SELECT COUNT(DISTINCT o.cBenutzername) FROM Theclient o " +
+				"WHERE o.tLoggedout IS NULL AND o.systemrolle.iMaxUsers IS NULL " + 
+				"AND o.hvmalizenzId IS NULL AND o.tLoggedin >= :today"),
+		@NamedQuery(name = "TheClientCountRolleLoggedIn", query = "SELECT COUNT(DISTINCT o.cBenutzername) FROM Theclient o " +
+				"WHERE o.tLoggedout IS NULL AND o.systemrolleIId = :rolle " + 
+				"AND o.hvmalizenzId IS NULL AND o.tLoggedin >= :today"),
+		@NamedQuery(name = "TheClientCountHvmaLoggedIn", query = "SELECT COUNT(DISTINCT o.cBenutzername) FROM Theclient o " +
+				"WHERE o.tLoggedout IS NULL " + 
+				"AND o.hvmalizenzId = :licenceId AND o.tLoggedin >= :today"),
 		})
 @Entity
 @Table(name = "LP_THECLIENT")
 public class Theclient implements Serializable {
+	private static final long serialVersionUID = 1L;
 	
 	@Id
 	@Column(name = "C_NR")
@@ -91,12 +113,19 @@ public class Theclient implements Serializable {
 	
 	@Column(name = "SYSTEMROLLE_I_ID")
 	private Integer systemrolleIId;
+	
+	@Column(name = "I_RMIPORT")
+	private Integer iRmiport;
 
-	private static final long serialVersionUID = 1L;
-
-	public Theclient() {
-		super();
-	}
+	@Column(name = "HVMALIZENZ_I_ID")
+	private Integer hvmalizenzId;
+	
+	@Column(name = "HVMARESOURCE")
+	private String hvmaResource;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "SYSTEMROLLE_I_ID", insertable=false, updatable=false)
+	private Systemrolle systemrolle;
 
 	public Theclient(String user,
 			String benutzername,
@@ -122,6 +151,18 @@ public class Theclient implements Serializable {
 		setSystemrolleIId(systemrolleIId);
 	}
 	
+	public Theclient() {
+		super();
+	}
+
+	public Integer getIRmiport() {
+		return iRmiport;
+	}
+
+	public void setIRmiport(Integer iRmiport) {
+		this.iRmiport = iRmiport;
+	}
+
 	public Integer getSystemrolleIId() {
 		return systemrolleIId;
 	}
@@ -226,4 +267,19 @@ public class Theclient implements Serializable {
 		this.tLoggedout = tLoggedout;
 	}
 
+	public Integer getHvmalizenIId() {
+		return this.hvmalizenzId;
+	}
+	
+	public void setHvmalizenzIId(Integer hvmalizenzId) {
+		this.hvmalizenzId = hvmalizenzId;
+	}
+	
+	public String getHvmaResource() {
+		return this.hvmaResource;
+	}
+	
+	public void setHvmaResource(String resource) {
+		this.hvmaResource = resource;
+	}
 }

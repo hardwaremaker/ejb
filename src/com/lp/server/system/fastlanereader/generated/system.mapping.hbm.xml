@@ -19,9 +19,10 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">--> 
 <!-- flr: 1 so ein file anlegen -->
 
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="com.lp.server.system.fastlanereader.generated">
 
 	<class name="FLRTheClient" table="LP_THECLIENT">
@@ -30,20 +31,24 @@
 			<generator class="native" />
 		</id>
 		<!-- flr: 3 alle jene spalten die du brauchst; li: hibernatename re: spaltenname -->
-		<property name="c_benutzername" column="C_BENUTZERNAME" type="java.lang.String"
-			not-null="true" />
-		<property name="c_mandant" column="C_MANDANT" type="java.lang.String"
-			not-null="true" />
-		<property name="i_personal" column="I_PERSONAL" type="java.lang.Integer"
-			not-null="true" />
-		<property name="c_uisprache" column="C_UILOCALE" type="java.lang.String"
-			not-null="true" />
+		<property name="c_benutzername" column="C_BENUTZERNAME"
+			type="java.lang.String" not-null="true" />
+		<property name="c_mandant" column="C_MANDANT"
+			type="java.lang.String" not-null="true" />
+		<property name="i_personal" column="I_PERSONAL"
+			type="java.lang.Integer" not-null="true" />
+		<property name="c_uisprache" column="C_UILOCALE"
+			type="java.lang.String" not-null="true" />
 		<property name="c_konzernsprache" column="C_KONZERNLOCALE"
 			type="java.lang.String" not-null="true" />
-		<property name="t_loggedin" column="T_LOGGEDIN" type="java.sql.Timestamp"
-			not-null="true" />
-		<property name="t_loggedout" column="T_LOGGEDOUT" type="java.sql.Timestamp"
-			not-null="true" />
+		<property name="t_loggedin" column="T_LOGGEDIN"
+			type="java.sql.Timestamp" not-null="true" />
+		<property name="t_loggedout" column="T_LOGGEDOUT"
+			type="java.sql.Timestamp" not-null="true" />
+		<property name="i_rmiport" column="I_RMIPORT"
+			type="java.lang.Integer" not-null="true" />
+		<property name="hvmalizenz_IId" column="HVMALIZENZ_I_ID"
+			type="java.lang.Integer" />
 		<many-to-one name="flrsystemrolle"
 			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
 			column="SYSTEMROLLE_I_ID" insert="false" update="false" />
@@ -54,8 +59,8 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_name" column="C_NAME" type="java.lang.String"
-			not-null="true" />
+		<property name="c_name" column="C_NAME"
+			type="java.lang.String" not-null="true" />
 	</class>
 
 
@@ -64,9 +69,34 @@
 			<generator class="native" />
 		</id>
 		<property name="c_lkz" column="C_LKZ" type="java.lang.String" />
-		<property name="c_name" column="C_NAME" type="java.lang.String" />
-		<property name="c_telvorwahl" column="C_TELVORWAHL" type="java.lang.String" />
-		<property name="waehrung_c_nr" column="WAEHRUNG_C_NR" type="java.lang.String" />
+		<property name="c_name" column="C_NAME"
+			type="java.lang.String" />
+		<property name="c_telvorwahl" column="C_TELVORWAHL"
+			type="java.lang.String" />
+		<property name="waehrung_c_nr" column="WAEHRUNG_C_NR"
+			type="java.lang.String" />
+
+		<property name="b_praeferenzbeguenstigt" column="B_PRAEFERENZBEGUENSTIGT"
+			type="java.lang.Short" />
+
+		<set name="spr_set" inverse="true">
+			<key column="LAND_I_ID" />
+			<one-to-many
+				class="com.lp.server.system.fastlanereader.generated.FLRLandspr" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+
+	</class>
+
+	<class name="FLRLandspr" table="LP_LANDSPR">
+		<composite-id>
+			<key-many-to-one name="land" column="LAND_I_ID"
+				class="com.lp.server.system.fastlanereader.generated.FLRLand" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
 
 	<class name="FLRLandplzort" table="LP_LANDPLZORT">
@@ -76,26 +106,29 @@
 		<property name="c_plz" column="C_PLZ" type="java.lang.String" />
 
 		<many-to-one name="flrort"
-			class="com.lp.server.system.fastlanereader.generated.FLROrt" column="ORT_I_ID"
-			insert="false" update="false" />
+			class="com.lp.server.system.fastlanereader.generated.FLROrt"
+			column="ORT_I_ID" insert="false" update="false" />
 		<many-to-one name="flrland"
-			class="com.lp.server.system.fastlanereader.generated.FLRLand" column="LAND_I_ID"
-			insert="false" update="false" />
+			class="com.lp.server.system.fastlanereader.generated.FLRLand"
+			column="LAND_I_ID" insert="false" update="false" />
 	</class>
 
 
 	<class name="FLRTheJudge" table="LP_THEJUDGE">
 		<composite-id name="id_comp"
 			class="com.lp.server.system.fastlanereader.generated.FLRTheJudgePK">
-			<key-property name="c_wer" column="C_WER" type="java.lang.String" />
-			<key-property name="c_was" column="C_WAS" type="java.lang.String" />
+			<key-property name="c_wer" column="C_WER"
+				type="java.lang.String" />
+			<key-property name="c_was" column="C_WAS"
+				type="java.lang.String" />
 		</composite-id>
-		<property name="c_usernr" column="C_USERNR" type="java.lang.String"
+		<property name="c_usernr" column="C_USERNR"
+			type="java.lang.String" not-null="true" />
+		<property name="t_wann" column="T_WANN"
+			type="java.sql.Timestamp" not-null="true" />
+		<property name="personal_i_id_locker"
+			column="PERSONAL_I_ID_LOCKER" type="java.lang.Integer"
 			not-null="true" />
-		<property name="t_wann" column="T_WANN" type="java.sql.Timestamp"
-			not-null="true" />
-		<property name="personal_i_id_locker" column="PERSONAL_I_ID_LOCKER"
-			type="java.lang.Integer" not-null="true" />
 
 	</class>
 
@@ -103,13 +136,14 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			not-null="true" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" not-null="true" />
 		<property name="c_nr" column="C_NR" type="java.lang.String"
 			not-null="true" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String"
 			not-null="true" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
 
 	</class>
 
@@ -123,19 +157,22 @@
 			<key column="FUNKTION_I_ID" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLRFunktionspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
 	</class>
 	<class name="FLRFunktionspr" table="LP_FUNKTIONSPR">
 		<composite-id>
-			<key-many-to-one name="funktion" column="FUNKTION_I_ID"
+			<key-many-to-one name="funktion"
+				column="FUNKTION_I_ID"
 				class="com.lp.server.system.fastlanereader.generated.FLRFunktion" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
 		</composite-id>
-		<property name="c_bezeichnung" column="C_BEZEICHNUNG" type="java.lang.String" />
+		<property name="c_bezeichnung" column="C_BEZEICHNUNG"
+			type="java.lang.String" />
 	</class>
 
 
@@ -148,33 +185,40 @@
 			<key column="ZAHLUNGSZIEL_I_ID" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLRZahlungszielspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			not-null="true" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" not-null="true" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String"
 			not-null="true" />
-		<property name="anzahlzieltagefuernetto" column="I_ANZAHLZIELTAGEFUERNETTO"
-			type="java.lang.Integer" not-null="true" />
-		<property name="skontoprozentsatz1" column="N_SKONTOPROZENTSATZ1"
-			type="java.lang.Integer" not-null="true" />
+		<property name="anzahlzieltagefuernetto"
+			column="I_ANZAHLZIELTAGEFUERNETTO" type="java.lang.Integer"
+			not-null="true" />
+		<property name="skontoprozentsatz1"
+			column="N_SKONTOPROZENTSATZ1" type="java.lang.Integer"
+			not-null="true" />
 		<property name="anzahltage1" column="I_SKONTOANZAHLTAGE1"
 			type="java.lang.Integer" not-null="true" />
-		<property name="skontoprozentsatz2" column="N_SKONTOPROZENTSATZ2"
-			type="java.lang.Integer" not-null="true" />
+		<property name="skontoprozentsatz2"
+			column="N_SKONTOPROZENTSATZ2" type="java.lang.Integer"
+			not-null="true" />
 		<property name="anzahltage2" column="I_SKONTOANZAHLTAGE2"
 			type="java.lang.Integer" not-null="true" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
 	</class>
 	<class name="FLRZahlungszielspr" table="LP_ZAHLUNGSZIELSPR">
 		<composite-id>
-			<key-many-to-one name="zahlungsziel" column="ZAHLUNGSZIEL_I_ID"
+			<key-many-to-one name="zahlungsziel"
+				column="ZAHLUNGSZIEL_I_ID"
 				class="com.lp.server.system.fastlanereader.generated.FLRZahlungsziel" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
 		</composite-id>
-		<property name="c_bezeichnung" column="C_BEZEICHNUNG" type="java.lang.String" />
+		<property name="c_bezeichnung" column="C_BEZEICHNUNG"
+			type="java.lang.String" />
 	</class>
 
 
@@ -182,10 +226,45 @@
 		<id name="c_nr" column="C_NR" type="java.lang.String">
 			<generator class="native" />
 		</id>
-		<property name="c_kbez" column="C_KBEZ" type="java.lang.String"
-			not-null="true" />
+		<property name="c_kbez" column="C_KBEZ"
+			type="java.lang.String" not-null="true" />
+		<property name="partner_i_id" column="PARTNER_I_ID"
+			type="java.lang.Integer" />
+
+		<property name="partner_i_id_lieferadresse"
+			column="PARTNER_I_ID_LIEFERADRESSE" type="java.lang.Integer" />
+
 	</class>
 
+	<class name="FLRKennung" table="LP_KENNUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<set name="kennungspr_set" inverse="true">
+			<key column="KENNUNG_I_ID" />
+			<one-to-many
+				class="com.lp.server.system.fastlanereader.generated.FLRKennungspr" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String"
+			not-null="true" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String"
+			not-null="true" />
+	</class>
+	<class name="FLRKennungspr" table="LP_KENNUNGSPR">
+		<composite-id>
+			<key-many-to-one name="kennung_i_id"
+				column="KENNUNG_I_ID"
+				class="com.lp.server.system.fastlanereader.generated.FLRKennung" />
+			<key-many-to-one name="locale_c_nr"
+				column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ"
+			type="java.lang.String" />
+	</class>
 
 
 
@@ -198,38 +277,45 @@
 			<key column="LIEFERART_I_ID" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLRLieferartspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			not-null="true" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" not-null="true" />
 		<property name="c_nr" column="C_NR" type="java.lang.String"
 			not-null="true" />
-		<property name="b_frachtkostenalserledigtverbuchen" column="B_FRACHTKOSTENALSERLEDIGTVERBUCHEN"
-			type="java.lang.Short" not-null="true" />
-		<property name="c_versandort" column="C_VERSANDORT" type="java.lang.String"
+		<property name="b_frachtkostenalserledigtverbuchen"
+			column="B_FRACHTKOSTENALSERLEDIGTVERBUCHEN" type="java.lang.Short"
 			not-null="true" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="c_versandort" column="C_VERSANDORT"
+			type="java.lang.String" not-null="true" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
 	</class>
 	<class name="FLRLieferartspr" table="LP_LIEFERARTSPR">
 		<composite-id>
-			<key-many-to-one name="lieferart_i_id" column="LIEFERART_I_ID"
+			<key-many-to-one name="lieferart_i_id"
+				column="LIEFERART_I_ID"
 				class="com.lp.server.system.fastlanereader.generated.FLRLieferart" />
-			<key-many-to-one name="locale_c_nr" column="LOCALE_C_NR"
+			<key-many-to-one name="locale_c_nr"
+				column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
 		</composite-id>
-		<property name="c_bezeichnung" column="C_BEZEICHNUNG" type="java.lang.String" />
+		<property name="c_bezeichnung" column="C_BEZEICHNUNG"
+			type="java.lang.String" />
 	</class>
 
 	<class name="FLRSpediteur" table="LP_SPEDITEUR">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			not-null="true" />
-		<property name="c_namedesspediteurs" column="C_NAMEDESSPEDITEURS"
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
 			type="java.lang.String" not-null="true" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="c_namedesspediteurs"
+			column="C_NAMEDESSPEDITEURS" type="java.lang.String" not-null="true" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
 	</class>
 
 
@@ -242,19 +328,22 @@
 			<key column="BELEGART_C_NR" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLRBelegartspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
-			not-null="true" />
-		<property name="c_kbez" column="C_KBEZ" type="java.lang.String"
-			not-null="true" />
-		<property name="i_standarderledigungszeitintagen" column="I_STANDARDERLEDIGUNGSZEITINTAGEN"
+		<property name="i_sort" column="I_SORT"
 			type="java.lang.Integer" not-null="true" />
+		<property name="c_kbez" column="C_KBEZ"
+			type="java.lang.String" not-null="true" />
+		<property name="i_standarderledigungszeitintagen"
+			column="I_STANDARDERLEDIGUNGSZEITINTAGEN" type="java.lang.Integer"
+			not-null="true" />
 	</class>
 	<class name="FLRBelegartspr" table="LP_BELEGARTSPR">
 		<composite-id>
-			<key-many-to-one name="belegart" column="BELEGART_C_NR"
+			<key-many-to-one name="belegart"
+				column="BELEGART_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRBelegart" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
@@ -266,18 +355,26 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_empfaenger" column="C_EMPFAENGER" type="java.lang.String" />
-		<property name="c_betreff" column="C_BETREFF" type="java.lang.String" />
+		<property name="c_empfaenger" column="C_EMPFAENGER"
+			type="java.lang.String" />
+		<property name="c_betreff" column="C_BETREFF"
+			type="java.lang.String" />
 		<property name="c_absenderadresse" column="C_ABSENDERADRESSE"
 			type="java.lang.String" />
-		<property name="t_sendezeitpunktwunsch" column="T_SENDEZEITPUNKTWUNSCH"
-			type="java.sql.Timestamp" />
-		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
-		<property name="i_belegiid" column="I_BELEGIID" type="java.lang.Integer" />
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
+		<property name="t_sendezeitpunktwunsch"
+			column="T_SENDEZEITPUNKTWUNSCH" type="java.sql.Timestamp" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR"
+			type="java.lang.String" />
+		<property name="i_belegiid" column="I_BELEGIID"
+			type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="status_c_nr" column="STATUS_C_NR"
+			type="java.lang.String" />
 		<property name="t_sendezeitpunkt" column="T_SENDEZEITPUNKT"
 			type="java.sql.Timestamp" />
+		<property name="c_jobid" column="C_JOBID"
+			type="java.lang.String" />
 		<many-to-one name="flrempfaenger"
 			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
 			column="PARTNER_I_ID_EMPFAENGER" insert="false" update="false" />
@@ -295,10 +392,12 @@
 			<key column="EINHEIT_C_NR" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLREinheitspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 
-		<property name="i_dimension" column="I_DIMENSION" type="java.lang.Integer" />
+		<property name="i_dimension" column="I_DIMENSION"
+			type="java.lang.Integer" />
 	</class>
 	<class name="FLREinheitspr" table="LP_EINHEITSPR">
 		<composite-id>
@@ -310,7 +409,8 @@
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
 
-	<class name="FLREinheitKonvertierung" table="LP_EINHEITKONVERTIERUNG">
+	<class name="FLREinheitKonvertierung"
+		table="LP_EINHEITKONVERTIERUNG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
@@ -318,8 +418,8 @@
 			type="java.lang.String" />
 		<property name="einheit_cnr_zu" column="EINHEIT_C_NR_ZU"
 			type="java.lang.String" />
-		<property name="n_faktor" column="N_FAKTOR" type="java.math.BigDecimal"
-			not-null="true" />
+		<property name="n_faktor" column="N_FAKTOR"
+			type="java.math.BigDecimal" not-null="true" />
 
 		<many-to-one name="flreinheitvon"
 			class="com.lp.server.system.fastlanereader.generated.FLREinheit"
@@ -338,7 +438,8 @@
 			<key column="STATUS_C_NR" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLRStatusspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 	</class>
 	<class name="FLRStatusspr" table="LP_STATUSSPR">
@@ -355,7 +456,8 @@
 		<id name="c_nr" column="C_NR" type="java.lang.String">
 			<generator class="native" />
 		</id>
-		<property name="b_aktiv" column="B_AKTIV" type="java.lang.Short" />
+		<property name="b_aktiv" column="B_AKTIV"
+			type="java.lang.Short" />
 		<set inverse="true" name="localestatussprset">
 			<key column="LOCALE_C_NR" />
 			<one-to-many
@@ -371,14 +473,17 @@
 			<key column="MEDIAART_C_NR" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLRMediaartspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 	</class>
 	<class name="FLRMediaartspr" table="LP_MEDIAARTSPR">
 		<composite-id>
-			<key-many-to-one name="mediaart_c_nr" column="MEDIAART_C_NR"
+			<key-many-to-one name="mediaart_c_nr"
+				column="MEDIAART_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRMediaart" />
-			<key-many-to-one name="locale_c_nr" column="LOCALE_C_NR"
+			<key-many-to-one name="locale_c_nr"
+				column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
 		</composite-id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
@@ -392,9 +497,31 @@
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
 		<property name="datenformat_c_nr" column="DATENFORMAT_C_NR"
 			type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR"
+			type="java.lang.String" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
+
+	</class>
+
+	<class name="FLRMediastandardTextsuche"
+		table="LP_MEDIASTANDARD_TEXTSUCHE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="datenformat_c_nr" column="DATENFORMAT_C_NR"
+			type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR"
+			type="java.lang.String" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
+		<property name="c_inhalt_o_media" column="C_INHALT_O_MEDIA"
+			type="java.lang.String" />
 
 	</class>
 
@@ -406,14 +533,17 @@
 			<key column="POSITIONSART_C_NR" />
 			<one-to-many
 				class="com.lp.server.system.fastlanereader.generated.FLRPositionsartspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 	</class>
 	<class name="FLRPositionsartspr" table="LP_POSITIONSARTSPR">
 		<composite-id>
-			<key-many-to-one name="positionsart_c_nr" column="POSITIONSART_C_NR"
+			<key-many-to-one name="positionsart_c_nr"
+				column="POSITIONSART_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRPositionsart" />
-			<key-many-to-one name="locale_c_nr" column="LOCALE_C_NR"
+			<key-many-to-one name="locale_c_nr"
+				column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
 		</composite-id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
@@ -424,12 +554,12 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mwstbez_i_id" column="MWSTSATZBEZ_I_ID" type="java.lang.Integer"
-			not-null="true" />
-		<property name="d_gueltigab" column="D_GUELTIGAB" type="java.util.Date"
-			not-null="true" />
-		<property name="f_mwstsatz" column="F_MWSTSATZ" type="java.lang.Double"
-			not-null="true" />
+		<property name="mwstbez_i_id" column="MWSTSATZBEZ_I_ID"
+			type="java.lang.Integer" not-null="true" />
+		<property name="d_gueltigab" column="D_GUELTIGAB"
+			type="java.util.Date" not-null="true" />
+		<property name="f_mwstsatz" column="F_MWSTSATZ"
+			type="java.lang.Double" not-null="true" />
 		<many-to-one name="flrmwstsatzbez"
 			class="com.lp.server.system.fastlanereader.generated.FLRMwstsatzbez"
 			column="MWSTSATZBEZ_I_ID" insert="false" update="false" />
@@ -439,10 +569,10 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
-			not-null="true" />
-		<property name="c_bezeichnung" column="C_BEZEICHNUNG" type="java.lang.String"
-			not-null="true" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" not-null="true" />
+		<property name="c_bezeichnung" column="C_BEZEICHNUNG"
+			type="java.lang.String" not-null="true" />
 
 
 	</class>
@@ -451,59 +581,70 @@
 		<id name="c_nr" column="C_NR" type="java.lang.String">
 			<generator class="native" />
 		</id>
-		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
+		<property name="c_kommentar" column="C_KOMMENTAR"
+			type="java.lang.String" />
 	</class>
 
 	<class name="FLRWechselkurs" table="LP_WECHSELKURS">
 		<composite-id name="id_comp"
 			class="com.lp.server.system.fastlanereader.generated.service.FLRWechselkursPK">
-			<key-property name="waehrung_c_nr_von" column="WAEHRUNG_C_NR_VON"
-				type="java.lang.String" />
-			<key-property name="waehrung_c_nr_zu" column="WAEHRUNG_C_NR_ZU"
-				type="java.lang.String" />
-			<key-property name="t_datum" column="T_DATUM" type="java.sql.Date" />
+			<key-property name="waehrung_c_nr_von"
+				column="WAEHRUNG_C_NR_VON" type="java.lang.String" />
+			<key-property name="waehrung_c_nr_zu"
+				column="WAEHRUNG_C_NR_ZU" type="java.lang.String" />
+			<key-property name="t_datum" column="T_DATUM"
+				type="java.sql.Date" />
 		</composite-id>
-		<property name="n_kurs" column="N_KURS" type="java.lang.Float" />
+		<property name="n_kurs" column="N_KURS"
+			type="java.math.BigDecimal" />
 	</class>
 
 	<class name="FLRParameteranwender" table="LP_PARAMETERANWENDER">
 		<composite-id name="id_comp"
 			class="com.lp.server.system.fastlanereader.generated.service.FLRParameteranwenderPK">
-			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="c_kategorie" column="C_KATEGORIE"
 				type="java.lang.String" />
 		</composite-id>
 
-		<property name="c_wert" column="C_WERT" type="java.lang.String" />
+		<property name="c_wert" column="C_WERT"
+			type="java.lang.String" />
 		<property name="c_bemerkungsmall" column="C_BEMERKUNGSMALL"
 			type="java.lang.String" />
 		<property name="c_bemerkunglarge" column="C_BEMERKUNGLARGE"
 			type="java.lang.String" />
-		<property name="c_datentyp" column="C_DATENTYP" type="java.lang.String" />
+		<property name="c_datentyp" column="C_DATENTYP"
+			type="java.lang.String" />
 	</class>
 
 	<class name="FLRParametermandant" table="LP_PARAMETERMANDANT">
 		<composite-id name="id_comp"
 			class="com.lp.server.system.fastlanereader.generated.service.FLRParametermandantPK">
-			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
 				type="java.lang.String" />
 			<key-property name="c_kategorie" column="C_KATEGORIE"
 				type="java.lang.String" />
 		</composite-id>
 
-		<property name="c_wert" column="C_WERT" type="java.lang.String" />
+		<property name="c_wert" column="C_WERT"
+			type="java.lang.String" />
 		<property name="c_bemerkungsmall" column="C_BEMERKUNGSMALL"
 			type="java.lang.String" />
 		<property name="c_bemerkunglarge" column="C_BEMERKUNGLARGE"
 			type="java.lang.String" />
-		<property name="c_datentyp" column="C_DATENTYP" type="java.lang.String" />
+		<property name="c_datentyp" column="C_DATENTYP"
+			type="java.lang.String" />
 	</class>
 
-	<class name="FLRParametermandantgueltigab" table="LP_PARAMETERMANDANTGUELTIGAB">
+	<class name="FLRParametermandantgueltigab"
+		table="LP_PARAMETERMANDANTGUELTIGAB">
 		<composite-id name="id_comp"
 			class="com.lp.server.system.fastlanereader.generated.service.FLRParametermandantgueltigabPK">
-			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
 				type="java.lang.String" />
 			<key-property name="c_kategorie" column="C_KATEGORIE"
@@ -512,7 +653,23 @@
 				type="java.sql.Timestamp" />
 		</composite-id>
 
-		<property name="c_wert" column="C_WERT" type="java.lang.String" />
+		<property name="c_wert" column="C_WERT"
+			type="java.lang.String" />
+
+	</class>
+
+	<class name="FLRPanelsperren" table="LP_PANELSPERREN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="belegart_c_nr" column="BELEGART_C_NR"
+			type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="c_ressource_unten" column="C_RESSOURCE_UNTEN"
+			type="java.lang.String" />
+		<property name="c_ressource_oben" column="C_RESSOURCE_OBEN"
+			type="java.lang.String" />
 
 	</class>
 
@@ -528,17 +685,35 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_name" column="C_NAME" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="c_name" column="C_NAME"
+			type="java.lang.String" />
 		<property name="c_typ" column="C_TYP" type="java.lang.String" />
-		<property name="c_fill" column="C_FILL" type="java.lang.String" />
-		<property name="c_anchor" column="C_ANCHOR" type="java.lang.String" />
-		<property name="panel_c_nr" column="PANEL_C_NR" type="java.lang.String" />
-		<property name="i_gridx" column="I_GRIDX" type="java.lang.Integer" />
-		<property name="i_gridy" column="I_GRIDY" type="java.lang.Integer" />
-		<property name="b_mandantory" column="B_MANDATORY" type="java.lang.Short" />
-		<property name="artgru_i_id" column="ARTGRU_I_ID" type="java.lang.Integer" />
-		<property name="c_default" column="C_DEFAULT" type="java.lang.String" />
+		<property name="c_fill" column="C_FILL"
+			type="java.lang.String" />
+		<property name="c_anchor" column="C_ANCHOR"
+			type="java.lang.String" />
+		<property name="panel_c_nr" column="PANEL_C_NR"
+			type="java.lang.String" />
+		<property name="i_gridx" column="I_GRIDX"
+			type="java.lang.Integer" />
+		<property name="i_gridy" column="I_GRIDY"
+			type="java.lang.Integer" />
+		<property name="b_mandantory" column="B_MANDATORY"
+			type="java.lang.Short" />
+		<property name="artgru_i_id" column="ARTGRU_I_ID"
+			type="java.lang.Integer" />
+		<property name="c_default" column="C_DEFAULT"
+			type="java.lang.String" />
+		<property name="partnerklasse_i_id"
+			column="PARTNERKLASSE_I_ID" type="java.lang.Integer" />
+		<property name="kostenstelle_i_id" column="KOSTENSTELLE_I_ID"
+			type="java.lang.Integer" />
+		<property name="bereich_i_id" column="BEREICH_I_ID"
+			type="java.lang.Integer" />
+		<property name="projekttyp_c_nr" column="PROJEKTTYP_C_NR"
+			type="java.lang.String" />
 	</class>
 
 	<class name="FLRPaneldaten" table="LP_PANELDATEN">
@@ -546,8 +721,10 @@
 			<generator class="native" />
 		</id>
 		<property name="c_key" column="C_KEY" type="java.lang.String" />
-		<property name="x_inhalt" column="X_INHALT" type="java.lang.String" />
-		<property name="panel_c_nr" column="PANEL_C_NR" type="java.lang.String" />
+		<property name="x_inhalt" column="X_INHALT"
+			type="java.lang.String" />
+		<property name="panel_c_nr" column="PANEL_C_NR"
+			type="java.lang.String" />
 		<many-to-one name="flrpanelbeschreibung"
 			class="com.lp.server.system.fastlanereader.generated.FLRPanelbeschreibung"
 			column="PANELBESCHREIBUNG_I_ID" insert="false" update="false" />
@@ -558,8 +735,10 @@
 			<generator class="native" />
 		</id>
 		<property name="i_id" column="I_ID" type="java.lang.Integer" />
-		<property name="x_inhalt" column="X_INHALT" type="java.lang.String" />
-		<property name="panel_c_nr" column="PANEL_C_NR" type="java.lang.String" />
+		<property name="x_inhalt" column="X_INHALT"
+			type="java.lang.String" />
+		<property name="panel_c_nr" column="PANEL_C_NR"
+			type="java.lang.String" />
 		<many-to-one name="flrpanelbeschreibung"
 			class="com.lp.server.system.fastlanereader.generated.FLRPanelbeschreibung"
 			column="PANELBESCHREIBUNG_I_ID" insert="false" update="false" />
@@ -573,15 +752,18 @@
 		</id>
 		<property name="datenformat_c_nr" column="DATENFORMAT_C_NR"
 			type="java.lang.String" />
-		<property name="c_dateiname" column="C_DATEINAME" type="java.lang.String" />
+		<property name="c_dateiname" column="C_DATEINAME"
+			type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
 	<class name="FLRDokumentschlagwort" table="LP_DOKUMENTSCHLAGWORT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="dokument_i_id" column="DOKUMENT_I_ID" type="java.lang.Integer" />
-		<property name="c_schlagwort" column="C_SCHLAGWORT" type="java.lang.String" />
+		<property name="dokument_i_id" column="DOKUMENT_I_ID"
+			type="java.lang.Integer" />
+		<property name="c_schlagwort" column="C_SCHLAGWORT"
+			type="java.lang.String" />
 
 		<many-to-one name="flrdokument"
 			class="com.lp.server.system.fastlanereader.generated.FLRDokument"
@@ -593,8 +775,8 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_buildnummerclientpc" column="I_BUILDNUMMERCLIENTPC"
-			type="java.lang.Integer" />
+		<property name="i_buildnummerclientpc"
+			column="I_BUILDNUMMERCLIENTPC" type="java.lang.Integer" />
 	</class>
 
 
@@ -602,11 +784,16 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="dokument_i_id" column="DOKUMENT_I_ID" type="java.lang.Integer" />
-		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
-		<property name="i_belegartid" column="I_BELEGARTID" type="java.lang.Integer" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="dokument_i_id" column="DOKUMENT_I_ID"
+			type="java.lang.Integer" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR"
+			type="java.lang.String" />
+		<property name="i_belegartid" column="I_BELEGARTID"
+			type="java.lang.Integer" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Timestamp" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 
 		<many-to-one name="flrdokument"
 			class="com.lp.server.system.fastlanereader.generated.FLRDokument"
@@ -618,7 +805,8 @@
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR"
+			type="java.lang.String" />
 	</class>
 
 
@@ -627,10 +815,12 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_reportname" column="C_REPORTNAME" type="java.lang.String" />
-		<property name="c_reportnamevariante" column="C_REPORTNAMEVARIANTE"
+		<property name="c_reportname" column="C_REPORTNAME"
 			type="java.lang.String" />
-		<property name="c_ressource" column="C_RESSOURCE" type="java.lang.String" />
+		<property name="c_reportnamevariante"
+			column="C_REPORTNAMEVARIANTE" type="java.lang.String" />
+		<property name="c_ressource" column="C_RESSOURCE"
+			type="java.lang.String" />
 	</class>
 
 
@@ -646,8 +836,11 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_pcname" column="C_PCNAME" type="java.lang.String" />
-		<property name="c_standort" column="C_STANDORT" type="java.lang.String" />
+		<property name="c_pcname" column="C_PCNAME"
+			type="java.lang.String" />
+		<property name="c_standort" column="C_STANDORT"
+			type="java.lang.String" />
+		<property name="c_typ" column="C_TYP" type="java.lang.String" />
 	</class>
 
 
@@ -655,24 +848,34 @@
 		<id name="c_nr" column="C_NR" type="java.lang.String">
 			<generator class="native" />
 		</id>
-		<property name="c_datentyp" column="C_DATENTYP" type="java.lang.String" />
-		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String" />
+		<property name="c_datentyp" column="C_DATENTYP"
+			type="java.lang.String" />
+		<property name="c_bemerkung" column="C_BEMERKUNG"
+			type="java.lang.String" />
 	</class>
 
 	<class name="FLREntitylog" table="LP_ENTITYLOG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_entity_key" column="C_ENTITY_KEY" type="java.lang.String" />
-		<property name="c_operation" column="C_OPERATION" type="java.lang.String" />
-		<property name="entity_i_id" column="ENTITY_I_ID" type="java.lang.String" />
+		<property name="c_entity_key" column="C_ENTITY_KEY"
+			type="java.lang.String" />
+		<property name="c_operation" column="C_OPERATION"
+			type="java.lang.String" />
+		<property name="entity_i_id" column="ENTITY_I_ID"
+			type="java.lang.String" />
 		<property name="c_key" column="C_KEY" type="java.lang.String" />
 		<property name="c_von" column="C_VON" type="java.lang.String" />
-		<property name="c_nach" column="C_NACH" type="java.lang.String" />
-		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
-		<property name="c_filter_key" column="C_FILTER_KEY" type="java.lang.String" />
-		<property name="filter_i_id" column="FILTER_I_ID" type="java.lang.String" />
+		<property name="c_nach" column="C_NACH"
+			type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR"
+			type="java.lang.String" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
+		<property name="c_filter_key" column="C_FILTER_KEY"
+			type="java.lang.String" />
+		<property name="filter_i_id" column="FILTER_I_ID"
+			type="java.lang.String" />
 		<many-to-one name="flrpersonal"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID" insert="false" update="false" />
@@ -681,13 +884,15 @@
 	</class>
 
 
-	<class name="FLRArbeitsplatzparameter" table="LP_ARBEITSPLATZPARAMETER">
+	<class name="FLRArbeitsplatzparameter"
+		table="LP_ARBEITSPLATZPARAMETER">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="arbeitsplatz_i_id" column="ARBEITSPLATZ_I_ID"
 			type="java.lang.Integer" />
-		<property name="c_wert" column="C_WERT" type="java.lang.String" />
+		<property name="c_wert" column="C_WERT"
+			type="java.lang.String" />
 		<many-to-one name="flrarbeitsplatz"
 			class="com.lp.server.system.fastlanereader.generated.FLRArbeitsplatz"
 			column="ARBEITSPLATZ_I_ID" insert="false" update="false" />
@@ -701,18 +906,27 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
-		<property name="c_name" column="C_NAME" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_beschreibung" column="C_BESCHREIBUNG" type="java.lang.String" />
-		<property name="b_active" column="B_ACTIVE" type="java.lang.String" />
-		<property name="i_intervall" column="I_INTERVALL" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+		<property name="c_name" column="C_NAME"
+			type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="c_beschreibung" column="C_BESCHREIBUNG"
+			type="java.lang.String" />
+		<property name="b_active" column="B_ACTIVE"
+			type="java.lang.String" />
+		<property name="i_intervall" column="I_INTERVALL"
+			type="java.lang.Integer" />
+		<property name="i_scheduler" column="I_SCHEDULER"
+			type="java.lang.Integer" />
 	</class>
 
 	<class name="FLRDokumentebelegart" table="LP_DOKUMENTBELEGART">
 		<composite-id name="id_comp"
 			class="com.lp.server.system.fastlanereader.generated.service.FLRDokumentebelegartPK">
-			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
 				type="java.lang.String" />
 		</composite-id>
@@ -721,7 +935,8 @@
 	<class name="FLRDokumentegruppe" table="LP_DOKUMENTGRUPPIERUNG">
 		<composite-id name="id_comp"
 			class="com.lp.server.system.fastlanereader.generated.service.FLRDokumentegruppePK">
-			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
 			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
 				type="java.lang.String" />
 		</composite-id>
@@ -735,10 +950,14 @@
 
 		<property name="c_art" column="C_ART" type="java.lang.String" />
 		<property name="c_typ" column="C_TYP" type="java.lang.String" />
-		<property name="c_text" column="C_TEXT" type="java.lang.String" />
-		<property name="c_langtext" column="C_LANGTEXT" type="java.lang.String" />
-		<property name="t_quelle" column="T_QUELLE" type="java.sql.Timestamp" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" />
+		<property name="c_text" column="C_TEXT"
+			type="java.lang.String" />
+		<property name="c_langtext" column="C_LANGTEXT"
+			type="java.lang.String" />
+		<property name="t_quelle" column="T_QUELLE"
+			type="java.sql.Timestamp" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Timestamp" />
 	</class>
 
 	<class name="FLRDokumentenlink" table="LP_DOKUMENTENLINK">
@@ -747,32 +966,60 @@
 			<generator class="native" />
 		</id>
 
-		<property name="c_ordner" column="C_ORDNER" type="java.lang.String" />
-		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
-		<property name="c_basispfad" column="C_BASISPFAD" type="java.lang.String" />
-		<property name="c_menuetext" column="C_MENUETEXT" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="b_pfadabsolut" column="B_PFADABSOLUT" type="java.lang.Short" />
+		<property name="c_ordner" column="C_ORDNER"
+			type="java.lang.String" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR"
+			type="java.lang.String" />
+		<property name="c_basispfad" column="C_BASISPFAD"
+			type="java.lang.String" />
+		<property name="c_menuetext" column="C_MENUETEXT"
+			type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="b_pfadabsolut" column="B_PFADABSOLUT"
+			type="java.lang.Short" />
 	</class>
 	<class name="FLRKostentraeger" table="LP_KOSTENTRAEGER">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 
 	</class>
 
 	<class name="FLRUsercount" table="LP_USERCOUNT">
-		<id name="t_zeitpunkt" column="T_ZEITPUNKT" type="java.sql.Timestamp">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_anzahl" column="I_ANZAHL" type="java.lang.Integer" />
+
+		<property name="t_zeitpunkt" column="T_ZEITPUNKT"
+			type="java.sql.Timestamp" />
+		<property name="i_anzahl" column="I_ANZAHL"
+			type="java.lang.Integer" />
 		<many-to-one name="flrsystemrolle"
 			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
 			column="SYSTEMROLLE_I_ID" insert="false" update="false" />
 	</class>
 
+	<class name="FLRMailProperty" table="LP_MAILPROPERTY">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+
+		<property name="c_wert" column="C_WERT"
+			type="java.lang.String" />
+		<property name="c_defaultwert" column="C_DEFAULTWERT"
+			type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="personal_i_id_aendern"
+			column="PERSONAL_I_ID_AENDERN" type="java.lang.Integer" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
+
+	</class>
 
 	<!-- flr: 4 wenn du fertig bist den generator (jb tools) abfahren -->
 </hibernate-mapping>

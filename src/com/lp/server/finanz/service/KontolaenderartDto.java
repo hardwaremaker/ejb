@@ -36,10 +36,8 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 
 public class KontolaenderartDto implements Serializable {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
+	private Integer iId;
 	private Integer kontoIId;
 	private String laenderartCNr;
 	private Integer finanzamtIId;
@@ -49,7 +47,17 @@ public class KontolaenderartDto implements Serializable {
 	private Integer personalIIdAnlegen;
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
-
+	private Integer reversechargeartIId ;
+	private Timestamp tGueltigAb;
+	
+	public Integer getIId() {
+		return iId;
+	}
+	
+	public void setIId(Integer newId) {
+		this.iId = newId;
+	}
+	
 	public Integer getKontoIId() {
 		return kontoIId;
 	}
@@ -155,6 +163,9 @@ public class KontolaenderartDto implements Serializable {
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
+		if (!(that.reversechargeartIId  == null ? this.reversechargeartIId == null : that.reversechargeartIId
+				.equals(this.reversechargeartIId)))
+			return false;
 		return true;
 	}
 
@@ -169,6 +180,7 @@ public class KontolaenderartDto implements Serializable {
 		result = 37 * result + this.personalIIdAnlegen.hashCode();
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
+		result = 37 * result + this.reversechargeartIId.hashCode();
 		return result;
 	}
 
@@ -184,5 +196,21 @@ public class KontolaenderartDto implements Serializable {
 		returnString += ", " + tAendern;
 		returnString += ", " + personalIIdAendern;
 		return returnString;
+	}
+
+	public Integer getReversechargeartIId() {
+		return reversechargeartIId;
+	}
+
+	public void setReversechargeartIId(Integer reversechargeartId) {
+		this.reversechargeartIId = reversechargeartId;
+	}
+
+	public Timestamp getTGueltigAb() {
+		return tGueltigAb;
+	}
+
+	public void setTGueltigAb(Timestamp tGueltigAb) {
+		this.tGueltigAb = tGueltigAb;
 	}
 }

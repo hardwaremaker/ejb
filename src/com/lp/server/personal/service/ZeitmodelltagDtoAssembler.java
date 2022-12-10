@@ -70,6 +70,11 @@ public class ZeitmodelltagDtoAssembler {
 			zeitmodelltagDto.setBRundesondertaetigkeiten(zeitmodelltag
 					.getBRundesondertaetigkeiten());
 			zeitmodelltagDto.setTAendern(zeitmodelltag.getTAendern());
+			zeitmodelltagDto.setUEndeAkzeptiertAb(zeitmodelltag.getUEndeAkzeptiertAb());
+			zeitmodelltagDto.setUBeginnAkzeptiertBis(zeitmodelltag.getUBeginnAkzeptiertBis());
+			zeitmodelltagDto.setUSchichterkennung(zeitmodelltag.getUSchichterkennung());
+			zeitmodelltagDto.setBBeginnVortag(zeitmodelltag.getBBeginnVortag());
+			
 		}
 		return zeitmodelltagDto;
 	}

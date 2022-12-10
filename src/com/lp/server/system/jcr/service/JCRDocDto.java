@@ -44,6 +44,7 @@ import javax.jcr.ValueFormatException;
 
 import net.sf.jasperreports.engine.JasperPrint;
 
+import com.lp.server.system.jcr.service.docnode.DocNodeBase;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 
 public class JCRDocDto implements Serializable {
@@ -70,6 +71,7 @@ public class JCRDocDto implements Serializable {
 	private String sPath;
 	private JasperPrint jasperPrint;
 	private Integer iFolderToken;
+	private String sLiteralName;
 	
 	private DocPath docPath;
 	
@@ -123,8 +125,9 @@ public class JCRDocDto implements Serializable {
 				.getBoolean());
 		this.setlSicherheitsstufe(node.getProperty(
 				JCRDocFac.PROPERTY_SICHERHEITSSTUFE).getLong());
-
 		setsGruppierung(getOptionalProperty(node, JCRDocFac.PROPERTY_GRUPPIERUNG)) ;
+		setsLiteralName(DocNodeBase.unescapeJCRChars(
+				getOptionalProperty(node, DocNodeBase.NODEPROPERTY_LITERALVALUE)));
 	}
 
 	private String getOptionalProperty(Node node, String propertyName) throws RepositoryException {
@@ -354,8 +357,8 @@ public class JCRDocDto implements Serializable {
 		if (that.getlSicherheitsstufe() != this.getlSicherheitsstufe()) {
 			return false;
 		}
-
 		return true;
+
 	}
 
 	public int getFolderToken() {
@@ -376,4 +379,11 @@ public class JCRDocDto implements Serializable {
 		this.sPath = sPath;
 	}
 
+	public void setsLiteralName(String sLiteralName) {
+		this.sLiteralName = sLiteralName;
+	}
+	
+	public String getsLiteralName() {
+		return sLiteralName;
+	}
 }

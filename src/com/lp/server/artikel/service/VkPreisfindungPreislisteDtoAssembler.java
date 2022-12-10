@@ -62,6 +62,7 @@ public class VkPreisfindungPreislisteDtoAssembler {
 							.getNArtikelfixpreis());
 			vkPreisfindungPreislisteDto.setTAendern(vkPreisfindungPreisliste.getTAendern());
 			vkPreisfindungPreislisteDto.setPersonalIIdAendern(vkPreisfindungPreisliste.getPersonalIIdAendern());
+			vkPreisfindungPreislisteDto.setCBemerkung(vkPreisfindungPreisliste.getCBemerkung());
 		}
 		return vkPreisfindungPreislisteDto;
 	}

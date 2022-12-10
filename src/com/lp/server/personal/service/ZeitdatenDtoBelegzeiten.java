@@ -37,7 +37,16 @@ public class ZeitdatenDtoBelegzeiten {
 
 	private Integer arbeitsgang=null;
 	private Integer unterarbeitsgang=null;
+	private String sArtikelgruppe=null;
 	
+	public String getSArtikelgruppe() {
+		return sArtikelgruppe;
+	}
+
+	public void setSArtikelgruppe(String sArtikelgruppe) {
+		this.sArtikelgruppe = sArtikelgruppe;
+	}
+
 	public Integer getArbeitsgang() {
 		return arbeitsgang;
 	}

@@ -43,6 +43,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.IBelegVerkaufEntity;
 import com.lp.server.util.IISort;
 import com.lp.server.util.IPositionIIdArtikelset;
 import com.lp.server.util.IZwsPosition;
@@ -54,17 +55,19 @@ import com.lp.server.util.IZwsPosition;
 		@NamedQuery(name = "AngebotpositionfindByAngebotIIdAngebotpositionsartCNr", query = "SELECT OBJECT (o) FROM Angebotposition o WHERE o.angebotIId=?1 AND o.angebotpositionartCNr=?2 ORDER BY o.iSort"),
 		@NamedQuery(name = "AngebotpositionfindByPositionIId", query = "SELECT OBJECT (o) FROM Angebotposition o WHERE o.positionIId=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0"),
 		@NamedQuery(name = "AngebotpositionpositionfindByPositionIIdArtikelset", query = "SELECT OBJECT (o) FROM Angebotposition o WHERE o.positionIIdArtikelset=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0 ORDER BY o.iSort"),
+		@NamedQuery(name = "AngebotpositionfindByPositionIIdZugehoerig", query = "SELECT OBJECT (o) FROM Angebotposition o WHERE o.positionIIdZugehoerig=?1 AND o.nMenge IS NOT NULL ORDER BY o.iSort"),
 		@NamedQuery(name = "getWertAngebotpositionartPosition", query = "SELECT sum(o.nMenge*o.nNettogesamtpreisplusversteckteraufschlag) FROM Angebotposition o WHERE o.positionIId=?1 AND o.angebotpositionartCNr IN (?2,?3)"),
 		@NamedQuery(name = "AngebotpositionfindByAngebotIIdISort", query = "SELECT OBJECT (o) FROM Angebotposition o WHERE o.angebotIId=?1 AND o.iSort=?2"),
 		@NamedQuery(name = Angebotposition.QueryFindIZwsByVonBisIId, query = "SELECT OBJECT (o) FROM Angebotposition o WHERE o.zwsVonPosition= :iid OR o.zwsBisPosition= :iid") })
 @Entity
 @Table(name = "ANGB_ANGEBOTPOSITION")
-public class Angebotposition implements Serializable, IISort, IPositionIIdArtikelset, IZwsPosition  {
+public class Angebotposition
+		implements Serializable, IISort, IPositionIIdArtikelset, IZwsPosition, IBelegVerkaufEntity {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 4167625547868900948L;
-	public final static String QueryFindIZwsByVonBisIId = "AngebotpositionFindIZwsByVonBisIId" ;
+	public final static String QueryFindIZwsByVonBisIId = "AngebotpositionFindIZwsByVonBisIId";
 
 	@Id
 	@Column(name = "I_ID")
@@ -130,15 +133,37 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "B_ALTERNATIVE")
 	private Short bAlternative;
 
+	@Column(name = "I_LIEFERZEITINSTUNDEN")
+	private Integer iLieferzeitinstunden;
+
+	public Integer getILieferzeitinstunden() {
+		return this.iLieferzeitinstunden;
+	}
+
+	public void setILieferzeitinstunden(Integer iLieferzeitinstunden) {
+		this.iLieferzeitinstunden = iLieferzeitinstunden;
+	}
+
 	@Column(name = "POSITION_I_ID")
 	private Integer positionIId;
+
+	@Column(name = "POSITION_I_ID_ZUGEHOERIG")
+	private Integer positionIIdZugehoerig;
+
+	public Integer getPositionIIdZugehoerig() {
+		return positionIIdZugehoerig;
+	}
+
+	public void setPositionIIdZugehoerig(Integer positionIIdZugehoerig) {
+		this.positionIIdZugehoerig = positionIIdZugehoerig;
+	}
 
 	@Column(name = "TYP_C_NR")
 	private String typCNr;
 
 	@Column(name = "ANGEBOT_I_ID")
 	private Integer angebotIId;
-	
+
 	public Integer getLieferantIId() {
 		return lieferantIId;
 	}
@@ -149,10 +174,10 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 
 	@Column(name = "LIEFERANT_I_ID")
 	private Integer lieferantIId;
-	
+
 	@Column(name = "N_MATERIALZUSCHLAG")
 	private BigDecimal nMaterialzuschlag;
-	
+
 	public BigDecimal getNMaterialzuschlag() {
 		return nMaterialzuschlag;
 	}
@@ -160,7 +185,7 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	public void setNMaterialzuschlag(BigDecimal materialzuschlag) {
 		nMaterialzuschlag = materialzuschlag;
 	}
-	
+
 	public Integer getVerleihIId() {
 		return verleihIId;
 	}
@@ -172,9 +197,9 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "VERLEIH_I_ID")
 	private Integer verleihIId;
 
-	@Column(name = "N_EINKAUFPREIS") 
+	@Column(name = "N_EINKAUFPREIS")
 	private BigDecimal nEinkaufpreis;
-	
+
 	public BigDecimal getNEinkaufpreis() {
 		return this.nEinkaufpreis;
 	}
@@ -182,11 +207,10 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	public void setNEinkaufpreis(BigDecimal nEinkaufpreis) {
 		this.nEinkaufpreis = nEinkaufpreis;
 	}
-	
+
 	@Column(name = "KOSTENTRAEGER_I_ID")
 	private Integer kostentraegerIId;
-	
-	
+
 	public Integer getKostentraegerIId() {
 		return kostentraegerIId;
 	}
@@ -220,21 +244,19 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	private Integer positionIIdArtikelset;
 
 	@Column(name = "ZWSVONPOSITION_I_ID")
-	private Integer zwsVonPosition ;
+	private Integer zwsVonPosition;
 
 	@Column(name = "ZWSBISPOSITION_I_ID")
-	private Integer zwsBisPosition ;
-	
-	@Column(name = "N_ZWSNETTOSUMME") 
-	private BigDecimal zwsNettoSumme ;
+	private Integer zwsBisPosition;
+
+	@Column(name = "N_ZWSNETTOSUMME")
+	private BigDecimal zwsNettoSumme;
 
 	@Column(name = "B_ZWSPOSITIONSPREISZEIGEN")
-	private Short bZwsPositionspreisZeigen ;
-	
-	
+	private Short bZwsPositionspreisZeigen;
+
 	@Column(name = "T_MATERIALZUSCHLAG_DATUM")
-	private Timestamp tMaterialzuschlagDatum ;
-	
+	private Timestamp tMaterialzuschlagDatum;
 
 	public Timestamp getTMaterialzuschlagDatum() {
 		return tMaterialzuschlagDatum;
@@ -245,9 +267,8 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	}
 
 	@Column(name = "N_MATERIALZUSCHLAG_KURS")
-	private BigDecimal nMaterialzuschlagKurs ;
+	private BigDecimal nMaterialzuschlagKurs;
 
-	
 	public BigDecimal getNMaterialzuschlagKurs() {
 		return nMaterialzuschlagKurs;
 	}
@@ -262,7 +283,7 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 
 	@Column(name = "C_LVPOSITION")
 	private String cLvposition;
-	
+
 	public String getCLvposition() {
 		return cLvposition;
 	}
@@ -275,9 +296,51 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 		this.positionIIdArtikelset = positionIIdArtikelset;
 	}
 
-	public Angebotposition(Integer iId, Integer angebotIId, Integer iSort,
-			String angebotpositionartCNr, BigDecimal nGestehungspreis,
-			Integer mwstsatzIId, Short bNettopreisuebersteuert) {
+	@Column(name = "N_DIM_MENGE")
+	private BigDecimal nDimMenge;
+	public BigDecimal getNDimMenge() {
+		return nDimMenge;
+	}
+
+	public void setNDimMenge(BigDecimal nDimMenge) {
+		this.nDimMenge = nDimMenge;
+	}
+
+	public BigDecimal getNDimHoehe() {
+		return nDimHoehe;
+	}
+
+	public void setNDimHoehe(BigDecimal nDimHoehe) {
+		this.nDimHoehe = nDimHoehe;
+	}
+
+	public BigDecimal getNDimBreite() {
+		return nDimBreite;
+	}
+
+	public void setNDimBreite(BigDecimal nDimBreite) {
+		this.nDimBreite = nDimBreite;
+	}
+
+	public BigDecimal getNDimTiefe() {
+		return nDimTiefe;
+	}
+
+	public void setNDimTiefe(BigDecimal nDimTiefe) {
+		this.nDimTiefe = nDimTiefe;
+	}
+
+	@Column(name = "N_DIM_HOEHE")
+	private BigDecimal nDimHoehe;
+
+	@Column(name = "N_DIM_BREITE")
+	private BigDecimal nDimBreite;
+
+	@Column(name = "N_DIM_TIEFE")
+	private BigDecimal nDimTiefe;
+
+	public Angebotposition(Integer iId, Integer angebotIId, Integer iSort, String angebotpositionartCNr,
+			BigDecimal nGestehungspreis, Integer mwstsatzIId, Short bNettopreisuebersteuert) {
 		setIId(iId);
 		setAngebotIId(angebotIId);
 		setISort(iSort);
@@ -291,9 +354,8 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 		setBNettopreisuebersteuert(bNettopreisuebersteuert);
 	}
 
-	public Angebotposition(Integer iId, Integer angebotIId, Integer iSort,
-			String angebotpositionartCNr, Short rabattsatzuebersteuert,
-			Short mwstsatzuebersteuert, Short alternative) {
+	public Angebotposition(Integer iId, Integer angebotIId, Integer iSort, String angebotpositionartCNr,
+			Short rabattsatzuebersteuert, Short mwstsatzuebersteuert, Short alternative) {
 		setIId(iId);
 		setAngebotIId(angebotIId);
 		setISort(iSort);
@@ -391,8 +453,7 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 		return this.nNettoeinzelpreisplusversteckteraufschlag;
 	}
 
-	public void setNNettoeinzelpreisplusversteckteraufschlag(
-			BigDecimal nNettoeinzelpreisplusversteckteraufschlag) {
+	public void setNNettoeinzelpreisplusversteckteraufschlag(BigDecimal nNettoeinzelpreisplusversteckteraufschlag) {
 		this.nNettoeinzelpreisplusversteckteraufschlag = nNettoeinzelpreisplusversteckteraufschlag;
 	}
 
@@ -416,8 +477,7 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 		return this.nNettogesamtpreisplusversteckteraufschlag;
 	}
 
-	public void setNNettogesamtpreisplusversteckteraufschlag(
-			BigDecimal nNettogesamtpreisplusversteckteraufschlag) {
+	public void setNNettogesamtpreisplusversteckteraufschlag(BigDecimal nNettogesamtpreisplusversteckteraufschlag) {
 		this.nNettogesamtpreisplusversteckteraufschlag = nNettogesamtpreisplusversteckteraufschlag;
 	}
 
@@ -458,8 +518,7 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 		return this.nGesamtwertagstklinangebotswaehrung;
 	}
 
-	public void setNGesamtwertagstklinangebotswaehrung(
-			BigDecimal nGesamtwertagstklinangebotswaehrung) {
+	public void setNGesamtwertagstklinangebotswaehrung(BigDecimal nGesamtwertagstklinangebotswaehrung) {
 		this.nGesamtwertagstklinangebotswaehrung = nGesamtwertagstklinangebotswaehrung;
 	}
 
@@ -582,12 +641,12 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	public void setZwsNettoSumme(BigDecimal zwsNettoSumme) {
 		this.zwsNettoSumme = zwsNettoSumme;
 	}
-	
+
 	public Short getBZwsPositionspreisZeigen() {
 		return bZwsPositionspreisZeigen;
 	}
 
 	public void setBZwsPositionspreisZeigen(Short bZwsPositionpreisZeigen) {
 		this.bZwsPositionspreisZeigen = bZwsPositionpreisZeigen;
-	}	
+	}
 }

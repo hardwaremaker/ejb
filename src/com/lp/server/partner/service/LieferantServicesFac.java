@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.rmi.RemoteException;
+import java.util.Map;
 
 import javax.ejb.Remote;
 
@@ -74,4 +75,6 @@ public interface LieferantServicesFac {
 	public LfliefergruppesprDto lfliefergruppesprFindByPrimaryKey(
 			Integer lfliefergruppeIIdI, String localeCNrI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+	
+	public Map getAllLiefergruppen(TheClientDto theClientDto);
 }

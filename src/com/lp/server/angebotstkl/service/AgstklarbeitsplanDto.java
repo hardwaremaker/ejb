@@ -38,14 +38,14 @@ import java.math.BigDecimal;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.service.BelegpositionDto;
 
-
-public class AgstklarbeitsplanDto extends BelegpositionDto implements Serializable    {
+public class AgstklarbeitsplanDto extends BelegpositionDto implements Serializable {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 
 	private Integer agstklIId;
+
 	public Integer getAgstklIId() {
 		return agstklIId;
 	}
@@ -61,9 +61,28 @@ public class AgstklarbeitsplanDto extends BelegpositionDto implements Serializab
 	private String xLangtext;
 	private String agartCNr;
 	private Integer iUnterarbeitsgang;
+
+	private BigDecimal nStundensatzMann;
+
+	public BigDecimal getNStundensatzMann() {
+		return nStundensatzMann;
+	}
+
+	public void setNStundensatzMann(BigDecimal nStundensatzMann) {
+		this.nStundensatzMann = nStundensatzMann;
+	}
+
+	private BigDecimal nStundensatzMaschine;
+	public BigDecimal getNStundensatzMaschine() {
+		return nStundensatzMaschine;
+	}
+
+	public void setNStundensatzMaschine(BigDecimal nStundensatzMaschine) {
+		this.nStundensatzMaschine = nStundensatzMaschine;
+	}
+
 	private Short bNurmaschinenzeit;
-	
-	
+
 	public Short getBNurmaschinenzeit() {
 		return bNurmaschinenzeit;
 	}
@@ -81,8 +100,7 @@ public class AgstklarbeitsplanDto extends BelegpositionDto implements Serializab
 	}
 
 	public BigDecimal nMengeWennHilfsstueckliste;
-	
-	
+
 	public String getAgartCNr() {
 		return agartCNr;
 	}
@@ -100,7 +118,6 @@ public class AgstklarbeitsplanDto extends BelegpositionDto implements Serializab
 	}
 
 	private Integer iAufspannung;
-	
 
 	private Integer maschineIId;
 
@@ -139,7 +156,6 @@ public class AgstklarbeitsplanDto extends BelegpositionDto implements Serializab
 	public String getXLangtext() {
 		return xLangtext;
 	}
-
 
 	public Integer getMaschineIId() {
 		return maschineIId;

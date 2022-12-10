@@ -43,11 +43,13 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.system.service.ITablenames;
+
 @NamedQueries( { @NamedQuery(name = "LandfindByLkzLandName", query = "SELECT OBJECT (o) FROM Land o WHERE o.cLkz = ?1 and o.cName = ?2"),
 				 @NamedQuery(name = "LandfindByLkz", query = "SELECT OBJECT (o) FROM Land o WHERE o.cLkz = ?1")
 	})
 @Entity
-@Table(name = "LP_LAND")
+@Table(name = ITablenames.LP_LAND)
 public class Land implements Serializable {
 	@Id
 	@Column(name = "I_ID")
@@ -62,8 +64,8 @@ public class Land implements Serializable {
 	@Column(name = "C_TELVORWAHL")
 	private String cTelvorwahl;
 
-	@Column(name = "T_EUMITGLIED")
-	private Date tEumitglied;
+	@Column(name = "T_EUMITGLIED_VON")
+	private Date tEumitgliedVon;
 
 	@Column(name = "N_UIDNUMMERPRUEFENABBETRAG")
 	private BigDecimal nUidnummerpruefenabbetrag;
@@ -80,6 +82,28 @@ public class Land implements Serializable {
 	@Column(name = "B_SEPA")
 	private Short bSepa;
 	
+	@Column(name = "B_PRAEFERENZBEGUENSTIGT")
+	private Short bPraeferenzbeguenstigt;
+	
+	public Short getBPraeferenzbeguenstigt() {
+		return bPraeferenzbeguenstigt;
+	}
+
+	public void setBPraeferenzbeguenstigt(Short bPraeferenzbeguenstigt) {
+		this.bPraeferenzbeguenstigt = bPraeferenzbeguenstigt;
+	}
+
+	@Column(name = "B_POSTFACHMITSTRASSE")
+	private Short bPostfachmitstrasse;
+	
+	public Short getBPostfachmitstrasse() {
+		return bPostfachmitstrasse;
+	}
+
+	public void setBPostfachmitstrasse(Short bPostfachmitstrasse) {
+		this.bPostfachmitstrasse = bPostfachmitstrasse;
+	}
+
 	@Column(name = "B_PLZNACHORT")
 	private Short bPlznachort;
 	
@@ -101,6 +125,12 @@ public class Land implements Serializable {
 	@Column(name = "LAND_I_ID_GEMEINSAMESPOSTLAND")
 	private Integer landIIdGemeinsamespostland;
 	
+	@Column(name = "B_MWSTMUENZRUNDUNG")
+	private Short bMwstMuenzrundung;
+
+	@Column(name = "T_EUMITGLIED_BIS")
+	private Date tEumitgliedBis;
+
 	public Integer getLandIIdGemeinsamespostland() {
 		return landIIdGemeinsamespostland;
 	}
@@ -131,13 +161,16 @@ public class Land implements Serializable {
 		super();
 	}
 
-	public Land(Integer iid, String lkz, String name, Integer laengeuidnummer, Short bSepa, Short bPlznachort) {
+	public Land(Integer iid, String lkz, String name, Integer laengeuidnummer, Short bSepa, Short bPlznachort,Short bPostfachmitstrasse, Short bMwstMuenzrundung, Short bPraeferenzbeguenstigt) {
 		setIId(iid);
 		setCLkz(lkz);
 		setCName(name);
 		setILaengeuidnummer(laengeuidnummer);
 		setBSepa(bSepa);
 		setBPlznachort(bPlznachort);
+		setBPostfachmitstrasse(bPostfachmitstrasse);
+		setBMwstMuenzrundung(bMwstMuenzrundung);
+		setBPraeferenzbeguenstigt(bPraeferenzbeguenstigt);
 	}
 
 	public Integer getIId() {
@@ -172,12 +205,12 @@ public class Land implements Serializable {
 		this.cTelvorwahl = cTelvorwahl;
 	}
 
-	public Date getTEumitglied() {
-		return this.tEumitglied;
+	public Date getTEumitgliedVon() {
+		return this.tEumitgliedVon;
 	}
 
-	public void setTEumitglied(Date tEumitglied) {
-		this.tEumitglied = tEumitglied;
+	public void setTEumitgliedVon(Date tEumitgliedVon) {
+		this.tEumitgliedVon = tEumitgliedVon;
 	}
 
 	public BigDecimal getNUidnummerpruefenabbetrag() {
@@ -229,5 +262,31 @@ public class Land implements Serializable {
 	 */
 	public void setNMuenzRundung(BigDecimal nMuenzRundung) {
 		this.nMuenzRundung = nMuenzRundung;
+	}
+	
+	/**
+	 * Soll auch der Mehrwertsteuerbetrag mittels M&uuml;nzrundung gerundet werden?
+	 * @return true wenn der Mehrwertsteuerbetrag gerundet werden soll
+	 */
+	public Short getBMwstMuenzrundung() {
+		return bMwstMuenzrundung;
+	}
+
+	/**
+	 * Rundung des Mehrwertsteuerbetrages aktivieren
+	 * 
+	 * @param bMwstMuenzrundung true wenn der Mehrwertsteuerbetrag ebenfalls nach
+	 *   der M&uuml;nzrundung gerundet werden soll
+	 */
+	public void setBMwstMuenzrundung(Short bMwstMuenzrundung) {
+		this.bMwstMuenzrundung = bMwstMuenzrundung;
+	}
+	
+	public Date getTEumitgliedBis() {
+		return tEumitgliedBis;
+	}
+	
+	public void setTEumitgliedBis(Date tEumitgliedBis) {
+		this.tEumitgliedBis = tEumitgliedBis;
 	}
 }

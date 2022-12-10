@@ -44,6 +44,7 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzUVAArt;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.finanz.service.UvaartsprDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -54,6 +55,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -102,15 +104,24 @@ public class UvaartHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 
-			Locale locUI = theClientDto.getLocUi();
+			
 			while (resultListIterator.hasNext()) {
 				FLRFinanzUVAArt uva = (FLRFinanzUVAArt) resultListIterator
 						.next();
 				rows[row][col++] = uva.getI_id();
 				rows[row][col++] = uva.getC_nr();
 				rows[row][col++] = uva.getC_kennzeichen();
-				rows[row][col++] = getFinanzServiceFac()
-						.uebersetzeUvaartOptimal(uva.getI_id(), locUI, locUI);
+				
+				UvaartsprDto uvaartsprDto=getFinanzServiceFac()
+				.uvaartsprFindByPrimaryKey(uva.getI_id(), theClientDto.getLocUiAsString());
+				if(uvaartsprDto!=null) {
+					rows[row][col++] = uvaartsprDto.getCBez();
+				} else {
+					rows[row][col++] = null;
+				}
+				
+				rows[row][col++] = Helper.short2Boolean(uva
+						.getB_keine_auswahl_bei_er());
 				row++;
 				col = 0;
 			}
@@ -119,11 +130,7 @@ public class UvaartHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			sessionClose(session);
 		}
 		return result;
 	}
@@ -307,21 +314,27 @@ public class UvaartHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class }, new String[] {
-					"c_nr",
-					getTextRespectUISpr("fb.uvaart", mandantCNr, locUI),
-					getTextRespectUISpr("fb.uvaart.ckennzeichen", mandantCNr,
-							locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class,
+							String.class, Boolean.class },
+					new String[] {
+							"c_nr",
+							getTextRespectUISpr("fb.uvaart", mandantCNr, locUI),
+							getTextRespectUISpr("fb.uvaart.ckennzeichen",
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
+									locUI),
+							getTextRespectUISpr("fb.uvaart.keineauswahlbei.er",
+									mandantCNr, locUI) }, new int[] {
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 					new String[] { FinanzFac.FLR_UVAART_I_ID,
 							FinanzFac.FLR_UVAART_C_NR,
 							FinanzFac.FLR_UVAART_C_KENNZEICHEN,
-							Facade.NICHT_SORTIERBAR }));
+							Facade.NICHT_SORTIERBAR, "b_keine_auswahl_bei_er" }));
 		}
 		return super.getTableInfo();
 	}

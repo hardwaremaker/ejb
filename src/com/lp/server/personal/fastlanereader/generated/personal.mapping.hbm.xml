@@ -19,22 +19,36 @@
 	details. You should have received a copy of the GNU Affero General Public 
 	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
 	Contact: developers@heliumv.com -->
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<hibernate-mapping package="com.lp.server.personal.fastlanereader.generated">
+<!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.org/dtd/hibernate-mapping-3.0.dtd">-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd"> 
+<hibernate-mapping
+	package="com.lp.server.personal.fastlanereader.generated">
 	<class name="FLRPersonal" table="PERS_PERSONAL">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_personalnummer" column="C_PERSONALNR" type="java.lang.String" />
-		<property name="personalgruppe_i_id" column="PERSONALGRUPPE_I_ID"
-			type="java.lang.Integer" />
-		<property name="c_ausweis" column="C_AUSWEIS" type="java.lang.String" />
-		<property name="c_kurzzeichen" column="C_KURZZEICHEN" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="c_personalnummer" column="C_PERSONALNR"
+			type="java.lang.String" />
+		<property name="personalgruppe_i_id"
+			column="PERSONALGRUPPE_I_ID" type="java.lang.Integer" />
+		<property name="c_ausweis" column="C_AUSWEIS"
+			type="java.lang.String" />
+		<property name="c_kurzzeichen" column="C_KURZZEICHEN"
+			type="java.lang.String" />
+		<property name="c_email" column="C_EMAIL"
+			type="java.lang.String" not-null="false" />
 		<property name="personalart_c_nr" column="PERSONALART_C_NR"
 			type="java.lang.String" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
-		<property name="t_geburtsdatum" column="T_GEBURTSDATUM" type="java.util.Date" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
+		<property name="b_synch_alle_kontakte"
+			column="B_SYNCH_ALLE_KONTAKTE" type="java.lang.Short" />
+		<property name="t_geburtsdatum" column="T_GEBURTSDATUM"
+			type="java.util.Date" />
+		<property name="x_kommentar" column="X_KOMMENTAR"
+			type="java.lang.String" />
 		<many-to-one name="flrpartner"
 			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
 			column="PARTNER_I_ID" />
@@ -48,21 +62,212 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonalgruppe"
 			column="PERSONALGRUPPE_I_ID" insert="false" update="false" />
 	</class>
+
+	<class name="FLRHvmalizenz" table="PERS_HVMALIZENZ">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="i_max_user" column="I_MAX_USER"
+			type="java.lang.Integer" />
+
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+
+		<set name="hvmabenutzerset" inverse="true">
+			<key column="HVMALIZENZ_I_ID" />
+			<one-to-many
+				class="com.lp.server.personal.fastlanereader.generated.FLRHvmabenutzer" />
+
+		</set>
+
+	</class>
+
+	<class name="FLRHvmarecht" table="PERS_HVMARECHT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="hvmalizenz_i_id" column="HVMALIZENZ_I_ID"
+			type="java.lang.Integer" />
+		<property name="b_aktiv" column="B_AKTIV"
+			type="java.lang.Short" />
+		<many-to-one name="flrhvmalizenz"
+			class="com.lp.server.personal.fastlanereader.generated.FLRHvmalizenz"
+			column="HVMALIZENZ_I_ID" insert="false" update="false" />
+
+	</class>
+
+	<class name="FLRHvmaparameter" table="PERS_HVMAPARAMETER">
+		<composite-id name="id_comp"
+			class="com.lp.server.personal.fastlanereader.generated.service.FLRHvmaparameterPK">
+			<key-property name="c_nr" column="C_NR"
+				type="java.lang.String" />
+			<key-property name="c_kategorie" column="C_KATEGORIE"
+				type="java.lang.String" />
+		</composite-id>
+
+		<property name="hvmalizenz_i_id" column="HVMALIZENZ_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrhvmalizenz"
+			class="com.lp.server.personal.fastlanereader.generated.FLRHvmalizenz"
+			column="HVMALIZENZ_I_ID" insert="false" update="false" />
+		<property name="c_datentyp" column="C_DATENTYP"
+			type="java.lang.String" />
+		<property name="c_default" column="C_DEFAULT"
+			type="java.lang.String" />
+		<property name="c_bemerkung" column="C_BEMERKUNG"
+			type="java.lang.String" />
+		<property name="b_uebertragen" column="B_UEBERTRAGEN"
+			type="java.lang.Short" />
+
+	</class>
+
+
+	<class name="FLRHvmabenutzer" table="PERS_HVMABENUTZER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="benutzer_i_id" column="BENUTZER_I_ID"
+			type="java.lang.Integer" />
+		<property name="hvmalizenz_i_id" column="HVMALIZENZ_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrhvmalizenz"
+			class="com.lp.server.personal.fastlanereader.generated.FLRHvmalizenz"
+			column="HVMALIZENZ_I_ID" insert="false" update="false" />
+		<many-to-one name="flrbenutzer"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRBenutzer"
+			column="BENUTZER_I_ID" insert="false" update="false" />
+
+	</class>
+
+
+	<class name="FLRHvmabenutzerparameter"
+		table="PERS_HVMABENUTZERPARAMETER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_kategorie" column="C_KATEGORIE"
+			type="java.lang.String" />
+		<property name="c_wert" column="C_WERT"
+			type="java.lang.String" />
+
+		<property name="hvmabenutzer_i_id" column="HVMABENUTZER_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrhvmabenutzer"
+			class="com.lp.server.personal.fastlanereader.generated.FLRHvmabenutzer"
+			column="HVMABENUTZER_I_ID" insert="false" update="false" />
+
+
+	</class>
+
+
+	<class name="FLRHvmarolle" table="PERS_HVMAROLLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="systemrolle_i_id" column="SYSTEMROLLE_I_ID"
+			type="java.lang.Integer" />
+		<property name="hvmarecht_i_id" column="HVMARECHT_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrhvmarecht"
+			class="com.lp.server.personal.fastlanereader.generated.FLRHvmarecht"
+			column="HVMARECHT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" insert="false" update="false" />
+
+	</class>
+
+	<class name="FLRHvmasync" table="PERS_HVMASYNC">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="systemrolle_i_id_synczeitpunkt"
+			column="SYSTEMROLLE_I_ID_SYNCZEITPUNKT" type="java.lang.Integer" />
+		<property name="t_sync" column="T_SYNC"
+			type="java.sql.Timestamp" />
+		<property name="c_wowurdegebucht" column="C_WOWURDEGEBUCHT"
+			type="java.lang.String" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID_SYNCZEITPUNKT" insert="false" update="false" />
+
+	</class>
+
 	<class name="FLRBeruf" table="PERS_BERUF">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
+
+	<class name="FLRNachrichtengruppe" table="PERS_NACHRICHTENGRUPPE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRNachrichtengruppeteilnehmer"
+		table="PERS_NACHRICHTENGRUPPETEILNEHMER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="nachrichtengruppe_i_id"
+			column="NACHRICHTENGRUPPE_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrnachrichtengruppe"
+			class="com.lp.server.personal.fastlanereader.generated.FLRNachrichtengruppe"
+			column="NACHRICHTENGRUPPE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+	</class>
+
 	<class name="FLRKollektiv" table="PERS_KOLLEKTIV">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
+
+		<property name="i_berechnungsbasis"
+			column="I_BERECHNUNGSBASIS" type="java.lang.Integer" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="b_verbraucheuestd" column="B_VERBRAUCHEUESTD"
 			type="java.lang.Short" />
 		<property name="n_normalstunden" column="N_NORMALSTUNDEN"
 			type="java.math.BigDecimal" />
+	</class>
+	<class name="FLRPassivereise" table="PERS_PASSIVEREISE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="u_bis" column="U_BIS" type="java.sql.Time" />
+		<property name="u_ab" column="U_AB" type="java.sql.Time" />
+		<property name="b_restdestages" column="B_RESTDESTAGES"
+			type="java.lang.Short" />
+
+		<many-to-one name="flrkollektiv"
+			class="com.lp.server.personal.fastlanereader.generated.FLRKollektiv"
+			column="KOLLEKTIV_I_ID" />
+		<many-to-one name="flrtagesart"
+			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
+			column="TAGESART_I_ID" />
+	</class>
+	<class name="FLRPersonalterminal" table="PERS_PERSONALTERMINAL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrarbeitsplatz"
+			class="com.lp.server.system.fastlanereader.generated.FLRArbeitsplatz"
+			column="ARBEITSPLATZ_I_ID" />
 	</class>
 	<class name="FLRKollektivuestd" table="PERS_KOLLEKTIVUESTD">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -70,7 +275,8 @@
 		</id>
 		<property name="u_bis" column="U_BIS" type="java.sql.Time" />
 		<property name="u_ab" column="U_AB" type="java.sql.Time" />
-		<property name="b_restdestages" column="B_RESTDESTAGES" type="java.lang.Short" />
+		<property name="b_restdestages" column="B_RESTDESTAGES"
+			type="java.lang.Short" />
 		<property name="b_unterignorieren" column="B_UNTERIGNORIEREN"
 			type="java.lang.Short" />
 		<many-to-one name="flrkollektiv"
@@ -86,7 +292,8 @@
 		</id>
 		<property name="u_bis" column="U_BIS" type="java.sql.Time" />
 		<property name="u_von" column="U_VON" type="java.sql.Time" />
-		<property name="b_restdestages" column="B_RESTDESTAGES" type="java.lang.Short" />
+		<property name="b_restdestages" column="B_RESTDESTAGES"
+			type="java.lang.Short" />
 		<property name="b_unterignorieren" column="B_UNTERIGNORIEREN"
 			type="java.lang.Short" />
 		<many-to-one name="flrkollektiv"
@@ -96,6 +303,35 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
 			column="TAGESART_I_ID" />
 	</class>
+
+
+	<class name="FLRKollektivuestdBVA"
+		table="PERS_KOLLEKTIVUESTD_BVA">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="u_100_ende" column="U_100_ENDE"
+			type="java.sql.Time" />
+		<property name="u_50_beginn" column="U_50_BEGINN"
+			type="java.sql.Time" />
+		<property name="u_50_ende" column="U_50_ENDE"
+			type="java.sql.Time" />
+		<property name="u_100_beginn" column="U_100_BEGINN"
+			type="java.sql.Time" />
+		<property name="u_gleitzeit_bis" column="U_GLEITZEIT_BIS"
+			type="java.sql.Time" />
+
+		<many-to-one name="flrkollektiv"
+			class="com.lp.server.personal.fastlanereader.generated.FLRKollektiv"
+			column="KOLLEKTIV_I_ID" />
+		<many-to-one name="flrtagesart"
+			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
+			column="TAGESART_I_ID" />
+
+
+
+	</class>
+
 	<class name="FLRLohngruppe" table="PERS_LOHNGRUPPE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -109,10 +345,39 @@
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
 
+	<class name="FLRAbwesenheitsart" table="PERS_ABWESENHEITSART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="sprset" inverse="true">
+			<key column="ABWESENHEITSART_I_ID" />
+			<one-to-many
+				class="com.lp.server.personal.fastlanereader.generated.FLRAbwesenheitsartspr" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+	</class>
+	<class name="FLRAbwesenheitsartspr"
+		table="PERS_ABWESENHEITSARTSPR">
+		<composite-id>
+			<key-many-to-one name="abwesenheitsart"
+				column="ABWESENHEITSART_I_ID"
+				class="com.lp.server.personal.fastlanereader.generated.FLRAbwesenheitsart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
 	<!-- flrsort: 2 -->
 	<class name="FLRReligionspr" table="PERS_RELIGIONSPR">
 		<composite-id>
-			<key-many-to-one name="religion" column="RELIGION_I_ID"
+			<key-many-to-one name="religion"
+				column="RELIGION_I_ID"
 				class="com.lp.server.personal.fastlanereader.generated.FLRReligion" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
@@ -129,9 +394,156 @@
 			<key column="RELIGION_I_ID" />
 			<one-to-many
 				class="com.lp.server.personal.fastlanereader.generated.FLRReligionspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 	</class>
+
+
+	<class name="FLRNachrichten" table="PERS_NACHRICHTEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="nachrichtenart_i_id"
+			column="NACHRICHTENART_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id_absender"
+			column="PERSONAL_I_ID_ABSENDER" type="java.lang.Integer" />
+		<property name="personal_i_id_erledigt"
+			column="PERSONAL_I_ID_ERLEDIGT" type="java.lang.Integer" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Timestamp" />
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+
+		<property name="c_betreff" column="C_BETREFF"
+			type="java.lang.String" />
+		<property name="x_text" column="X_TEXT"
+			type="java.lang.String" />
+
+		<many-to-one name="flrnachrichtenart"
+			class="com.lp.server.personal.fastlanereader.generated.FLRNachrichtenart"
+			column="NACHRICHTENART_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal_absender"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ABSENDER" insert="false" update="false" />
+
+	</class>
+
+	<class name="FLRAnwesenheitsbestaetigung"
+		table="PERS_ANWESENHEITSBESTAETIGUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="auftrag_i_id" column="AUFTRAG_I_ID"
+			type="java.lang.Integer" />
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" />
+
+		<property name="t_versandt" column="T_VERSANDT"
+			type="java.sql.Timestamp" />
+		<property name="t_unterschrift" column="T_UNTERSCHRIFT"
+			type="java.sql.Timestamp" />
+
+		<property name="c_bemerkung" column="C_BEMERKUNG"
+			type="java.lang.String" />
+		<property name="c_name" column="C_NAME"
+			type="java.lang.String" />
+		<property name="i_lfdnr" column="I_LFDNR"
+			type="java.lang.Integer" />
+
+		<property name="datenformat_c_nr" column="DATENFORMAT_C_NR"
+			type="java.lang.String" />
+
+		<many-to-one name="flrauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag"
+			column="AUFTRAG_I_ID" insert="false" update="false" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+
+	</class>
+
+	<class name="FLRNachrichtenempfaenger"
+		table="PERS_NACHRICHTENEMPFAENGER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="nachrichten_i_id" column="NACHRICHTEN_I_ID"
+			type="java.lang.Integer" />
+		<property name="personal_i_id_empfaenger"
+			column="PERSONAL_I_ID_EMPFAENGER" type="java.lang.Integer" />
+
+		<property name="t_empfangen" column="T_EMPFANGEN"
+			type="java.sql.Timestamp" />
+		<property name="t_gelesen" column="T_GELESEN"
+			type="java.sql.Timestamp" />
+
+
+
+		<many-to-one name="flrnachrichten"
+			class="com.lp.server.personal.fastlanereader.generated.FLRNachrichten"
+			column="NACHRICHTEN_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal_empfaenger"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_EMPFAENGER" insert="false" update="false" />
+
+	</class>
+
+	<class name="FLRNachrichtenabo" table="PERS_NACHRICHTENABO">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="nachrichtenart_i_id"
+			column="NACHRICHTENART_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="nachrichtengruppe_i_id"
+			column="NACHRICHTENGRUPPE_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrnachrichtenart"
+			class="com.lp.server.personal.fastlanereader.generated.FLRNachrichtenart"
+			column="NACHRICHTENART_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrnachrichtengruppe"
+			class="com.lp.server.personal.fastlanereader.generated.FLRNachrichtengruppe"
+			column="NACHRICHTENGRUPPE_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRNachrichtenart" table="PERS_NACHRICHTENART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="b_muss_erledigt_werden"
+			column="B_MUSS_ERLEDIGT_WERDEN" type="java.lang.Short" />
+		<set name="nachrichtenartsprset" inverse="true">
+			<key column="NACHRICHTENART_I_ID" />
+			<one-to-many
+				class="com.lp.server.personal.fastlanereader.generated.FLRNachrichtenartspr" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+
+	<class name="FLRNachrichtenartspr" table="PERS_NACHRICHTENARTSPR">
+		<composite-id>
+			<key-many-to-one name="nachrichtenart"
+				column="NACHRICHTENART_I_ID"
+				class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodell" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
 	<class name="FLRLohnart" table="PERS_LOHNART">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -139,13 +551,49 @@
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="personalart_c_nr" column="PERSONALART_C_NR"
 			type="java.lang.String" />
-		<property name="i_lohnart" column="I_LOHNART" type="java.lang.Integer" />
+		<property name="i_lohnart" column="I_LOHNART"
+			type="java.lang.Integer" />
+		<property name="i_ausfall_wochen" column="I_AUSFALL_WOCHEN"
+			type="java.lang.Integer" />
+		<property name="f_mindestuestd" column="F_MINDESTUESTD"
+			type="java.lang.Double" />
+
+
 	</class>
-	<class name="FLRLohnartstundenfaktor" table="PERS_LOHNARTSTUNDENFAKTOR">
+	<class name="FLRZahltag" table="PERS_ZAHLTAG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="f_faktor" column="F_FAKTOR" type="java.lang.Double" />
+		<property name="i_monat" column="I_MONAT"
+			type="java.lang.Integer" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="i_stichtag_netto" column="I_STICHTAG_NETTO"
+			type="java.lang.Integer" />
+		<property name="i_stichtag_lohnsteuer_relativ_zum_letzten"
+			column="I_STICHTAG_LOHNSTEUER_RELATIV_ZUM_LETZTEN"
+			type="java.lang.Integer" />
+		<property name="i_stichtag_sozialabgaben_relativ_zum_letzten"
+			column="I_STICHTAG_SOZIALABGABEN_RELATIV_ZUM_LETZTEN"
+			type="java.lang.Integer" />
+		<property name="f_faktor" column="F_FAKTOR"
+			type="java.lang.Double" />
+		<property name="b_monatsletzter_netto"
+			column="B_MONATSLETZTER_NETTO" type="java.lang.Short" />
+	</class>
+	<class name="FLRLohnartstundenfaktor"
+		table="PERS_LOHNARTSTUNDENFAKTOR">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="f_faktor" column="F_FAKTOR"
+			type="java.lang.Double" />
+		<property name="zeitmodell_i_id" column="ZEITMODELL_I_ID"
+			type="java.lang.Integer" />
+		<property name="taetigkeit_i_id" column="TAETIGKEIT_I_ID"
+			type="java.lang.Integer" />
+		<property name="schichtzeit_i_id" column="SCHICHTZEIT_I_ID"
+			type="java.lang.Integer" />
 		<many-to-one name="flrlohnart"
 			class="com.lp.server.personal.fastlanereader.generated.FLRLohnart"
 			column="LOHNART_I_ID" />
@@ -155,6 +603,10 @@
 		<many-to-one name="flrlohnstundenart"
 			class="com.lp.server.personal.fastlanereader.generated.FLRLohnstundenart"
 			column="LOHNSTUNDENART_C_NR" />
+
+		<many-to-one name="flrzeitmodell"
+			class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodell"
+			column="ZEITMODELL_I_ID" insert="false" update="false" />
 
 	</class>
 
@@ -170,15 +622,21 @@
 			<generator class="native" />
 		</id>
 	</class>
-	<class name="FLRPersonalangehoerige" table="PERS_PERSONALANGEHOERIGE">
+	<class name="FLRPersonalangehoerige"
+		table="PERS_PERSONALANGEHOERIGE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="c_vorname" column="C_VORNAME" type="java.lang.String" />
-		<property name="c_name" column="C_NAME" type="java.lang.String" />
-		<property name="c_sozialversnr" column="C_SOZIALVERSNR" type="java.lang.String" />
-		<property name="t_geburtsdatum" column="T_GEBURTSDATUM" type="java.util.Date" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="c_vorname" column="C_VORNAME"
+			type="java.lang.String" />
+		<property name="c_name" column="C_NAME"
+			type="java.lang.String" />
+		<property name="c_sozialversnr" column="C_SOZIALVERSNR"
+			type="java.lang.String" />
+		<property name="t_geburtsdatum" column="T_GEBURTSDATUM"
+			type="java.util.Date" />
 		<many-to-one name="flrangehoerigenart"
 			class="com.lp.server.personal.fastlanereader.generated.FLRAngehoerigenart"
 			column="ANGEHOERIGENART_C_NR" />
@@ -187,33 +645,47 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="t_eintritt" column="T_EINTRITT" type="java.util.Date" />
-		<property name="t_austritt" column="T_AUSTRITT" type="java.util.Date" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_eintritt" column="T_EINTRITT"
+			type="java.util.Date" />
+		<property name="t_austritt" column="T_AUSTRITT"
+			type="java.util.Date" />
+		<property name="b_wiedereintritt" column="B_WIEDEREINTRITT"
+			type="java.lang.Short" />
 		<property name="c_austrittsgrund" column="C_AUSTRITTSGRUND"
 			type="java.lang.String" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+
 	</class>
 	<class name="FLRPersonalzeiten" table="PERS_PERSONALZEITEN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
 		<property name="t_von" column="T_VON" type="java.util.Date" />
 		<property name="t_bis" column="T_BIS" type="java.util.Date" />
-		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String" />
+		<property name="c_bemerkung" column="C_BEMERKUNG"
+			type="java.lang.String" />
 	</class>
 	<class name="FLRZeitmodell" table="PERS_ZEITMODELL">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
 		<set name="zeitmodellsprset" inverse="true">
 			<key column="ZEITMODELL_I_ID" />
 			<one-to-many
 				class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodellspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 		<set name="zeitmodelltagset" inverse="true">
 			<key column="ZEITMODELL_I_ID" />
@@ -221,10 +693,14 @@
 				class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodelltag" />
 
 		</set>
+		<many-to-one name="flrschicht"
+			class="com.lp.server.personal.fastlanereader.generated.FLRSchicht"
+			column="SCHICHT_I_ID" insert="false" update="false" />
 	</class>
 	<class name="FLRZeitmodellspr" table="PERS_ZEITMODELLSPR">
 		<composite-id>
-			<key-many-to-one name="zeitmodell" column="ZEITMODELL_I_ID"
+			<key-many-to-one name="zeitmodell"
+				column="ZEITMODELL_I_ID"
 				class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodell" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
@@ -237,11 +713,13 @@
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 
 	</class>
 
-	<class name="FLRMaschinenzmtagesart" table="PERS_MASCHINENZMTAGESART">
+	<class name="FLRMaschinenzmtagesart"
+		table="PERS_MASCHINENZMTAGESART">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
@@ -255,34 +733,63 @@
 			column="MASCHINENZM_I_ID" />
 	</class>
 
-	<class name="FLRMaschinemaschinenzm" table="PERS_MASCHINEMASCHINENZM">
+	<class name="FLRMaschinemaschinenzm"
+		table="PERS_MASCHINEMASCHINENZM">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="maschine_i_id" column="MASCHINE_I_ID" type="java.lang.Integer" />
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.util.Date" />
+		<property name="maschine_i_id" column="MASCHINE_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
 		<many-to-one name="flrzeitmodell"
 			class="com.lp.server.personal.fastlanereader.generated.FLRMaschinenzm"
 			column="MASCHINENZM_I_ID" />
 	</class>
 
+	<class name="FLRMaschineleistungsfaktor"
+		table="PERS_MASCHINELEISTUNGSFAKTOR">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="maschine_i_id" column="MASCHINE_I_ID"
+			type="java.lang.Integer" />
+		<property name="material_i_id" column="MATERIAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
+			
+		<property name="n_faktor_in_prozent" column="N_FAKTOR_IN_PROZENT"
+			type="java.math.BigDecimal" />
+			
+		<many-to-one name="flrmaschine"
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
+			column="MASCHINE_I_ID"  insert="false" update="false" />
+			
+		<many-to-one name="flrmaterial"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRMaterial"
+			column="MATERIAL_I_ID"  insert="false" update="false" />
+	</class>
 
 	<class name="FLRTagesart" table="PERS_TAGESART">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
 		<set name="tagesartsprset" inverse="true">
 			<key column="TAGESART_I_ID" />
 			<one-to-many
 				class="com.lp.server.personal.fastlanereader.generated.FLRTagesartspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 	</class>
 	<class name="FLRTagesartspr" table="PERS_TAGESARTSPR">
 		<composite-id>
-			<key-many-to-one name="tagesart" column="TAGESART_I_ID"
+			<key-many-to-one name="tagesart"
+				column="TAGESART_I_ID"
 				class="com.lp.server.personal.fastlanereader.generated.FLRTagesart" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
@@ -293,14 +800,18 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="u_sollzeit" column="U_SOLLZEIT" type="java.sql.Time" />
-		<property name="u_autopauseab" column="U_AUTOPAUSEAB" type="java.sql.Time" />
-		<property name="u_mindestpause" column="U_MINDESTPAUSE" type="java.sql.Time" />
-		<property name="u_autopauseab2" column="U_AUTOPAUSEAB2" type="java.sql.Time" />
+		<property name="u_sollzeit" column="U_SOLLZEIT"
+			type="java.sql.Time" />
+		<property name="u_autopauseab" column="U_AUTOPAUSEAB"
+			type="java.sql.Time" />
+		<property name="u_mindestpause" column="U_MINDESTPAUSE"
+			type="java.sql.Time" />
+		<property name="u_autopauseab2" column="U_AUTOPAUSEAB2"
+			type="java.sql.Time" />
 		<property name="u_mindestpause2" column="U_MINDESTPAUSE2"
 			type="java.sql.Time" />
-		<property name="u_erlaubteanwesenheitszeit" column="U_ERLAUBTEANWESENHEITSZEIT"
-			type="java.sql.Time" />
+		<property name="u_erlaubteanwesenheitszeit"
+			column="U_ERLAUBTEANWESENHEITSZEIT" type="java.sql.Time" />
 		<many-to-one name="flrtagesart"
 			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
 			column="TAGESART_I_ID" />
@@ -308,31 +819,51 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodell"
 			column="ZEITMODELL_I_ID" />
 	</class>
-	<class name="FLRZeitmodelltagpause" table="PERS_ZEITMODELLTAGPAUSE">
+	<class name="FLRZeitmodelltagpause"
+		table="PERS_ZEITMODELLTAGPAUSE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="u_beginn" column="U_BEGINN" type="java.sql.Time" />
+		<property name="u_beginn" column="U_BEGINN"
+			type="java.sql.Time" />
 		<property name="u_ende" column="U_ENDE" type="java.sql.Time" />
 		<many-to-one name="flrzeitmodelltag"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodelltag"
 			column="ZEITMODELLTAG_I_ID" />
 	</class>
-	<class name="FLRPersonalzeitmodell" table="PERS_PERSONALZEITMODELL">
+	<class name="FLRPersonalzeitmodell"
+		table="PERS_PERSONALZEITMODELL">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.util.Date" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
 		<many-to-one name="flrzeitmodell"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodell"
 			column="ZEITMODELL_I_ID" />
 	</class>
+
+	<class name="FLRPersonalfahrzeug" table="PERS_PERSONALFAHRZEUG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="fahrzeug_i_id" column="FAHRZEUG_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrfahrzeug"
+			class="com.lp.server.personal.fastlanereader.generated.FLRFahrzeug"
+			column="FAHRZEUG_I_ID" insert="false" update="false" />
+	</class>
+
 	<class name="FLRSchichtzeitmodell" table="PERS_SCHICHTZEITMODELL">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
 		<many-to-one name="flrzeitmodell"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZeitmodell"
 			column="ZEITMODELL_I_ID" />
@@ -341,8 +872,10 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_datum" column="T_DATUM" type="java.util.Date" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="t_datum" column="T_DATUM"
+			type="java.util.Date" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<many-to-one name="flrtagesart"
 			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
@@ -357,12 +890,15 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_tag" column="I_TAG" type="java.lang.Integer" />
-		<property name="i_monat" column="I_MONAT" type="java.lang.Integer" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="i_offset_ostersonntag" column="I_OFFSET_OSTERSONNTAG"
+		<property name="i_tag" column="I_TAG"
 			type="java.lang.Integer" />
+		<property name="i_monat" column="I_MONAT"
+			type="java.lang.Integer" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="i_offset_ostersonntag"
+			column="I_OFFSET_OSTERSONNTAG" type="java.lang.Integer" />
 		<many-to-one name="flrtagesart"
 			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
 			column="TAGESART_I_ID" />
@@ -376,9 +912,15 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="c_kennzeichen" column="C_KENNZEICHEN" type="java.lang.String" />
+		<property name="c_kennzeichen" column="C_KENNZEICHEN"
+			type="java.lang.String" />
+		<property name="fahrzeugverwendungsart_c_nr"
+			column="FAHRZEUGVERWENDUNGSART_C_NR" type="java.lang.String" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
 
 	</class>
 
@@ -387,10 +929,12 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="n_kmkosten" column="N_KMKOSTEN" type="java.math.BigDecimal" />
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.sql.Timestamp" />
-		<property name="fahrzeug_i_id" column="FAHRZEUG_I_ID" type="java.lang.Integer"
-			insert="false" update="false" />
+		<property name="n_kmkosten" column="N_KMKOSTEN"
+			type="java.math.BigDecimal" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.sql.Timestamp" />
+		<property name="fahrzeug_i_id" column="FAHRZEUG_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
 
 		<many-to-one name="flrfahrzeug"
 			class="com.lp.server.personal.fastlanereader.generated.FLRFahrzeug"
@@ -403,55 +947,116 @@
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="taetigkeitart_c_nr" column="TAETIGKEITART_C_NR"
-			type="java.lang.String" />
-		<property name="b_tagbuchbar" column="B_TAGBUCHBAR" type="java.lang.Short" />
-		<property name="f_bezahlt" column="F_BEZAHLT" type="java.lang.Double" />
-		<property name="b_bdebuchbar" column="B_BDEBUCHBAR" type="java.lang.Short" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
-		<property name="c_importkennzeichen" column="C_IMPORTKENNZEICHEN"
-			type="java.lang.String" />
+		<property name="taetigkeitart_c_nr"
+			column="TAETIGKEITART_C_NR" type="java.lang.String" />
+		<property name="b_tagbuchbar" column="B_TAGBUCHBAR"
+			type="java.lang.Short" />
+		<property name="f_bezahlt" column="F_BEZAHLT"
+			type="java.lang.Double" />
+		<property name="b_bdebuchbar" column="B_BDEBUCHBAR"
+			type="java.lang.Short" />
+		<property name="b_darf_selber_buchen"
+			column="B_DARF_SELBER_BUCHEN" type="java.lang.Short" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
+		<property name="c_importkennzeichen"
+			column="C_IMPORTKENNZEICHEN" type="java.lang.String" />
 		<set name="taetigkeitsprset" inverse="true">
 			<key column="TAETIGKEIT_I_ID" />
 			<one-to-many
 				class="com.lp.server.personal.fastlanereader.generated.FLRTaetigkeitspr" />
-			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+			<filter name="filterLocale"
+				condition=":paramLocale = LOCALE_C_NR" />
 		</set>
 	</class>
 	<class name="FLRTaetigkeitspr" table="PERS_TAETIGKEITSPR">
 		<composite-id>
-			<key-many-to-one name="religion" column="TAETIGKEIT_I_ID"
+			<key-many-to-one name="religion"
+				column="TAETIGKEIT_I_ID"
 				class="com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit" />
 			<key-many-to-one name="locale" column="LOCALE_C_NR"
 				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
 		</composite-id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
+
+	<class name="FLRZeitenmanuellerledigt"
+		table="PERS_ZEITENMANUELLERLEDIGT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="zeitdaten_i_id" column="ZEITDATEN_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="maschinenzeitdaten_i_id"
+			column="MASCHINENZEITDATEN_I_ID" type="java.lang.Integer"
+			insert="false" update="false" />
+		<property name="reise_i_id" column="REISE_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="telefonzeiten_i_id"
+			column="TELEFONZEITEN_I_ID" type="java.lang.Integer" insert="false"
+			update="false" />
+
+		<many-to-one name="flrzeitdaten"
+			class="com.lp.server.personal.fastlanereader.generated.FLRZeitdaten"
+			column="ZEITDATEN_I_ID" />
+		<many-to-one name="flrmaschinenzeitdaten"
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschinenzeitdaten"
+			column="MASCHINENZEITDATEN_I_ID" />
+		<many-to-one name="flrreise"
+			class="com.lp.server.personal.fastlanereader.generated.FLRReise"
+			column="REISE_I_ID" />
+		<many-to-one name="flrtelefonzeiten"
+			class="com.lp.server.personal.fastlanereader.generated.FLRTelefonzeiten"
+			column="TELEFONZEITEN_I_ID" />
+
+	</class>
+
 	<class name="FLRZeitdaten" table="PERS_ZEITDATEN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_zeit" column="T_ZEIT" type="java.sql.Timestamp" />
-		<property name="c_belegartnr" column="C_BELEGARTNR" type="java.lang.String" />
-		<property name="b_taetigkeitgeaendert" column="B_TAETIGKEITGEAENDERT"
-			type="java.lang.Short" />
-		<property name="b_automatikbuchung" column="B_AUTOMATIKBUCHUNG"
-			type="java.lang.Short" />
-		<property name="i_belegartid" column="I_BELEGARTID" type="java.lang.Integer" />
-		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+		<property name="t_zeit" column="T_ZEIT"
+			type="java.sql.Timestamp" />
+		<property name="c_belegartnr" column="C_BELEGARTNR"
+			type="java.lang.String" />
+		<property name="b_taetigkeitgeaendert"
+			column="B_TAETIGKEITGEAENDERT" type="java.lang.Short" />
+		<property name="b_automatikbuchung"
+			column="B_AUTOMATIKBUCHUNG" type="java.lang.Short" />
+		<property name="i_belegartid" column="I_BELEGARTID"
 			type="java.lang.Integer" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer"
-			insert="false" update="false" />
-		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer"
-			insert="false" update="false" />
+		<property name="i_belegartpositionid"
+			column="I_BELEGARTPOSITIONID" type="java.lang.Integer" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
 		<property name="taetigkeit_i_id" column="TAETIGKEIT_I_ID"
 			type="java.lang.Integer" insert="false" update="false" />
-		<property name="c_bemerkungzubelegart" column="C_BEMERKUNGZUBELEGART"
-			type="java.lang.String" />
+		<property name="c_bemerkungzubelegart"
+			column="C_BEMERKUNGZUBELEGART" type="java.lang.String" />
 		<property name="c_wowurdegebucht" column="C_WOWURDEGEBUCHT"
 			type="java.lang.String" />
-		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String" />
+		<property name="x_kommentar" column="X_KOMMENTAR"
+			type="java.lang.String" />
+		<property name="x_kommentar_intern"
+			column="X_KOMMENTAR_INTERN" type="java.lang.String" />
+
+		<property name="f_verrechenbar" column="F_VERRECHENBAR"
+			type="java.lang.Double" />
+
+		<property name="f_dauer_uebersteuert"
+			column="F_DAUER_UEBERSTEUERT" type="java.lang.Double" />
+
+		<many-to-one name="flrpersonal_erledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" />
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+
 		<many-to-one name="flrtaetigkeit"
 			class="com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit"
 			column="TAETIGKEIT_I_ID" />
@@ -461,23 +1066,40 @@
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
 			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrmaschine"
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
+			column="MASCHINE_I_ID" />
 	</class>
 	<class name="FLRZeitdatenLos" table="PERS_ZEITDATEN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_zeit" column="T_ZEIT" type="java.sql.Timestamp" />
-		<property name="c_belegartnr" column="C_BELEGARTNR" type="java.lang.String" />
-		<property name="b_taetigkeitgeaendert" column="B_TAETIGKEITGEAENDERT"
-			type="java.lang.Short" />
-		<property name="i_belegartid" column="I_BELEGARTID" type="java.lang.Integer" />
-		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+		<property name="t_zeit" column="T_ZEIT"
+			type="java.sql.Timestamp" />
+		<property name="c_belegartnr" column="C_BELEGARTNR"
+			type="java.lang.String" />
+		<property name="b_taetigkeitgeaendert"
+			column="B_TAETIGKEITGEAENDERT" type="java.lang.Short" />
+		<property name="i_belegartid" column="I_BELEGARTID"
+			type="java.lang.Integer" />
+		<property name="i_belegartpositionid"
+			column="I_BELEGARTPOSITIONID" type="java.lang.Integer" insert="false"
+			update="false" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
 			type="java.lang.Integer" insert="false" update="false" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer"
-			insert="false" update="false" />
-		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer"
-			insert="false" update="false" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+
+		<property name="f_verrechenbar" column="F_VERRECHENBAR"
+			type="java.lang.Double" />
+		<many-to-one name="flrpersonal_erledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" />
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+
 		<many-to-one name="flrtaetigkeit"
 			class="com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit"
 			column="TAETIGKEIT_I_ID" />
@@ -490,88 +1112,307 @@
 		<many-to-one name="flrlossollarbeitsplan"
 			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan"
 			column="I_BELEGARTPOSITIONID" />
+		<many-to-one name="flrmaschine"
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
+			column="MASCHINE_I_ID" />
 	</class>
+
+	<class name="FLRZeitdatenProjekt" table="PERS_ZEITDATEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="t_zeit" column="T_ZEIT"
+			type="java.sql.Timestamp" />
+		<property name="c_belegartnr" column="C_BELEGARTNR"
+			type="java.lang.String" />
+		<property name="b_taetigkeitgeaendert"
+			column="B_TAETIGKEITGEAENDERT" type="java.lang.Short" />
+		<property name="i_belegartid" column="I_BELEGARTID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="i_belegartpositionid"
+			column="I_BELEGARTPOSITIONID" type="java.lang.Integer" insert="false"
+			update="false" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+
+		<property name="x_kommentar" column="X_KOMMENTAR"
+			type="java.lang.String" />
+
+		<property name="c_bemerkungzubelegart"
+			column="C_BEMERKUNGZUBELEGART" type="java.lang.String" />
+
+		<property name="f_verrechenbar" column="F_VERRECHENBAR"
+			type="java.lang.Double" />
+		<property name="f_dauer_uebersteuert"
+			column="F_DAUER_UEBERSTEUERT" type="java.lang.Double" />
+		<many-to-one name="flrpersonal_erledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" />
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+
+		<many-to-one name="flrtaetigkeit"
+			class="com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit"
+			column="TAETIGKEIT_I_ID" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="I_BELEGARTID" />
+	</class>
+
+
+	<class name="FLRZeitverteilung" table="PERS_ZEITVERTEILUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="t_zeit" column="T_ZEIT"
+			type="java.sql.Timestamp" />
+
+		<property name="los_i_id" column="LOS_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+
+		<property name="lossollarbeitsplan_i_id"
+			column="LOSSOLLARBEITSPLAN_I_ID" type="java.lang.Integer"
+			insert="false" update="false" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+	</class>
+
+
+	<class name="FLRProjektzeiten" table="PERS_PROJEKTZEITEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="t_zeit" column="T_ZEIT"
+			type="java.sql.Timestamp" />
+
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+
+		<property name="zeitdaten_i_id" column="ZEITDATEN_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="telefonzeiten_i_id"
+			column="TELEFONZEITEN_I_ID" type="java.lang.Integer" insert="false"
+			update="false" />
+
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+
+		<property name="f_verrechenbar" column="F_VERRECHENBAR"
+			type="java.lang.Double" />
+
+
+		<property name="c_bemerkung" column="C_BEMERKUNG"
+			type="java.lang.String" />
+
+
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" />
+
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" />
+
+
+
+
+		<many-to-one name="flrzeitdaten"
+			class="com.lp.server.personal.fastlanereader.generated.FLRZeitdaten"
+			column="ZEITDATEN_I_ID" />
+
+		<many-to-one name="flrtelefonzeit"
+			class="com.lp.server.personal.fastlanereader.generated.FLRTelefonzeiten"
+			column="TELEFONZEITEN_I_ID" />
+
+
+
+
+	</class>
+
 	<class name="FLRUrlaubsanspruch" table="PERS_URLAUBSANSPRUCH">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="i_jahr" column="I_JAHR" type="java.lang.Integer" />
-		<property name="f_tage" column="F_TAGE" type="java.lang.Double" />
-		<property name="f_jahresurlaubinwochen" column="F_JAHRESURLAUBINWOCHEN"
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="i_jahr" column="I_JAHR"
+			type="java.lang.Integer" />
+		<property name="f_tage" column="F_TAGE"
 			type="java.lang.Double" />
-		<property name="f_stunden" column="F_STUNDEN" type="java.lang.Double" />
+		<property name="f_jahresurlaubinwochen"
+			column="F_JAHRESURLAUBINWOCHEN" type="java.lang.Double" />
+		<property name="f_stunden" column="F_STUNDEN"
+			type="java.lang.Double" />
 		<property name="f_tagezusaetzlich" column="F_TAGEZUSAETZLICH"
 			type="java.lang.Double" />
-		<property name="f_stundenzusaetzlich" column="F_STUNDENZUSAETZLICH"
-			type="java.lang.Double" />
+		<property name="f_stundenzusaetzlich"
+			column="F_STUNDENZUSAETZLICH" type="java.lang.Double" />
 	</class>
 	<class name="FLRSonderzeiten" table="PERS_SONDERZEITEN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
 		<property name="taetigkeit_i_id" column="TAETIGKEIT_I_ID"
 			type="java.lang.Integer" />
-		<property name="t_datum" column="T_DATUM" type="java.util.Date" />
+		<property name="t_datum" column="T_DATUM"
+			type="java.util.Date" />
 		<property name="b_tag" column="B_TAG" type="java.lang.Short" />
-		<property name="b_halbtag" column="B_HALBTAG" type="java.lang.Short" />
-		<property name="u_stunden" column="U_STUNDEN" type="java.sql.Timestamp" />
+		<property name="b_halbtag" column="B_HALBTAG"
+			type="java.lang.Short" />
+		<property name="b_automatik" column="B_AUTOMATIK"
+			type="java.lang.Short" />
+		<property name="u_stunden" column="U_STUNDEN"
+			type="java.sql.Timestamp" />
 		<many-to-one name="flrtaetigkeit"
 			class="com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit"
 			column="TAETIGKEIT_I_ID" insert="false" update="false" />
 	</class>
+
+	<class name="FLRZeitgutschrift" table="PERS_ZEITGUTSCHRIFT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_datum" column="T_DATUM"
+			type="java.util.Date" />
+		<property name="u_gutschrift_kommt"
+			column="U_GUTSCHRIFT_KOMMT" type="java.sql.Time" />
+		<property name="u_gutschrift_geht" column="U_GUTSCHRIFT_GEHT"
+			type="java.sql.Time" />
+
+	</class>
+
 	<class name="FLRStundenabrechnung" table="PERS_STUNDENABRECHNUNG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="t_datum" column="T_DATUM" type="java.util.Date" />
-		<property name="n_mehrstunden" column="N_MEHRSTUNDEN" type="java.math.BigDecimal" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_datum" column="T_DATUM"
+			type="java.util.Date" />
+		<property name="n_mehrstunden" column="N_MEHRSTUNDEN"
+			type="java.math.BigDecimal" />
 		<property name="n_normalstunden" column="N_NORMALSTUNDEN"
 			type="java.math.BigDecimal" />
-		<property name="n_uestfrei50" column="N_UESTFREI50" type="java.math.BigDecimal" />
+		<property name="n_uestfrei50" column="N_UESTFREI50"
+			type="java.math.BigDecimal" />
 		<property name="n_uestpflichtig50" column="N_UESTPFLICHTIG50"
 			type="java.math.BigDecimal" />
-		<property name="n_uestfrei100" column="N_UESTFREI100" type="java.math.BigDecimal" />
-		<property name="n_uest200" column="N_UEST200" type="java.math.BigDecimal" />
-		<property name="n_uestpflichtig100" column="N_UESTPFLICHTIG100"
+		<property name="n_uestfrei100" column="N_UESTFREI100"
 			type="java.math.BigDecimal" />
-		<property name="n_gutstunden" column="N_GUTSTUNDEN" type="java.math.BigDecimal" />
-		<property name="n_qualifikationspraemie" column="N_QUALIFIKATIONSPRAEMIE"
+		<property name="n_uest200" column="N_UEST200"
 			type="java.math.BigDecimal" />
+		<property name="n_uestpflichtig100"
+			column="N_UESTPFLICHTIG100" type="java.math.BigDecimal" />
+		<property name="n_gutstunden" column="N_GUTSTUNDEN"
+			type="java.math.BigDecimal" />
+		<property name="n_qualifikationspraemie"
+			column="N_QUALIFIKATIONSPRAEMIE" type="java.math.BigDecimal" />
 	</class>
 	<class name="FLRGleitzeitsaldo" table="PERS_GLEITZEITSALDO">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="i_jahr" column="I_JAHR" type="java.lang.Integer" />
-		<property name="i_monat" column="I_MONAT" type="java.lang.Integer" />
-		<property name="n_saldo" column="N_SALDO" type="java.math.BigDecimal" />
-		<property name="n_saldomehrstunden" column="N_SALDOMEHRSTUNDEN"
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="i_jahr" column="I_JAHR"
+			type="java.lang.Integer" />
+		<property name="i_monat" column="I_MONAT"
+			type="java.lang.Integer" />
+		<property name="n_saldo" column="N_SALDO"
 			type="java.math.BigDecimal" />
+		<property name="n_saldomehrstunden"
+			column="N_SALDOMEHRSTUNDEN" type="java.math.BigDecimal" />
 		<property name="n_saldouestfrei50" column="N_SALDOUESTFREI50"
 			type="java.math.BigDecimal" />
-		<property name="n_saldouestpflichtig50" column="N_SALDOUESTPFLICHTIG50"
+		<property name="n_saldouestpflichtig50"
+			column="N_SALDOUESTPFLICHTIG50" type="java.math.BigDecimal" />
+		<property name="n_saldouestfrei100"
+			column="N_SALDOUESTFREI100" type="java.math.BigDecimal" />
+		<property name="n_saldouestpflichtig100"
+			column="N_SALDOUESTPFLICHTIG100" type="java.math.BigDecimal" />
+		<property name="n_saldouest200" column="N_SALDOUEST200"
 			type="java.math.BigDecimal" />
-		<property name="n_saldouestfrei100" column="N_SALDOUESTFREI100"
+		<property name="n_gz_saldo_mit_uestd_in_normalstunden"
+			column="N_GZ_SALDO_MIT_UESTD_IN_NORMALSTUNDEN"
 			type="java.math.BigDecimal" />
-		<property name="n_saldouestpflichtig100" column="N_SALDOUESTPFLICHTIG100"
-			type="java.math.BigDecimal" />
-		<property name="n_saldouest200" column="N_SALDOUEST200" type="java.math.BigDecimal" />
 	</class>
+
+	<class name="FLRUebertragBVA" table="PERS_UEBERTRAG_BVA">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_datum" column="T_DATUM"
+			type="java.util.Date" />
+		<property name="n_gleitzeit" column="N_GLEITZEIT"
+			type="java.math.BigDecimal" />
+		<property name="n_uest50_gz" column="N_UEST50_GZ"
+			type="java.math.BigDecimal" />
+		<property name="n_uest50_gz_zuschlag"
+			column="N_UEST50_GZ_ZUSCHLAG" type="java.math.BigDecimal" />
+		<property name="n_uest50" column="N_UEST50"
+			type="java.math.BigDecimal" />
+		<property name="n_uest50_zuschlag" column="N_UEST50_ZUSCHLAG"
+			type="java.math.BigDecimal" />
+		<property name="n_uest100" column="N_UEST100"
+			type="java.math.BigDecimal" />
+		<property name="n_uest100_zuschlag"
+			column="N_UEST100_ZUSCHLAG" type="java.math.BigDecimal" />
+	</class>
+
+	<class name="FLRAuszahlungBVA" table="PERS_AUSZAHLUNG_BVA">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_datum" column="T_DATUM"
+			type="java.util.Date" />
+		<property name="n_gleitzeit" column="N_GLEITZEIT"
+			type="java.math.BigDecimal" />
+		<property name="n_uest50_gz" column="N_UEST50_GZ"
+			type="java.math.BigDecimal" />
+		<property name="n_uest50_gz_zuschlag"
+			column="N_UEST50_GZ_ZUSCHLAG" type="java.math.BigDecimal" />
+		<property name="n_uest50" column="N_UEST50"
+			type="java.math.BigDecimal" />
+		<property name="n_uest50_zuschlag" column="N_UEST50_ZUSCHLAG"
+			type="java.math.BigDecimal" />
+		<property name="n_uest100" column="N_UEST100"
+			type="java.math.BigDecimal" />
+		<property name="n_uest100_zuschlag"
+			column="N_UEST100_ZUSCHLAG" type="java.math.BigDecimal" />
+	</class>
+
 	<class name="FLRPersonalgehalt" table="PERS_PERSONALGEHALT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="i_jahr" column="I_JAHR" type="java.lang.Integer" />
-		<property name="i_monat" column="I_MONAT" type="java.lang.Integer" />
-		<property name="n_gehalt" column="N_GEHALT" type="java.math.BigDecimal" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="n_gehalt" column="N_GEHALT"
+			type="java.math.BigDecimal" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.sql.Timestamp" />
 		<property name="f_uestpauschale" column="F_UESTPAUSCHALE"
 			type="java.lang.Double" />
-		<property name="n_stundensatz" column="N_STUNDENSATZ" type="java.math.BigDecimal" />
+		<property name="n_stundensatz" column="N_STUNDENSATZ"
+			type="java.math.BigDecimal" />
 	</class>
 	<class name="FLRZulage" table="PERS_ZULAGE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -589,40 +1430,70 @@
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" insert="false" update="false" />
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.util.Date" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
+	</class>
+	<class name="FLRArtikelzuschlag" table="PERS_ARTIKELZUSCHLAG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
+		<property name="n_zuschlag" column="N_ZUSCHLAG"
+			type="java.math.BigDecimal" />
 	</class>
 	<class name="FLRMaschine" table="PERS_MASCHINE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<property name="c_inventarnummer" column="C_INVENTARNUMMER"
 			type="java.lang.String" />
-		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
-		<property name="c_identifikationsnr" column="C_IDENTIFIKATIONSNR"
+		<property name="c_seriennummer" column="C_SERIENNUMMER"
 			type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="b_versteckt" column="B_VERSTECKT"
+			type="java.lang.Short" />
+		<property name="c_identifikationsnr"
+			column="C_IDENTIFIKATIONSNR" type="java.lang.String" />
 		<property name="b_autoendebeigeht" column="B_AUTOENDEBEIGEHT"
 			type="java.lang.Short" />
-		<property name="t_kaufdatum" column="T_KAUFDATUM" type="java.util.Date" />
-		<property name="maschinengruppe_i_id" column="MASCHINENGRUPPE_I_ID"
-			type="java.lang.Integer" />
+		<property name="b_manuelle_bedienung"
+			column="B_MANUELLE_BEDIENUNG" type="java.lang.Short" />
+		<property name="t_kaufdatum" column="T_KAUFDATUM"
+			type="java.util.Date" />
+		<property name="maschinengruppe_i_id"
+			column="MASCHINENGRUPPE_I_ID" type="java.lang.Integer" />
 		<many-to-one name="flrmaschinengruppe"
 			class="com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe"
 			column="MASCHINENGRUPPE_I_ID" insert="false" update="false" />
+		<set name="maschinenzeitdatenset" inverse="true">
+			<key column="MASCHINE_I_ID" />
+			<one-to-many
+				class="com.lp.server.personal.fastlanereader.generated.FLRMaschinenzeitdaten" />
+			<filter name="filterTBis" condition="T_BIS is null" />
+		</set>
 	</class>
+
 	<class name="FLRZeitstift" table="PERS_ZEITSTIFT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<property name="c_typ" column="C_TYP" type="java.lang.String" />
 		<property name="b_mehrfachstift" column="B_MEHRFACHSTIFT"
 			type="java.lang.Short" />
-		<property name="b_personenzuordnung" column="B_PERSONENZUORDNUNG"
-			type="java.lang.Short" />
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
+		<property name="b_personenzuordnung"
+			column="B_PERSONENZUORDNUNG" type="java.lang.Short" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
 		<many-to-one name="flrpersonal"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID" insert="false" update="false" />
@@ -633,12 +1504,15 @@
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 	</class>
-	<class name="FLRPersonalgruppekosten" table="PERS_PERSONALGRUPPEKOSTEN">
+	<class name="FLRPersonalgruppekosten"
+		table="PERS_PERSONALGRUPPEKOSTEN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.util.Date" />
-		<property name="n_stundensatz" column="N_STUNDENSATZ" type="java.math.BigDecimal" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
+		<property name="n_stundensatz" column="N_STUNDENSATZ"
+			type="java.math.BigDecimal" />
 		<many-to-one name="flrpersonalgruppe"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonalgruppe"
 			column="PERSONALGRUPPE_I_ID" />
@@ -647,9 +1521,12 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.util.Date" />
-		<property name="n_stundensatz" column="N_STUNDENSATZ" type="java.math.BigDecimal" />
-		<property name="n_vkstundensatz" column="N_VKSTUNDENSATZ" type="java.math.BigDecimal" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
+		<property name="n_stundensatz" column="N_STUNDENSATZ"
+			type="java.math.BigDecimal" />
+		<property name="n_vkstundensatz" column="N_VKSTUNDENSATZ"
+			type="java.math.BigDecimal" />
 		<many-to-one name="flrmaschine"
 			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
 			column="MASCHINE_I_ID" />
@@ -660,34 +1537,40 @@
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<many-to-one name="flrmandant"
 			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
 			column="MANDANT_C_NR" insert="false" update="false" />
 	</class>
-	<class name="FLRZutrittscontroller" table="PERS_ZUTRITTSCONTROLLER">
+	<class name="FLRZutrittscontroller"
+		table="PERS_ZUTRITTSCONTROLLER">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="c_adresse" column="C_ADRESSE" type="java.lang.String" />
+		<property name="c_adresse" column="C_ADRESSE"
+			type="java.lang.String" />
 	</class>
 	<class name="FLRZutrittsobjekt" table="PERS_ZUTRITTSOBJEKT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="c_adresse" column="C_ADRESSE" type="java.lang.String" />
-		<property name="zutrittsleser_c_nr" column="ZUTRITTSLESER_C_NR"
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
 			type="java.lang.String" />
-		<property name="c_relais" column="C_RELAIS" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="c_adresse" column="C_ADRESSE"
+			type="java.lang.String" />
+		<property name="zutrittsleser_c_nr"
+			column="ZUTRITTSLESER_C_NR" type="java.lang.String" />
+		<property name="c_relais" column="C_RELAIS"
+			type="java.lang.String" />
 		<property name="f_oeffnungszeit" column="F_OEFFNUNGSZEIT"
 			type="java.lang.Double" />
-		<property name="zutrittscontroller_i_id" column="ZUTRITTSCONTROLLER_I_ID"
-			type="java.lang.Integer" />
+		<property name="zutrittscontroller_i_id"
+			column="ZUTRITTSCONTROLLER_I_ID" type="java.lang.Integer" />
 		<many-to-one name="flrmandant"
 			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
 			column="MANDANT_C_NR" insert="false" update="false" />
@@ -700,16 +1583,18 @@
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<property name="x_bem" column="X_BEM" type="java.lang.String" />
 	</class>
 	<class name="FLRZutrittsmodelltag" table="PERS_ZUTRITTSMODELLTAG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="zutrittsmodell_i_id" column="ZUTRITTSMODELL_I_ID"
+		<property name="zutrittsmodell_i_id"
+			column="ZUTRITTSMODELL_I_ID" type="java.lang.Integer" />
+		<property name="tagesart_i_id" column="TAGESART_I_ID"
 			type="java.lang.Integer" />
-		<property name="tagesart_i_id" column="TAGESART_I_ID" type="java.lang.Integer" />
 		<many-to-one name="flrzutrittsmodell"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsmodell"
 			column="ZUTRITTSMODELL_I_ID" insert="false" update="false" />
@@ -717,31 +1602,36 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
 			column="TAGESART_I_ID" insert="false" update="false" />
 	</class>
-	<class name="FLRZutrittsmodelltagdetail" table="PERS_ZUTRITTSMODELLTAGDETAIL">
+	<class name="FLRZutrittsmodelltagdetail"
+		table="PERS_ZUTRITTSMODELLTAGDETAIL">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="zutrittsmodelltag_i_id" column="ZUTRITTSMODELLTAG_I_ID"
-			type="java.lang.Integer" />
-		<property name="u_offenvon" column="U_OFFENVON" type="java.sql.Time" />
-		<property name="u_offenbis" column="U_OFFENBIS" type="java.sql.Time" />
-		<property name="zutrittsoeffnungsart_c_nr" column="ZUTRITTSOEFFNUNGSART_C_NR"
-			type="java.lang.String" />
-		<property name="b_restdestages" column="B_RESTDESTAGES" type="java.lang.Short" />
+		<property name="zutrittsmodelltag_i_id"
+			column="ZUTRITTSMODELLTAG_I_ID" type="java.lang.Integer" />
+		<property name="u_offenvon" column="U_OFFENVON"
+			type="java.sql.Time" />
+		<property name="u_offenbis" column="U_OFFENBIS"
+			type="java.sql.Time" />
+		<property name="zutrittsoeffnungsart_c_nr"
+			column="ZUTRITTSOEFFNUNGSART_C_NR" type="java.lang.String" />
+		<property name="b_restdestages" column="B_RESTDESTAGES"
+			type="java.lang.Short" />
 		<many-to-one name="flrzutrittsmodelltag"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsmodelltag"
 			column="ZUTRITTSMODELLTAG_I_ID" insert="false" update="false" />
 	</class>
-	<class name="FLRZutrittsklasseobjekt" table="PERS_ZUTRITTSKLASSEOBJEKT">
+	<class name="FLRZutrittsklasseobjekt"
+		table="PERS_ZUTRITTSKLASSEOBJEKT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="zutrittsklasse_i_id" column="ZUTRITTSKLASSE_I_ID"
-			type="java.lang.Integer" />
-		<property name="zutrittsobjekt_i_id" column="ZUTRITTSOBJEKT_I_ID"
-			type="java.lang.Integer" />
-		<property name="zutrittsmodell_i_id" column="ZUTRITTSMODELL_I_ID"
-			type="java.lang.Integer" />
+		<property name="zutrittsklasse_i_id"
+			column="ZUTRITTSKLASSE_I_ID" type="java.lang.Integer" />
+		<property name="zutrittsobjekt_i_id"
+			column="ZUTRITTSOBJEKT_I_ID" type="java.lang.Integer" />
+		<property name="zutrittsmodell_i_id"
+			column="ZUTRITTSMODELL_I_ID" type="java.lang.Integer" />
 		<many-to-one name="flrzutrittsklasse"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsklasse"
 			column="ZUTRITTSKLASSE_I_ID" insert="false" update="false" />
@@ -752,12 +1642,15 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsmodell"
 			column="ZUTRITTSMODELL_I_ID" insert="false" update="false" />
 	</class>
-	<class name="FLRPersonalzutrittsklasse" table="PERS_PERSONALZUTRITTSKLASSE">
+	<class name="FLRPersonalzutrittsklasse"
+		table="PERS_PERSONALZUTRITTSKLASSE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.util.Date" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
 		<many-to-one name="flrzutrittsklasse"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsklasse"
 			column="ZUTRITTSKLASSE_I_ID" />
@@ -765,15 +1658,21 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID" insert="false" update="false" />
 	</class>
-	<class name="FLRZutrittonlinecheck" table="PERS_ZUTRITTONLINECHECK">
+	<class name="FLRZutrittonlinecheck"
+		table="PERS_ZUTRITTONLINECHECK">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_ausweis" column="C_AUSWEIS" type="java.lang.String" />
-		<property name="c_pincode" column="C_PINCODE" type="java.lang.String" />
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.sql.Timestamp" />
-		<property name="t_gueltigbis" column="T_GUELTIGBIS" type="java.sql.Timestamp" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_ausweis" column="C_AUSWEIS"
+			type="java.lang.String" />
+		<property name="c_pincode" column="C_PINCODE"
+			type="java.lang.String" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.sql.Timestamp" />
+		<property name="t_gueltigbis" column="T_GUELTIGBIS"
+			type="java.sql.Timestamp" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<many-to-one name="flrmandant"
 			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
 			column="MANDANT_C_NR" insert="false" update="false" />
@@ -781,13 +1680,15 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsklasse"
 			column="ZUTRITTSKLASSE_I_ID" />
 	</class>
-	<class name="FLRZutrittsobjektverwendung" table="PERS_ZUTRITTSOBJEKTVERWENDUNG">
+	<class name="FLRZutrittsobjektverwendung"
+		table="PERS_ZUTRITTSOBJEKTVERWENDUNG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="i_anzahlverwendung" column="I_ANZAHLVERWENDUNG"
-			type="java.lang.Integer" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="i_anzahlverwendung"
+			column="I_ANZAHLVERWENDUNG" type="java.lang.Integer" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 		<many-to-one name="flrzutrittsobjekt"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsobjekt"
 			column="ZUTRITTSOBJEKT_I_ID" />
@@ -799,17 +1700,22 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="c_person" column="C_PERSON" type="java.lang.String" />
-		<property name="c_ausweis" column="C_AUSWEIS" type="java.lang.String" />
-		<property name="c_zutrittscontroller" column="C_ZUTRITTSCONTROLLER"
+		<property name="c_person" column="C_PERSON"
 			type="java.lang.String" />
+		<property name="c_ausweis" column="C_AUSWEIS"
+			type="java.lang.String" />
+		<property name="c_zutrittscontroller"
+			column="C_ZUTRITTSCONTROLLER" type="java.lang.String" />
 		<property name="c_zutrittsobjekt" column="C_ZUTRITTSOBJEKT"
 			type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
-		<property name="mandant_c_nr_objekt" column="MANDANT_C_NR_OBJEKT"
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
 			type="java.lang.String" />
-		<property name="t_zeitpunkt" column="T_ZEITPUNKT" type="java.sql.Timestamp" />
-		<property name="b_erlaubt" column="B_ERLAUBT" type="java.lang.Short" />
+		<property name="mandant_c_nr_objekt"
+			column="MANDANT_C_NR_OBJEKT" type="java.lang.String" />
+		<property name="t_zeitpunkt" column="T_ZEITPUNKT"
+			type="java.sql.Timestamp" />
+		<property name="b_erlaubt" column="B_ERLAUBT"
+			type="java.lang.Short" />
 		<many-to-one name="flrmandant"
 			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
 			column="MANDANT_C_NR" insert="false" update="false" />
@@ -818,11 +1724,14 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="tagesart_i_id" column="TAGESART_I_ID" type="java.lang.Integer" />
-		<property name="zutrittsobjekt_i_id" column="ZUTRITTSOBJEKT_I_ID"
+		<property name="tagesart_i_id" column="TAGESART_I_ID"
 			type="java.lang.Integer" />
-		<property name="u_offenvon" column="U_OFFENVON" type="java.sql.Time" />
-		<property name="u_offenbis" column="U_OFFENBIS" type="java.sql.Time" />
+		<property name="zutrittsobjekt_i_id"
+			column="ZUTRITTSOBJEKT_I_ID" type="java.lang.Integer" />
+		<property name="u_offenvon" column="U_OFFENVON"
+			type="java.sql.Time" />
+		<property name="u_offenbis" column="U_OFFENBIS"
+			type="java.sql.Time" />
 		<many-to-one name="flrzutrittsobjekt"
 			class="com.lp.server.personal.fastlanereader.generated.FLRZutrittsobjekt"
 			column="ZUTRITTSOBJEKT_I_ID" insert="false" update="false" />
@@ -834,14 +1743,33 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
+		<property name="c_kbez" column="C_KBEZ"
+			type="java.lang.String" />
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+
+		<property name="i_sort" column="I_SORT"
+			type="java.lang.Integer" />
+
+		<property name="b_auslastungsanzeige"
+			column="B_AUSLASTUNGSANZEIGE" type="java.lang.Short" />
+		<property name="fertigungsgruppe_i_id"
+			column="FERTIGUNGSGRUPPE_I_ID" type="java.lang.Integer" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+		<many-to-one name="flrfertigungsgruppe"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
+			column="FERTIGUNGSGRUPPE_I_ID" insert="false" update="false" />
 	</class>
-	<class name="FLRPersonalverfuegbarkeit" table="PERS_PERSONALVERFUEGBARKEIT">
+
+	<class name="FLRPersonalverfuegbarkeit"
+		table="PERS_PERSONALVERFUEGBARKEIT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" />
 		<property name="f_anteilprozent" column="F_ANTEILPROZENT"
 			type="java.lang.Double" />
 		<many-to-one name="flrartikel"
@@ -855,18 +1783,38 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="fahrzeug_i_id" column="FAHRZEUG_I_ID" type="java.lang.Integer" />
-		<property name="t_zeit" column="T_ZEIT" type="java.sql.Timestamp" />
-		<property name="b_beginn" column="B_BEGINN" type="java.lang.Short" />
-		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
-		<property name="c_fahrzeug" column="C_FAHRZEUG" type="java.lang.String" />
-		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
-		<property name="n_spesen" column="N_SPESEN" type="java.math.BigDecimal" />
-		<property name="i_kmbeginn" column="I_KMBEGINN" type="java.lang.Integer" />
-		<property name="i_kmende" column="I_KMENDE" type="java.lang.Integer" />
-		<property name="i_belegartid" column="I_BELEGARTID" type="java.lang.Integer" />
-		<property name="f_faktor" column="F_FAKTOR" type="java.lang.Double" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="fahrzeug_i_id" column="FAHRZEUG_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_zeit" column="T_ZEIT"
+			type="java.sql.Timestamp" />
+		<property name="b_beginn" column="B_BEGINN"
+			type="java.lang.Short" />
+		<property name="c_kommentar" column="C_KOMMENTAR"
+			type="java.lang.String" />
+		<property name="c_fahrzeug" column="C_FAHRZEUG"
+			type="java.lang.String" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR"
+			type="java.lang.String" />
+		<property name="n_spesen" column="N_SPESEN"
+			type="java.math.BigDecimal" />
+		<property name="i_kmbeginn" column="I_KMBEGINN"
+			type="java.lang.Integer" />
+		<property name="i_kmende" column="I_KMENDE"
+			type="java.lang.Integer" />
+		<property name="i_belegartid" column="I_BELEGARTID"
+			type="java.lang.Integer" />
+		<property name="f_verrechenbar" column="F_VERRECHENBAR"
+			type="java.lang.Double" />
+		<many-to-one name="flrpersonal_erledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" />
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+		<property name="i_mitfahrer" column="I_MITFAHRER"
+			type="java.lang.Integer" />
+
 		<many-to-one name="flrpartner"
 			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
 			column="PARTNER_I_ID" insert="false" update="false" />
@@ -880,6 +1828,23 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRDiaeten"
 			column="DIAETEN_I_ID" insert="false" update="false" />
 	</class>
+	<class name="FLRReisespesen" table="PERS_REISESPESEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="reise_i_id" column="REISE_I_ID"
+			type="java.lang.Integer" />
+		<property name="eingangsrechnung_i_id"
+			column="EINGANGSRECHNUNG_I_ID" type="java.lang.Integer" />
+
+		<many-to-one name="flrreise"
+			class="com.lp.server.personal.fastlanereader.generated.FLRReise"
+			column="REISE_I_ID" insert="false" update="false" />
+		<many-to-one name="flreingangsrechnung"
+			class="com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung"
+			column="EINGANGSRECHNUNG_I_ID" insert="false" update="false" />
+
+	</class>
 	<class name="FLRFingerart" table="PERS_FINGERART">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -890,9 +1855,12 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="i_fingerid" column="I_FINGERID" type="java.lang.Integer" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="i_fingerid" column="I_FINGERID"
+			type="java.lang.Integer" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
 		<many-to-one name="flrpersonal"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID" insert="false" update="false" />
@@ -904,61 +1872,210 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
-		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer" />
-		<property name="x_kommentarext" column="X_KOMMENTAREXT" type="java.lang.String" />
-		<property name="x_kommentarint" column="X_KOMMENTARINT" type="java.lang.String" />
-		<property name="t_von" column="T_VON" type="java.sql.Timestamp" />
-		<property name="t_bis" column="T_BIS" type="java.sql.Timestamp" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" />
+		<property name="partner_i_id" column="PARTNER_I_ID"
+			type="java.lang.Integer" />
+		<property name="x_kommentarext" column="X_KOMMENTAREXT"
+			type="java.lang.String" />
+		<property name="x_kommentarint" column="X_KOMMENTARINT"
+			type="java.lang.String" />
+		<property name="t_von" column="T_VON"
+			type="java.sql.Timestamp" />
+		<property name="t_bis" column="T_BIS"
+			type="java.sql.Timestamp" />
+
+		<property name="auftrag_i_id" column="AUFTRAG_I_ID"
+			type="java.lang.Integer" />
+		<property name="angebot_i_id" column="ANGEBOT_I_ID"
+			type="java.lang.Integer" />
+
+		<property name="f_verrechenbar" column="F_VERRECHENBAR"
+			type="java.lang.Double" />
+
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+
+		<property name="t_wiedervorlage" column="T_WIEDERVORLAGE"
+			type="java.sql.Timestamp" />
+		<property name="t_wiedervorlage_erledigt"
+			column="T_WIEDERVORLAGE_ERLEDIGT" type="java.sql.Timestamp" />
+
+		<property name="c_titel" column="C_TITEL"
+			type="java.lang.String" />
+
+
+		<property name="kontaktart_i_id" column="KONTAKTART_I_ID"
+			type="java.lang.Integer" />
+
+		<property name="f_dauer_uebersteuert"
+			column="F_DAUER_UEBERSTEUERT" type="java.lang.Double" />
+
+
+		<many-to-one name="flrpersonal_erledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" />
 		<many-to-one name="flrpersonal"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal_zugewiesener"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ZUGEWIESENER" insert="false" update="false" />
 		<many-to-one name="flrpartner"
 			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
 			column="PARTNER_I_ID" insert="false" update="false" />
 		<many-to-one name="flransprechpartner"
 			class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner"
 			column="ANSPRECHPARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkontaktart"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKontaktart"
+			column="KONTAKTART_I_ID" insert="false" update="false" />
+		<many-to-one name="flrauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag"
+			column="AUFTRAG_I_ID" insert="false" update="false" />
+		<many-to-one name="flrangebot"
+			class="com.lp.server.angebot.fastlanereader.generated.FLRAngebot"
+			column="ANGEBOT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
 	</class>
+
+	<class name="FLRTelefontodo" table="PERS_TELEFONTODO">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+
+		<property name="t_von" column="T_VON"
+			type="java.sql.Timestamp" />
+		<property name="t_bis" column="T_BIS"
+			type="java.sql.Timestamp" />
+		<property name="partner_i_id" column="PARTNER_I_ID"
+			type="java.lang.Integer" />
+		<property name="ansprechpartner_i_id"
+			column="ANSPRECHPARTNER_I_ID" type="java.lang.Integer" />
+
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flransprechpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner"
+			column="ANSPRECHPARTNER_I_ID" insert="false" update="false" />
+
+
+		<property name="projekt_i_id" column="PROJEKT_I_ID"
+			type="java.lang.Integer" />
+		<property name="auftrag_i_id" column="AUFTRAG_I_ID"
+			type="java.lang.Integer" />
+		<property name="angebot_i_id" column="ANGEBOT_I_ID"
+			type="java.lang.Integer" />
+
+		<many-to-one name="flrauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag"
+			column="AUFTRAG_I_ID" insert="false" update="false" />
+		<many-to-one name="flrangebot"
+			class="com.lp.server.angebot.fastlanereader.generated.FLRAngebot"
+			column="ANGEBOT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
+
+
+		<property name="telefonzeiten_i_id"
+			column="TELEFONZEITEN_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrtelefonzeiten"
+			class="com.lp.server.personal.fastlanereader.generated.FLRTelefonzeiten"
+			column="TELEFONZEITEN_I_ID" insert="false" update="false" />
+
+
+		<property name="c_titel" column="C_TITEL"
+			type="java.lang.String" />
+
+		<property name="personal_i_id_zugewiesener"
+			column="PERSONAL_I_ID_ZUGEWIESENER" type="java.lang.Integer" />
+
+		<many-to-one name="flrpersonal_zugewiesener"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ZUGEWIESENER" insert="false" update="false" />
+
+
+
+		<property name="t_wiedervorlage" column="T_WIEDERVORLAGE"
+			type="java.sql.Timestamp" />
+		<property name="t_wiedervorlage_erledigt"
+			column="T_WIEDERVORLAGE_ERLEDIGT" type="java.sql.Timestamp" />
+
+	</class>
+
 	<class name="FLRDiaeten" table="PERS_DIAETEN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<many-to-one name="flrland"
-			class="com.lp.server.system.fastlanereader.generated.FLRLand" column="LAND_I_ID"
-			insert="false" update="false" />
+			class="com.lp.server.system.fastlanereader.generated.FLRLand"
+			column="LAND_I_ID" insert="false" update="false" />
 	</class>
 	<class name="FLRDiaetentagessatz" table="PERS_DIAETENTAGESSATZ">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.util.Date" />
-		<property name="n_mindestsatz" column="N_MINDESTSATZ" type="java.math.BigDecimal" />
-		<property name="n_tagessatz" column="N_TAGESSATZ" type="java.math.BigDecimal" />
-		<property name="n_stundensatz" column="N_STUNDENSATZ" type="java.math.BigDecimal" />
-		<property name="i_abstunden" column="I_ABSTUNDEN" type="java.lang.Integer" />
-		<property name="b_stundenweise" column="B_STUNDENWEISE" type="java.lang.Short" />
+		<property name="t_gueltigab" column="T_GUELTIGAB"
+			type="java.util.Date" />
+		<property name="n_mindestsatz" column="N_MINDESTSATZ"
+			type="java.math.BigDecimal" />
+		<property name="n_tagessatz" column="N_TAGESSATZ"
+			type="java.math.BigDecimal" />
+		<property name="n_stundensatz" column="N_STUNDENSATZ"
+			type="java.math.BigDecimal" />
+		<property name="i_abstunden" column="I_ABSTUNDEN"
+			type="java.lang.Integer" />
+		<property name="b_stundenweise" column="B_STUNDENWEISE"
+			type="java.lang.Short" />
 		<many-to-one name="flrdiaeten"
 			class="com.lp.server.personal.fastlanereader.generated.FLRDiaeten"
 			column="DIAETEN_I_ID" insert="false" update="false" />
 	</class>
-	<class name="FLRMaschinenzeitdaten" table="PERS_MASCHINENZEITDATEN">
+	<class name="FLRMaschinenzeitdaten"
+		table="PERS_MASCHINENZEITDATEN">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_von" column="T_VON" type="java.sql.Timestamp" />
-		<property name="t_bis" column="T_BIS" type="java.sql.Timestamp" />
-		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
-		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" />
-		<property name="maschine_i_id" column="MASCHINE_I_ID" type="java.lang.Integer"
+		<property name="t_von" column="T_VON"
+			type="java.sql.Timestamp" />
+		<property name="t_bis" column="T_BIS"
+			type="java.sql.Timestamp" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
+		<property name="t_anlegen" column="T_ANLEGEN"
+			type="java.sql.Timestamp" />
+		<property name="maschine_i_id" column="MASCHINE_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="lossollarbeitsplan_i_id"
+			column="LOSSOLLARBEITSPLAN_I_ID" type="java.lang.Integer"
 			insert="false" update="false" />
-		<property name="lossollarbeitsplan_i_id" column="LOSSOLLARBEITSPLAN_I_ID"
-			type="java.lang.Integer" insert="false" update="false" />
-		<property name="personal_i_id_gestartet" column="PERSONAL_I_ID_GESTARTET"
-			type="java.lang.Integer" insert="false" update="false" />
-		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String" />
+		<property name="personal_i_id_gestartet"
+			column="PERSONAL_I_ID_GESTARTET" type="java.lang.Integer"
+			insert="false" update="false" />
+		<property name="c_bemerkung" column="C_BEMERKUNG"
+			type="java.lang.String" />
+
+		<property name="f_verrechenbar" column="F_VERRECHENBAR"
+			type="java.lang.Double" />
+		<many-to-one name="flrpersonal_erledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" />
+		<property name="t_erledigt" column="T_ERLEDIGT"
+			type="java.sql.Timestamp" />
+
+		<property name="b_parallel" column="B_PARALLEL"
+			type="java.lang.Short" />
+
 		<many-to-one name="flrpersonal_gestartet"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID_GESTARTET" insert="false" update="false" />
@@ -975,17 +2092,56 @@
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
 
 	</class>
+	<class name="FLRSchicht" table="PERS_SCHICHT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+
+	</class>
+	<class name="FLRSchichtzuschlag" table="PERS_SCHICHTZUSCHLAG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR"
+			type="java.lang.String" />
+
+	</class>
+
+	<class name="FLRSchichtzeit" table="PERS_SCHICHTZEIT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="u_beginn" column="U_BEGINN"
+			type="java.sql.Time" />
+		<property name="u_ende" column="U_ENDE" type="java.sql.Time" />
+		<property name="b_endedestages" column="B_ENDEDESTAGES"
+			type="java.lang.Short" />
+		<many-to-one name="flrschicht"
+			class="com.lp.server.personal.fastlanereader.generated.FLRSchicht"
+			column="SCHICHT_I_ID" />
+		<many-to-one name="flrschichtzuschlag"
+			class="com.lp.server.personal.fastlanereader.generated.FLRSchichtzuschlag"
+			column="SCHICHTZUSCHLAG_I_ID" />
+	</class>
+
 
 	<class name="FLRBereitschafttag" table="PERS_BEREITSCHAFTTAG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="u_beginn" column="U_BEGINN" type="java.sql.Time" />
+		<property name="u_beginn" column="U_BEGINN"
+			type="java.sql.Time" />
 		<property name="u_ende" column="U_ENDE" type="java.sql.Time" />
-		<property name="b_endedestages" column="B_ENDEDESTAGES" type="java.lang.Short" />
+		<property name="b_endedestages" column="B_ENDEDESTAGES"
+			type="java.lang.Short" />
 		<many-to-one name="flrtagesart"
 			class="com.lp.server.personal.fastlanereader.generated.FLRTagesart"
 			column="TAGESART_I_ID" />
@@ -998,9 +2154,12 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="t_beginn" column="T_BEGINN" type="java.sql.Timestamp" />
-		<property name="t_ende" column="T_ENDE" type="java.sql.Timestamp" />
-		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String" />
+		<property name="t_beginn" column="T_BEGINN"
+			type="java.sql.Timestamp" />
+		<property name="t_ende" column="T_ENDE"
+			type="java.sql.Timestamp" />
+		<property name="c_bemerkung" column="C_BEMERKUNG"
+			type="java.lang.String" />
 		<many-to-one name="flrpersonal"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID" />
@@ -1012,15 +2171,59 @@
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
 		</id>
-		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
-		<property name="t_abgeschlossen_bis" column="T_ABGESCHLOSSEN_BIS"
-			type="java.sql.Timestamp" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" />
+		<property name="t_abgeschlossen_bis"
+			column="T_ABGESCHLOSSEN_BIS" type="java.sql.Timestamp" />
 		<many-to-one name="flrpersonal"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID" insert="false" update="false" />
 
 	</class>
+	<class name="FLRZeitdatenpruefen" table="PERS_ZEITDATENPRUEFEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="t_zeit" column="T_ZEIT"
+			type="java.sql.Timestamp" />
+		<property name="c_belegartnr" column="C_BELEGARTNR"
+			type="java.lang.String" />
+		<property name="b_taetigkeitgeaendert"
+			column="B_TAETIGKEITGEAENDERT" type="java.lang.Short" />
+		<property name="b_automatikbuchung"
+			column="B_AUTOMATIKBUCHUNG" type="java.lang.Short" />
+		<property name="i_belegartid" column="I_BELEGARTID"
+			type="java.lang.Integer" />
+		<property name="i_belegartpositionid"
+			column="I_BELEGARTPOSITIONID" type="java.lang.Integer" />
+		<property name="t_aendern" column="T_AENDERN"
+			type="java.sql.Timestamp" />
+		<property name="personal_i_id" column="PERSONAL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="taetigkeit_i_id" column="TAETIGKEIT_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="c_bemerkungzubelegart"
+			column="C_BEMERKUNGZUBELEGART" type="java.lang.String" />
+		<property name="c_wowurdegebucht" column="C_WOWURDEGEBUCHT"
+			type="java.lang.String" />
+		<property name="x_kommentar" column="X_KOMMENTAR"
+			type="java.lang.String" />
+		<property name="i_fehlercode" column="I_FEHLERCODE"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="x_fehlertext" column="X_FEHLERTEXT"
+			type="java.lang.String" />
 
-
-
+		<many-to-one name="flrtaetigkeit"
+			class="com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit"
+			column="TAETIGKEIT_I_ID" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+	</class>
+	<filter-def name="filterTBis" />
 </hibernate-mapping>

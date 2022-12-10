@@ -35,7 +35,6 @@ package com.lp.server.finanz.ejbfac;
 import java.util.Comparator;
 
 import com.lp.server.finanz.service.IntrastatDto;
-import com.lp.util.Helper;
 
 /**
  * <p>
@@ -57,35 +56,39 @@ import com.lp.util.Helper;
  * 
  * @version not attributable Date $Date: 2008/10/14 14:07:18 $
  */
-public class ComparatorIntrastat implements Comparator<Object> {
+public class ComparatorIntrastat implements Comparator<IntrastatDto> {
 
-	public int compare(Object a, Object b) {
+	public int compare(IntrastatDto a, IntrastatDto b) {
 		// Die Reihenfolge der Sortierung ist nicht wichtig.
 		// es muessen nur Eintraege mit gleicher WVK-Nummer, gleicher UID und
 		// gleichem Partner
 
-		IntrastatDto iDto1 = (IntrastatDto) a;
-		IntrastatDto iDto2 = (IntrastatDto) b;
-		int iComp = iDto1.getWarenverkehrsnummerDto().getCNr().compareTo(
-				iDto2.getWarenverkehrsnummerDto().getCNr());
-		// if (iComp == 0) {
-		// iComp =
-		// iDto1.getPartnerDto().getCName1nachnamefirmazeile1().compareTo(iDto2.
-		// getPartnerDto().getCName1nachnamefirmazeile1());
-		// }
-		if (iComp == 0) {
-			String sUid1 = Helper.getAllStartCharacters(iDto1.getUid());
-			String sUid2 = Helper.getAllStartCharacters(iDto2.getUid());
+		int diff = a.getWarenverkehrsnummerDto().getCNr().compareTo(
+				b.getWarenverkehrsnummerDto().getCNr());
+
+		if (diff == 0) {
+			String sUid1 = a.getUid();
+			String sUid2 = b.getUid();
+/*
+ * Das reicht nicht mehr ab Berichtsjahr 2022, da die EmpfaengerUID 
+ * explizit ausgegeben werden muss und damit unterschiedliche Empfaenger
+ * aufscheinen muessen
+
+			String sUid1 = Helper.getAllStartCharacters(a.getUid());
+			String sUid2 = Helper.getAllStartCharacters(b.getUid());
+ * 			
+ */
 			if (sUid1 == null && sUid2 == null) {
-				iComp = 0;
+				diff = 0;
 			} else if (sUid1 == null) {
-				return -1;
+				diff = -1;
 			} else if (sUid2 == null) {
-				return 1;
+				diff = 1;
 			} else {
-				iComp = sUid1.compareTo(sUid2);
+				diff = sUid1.compareTo(sUid2);
 			}
 		}
-		return iComp;
+
+		return diff;
 	}
 }

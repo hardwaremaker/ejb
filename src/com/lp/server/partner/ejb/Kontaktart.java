@@ -42,7 +42,8 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 @NamedQueries( {
-		@NamedQuery(name = "KontaktartfindByCBez", query = "SELECT OBJECT(o) FROM Kontaktart o WHERE o.cBez=?1") })
+		@NamedQuery(name = "KontaktartfindAll", query = "SELECT OBJECT(o) FROM Kontaktart o ORDER BY o.cBez"),
+		@NamedQuery(name = "KontaktartfindByCBez", query = "SELECT OBJECT(o) FROM Kontaktart o WHERE o.cBez=?1")})
 @Entity
 @Table(name = "PART_KONTAKTART")
 public class Kontaktart implements Serializable {

@@ -34,11 +34,12 @@
 
 import java.util.List;
 
+import com.lp.server.partner.service.KundesokoFac;
 import com.lp.service.StklImportSpezifikation;
 
 public class ImportColumnQueryBuilderKndArtikelNr implements IImportColumnQueryBuilder {
 	
-	private static final String QUERY = KundeSoko + ".c_kundeartikelnummer LIKE '{VALUE}'";
+	private static final String QUERY = KundeSoko + "." + KundesokoFac.FLR_KUNDESOKO_KUNDEARTIKELNUMMER + " LIKE '{VALUE}'";
 
 	@Override
 	public boolean isTotalMatch() {
@@ -51,8 +52,8 @@ public class ImportColumnQueryBuilderKndArtikelNr implements IImportColumnQueryB
 		return QUERY.replaceAll("\\{VALUE\\}", columnValue);
 	}
 
-	public String buildWhereKundeIidQuery(int kundeIId) {
-		return IImportColumnQueryBuilder.KundeSoko + ".kunde_i_id=" + kundeIId;
+	public String buildWhereKundeIIdQuery(int kundeIId) {
+		return IImportColumnQueryBuilder.KundeSoko + "." + KundesokoFac.FLR_KUNDESOKO_KUNDE_I_ID + "=" + kundeIId;
 	}
 
 	@Override

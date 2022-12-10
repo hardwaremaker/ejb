@@ -2,32 +2,32 @@
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
  * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.partner.ejb;
@@ -44,20 +44,24 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 import com.lp.server.util.ICEmail;
+import com.lp.server.util.IISort;
 
-@NamedQueries( {
+@NamedQueries({
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerFunktionGueltigAb", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIId = ?1 AND c.partnerIIdAnsprechpartner = ?2 AND c.ansprechpartnerfunktionIId= ?3 AND c.tGueltigab= ?4"),
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerIIdAnsprechpartner", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIIdAnsprechpartner = ?1"),
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerIId", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIId = ?1 ORDER BY c.iSort"),
+		@NamedQuery(name = Ansprechpartner.QueryFindByPartnerId, query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIId = :partnerId ORDER BY c.iSort"),
 		@NamedQuery(name = "AnsprechpartnerfindByCEmail", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.cEmail = ?1"),
 		@NamedQuery(name = "AnsprechpartnerejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Ansprechpartner o WHERE o.partnerIId = ?1"),
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerIIdAndPartnerIIdAnsprechpartner", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIId = ?1 AND c.partnerIIdAnsprechpartner = ?2"),
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerIIdOrPartnerIIdAnsprechpartner", query = "SELECT OBJECT(C) FROM Ansprechpartner c WHERE c.partnerIId = ?1 OR c.partnerIIdAnsprechpartner = ?1"),
-		@NamedQuery(name = AnsprechpartnerQuery.ByEmail, query = "SELECT OBJECT(C) FROM Ansprechpartner c WHERE LOWER(c.cEmail) like :email")
-})
+		@NamedQuery(name = AnsprechpartnerQuery.ByEmail, query = "SELECT OBJECT(C) FROM Ansprechpartner c WHERE LOWER(c.cEmail) like :email") })
 @Entity
 @Table(name = "PART_ANSPRECHPARTNER")
-public class Ansprechpartner implements Serializable, ICEmail {
+public class Ansprechpartner implements Serializable, ICEmail, IISort {
+
+	public final static String QueryFindByPartnerId = "AnsprechpartnerfindByPartnerId";
+
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -77,6 +81,17 @@ public class Ansprechpartner implements Serializable, ICEmail {
 	@Column(name = "B_VERSTECKT")
 	private Short bVersteckt;
 
+	@Column(name = "B_DURCHWAHL")
+	private Short bDurchwahl;
+	
+	public Short getBDurchwahl() {
+		return bDurchwahl;
+	}
+
+	public void setBDurchwahl(Short bDurchwahl) {
+		this.bDurchwahl = bDurchwahl;
+	}
+
 	@Column(name = "ANSPRECHPARTNERFUNKTION_I_ID")
 	private Integer ansprechpartnerfunktionIId;
 
@@ -85,13 +100,13 @@ public class Ansprechpartner implements Serializable, ICEmail {
 
 	@Column(name = "PARTNER_I_ID")
 	private Integer partnerIId;
-	
-	@Column(name = "B_NEWSLETTER_EMPFAENGER")
-	private Short bNewsletterEmpfaenger;
-	
+
+	@Column(name = "NEWSLETTERGRUND_I_ID")
+	private Integer newslettergrundIId;
+
 	@Column(name = "C_KENNWORT")
 	private String cKennwort;
-	
+
 	public String getCKennwort() {
 		return this.cKennwort;
 	}
@@ -99,10 +114,9 @@ public class Ansprechpartner implements Serializable, ICEmail {
 	public void setCKennwort(String cKennwort) {
 		this.cKennwort = cKennwort;
 	}
-	
+
 	@Column(name = "C_ABTEILUNG")
 	private String cAbteilung;
-
 
 	public String getCAbteilung() {
 		return cAbteilung;
@@ -122,29 +136,25 @@ public class Ansprechpartner implements Serializable, ICEmail {
 
 	@Column(name = "C_FREMDSYSTEMNR")
 	private String cFremdsystemnr;
-	
-
 
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
 
-	
 	@Column(name = "C_FAX")
 	private String cFax;
-	
+
 	@Column(name = "C_TELEFON")
 	private String cTelefon;
-	
+
 	@Column(name = "C_HANDY")
 	private String cHandy;
-	
+
 	@Column(name = "C_DIREKTFAX")
 	private String cDirektfax;
-	
+
 	@Column(name = "C_EMAIL")
 	private String cEmail;
-	
-	
+
 	public String getCFax() {
 		return cFax;
 	}
@@ -169,7 +179,6 @@ public class Ansprechpartner implements Serializable, ICEmail {
 		this.cDirektfax = cDirektfax;
 	}
 
-
 	public String getCEmail() {
 		return cEmail;
 	}
@@ -185,6 +194,29 @@ public class Ansprechpartner implements Serializable, ICEmail {
 	public void setCHandy(String cHandy) {
 		this.cHandy = cHandy;
 	}
+
+	
+	@Column(name = "C_EXCHANGEID")
+	private String cExchangeid;
+	@Column(name = "T_ZULETZT_EXPORTIERT")
+	private Timestamp tZuletztExportiert;
+	
+	
+	public String getCExchangeid() {
+		return cExchangeid;
+	}
+
+	public void setCExchangeid(String cExchangeid) {
+		this.cExchangeid = cExchangeid;
+	}
+
+	public Timestamp getTZuletztExportiert() {
+		return tZuletztExportiert;
+	}
+
+	public void setTZuletztExportiert(Timestamp tZuletztExportiert) {
+		this.tZuletztExportiert = tZuletztExportiert;
+	}
 	
 	private static final long serialVersionUID = 1L;
 
@@ -194,30 +226,31 @@ public class Ansprechpartner implements Serializable, ICEmail {
 
 	public Ansprechpartner(Integer iId, Integer partnerIId,
 			Integer partnerIIdAnsprechpartner,
-			Integer ansprechpartnerfunktionIId, Date tGueltigab,
-			Integer iSort, Integer personalIIdAendern, Short bVersteckt, Short bNewsletterEmpfaenger) {
+			Integer ansprechpartnerfunktionIId, Date tGueltigab, Integer iSort,
+			Integer personalIIdAendern, Short bVersteckt,Short bDurchwahl) {
 		setIId(iId);
-	    setPartnerIIdAnsprechpartner(partnerIIdAnsprechpartner);
-	    setISort(iSort);
-	    setPersonalIIdAendern(personalIIdAendern);
+		setPartnerIIdAnsprechpartner(partnerIIdAnsprechpartner);
+		setISort(iSort);
+		setPersonalIIdAendern(personalIIdAendern);
 
-	    //die ts anlegen, aendern nur am server
-	    setTAendern(new Timestamp(System.currentTimeMillis()));
-	    setAnsprechpartnerfunktionIId(ansprechpartnerfunktionIId);
-	    setPartnerIId(partnerIId);
-	    setTGueltigab(tGueltigab);
-	    setBVersteckt(bVersteckt);
-	    setbNewsletterEmpfaenger(bNewsletterEmpfaenger);
+		// die ts anlegen, aendern nur am server
+		setTAendern(new Timestamp(System.currentTimeMillis()));
+		setAnsprechpartnerfunktionIId(ansprechpartnerfunktionIId);
+		setPartnerIId(partnerIId);
+		setTGueltigab(tGueltigab);
+		setBVersteckt(bVersteckt);
+		setBDurchwahl(bDurchwahl);
+
 	}
 
-	public void setbNewsletterEmpfaenger(Short bNewsletterEmpfaenger) {
-		this.bNewsletterEmpfaenger = bNewsletterEmpfaenger;
+	public void setNewslettergrundIId(Integer newslettergrundIId) {
+		this.newslettergrundIId = newslettergrundIId;
 	}
-	
-	public Short getbNewsletterEmpfaenger() {
-		return bNewsletterEmpfaenger;
+
+	public Integer getNewslettergrundIId() {
+		return newslettergrundIId;
 	}
-	
+
 	public Integer getIId() {
 		return this.iId;
 	}
@@ -289,7 +322,6 @@ public class Ansprechpartner implements Serializable, ICEmail {
 	public void setPartnerIId(Integer partnerIId) {
 		this.partnerIId = partnerIId;
 	}
-
 
 	public Integer getPersonalIIdAendern() {
 		return this.personalIIdAendern;

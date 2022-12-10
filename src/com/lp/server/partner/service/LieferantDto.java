@@ -36,9 +36,22 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import com.lp.server.artikel.ejb.Lager;
+import com.lp.server.finanz.ejb.Konto;
+import com.lp.server.partner.ejb.Partner;
+import com.lp.server.system.ejb.Lieferart;
+import com.lp.server.system.ejb.Zahlungsziel;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCBez;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.system.service.HvDtoLogIgnore;
+import com.lp.server.util.IIId;
+import com.lp.server.util.IModificationData;
 import com.lp.util.Helper;
 
-public class LieferantDto implements Serializable {
+
+@HvDtoLogClass(name = HvDtoLogClass.LIEFERANT)
+public class LieferantDto implements Serializable, IIId, IModificationData {
 	/**
 	 * 
 	 */
@@ -84,6 +97,50 @@ public class LieferantDto implements Serializable {
 	private Timestamp tBestellsperream = null;
 	private BigDecimal nTransportkostenprolieferung;
 
+	private Integer partnerIIdLieferadresse;
+
+	public Integer getPartnerIIdLieferadresse() {
+		return this.partnerIIdLieferadresse;
+	}
+
+	public void setPartnerIIdLieferadresse(Integer partnerIIdLieferadresse) {
+		this.partnerIIdLieferadresse = partnerIIdLieferadresse;
+	}
+	
+	private Short bVersteckterkunde;
+	private Integer reversechargeartId ;
+	private String cFremdsystemnr;
+	
+	private Integer iLiefertag;
+	
+	
+	public Integer getILiefertag() {
+		return iLiefertag;
+	}
+
+	public void setILiefertag(Integer iLiefertag) {
+		this.iLiefertag = iLiefertag;
+	}
+
+	
+	public Short getBVersteckterkunde() {
+		return bVersteckterkunde;
+	}
+
+	public void setBVersteckterkunde(Short bVersteckterkunde) {
+		this.bVersteckterkunde = bVersteckterkunde;
+	}
+
+	private Short bZuschlagInklusive;
+
+	public Short getBZuschlagInklusive() {
+		return bZuschlagInklusive;
+	}
+
+	public void setBZuschlagInklusive(Short bZuschlagInklusive) {
+		this.bZuschlagInklusive = bZuschlagInklusive;
+	}
+	
 	private Timestamp tFreigabe;
 
 	private Timestamp tPersonalFreigabe;
@@ -94,26 +151,26 @@ public class LieferantDto implements Serializable {
 	private Short bReversecharge;
 	private Short bIgErwerb;
 
-	public Short getBReversecharge() {
-		return this.bReversecharge;
-	}
+//	public Short getBReversecharge() {
+//		return this.bReversecharge;
+//	}
 
 	public Short getBIgErwerb() {
 		return bIgErwerb;
 	}
-	
+
 	public boolean getBIgErwerbBoolean() {
 		return Helper.short2boolean(bIgErwerb);
 	}
 
-	public void setBReversecharge(Short bReversecharge) {
-		this.bReversecharge = bReversecharge;
-	}
+//	public void setBReversecharge(Short bReversecharge) {
+//		this.bReversecharge = bReversecharge;
+//	}
 
 	public void setBIgErwerb(Short bIgErwerb) {
 		this.bIgErwerb = bIgErwerb;
 	}
-	
+
 	public void setBIgErwerb(boolean bIgErwerb) {
 		this.bIgErwerb = Helper.boolean2Short(bIgErwerb);
 	}
@@ -138,6 +195,7 @@ public class LieferantDto implements Serializable {
 
 	private Integer lagerIIdZubuchungslager;
 
+	@HvDtoLogIdCnr(entityClass = Lager.class)
 	public Integer getLagerIIdZubuchungslager() {
 		return this.lagerIIdZubuchungslager;
 	}
@@ -215,11 +273,11 @@ public class LieferantDto implements Serializable {
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
 	}
-
+	@HvDtoLogIgnore
 	public Timestamp getTAnlegen() {
 		return tAnlegen;
 	}
-
+	@HvDtoLogIgnore
 	public Integer getPersonalIIdAnlegen() {
 		return personalIIdAnlegen;
 	}
@@ -227,11 +285,11 @@ public class LieferantDto implements Serializable {
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
 	}
-
+	@HvDtoLogIgnore
 	public Timestamp getTAendern() {
 		return tAendern;
 	}
-
+	@HvDtoLogIgnore
 	public Integer getPersonalIIdAendern() {
 		return personalIIdAendern;
 	}
@@ -263,7 +321,7 @@ public class LieferantDto implements Serializable {
 	public void setVerrechnungsartCNr(String verrechnungsartCNr) {
 		this.verrechnungsartCNr = verrechnungsartCNr;
 	}
-
+	@HvDtoLogIdCnr(entityClass = Lieferart.class)
 	public Integer getLieferartIId() {
 		return lieferartIId;
 	}
@@ -272,6 +330,7 @@ public class LieferantDto implements Serializable {
 		this.lieferartIId = lieferartIId;
 	}
 
+	@HvDtoLogIdCBez(entityClass = Zahlungsziel.class)
 	public Integer getZahlungszielIId() {
 		return zahlungszielIId;
 	}
@@ -336,6 +395,7 @@ public class LieferantDto implements Serializable {
 		this.nMindermengenzuschlag = nMindermengenzuschlag;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Konto.class)
 	public Integer getKontoIIdKreditorenkonto() {
 		return kontoIIdKreditorenkonto;
 	}
@@ -343,7 +403,7 @@ public class LieferantDto implements Serializable {
 	public void setKontoIIdKreditorenkonto(Integer kontoIIdKreditorenkonto) {
 		this.kontoIIdKreditorenkonto = kontoIIdKreditorenkonto;
 	}
-
+	@HvDtoLogIdCnr(entityClass = Konto.class)
 	public Integer getKontoIIdWarenkonto() {
 		return kontoIIdWarenkonto;
 	}
@@ -411,7 +471,7 @@ public class LieferantDto implements Serializable {
 	public Integer getPartnerIIdRechnungsadresse() {
 		return partnerIIdRechnungsadresse;
 	}
-
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerDto() {
 		return partnerDto;
 	}
@@ -419,7 +479,7 @@ public class LieferantDto implements Serializable {
 	public Short getBMoeglicherLieferant() {
 		return bMoeglicherLieferant;
 	}
-
+	@HvDtoLogIgnore
 	public PartnerDto getPartnerRechnungsadresseDto() {
 		return partnerRechnungsadresseDto;
 	}
@@ -432,6 +492,7 @@ public class LieferantDto implements Serializable {
 		return idSpediteur;
 	}
 
+	@HvDtoLogIgnore
 	public Integer getIKreditorenkontoAsIntegerNotiId() {
 		return iKreditorenkontoAsIntegerNotiId;
 	}
@@ -468,7 +529,7 @@ public class LieferantDto implements Serializable {
 	public void setIdSpediteur(Integer idSpediteur) {
 		this.idSpediteur = idSpediteur;
 	}
-
+	@HvDtoLogIgnore
 	public int getUpdateModeKreditorenkonto() {
 		return iUpdateKreditorenkonto;
 	}
@@ -619,6 +680,14 @@ public class LieferantDto implements Serializable {
 				: that.tBestellsperream.equals(this.tBestellsperream))) {
 			return false;
 		}
+		if (!(that.reversechargeartId == null ? this.reversechargeartId == null
+				: that.reversechargeartId.equals(this.reversechargeartId))) {
+			return false;
+		}
+		if (!(that.cFremdsystemnr == null ? this.cFremdsystemnr == null 
+				: that.cFremdsystemnr.equals(this.cFremdsystemnr))) {
+			return false;
+		}
 		return true;
 	}
 
@@ -654,6 +723,8 @@ public class LieferantDto implements Serializable {
 		result = 37 * result + this.bVersteckt.hashCode();
 		result = 37 * result + this.partnerIIdRechnungsadresse.hashCode();
 		result = 37 * result + this.tBestellsperream.hashCode();
+		result = 37 * result + this.reversechargeartId.hashCode();
+		result = 37 * result + this.cFremdsystemnr.hashCode();
 		return result;
 	}
 
@@ -690,5 +761,21 @@ public class LieferantDto implements Serializable {
 		returnString += ", " + partnerIIdRechnungsadresse;
 		returnString += ", " + tBestellsperream;
 		return returnString;
+	}
+
+	public Integer getReversechargeartId() {
+		return reversechargeartId;
+	}
+
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId;
+	}
+
+	public String getCFremdsystemnr() {
+		return cFremdsystemnr;
+	}
+
+	public void setCFremdsystemnr(String cFremdsystemnr) {
+		this.cFremdsystemnr = cFremdsystemnr;
 	}
 }

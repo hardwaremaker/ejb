@@ -119,6 +119,16 @@ public class AuftragteilnehmerDto implements Serializable {
 		return personalIIdAnlegen;
 	}
 
+	private Integer kostenstelleIId;
+
+	public Integer getKostenstelleIId() {
+		return this.kostenstelleIId;
+	}
+
+	public void setKostenstelleIId(Integer kostenstelleIId) {
+		this.kostenstelleIId = kostenstelleIId;
+	}
+	
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;

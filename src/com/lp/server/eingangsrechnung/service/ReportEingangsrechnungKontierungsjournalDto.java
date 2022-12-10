@@ -33,6 +33,7 @@
 package com.lp.server.eingangsrechnung.service;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.Date;
 
 /**
@@ -65,6 +66,63 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	private String sLieferant = null;
 	private String sPartnerartLieferant = null;
 	private String sArt;
+	private java.util.Date tGeprueftAm=null;
+	public java.util.Date getTGeprueftAm() {
+		return tGeprueftAm;
+	}
+
+	public void setTGeprueftAm(java.util.Date tGeprueftAm) {
+		this.tGeprueftAm = tGeprueftAm;
+	}
+
+	public String getSGeprueftVon() {
+		return sGeprueftVon;
+	}
+
+	public void setSGeprueftVon(String sGeprueftVon) {
+		this.sGeprueftVon = sGeprueftVon;
+	}
+
+	private String sGeprueftVon=null; 
+	
+	private String sFinanzamtLieferant = null;
+	public String getSFinanzamtLieferant() {
+		return sFinanzamtLieferant;
+	}
+
+	public void setSFinanzamtLieferant(String sFinanzamtLieferant) {
+		this.sFinanzamtLieferant = sFinanzamtLieferant;
+	}
+
+	public String getSFinanzamtKonto() {
+		return sFinanzamtKonto;
+	}
+
+	public void setSFinanzamtKonto(String sFinanzamtKonto) {
+		this.sFinanzamtKonto = sFinanzamtKonto;
+	}
+
+	public Boolean getBFinanzaemterUnterschiedlich() {
+		return bFinanzaemterUnterschiedlich;
+	}
+
+	public void setBFinanzaemterUnterschiedlich(Boolean bFinanzaemterUnterschiedlich) {
+		this.bFinanzaemterUnterschiedlich = bFinanzaemterUnterschiedlich;
+	}
+
+	private String sFinanzamtKonto = null;
+	private Boolean bFinanzaemterUnterschiedlich = Boolean.TRUE;
+
+	private Boolean bMitPositionen = null;
+
+	public Boolean getBMitPositionen() {
+		return bMitPositionen;
+	}
+
+	public void setBMitPositionen(Boolean bMitPositionen) {
+		this.bMitPositionen = bMitPositionen;
+	}
+
 	public String getSPartnerartLieferant() {
 		return sPartnerartLieferant;
 	}
@@ -74,7 +132,7 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	}
 
 	private String sSteuerkategorie = null;
-	
+
 	public String getSSteuerkategorie() {
 		return sSteuerkategorie;
 	}
@@ -84,7 +142,7 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	}
 
 	private String sUVAArt = null;
-	
+
 	public String getSUVAArt() {
 		return sUVAArt;
 	}
@@ -93,10 +151,9 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 		this.sUVAArt = sUVAArt;
 	}
 
-
 	private String sEingangsrechnungText = null;
 	private String sEingangsrechnungWeartikel = null;
-	
+
 	public String getSEingangsrechnungWeartikel() {
 		return sEingangsrechnungWeartikel;
 	}
@@ -106,7 +163,7 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	}
 
 	private String waehrungCNr = null;
-	
+
 	public String getWaehrungCNr() {
 		return waehrungCNr;
 	}
@@ -118,7 +175,7 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	private BigDecimal bdWertFW = null;
 	private BigDecimal bdUstFW = null;
 	private BigDecimal bdBezahltFW = null;
-	
+
 	public BigDecimal getBdWertFW() {
 		return bdWertFW;
 	}
@@ -155,7 +212,6 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	private String sKreditorennummer = null;
 	private BigDecimal bdERKurs = null;
 
-	
 	public BigDecimal getBdERKurs() {
 		return bdERKurs;
 	}
@@ -171,7 +227,7 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	public void setBdBezahltzuERKurs(BigDecimal bdBezahltzuERKurs) {
 		this.bdBezahltzuERKurs = bdBezahltzuERKurs;
 	}
-	
+
 	public BigDecimal getBdBezahlt() {
 		return bdBezahlt;
 	}
@@ -316,6 +372,5 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	public void setSArt(String sArt) {
 		this.sArt = sArt;
 	}
-	
 
 }

@@ -36,74 +36,84 @@ import java.io.Serializable;
 import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-
 /** @author Hibernate CodeGenerator */
 public class FLRMeilenstein implements Serializable {
 
-    /** identifier field */
-    private Integer i_id;
+	/** identifier field */
+	private Integer i_id;
 
-    /** nullable persistent field */
-    private String c_nr;
+	/** nullable persistent field */
+	private String c_nr;
 
-    /** nullable persistent field */
-    private String mandant_c_nr;
+	/** nullable persistent field */
+	private String mandant_c_nr;
 
-    /** persistent field */
-    private Set meilensteinspr_set;
+	/** nullable persistent field */
+	private Integer i_sort;
 
-    /** full constructor */
-    public FLRMeilenstein(String c_nr, String mandant_c_nr, Set meilensteinspr_set) {
-        this.c_nr = c_nr;
-        this.mandant_c_nr = mandant_c_nr;
-        this.meilensteinspr_set = meilensteinspr_set;
-    }
+	/** persistent field */
+	private Set meilensteinspr_set;
 
-    /** default constructor */
-    public FLRMeilenstein() {
-    }
+	/** full constructor */
+	public FLRMeilenstein(String c_nr, String mandant_c_nr, Integer i_sort,
+			Set meilensteinspr_set) {
+		this.c_nr = c_nr;
+		this.mandant_c_nr = mandant_c_nr;
+		this.i_sort = i_sort;
+		this.meilensteinspr_set = meilensteinspr_set;
+	}
 
-    /** minimal constructor */
-    public FLRMeilenstein(Set meilensteinspr_set) {
-        this.meilensteinspr_set = meilensteinspr_set;
-    }
+	/** default constructor */
+	public FLRMeilenstein() {
+	}
 
-    public Integer getI_id() {
-        return this.i_id;
-    }
+	/** minimal constructor */
+	public FLRMeilenstein(Set meilensteinspr_set) {
+		this.meilensteinspr_set = meilensteinspr_set;
+	}
 
-    public void setI_id(Integer i_id) {
-        this.i_id = i_id;
-    }
+	public Integer getI_id() {
+		return this.i_id;
+	}
 
-    public String getC_nr() {
-        return this.c_nr;
-    }
+	public void setI_id(Integer i_id) {
+		this.i_id = i_id;
+	}
 
-    public void setC_nr(String c_nr) {
-        this.c_nr = c_nr;
-    }
+	public String getC_nr() {
+		return this.c_nr;
+	}
 
-    public String getMandant_c_nr() {
-        return this.mandant_c_nr;
-    }
+	public void setC_nr(String c_nr) {
+		this.c_nr = c_nr;
+	}
 
-    public void setMandant_c_nr(String mandant_c_nr) {
-        this.mandant_c_nr = mandant_c_nr;
-    }
+	public String getMandant_c_nr() {
+		return this.mandant_c_nr;
+	}
 
-    public Set getMeilensteinspr_set() {
-        return this.meilensteinspr_set;
-    }
+	public void setMandant_c_nr(String mandant_c_nr) {
+		this.mandant_c_nr = mandant_c_nr;
+	}
 
-    public void setMeilensteinspr_set(Set meilensteinspr_set) {
-        this.meilensteinspr_set = meilensteinspr_set;
-    }
+	public Integer getI_sort() {
+		return this.i_sort;
+	}
 
-    public String toString() {
-        return new ToStringBuilder(this)
-            .append("i_id", getI_id())
-            .toString();
-    }
+	public void setI_sort(Integer i_sort) {
+		this.i_sort = i_sort;
+	}
+
+	public Set getMeilensteinspr_set() {
+		return this.meilensteinspr_set;
+	}
+
+	public void setMeilensteinspr_set(Set meilensteinspr_set) {
+		this.meilensteinspr_set = meilensteinspr_set;
+	}
+
+	public String toString() {
+		return new ToStringBuilder(this).append("i_id", getI_id()).toString();
+	}
 
 }

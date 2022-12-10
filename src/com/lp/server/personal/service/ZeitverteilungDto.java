@@ -32,9 +32,13 @@
  ******************************************************************************/
 package com.lp.server.personal.service;
 
-
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
+
+import javax.persistence.Column;
+
+import com.lp.server.fertigung.service.LossollarbeitsplanDto;
 
 public class ZeitverteilungDto implements Serializable {
 
@@ -48,6 +52,67 @@ public class ZeitverteilungDto implements Serializable {
 	private Timestamp tZeit;
 	private Integer artikelIId;
 	private Integer losIId;
+
+	public static ZeitverteilungDto clone(ZeitverteilungDto orig) {
+		ZeitverteilungDto klon = new ZeitverteilungDto();
+		klon.setArtikelIId(orig.getArtikelIId());
+		klon.setBdSummeGutSchlecht_NOT_IN_DB(orig.getBdSummeGutSchlecht_NOT_IN_DB());
+		klon.setBRuesten(orig.isbRuesten());
+		klon.setBVerteilt(orig.getBVerteilt());
+		klon.setIIdBlock(orig.getIIdBlock());
+		klon.setLosIId(orig.getLosIId());
+		klon.setLossollarbeitsplanIId(orig.getLossollarbeitsplanIId());
+		klon.setlZeitproLos_notInDB(orig.getlZeitproLos_notInDB());
+		klon.setMaschineIId(orig.getMaschineIId());
+		klon.setPersonalIId(orig.getPersonalIId());
+
+		klon.setTZeit(orig.getTZeit());
+		
+		return klon;
+	}
+
+	
+	private long lZeitproLos_notInDB = 0;
+
+	public long getlZeitproLos_notInDB() {
+		return lZeitproLos_notInDB;
+	}
+	
+	LossollarbeitsplanDto[] zusaetzlicheAGs_NOT_IN_DB=null;
+	
+	public boolean bRuesten=false;
+
+	public boolean isbRuesten() {
+		return bRuesten;
+	}
+
+	public void setBRuesten(boolean bRuesten) {
+		this.bRuesten = bRuesten;
+	}
+
+	public BigDecimal bdSummeGutSchlecht_NOT_IN_DB=null;
+	
+	public BigDecimal getBdSummeGutSchlecht_NOT_IN_DB() {
+		return bdSummeGutSchlecht_NOT_IN_DB;
+	}
+
+	public void setBdSummeGutSchlecht_NOT_IN_DB(BigDecimal bdSummeGutSchlecht_NOT_IN_DB) {
+		this.bdSummeGutSchlecht_NOT_IN_DB = bdSummeGutSchlecht_NOT_IN_DB;
+	}
+
+	public LossollarbeitsplanDto[] getZusaetzlicheAGs_NOT_IN_DB() {
+		return zusaetzlicheAGs_NOT_IN_DB;
+	}
+
+	public void setZusaetzlicheAGs_NOT_IN_DB(LossollarbeitsplanDto[] zusaetzlicheAGs_NOT_IN_DB) {
+		this.zusaetzlicheAGs_NOT_IN_DB = zusaetzlicheAGs_NOT_IN_DB;
+	}
+
+	
+
+	public void setlZeitproLos_notInDB(long lZeitproLos_notInDB) {
+		this.lZeitproLos_notInDB = lZeitproLos_notInDB;
+	}
 
 	public Integer getIId() {
 		return iId;
@@ -64,7 +129,6 @@ public class ZeitverteilungDto implements Serializable {
 	public Integer getArtikelIId() {
 		return artikelIId;
 	}
-
 
 	public void setArtikelIId(Integer artikelIId) {
 		this.artikelIId = artikelIId;
@@ -86,12 +150,59 @@ public class ZeitverteilungDto implements Serializable {
 		return losIId;
 	}
 
-
 	public void setLosIId(Integer losIId) {
 		this.losIId = losIId;
 	}
 
+	private Integer maschineIId;
 
+	public Integer getMaschineIId() {
+		return this.maschineIId;
+	}
+
+	public void setMaschineIId(Integer maschineIId) {
+		this.maschineIId = maschineIId;
+	}
+
+	private Integer lossollarbeitsplanIId;
+
+	public Integer getLossollarbeitsplanIId() {
+		return lossollarbeitsplanIId;
+	}
+
+	public void setLossollarbeitsplanIId(Integer lossollarbeitsplanIId) {
+		this.lossollarbeitsplanIId = lossollarbeitsplanIId;
+	}
+
+	private Short bVerteilt;
+
+	public Short getBVerteilt() {
+		return bVerteilt;
+	}
+
+	public void setBVerteilt(Short bVerteilt) {
+		this.bVerteilt = bVerteilt;
+	}
+
+	private Integer iIdBlock;
+
+	public Integer getIIdBlock() {
+		return iIdBlock;
+	}
+
+	public void setIIdBlock(Integer iIdBlock) {
+		this.iIdBlock = iIdBlock;
+	}
+
+	private Integer zeitdatenIIdUmgewandelt;
+
+	public Integer getZeitdatenIIdUmgewandelt() {
+		return zeitdatenIIdUmgewandelt;
+	}
+
+	public void setZeitdatenIIdUmgewandelt(Integer zeitdatenIIdUmgewandelt) {
+		this.zeitdatenIIdUmgewandelt = zeitdatenIIdUmgewandelt;
+	}
 
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -107,8 +218,8 @@ public class ZeitverteilungDto implements Serializable {
 		if (!(that.tZeit == null ? this.tZeit == null : that.tZeit
 				.equals(this.tZeit)))
 			return false;
-		if (!(that.losIId == null ? this.losIId == null
-				: that.losIId.equals(this.losIId)))
+		if (!(that.losIId == null ? this.losIId == null : that.losIId
+				.equals(this.losIId)))
 			return false;
 
 		return true;

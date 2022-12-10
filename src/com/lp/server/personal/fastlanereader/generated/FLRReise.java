@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRPartner;
@@ -79,7 +47,16 @@ public class FLRReise implements Serializable {
     private Integer i_belegartid;
 
     /** nullable persistent field */
-    private Double f_faktor;
+    private Double f_verrechenbar;
+
+    /** nullable persistent field */
+    private Date t_erledigt;
+
+    /** nullable persistent field */
+    private Integer i_mitfahrer;
+
+    /** nullable persistent field */
+    private com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt;
 
     /** nullable persistent field */
     private FLRPartner flrpartner;
@@ -94,7 +71,7 @@ public class FLRReise implements Serializable {
     private com.lp.server.personal.fastlanereader.generated.FLRDiaeten flrdiaeten;
 
     /** full constructor */
-    public FLRReise(Integer personal_i_id, Integer fahrzeug_i_id, Date t_zeit, Short b_beginn, String c_kommentar, String c_fahrzeug, String belegart_c_nr, BigDecimal n_spesen, Integer i_kmbeginn, Integer i_kmende, Integer i_belegartid, Double f_faktor, FLRPartner flrpartner, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal, com.lp.server.personal.fastlanereader.generated.FLRFahrzeug flrfahrzeug, com.lp.server.personal.fastlanereader.generated.FLRDiaeten flrdiaeten) {
+    public FLRReise(Integer personal_i_id, Integer fahrzeug_i_id, Date t_zeit, Short b_beginn, String c_kommentar, String c_fahrzeug, String belegart_c_nr, BigDecimal n_spesen, Integer i_kmbeginn, Integer i_kmende, Integer i_belegartid, Double f_verrechenbar, Date t_erledigt, Integer i_mitfahrer, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt, FLRPartner flrpartner, com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal, com.lp.server.personal.fastlanereader.generated.FLRFahrzeug flrfahrzeug, com.lp.server.personal.fastlanereader.generated.FLRDiaeten flrdiaeten) {
         this.personal_i_id = personal_i_id;
         this.fahrzeug_i_id = fahrzeug_i_id;
         this.t_zeit = t_zeit;
@@ -106,7 +83,10 @@ public class FLRReise implements Serializable {
         this.i_kmbeginn = i_kmbeginn;
         this.i_kmende = i_kmende;
         this.i_belegartid = i_belegartid;
-        this.f_faktor = f_faktor;
+        this.f_verrechenbar = f_verrechenbar;
+        this.t_erledigt = t_erledigt;
+        this.i_mitfahrer = i_mitfahrer;
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
         this.flrpartner = flrpartner;
         this.flrpersonal = flrpersonal;
         this.flrfahrzeug = flrfahrzeug;
@@ -213,12 +193,36 @@ public class FLRReise implements Serializable {
         this.i_belegartid = i_belegartid;
     }
 
-    public Double getF_faktor() {
-        return this.f_faktor;
+    public Double getF_verrechenbar() {
+        return this.f_verrechenbar;
     }
 
-    public void setF_faktor(Double f_faktor) {
-        this.f_faktor = f_faktor;
+    public void setF_verrechenbar(Double f_verrechenbar) {
+        this.f_verrechenbar = f_verrechenbar;
+    }
+
+    public Date getT_erledigt() {
+        return this.t_erledigt;
+    }
+
+    public void setT_erledigt(Date t_erledigt) {
+        this.t_erledigt = t_erledigt;
+    }
+
+    public Integer getI_mitfahrer() {
+        return this.i_mitfahrer;
+    }
+
+    public void setI_mitfahrer(Integer i_mitfahrer) {
+        this.i_mitfahrer = i_mitfahrer;
+    }
+
+    public com.lp.server.personal.fastlanereader.generated.FLRPersonal getFlrpersonal_erledigt() {
+        return this.flrpersonal_erledigt;
+    }
+
+    public void setFlrpersonal_erledigt(com.lp.server.personal.fastlanereader.generated.FLRPersonal flrpersonal_erledigt) {
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
     }
 
     public FLRPartner getFlrpartner() {

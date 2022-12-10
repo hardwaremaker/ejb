@@ -60,8 +60,32 @@ public class Stuecklisteposition implements Serializable {
 	@Column(name = "N_MENGE")
 	private BigDecimal nMenge;
 
+	@Column(name = "B_INITIAL")
+	private Short bInitial;
+	
+	public Short getBInitial() {
+		
+		return bInitial;
+	}
+
+	public void setBInitial(Short bInitial) {
+		this.bInitial = bInitial;
+	}
+
+	@Column(name = "B_RUESTMENGE")
+	private Short bRuestmenge;
+	
+	public Short getBRuestmenge() {
+		return bRuestmenge;
+	}
+
+	public void setBRuestmenge(Short bRuestmenge) {
+		this.bRuestmenge = bRuestmenge;
+	}
+
 	@Column(name = "B_MITDRUCKEN")
 	private Short bMitdrucken;
+	
 
 	@Column(name = "F_DIMENSION1")
 	private Float fDimension1;
@@ -134,6 +158,9 @@ public class Stuecklisteposition implements Serializable {
 	@Column(name = "ANSPRECHPARTNER_I_ID_AENDERN")
 	private Integer ansprechpartnerIIdAendern;
 	
+	@Column(name = "X_FORMEL")
+	private String xFormel;
+
 	private static final long serialVersionUID = 1L;
 
 	public Stuecklisteposition() {
@@ -144,7 +171,8 @@ public class Stuecklisteposition implements Serializable {
 			Integer artikelIId, BigDecimal menge, String einheitCNr,
 			Integer montageartIId, Integer sort, Short mitdrucken,
 			Integer personalIIdAnlegen2,
-			Integer personalIIdAendern2,Integer iBeginnterminoffset) {
+			Integer personalIIdAendern2,Integer iBeginnterminoffset,
+			Short bRuestmenge, Short bInitial, String formel) {
 		setIId(id);
 		setStuecklisteIId(stuecklisteIId);
 		setArtikelIId(artikelIId);
@@ -159,6 +187,9 @@ public class Stuecklisteposition implements Serializable {
 		setPersonalIIdAnlegen(personalIIdAnlegen2);
 		setPersonalIIdAendern(personalIIdAendern2);
 		setIBeginnterminoffset(iBeginnterminoffset);
+		setBRuestmenge(bRuestmenge); 
+		setXFormel(formel);
+		setBInitial(bInitial);
 	}
 
 	public Integer getIId() {
@@ -343,5 +374,13 @@ public class Stuecklisteposition implements Serializable {
 
 	public void setTAnlegenAnsprechpartner(Timestamp tAnlegenAnsprechpartner) {
 		this.tAnlegenAnsprechpartner = tAnlegenAnsprechpartner;
+	}
+	
+	public String getXFormel() {
+		return xFormel;
+	}
+	
+	public void setXFormel(String formel) {
+		this.xFormel = formel;
 	}
 }

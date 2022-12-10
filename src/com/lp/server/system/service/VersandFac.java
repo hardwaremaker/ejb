@@ -34,11 +34,16 @@ package com.lp.server.system.service;
 
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import javax.ejb.Remote;
+import javax.persistence.PersistenceException;
 
+import com.lp.server.system.jcr.service.FehlerVersandauftraegeDto;
+import com.lp.server.system.mail.service.LPMailDto;
+import com.lp.server.system.mail.service.MailTestMessage;
+import com.lp.server.system.mail.service.MailTestMessageResult;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
@@ -49,12 +54,15 @@ public interface VersandFac {
 	public final static int MAX_ABSENDER = 100;
 	public final static int MAX_STATUSTEXT = 100;
 	public final static int MAX_DATEINAME = 260;
+	public final static int MAX_BCCEMPFAENGER = 300;
 
 	public final static String MAIL_PARAMETER_ANREDE_ANSPRECHPARTNER = "anrede_anprechpartner";
 	public final static String MAIL_PARAMETER_BELEGNUMMER = "belegnummer";
 	public final static String MAIL_PARAMETER_BEZEICHNUNG = "bezeichnung";
 	public final static String MAIL_PARAMETER_BELEGDATUM = "belegdatum";
+	public final static String MAIL_PARAMETER_BELEGDATUM_YYMMDD = "belegdatumYYMMDD";
 	public final static String MAIL_PARAMETER_PROJEKT = "projekt";
+	public final static String MAIL_PARAMETER_PROJEKT1 = "projekt1";
 	public final static String MAIL_PARAMETER_BEARBEITER = "bearbeiter";
 	public final static String MAIL_PARAMETER_FUSSTEXT = "fusstext";
 	public final static String MAIL_PARAMETER_TEXT = "text";
@@ -74,7 +82,8 @@ public interface VersandFac {
 	public final static String MAIL_PARAMETER_BEARBEITER_FAXDWFIRMA = "bearbeiter_faxdwfirma";
 	public final static String MAIL_PARAMETER_BEARBEITER_FAXFIRMAMITDW = "bearbeiter_faxfirmamitdw";	
 	public final static String MAIL_PARAMETER_BEARBEITER_UNTERSCHRIFTSFUNKTION = "bearbeiter_unterschriftsfunktion";	
-	public final static String MAIL_PARAMETER_BEARBEITER_UNTERSCHRIFTSTEXT = "bearbeiter_unterschriftstext";	
+	public final static String MAIL_PARAMETER_BEARBEITER_UNTERSCHRIFTSTEXT = "bearbeiter_unterschriftstext";
+	public final static String MAIL_PARAMETER_BEARBEITER_SIGNATUR = "bearbeiter_signatur";
 
 	public final static String MAIL_PARAMETER_VERTRETER_VORNAME = "vertreter_vorname";
 	public final static String MAIL_PARAMETER_VERTRETER_NACHNAME = "vertreter_nachname";
@@ -89,8 +98,23 @@ public interface VersandFac {
 	public final static String MAIL_PARAMETER_VERTRETER_FAXDWFIRMA = "vertreter_faxdwfirma";
 	public final static String MAIL_PARAMETER_VERTRETER_FAXFIRMAMITDW = "vertreter_faxfirmamitdw";	
 	public final static String MAIL_PARAMETER_VERTRETER_UNTERSCHRIFTSFUNKTION = "vertreter_unterschriftsfunktion";	
-	public final static String MAIL_PARAMETER_VERTRETER_UNTERSCHRIFTSTEXT = "vertreter_unterschriftstext";	
-
+	public final static String MAIL_PARAMETER_VERTRETER_UNTERSCHRIFTSTEXT = "vertreter_unterschriftstext";
+	public final static String MAIL_PARAMETER_VERTRETER_SIGNATUR = "vertreter_signatur";
+	
+	public final static String MAIL_PARAMETER_PERSON_ANDREDE = "person_anrede";
+	public final static String MAIL_PARAMETER_PERSON_PERSONALNUMMER = "person_personalnummer";
+	public final static String MAIL_PARAMETER_PERSON_TITEL = "person_titel";	
+	public final static String MAIL_PARAMETER_PERSON_VORNAME1 = "person_vorname1";	
+	public final static String MAIL_PARAMETER_PERSON_VORNAME2 = "person_vorname2";	
+	public final static String MAIL_PARAMETER_PERSON_NACHNAME = "person_nachname";	
+	public final static String MAIL_PARAMETER_PERSON_NTITEL = "person_ntitel";	
+	
+	public final static String MAIL_PARAMETER_LS_VERSANDNUMMER = "ls_versandnummer";	
+	public final static String MAIL_PARAMETER_LS_VERSANDNUMMER2 = "ls_versandnummer2";	
+	
+	public final static String MAIL_PARAMETER_LS_SPEDITEUR_NAME = "ls_spediteur_name";
+	public final static String MAIL_PARAMETER_LS_SPEDITEUR_WEBSITE = "ls_spediteur_website";
+	
 	public final static String MAIL_PARAMETER_REKLA_LIEFERSCHEIN = "rekla_lieferschein";	
 	public final static String MAIL_PARAMETER_REKLA_RECHNUNG = "rekla_rechung";	
 	public final static String MAIL_PARAMETER_REKLA_KNDREKLANR = "rekla_kndreklanr";	
@@ -99,9 +123,6 @@ public interface VersandFac {
 	public final static String MAIL_PARAMETER_REKLA_WE_WEDATUM = "rekla_we_wedatum";	
 	public final static String MAIL_PARAMETER_REKLA_WE_LSDATUM = "rekla_we_lsdatum";	
 
-	
-
-	
 	public final static String MAIL_PARAMETER_FIRMA_NAME1 = "firma_name1";	
 	public final static String MAIL_PARAMETER_FIRMA_NAME2 = "firma_name2";	
 	public final static String MAIL_PARAMETER_FIRMA_NAME3 = "firma_name3";	
@@ -111,6 +132,38 @@ public interface VersandFac {
 	public final static String MAIL_PARAMETER_FIRMA_ORT = "firma_ort";	
 	public final static String MAIL_PARAMETER_FIRMA_STRASSE = "firma_strasse";	
 
+	public final static String MAIL_PARAMETER_PROJEKTNUMMER = "projektnummer";
+	public final static String MAIL_PARAMETER_ANGEBOT_ANFRAGENUMMER = "angebot_anfragenummer";
+	
+	public final static String MAIL_PARAMETER_ANWESENHEIT_LFDNR = "anwesenheit_lfdnr";
+	
+	public final static String MAIL_PARAMETER_PARTNER_NAME1 = "partner_name1";
+	public final static String MAIL_PARAMETER_PARTNER_NAME2 = "partner_name2";	
+	public final static String MAIL_PARAMETER_PARTNER_NAME3 = "partner_name3";	
+	public final static String MAIL_PARAMETER_PARTNER_LKZ = "partner_lkz";	
+	public final static String MAIL_PARAMETER_PARTNER_PLZ = "partner_plz";	
+	public final static String MAIL_PARAMETER_PARTNER_ORT = "partner_ort";	
+	public final static String MAIL_PARAMETER_PARTNER_STRASSE = "partner_strasse";
+	public final static String MAIL_PARAMETER_PARTNER_KBEZ = "partner_kbez";
+	
+	public final static String MAIL_PARAMETER_BIS_DATUM = "bis_datum";
+	
+	public final static String MAIL_PARAMETER_XLS_MAILVERSAND_PROJEKT = "xlsmailversand_projekt";
+	public final static String MAIL_PARAMETER_XLS_MAILVERSAND_ENDKUNDE = "xlsmailversand_endkunde";
+	public final static String MAIL_PARAMETER_XLS_MAILVERSAND_ABGABETERMIN = "xlsmailversand_abgabetermin";
+	public final static String MAIL_PARAMETER_XLS_MAILVERSAND_GEPLANTERFERTIGUNGSTERMIN = "xlsmailversand_geplanterfertigungstermin";
+	
+	public final static String MAIL_PARAMETER_BELEG_VERSION = "beleg_version";
+	public final static String MAIL_PARAMETER_RECHNUNGSART = "rechnungsart";
+	public final static String MAIL_PARAMETER_KOPFTEXT = "kopftext";
+	
+	public final static String MAIL_PARAMETER_MANDANT_HOMEPAGE = "mandant_homepage";
+	public final static String MAIL_PARAMETER_MANDANT_GERICHTSSTAND = "mandant_gerichtsstand";
+	public final static String MAIL_PARAMETER_MANDANT_FIRMENBUCHNR = "mandant_firmenbuchnr";
+	public final static String MAIL_PARAMETER_MANDANT_UID = "mandant_uid";
+	public final static String MAIL_PARAMETER_MANDANT_FAX = "mandant_fax";
+	public final static String MAIL_PARAMETER_MANDANT_GESCHAEFSTFUEHRER = "mandant_geschaeftsfuehrer";
+	
 	// TODO: Wo werden diese falschen Pfade verwendet? (ghp)
 	public final static String LOGO_IMAGE = "c:/jboss-4.0.1/server/helium/report/allgemein/logo.png";
 	public final static String LOGO_SUBREPORT = "c:/jboss-4.0.1/server/helium/report/allgemein/logo.jasper";
@@ -136,6 +189,7 @@ public interface VersandFac {
 	public final static String STATUS_FEHLGESCHLAGEN = LocaleFac.STATUS_FEHLGESCHLAGEN;
 	public final static String STATUS_DATEN_UNGUELTIG = LocaleFac.STATUS_DATEN_UNGUELTIG;
 	public final static String STATUS_STORNIERT = LocaleFac.STATUS_STORNIERT;
+	public final static String STATUS_TEILERLEDIGT = LocaleFac.STATUS_TEILERLEDIGT;
 
 	public VersandauftragDto createVersandauftrag(
 			VersandauftragDto versandauftragDto,boolean bDokumenteMitanhaengen, TheClientDto theClientDto)
@@ -198,6 +252,9 @@ public interface VersandFac {
 	public void sendeVersandauftragSofort(Integer versandauftragIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
+	public void sendeVersandauftragZeitpunktWunsch(Integer versandauftragIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
 	public String getVersandstatus(String belegartCNr, Integer i_belegIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
@@ -215,7 +272,67 @@ public interface VersandFac {
 
 	public VersandauftragDto versandauftragFindNextNotInDoc();
 	
-	public VersandanhangDto updateVersandanhang(VersandanhangDto versandanhangDto);
-	public void createVersandanhaenge(ArrayList<VersandanhangDto> alAnhaenge,
-			TheClientDto theClientDto);
+	VersandanhangDto updateVersandanhang(VersandanhangDto versandanhangDto);
+	void createVersandanhaenge(List<VersandanhangDto> alAnhaenge, TheClientDto theClientDto);
+	public String getUebersteuertenAbsenderFuerBelegEmail(
+			MailtextDto mailtextDto,  TheClientDto theClientDto) throws EJBExceptionLP;
+
+	String getDefaultAnhangForBelegEmail(MailtextDto mailtextDto, String belegartCNr, Integer iIdBeleg,
+			Locale locSprache, TheClientDto theClientDto);
+
+	String getUebersteuertenDateinamenForBeleg(MailtextDto mailtextDto, String belegartCNr, Integer iIdBeleg,
+			Locale locSprache, TheClientDto theClientDto);
+
+	MailTestMessageResult testMailConfiguration(MailTestMessage testMessage, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	/**
+	 * Einen Versandauftrag und optionale Anhaenge in der DatenDB
+	 * speichern, in die Dokumentablage speichern und dann per E-Mail/Fax
+	 * versenden.</br>
+	 * <p>Diese optionalen Anhaenge sind jene, die der Benutzer selbst noch
+	 * hinzufuegen will. Die Belegspezifischen (Lieferschein) und/oder
+	 * Anhaenge durch Artikelkommentare werden immer entsprechend dem 
+	 * Beleg erzeugt.</p>
+	 * <p>
+	 * Hinweis: Neben dem eigentliche Erzeugen der Versandauftrags und
+	 * der optionalen Anhaenge geht es darum, dass weder der Versandauftrag
+	 * noch die Anhaenge selbst die Dokumentenablage erzeugen. Das soll 
+	 * einzig und alleine der saveVersandauftrag machen. Es geht darum, 
+	 * dass die ganzen Dokumentenablagemodifikationen in der gleichen 
+	 * JcrSession erfolgen.</p>
+	 * 
+	 */
+	VersandauftragDto createVersandauftrag(
+			VersandauftragDto versandauftragDto,
+			List<VersandanhangDto> anhaenge,
+			boolean dokumenteAnhaengen, TheClientDto theClientDto);
+
+	List<VersandauftragDto> createVersandauftrags(
+			List<VersandauftragDto> versandauftragDtos,
+			boolean dokumenteAnhaengen, TheClientDto theClientDto);
+	
+	VersandauftragDto[] versandauftragFindOffen(Integer anzahl)
+			throws EJBExceptionLP;
+
+	VersandauftragDto[] versandauftragFindAblage(Integer anzahl)
+			throws EJBExceptionLP;
+
+	public FehlerVersandauftraegeDto getOffeneUndFehlgeschlageneAuftraege( TheClientDto theClientDto);
+		
+	void ablageIMAP(Integer iid, String cMandant);
+
+	void anhaengeLoeschen(Integer versandauftragIId);
+	
+	void performJobSmtp(TheClientDto theClientDto);
+	
+	void performJobImap(TheClientDto theClientDto);
+	
+	boolean setJobid(Integer versandauftragIId, String jobId) throws PersistenceException;
+	
+	boolean sendMail(VersandauftragDto versandauftragDto, LPMailDto lpMailDto);
+	
+	boolean setStatus(Integer versandauftragIId, String statusCNr, String cStatustext, 
+			Timestamp tSendezeitpunkt, byte[] oMessage, boolean clearInhalt);
+
 }

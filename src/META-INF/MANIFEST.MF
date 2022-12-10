@@ -1,5 +1,6 @@
 Manifest-Version: 1.0
 Ant-Version: Apache Ant 1.7.0
+Built-By: sebastian
 Class-Path: asm-attrs.jar 
  asm.jar 
  barbecue-1.5-alpha3.jar 
@@ -33,7 +34,7 @@ Class-Path: asm-attrs.jar
  tidy.jar 
  versioncheck.jar 
  jcr-1.0.jar 
- jasperreports-4.0.1.jar 
+ jasperreports-5.5.0.jar 
  jasperreports-chart-themes-4.0.1.jar 
  jasperreports-extensions-3.5.3.jar 
  jasperreports-fonts-4.0.1.jar 
@@ -47,7 +48,7 @@ Class-Path: asm-attrs.jar
  batik-parser.jar 
  batik-script.jar 
  batik-svg-dom.jar 
- batik-svggen.jar 
+ batik-svggen.jarbatik-transcoder.jarbatik-codec.jar 
  batik-util.jar 
  batik-xml.jar 
  bcel-5.2.jar 
@@ -69,6 +70,6 @@ Class-Path: asm-attrs.jar
  iReport.jar 
  fujitsu-bss-extsvc-provisioning.jar 
  modelmapper-0.6.2.jar
-Built-By: sebastian
 Created-By: 10.0-b19 (Sun Microsystems Inc.)
+Dependencies: javax.jcr
 

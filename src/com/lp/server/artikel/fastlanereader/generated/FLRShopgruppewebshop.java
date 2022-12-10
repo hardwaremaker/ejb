@@ -38,8 +38,9 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 /** @author Hibernate CodeGenerator */
 public class FLRShopgruppewebshop implements Serializable {
+	private static final long serialVersionUID = 1888652182125369094L;
 
-    /** identifier field */
+	/** identifier field */
     private Integer i_id;
 
     /** nullable persistent field */
@@ -51,11 +52,14 @@ public class FLRShopgruppewebshop implements Serializable {
     /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRWebshop flrwebshop;
 
+    private FLRShopgruppe flrshopgruppe;
+    
     /** full constructor */
-    public FLRShopgruppewebshop(Integer shopgruppe_i_id, Integer webshop_i_id, com.lp.server.artikel.fastlanereader.generated.FLRWebshop flrwebshop) {
+    public FLRShopgruppewebshop(Integer shopgruppe_i_id, Integer webshop_i_id, FLRWebshop flrwebshop, FLRShopgruppe flrshopgruppe) {
         this.shopgruppe_i_id = shopgruppe_i_id;
         this.webshop_i_id = webshop_i_id;
-        this.flrwebshop = flrwebshop;
+        setFlrwebshop(flrwebshop);
+        setFlrshopgruppe(flrshopgruppe);
     }
 
     /** default constructor */
@@ -94,10 +98,17 @@ public class FLRShopgruppewebshop implements Serializable {
         this.flrwebshop = flrwebshop;
     }
 
-    public String toString() {
+	public FLRShopgruppe getFlrshopgruppe() {
+		return flrshopgruppe;
+	}
+
+	public void setFlrshopgruppe(FLRShopgruppe flrshopgruppe) {
+		this.flrshopgruppe = flrshopgruppe;
+	}
+	
+  	public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();
     }
-
 }

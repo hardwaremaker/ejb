@@ -35,6 +35,7 @@ package com.lp.server.personal.ejb;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.GregorianCalendar;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -44,9 +45,8 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 @NamedQueries({
-		@NamedQuery(name = "PersonalgehaltfindByPersonalIIdIJahrIMonat", query = "SELECT OBJECT(C) FROM Personalgehalt c WHERE c.personalIId = ?1 AND c.iJahr = ?2 AND c.iMonat = ?3"),
-		@NamedQuery(name = "PersonalgehaltfindLetztePersonalgehalt", query = "SELECT OBJECT(C) FROM Personalgehalt c WHERE c.personalIId = ?1 AND c.iJahr <= ?2 AND c.iMonat <= ?3  ORDER BY c.iJahr DESC, c.iMonat DESC"),
-		@NamedQuery(name = "PersonalgehaltfindByPersonalIIdIJahrMonat", query = "SELECT OBJECT(C) FROM Personalgehalt c WHERE c.personalIId = ?1 AND c.iJahr = ?2 AND c.iMonat <= ?3  ORDER BY c.iMonat DESC") })
+		@NamedQuery(name = "PersonalgehaltfindByPersonalIIdTGueltigab", query = "SELECT OBJECT(C) FROM Personalgehalt c WHERE c.personalIId = ?1 AND c.tGueltigab = ?2"),
+		@NamedQuery(name = "PersonalgehaltfindLetztePersonalgehalt", query = "SELECT OBJECT(C) FROM Personalgehalt c WHERE c.personalIId = ?1 AND c.tGueltigab <= ?2 ORDER BY c.tGueltigab DESC") })
 @Entity
 @Table(name = "PERS_PERSONALGEHALT")
 public class Personalgehalt implements Serializable {
@@ -94,8 +94,7 @@ public class Personalgehalt implements Serializable {
 		return nAufschlagLohnmittelstundensatz;
 	}
 
-	public void setNAufschlagLohnmittelstundensatz(
-			BigDecimal nAufschlagLohnmittelstundensatz) {
+	public void setNAufschlagLohnmittelstundensatz(BigDecimal nAufschlagLohnmittelstundensatz) {
 		this.nAufschlagLohnmittelstundensatz = nAufschlagLohnmittelstundensatz;
 	}
 
@@ -111,17 +110,33 @@ public class Personalgehalt implements Serializable {
 	@Column(name = "I_ID")
 	private Integer iId;
 
-	@Column(name = "I_JAHR")
-	private Integer iJahr;
+	@Column(name = "T_GUELTIGAB")
+	private Timestamp tGueltigab;
+
+	public Timestamp getTGueltigab() {
+		return tGueltigab;
+	}
+
+	public void setTGueltigab(Timestamp tGueltigab) {
+		this.tGueltigab = tGueltigab;
+	}
 
 	@Column(name = "F_LEISTUNGSWERT")
 	private Double fLeistungswert;
 
-	@Column(name = "I_MONAT")
-	private Integer iMonat;
-
 	@Column(name = "N_GEHALT")
 	private BigDecimal nGehalt;
+
+	@Column(name = "N_DRZPAUSCHALE")
+	private BigDecimal nDrzpauschale;
+
+	public BigDecimal getNDrzpauschale() {
+		return nDrzpauschale;
+	}
+
+	public void setNDrzpauschale(BigDecimal nDrzpauschale) {
+		this.nDrzpauschale = nDrzpauschale;
+	}
 
 	@Column(name = "F_UESTPAUSCHALE")
 	private Double fUestpauschale;
@@ -132,8 +147,42 @@ public class Personalgehalt implements Serializable {
 	@Column(name = "F_VERFUEGBARKEIT")
 	private Double fVerfuegbarkeit;
 
+	@Column(name = "N_KMGELD_MITFAHRER")
+	private BigDecimal nKmgeldMitfahrer;
+	
+	public BigDecimal getNKmgeldMitfahrer() {
+		return nKmgeldMitfahrer;
+	}
+
+	public void setNKmgeldMitfahrer(BigDecimal nKmgeldMitfahrer) {
+		this.nKmgeldMitfahrer = nKmgeldMitfahrer;
+	}
+
 	@Column(name = "N_KMGELD1")
 	private BigDecimal nKmgeld1;
+
+	@Column(name = "N_LOHNSTEUER")
+	private BigDecimal nLohnsteuer;
+
+	public BigDecimal getNLohnsteuer() {
+		return nLohnsteuer;
+	}
+
+	public void setNLohnsteuer(BigDecimal nLohnsteuer) {
+		this.nLohnsteuer = nLohnsteuer;
+	}
+
+	@Column(name = "B_NEGATIVSTUNDEN_IN_URLAUB_UMWANDELN_TAGEWEISE_BETRACHTEN")
+	private Short bNegativstundenInUrlaubUmwandelnTageweiseBetrachten;
+	
+	public Short getBNegativstundenInUrlaubUmwandelnTageweiseBetrachten() {
+		return bNegativstundenInUrlaubUmwandelnTageweiseBetrachten;
+	}
+
+	public void setBNegativstundenInUrlaubUmwandelnTageweiseBetrachten(
+			Short bNegativstundenInUrlaubUmwandelnTageweiseBetrachten) {
+		this.bNegativstundenInUrlaubUmwandelnTageweiseBetrachten = bNegativstundenInUrlaubUmwandelnTageweiseBetrachten;
+	}
 
 	@Column(name = "F_BISKILOMETER")
 	private Double fBiskilometer;
@@ -156,8 +205,8 @@ public class Personalgehalt implements Serializable {
 	@Column(name = "T_AENDERN")
 	private Timestamp tAendern;
 
-	@Column(name = "B_UESTDAUSZAHLEN")
-	private Short bUestdauszahlen;
+	@Column(name = "I_UESTDAUSZAHLEN")
+	private Integer iUestdauszahlen;
 
 	@Column(name = "N_UESTDPUFFER")
 	private BigDecimal nUestdpuffer;
@@ -201,10 +250,9 @@ public class Personalgehalt implements Serializable {
 		super();
 	}
 
-	public Personalgehalt(Integer id, Integer personalIId2, BigDecimal gehalt,
-			Double uestpauschale, BigDecimal stundensatz,
-			Integer personalIIdAendern2, Integer jahr, Integer monat,
-			Short uestdauszahlen, BigDecimal uestdpuffer) {
+	public Personalgehalt(Integer id, Integer personalIId2, BigDecimal gehalt, Double uestpauschale,
+			BigDecimal stundensatz, Integer personalIIdAendern2, Integer jahr, Integer monat, Integer uestdauszahlen,
+			BigDecimal uestdpuffer,Short bNegativstundenInUrlaubUmwandelnTageweiseBetrachten) {
 		setIId(id);
 		setPersonalIId(personalIId2);
 		setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
@@ -212,9 +260,9 @@ public class Personalgehalt implements Serializable {
 		setFUestpauschale(uestpauschale);
 		setNStundensatz(stundensatz);
 		setPersonalIIdAendern(personalIIdAendern2);
-		setIJahr(jahr);
-		setIMonat(monat);
-		setBUestdauszahlen(uestdauszahlen);
+		
+		setTGueltigab(new java.sql.Timestamp(new GregorianCalendar(jahr, monat, 1).getTimeInMillis()));
+		setIUestdauszahlen(uestdauszahlen);
 		setNUestdpuffer(uestdpuffer);
 		setBAlleinerzieher(new Short((short) 0));
 		setBAlleinverdiener(new Short((short) 0));
@@ -223,42 +271,15 @@ public class Personalgehalt implements Serializable {
 
 		setNKmgeld1(new BigDecimal(0));
 		setNKmgeld2(new BigDecimal(0));
+		setNKmgeldMitfahrer(new BigDecimal(0));
 		setNStundensatz(new BigDecimal(0));
 		setFBiskilometer(new Double(0));
 		setFVerfuegbarkeit(new Double(0));
 		setFUestpauschale(new Double(0));
+		setNDrzpauschale(new BigDecimal(0));
+		setBNegativstundenInUrlaubUmwandelnTageweiseBetrachten(bNegativstundenInUrlaubUmwandelnTageweiseBetrachten);
 	}
 
-	public Personalgehalt(Integer id, Integer personalIId2, Integer jahr,
-			Integer monat, BigDecimal gehalt, Double uestpauschale,
-			BigDecimal stundensatz, Double verfuegbarkeit, BigDecimal kmgeld1,
-			Double biskilometer, BigDecimal kmgeld2, Short kksgebbefreit,
-			Short alleinverdiener, Short alleinerzieher,
-			Integer personalIIdAendern2, Short uestdauszahlen,
-			BigDecimal uestdpuffer, Short stundensatzfixiert) {
-		setIId(id);
-		setPersonalIId(personalIId2);
-		setTAendern(new java.sql.Timestamp(System.currentTimeMillis()));
-		setNGehalt(gehalt);
-		setFUestpauschale(uestpauschale);
-		setNStundensatz(stundensatz);
-		setPersonalIIdAendern(personalIIdAendern2);
-		setIJahr(jahr);
-		setIMonat(monat);
-		setBUestdauszahlen(uestdauszahlen);
-		setNUestdpuffer(uestdpuffer);
-		setBAlleinerzieher(alleinerzieher);
-		setBAlleinverdiener(alleinverdiener);
-		setBKksgebbefreit(kksgebbefreit);
-		setNKmgeld1(kmgeld1);
-		setNKmgeld2(kmgeld2);
-		setNGehalt(gehalt);
-		setNStundensatz(stundensatz);
-		setFBiskilometer(biskilometer);
-		setFVerfuegbarkeit(verfuegbarkeit);
-		setFUestpauschale(uestpauschale);
-		setBStundensatzFixiert(stundensatzfixiert);
-	}
 
 	public Double getFLeistungswert() {
 		return this.fLeistungswert;
@@ -274,22 +295,6 @@ public class Personalgehalt implements Serializable {
 
 	public void setIId(Integer iId) {
 		this.iId = iId;
-	}
-
-	public Integer getIJahr() {
-		return this.iJahr;
-	}
-
-	public void setIJahr(Integer iJahr) {
-		this.iJahr = iJahr;
-	}
-
-	public Integer getIMonat() {
-		return this.iMonat;
-	}
-
-	public void setIMonat(Integer iMonat) {
-		this.iMonat = iMonat;
 	}
 
 	public BigDecimal getNGehalt() {
@@ -388,12 +393,12 @@ public class Personalgehalt implements Serializable {
 		this.tAendern = tAendern;
 	}
 
-	public Short getBUestdauszahlen() {
-		return this.bUestdauszahlen;
+	public Integer getIUestdauszahlen() {
+		return this.iUestdauszahlen;
 	}
 
-	public void setBUestdauszahlen(Short bUestdauszahlen) {
-		this.bUestdauszahlen = bUestdauszahlen;
+	public void setIUestdauszahlen(Integer iUestdauszahlen) {
+		this.iUestdauszahlen = iUestdauszahlen;
 	}
 
 	public BigDecimal getNUestdpuffer() {

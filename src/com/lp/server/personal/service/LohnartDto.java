@@ -109,4 +109,23 @@ public class LohnartDto implements Serializable {
 		this.iId = iId;
 	}
 
+	private Integer iAusfallWochen;
+
+	public Integer getIAusfallWochen() {
+		return iAusfallWochen;
+	}
+
+	public void setIAusfallWochen(Integer iAusfallWochen) {
+		this.iAusfallWochen = iAusfallWochen;
+	}
+
+	private Double fMindestuestd;
+	public Double getFMindestuestd() {
+		return fMindestuestd;
+	}
+
+	public void setFMindestuestd(Double fMindestuestd) {
+		this.fMindestuestd = fMindestuestd;
+	}
+
 }

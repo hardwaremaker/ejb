@@ -115,4 +115,8 @@ public class ArbeitsplatzparameterDto implements Serializable {
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}
+	
+	public Boolean asBoolean() {
+		return "1".equals(getCWert());
+	}
 }

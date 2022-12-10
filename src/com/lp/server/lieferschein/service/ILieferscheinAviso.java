@@ -38,4 +38,7 @@ public interface ILieferscheinAviso {
 
 	public Integer getPartnerId() ;
 	public void setPartnerId(Integer partnerId) ;
+	
+	LieferscheinDto getLieferscheinDto();
+	void setLieferscheinDto(LieferscheinDto lieferscheinDto);
 }

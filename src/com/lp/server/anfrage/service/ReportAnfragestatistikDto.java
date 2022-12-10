@@ -40,7 +40,6 @@ public class ReportAnfragestatistikDto implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private Integer iIndex;
 	private String anfrageCNr;
 	private String kundenname;
 	private String belegdatumCNr;
@@ -49,13 +48,42 @@ public class ReportAnfragestatistikDto implements Serializable {
 	private BigDecimal nAngebotenerpreis;
 	private Integer iLieferzeit;
 
-	public Integer getIIndex() {
-		return iIndex;
+	private String artikelnummer;
+	private String artikelbezeichnung;
+	private String artikelzusatzbezeichnung;
+	public String getArtikelnummer() {
+		return artikelnummer;
 	}
 
-	public void setIIndex(Integer iIndexI) {
-		this.iIndex = iIndexI;
+	public void setArtikelnummer(String artikelnummer) {
+		this.artikelnummer = artikelnummer;
 	}
+
+	public String getArtikelbezeichnung() {
+		return artikelbezeichnung;
+	}
+
+	public void setArtikelbezeichnung(String artikelbezeichnung) {
+		this.artikelbezeichnung = artikelbezeichnung;
+	}
+
+	public String getArtikelzusatzbezeichnung() {
+		return artikelzusatzbezeichnung;
+	}
+
+	public void setArtikelzusatzbezeichnung(String artikelzusatzbezeichnung) {
+		this.artikelzusatzbezeichnung = artikelzusatzbezeichnung;
+	}
+
+	public boolean isErsatzartikel() {
+		return ersatzartikel;
+	}
+
+	public void setErsatzartikel(boolean ersatzartikel) {
+		this.ersatzartikel = ersatzartikel;
+	}
+
+	boolean ersatzartikel;
 
 	public String getAnfrageCNr() {
 		return anfrageCNr;

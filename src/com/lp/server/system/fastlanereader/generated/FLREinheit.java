@@ -52,10 +52,10 @@ public class FLREinheit implements Serializable {
 	private Integer i_dimension;
 
 	/** persistent field */
-	private Set<?> einheit_einheit_set;
+	private Set<FLREinheitspr> einheit_einheit_set;
 
 	/** full constructor */
-	public FLREinheit(Integer i_dimension, Set<?> einheit_einheit_set) {
+	public FLREinheit(Integer i_dimension, Set<FLREinheitspr> einheit_einheit_set) {
 		this.i_dimension = i_dimension;
 		this.einheit_einheit_set = einheit_einheit_set;
 	}
@@ -65,7 +65,7 @@ public class FLREinheit implements Serializable {
 	}
 
 	/** minimal constructor */
-	public FLREinheit(Set<?> einheit_einheit_set) {
+	public FLREinheit(Set<FLREinheitspr> einheit_einheit_set) {
 		this.einheit_einheit_set = einheit_einheit_set;
 	}
 
@@ -85,11 +85,11 @@ public class FLREinheit implements Serializable {
 		this.i_dimension = i_dimension;
 	}
 
-	public Set<?> getEinheit_einheit_set() {
+	public Set<FLREinheitspr> getEinheit_einheit_set() {
 		return this.einheit_einheit_set;
 	}
 
-	public void setEinheit_einheit_set(Set<?> einheit_einheit_set) {
+	public void setEinheit_einheit_set(Set<FLREinheitspr> einheit_einheit_set) {
 		this.einheit_einheit_set = einheit_einheit_set;
 	}
 

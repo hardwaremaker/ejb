@@ -1,38 +1,7 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.fertigung.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -65,6 +34,9 @@ public class FLRLossollmaterial implements Serializable {
     private Short b_nachtraeglich;
 
     /** nullable persistent field */
+    private Short b_dringend;
+
+    /** nullable persistent field */
     private Integer montageart_i_id;
 
     /** nullable persistent field */
@@ -77,28 +49,81 @@ public class FLRLossollmaterial implements Serializable {
     private Date t_aendern;
 
     /** nullable persistent field */
+    private BigDecimal n_menge_stklpos;
+
+    /** nullable persistent field */
+    private String einheit_c_nr_stklpos;
+
+    /** nullable persistent field */
+    private String c_position;
+
+    /** nullable persistent field */
+    private String c_kommentar;
+
+    /** nullable persistent field */
+    private Double f_dimension1;
+
+    /** nullable persistent field */
+    private Double f_dimension2;
+
+    /** nullable persistent field */
+    private Double f_dimension3;
+
+    /** nullable persistent field */
+    private String c_fehlercode;
+
+    /** nullable persistent field */
+    private String c_fehlertext;
+
+    /** nullable persistent field */
+    private Date t_export_beginn;
+
+    /** nullable persistent field */
+    private Date t_export_ende;
+
+    /** nullable persistent field */
     private FLRArtikel flrartikel;
 
     /** nullable persistent field */
+    private FLRArtikelliste flrartikelliste;
+
+    /** nullable persistent field */
     private com.lp.server.fertigung.fastlanereader.generated.FLRLos flrlos;
+
+    /** nullable persistent field */
+    private com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial flrlossollmaterial_original;
 
     /** persistent field */
     private Set istmaterialset;
 
     /** full constructor */
-    public FLRLossollmaterial(Integer los_i_id, Integer i_sort, Integer i_beginnterminoffset, BigDecimal n_menge, BigDecimal n_sollpreis, Short b_nachtraeglich, Integer montageart_i_id, Integer lossollmaterial_i_id_original, Integer i_lfdnummer, Date t_aendern, FLRArtikel flrartikel, com.lp.server.fertigung.fastlanereader.generated.FLRLos flrlos, Set istmaterialset) {
+    public FLRLossollmaterial(Integer los_i_id, Integer i_sort, Integer i_beginnterminoffset, BigDecimal n_menge, BigDecimal n_sollpreis, Short b_nachtraeglich, Short b_dringend, Integer montageart_i_id, Integer lossollmaterial_i_id_original, Integer i_lfdnummer, Date t_aendern, BigDecimal n_menge_stklpos, String einheit_c_nr_stklpos, String c_position, String c_kommentar, Double f_dimension1, Double f_dimension2, Double f_dimension3, String c_fehlercode, String c_fehlertext, Date t_export_beginn, Date t_export_ende, FLRArtikel flrartikel, FLRArtikelliste flrartikelliste, com.lp.server.fertigung.fastlanereader.generated.FLRLos flrlos, com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial flrlossollmaterial_original, Set istmaterialset) {
         this.los_i_id = los_i_id;
         this.i_sort = i_sort;
         this.i_beginnterminoffset = i_beginnterminoffset;
         this.n_menge = n_menge;
         this.n_sollpreis = n_sollpreis;
         this.b_nachtraeglich = b_nachtraeglich;
+        this.b_dringend = b_dringend;
         this.montageart_i_id = montageart_i_id;
         this.lossollmaterial_i_id_original = lossollmaterial_i_id_original;
         this.i_lfdnummer = i_lfdnummer;
         this.t_aendern = t_aendern;
+        this.n_menge_stklpos = n_menge_stklpos;
+        this.einheit_c_nr_stklpos = einheit_c_nr_stklpos;
+        this.c_position = c_position;
+        this.c_kommentar = c_kommentar;
+        this.f_dimension1 = f_dimension1;
+        this.f_dimension2 = f_dimension2;
+        this.f_dimension3 = f_dimension3;
+        this.c_fehlercode = c_fehlercode;
+        this.c_fehlertext = c_fehlertext;
+        this.t_export_beginn = t_export_beginn;
+        this.t_export_ende = t_export_ende;
         this.flrartikel = flrartikel;
+        this.flrartikelliste = flrartikelliste;
         this.flrlos = flrlos;
+        this.flrlossollmaterial_original = flrlossollmaterial_original;
         this.istmaterialset = istmaterialset;
     }
 
@@ -167,6 +192,14 @@ public class FLRLossollmaterial implements Serializable {
         this.b_nachtraeglich = b_nachtraeglich;
     }
 
+    public Short getB_dringend() {
+        return this.b_dringend;
+    }
+
+    public void setB_dringend(Short b_dringend) {
+        this.b_dringend = b_dringend;
+    }
+
     public Integer getMontageart_i_id() {
         return this.montageart_i_id;
     }
@@ -199,6 +232,94 @@ public class FLRLossollmaterial implements Serializable {
         this.t_aendern = t_aendern;
     }
 
+    public BigDecimal getN_menge_stklpos() {
+        return this.n_menge_stklpos;
+    }
+
+    public void setN_menge_stklpos(BigDecimal n_menge_stklpos) {
+        this.n_menge_stklpos = n_menge_stklpos;
+    }
+
+    public String getEinheit_c_nr_stklpos() {
+        return this.einheit_c_nr_stklpos;
+    }
+
+    public void setEinheit_c_nr_stklpos(String einheit_c_nr_stklpos) {
+        this.einheit_c_nr_stklpos = einheit_c_nr_stklpos;
+    }
+
+    public String getC_position() {
+        return this.c_position;
+    }
+
+    public void setC_position(String c_position) {
+        this.c_position = c_position;
+    }
+
+    public String getC_kommentar() {
+        return this.c_kommentar;
+    }
+
+    public void setC_kommentar(String c_kommentar) {
+        this.c_kommentar = c_kommentar;
+    }
+
+    public Double getF_dimension1() {
+        return this.f_dimension1;
+    }
+
+    public void setF_dimension1(Double f_dimension1) {
+        this.f_dimension1 = f_dimension1;
+    }
+
+    public Double getF_dimension2() {
+        return this.f_dimension2;
+    }
+
+    public void setF_dimension2(Double f_dimension2) {
+        this.f_dimension2 = f_dimension2;
+    }
+
+    public Double getF_dimension3() {
+        return this.f_dimension3;
+    }
+
+    public void setF_dimension3(Double f_dimension3) {
+        this.f_dimension3 = f_dimension3;
+    }
+
+    public String getC_fehlercode() {
+        return this.c_fehlercode;
+    }
+
+    public void setC_fehlercode(String c_fehlercode) {
+        this.c_fehlercode = c_fehlercode;
+    }
+
+    public String getC_fehlertext() {
+        return this.c_fehlertext;
+    }
+
+    public void setC_fehlertext(String c_fehlertext) {
+        this.c_fehlertext = c_fehlertext;
+    }
+
+    public Date getT_export_beginn() {
+        return this.t_export_beginn;
+    }
+
+    public void setT_export_beginn(Date t_export_beginn) {
+        this.t_export_beginn = t_export_beginn;
+    }
+
+    public Date getT_export_ende() {
+        return this.t_export_ende;
+    }
+
+    public void setT_export_ende(Date t_export_ende) {
+        this.t_export_ende = t_export_ende;
+    }
+
     public FLRArtikel getFlrartikel() {
         return this.flrartikel;
     }
@@ -207,12 +328,28 @@ public class FLRLossollmaterial implements Serializable {
         this.flrartikel = flrartikel;
     }
 
+    public FLRArtikelliste getFlrartikelliste() {
+        return this.flrartikelliste;
+    }
+
+    public void setFlrartikelliste(FLRArtikelliste flrartikelliste) {
+        this.flrartikelliste = flrartikelliste;
+    }
+
     public com.lp.server.fertigung.fastlanereader.generated.FLRLos getFlrlos() {
         return this.flrlos;
     }
 
     public void setFlrlos(com.lp.server.fertigung.fastlanereader.generated.FLRLos flrlos) {
         this.flrlos = flrlos;
+    }
+
+    public com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial getFlrlossollmaterial_original() {
+        return this.flrlossollmaterial_original;
+    }
+
+    public void setFlrlossollmaterial_original(com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial flrlossollmaterial_original) {
+        this.flrlossollmaterial_original = flrlossollmaterial_original;
     }
 
     public Set getIstmaterialset() {

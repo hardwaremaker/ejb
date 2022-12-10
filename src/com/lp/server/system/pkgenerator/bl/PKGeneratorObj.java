@@ -65,7 +65,11 @@ public class PKGeneratorObj {
 	public PKGeneratorObj() {
 		try {
 			context = new InitialContext();
-			pkGenerator = (PKGeneratorFac) context.lookup("lpserver/PKGeneratorFacBean/remote");
+			try {
+				pkGenerator = (PKGeneratorFac) context.lookup("lpserver/PKGeneratorFacBean/remote");
+			} catch (Exception e) {
+				pkGenerator = (PKGeneratorFac) context.lookup("java:global/lpserver/ejb/PKGeneratorFacBean!com.lp.server.system.pkgenerator.service.PKGeneratorFac");
+			}
 		} catch (Exception ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PK_GENERATOR, ex);
 		}
@@ -112,5 +116,9 @@ public class PKGeneratorObj {
 	 */
 	public void createSequenceIfNotExists(String name) throws RemoteException {
 		pkGenerator.createSequenceIfNotExists(name);
+	}
+	
+	public void createSequenceIfNotExists(String name, Integer defaultValue) throws RemoteException {
+		pkGenerator.createSequenceIfNotExists(name, defaultValue);
 	}
 }

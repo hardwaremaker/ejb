@@ -45,6 +45,7 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
+import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.personal.service.PersonalDto;
@@ -94,7 +95,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 	private int ANZAHL_SPALTEN = 10;
 
 	private Boolean bSchlussrechnung = Boolean.FALSE;
-	
+
 	/**
 	 * Konstruktor.
 	 */
@@ -111,7 +112,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 					String.class, String.class, String.class,
 					java.util.Date.class, String.class, Icon.class,
 					BigDecimal.class, String.class },
-			// die Spaltenueberschriften werden durch die Kriterien
+					// die Spaltenueberschriften werden durch die Kriterien
 					// bestimmt
 					new String[] {
 							" ",
@@ -208,7 +209,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 	 */
 
 	private void befuelleMitRechnungDto(RechnungDto rDto, String typ1,
-			String typ2, String typ3) {
+			String typ2, String typ3, boolean bDarfPreiseSehen) {
 		Object[] oZeile = new Object[ANZAHL_SPALTEN];
 		oZeile[0] = rDto;
 
@@ -245,23 +246,30 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 
 		oZeile[SPALTE_DATUM] = rDto.getTBelegdatum();
 
-		if (typ1 != null && typ1.equals("GS") || typ2 != null
-				&& typ2.equals("GS") || typ3 != null && typ3.equals("GS")) {
-			if (rDto.getNGesamtwertinbelegwaehrung() != null) {
-				oZeile[SPALTE_NETTOWERT] = rDto.getNGesamtwertinbelegwaehrung()
-						.negate();
+		if (bDarfPreiseSehen) {
+
+			if (typ1 != null && typ1.equals("GS") || typ2 != null
+					&& typ2.equals("GS") || typ3 != null && typ3.equals("GS")) {
+				if (rDto.getNGesamtwertinbelegwaehrung() != null) {
+					oZeile[SPALTE_NETTOWERT] = rDto
+							.getNGesamtwertinbelegwaehrung().negate();
+				}
+			} else if (typ1 != null && typ1.equals("SCHLUSSRE") || typ2 != null
+					&& typ2.equals("SCHLUSSRE") || typ3 != null
+					&& typ3.equals("SCHLUSSRE")) {
+
+				if (rDto.getNGesamtwertinbelegwaehrung() != null) {
+
+					BigDecimal bdAnzahlungen = getRechnungFac()
+							.getAnzahlungenZuSchlussrechnungFw(rDto.getIId());
+
+					oZeile[SPALTE_NETTOWERT] = rDto
+							.getNGesamtwertinbelegwaehrung().subtract(
+									bdAnzahlungen);
+				}
+			} else {
+				oZeile[SPALTE_NETTOWERT] = rDto.getNGesamtwertinbelegwaehrung();
 			}
-		} else if (typ1 != null && typ1.equals("SCHLUSSRE") || typ2 != null
-				&& typ2.equals("SCHLUSSRE") || typ3 != null
-				&& typ3.equals("SCHLUSSRE")) {
-
-			BigDecimal bdAnzahlungen = getRechnungFac()
-					.getAnzahlungenZuSchlussrechnungFw(rDto.getIId());
-
-			oZeile[SPALTE_NETTOWERT] = rDto.getNGesamtwertinbelegwaehrung()
-					.subtract(bdAnzahlungen);
-		} else {
-			oZeile[SPALTE_NETTOWERT] = rDto.getNGesamtwertinbelegwaehrung();
 		}
 
 		oZeile[SPALTE_STATUS] = rDto.getStatusCNr();
@@ -280,16 +288,18 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 		for (int i = 0; i < gsDtos.length; i++) {
 
 			if (typ1 != null) {
-				befuelleMitRechnungDto(gsDtos[i], null, "GS", null);
+				befuelleMitRechnungDto(gsDtos[i], null, "GS", null,
+						bDarfPreiseSehen);
 			} else {
-				befuelleMitRechnungDto(gsDtos[i], null, null, "GS");
+				befuelleMitRechnungDto(gsDtos[i], null, null, "GS",
+						bDarfPreiseSehen);
 			}
 		}
 
 	}
 
 	private void befuelleMitLieferscheinDto(LieferscheinDto lDto, String typ1,
-			String typ2, String typ3)
+			String typ2, String typ3, boolean bDarfPreiseSehen)
 			throws Throwable {
 		Object[] oZeile = new Object[ANZAHL_SPALTEN];
 		oZeile[0] = lDto;
@@ -306,7 +316,12 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 		}
 
 		oZeile[SPALTE_STATUS] = lDto.getStatusCNr();
-		oZeile[SPALTE_NETTOWERT] = lDto.getNGesamtwertInLieferscheinwaehrung();
+
+		if (bDarfPreiseSehen) {
+
+			oZeile[SPALTE_NETTOWERT] = lDto
+					.getNGesamtwertInLieferscheinwaehrung();
+		}
 		oZeile[SPALTE_WAEHRUNG] = lDto.getWaehrungCNr();
 		hmDaten.add(oZeile);
 
@@ -360,7 +375,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 
 			RechnungDto reDto = (RechnungDto) rechnungen.get(re.next());
 
-			befuelleMitRechnungDto(reDto, null, "RE", null);
+			befuelleMitRechnungDto(reDto, null, "RE", null, bDarfPreiseSehen);
 		}
 	}
 
@@ -368,10 +383,12 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 
 		hmDaten = new ArrayList<Object[]>();
 		bSchlussrechnung = Boolean.FALSE;
-		
 
 		// die aktuellen Filter Kriterien bestimmen
 		getFilterKriterien();
+
+		boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
+				RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF, theClientDto);
 
 		HashMap<Integer, LieferscheinDto> lieferscheine = new HashMap<Integer, LieferscheinDto>();
 
@@ -389,8 +406,6 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 			}
 		}
 
-		
-
 		// Lieferscheine einfuegen
 
 		Iterator<Integer> ls = lieferscheine.keySet().iterator();
@@ -398,7 +413,8 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 
 			LieferscheinDto lsDto = (LieferscheinDto) lieferscheine.get(ls
 					.next());
-			befuelleMitLieferscheinDto(lsDto, "LS", null, null);
+			befuelleMitLieferscheinDto(lsDto, "LS", null, null,
+					bDarfPreiseSehen);
 		}
 
 		// Rechnungen
@@ -446,7 +462,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 				continue;
 			}
 
-			befuelleMitRechnungDto(reDto, "RE", null, null);
+			befuelleMitRechnungDto(reDto, "RE", null, null, bDarfPreiseSehen);
 		}
 
 		int iAnzahlZeilen = hmDaten.size();

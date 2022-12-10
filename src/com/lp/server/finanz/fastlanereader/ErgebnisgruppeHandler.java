@@ -85,6 +85,7 @@ public class ErgebnisgruppeHandler extends UseCaseHandler {
 	private final static int INDEX_SUMMENNEG = 3;
 	private final static int INDEX_INVERTIERT = 4;
 	private final static int INDEX_PROZENTBASIS = 5;
+	private final static int INDEX_JAHRESGEWINN = 6;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -125,6 +126,8 @@ public class ErgebnisgruppeHandler extends UseCaseHandler {
 						.short2Boolean(ergebnisgruppe.getB_invertiert());
 				rows[row][INDEX_PROZENTBASIS] = Helper
 						.short2Boolean(ergebnisgruppe.getB_prozentbasis());
+				rows[row][INDEX_JAHRESGEWINN] = Helper
+						.short2boolean(ergebnisgruppe.getB_jahresgewinn());
 				// }
 				// break;
 				// case FinanzFac.ERGEBNISGRUPPE_TYP_LEEREZEILE: {
@@ -383,7 +386,7 @@ public class ErgebnisgruppeHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							Boolean.class, Boolean.class, Boolean.class },
+							Boolean.class, Boolean.class, Boolean.class, Boolean.class },
 					new String[] {
 							"Id",
 							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
@@ -395,10 +398,12 @@ public class ErgebnisgruppeHandler extends UseCaseHandler {
 							getTextRespectUISpr("fb.invertiert", mandantCNr,
 									locUI),
 							getTextRespectUISpr("fb.prozentbasis", mandantCNr,
+									locUI),
+							getTextRespectUISpr("fb.jahresgewinn", mandantCNr,
 									locUI) },
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, 3, 3, 3 },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, 3, 3, 3, 3 },
 					new String[] {
 							FinanzFac.FLR_ERGEBNISGRUPPE_I_ID,
 							FinanzFac.FLR_ERGEBNISGRUPPE_C_BEZ,
@@ -406,7 +411,8 @@ public class ErgebnisgruppeHandler extends UseCaseHandler {
 									+ "." + FinanzFac.FLR_ERGEBNISGRUPPE_C_BEZ,
 							FinanzFac.FLR_ERGEBNISGRUPPE_B_SUMME_NEGATIV,
 							FinanzFac.FLR_ERGEBNISGRUPPE_B_INVERTIERT,
-							FinanzFac.FLR_ERGEBNISGRUPPE_B_PROZENTBASIS }));
+							FinanzFac.FLR_ERGEBNISGRUPPE_B_PROZENTBASIS,
+							FinanzFac.FLR_ERGEBNISGRUPPE_B_JAHRESGEWINN}));
 		}
 		return super.getTableInfo();
 	}

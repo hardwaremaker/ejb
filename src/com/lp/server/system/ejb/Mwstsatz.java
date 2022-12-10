@@ -62,9 +62,6 @@ public class Mwstsatz implements Serializable {
 	@Column(name = "MWSTSATZBEZ_I_ID")
 	private Integer mwstsatzbezIId;
 	
-	@Column(name="I_FIBUMWSTCODE")
-	private Integer iFibumwstcode;
-
 	private static final long serialVersionUID = 1L;
 
 	public Mwstsatz() {
@@ -95,14 +92,6 @@ public class Mwstsatz implements Serializable {
 		this.fMwstsatz = fMwstsatz;
 	}
 	
-	public Integer getIFibumwstcode(){
-		return this.iFibumwstcode;
-	}
-	
-	public void setIFibumwstcode(Integer iFibumwstcode){
-		this.iFibumwstcode = iFibumwstcode;
-	}
-
 	public Timestamp getDGueltigab() {
 		return this.dGueltigab;
 	}

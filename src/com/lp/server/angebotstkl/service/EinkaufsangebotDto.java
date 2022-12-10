@@ -60,6 +60,118 @@ public class EinkaufsangebotDto implements Serializable {
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
 
+	private String cKommentar;
+
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
+	public void setCKommentar(String kommentar) {
+		cKommentar = kommentar;
+	}
+	
+	private Timestamp tFertigungstermin;
+
+	public Timestamp getTFertigungstermin() {
+		return tFertigungstermin;
+	}
+
+	public void setTFertigungstermin(Timestamp tFertigungstermin) {
+		this.tFertigungstermin = tFertigungstermin;
+	}
+	
+	private Integer iSortierung;
+	
+	
+	public Integer getISortierung() {
+		return iSortierung;
+	}
+
+	public void setISortierung(Integer iSortierung) {
+		this.iSortierung = iSortierung;
+	}
+	
+	private Integer iOptimierenMenge;
+	
+	public Integer getIOptimierenMenge() {
+		return iOptimierenMenge;
+	}
+
+	public void setIOptimierenMenge(Integer iOptimierenMenge) {
+		this.iOptimierenMenge = iOptimierenMenge;
+	}
+
+	
+	private Integer iOptimierenLieferzeit;
+
+	public Integer getIOptimierenLieferzeit() {
+		return iOptimierenLieferzeit;
+	}
+
+	public void setIOptimierenLieferzeit(Integer iOptimierenLieferzeit) {
+		this.iOptimierenLieferzeit = iOptimierenLieferzeit;
+	}
+
+	private Short bOptimierenMinmenge;
+
+	public Short getBOptimierenMinmenge() {
+		return bOptimierenMinmenge;
+	}
+
+	public void setBOptimierenMinmenge(Short bOptimierenMinmenge) {
+		this.bOptimierenMinmenge = bOptimierenMinmenge;
+	}
+
+	private Short bOptimierenVerpackungseinheit;
+
+	public Short getBOptimierenVerpackungseinheit() {
+		return bOptimierenVerpackungseinheit;
+	}
+
+	public void setBOptimierenVerpackungseinheit(Short bOptimierenVerpackungseinheit) {
+		this.bOptimierenVerpackungseinheit = bOptimierenVerpackungseinheit;
+	}
+
+	private Short bKundeExportieren;
+
+	public Short getBKundeExportieren() {
+		return bKundeExportieren;
+	}
+
+	public void setBKundeExportieren(Short bKundeExportieren) {
+		this.bKundeExportieren = bKundeExportieren;
+	}
+
+	private Timestamp tLiefertermin;
+
+	public Timestamp getTLiefertermin() {
+		return tLiefertermin;
+	}
+
+	public void setTLiefertermin(Timestamp tLiefertermin) {
+		this.tLiefertermin = tLiefertermin;
+	}
+
+	private Integer iAnzahlwebabfragen;
+
+	public Integer getIAnzahlwebabfragen() {
+		return iAnzahlwebabfragen;
+	}
+
+	public void setIAnzahlwebabfragen(Integer iAnzahlwebabfragen) {
+		this.iAnzahlwebabfragen = iAnzahlwebabfragen;
+	}
+
+	private Short bRoHs;
+
+	public Short getBRoHs() {
+		return this.bRoHs;
+	}
+
+	public void setBRoHs(Short bRoHs) {
+		this.bRoHs = bRoHs;
+	}
+
 	public Integer getIId() {
 		return iId;
 	}
@@ -196,49 +308,38 @@ public class EinkaufsangebotDto implements Serializable {
 		EinkaufsangebotDto that = (EinkaufsangebotDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr)))
 			return false;
-		if (!(that.tBelegdatum == null ? this.tBelegdatum == null
-				: that.tBelegdatum.equals(this.tBelegdatum)))
+		if (!(that.tBelegdatum == null ? this.tBelegdatum == null : that.tBelegdatum.equals(this.tBelegdatum)))
 			return false;
-		if (!(that.cProjekt == null ? this.cProjekt == null : that.cProjekt
-				.equals(this.cProjekt)))
+		if (!(that.cProjekt == null ? this.cProjekt == null : that.cProjekt.equals(this.cProjekt)))
 			return false;
-		if (!(that.kundeIId == null ? this.kundeIId == null : that.kundeIId
-				.equals(this.kundeIId)))
+		if (!(that.kundeIId == null ? this.kundeIId == null : that.kundeIId.equals(this.kundeIId)))
 			return false;
 		if (!(that.ansprechpartnerIId == null ? this.ansprechpartnerIId == null
 				: that.ansprechpartnerIId.equals(this.ansprechpartnerIId)))
 			return false;
-		if (!(that.nMenge1 == null ? this.nMenge1 == null : that.nMenge1
-				.equals(this.nMenge1)))
+		if (!(that.nMenge1 == null ? this.nMenge1 == null : that.nMenge1.equals(this.nMenge1)))
 			return false;
-		if (!(that.nMenge2 == null ? this.nMenge2 == null : that.nMenge2
-				.equals(this.nMenge2)))
+		if (!(that.nMenge2 == null ? this.nMenge2 == null : that.nMenge2.equals(this.nMenge2)))
 			return false;
-		if (!(that.nMenge3 == null ? this.nMenge3 == null : that.nMenge3
-				.equals(this.nMenge3)))
+		if (!(that.nMenge3 == null ? this.nMenge3 == null : that.nMenge3.equals(this.nMenge3)))
 			return false;
-		if (!(that.nMenge4 == null ? this.nMenge4 == null : that.nMenge4
-				.equals(this.nMenge4)))
+		if (!(that.nMenge4 == null ? this.nMenge4 == null : that.nMenge4.equals(this.nMenge4)))
 			return false;
-		if (!(that.nMenge5 == null ? this.nMenge5 == null : that.nMenge5
-				.equals(this.nMenge5)))
+		if (!(that.nMenge5 == null ? this.nMenge5 == null : that.nMenge5.equals(this.nMenge5)))
 			return false;
 		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
 				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen)))
 			return false;
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen)))
+		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen.equals(this.tAnlegen)))
 			return false;
 		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
 				: that.personalIIdAendern.equals(this.personalIIdAendern)))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern.equals(this.tAendern)))
 			return false;
 		return true;
 	}
@@ -273,18 +374,15 @@ public class EinkaufsangebotDto implements Serializable {
 		returnStringBuffer.append("tBelegdatum:").append(tBelegdatum);
 		returnStringBuffer.append("cProjekt:").append(cProjekt);
 		returnStringBuffer.append("kundeIId:").append(kundeIId);
-		returnStringBuffer.append("ansprechpartnerIId:").append(
-				ansprechpartnerIId);
+		returnStringBuffer.append("ansprechpartnerIId:").append(ansprechpartnerIId);
 		returnStringBuffer.append("nMenge1:").append(nMenge1);
 		returnStringBuffer.append("nMenge2:").append(nMenge2);
 		returnStringBuffer.append("nMenge3:").append(nMenge3);
 		returnStringBuffer.append("nMenge4:").append(nMenge4);
 		returnStringBuffer.append("nMenge5:").append(nMenge5);
-		returnStringBuffer.append("personalIIdAnlegen:").append(
-				personalIIdAnlegen);
+		returnStringBuffer.append("personalIIdAnlegen:").append(personalIIdAnlegen);
 		returnStringBuffer.append("tAnlegen:").append(tAnlegen);
-		returnStringBuffer.append("personalIIdAendern:").append(
-				personalIIdAendern);
+		returnStringBuffer.append("personalIIdAendern:").append(personalIIdAendern);
 		returnStringBuffer.append("tAendern:").append(tAendern);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();

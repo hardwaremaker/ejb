@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
 
+import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -44,8 +45,12 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzExportdaten;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.finanz.service.KontoDto;
+import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.system.fastlanereader.generated.FLRBelegartspr;
 import com.lp.server.system.service.LocaleFac;
@@ -84,12 +89,8 @@ public class ExportdatenHandler extends UseCaseHandler {
 	private static final long serialVersionUID = 1L;
 	private static final String FLR_EXPORTDATEN = "flrexportdaten.";
 	private static final String FLR_EXPORTDATEN_FROM_CLAUSE = " from FLRFinanzExportdaten as flrexportdaten "
-			+ " left join flrexportdaten."
-			+ FinanzFac.FLR_EXPORTDATEN_FLRBELEGART
-			+ "."
-			+ SystemFac.FLR_BELEGART_BELEGARTSPR_SET
-			+ " AS "
-			+ SystemFac.FLR_BELEGART_BELEGARTSPR_SET;
+			+ " left join flrexportdaten." + FinanzFac.FLR_EXPORTDATEN_FLRBELEGART + "."
+			+ SystemFac.FLR_BELEGART_BELEGARTSPR_SET + " AS " + SystemFac.FLR_BELEGART_BELEGARTSPR_SET;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -102,8 +103,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			// LocaleFilter fuer die Belegart
 			session = setFilter(session);
@@ -118,39 +118,95 @@ public class ExportdatenHandler extends UseCaseHandler {
 			int col = 0;
 
 			while (resultListIterator.hasNext()) {
-				FLRFinanzExportdaten exportDaten = (FLRFinanzExportdaten) ((Object[]) resultListIterator
-						.next())[0];
+				FLRFinanzExportdaten exportDaten = (FLRFinanzExportdaten) ((Object[]) resultListIterator.next())[0];
 				rows[row][col++] = exportDaten.getI_id();
 				String sBelegart = exportDaten.getBelegart_c_nr();
-				Set<?> sprSet = exportDaten.getFlrbelegart()
-						.getBelegart_belegart_set();
+				Set<?> sprSet = exportDaten.getFlrbelegart().getBelegart_belegart_set();
 				if (!sprSet.isEmpty()) {
-					sBelegart = ((FLRBelegartspr) sprSet.toArray()[0])
-							.getC_bez();
+					sBelegart = ((FLRBelegartspr) sprSet.toArray()[0]).getC_bez();
 				}
-				rows[row][col++] = sBelegart;
+
 				String sBelegnummer = "";
-				if (exportDaten.getBelegart_c_nr().equals(
-						LocaleFac.BELEGART_EINGANGSRECHNUNG)) {
+
+				BigDecimal bdBruttobetrag = null;
+				String waehrungCNr = "";
+				String kundelieferant = "";
+				String konto = "";
+
+				BigDecimal bdUstbetrag = null;
+				
+				if (exportDaten.getBelegart_c_nr().equals(LocaleFac.BELEGART_EINGANGSRECHNUNG)) {
 					EingangsrechnungDto erDto = getEingangsrechnungFac()
-							.eingangsrechnungFindByPrimaryKey(
-									exportDaten.getI_belegiid());
+							.eingangsrechnungFindByPrimaryKey(exportDaten.getI_belegiid());
 					sBelegnummer = erDto.getCNr();
-				} else if (exportDaten.getBelegart_c_nr().equals(
-						LocaleFac.BELEGART_RECHNUNG)
-						|| exportDaten.getBelegart_c_nr().equals(
-								LocaleFac.BELEGART_GUTSCHRIFT)) {
-					RechnungDto erDto = getRechnungFac()
-							.rechnungFindByPrimaryKey(
-									exportDaten.getI_belegiid());
+					if (erDto.getEingangsrechnungartCNr()
+							.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)) {
+						sBelegart = EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN.trim();
+					}
+
+					LieferantDto lfDto = getLieferantFac().lieferantFindByPrimaryKey(erDto.getLieferantIId(),
+							theClientDto);
+
+					kundelieferant = lfDto.getPartnerDto().formatFixName1Name2();
+					
+					if(lfDto.getKontoIIdKreditorenkonto()!=null) {
+						KontoDto ktDto=getFinanzFac().kontoFindByPrimaryKey(lfDto.getKontoIIdKreditorenkonto());
+						konto=ktDto.getCNr();
+					}
+					
+
+					bdBruttobetrag = erDto.getNBetragfw();
+					waehrungCNr = erDto.getWaehrungCNr();
+					
+					bdUstbetrag = erDto.getNUstBetragfw();
+
+				} else if (exportDaten.getBelegart_c_nr().equals(LocaleFac.BELEGART_RECHNUNG)
+						|| exportDaten.getBelegart_c_nr().equals(LocaleFac.BELEGART_GUTSCHRIFT)) {
+					RechnungDto erDto = getRechnungFac().rechnungFindByPrimaryKey(exportDaten.getI_belegiid());
 					sBelegnummer = erDto.getCNr();
+
+					KundeDto kdDto = getKundeFac().kundeFindByPrimaryKey(erDto.getKundeIId(),
+							theClientDto);
+
+					kundelieferant = kdDto.getPartnerDto().formatFixName1Name2();
+
+					
+					if(kdDto.getIidDebitorenkonto()!=null) {
+						KontoDto ktDto=getFinanzFac().kontoFindByPrimaryKey(kdDto.getIidDebitorenkonto());
+						konto=ktDto.getCNr();
+					}
+					
+					bdBruttobetrag = erDto.getNWertfw();
+
+					if (erDto.getNWertfw() != null && erDto.getNWertustfw() != null) {
+						bdBruttobetrag = erDto.getNWertfw().add(erDto.getNWertustfw());
+					}
+
+					
+					
+					waehrungCNr = erDto.getWaehrungCNr();
+					
+					
+					bdUstbetrag = erDto.getNWertustfw();
+					
+
 				}
+
+				rows[row][col++] = sBelegart;
+
 				rows[row][col++] = sBelegnummer;
+
+				rows[row][col++] = kundelieferant;
+
+				rows[row][col++] = konto;
+
+				rows[row][col++] = bdBruttobetrag;
+				rows[row][col++] = bdUstbetrag;
+				rows[row][col++] = waehrungCNr;
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -170,8 +226,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 		try {
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -192,8 +247,8 @@ public class ExportdatenHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -204,8 +259,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -215,8 +269,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_EXPORTDATEN
-							+ filterKriterien[i].kritName);
+					where.append(" " + FLR_EXPORTDATEN + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -242,8 +295,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -260,13 +312,11 @@ public class ExportdatenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_ID
-						+ " ASC ");
+				orderBy.append(FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_ID + " ASC ");
 
 				sortAdded = true;
 			}
-			if (orderBy.indexOf(FLR_EXPORTDATEN
-					+ FinanzFac.FLR_EXPORTDATEN_I_ID) < 0) {
+			if (orderBy.indexOf(FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_ID) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the bestellungart
@@ -275,8 +325,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" " + FLR_EXPORTDATEN
-						+ FinanzFac.FLR_EXPORTDATEN_I_ID + " ");
+				orderBy.append(" " + FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_ID + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -295,8 +344,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 		return FLR_EXPORTDATEN_FROM_CLAUSE;
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 
 		this.getQuery().setSortKrit(sortierKriterien);
 
@@ -310,8 +358,7 @@ public class ExportdatenHandler extends UseCaseHandler {
 			try {
 				session = factory.openSession();
 				session = setFilter(session);
-				String queryString = "select " + FLR_EXPORTDATEN
-						+ FinanzFac.FLR_EXPORTDATEN_I_ID + this.getFromClause()
+				String queryString = "select " + FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_ID + this.getFromClause()
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -350,19 +397,24 @@ public class ExportdatenHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class }, new String[] { "i_id",
-					getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class, String.class, String.class,
+							BigDecimal.class,BigDecimal.class, String.class },
+					new String[] { "i_id", getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.partner", mandantCNr, locUI),
+							getTextRespectUISpr("lp.konto", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bruttobetrag", mandantCNr, locUI),
+							getTextRespectUISpr("fb.exportdaten.ust", mandantCNr, locUI),
+							getTextRespectUISpr("lp.waehrung", mandantCNr, locUI) },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
-					new String[] {
-							FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_ID,
-							FLR_EXPORTDATEN
-									+ FinanzFac.FLR_EXPORTDATEN_BELEGART_C_NR,
-							FLR_EXPORTDATEN
-									+ FinanzFac.FLR_EXPORTDATEN_I_BELEGIID }));
+					new String[] { FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_ID,
+							FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_BELEGART_C_NR,
+							FLR_EXPORTDATEN + FinanzFac.FLR_EXPORTDATEN_I_BELEGIID, Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR }));
 		}
 		return super.getTableInfo();
 	}

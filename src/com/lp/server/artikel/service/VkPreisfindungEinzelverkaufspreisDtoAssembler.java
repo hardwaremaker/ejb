@@ -60,6 +60,7 @@ public class VkPreisfindungEinzelverkaufspreisDtoAssembler {
 							.getTVerkaufspreisbasisgueltigab());
 			vkPreisfindungEinzelverkaufspreisDto.setTAendern(vkPreisfindungEinzelverkaufspreis.getTAendern());
 			vkPreisfindungEinzelverkaufspreisDto.setPersonalIIdAendern(vkPreisfindungEinzelverkaufspreis.getPersonalIIdAendern());
+			vkPreisfindungEinzelverkaufspreisDto.setCBemerkung(vkPreisfindungEinzelverkaufspreis.getCBemerkung());
 		}
 		return vkPreisfindungEinzelverkaufspreisDto;
 	}

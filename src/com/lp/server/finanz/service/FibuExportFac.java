@@ -34,7 +34,6 @@ package com.lp.server.finanz.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
-import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,7 +49,9 @@ public interface FibuExportFac {
 	public final static String ZIEL_ABACUS = "ABACUS";
 	public final static String ZIEL_SCHLEUPEN = "SCHLEUPEN";
 	public final static String ZIEL_DATEV = "DATEV-CSV";
-
+	public final static String ZIEL_BMD_NTCS = "BMD-NTCS";
+	public final static String ZIEL_DATEV_EXTF = "DATEV-EXTF";
+	
 	public final static String VARIANTE_KOSTENSTELLEN = "Kostenstellen";
 	public final static String VARIANTE_ARTIKELGRUPPEN = "Artikelgruppen";
 
@@ -100,7 +101,7 @@ public interface FibuExportFac {
 	public void nehmeExportlaufZurueckUndLoescheIhn(Integer exportlaufIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public String exportierePersonenkonten(String kontotypCNr, TheClientDto theClientDto)
+	public String exportierePersonenkonten(String kontotypCNr, boolean nurVerwendete, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public Integer exportlaufFindLetztenExportlauf(String mandantCNr)
@@ -126,7 +127,7 @@ public interface FibuExportFac {
 			java.sql.Date dBis, BigDecimal bdTransportkosten, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public String importiereOffenePosten(ArrayList<String[]> daten, TheClientDto theClientDto)
+	public String importiereOffenePosten(List<String[]> daten, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 	
 	public ExportdatenDto createExportdaten(ExportdatenDto exportdatenDto)
@@ -135,8 +136,7 @@ public interface FibuExportFac {
 	public ExportdatenDto[] exportdatenFindByExportlaufIIdBelegartCNr(Integer exportlaufIId, String belegartCNr)
 		throws EJBExceptionLP;
 	
-	public List<String> exportiereBuchungsjournal(String format, Date von, Date bis,
-			boolean mitAutoEB, boolean mitManEB, boolean mitAutoB, boolean mitStornierte, String bezeichnung,
+	public List<String> exportiereBuchungsjournal(BuchungsjournalExportProperties exportProperties,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
 	
 }

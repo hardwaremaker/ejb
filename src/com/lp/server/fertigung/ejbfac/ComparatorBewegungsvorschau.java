@@ -75,10 +75,9 @@ public class ComparatorBewegungsvorschau implements Comparator<Object> {
 	public int compare(Object a, Object b) {
 		BewegungsvorschauDto bewegDto1 = (BewegungsvorschauDto) a;
 		BewegungsvorschauDto bewegDto2 = (BewegungsvorschauDto) b;
-		// SP1678 mit Uhrzeit vergleichen 
+		// SP1678 mit Uhrzeit vergleichen
 		Timestamp ts1 = bewegDto1.getTLiefertermin();
 		Timestamp ts2 = bewegDto2.getTLiefertermin();
-		
 
 		if (bewegDto1.getTABTerminBestellung() != null) {
 			ts1 = new java.sql.Timestamp(bewegDto1.getTABTerminBestellung()
@@ -86,6 +85,16 @@ public class ComparatorBewegungsvorschau implements Comparator<Object> {
 		}
 		if (bewegDto2.getTABTerminBestellung() != null) {
 			ts2 = new java.sql.Timestamp(bewegDto2.getTABTerminBestellung()
+					.getTime());
+		}
+
+		//PJ19985 Ausliefertermin ist fuer die Sortierung relevant
+		if (bewegDto1.getTAbliefertermin() != null) {
+			ts1 = new java.sql.Timestamp(bewegDto1.getTAbliefertermin()
+					.getTime());
+		}
+		if (bewegDto2.getTAbliefertermin() != null) {
+			ts2 = new java.sql.Timestamp(bewegDto2.getTAbliefertermin()
 					.getTime());
 		}
 

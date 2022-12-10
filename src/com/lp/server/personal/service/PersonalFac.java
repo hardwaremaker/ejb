@@ -36,12 +36,15 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.ejb.Remote;
 
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerDtoSmall;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.HvOptional;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.report.PersonRpt;
@@ -59,7 +62,8 @@ public interface PersonalFac {
 	public static final String FLR_PERSONAL_B_VERSTECKT = "b_versteckt";
 	public static final String FLR_PERSONAL_C_KURZZEICHEN = "c_kurzzeichen";
 	public static final String FLR_PERSONAL_T_GEBURTSDATUM = "t_geburtsdatum";
-
+	public static final String FLR_PERSONAL_B_HATPRUEFDATEN = "b_hatpruefdaten";
+	
 	public static final String FLR_BERUF_C_BEZ = "c_bez";
 
 	public static final String FLR_RELIGION_RELIGIONSPRSET = "religionsprset";
@@ -159,6 +163,7 @@ public interface PersonalFac {
 	public static final String FLR_GLEITZEITSALDO_N_SALDOUESTFREI100 = "n_saldouestfrei100";
 	public static final String FLR_GLEITZEITSALDO_N_SALDOUESTPFLICHTIG100 = "n_saldouestpflichtig100";
 	public static final String FLR_GLEITZEITSALDO_N_SALDOUEST200 = "n_saldouest200";
+	public static final String FLR_GLEITZEITSALDO_N_GZ_SALDO_MIT_UESTD_IN_NORMALSTUNDEN = "n_gz_saldo_mit_uestd_in_normalstunden";
 
 	public static final String FLR_STUNDENABRECHNUNG_PERSONAL_I_ID = "personal_i_id";
 	public static final String FLR_STUNDENABRECHNUNG_D_DATUM = "t_datum";
@@ -186,6 +191,11 @@ public interface PersonalFac {
 	public static final String FAMILIENSTAND_VERHEIRATET = "Verheiratet    ";
 	public static final String FAMILIENSTAND_GESCHIEDEN = "Geschieden     ";
 	public static final String FAMILIENSTAND_VERWITWET = "Verwitwet      ";
+	
+	public static final String FAHRZEUGVERWENDUNGSART_POOLFAHRZEUG = "Poolfahrzeug   ";
+	public static final String FAHRZEUGVERWENDUNGSART_PRIVATFAHRZEUG = "Privatfahrzeug ";
+	public static final String FAHRZEUGVERWENDUNGSART_FIRMENFAHRZEUG = "Firmenfahrzeug ";
+	
 
 	public static final String ANGEHOERIGENART_EHEPARTNER = "Ehepartner     ";
 	public static final String ANGEHOERIGENART_KIND = "Kind           ";
@@ -194,10 +204,14 @@ public interface PersonalFac {
 	public final static String REPORT_MODUL = "personal";
 
 	public final static String REPORT_PERSONALLISTE = "pers_personalliste.jasper";
+	public final static String REPORT_PERSONALSTAMMBLATT = "pers_personalstammblatt.jasper";
+
 	public final static int REPORT_PERSONALLISTE_OPTION_SORTIERUNG_NAME = 0;
 	public final static int REPORT_PERSONALLISTE_OPTION_SORTIERUNG_AUSWEIS = 1;
 	public final static int REPORT_PERSONALLISTE_OPTION_SORTIERUNG_PERSONALNUMMER = 2;
 	public final static int REPORT_PERSONALLISTE_OPTION_SORTIERUNG_ZUTRITTSKLASSE = 3;
+	public final static int REPORT_PERSONALLISTE_OPTION_SORTIERUNG_HEIMATKOSTENSTELLE = 4;
+	public final static int REPORT_PERSONALLISTE_OPTION_SORTIERUNG_GEBURTSTAG = 5;
 
 	public static final String LOHNSTUNDENART_GST = "GST            ";
 	public static final String LOHNSTUNDENART_NST = "NST            ";
@@ -209,10 +223,31 @@ public interface PersonalFac {
 	public static final String LOHNSTUNDENART_U100F = "U100F          ";
 	public static final String LOHNSTUNDENART_U100P = "U100P          ";
 	public static final String LOHNSTUNDENART_GUT = "GUT            ";
+	public static final String LOHNSTUNDENART_ZG_KOMMT = "ZG_KOMMT       ";
+	public static final String LOHNSTUNDENART_ZG_GEHT = "ZG_GEHT        ";
+	public static final String LOHNSTUNDENART_URLAUB  = "URLAUB         ";
+	public static final String LOHNSTUNDENART_KRANK      =  "KRANK          ";
+	public static final String LOHNSTUNDENART_KINDKRANK  =  "KINDKRANK      ";
+	public static final String LOHNSTUNDENART_ARZT  =  "ARZT           ";
+	public static final String LOHNSTUNDENART_SONSTIGE_SONDER  =  "SONSTIGE_SONDER";
+	
+	public static final String LOHNSTUNDENART_BVA_GZ  =          "BVA_GZ         ";
+	public static final String LOHNSTUNDENART_BVA_UESTD50_GZ  =  "BVA_UESTD50_GZ ";
+	public static final String LOHNSTUNDENART_BVA_UESTD50  =     "BVA_UESTD50    ";
+	public static final String LOHNSTUNDENART_BVA_UESTD100  =    "BVA_UESTD100   ";
+	public static final String LOHNSTUNDENART_BVA_UESTD50_GZ_ZUSCHLAG  =  "BVA_UESTD50_GZZ";
+	public static final String LOHNSTUNDENART_BVA_UESTD50_ZUSCHLAG  =     "BVA_UESTD50Z   ";
+	public static final String LOHNSTUNDENART_BVA_UESTD100_ZUSCHLAG  =    "BVA_UESTD100Z  ";
+	
+	public static final String LOHNSTUNDENART_URLAUB_TAGE  =    		  "URLAUB_TAGE    ";
+	public static final String LOHNSTUNDENART_SCHICHTSTUNDEN  =    		  "SCHICHTSTUNDEN ";
+	
+	
 
+	public static final String FILTER_BERECHTIGTE_FAHRZEUGE = "FILTER_BERECHTIGTE_FAHRZEUGE";
+	
 	public static final String LOHNART_TYP_STUNDEN = "Stunden";
 
-	public final static int REPORT_PERSONALLISTE_OPTION_SORTIERUNG_GEBURTSTAG = 4;
 
 	public final static String REPORT_BARCODELISTE = "pers_barcodeliste.jasper";
 
@@ -246,6 +281,16 @@ public interface PersonalFac {
 
 	public static final int MAX_TAGESART_KENNUNG = 15;
 	public static final int MAX_TAGESART_BEZEICHNUNG = 40;
+	
+	
+	public static final int KOLLEKTIV_BERECHNUNGSBASIS_UHRZEIT = 0;
+	public static final int KOLLEKTIV_BERECHNUNGSBASIS_SOLLZEIT_ZEITMODEL = 1;
+	public static final int KOLLEKTIV_BERECHNUNGSBASIS_FESTE_STUNDEN = 2;
+	
+	
+	public final static String KOLLEKTIV_ABRECHNUNGSART_STANDARD = "Standard";
+	public final static String KOLLEKTIV_ABRECHNUNGSART_BETRIEBSVEREINBARUNG_A = "Betriebsvereinbarung A";
+	
 
 	public Integer createPersonal(PersonalDto personalDto,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
@@ -495,7 +540,7 @@ public interface PersonalFac {
 			String mandantCNr, Boolean bPlusVersteckte) throws EJBExceptionLP,
 			RemoteException;
 
-	public PersonalDto[] personalFindAllPersonenMeinerAbteilung(
+	public PersonalDto[] personalFindAllPersonenEinerAbteilung(
 			Integer kostenstelleIIdAbteilung, String mandantCNr,
 			Boolean bPlusVersteckte);
 
@@ -672,15 +717,11 @@ public interface PersonalFac {
 			Integer personalIId, Integer iJahr, Integer iMonat)
 			throws EJBExceptionLP, RemoteException;
 
-	public PersonalgehaltDto personalgehaltFindByPersonalIIdDGueltigab(
-			Integer personalIId, Integer iJahr, Integer iMonat)
-			throws RemoteException, EJBExceptionLP;
-
 	public PersonalgehaltDto personalgehaltFindLetztePersonalgehalt(
 			Integer personalIId, Integer iJahr, Integer iMonat)
 			throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printPersonalliste(Timestamp tsStichtag,
+	public JasperPrintLP printPersonalliste(Timestamp tsStichtag, Integer personalIId,
 			boolean bMitBarcodes, boolean bMitVersteckten,
 			int iOptionSortierung, TheClientDto theClientDto)
 			throws RemoteException;
@@ -747,6 +788,8 @@ public interface PersonalFac {
 	public PersonalverfuegbarkeitDto[] personalverfuegbarkeitFindByPersonalIId(
 			Integer personalIId) throws EJBExceptionLP, RemoteException;
 
+	
+	
 	public Integer createKollektivuestd(KollektivuestdDto kollektivuestdDto)
 			throws RemoteException, EJBExceptionLP;
 
@@ -914,4 +957,76 @@ public interface PersonalFac {
 
 	PersonalDto[] personalFindByMandantCNrWithEmail(String mandantCNr,
 			boolean bPlusVersteckte) throws EJBExceptionLP;
+
+	public Integer createZahltag(ZahltagDto dto);
+
+	public void updateZahltag(ZahltagDto dto);
+
+	public ZahltagDto zahltagFindByPrimaryKey(Integer iId);
+
+	public void removeZahltag(Integer iId);
+
+	public ZahltagDto[] zahltagFindByMandantCNr(TheClientDto theClientDto);
+
+	public JasperPrintLP printPersonalstammblatt(Integer personalIId,
+			TheClientDto theClientDto);
+
+	public Integer createArtikelzuschlag(ArtikelzuschlagDto artikelzulageDto);
+
+	public void removeArtikelzuschlag(ArtikelzuschlagDto dto);
+
+	public ArtikelzuschlagDto artikelzuschlagFindByPrimaryKey(Integer iId);
+	public void updateArtikelzuschlag(ArtikelzuschlagDto dto);
+	public String formatAnrede(PartnerDto partnerDto, Locale loc,
+			TheClientDto theClientDto);
+	public Integer createKollektivuestdBVA(KollektivUestdBVADto dto);
+	public KollektivUestdBVADto kollektivUestdBVAFindByPrimaryKey(Integer iId);
+	public void removeKollektivuestdBVA(KollektivUestdBVADto kollektivuestdBVADto);
+	public void updateKollektivUestdBVA(KollektivUestdBVADto dto);
+	
+	public KollektivUestdBVADto[] kollektivuestdBVAfindByKollektivIId(
+			Integer kollektivIId) throws EJBExceptionLP;
+	public AbwesenheitsartDto abwesenheitsartFindByPrimaryKey(Integer iIdI,
+			TheClientDto theClientDto);
+	public void vertauscheAbwesenheitsart(Integer id1,
+			Integer id2);
+	public void removeAbwesenheitsart(AbwesenheitsartDto dto,
+			TheClientDto theClientDto);
+	public void updateAbwesenheitsart(AbwesenheitsartDto dto,
+			TheClientDto theClientDto);
+	public Map getAllSprAbwesenheitsart(String cNrSpracheI);
+
+	FahrzeugDto fahrzeugFindByPrimaryKeyOhneExc(Integer iId);
+	public Integer createAnwesenheitsbestaetigung(AnwesenheitsbestaetigungDto dto,
+			TheClientDto theClientDto);
+	public void updateAnwesenheitsbestaetigung(AnwesenheitsbestaetigungDto dto);
+	public void removeAnwesenheitsbestaetigung(AnwesenheitsbestaetigungDto dto);
+	public AnwesenheitsbestaetigungDto anwesenheitsbestaetigungFindByPrimaryKey(Integer iId);
+	public AnwesenheitsbestaetigungDto[] getAllAnwesenheitsbestaetigungEinesAuftrages(Integer auftragIId, TheClientDto theClientDto);
+
+	void createAnwesenheitsbestaetigungEmail(Integer anwesenheitsbestaetigungId, TheClientDto theClientDto)
+			throws RemoteException;
+	public int getAnzahlDerNichtVerstecktenPersonenEinesMandanten(TheClientDto theClientDto);
+
+	HvOptional<String> getAbsenderEmail(TheClientDto theClientDto) throws RemoteException;
+	
+	public PassivereiseDto passivereiseFindByPrimaryKey(Integer iId);
+	public void updatePassivereise(PassivereiseDto dto) ;
+	public void removePassivereise(PassivereiseDto dto);
+	public Integer createPassivereise(PassivereiseDto dto);
+	public PassivereiseDto[] passivereiseFindByKollektivIId(Integer kollektivId);
+	
+	public Integer createPersonalterminal(PersonalterminalDto dto);
+	public PersonalterminalDto personalterminalFindByPrimaryKey(Integer iId);
+	public void removePersonalterminal(PersonalterminalDto dto);
+	public void updatePersonalterminal(PersonalterminalDto dto);
+	public boolean darfPersonAmTerminalBuchen(Integer personalIId, Integer arbeitsplatzIId);
+	
+	public Integer createPersonalfahrzeug(PersonalfahrzeugDto dto);
+	public void updatePersonalfahrzeug(PersonalfahrzeugDto dto);
+	public PersonalfahrzeugDto personalfahrzeugFindByPrimaryKey(Integer iId, TheClientDto theClientDto);
+	public void removePersonalfahrzeug(PersonalfahrzeugDto dto) ;
+	public Integer istFahrzeugBereitsEinerAnderenPersonZugeordnet(Integer fahrzeugIId, Integer personalIId);
+	public PersonalDto getAbteilungsleiter(Integer kostenstelleIIdAbteilung, TheClientDto theClientDto);
+	
 }

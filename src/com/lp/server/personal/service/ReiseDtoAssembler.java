@@ -62,7 +62,12 @@ public class ReiseDtoAssembler {
 			reiseDto.setBelegartCNr(reise.getBelegartCNr());
 			reiseDto.setIBelegartid(reise.getIBelegartid());
 			reiseDto.setFahrzeugIId(reise.getFahrzeugIId());
-			reiseDto.setFFaktor(reise.getFFaktor());
+			
+			reiseDto.setFVerrechenbar(reise.getFVerrechenbar());
+			reiseDto.setPersonalIIdErledigt(reise.getPersonalIIdErledigt());
+			reiseDto.setTErledigt(reise.getTErledigt());
+			reiseDto.setIMitfahrer(reise.getIMitfahrer());
+			
 		}
 		return reiseDto;
 	}

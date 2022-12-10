@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
+<!--<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">--> 
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "classpath://org/hibernate/hibernate-mapping-3.0.dtd"> 
+<hibernate-mapping package="com.lp.server.forecast.fastlanereader.generated">
+
+
+	<class name="FLRImportdef" table="FC_IMPORTDEF">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<set name="importdef_importdefspr_set" inverse="true">
+			<key column="IMPORTDEF_C_NR" />
+			<one-to-many
+				class="com.lp.server.forecast.fastlanereader.generated.FLRImportdefspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRImportdefspr" table="FC_IMPORTDEFSPR">
+		<composite-id>
+			<key-many-to-one name="importdef" column="IMPORTDEF_C_NR"
+				class="com.lp.server.forecast.fastlanereader.generated.FLRImportdef" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRForecast" table="FC_FORECAST">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_projekt" column="C_PROJEKT" type="java.lang.String" />
+		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
+
+		<many-to-one name="flrkunde"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" update="false" />
+
+
+		<property name="i_tage_cod" column="I_TAGE_COD" type="java.lang.Integer" />
+		<property name="i_wochen_cow" column="I_WOCHEN_COW" type="java.lang.Integer" />
+		<property name="i_monate_fca" column="I_MONATE_FCA" type="java.lang.Integer" />
+
+
+
+	</class>
+
+	<class name="FLRFclieferadresse" table="FC_FCLIEFERADRESSE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="forecast_i_id" column="FORECAST_I_ID" type="java.lang.Integer" />
+		<property name="kunde_i_id_lieferadresse" column="KUNDE_I_ID_LIEFERADRESSE"
+			type="java.lang.Integer" />
+		<property name="b_kommissionieren" column="B_KOMMISSIONIEREN"
+			type="java.lang.Short" />
+
+		<property name="i_typ_rundung_position" column="I_TYP_RUNDUNG_POSITION"
+			type="java.lang.Integer" />
+		<property name="i_typ_rundung_linienabruf" column="I_TYP_RUNDUNG_LINIENABRUF"
+			type="java.lang.Integer" />
+
+		<many-to-one name="flrforecast"
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecast"
+			column="FORECAST_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrkunde_lieferadresse"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID_LIEFERADRESSE" insert="false" update="false" />
+
+
+	</class>
+
+	<class name="FLRForecastauftrag" table="FC_FORECASTAUFTRAG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.util.Date" />
+
+		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String" />
+		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
+
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String" />
+		<property name="t_freigabe" column="T_FREIGABE" type="java.sql.Date" />
+
+		<many-to-one name="flrfclieferadresse"
+			class="com.lp.server.forecast.fastlanereader.generated.FLRFclieferadresse"
+			column="FCLIEFERADRESSE_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrpersonalfreigabe"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_FREIGABE" unique="true" insert="false" update="false" />
+
+	</class>
+
+
+	<class name="FLRForecastposition" table="FC_FORECASTPOSITION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="t_termin" column="T_TERMIN" type="java.util.Date" />
+		<property name="c_bestellnummer" column="C_BESTELLNUMMER"
+			type="java.lang.String" />
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String" />
+		<property name="forecastart_c_nr" column="FORECASTART_C_NR"
+			type="java.lang.String" />
+		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
+
+		<many-to-one name="flrforecastauftrag"
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecastauftrag"
+			column="FORECASTAUFTRAG_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikelliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+
+
+
+		<set name="linienabrufset" inverse="true">
+			<key column="FORECASTPOSITION_I_ID" />
+			<one-to-many
+				class="com.lp.server.forecast.fastlanereader.generated.FLRLinienabruf" />
+		</set>
+
+
+		<set name="losset" inverse="true">
+			<key column="FORECASTPOSITION_I_ID" />
+			<one-to-many
+				class="com.lp.server.fertigung.fastlanereader.generated.FLRLos" />
+		</set>
+
+	</class>
+
+
+	<class name="FLRLinienabruf" table="FC_LINIENABRUF">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="forecastposition_i_id" column="FORECASTPOSITION_I_ID"
+			type="java.lang.Integer" />
+		<property name="c_linie" column="C_LINIE" type="java.lang.String" />
+		<property name="c_bereich_nr" column="C_BEREICH_NR" type="java.lang.String" />
+		<property name="c_bereich_bez" column="C_BEREICH_BEZ" type="java.lang.String" />
+		<property name="c_bestellnummer" column="C_BESTELLNUMMER"
+			type="java.lang.String" />
+		<property name="t_produktionstermin" column="T_PRODUKTIONSTERMIN"
+			type="java.util.Date" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+
+		<many-to-one name="flrforecastposition"
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecastposition"
+			column="FORECASTPOSITION_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRForecastart" table="FC_FORECASTART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<set name="forecastart_forecastart_set" inverse="true">
+			<key column="FORECASTART_C_NR" />
+			<one-to-many
+				class="com.lp.server.forecast.fastlanereader.generated.FLRForecastartspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+	<class name="FLRForecastartspr" table="FC_FORECASTARTSPR">
+		<composite-id>
+			<key-many-to-one name="forecastart" column="FORECASTART_C_NR"
+				class="com.lp.server.forecast.fastlanereader.generated.FLRForecastart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRKommdrucker" table="FC_KOMMDRUCKER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+
+	<class name="FLRForecastpositionProduktion" table="FC_FORECASTPOSITION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="t_termin" column="T_TERMIN" type="java.util.Date" />
+		<property name="c_bestellnummer" column="C_BESTELLNUMMER"
+			type="java.lang.String" />
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String" />
+		<property name="forecastart_c_nr" column="FORECASTART_C_NR"
+			type="java.lang.String" />
+		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
+
+		<many-to-one name="flrforecastauftrag"
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecastauftrag"
+			column="FORECASTAUFTRAG_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+
+		<set name="linienabrufset" inverse="true">
+			<key column="FORECASTPOSITION_I_ID" />
+			<one-to-many
+				class="com.lp.server.forecast.fastlanereader.generated.FLRLinienabruf" />
+		</set>
+
+		<many-to-one name="flrlos"
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="I_ID" unique="true" insert="false" update="false"
+			property-ref="forecastposition_i_id" />
+		<property name="personal_i_id_produktion" column="PERSONAL_I_ID_PRODUKTION"
+			type="java.lang.Integer" />
+	</class>
+
+	<class name="FLRForecastpositionLiefersituation" table="FC_FORECASTPOSITION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="t_termin" column="T_TERMIN" type="java.util.Date" />
+		<property name="c_bestellnummer" column="C_BESTELLNUMMER"
+			type="java.lang.String" />
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String" />
+		<property name="forecastart_c_nr" column="FORECASTART_C_NR"
+			type="java.lang.String" />
+		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
+
+		<many-to-one name="flrforecastauftrag"
+			class="com.lp.server.forecast.fastlanereader.generated.FLRForecastauftrag"
+			column="FORECASTAUFTRAG_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+
+		<set name="lieferscheinpositionen_set" inverse="true" order-by="LIEFERSCHEIN_I_ID">
+			<key column="FORECASTPOSITION_I_ID" />
+			<one-to-many
+				class="com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition" />
+		</set>
+
+		<set name="lose_set" inverse="true" order-by="C_NR">
+			<key column="FORECASTPOSITION_I_ID" />
+			<one-to-many
+				class="com.lp.server.fertigung.fastlanereader.generated.FLRLos" />
+		</set>
+
+
+
+		<property name="personal_i_id_produktion" column="PERSONAL_I_ID_PRODUKTION"
+			type="java.lang.Integer" />
+	</class>
+
+</hibernate-mapping>

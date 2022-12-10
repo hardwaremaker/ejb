@@ -40,6 +40,57 @@ import com.lp.server.partner.service.LieferantDto;
 import com.lp.util.Helper;
 
 public class ArtikellieferantDto implements Serializable {
+
+	private Integer anfragepositionlieferdatenIId;
+
+	public Integer getAnfragepositionlieferdatenIId() {
+		return anfragepositionlieferdatenIId;
+	}
+
+	public void setAnfragepositionlieferdatenIId(Integer anfragepositionIId) {
+		this.anfragepositionlieferdatenIId = anfragepositionIId;
+	}
+
+	private BigDecimal nInitialkosten;
+
+	public BigDecimal getNInitialkosten() {
+		return nInitialkosten;
+	}
+
+	public void setNInitialkosten(BigDecimal nInitialkosten) {
+		this.nInitialkosten = nInitialkosten;
+	}
+
+	private Short bNichtLieferbar;
+
+	public Short getBNichtLieferbar() {
+		return bNichtLieferbar;
+	}
+
+	public void setBNichtLieferbar(Short bNichtLieferbar) {
+		this.bNichtLieferbar = bNichtLieferbar;
+	}
+
+	private String xKommentarNichtLieferbar;
+
+	public String getXKommentarNichtLieferbar() {
+		return xKommentarNichtLieferbar;
+	}
+
+	public void setXKommentarNichtLieferbar(String xKommentarNichtLieferbar) {
+		this.xKommentarNichtLieferbar = xKommentarNichtLieferbar;
+	}
+
+	private String xKommentarFixkosten;
+
+	public String getXKommentarFixkosten() {
+		return xKommentarFixkosten;
+	}
+
+	public void setXKommentarFixkosten(String xKommentarFixkosten) {
+		this.xKommentarFixkosten = xKommentarFixkosten;
+	}
+
 	public Short getBRabattbehalten() {
 		return bRabattbehalten;
 	}
@@ -56,6 +107,26 @@ public class ArtikellieferantDto implements Serializable {
 
 	public void setEinheitCNrVpe(String einheitCNrVpe) {
 		this.einheitCNrVpe = einheitCNrVpe;
+	}
+
+	private BigDecimal nGebindemenge;
+
+	public BigDecimal getNGebindemenge() {
+		return nGebindemenge;
+	}
+
+	public void setNGebindemenge(BigDecimal nGebindemenge) {
+		this.nGebindemenge = nGebindemenge;
+	}
+
+	private Integer gebindeIId;
+
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
 	}
 
 	/**
@@ -120,6 +191,8 @@ public class ArtikellieferantDto implements Serializable {
 	private Timestamp tAendern;
 
 	private Integer zertifikatartIId;
+	private Timestamp tLetzteWebabfrage;
+	private BigDecimal nWebabfrageBestand;
 
 	public Integer getZertifikatartIId() {
 		return zertifikatartIId;
@@ -340,6 +413,22 @@ public class ArtikellieferantDto implements Serializable {
 		return nStaffelmenge;
 	}
 
+	public BigDecimal getNWebabfrageBestand() {
+		return nWebabfrageBestand;
+	}
+
+	public void setNWebabfrageBestand(BigDecimal nWebabfrageBestand) {
+		this.nWebabfrageBestand = nWebabfrageBestand;
+	}
+
+	public Timestamp getTLetzteWebabfrage() {
+		return tLetzteWebabfrage;
+	}
+
+	public void setTLetzteWebabfrage(Timestamp tLetzteWebabfrage) {
+		this.tLetzteWebabfrage = tLetzteWebabfrage;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -348,16 +437,13 @@ public class ArtikellieferantDto implements Serializable {
 			return false;
 		}
 		ArtikellieferantDto that = (ArtikellieferantDto) obj;
-		if (!(that.artikelIId == null ? this.artikelIId == null
-				: that.artikelIId.equals(this.artikelIId))) {
+		if (!(that.artikelIId == null ? this.artikelIId == null : that.artikelIId.equals(this.artikelIId))) {
 			return false;
 		}
-		if (!(that.lieferantIId == null ? this.lieferantIId == null
-				: that.lieferantIId.equals(this.lieferantIId))) {
+		if (!(that.lieferantIId == null ? this.lieferantIId == null : that.lieferantIId.equals(this.lieferantIId))) {
 			return false;
 		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr))) {
 			return false;
 		}
 		if (!(that.cBezbeilieferant == null ? this.cBezbeilieferant == null
@@ -372,16 +458,13 @@ public class ArtikellieferantDto implements Serializable {
 				: that.bHerstellerbez.equals(this.bHerstellerbez))) {
 			return false;
 		}
-		if (!(that.nEinzelpreis == null ? this.nEinzelpreis == null
-				: that.nEinzelpreis.equals(this.nEinzelpreis))) {
+		if (!(that.nEinzelpreis == null ? this.nEinzelpreis == null : that.nEinzelpreis.equals(this.nEinzelpreis))) {
 			return false;
 		}
-		if (!(that.fRabatt == null ? this.fRabatt == null : that.fRabatt
-				.equals(this.fRabatt))) {
+		if (!(that.fRabatt == null ? this.fRabatt == null : that.fRabatt.equals(this.fRabatt))) {
 			return false;
 		}
-		if (!(that.nNettopreis == null ? this.nNettopreis == null
-				: that.nNettopreis.equals(this.nNettopreis))) {
+		if (!(that.nNettopreis == null ? this.nNettopreis == null : that.nNettopreis.equals(this.nNettopreis))) {
 			return false;
 		}
 		if (!(that.fStandardmenge == null ? this.fStandardmenge == null
@@ -396,8 +479,7 @@ public class ArtikellieferantDto implements Serializable {
 				: that.nVerpackungseinheit.equals(this.nVerpackungseinheit))) {
 			return false;
 		}
-		if (!(that.nFixkosten == null ? this.nFixkosten == null
-				: that.nFixkosten.equals(this.nFixkosten))) {
+		if (!(that.nFixkosten == null ? this.nFixkosten == null : that.nFixkosten.equals(this.nFixkosten))) {
 			return false;
 		}
 		if (!(that.cRabattgruppe == null ? this.cRabattgruppe == null
@@ -408,12 +490,19 @@ public class ArtikellieferantDto implements Serializable {
 				: that.tPreisgueltigab.equals(this.tPreisgueltigab))) {
 			return false;
 		}
-		if (!(that.iSort == null ? this.iSort == null : that.iSort
-				.equals(this.iSort))) {
+		if (!(that.iSort == null ? this.iSort == null : that.iSort.equals(this.iSort))) {
 			return false;
 		}
 		if (!(that.nStaffelmenge == null ? this.nStaffelmenge == null
 				: that.nStaffelmenge.equals(this.nStaffelmenge))) {
+			return false;
+		}
+		if (!(that.getNWebabfrageBestand() == null ? this.getNWebabfrageBestand() == null
+				: that.getNWebabfrageBestand().equals(this.getNWebabfrageBestand()))) {
+			return false;
+		}
+		if (!(that.getTLetzteWebabfrage() == null ? this.getTLetzteWebabfrage() == null
+				: that.getTLetzteWebabfrage().equals(this.getTLetzteWebabfrage()))) {
 			return false;
 		}
 		return true;
@@ -438,6 +527,8 @@ public class ArtikellieferantDto implements Serializable {
 		result = 37 * result + this.tPreisgueltigab.hashCode();
 		result = 37 * result + this.iSort.hashCode();
 		result = 37 * result + this.nStaffelmenge.hashCode();
+		result = 37 * result + this.nWebabfrageBestand.hashCode();
+		result = 37 * result + this.tLetzteWebabfrage.hashCode();
 		return result;
 	}
 
@@ -460,6 +551,8 @@ public class ArtikellieferantDto implements Serializable {
 		returnString += ", " + tPreisgueltigab;
 		returnString += ", " + iSort;
 		returnString += ", " + nStaffelmenge;
+		returnString += ", " + nWebabfrageBestand;
+		returnString += ", " + tLetzteWebabfrage;
 		return returnString;
 	}
 

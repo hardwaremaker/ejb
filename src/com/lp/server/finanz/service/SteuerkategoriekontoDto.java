@@ -33,12 +33,12 @@
 package com.lp.server.finanz.service;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
+
+import com.lp.server.util.SteuerkategoriekontoId;
+import com.lp.server.util.Validator;
 
 public class SteuerkategoriekontoDto implements Serializable{
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 	
 	private Integer steuerkategorieIId;
@@ -48,6 +48,8 @@ public class SteuerkategoriekontoDto implements Serializable{
 	private Integer kontoIIdSkontoVk;
 	private Integer kontoIIdSkontoEk;
 	private Integer kontoIIdEinfuhrUst;
+	private Timestamp gueltigAb;
+	private SteuerkategoriekontoId iId;
 	
 	public Integer getSteuerkategorieIId() {
 		return steuerkategorieIId;
@@ -90,5 +92,20 @@ public class SteuerkategoriekontoDto implements Serializable{
 	}
 	public Integer getKontoIIdEinfuhrUst() {
 		return kontoIIdEinfuhrUst;
+	}
+	
+	public void setTGueltigAb(Timestamp gueltigAb) {
+		Validator.notNull(gueltigAb, "gueltigAb");
+		this.gueltigAb = gueltigAb;		
+	}
+	public Timestamp getTGueltigAb() {
+		return this.gueltigAb;
+	}
+
+	public SteuerkategoriekontoId getId() {
+		return iId;
+	}
+	public void setId(SteuerkategoriekontoId theId) {
+		this.iId = theId;
 	}
 }

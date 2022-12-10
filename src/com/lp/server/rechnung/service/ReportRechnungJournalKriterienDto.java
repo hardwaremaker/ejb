@@ -67,6 +67,17 @@ public class ReportRechnungJournalKriterienDto extends
 	 * statt dem Kunden wird die Statistikadresse verwenden?
 	 */
 	private boolean bVerwendeStatistikAdresse = false;
+	
+	private boolean bVerwendeVertreterDesKunden = false;
+	
+	public boolean isVerwendeVertreterDesKunden() {
+		return bVerwendeVertreterDesKunden;
+	}
+
+	public void setBVerwendeVertreterDesKunden(boolean bVerwendeVertreterDesKunden) {
+		this.bVerwendeVertreterDesKunden = bVerwendeVertreterDesKunden;
+	}
+
 	/**
 	 * Nur offene Rechnungen anfuehren?
 	 */
@@ -83,6 +94,8 @@ public class ReportRechnungJournalKriterienDto extends
 	private boolean bMitTexteingaben = false;
 
 	private boolean bMitNichtZugeordnetendBelegen = false;
+	
+	private boolean bFibuDetails = false;
 	
 	public boolean getBMitNichtZugeordnetendBelegen() {
 		return bMitNichtZugeordnetendBelegen;
@@ -132,5 +145,13 @@ public class ReportRechnungJournalKriterienDto extends
 	public void setBGutschriftenBeruecksichtigen(
 			boolean bGutschriftenBeruecksichtigen) {
 		this.bGutschriftenBeruecksichtigen = bGutschriftenBeruecksichtigen;
+	}
+
+	public boolean getBFibuDetails() {
+		return bFibuDetails;
+	}
+
+	public void setBFibuDetails(boolean bFibuDetails) {
+		this.bFibuDetails = bFibuDetails;
 	}
 }

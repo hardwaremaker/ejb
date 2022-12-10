@@ -51,6 +51,7 @@ import org.hibernate.SessionFactory;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellistespr;
 import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.artikel.service.SperrenIcon;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragpositionDto;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellvorschlag;
@@ -84,12 +85,11 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 	public static final String FLR_LIEFERANTENOPTIMIEREN_FROM_CLAUSE = " from FLRLieferantenoptimieren flrLieferantenoptimieren ";
 
 	/**
-	 * gets the data page for the specified row using the current query. The row
-	 * at rowIndex will be located in the middle of the page.
+	 * gets the data page for the specified row using the current query. The row at
+	 * rowIndex will be located in the middle of the page.
 	 * 
 	 * @see UseCaseHandler#getPageAt(java.lang.Integer)
-	 * @param rowIndex
-	 *            Integer
+	 * @param rowIndex Integer
 	 * @throws EJBExceptionLP
 	 * @return QueryResult
 	 */
@@ -105,8 +105,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 
@@ -124,18 +123,17 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 				Object[] o = (Object[]) resultListIterator.next();
 
 				FLRLieferantenoptimieren flrLieferantenoptimieren = (FLRLieferantenoptimieren) o[0];
-				FLRBestellvorschlag bestellvorschlag = flrLieferantenoptimieren
-						.getFlrbestellvorschlag();
+				FLRBestellvorschlag bestellvorschlag = flrLieferantenoptimieren.getFlrbestellvorschlag();
 
 				rows[row][col++] = bestellvorschlag.getI_id();
 
 				if (o[1] != null) {
-					rows[row][col++] = LocaleFac.STATUS_GESPERRT;
+					rows[row][col++] = o[1];
 				} else {
 					rows[row][col++] = null;
 				}
-				rows[row][col++] = bestellvorschlag.getFlrartikelliste()
-						.getC_nr();
+
+				rows[row][col++] = bestellvorschlag.getFlrartikelliste().getC_nr();
 
 				if (o[2] != null) {
 					FLRArtikellistespr artikelspr = ((com.lp.server.artikel.fastlanereader.generated.FLRArtikellistespr) o[2]);
@@ -146,19 +144,14 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 					rows[row][col++] = null;
 				}
 				rows[row][col++] = bestellvorschlag.getN_zubestellendemenge();
-				rows[row][col++] = bestellvorschlag.getFlrartikel()
-						.getEinheit_c_nr();
+				rows[row][col++] = bestellvorschlag.getFlrartikel().getEinheit_c_nr();
 
 				BigDecimal nettopreisArtikellieferant = new BigDecimal(0);
-				ArtikellieferantDto alDto = getArtikelFac()
-						.getArtikelEinkaufspreis(
-								flrLieferantenoptimieren.getArtikel_i_id(),
-								flrLieferantenoptimieren
-										.getLieferant_i_id_artikellieferant(),
-								bestellvorschlag.getN_zubestellendemenge(),
-								theClientDto.getSMandantenwaehrung(),
-								Helper.cutDate(new java.sql.Date(System
-										.currentTimeMillis())), theClientDto);
+				ArtikellieferantDto alDto = getArtikelFac().getArtikelEinkaufspreis(
+						flrLieferantenoptimieren.getArtikel_i_id(),
+						flrLieferantenoptimieren.getLieferant_i_id_artikellieferant(),
+						bestellvorschlag.getN_zubestellendemenge(), theClientDto.getSMandantenwaehrung(),
+						Helper.cutDate(new java.sql.Date(System.currentTimeMillis())), theClientDto);
 
 				if (alDto != null) {
 
@@ -167,33 +160,22 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 					}
 
 					rows[row][col++] = alDto.getNNettopreis();
-					rows[row][col++] = flrLieferantenoptimieren
-							.getFlrartikellieferant()
-							.getI_wiederbeschaffungszeit();
+					rows[row][col++] = flrLieferantenoptimieren.getFlrartikellieferant().getI_wiederbeschaffungszeit();
 					rows[row][col++] = alDto.getNFixkosten();
 				} else {
 					rows[row][col++] = null;
-					rows[row][col++] = flrLieferantenoptimieren
-							.getFlrartikellieferant()
-							.getI_wiederbeschaffungszeit();
+					rows[row][col++] = flrLieferantenoptimieren.getFlrartikellieferant().getI_wiederbeschaffungszeit();
 					rows[row][col++] = null;
 				}
 
-				rows[row][col++] = flrLieferantenoptimieren
-						.getFlrartikellieferant().getI_sort();
+				rows[row][col++] = flrLieferantenoptimieren.getFlrartikellieferant().getI_sort();
 
-				if (flrLieferantenoptimieren
-						.getFlrbestellvorschlag().getFlrlieferant() == null || !flrLieferantenoptimieren
-						.getFlrartikellieferant()
-						.getLieferant_i_id()
-						.equals(flrLieferantenoptimieren
-								.getFlrbestellvorschlag().getFlrlieferant()
-								.getI_id())) {
+				if (flrLieferantenoptimieren.getFlrbestellvorschlag().getFlrlieferant() == null
+						|| !flrLieferantenoptimieren.getFlrartikellieferant().getLieferant_i_id().equals(
+								flrLieferantenoptimieren.getFlrbestellvorschlag().getFlrlieferant().getI_id())) {
 					rows[row][col++] = Color.GRAY;
 				} else {
-					summe = summe.add(nettopreisArtikellieferant
-							.multiply(bestellvorschlag
-									.getN_zubestellendemenge()));
+					summe = summe.add(nettopreisArtikellieferant.multiply(bestellvorschlag.getN_zubestellendemenge()));
 				}
 
 				row++;
@@ -203,8 +185,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 			rows[row][6] = "Summe:";
 			rows[row][7] = summe;
 
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -273,8 +254,8 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 	// }
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -285,8 +266,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -300,8 +280,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 					if (filterKriterien[i].kritName.equals("c_volltext")) {
 						String suchstring = "lower(coalesce(aspr.c_bez,'')||' '||coalesce(aspr.c_kbez,'')||' '||coalesce(aspr.c_zbez,'')||' '||coalesce(aspr.c_zbez2,''))";
 
-						String[] teile = filterKriterien[i].value.toLowerCase()
-								.split(" ");
+						String[] teile = filterKriterien[i].value.toLowerCase().split(" ");
 						where.append("(");
 
 						for (int p = 0; p < teile.length; p++) {
@@ -313,8 +292,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 
 							}
 
-							where.append("lower(" + suchstring + ") like '%"
-									+ teile[p].toLowerCase() + "%'");
+							where.append("lower(" + suchstring + ") like '%" + teile[p].toLowerCase() + "%'");
 							if (p < teile.length - 1) {
 								where.append(" AND ");
 							}
@@ -324,15 +302,13 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 					} else {
 
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" lower("
-									+ filterKriterien[i].kritName + ")");
+							where.append(" lower(" + filterKriterien[i].kritName + ")");
 						} else {
 							where.append(" " + filterKriterien[i].kritName);
 						}
 						where.append(" " + filterKriterien[i].operator);
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" "
-									+ filterKriterien[i].value.toLowerCase());
+							where.append(" " + filterKriterien[i].value.toLowerCase());
 						} else {
 							where.append(" " + filterKriterien[i].value);
 						}
@@ -360,8 +336,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
@@ -370,17 +345,14 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 
 							// spezial unterscheidung nur in diesem haendler
 							if (kriterien[i].kritName.toString().equals("c_nr")) {
-								orderBy.append("flrLieferantenoptimieren."
-										+ "flrartikelliste.c_nr");
+								orderBy.append("flrLieferantenoptimieren." + "flrartikelliste.c_nr");
 								orderBy.append(" ");
 								orderBy.append(kriterien[i].value);
 
 							}
 
-							else if (kriterien[i].kritName.toString().equals(
-									"c_bez")) {
-								orderBy.append("flrLieferantenoptimieren."
-										+ "flrartikelliste.c_nr");
+							else if (kriterien[i].kritName.toString().equals("c_bez")) {
+								orderBy.append("flrLieferantenoptimieren." + "flrartikelliste.c_nr");
 								orderBy.append(" ");
 								orderBy.append(kriterien[i].value);
 							} else {
@@ -397,12 +369,10 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("flrLieferantenoptimieren.flrartikelliste.")
-						.append("c_nr").append(" ASC ");
+				orderBy.append("flrLieferantenoptimieren.flrartikelliste.").append("c_nr").append(" ASC ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("flrLieferantenoptimieren."
-					+ "bestellvorschlag_i_id") < 0) {
+			if (orderBy.indexOf("flrLieferantenoptimieren." + "bestellvorschlag_i_id") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -411,8 +381,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" flrLieferantenoptimieren.")
-						.append("bestellvorschlag_i_id").append(" ");
+				orderBy.append(" flrLieferantenoptimieren.").append("bestellvorschlag_i_id").append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -428,7 +397,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "SELECT flrLieferantenoptimieren,  (SELECT distinct s.artikel_i_id FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrLieferantenoptimieren.artikel_i_id AND ( s.flrsperren.b_gesperrteinkauf=1 OR s.flrsperren.b_gesperrt=1) ) as sperren, aspr from FLRLieferantenoptimieren flrLieferantenoptimieren LEFT OUTER JOIN flrLieferantenoptimieren.flrartikelliste.artikelsprset AS aspr ";
+		return "SELECT flrLieferantenoptimieren,  (SELECT max(s.flrsperren.c_bez) FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrLieferantenoptimieren.artikel_i_id AND ( s.flrsperren.b_gesperrteinkauf=1 OR s.flrsperren.b_gesperrt=1) ) as sperren, aspr from FLRLieferantenoptimieren flrLieferantenoptimieren LEFT OUTER JOIN flrLieferantenoptimieren.flrartikelliste.artikelsprset AS aspr ";
 	}
 
 	/**
@@ -437,14 +406,11 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 	 * 
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
-	 * @param sortierKriterien
-	 *            SortierKriterium[]
-	 * @param selectedId
-	 *            Object
+	 * @param sortierKriterien SortierKriterium[]
+	 * @param selectedId       Object
 	 * @return QueryResult
 	 */
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -457,8 +423,7 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select flrLieferantenoptimieren."
-						+ "bestellvorschlag_i_id"
+				String queryString = "select flrLieferantenoptimieren." + "bestellvorschlag_i_id"
 						+ " from FLRLieferantenoptimieren flrLieferantenoptimieren  LEFT OUTER JOIN flrLieferantenoptimieren.flrartikelliste.artikelsprset AS aspr "
 						+ this.buildWhereClause() + this.buildOrderByClause();
 
@@ -502,58 +467,37 @@ public class LieferantenoptimierenHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, Icon.class, String.class,
-							String.class, String.class, BigDecimal.class,
-							String.class, BigDecimal.class, Integer.class,
-							BigDecimal.class, Integer.class, Color.class },
-					new String[] {
-							"i_id",
-							"S",
-							getTextRespectUISpr("bes.artikelcnr", mandantCNr,
-									locUI),
-							getTextRespectUISpr("bes.artikelbezeichnung",
-									mandantCNr, locUI),
-							getTextRespectUISpr("artikel.zusatzbez",
-									mandantCNr, locUI),
+					new Class[] { Integer.class, SperrenIcon.class, String.class, String.class, String.class,
+							BigDecimal.class, String.class, BigDecimal.class, Integer.class, BigDecimal.class,
+							Integer.class, Color.class },
+					new String[] { "i_id", getTextRespectUISpr("bes.sperre", mandantCNr, locUI),
+							getTextRespectUISpr("bes.artikelcnr", mandantCNr, locUI),
+							getTextRespectUISpr("bes.artikelbezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("artikel.zusatzbez", mandantCNr, locUI),
 
-							getTextRespectUISpr("bes.zubestellendeMenge",
-									mandantCNr, locUI),
-							getTextRespectUISpr("bes.einheit", mandantCNr,
-									locUI),
-							getTextRespectUISpr(
-									"bes.nettogesamtpreisminusrabatte",
-									mandantCNr, locUI),
-							getTextRespectUISpr(
-									"artikel.wiederbeschaffungszeit.short",
-									mandantCNr, locUI),
-							getTextRespectUISpr("bes.fixkosten", mandantCNr,
-									locUI),
-							getTextRespectUISpr("bes.sort", mandantCNr, locUI),
-							"" },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XL,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							getTextRespectUISpr("bes.zubestellendeMenge", mandantCNr, locUI),
+							getTextRespectUISpr("bes.einheit", mandantCNr, locUI),
+							getTextRespectUISpr("bes.nettogesamtpreisminusrabatte", mandantCNr, locUI),
+							getTextRespectUISpr("artikel.wiederbeschaffungszeit.short", mandantCNr, locUI),
+							getTextRespectUISpr("bes.fixkosten", mandantCNr, locUI),
+							getTextRespectUISpr("bes.sort", mandantCNr, locUI), "" },
+					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_S,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_XL,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_XS, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 
 							QueryParameters.FLR_BREITE_M, 1 },
-					new String[] {
-							"i_id",
-							Facade.NICHT_SORTIERBAR,
-							"flrLieferantenoptimieren.flrartikelliste.c_nr",
-							"aspr.c_bez",
-							"aspr.c_zbez",
+					new String[] { "i_id", Facade.NICHT_SORTIERBAR, "flrLieferantenoptimieren.flrartikelliste.c_nr",
+							"aspr.c_bez", "aspr.c_zbez",
 							"flrLieferantenoptimieren.flrbestellvorschlag."
 									+ BestellvorschlagFac.FLR_BESTELLVORSCHLAG_N_ZUBESTELLENDEMENGE,
-							"flrLieferantenoptimieren.flrartikelliste.einheit_c_nr",
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							"" }));
+							"flrLieferantenoptimieren.flrartikelliste.einheit_c_nr", Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR, "" },
+					new String[] { null, getTextRespectUISpr("bes.sperre.tooltip", mandantCNr, locUI), null, null, null,
+							null, null, null,
+							getTextRespectUISpr("artikel.wiederbeschaffungszeit.tooltip", mandantCNr, locUI), null,
+							getTextRespectUISpr("bes.sortierung.tooltip", mandantCNr, locUI), null, }));
 		}
 
 		return super.getTableInfo();

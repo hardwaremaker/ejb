@@ -35,6 +35,8 @@ package com.lp.server.system.mail.service;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import com.lp.server.system.service.TheClientDto;
+
 public class LPMailDto implements Serializable {
 
 	private static final long serialVersionUID = 4175064614790804470L;
@@ -55,7 +57,14 @@ public class LPMailDto implements Serializable {
 	private String mailAdmin;
 	private int faxAnbindung = 0;
 	private String xpirioKennwort;
+	private TheClientDto theClientDto;
 	
+	public TheClientDto getTheClientDto() {
+		return theClientDto;
+	}
+	public void setTheClientDto(TheClientDto theClientDto) {
+		this.theClientDto = theClientDto;
+	}
 	private final static String sentFolderDefault = "Gesendete Objekte";
 	
 	public void setVersandauftragIId(Integer versandauftragIId) {

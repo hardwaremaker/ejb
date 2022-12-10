@@ -1,39 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
+import com.lp.server.system.fastlanereader.generated.FLRMwstsatzbez;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
@@ -68,6 +39,15 @@ public class FLRArtikelliste implements Serializable {
     /** persistent field */
     private Short b_versteckt;
 
+    /** persistent field */
+    private Integer i_passive_reisezeit;
+
+    /** persistent field */
+    private Short b_bevorzugt;
+
+    /** nullable persistent field */
+    private Date t_freigabe;
+
     /** nullable persistent field */
     private Integer i_garantiezeit;
 
@@ -87,6 +67,18 @@ public class FLRArtikelliste implements Serializable {
     private Double f_fertigungssatzgroesse;
 
     /** nullable persistent field */
+    private Double f_maxfertigungssatzgroesse;
+
+    /** nullable persistent field */
+    private Double f_materialgewicht;
+
+    /** nullable persistent field */
+    private Double f_verpackungsmenge;
+
+    /** nullable persistent field */
+    private BigDecimal n_verpackungsmittelmenge;
+
+    /** nullable persistent field */
     private String c_artikelbezhersteller;
 
     /** nullable persistent field */
@@ -94,6 +86,9 @@ public class FLRArtikelliste implements Serializable {
 
     /** nullable persistent field */
     private Integer mwstsatz_i_id;
+
+    /** nullable persistent field */
+    private BigDecimal n_verschnittmenge;
 
     /** nullable persistent field */
     private Double f_lagermindest;
@@ -105,6 +100,9 @@ public class FLRArtikelliste implements Serializable {
     private Double f_verschnittbasis;
 
     /** nullable persistent field */
+    private String c_verkaufseannr;
+
+    /** nullable persistent field */
     private Double f_fertigungs_vpe;
 
     /** nullable persistent field */
@@ -112,6 +110,27 @@ public class FLRArtikelliste implements Serializable {
 
     /** nullable persistent field */
     private String c_revision;
+
+    /** nullable persistent field */
+    private String c_ul;
+
+    /** nullable persistent field */
+    private Short b_bestellmengeneinheitinvers;
+
+    /** nullable persistent field */
+    private Short b_meldepflichtig;
+
+    /** nullable persistent field */
+    private Short b_bewilligungspflichtig;
+
+    /** nullable persistent field */
+    private Integer shopgruppe_i_id;
+
+    /** persistent field */
+    private Short b_nurzurinfo;
+
+    /** nullable persistent field */
+    private com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial;
 
     /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe;
@@ -126,10 +145,22 @@ public class FLRArtikelliste implements Serializable {
     private com.lp.server.artikel.fastlanereader.generated.FLRGeometrie flrgeometrie;
 
     /** nullable persistent field */
+    private FLRMwstsatzbez flrmwstatzbez;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonal_freigabe;
+
+    /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRVorzug flrvorzug;
+
+    /** nullable persistent field */
+    private com.lp.server.artikel.fastlanereader.generated.FLRHersteller flrhersteller;
 
     /** persistent field */
     private Set artikelsperreset;
+
+    /** persistent field */
+    private Set ersatztypenset;
 
     /** persistent field */
     private Set artikellieferantset;
@@ -144,6 +175,9 @@ public class FLRArtikelliste implements Serializable {
     private Set stuecklisten;
 
     /** persistent field */
+    private Set stuecklisten_mandantenunabhaengig;
+
+    /** persistent field */
     private Set artikellagerplatzset;
 
     /** persistent field */
@@ -152,10 +186,11 @@ public class FLRArtikelliste implements Serializable {
     /** persistent field */
     private Set kundesokoset2;
 
-    private Integer shopgruppe_i_id;
-    
+    /** persistent field */
+    private Set artikelshopgruppeset;
+
     /** full constructor */
-    public FLRArtikelliste(String c_nr, String mandant_c_nr, String einheit_c_nr, Short b_lagerbewertet, Short b_lagerbewirtschaftet, Short b_seriennrtragend, Short b_chargennrtragend, Short b_versteckt, Integer i_garantiezeit, String artikelart_c_nr, String c_referenznr, String einheit_c_nr_bestellung, BigDecimal n_umrechnugsfaktor, Double f_fertigungssatzgroesse, String c_artikelbezhersteller, String c_artikelnrhersteller, Integer mwstsatz_i_id, Double f_lagermindest, Double f_verschnittfaktor, Double f_verschnittbasis, Double f_fertigungs_vpe, String c_index, String c_revision, com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe, com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe flrshopgruppe, com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse flrartikelklasse, com.lp.server.artikel.fastlanereader.generated.FLRGeometrie flrgeometrie, com.lp.server.artikel.fastlanereader.generated.FLRVorzug flrvorzug, Set artikelsperreset, Set artikellieferantset, Set artikelsprset, Set artikellagerset, Set stuecklisten, Set artikellagerplatzset, Set kundesokoset, Set kundesokoset2, Integer shopgruppe_i_id) {
+    public FLRArtikelliste(String c_nr, String mandant_c_nr, String einheit_c_nr, Short b_lagerbewertet, Short b_lagerbewirtschaftet, Short b_seriennrtragend, Short b_chargennrtragend, Short b_versteckt, Integer i_passive_reisezeit, Short b_bevorzugt, Date t_freigabe, Integer i_garantiezeit, String artikelart_c_nr, String c_referenznr, String einheit_c_nr_bestellung, BigDecimal n_umrechnugsfaktor, Double f_fertigungssatzgroesse, Double f_maxfertigungssatzgroesse, Double f_materialgewicht, Double f_verpackungsmenge, BigDecimal n_verpackungsmittelmenge, String c_artikelbezhersteller, String c_artikelnrhersteller, Integer mwstsatz_i_id, BigDecimal n_verschnittmenge, Double f_lagermindest, Double f_verschnittfaktor, Double f_verschnittbasis, String c_verkaufseannr, Double f_fertigungs_vpe, String c_index, String c_revision, String c_ul, Short b_bestellmengeneinheitinvers, Short b_meldepflichtig, Short b_bewilligungspflichtig, Integer shopgruppe_i_id, Short b_nurzurinfo, com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial, com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe, com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe flrshopgruppe, com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse flrartikelklasse, com.lp.server.artikel.fastlanereader.generated.FLRGeometrie flrgeometrie, FLRMwstsatzbez flrmwstatzbez, FLRPersonal flrpersonal_freigabe, com.lp.server.artikel.fastlanereader.generated.FLRVorzug flrvorzug, com.lp.server.artikel.fastlanereader.generated.FLRHersteller flrhersteller, Set artikelsperreset, Set ersatztypenset, Set artikellieferantset, Set artikelsprset, Set artikellagerset, Set stuecklisten, Set stuecklisten_mandantenunabhaengig, Set artikellagerplatzset, Set kundesokoset, Set kundesokoset2, Set artikelshopgruppeset) {
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
         this.einheit_c_nr = einheit_c_nr;
@@ -164,34 +199,56 @@ public class FLRArtikelliste implements Serializable {
         this.b_seriennrtragend = b_seriennrtragend;
         this.b_chargennrtragend = b_chargennrtragend;
         this.b_versteckt = b_versteckt;
+        this.i_passive_reisezeit = i_passive_reisezeit;
+        this.b_bevorzugt = b_bevorzugt;
+        this.t_freigabe = t_freigabe;
         this.i_garantiezeit = i_garantiezeit;
         this.artikelart_c_nr = artikelart_c_nr;
         this.c_referenznr = c_referenznr;
         this.einheit_c_nr_bestellung = einheit_c_nr_bestellung;
         this.n_umrechnugsfaktor = n_umrechnugsfaktor;
         this.f_fertigungssatzgroesse = f_fertigungssatzgroesse;
+        this.f_maxfertigungssatzgroesse = f_maxfertigungssatzgroesse;
+        this.f_materialgewicht = f_materialgewicht;
+        this.f_verpackungsmenge = f_verpackungsmenge;
+        this.n_verpackungsmittelmenge = n_verpackungsmittelmenge;
         this.c_artikelbezhersteller = c_artikelbezhersteller;
         this.c_artikelnrhersteller = c_artikelnrhersteller;
         this.mwstsatz_i_id = mwstsatz_i_id;
+        this.n_verschnittmenge = n_verschnittmenge;
         this.f_lagermindest = f_lagermindest;
         this.f_verschnittfaktor = f_verschnittfaktor;
         this.f_verschnittbasis = f_verschnittbasis;
+        this.c_verkaufseannr = c_verkaufseannr;
         this.f_fertigungs_vpe = f_fertigungs_vpe;
         this.c_index = c_index;
         this.c_revision = c_revision;
+        this.c_ul = c_ul;
+        this.b_bestellmengeneinheitinvers = b_bestellmengeneinheitinvers;
+        this.b_meldepflichtig = b_meldepflichtig;
+        this.b_bewilligungspflichtig = b_bewilligungspflichtig;
+        this.shopgruppe_i_id = shopgruppe_i_id;
+        this.b_nurzurinfo = b_nurzurinfo;
+        this.flrmaterial = flrmaterial;
         this.flrartikelgruppe = flrartikelgruppe;
         this.flrshopgruppe = flrshopgruppe;
         this.flrartikelklasse = flrartikelklasse;
         this.flrgeometrie = flrgeometrie;
+        this.flrmwstatzbez = flrmwstatzbez;
+        this.flrpersonal_freigabe = flrpersonal_freigabe;
         this.flrvorzug = flrvorzug;
+        this.flrhersteller = flrhersteller;
         this.artikelsperreset = artikelsperreset;
+        this.ersatztypenset = ersatztypenset;
         this.artikellieferantset = artikellieferantset;
         this.artikelsprset = artikelsprset;
         this.artikellagerset = artikellagerset;
         this.stuecklisten = stuecklisten;
+        this.stuecklisten_mandantenunabhaengig = stuecklisten_mandantenunabhaengig;
         this.artikellagerplatzset = artikellagerplatzset;
         this.kundesokoset = kundesokoset;
         this.kundesokoset2 = kundesokoset2;
+        this.artikelshopgruppeset = artikelshopgruppeset;
     }
 
     /** default constructor */
@@ -199,7 +256,7 @@ public class FLRArtikelliste implements Serializable {
     }
 
     /** minimal constructor */
-    public FLRArtikelliste(String c_nr, String mandant_c_nr, Short b_lagerbewertet, Short b_lagerbewirtschaftet, Short b_seriennrtragend, Short b_chargennrtragend, Short b_versteckt, String artikelart_c_nr, String c_referenznr, String einheit_c_nr_bestellung, BigDecimal n_umrechnugsfaktor, Set artikelsperreset, Set artikellieferantset, Set artikelsprset, Set artikellagerset, Set stuecklisten, Set artikellagerplatzset, Set kundesokoset, Set kundesokoset2) {
+    public FLRArtikelliste(String c_nr, String mandant_c_nr, Short b_lagerbewertet, Short b_lagerbewirtschaftet, Short b_seriennrtragend, Short b_chargennrtragend, Short b_versteckt, Integer i_passive_reisezeit, Short b_bevorzugt, String artikelart_c_nr, String c_referenznr, String einheit_c_nr_bestellung, BigDecimal n_umrechnugsfaktor, Short b_nurzurinfo, Set artikelsperreset, Set ersatztypenset, Set artikellieferantset, Set artikelsprset, Set artikellagerset, Set stuecklisten, Set stuecklisten_mandantenunabhaengig, Set artikellagerplatzset, Set kundesokoset, Set kundesokoset2, Set artikelshopgruppeset) {
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
         this.b_lagerbewertet = b_lagerbewertet;
@@ -207,18 +264,24 @@ public class FLRArtikelliste implements Serializable {
         this.b_seriennrtragend = b_seriennrtragend;
         this.b_chargennrtragend = b_chargennrtragend;
         this.b_versteckt = b_versteckt;
+        this.i_passive_reisezeit = i_passive_reisezeit;
+        this.b_bevorzugt = b_bevorzugt;
         this.artikelart_c_nr = artikelart_c_nr;
         this.c_referenznr = c_referenznr;
         this.einheit_c_nr_bestellung = einheit_c_nr_bestellung;
         this.n_umrechnugsfaktor = n_umrechnugsfaktor;
+        this.b_nurzurinfo = b_nurzurinfo;
         this.artikelsperreset = artikelsperreset;
+        this.ersatztypenset = ersatztypenset;
         this.artikellieferantset = artikellieferantset;
         this.artikelsprset = artikelsprset;
         this.artikellagerset = artikellagerset;
         this.stuecklisten = stuecklisten;
+        this.stuecklisten_mandantenunabhaengig = stuecklisten_mandantenunabhaengig;
         this.artikellagerplatzset = artikellagerplatzset;
         this.kundesokoset = kundesokoset;
         this.kundesokoset2 = kundesokoset2;
+        this.artikelshopgruppeset = artikelshopgruppeset;
     }
 
     public Integer getI_id() {
@@ -293,6 +356,30 @@ public class FLRArtikelliste implements Serializable {
         this.b_versteckt = b_versteckt;
     }
 
+    public Integer getI_passive_reisezeit() {
+        return this.i_passive_reisezeit;
+    }
+
+    public void setI_passive_reisezeit(Integer i_passive_reisezeit) {
+        this.i_passive_reisezeit = i_passive_reisezeit;
+    }
+
+    public Short getB_bevorzugt() {
+        return this.b_bevorzugt;
+    }
+
+    public void setB_bevorzugt(Short b_bevorzugt) {
+        this.b_bevorzugt = b_bevorzugt;
+    }
+
+    public Date getT_freigabe() {
+        return this.t_freigabe;
+    }
+
+    public void setT_freigabe(Date t_freigabe) {
+        this.t_freigabe = t_freigabe;
+    }
+
     public Integer getI_garantiezeit() {
         return this.i_garantiezeit;
     }
@@ -341,6 +428,38 @@ public class FLRArtikelliste implements Serializable {
         this.f_fertigungssatzgroesse = f_fertigungssatzgroesse;
     }
 
+    public Double getF_maxfertigungssatzgroesse() {
+        return this.f_maxfertigungssatzgroesse;
+    }
+
+    public void setF_maxfertigungssatzgroesse(Double f_maxfertigungssatzgroesse) {
+        this.f_maxfertigungssatzgroesse = f_maxfertigungssatzgroesse;
+    }
+
+    public Double getF_materialgewicht() {
+        return this.f_materialgewicht;
+    }
+
+    public void setF_materialgewicht(Double f_materialgewicht) {
+        this.f_materialgewicht = f_materialgewicht;
+    }
+
+    public Double getF_verpackungsmenge() {
+        return this.f_verpackungsmenge;
+    }
+
+    public void setF_verpackungsmenge(Double f_verpackungsmenge) {
+        this.f_verpackungsmenge = f_verpackungsmenge;
+    }
+
+    public BigDecimal getN_verpackungsmittelmenge() {
+        return this.n_verpackungsmittelmenge;
+    }
+
+    public void setN_verpackungsmittelmenge(BigDecimal n_verpackungsmittelmenge) {
+        this.n_verpackungsmittelmenge = n_verpackungsmittelmenge;
+    }
+
     public String getC_artikelbezhersteller() {
         return this.c_artikelbezhersteller;
     }
@@ -363,6 +482,14 @@ public class FLRArtikelliste implements Serializable {
 
     public void setMwstsatz_i_id(Integer mwstsatz_i_id) {
         this.mwstsatz_i_id = mwstsatz_i_id;
+    }
+
+    public BigDecimal getN_verschnittmenge() {
+        return this.n_verschnittmenge;
+    }
+
+    public void setN_verschnittmenge(BigDecimal n_verschnittmenge) {
+        this.n_verschnittmenge = n_verschnittmenge;
     }
 
     public Double getF_lagermindest() {
@@ -389,6 +516,14 @@ public class FLRArtikelliste implements Serializable {
         this.f_verschnittbasis = f_verschnittbasis;
     }
 
+    public String getC_verkaufseannr() {
+        return this.c_verkaufseannr;
+    }
+
+    public void setC_verkaufseannr(String c_verkaufseannr) {
+        this.c_verkaufseannr = c_verkaufseannr;
+    }
+
     public Double getF_fertigungs_vpe() {
         return this.f_fertigungs_vpe;
     }
@@ -411,6 +546,62 @@ public class FLRArtikelliste implements Serializable {
 
     public void setC_revision(String c_revision) {
         this.c_revision = c_revision;
+    }
+
+    public String getC_ul() {
+        return this.c_ul;
+    }
+
+    public void setC_ul(String c_ul) {
+        this.c_ul = c_ul;
+    }
+
+    public Short getB_bestellmengeneinheitinvers() {
+        return this.b_bestellmengeneinheitinvers;
+    }
+
+    public void setB_bestellmengeneinheitinvers(Short b_bestellmengeneinheitinvers) {
+        this.b_bestellmengeneinheitinvers = b_bestellmengeneinheitinvers;
+    }
+
+    public Short getB_meldepflichtig() {
+        return this.b_meldepflichtig;
+    }
+
+    public void setB_meldepflichtig(Short b_meldepflichtig) {
+        this.b_meldepflichtig = b_meldepflichtig;
+    }
+
+    public Short getB_bewilligungspflichtig() {
+        return this.b_bewilligungspflichtig;
+    }
+
+    public void setB_bewilligungspflichtig(Short b_bewilligungspflichtig) {
+        this.b_bewilligungspflichtig = b_bewilligungspflichtig;
+    }
+
+    public Integer getShopgruppe_i_id() {
+        return this.shopgruppe_i_id;
+    }
+
+    public void setShopgruppe_i_id(Integer shopgruppe_i_id) {
+        this.shopgruppe_i_id = shopgruppe_i_id;
+    }
+
+    public Short getB_nurzurinfo() {
+        return this.b_nurzurinfo;
+    }
+
+    public void setB_nurzurinfo(Short b_nurzurinfo) {
+        this.b_nurzurinfo = b_nurzurinfo;
+    }
+
+    public com.lp.server.artikel.fastlanereader.generated.FLRMaterial getFlrmaterial() {
+        return this.flrmaterial;
+    }
+
+    public void setFlrmaterial(com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial) {
+        this.flrmaterial = flrmaterial;
     }
 
     public com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe getFlrartikelgruppe() {
@@ -445,6 +636,22 @@ public class FLRArtikelliste implements Serializable {
         this.flrgeometrie = flrgeometrie;
     }
 
+    public FLRMwstsatzbez getFlrmwstatzbez() {
+        return this.flrmwstatzbez;
+    }
+
+    public void setFlrmwstatzbez(FLRMwstsatzbez flrmwstatzbez) {
+        this.flrmwstatzbez = flrmwstatzbez;
+    }
+
+    public FLRPersonal getFlrpersonal_freigabe() {
+        return this.flrpersonal_freigabe;
+    }
+
+    public void setFlrpersonal_freigabe(FLRPersonal flrpersonal_freigabe) {
+        this.flrpersonal_freigabe = flrpersonal_freigabe;
+    }
+
     public com.lp.server.artikel.fastlanereader.generated.FLRVorzug getFlrvorzug() {
         return this.flrvorzug;
     }
@@ -453,12 +660,28 @@ public class FLRArtikelliste implements Serializable {
         this.flrvorzug = flrvorzug;
     }
 
+    public com.lp.server.artikel.fastlanereader.generated.FLRHersteller getFlrhersteller() {
+        return this.flrhersteller;
+    }
+
+    public void setFlrhersteller(com.lp.server.artikel.fastlanereader.generated.FLRHersteller flrhersteller) {
+        this.flrhersteller = flrhersteller;
+    }
+
     public Set getArtikelsperreset() {
         return this.artikelsperreset;
     }
 
     public void setArtikelsperreset(Set artikelsperreset) {
         this.artikelsperreset = artikelsperreset;
+    }
+
+    public Set getErsatztypenset() {
+        return this.ersatztypenset;
+    }
+
+    public void setErsatztypenset(Set ersatztypenset) {
+        this.ersatztypenset = ersatztypenset;
     }
 
     public Set getArtikellieferantset() {
@@ -493,6 +716,14 @@ public class FLRArtikelliste implements Serializable {
         this.stuecklisten = stuecklisten;
     }
 
+    public Set getStuecklisten_mandantenunabhaengig() {
+        return this.stuecklisten_mandantenunabhaengig;
+    }
+
+    public void setStuecklisten_mandantenunabhaengig(Set stuecklisten_mandantenunabhaengig) {
+        this.stuecklisten_mandantenunabhaengig = stuecklisten_mandantenunabhaengig;
+    }
+
     public Set getArtikellagerplatzset() {
         return this.artikellagerplatzset;
     }
@@ -517,16 +748,15 @@ public class FLRArtikelliste implements Serializable {
         this.kundesokoset2 = kundesokoset2;
     }
 
-    
-    public Integer getShopgruppe_i_id() {
-		return shopgruppe_i_id;
-	}
+    public Set getArtikelshopgruppeset() {
+        return this.artikelshopgruppeset;
+    }
 
-	public void setShopgruppe_i_id(Integer shopgruppe_i_id) {
-		this.shopgruppe_i_id = shopgruppe_i_id;
-	}
+    public void setArtikelshopgruppeset(Set artikelshopgruppeset) {
+        this.artikelshopgruppeset = artikelshopgruppeset;
+    }
 
-	public String toString() {
+    public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();

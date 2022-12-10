@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.angebotstkl.fastlanereader;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -42,7 +43,6 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl;
 import com.lp.server.angebotstkl.service.AgstklDto;
 import com.lp.server.angebotstkl.service.AngebotstklFac;
 import com.lp.server.partner.service.KundeDto;
@@ -50,13 +50,13 @@ import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
-import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeAgStueckliste;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.FlrFirmaAnsprechpartnerFilterBuilder;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
@@ -65,11 +65,12 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Angebotsstuecklisten implementiert.
- * Pro UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Angebotsstuecklisten
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -92,7 +93,25 @@ public class AgstklHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	public static final String FLR_AGSTKL = "agstkl.";
 
+	private class AgstklKundeAnsprechpartnerFilterBuilder extends FlrFirmaAnsprechpartnerFilterBuilder {
+		
+		public AgstklKundeAnsprechpartnerFilterBuilder(boolean bSuchenInklusiveKBez) {
+			super(bSuchenInklusiveKBez);
+		}
+
+		@Override
+		public String getFlrPartner() {
+			return FLR_AGSTKL + AngebotstklFac.FLR_AGSTKL_FLRKUNDE + "." + LieferantFac.FLR_PARTNER;
+		}
+
+		@Override
+		public String getFlrPropertyAnsprechpartnerIId() {
+			return FLR_AGSTKL + "ansprechpartner_i_id_kunde";
+		}
+	}
+	
 	/**
 	 * The information needed for the kundes table.
 	 */
@@ -119,26 +138,23 @@ public class AgstklHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
-				FLRAgstkl stueckliste = (FLRAgstkl) ((Object[]) resultListIterator
-						.next())[0];
-				rows[row][col++] = stueckliste.getI_id();
-				rows[row][col++] = stueckliste.getC_nr();
-				rows[row][col++] = stueckliste.getFlrkunde() == null ? null
-						: stueckliste.getFlrkunde().getFlrpartner()
-								.getC_name1nachnamefirmazeile1();
+				Object[] agstkl = (Object[]) resultListIterator.next();
+				rows[row][col++] = agstkl[0];
+				rows[row][col++] = agstkl[1];
+				rows[row][col++] = agstkl[2];
 
-				FLRLandplzort anschrift = stueckliste.getFlrkunde()
-						.getFlrpartner().getFlrlandplzort();
-				if (anschrift != null) {
-					rows[row][col++] = anschrift.getFlrland().getC_lkz() + "-"
-							+ anschrift.getC_plz() + " "
-							+ anschrift.getFlrort().getC_name();
-				} else {
-					rows[row][col++] = "";
+				if (agstkl[5] != null) {
+					rows[row][col++] = agstkl[5]+"-"+agstkl[6]+" "+agstkl[7];
+				}else {
+					rows[row][col++] = null;
 				}
 
-				rows[row][col++] = stueckliste.getC_bez();
-				rows[row++][col++] = stueckliste.getT_belegdatum();
+				rows[row][col++] = agstkl[3];
+				
+				rows[row][col++] = agstkl[9];
+				
+				rows[row][col++] = agstkl[4];
+				rows[row++][col++] =new Boolean(Helper.short2boolean((Short)agstkl[8]));
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -161,7 +177,11 @@ public class AgstklHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
+			String queryString = " SELECT  count( distinct agstkl.i_id) from FLRAgstkl agstkl "
+					+ " left join agstkl.flrkunde.flrpartner.flrlandplzort as flrlandplzort "
+					+ " left join agstkl.flrkunde.flrpartner.flrlandplzort.flrort as flrort "
+					+ " left outer join agstkl.angebotspositionen as angebotspositionen "
+					+ " left join agstkl.flrkunde.flrpartner.flrlandplzort.flrland as flrland "
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -217,25 +237,45 @@ public class AgstklHandler extends UseCaseHandler {
 								sValue = super.buildWhereBelegnummer(
 										filterKriterien[i], true);
 							}
-							where.append(" " + ""
-									+ filterKriterien[i].kritName);
+							where.append(" " + "" + filterKriterien[i].kritName);
 							where.append(" " + filterKriterien[i].operator);
 							where.append(" " + sValue);
 						} catch (Throwable ex) {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
 									new Exception(ex));
 						}
-					} else if (filterKriterien[i].kritName.equals("angebotspositionen.flrangebot.c_nr")) {
+					} else if (filterKriterien[i].kritName
+							.equals("angebotspositionen.flrangebot.c_nr")) {
 
 						whereAngebot(where, filterKriterien[i]);
 
-					}  else {
+					} else if (filterKriterien[i].kritName
+							.equals("agstkl.c_bez")) {
+
+						
+						where.append(" (");
+						where.append(buildWhereClauseExtendedSearch(Arrays
+								.asList(filterKriterien[i].value.split(" ")),
+								filterKriterien[i].kritName, filterKriterien[i]
+										.isBIgnoreCase()));
+						where.append(" OR ");
+						where.append(
+								buildWhereClauseExtendedSearch(Arrays.asList(filterKriterien[i].value.split(" ")),
+										"agstkl.c_zeichnungsnummer", filterKriterien[i].isBIgnoreCase()));
+						where.append(") ");
+						
+						
+						
+					} else if (isKundeFilter(filterKriterien[i])) {
+						AgstklKundeAnsprechpartnerFilterBuilder filterBuilder = new AgstklKundeAnsprechpartnerFilterBuilder(
+								getParameterFac().getSuchenInklusiveKBez(theClientDto.getMandant()));
+						filterBuilder.buildFirmaAnsprechpartnerFilter(filterKriterien[i], where);
+					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
 							where.append(" upper(" + ""
 									+ filterKriterien[i].kritName + ")");
 						} else {
-							where.append(" " + ""
-									+ filterKriterien[i].kritName);
+							where.append(" " + "" + filterKriterien[i].kritName);
 						}
 
 						where.append(" " + filterKriterien[i].operator);
@@ -255,6 +295,14 @@ public class AgstklHandler extends UseCaseHandler {
 		}
 
 		return where.toString();
+	}
+
+	private boolean isKundeFilter(FilterKriterium filterKriterium) {
+		return filterKriterium.kritName.equals(FLR_AGSTKL + AngebotstklFac.FLR_AGSTKL_FLRKUNDE
+				+ "."
+				+ KundeFac.FLR_PARTNER 
+				+ "."
+				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
 	}
 
 	/**
@@ -315,11 +363,12 @@ public class AgstklHandler extends UseCaseHandler {
 	 * 
 	 * @return the from clause.
 	 */
+
 	private String getFromClause() {
-		return "from FLRAgstkl agstkl "
+		return "SELECT distinct agstkl.i_id, agstkl.c_nr, agstkl.flrkunde.flrpartner.c_name1nachnamefirmazeile1, agstkl.c_bez, agstkl.t_belegdatum, agstkl.flrkunde.flrpartner.flrlandplzort.flrland.c_lkz, agstkl.flrkunde.flrpartner.flrlandplzort.c_plz, agstkl.flrkunde.flrpartner.flrlandplzort.flrort.c_name, agstkl.b_vorlage, agstkl.c_zeichnungsnummer from FLRAgstkl agstkl "
 				+ " left join agstkl.flrkunde.flrpartner.flrlandplzort as flrlandplzort "
 				+ " left join agstkl.flrkunde.flrpartner.flrlandplzort.flrort as flrort "
-				+ " left join agstkl.angebotspositionen as angebotspositionen "
+				+ " left outer join agstkl.angebotspositionen as angebotspositionen "
 				+ " left join agstkl.flrkunde.flrpartner.flrlandplzort.flrland as flrland ";
 	}
 
@@ -341,7 +390,7 @@ public class AgstklHandler extends UseCaseHandler {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, ex);
 		}
 	}
-	
+
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
 			Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
@@ -355,8 +404,8 @@ public class AgstklHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select agstkl.i_id from FLRAgstkl agstkl left join agstkl.angebotspositionen as angebotspositionen  "
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = getFromClause() + buildWhereClause()
+						+ buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {
@@ -389,12 +438,14 @@ public class AgstklHandler extends UseCaseHandler {
 
 		return result;
 	}
+	
+	
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, Date.class },
+							String.class, String.class,String.class, Date.class, Boolean.class },
 					new String[] {
 							"Id",
 							getTextRespectUISpr("bes.belegartnummer",
@@ -406,10 +457,16 @@ public class AgstklHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.ort",
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.projekt",
+							getTextRespectUISpr("agstkl.projekt.bezeichnung",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("agstkl.projekt.zeichnungsnummer",
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("lp.datum",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("as.vorlage",
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()) },
 					new int[] {
@@ -418,19 +475,22 @@ public class AgstklHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_S},
 
 					new String[] {
 							"i_id",
 							"agstkl.c_nr",
-							"agstkl."+AngebotstklFac.FLR_AGSTKL_FLRKUNDE
+							"agstkl."
+									+ AngebotstklFac.FLR_AGSTKL_FLRKUNDE
 									+ "."
 									+ KundeFac.FLR_PARTNER
 									+ "."
 									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
 
-									"agstkl."+AngebotstklFac.FLR_AGSTKL_FLRKUNDE + "."
-									+ LieferantFac.FLR_PARTNER + "."
+							"agstkl." + AngebotstklFac.FLR_AGSTKL_FLRKUNDE
+									+ "." + LieferantFac.FLR_PARTNER + "."
 									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
 									+ "." + SystemFac.FLR_LP_FLRLAND + "."
 									+ SystemFac.FLR_LP_LANDLKZ + ", agstkl."
@@ -439,7 +499,10 @@ public class AgstklHandler extends UseCaseHandler {
 									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
 									+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
 
-									"agstkl.c_bez", "agstkl."+AngebotstklFac.FLR_AGSTKL_T_BELEGDATUM }));
+							"agstkl.c_bez",
+							"agstkl.c_zeichnungsnummer",
+							"agstkl." + AngebotstklFac.FLR_AGSTKL_T_BELEGDATUM ,
+							"agstkl.b_vorlage" }));
 		}
 
 		return super.getTableInfo();
@@ -460,11 +523,11 @@ public class AgstklHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (agstklDto != null) {
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_AGSTUECKLISTE.trim() + "/"
-//					+ LocaleFac.BELEGART_AGSTUECKLISTE.trim() + "/"
-//					+ agstklDto.getCNr().replace("/", ".");
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_AGSTUECKLISTE.trim() + "/"
+			// + LocaleFac.BELEGART_AGSTUECKLISTE.trim() + "/"
+			// + agstklDto.getCNr().replace("/", ".");
 			DocPath docPath = new DocPath(new DocNodeAgStueckliste(agstklDto));
 			Integer iPartnerIId = null;
 			if (partnerDto != null) {

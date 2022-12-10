@@ -53,6 +53,8 @@ import com.lp.server.reklamation.ejb.Aufnahmeart;
 import com.lp.server.reklamation.ejb.Aufnahmeartspr;
 import com.lp.server.reklamation.ejb.AufnahmeartsprPK;
 import com.lp.server.reklamation.ejb.Behandlung;
+import com.lp.server.reklamation.ejb.Behandlungspr;
+import com.lp.server.reklamation.ejb.BehandlungsprPK;
 import com.lp.server.reklamation.ejb.Fehler;
 import com.lp.server.reklamation.ejb.Fehlerangabe;
 import com.lp.server.reklamation.ejb.Fehlerangabespr;
@@ -66,6 +68,8 @@ import com.lp.server.reklamation.ejb.Reklamation;
 import com.lp.server.reklamation.ejb.Reklamationart;
 import com.lp.server.reklamation.ejb.Reklamationbild;
 import com.lp.server.reklamation.ejb.Schwere;
+import com.lp.server.reklamation.ejb.Schwerespr;
+import com.lp.server.reklamation.ejb.SchweresprPK;
 import com.lp.server.reklamation.ejb.Termintreue;
 import com.lp.server.reklamation.ejb.Wirksamkeit;
 import com.lp.server.reklamation.ejb.Wirksamkeitspr;
@@ -76,6 +80,8 @@ import com.lp.server.reklamation.service.AufnahmeartsprDto;
 import com.lp.server.reklamation.service.AufnahmeartsprDtoAssembler;
 import com.lp.server.reklamation.service.BehandlungDto;
 import com.lp.server.reklamation.service.BehandlungDtoAssembler;
+import com.lp.server.reklamation.service.BehandlungsprDto;
+import com.lp.server.reklamation.service.BehandlungsprDtoAssembler;
 import com.lp.server.reklamation.service.FehlerDto;
 import com.lp.server.reklamation.service.FehlerDtoAssembler;
 import com.lp.server.reklamation.service.FehlerangabeDto;
@@ -97,6 +103,8 @@ import com.lp.server.reklamation.service.ReklamationbildDto;
 import com.lp.server.reklamation.service.ReklamationbildDtoAssembler;
 import com.lp.server.reklamation.service.SchwereDto;
 import com.lp.server.reklamation.service.SchwereDtoAssembler;
+import com.lp.server.reklamation.service.SchweresprDto;
+import com.lp.server.reklamation.service.SchweresprDtoAssembler;
 import com.lp.server.reklamation.service.TermintreueDto;
 import com.lp.server.reklamation.service.TermintreueDtoAssembler;
 import com.lp.server.reklamation.service.WirksamkeitDto;
@@ -567,12 +575,11 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		}
 		return reklamation;
 	}
-	
 
-	public ReklamationDto reklamationFindByPrimaryKeyOhneExc(Integer iId){
-		
+	public ReklamationDto reklamationFindByPrimaryKeyOhneExc(Integer iId) {
+
 		Reklamation reklamation = em.find(Reklamation.class, iId);
-		return reklamation==null?null:assembleReklamationDto(reklamation);
+		return reklamation == null ? null : assembleReklamationDto(reklamation);
 	}
 
 	public ReklamationDto[] reklamationFindByKundeIIdMandantCNr(
@@ -735,10 +742,7 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		reklamation.setAnsprechpartnerIIdLieferant(reklamationDto
 				.getAnsprechpartnerIIdLieferant());
 		reklamation.setCProjekt(reklamationDto.getCProjekt());
-		reklamation.setCTelansprechpartner(reklamationDto
-				.getCTelansprechpartner());
-		reklamation.setCTelansprechpartnerLieferant(reklamationDto
-				.getCTelansprechpartnerLieferant());
+
 		reklamation.setXAnalyse(reklamationDto.getXAnalyse());
 		reklamation.setXKommentar(reklamationDto.getXKommentar());
 		reklamation.setFehlerIId(reklamationDto.getFehlerIId());
@@ -810,6 +814,12 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		reklamation.setCSeriennrchargennr(reklamationDto
 				.getCSeriennrchargennr());
 		reklamation.setIKundeunterart(reklamationDto.getIKundeunterart());
+		reklamation.setProjektIId(reklamationDto.getProjektIId());
+		reklamation.setCLflsnr(reklamationDto.getCLflsnr());
+		reklamation.setCLfreklanr(reklamationDto.getCLfreklanr());
+		reklamation.setTWareErhalten(reklamationDto.getTWareErhalten());
+		reklamation.setCBestellnummer(reklamationDto.getCBestellnummer());
+		reklamation.setCWareneingang(reklamationDto.getCWareneingang());
 
 		em.merge(reklamation);
 		em.flush();
@@ -1748,7 +1758,9 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 					reklamationbildDto.getIId(),
 					reklamationbildDto.getReklamationIId(),
 					reklamationbildDto.getISort(),
-					reklamationbildDto.getOBild());
+					reklamationbildDto.getOBild(),
+					reklamationbildDto.getCDateiname(),
+					reklamationbildDto.getDatenformatCNr());
 			em.persist(reklamationbild);
 			em.flush();
 			setReklamationbildFromReklamationbildDto(reklamationbild,
@@ -1847,6 +1859,9 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		reklamationbild.setOBild(reklamationbildDto.getOBild());
 		reklamationbild.setReklamationIId(reklamationbildDto
 				.getReklamationIId());
+		reklamationbild.setCDateiname(reklamationbildDto.getCDateiname());
+		reklamationbild.setDatenformatCNr(reklamationbildDto
+				.getDatenformatCNr());
 		em.merge(reklamationbild);
 		em.flush();
 	}
@@ -2025,9 +2040,9 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 	}
 
 	/**
-	 * Es wird nur X_KOMMENTAR wird aktualisiert 
+	 * Es wird nur X_KOMMENTAR wird aktualisiert
 	 * 
-	 * @param reklamationDto 
+	 * @param reklamationDto
 	 * @param theClientDto
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
@@ -2109,13 +2124,13 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		return (MassnahmeDto[]) list.toArray(returnArray);
 	}
 
-	public Integer createSchwere(SchwereDto schwereDto) throws EJBExceptionLP {
+	public Integer createSchwere(SchwereDto schwereDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (schwereDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("schwereDto == null"));
 		}
-		if (schwereDto.getCNr() == null || schwereDto.getCBez() == null
-				|| schwereDto.getIPunkte() == null) {
+		if (schwereDto.getCNr() == null || schwereDto.getIPunkte() == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception(
@@ -2143,11 +2158,19 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 			schwereDto.setIId(pk);
 
 			Schwere schwere = new Schwere(schwereDto.getIId(),
-					schwereDto.getCNr(), schwereDto.getCBez(),
-					schwereDto.getIPunkte());
+					schwereDto.getCNr(), schwereDto.getIPunkte());
 			em.persist(schwere);
 			em.flush();
 			setSchwereFromSchwereDto(schwere, schwereDto);
+
+			if (schwereDto.getSchweresprDto() != null) {
+				Schwerespr spr = new Schwerespr(
+						theClientDto.getLocUiAsString(), schwereDto.getIId());
+				spr.setCBez(schwereDto.getSchweresprDto().getCBez());
+				em.persist(spr);
+				em.flush();
+
+			}
 
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
@@ -2167,6 +2190,21 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		}
 		// try {
 		Integer iId = schwereDto.getIId();
+
+		try {
+			Query query = em.createNamedQuery("SchweresprsprfindBySchwereIId");
+			query.setParameter(1, iId);
+			Collection<?> allspr = query.getResultList();
+			Iterator<?> iter = allspr.iterator();
+			while (iter.hasNext()) {
+				Schwerespr sprTemp = (Schwerespr) iter.next();
+				em.remove(sprTemp);
+			}
+			em.flush();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+
 		Schwere toRemove = em.find(Schwere.class, iId);
 		if (toRemove == null) {
 			throw new EJBExceptionLP(
@@ -2186,13 +2224,13 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 
 	}
 
-	public void updateSchwere(SchwereDto schwereDto) throws EJBExceptionLP {
+	public void updateSchwere(SchwereDto schwereDto, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		if (schwereDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("schwereDto == null"));
 		}
 		if (schwereDto.getIId() == null || schwereDto.getCNr() == null
-				|| schwereDto.getCBez() == null
 				|| schwereDto.getIPunkte() == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -2225,16 +2263,29 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		}
 
 		setSchwereFromSchwereDto(schwere, schwereDto);
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
+		if (schwereDto.getSchweresprDto() != null) {
+
+			Schwerespr spr = em.find(Schwerespr.class, new SchweresprPK(
+					theClientDto.getLocUiAsString(), iId));
+			if (spr == null) {
+				try {
+					spr = new Schwerespr(theClientDto.getLocUiAsString(), iId);
+
+				} catch (EntityExistsException ex7) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_BEIM_DRUCKEN, ex7);
+
+				}
+			}
+			spr.setCBez(schwereDto.getSchweresprDto().getCBez());
+			em.persist(spr);
+			em.flush();
+		}
 
 	}
 
-	public SchwereDto schwereFindByPrimaryKey(Integer iId)
-			throws EJBExceptionLP {
+	public SchwereDto schwereFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("iId == null"));
@@ -2246,18 +2297,26 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		return assembleSchwereDto(schwere);
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.
-		// FEHLER_BEI_FINDBYPRIMARYKEY,
-		// e);
-		// }
+		SchwereDto schwereDto = assembleSchwereDto(schwere);
+
+		Schwerespr spr = em.find(Schwerespr.class, new SchweresprPK(
+				theClientDto.getLocUiAsString(), iId));
+
+		if (spr == null) {
+			spr = em.find(Schwerespr.class,
+					new SchweresprPK(theClientDto.getLocKonzernAsString(), iId));
+
+		}
+		SchweresprDto sprDto = null;
+		if (spr != null) {
+			sprDto = SchweresprDtoAssembler.createDto(spr);
+		}
+		schwereDto.setSchweresprDto(sprDto);
+		return schwereDto;
 	}
 
 	private void setSchwereFromSchwereDto(Schwere schwere, SchwereDto schwereDto) {
 		schwere.setCNr(schwereDto.getCNr());
-		schwere.setCBez(schwereDto.getCBez());
 		schwere.setIPunkte(schwereDto.getIPunkte());
 		em.merge(schwere);
 		em.flush();
@@ -2298,7 +2357,7 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		// throw new EJBException(e.getMessage());
 		// }
 	}
-	
+
 	public ReklamationDto reklamationFindByCNrMandantCNrOhneExc(String cNr,
 			String mandantCNr) {
 		// try {
@@ -2308,7 +2367,7 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		try {
 			Reklamation reklamation = (Reklamation) query.getSingleResult();
 			return assembleReklamationDto(reklamation);
-		} catch(NoResultException ex) {
+		} catch (NoResultException ex) {
 			return null;
 		}
 	}
@@ -2365,17 +2424,18 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 
 	}
 
-	public Integer createBehandlung(BehandlungDto beurteilungDto) {
+	public Integer createBehandlung(BehandlungDto beurteilungDto,
+			TheClientDto theClientDto) {
 		if (beurteilungDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("beurteilungDto == null"));
 		}
-		if (beurteilungDto.getCNr() == null || beurteilungDto.getCBez() == null
+		if (beurteilungDto.getCNr() == null 
 				|| beurteilungDto.getIPunkte() == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
 					new Exception(
-							"beurteilungDto.getCNr() == null || beurteilungDto.getCBez() == null || beurteilungDto.getIPunkte() == null"));
+							"beurteilungDto.getCNr() == null || beurteilungDto.getIPunkte() == null"));
 		}
 		try {
 			Query query = em.createNamedQuery("BehandlungfindByCNr");
@@ -2399,11 +2459,21 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 			beurteilungDto.setIId(pk);
 
 			Behandlung beurteilung = new Behandlung(beurteilungDto.getIId(),
-					beurteilungDto.getCNr(), beurteilungDto.getCBez(),
+					beurteilungDto.getCNr(), 
 					beurteilungDto.getIPunkte());
 			em.persist(beurteilung);
 			em.flush();
 			setBeurteilungFromBeurteilungDto(beurteilung, beurteilungDto);
+
+			if (beurteilungDto.getBehandlungsprDto() != null) {
+				Behandlungspr spr = new Behandlungspr(
+						theClientDto.getLocUiAsString(),
+						beurteilungDto.getIId());
+				spr.setCBez(beurteilungDto.getBehandlungsprDto().getCBez());
+				em.persist(spr);
+				em.flush();
+
+			}
 
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
@@ -2423,6 +2493,22 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		}
 		// try {
 		Integer iId = beurteilungDto.getIId();
+
+		try {
+			Query query = em
+					.createNamedQuery("BehandlungsprfindByBehandlungIId");
+			query.setParameter(1, iId);
+			Collection<?> allspr = query.getResultList();
+			Iterator<?> iter = allspr.iterator();
+			while (iter.hasNext()) {
+				Behandlungspr sprTemp = (Behandlungspr) iter.next();
+				em.remove(sprTemp);
+			}
+			em.flush();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+
 		Behandlung toRemove = em.find(Behandlung.class, iId);
 		if (toRemove == null) {
 			throw new EJBExceptionLP(
@@ -2442,13 +2528,14 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 
 	}
 
-	public void updateBehandlung(BehandlungDto beurteilungDto) {
+	public void updateBehandlung(BehandlungDto beurteilungDto,
+			TheClientDto theClientDto) {
 		if (beurteilungDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("beurteilungDto == null"));
 		}
 		if (beurteilungDto.getIId() == null || beurteilungDto.getCNr() == null
-				|| beurteilungDto.getCBez() == null
+				
 				|| beurteilungDto.getIPunkte() == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -2482,15 +2569,30 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 		}
 
 		setBeurteilungFromBeurteilungDto(beurteilung, beurteilungDto);
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
+		if (beurteilungDto.getBehandlungsprDto() != null) {
+
+			Behandlungspr spr = em.find(Behandlungspr.class, new BehandlungsprPK(
+					theClientDto.getLocUiAsString(), iId));
+			if (spr == null) {
+				try {
+					spr = new Behandlungspr(theClientDto.getLocUiAsString(),
+							iId);
+
+				} catch (EntityExistsException ex7) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_BEIM_DRUCKEN, ex7);
+
+				}
+			}
+			spr.setCBez(beurteilungDto.getBehandlungsprDto().getCBez());
+			em.persist(spr);
+			em.flush();
+		}
 
 	}
 
-	public BehandlungDto behandlungFindByPrimaryKey(Integer iId) {
+	public BehandlungDto behandlungFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto) {
 		if (iId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("iId == null"));
@@ -2502,19 +2604,29 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		return assembleBehandlungDto(beurteilung);
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.
-		// FEHLER_BEI_FINDBYPRIMARYKEY,
-		// e);
-		// }
+		BehandlungDto behandlungDto = assembleBehandlungDto(beurteilung);
+
+		Behandlungspr spr = em.find(Behandlungspr.class, new BehandlungsprPK(
+				theClientDto.getLocUiAsString(), iId));
+
+		if (spr == null) {
+			spr = em.find(Behandlungspr.class,
+					new BehandlungsprPK(theClientDto.getLocKonzernAsString(),
+							iId));
+
+		}
+		BehandlungsprDto sprDto = null;
+		if (spr != null) {
+			sprDto = BehandlungsprDtoAssembler.createDto(spr);
+		}
+		behandlungDto.setBehandlungsprDto(sprDto);
+		return behandlungDto;
+
 	}
 
 	private void setBeurteilungFromBeurteilungDto(Behandlung beurteilung,
 			BehandlungDto beurteilungDto) {
 		beurteilung.setCNr(beurteilungDto.getCNr());
-		beurteilung.setCBez(beurteilungDto.getCBez());
 		beurteilung.setIPunkte(beurteilungDto.getIPunkte());
 		em.merge(beurteilung);
 		em.flush();
@@ -2724,18 +2836,69 @@ public class ReklamationFacBean extends Facade implements ReklamationFac {
 			querynext.setParameter(1, reklamationIId);
 
 			Integer i = (Integer) querynext.getSingleResult();
-			if (i != null) {
-				i = 1 + 1;
-			} else {
-				i = 1;
-			}
-			return i;
+			return i != null ? i + 1 : 1;
 		} catch (NoResultException ex) {
 			return new Integer(1);
 		} catch (NonUniqueResultException ex1) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
 					ex1);
 		}
+
+	}
+
+	public Integer erzeugeReklamationAusReklamation(Integer iIdReklamationI,
+			boolean bMitAnalyse, TheClientDto theClientDto) {
+
+		ReklamationDto reklamationBasisDto = reklamationFindByPrimaryKey(iIdReklamationI);
+		reklamationBasisDto.setIId(null);
+		reklamationBasisDto.setCNr(null);
+		reklamationBasisDto.setStatusCNr(LocaleFac.STATUS_ANGELEGT);
+		// /SP5357
+		reklamationBasisDto.setTBelegdatum(Helper.cutTimestamp(new Timestamp(
+				System.currentTimeMillis())));
+		reklamationBasisDto.setTErledigt(null);
+		reklamationBasisDto.setBestellungIId(null);
+		reklamationBasisDto.setMassnahmeIIdKurz(null);
+		reklamationBasisDto.setMassnahmeIIdMittel(null);
+		reklamationBasisDto.setMassnahmeIIdLang(null);
+		reklamationBasisDto.setPersonalIIdEingefuehrtkurz(null);
+		reklamationBasisDto.setPersonalIIdEingefuehrtmittel(null);
+		reklamationBasisDto.setPersonalIIdEingefuehrtlang(null);
+		reklamationBasisDto.setXMassnahmeKurz(null);
+		reklamationBasisDto.setXMassnahmeMittel(null);
+		reklamationBasisDto.setXMassnahmeLang(null);
+		reklamationBasisDto.setCSeriennrchargennr(null);
+		reklamationBasisDto.setBehandlungIId(null);
+		
+		if (bMitAnalyse == false) {
+			reklamationBasisDto.setXAnalyse(null);
+			reklamationBasisDto.setBBerechtigt(Helper.boolean2Short(false));
+			reklamationBasisDto.setSchwereIId(null);
+			reklamationBasisDto.setFehlerIId(null);
+			reklamationBasisDto.setPersonalIIdRuecksprache(null);
+			reklamationBasisDto.setTRuecksprache(null);
+			reklamationBasisDto.setNKostenmaterial(null);
+			reklamationBasisDto.setNKostenarbeitszeit(null);
+			
+
+		}
+
+		Integer reklamationIIdKopie = createReklamation(reklamationBasisDto,
+				theClientDto);
+
+		// lt. CU auch Bilder kopieren
+
+		ReklamationbildDto[] bilderDto = reklamationbildFindByReklamationIId(iIdReklamationI);
+
+		for (int i = 0; i < bilderDto.length; i++) {
+
+			ReklamationbildDto bDto = bilderDto[i];
+			bDto.setIId(null);
+			bDto.setReklamationIId(reklamationIIdKopie);
+			createReklamationbild(bDto);
+		}
+
+		return reklamationIIdKopie;
 
 	}
 

@@ -37,6 +37,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 
+import com.lp.server.system.fastlanereader.generated.FLRPositionsartspr;
+
 /** @author Hibernate CodeGenerator */
 public class FLRGutschriftpositionsart implements Serializable {
 	
@@ -52,11 +54,11 @@ public class FLRGutschriftpositionsart implements Serializable {
 	private Integer i_sort;
 
 	/** persistent field */
-	private Set<?> gutschriftpositionsart_positionsart_set;
+	private Set<FLRPositionsartspr> gutschriftpositionsart_positionsart_set;
 
 	/** full constructor */
 	public FLRGutschriftpositionsart(String positionsart_c_nr, Integer i_sort,
-			Set<?> gutschriftpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> gutschriftpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.i_sort = i_sort;
 		this.gutschriftpositionsart_positionsart_set = gutschriftpositionsart_positionsart_set;
@@ -68,7 +70,7 @@ public class FLRGutschriftpositionsart implements Serializable {
 
 	/** minimal constructor */
 	public FLRGutschriftpositionsart(String positionsart_c_nr,
-			Set<?> gutschriftpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> gutschriftpositionsart_positionsart_set) {
 		this.positionsart_c_nr = positionsart_c_nr;
 		this.gutschriftpositionsart_positionsart_set = gutschriftpositionsart_positionsart_set;
 	}
@@ -89,12 +91,12 @@ public class FLRGutschriftpositionsart implements Serializable {
 		this.i_sort = i_sort;
 	}
 
-	public Set<?> getGutschriftpositionsart_positionsart_set() {
+	public Set<FLRPositionsartspr> getGutschriftpositionsart_positionsart_set() {
 		return this.gutschriftpositionsart_positionsart_set;
 	}
 
 	public void setGutschriftpositionsart_positionsart_set(
-			Set<?> gutschriftpositionsart_positionsart_set) {
+			Set<FLRPositionsartspr> gutschriftpositionsart_positionsart_set) {
 		this.gutschriftpositionsart_positionsart_set = gutschriftpositionsart_positionsart_set;
 	}
 

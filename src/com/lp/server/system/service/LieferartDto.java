@@ -49,6 +49,7 @@ public class LieferartDto implements Serializable, DatenspracheIf {
 	private Short bFrachtkostenalserledigtverbuchen;
 	private String cVersandort;
 	private String mandantCNr;
+	private String cExtern;
 
 	public Integer getIId() {
 		return iId;
@@ -93,8 +94,7 @@ public class LieferartDto implements Serializable, DatenspracheIf {
 		return bFrachtkostenalserledigtverbuchen;
 	}
 
-	public void setBFrachtkostenalserledigtverbuchen(
-			Short bFrachtkostenalserledigtverbuchen) {
+	public void setBFrachtkostenalserledigtverbuchen(Short bFrachtkostenalserledigtverbuchen) {
 		this.bFrachtkostenalserledigtverbuchen = bFrachtkostenalserledigtverbuchen;
 	}
 
@@ -122,6 +122,26 @@ public class LieferartDto implements Serializable, DatenspracheIf {
 		this.bVersteckt = bVersteckt;
 	}
 
+	private Integer artikelIIdVersand;
+
+	public Integer getArtikelIIdVersand() {
+		return artikelIIdVersand;
+	}
+
+	public void setArtikelIIdVersand(Integer artikelIIdVersand) {
+		this.artikelIIdVersand = artikelIIdVersand;
+	}
+
+	private Integer iLieferort;
+
+	public Integer getILieferort() {
+		return iLieferort;
+	}
+
+	public void setILieferort(Integer iLieferort) {
+		this.iLieferort = iLieferort;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -137,16 +157,16 @@ public class LieferartDto implements Serializable, DatenspracheIf {
 			return false;
 		}
 		if (!(that.bFrachtkostenalserledigtverbuchen == null ? this.bFrachtkostenalserledigtverbuchen == null
-				: that.bFrachtkostenalserledigtverbuchen
-						.equals(this.bFrachtkostenalserledigtverbuchen))) {
+				: that.bFrachtkostenalserledigtverbuchen.equals(this.bFrachtkostenalserledigtverbuchen))) {
 			return false;
 		}
-		if (!(that.cVersandort == null ? this.cVersandort == null
-				: that.cVersandort.equals(this.cVersandort))) {
+		if (!(that.cVersandort == null ? this.cVersandort == null : that.cVersandort.equals(this.cVersandort))) {
 			return false;
 		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr))) {
+			return false;
+		}
+		if (!(that.cExtern == null ? this.cExtern == null : that.cExtern.equals(this.cExtern))) {
 			return false;
 		}
 
@@ -157,10 +177,10 @@ public class LieferartDto implements Serializable, DatenspracheIf {
 		int result = 17;
 		result = 37 * result + this.iId.hashCode();
 		result = 37 * result + this.cNr.hashCode();
-		result = 37 * result
-				+ this.bFrachtkostenalserledigtverbuchen.hashCode();
+		result = 37 * result + this.bFrachtkostenalserledigtverbuchen.hashCode();
 		result = 37 * result + this.cVersandort.hashCode();
 		result = 37 * result + this.mandantCNr.hashCode();
+		result = 37 * result + this.cExtern.hashCode();
 		return result;
 	}
 
@@ -172,5 +192,13 @@ public class LieferartDto implements Serializable, DatenspracheIf {
 		returnString += ", " + cVersandort;
 		returnString += ", " + mandantCNr;
 		return returnString;
+	}
+
+	public String getCExtern() {
+		return cExtern;
+	}
+
+	public void setCExtern(String cExtern) {
+		this.cExtern = cExtern;
 	}
 }

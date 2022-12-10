@@ -37,7 +37,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.rmi.RemoteException;
-import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -54,21 +54,24 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
-import com.lp.server.artikel.ejb.Artikellager;
 import com.lp.server.artikel.ejb.Artikellagerplaetze;
+import com.lp.server.artikel.ejb.LagerQuery;
 import com.lp.server.artikel.ejb.Lagerplatz;
 import com.lp.server.artikel.ejb.Paternoster;
+import com.lp.server.artikel.ejb.PaternosterQuery;
 import com.lp.server.artikel.ejb.Paternostereigenschaft;
 import com.lp.server.artikel.service.ArtikelDto;
-import com.lp.server.artikel.service.ArtikellagerDto;
-import com.lp.server.artikel.service.ArtikellagerDtoAssembler;
 import com.lp.server.artikel.service.PaternosterDto;
 import com.lp.server.artikel.service.PaternosterDtoAssembler;
 import com.lp.server.system.automatikjob.AutomatikjobBasis;
 import com.lp.server.system.automatikjob.AutomatikjobPaternoster;
 import com.lp.server.system.ejb.Automatikjobs;
+import com.lp.server.system.ejb.AutomatikjobsQuery;
+import com.lp.server.system.ejb.Automatikjobtype;
+import com.lp.server.system.ejb.AutomatikjobtypeQuery;
 import com.lp.server.system.service.AutoPaternosterFac;
-import com.lp.server.system.service.AutomatikjobtypeDto;
+import com.lp.server.system.service.AutomatikjobDto;
+import com.lp.server.system.service.AutomatikjobDtoAssembler;
 import com.lp.server.system.service.AutomatiktimerFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
@@ -84,6 +87,8 @@ public class AutoPaternosterFacBean extends Facade implements AutoPaternosterFac
 
 	@PersistenceContext
 	private EntityManager em;
+	private TheClientDto theClientDto;
+	private String lastMandantCnr;
 
 	protected final ILPLogger myLogger = LPLogService.getInstance().getLogger(
 			AutomatikjobBasis.class);
@@ -100,7 +105,6 @@ public class AutoPaternosterFacBean extends Facade implements AutoPaternosterFac
 		}
 		return allPaternoster;
 	}
-	
 	
 	public boolean isPaternosterVerfuegbar(){
 		Query query = em.createNamedQuery("PaternosterAll");
@@ -265,7 +269,6 @@ public class AutoPaternosterFacBean extends Facade implements AutoPaternosterFac
 		} catch (RemoteException e) {
 			myLogger.error(e.getMessage());
 		}
-		Date tTimeStarted = getDate();
 		//Check if Automatik is activated
 		Integer iEnabled = 0;
 		try {
@@ -274,38 +277,93 @@ public class AutoPaternosterFacBean extends Facade implements AutoPaternosterFac
 		catch (Throwable t) {
 			myLogger.error("Die Konfiguration f\u00FCr den Timer konnte nicht gefunden werden");
 		}
+		
 		if (iEnabled != 0) {
-			
-			AutomatikjobtypeDto jobtypDto = null;
-			try {
-				jobtypDto = getAutomatikjobtypeFac().automatikjobtypeFindByCJobType(
-						AutomatiktimerFac.JOBTYPE_PATERNOSTERABFRAGE_TYPE);
-			} catch (Throwable t) {
-				myLogger.error("Es konnten kein Paternoster Jobtyp gefunden werden");
-			}
-			if (jobtypDto != null) {
-				Query query = em.createNamedQuery("AutomatikjobfindByIAutomatikjobtypeIid");
-				query.setParameter(1, jobtypDto.getIId());
-				Automatikjobs job = (Automatikjobs) query.getSingleResult();
+			processJobs();
+		}
+		
+//		if (iEnabled != 0) {
+//			
+//			AutomatikjobtypeDto jobtypDto = null;
+//			try {
+//				jobtypDto = getAutomatikjobtypeFac().automatikjobtypeFindByCJobType(
+//						AutomatiktimerFac.JOBTYPE_PATERNOSTERABFRAGE_TYPE);
+//			} catch (Throwable t) {
+//				myLogger.error("Es konnten kein Paternoster Jobtyp gefunden werden");
+//			}
+//			if (jobtypDto != null) {
+//				Query query = em.createNamedQuery("AutomatikjobfindByIAutomatikjobtypeIid");
+//				query.setParameter(1, jobtypDto.getIId());
+//				Automatikjobs job = (Automatikjobs) query.getSingleResult();
+//	
+//				if (Helper.short2boolean(job.getBActive().shortValue())) {
+//					myLogger.info("Automatik start Paternoster");
+//					AutomatikjobBasis automatikjobBasis = new AutomatikjobPaternoster();
+//					if (automatikjobBasis.performJob(null))
+//						myLogger.error("Fehler beim Paternoster Job");
+//					
+//					myLogger.info("Automatik ende Paternoster");
+//					//sendMailToUser();
+//				} else {
+//					job.setDLastperformed(Helper.cutTimestamp(tTimeStarted));
+//					job.setDNextperform(Helper.cutTimestamp(new Timestamp(job.
+//							getDLastperformed().getTime() +
+//							(job.getIIntervall() * 60 * 1000))));
+//				}
+//				em.merge(job);
+//				em.flush();
+//			}
+//			
+//		}
+	}
 	
-				if (Helper.short2boolean(job.getBActive().shortValue())) {
-					myLogger.info("Automatik start Paternoster");
-					AutomatikjobBasis automatikjobBasis = new AutomatikjobPaternoster();
-					if (automatikjobBasis.performJob(null))
-						myLogger.error("Fehler beim Paternoster Job");
-					
-					myLogger.info("Automatik ende Paternoster");
-					//sendMailToUser();
-				} else {
-					job.setDLastperformed(tTimeStarted);
-					job.setDNextperform(new Date(job.
-							getDLastperformed().getTime() +
-							(job.getIIntervall() * 60 * 1000)));
+	private void processJobs() {
+		lastMandantCnr = null;
+		AutomatikjobDto[] jobs = listPaternosterJobs();
+		for (AutomatikjobDto jobDto : jobs) {
+			Timestamp tTimeStarted = getTimestamp();
+			if (Helper.isTrue(jobDto.getBActive().shortValue())) {
+				myLogger.info("Automatik start Paternoster");
+				if (!changeToMandant(jobDto.getCMandantCNr())) {
+					continue;
 				}
-				em.merge(job);
-				em.flush();
+				
+				AutomatikjobBasis automatikjobBasis = new AutomatikjobPaternoster();
+				if (automatikjobBasis.performJob(theClientDto)) {
+					myLogger.error("Fehler beim Paternoster Job");
+				} else {
+					jobDto.setDLastperformed(Helper.cutTimestamp(tTimeStarted));
+					updateTimestamps(jobDto);
+				}
+				myLogger.info("Automatik ende Paternoster");
 			}
-			
+		}
+	}
+
+	private void updateTimestamps(AutomatikjobDto jobDto) {
+		jobDto.setDNextperform(Helper.cutTimestamp(new Timestamp(jobDto.
+				getDLastperformed().getTime() +
+				(jobDto.getIIntervall() * 60 * 1000))));
+		try {
+			getAutomatikjobFac().updateAutomatikjob(jobDto);
+		} catch (RemoteException ex1) {
+			myLogger.error("Fehler beim Beenden des Jobs", ex1);
+		}
+	}
+
+	private boolean changeToMandant(String newMandantCNr) {
+		if (newMandantCNr.equals(lastMandantCnr)) {
+			return true;
+		}
+		
+		try {
+			theClientDto = getLogonFac().logonIntern(
+					getMandantFac().getLocaleDesHauptmandanten(), newMandantCNr);
+			lastMandantCnr = newMandantCNr;
+			return true;
+		} catch (Throwable t) {
+			myLogger.error("Der interne Logon in Mandant " + newMandantCNr + " schlug fehl.", t);
+			return false;
 		}
 	}
 
@@ -323,6 +381,25 @@ public class AutoPaternosterFacBean extends Facade implements AutoPaternosterFac
 		timerService.createTimer(millisTillStart, null); ;
 
 	}
-
-
+	
+	private AutomatikjobDto[] listPaternosterJobs() {
+		Automatikjobtype jobtype = AutomatikjobtypeQuery.resultByCJobType(em, AutomatiktimerFac.JOBTYPE_PATERNOSTERABFRAGE_TYPE);
+		if (jobtype == null) {
+			myLogger.error("Es konnte kein Paternoster Jobtyp (" + AutomatiktimerFac.JOBTYPE_PATERNOSTERABFRAGE_TYPE + ") gefunden werden");
+			return new AutomatikjobDto[]{};
+		}
+		
+		List<Automatikjobs> jobs = AutomatikjobsQuery.listByAutomatikjobtypeIId(em, jobtype.getIId());
+		if (jobs.isEmpty()) {
+			return new AutomatikjobDto[]{};
+		}
+		
+		return AutomatikjobDtoAssembler.createDtos(jobs);
+	}
+	
+	public Collection<Paternoster> paternosterFindByMandant(String mandantCnr) {
+		List<Integer> lagerIIds = LagerQuery.listIIdsByMandantCNr(em, mandantCnr);
+		List<Paternoster> paternoster = PaternosterQuery.listByLagerIIds(em, lagerIIds);
+		return paternoster;
+	}
 }

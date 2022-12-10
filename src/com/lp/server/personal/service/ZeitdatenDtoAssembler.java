@@ -66,6 +66,12 @@ public class ZeitdatenDtoAssembler {
 			zeitdatenDto.setTAendern(zeitdaten.getTAendern());
 			zeitdatenDto.setXKommentar(zeitdaten.getXKommentar());
 			zeitdatenDto.setCWowurdegebucht(zeitdaten.getCWowurdegebucht());
+			zeitdatenDto.setFVerrechenbar(zeitdaten.getFVerrechenbar());
+			zeitdatenDto.setPersonalIIdErledigt(zeitdaten.getPersonalIIdErledigt());
+			zeitdatenDto.setTErledigt(zeitdaten.getTErledigt());
+			zeitdatenDto.setMaschineIId(zeitdaten.getMaschineIId());
+			zeitdatenDto.setXKommentarIntern(zeitdaten.getXKommentarIntern());
+			zeitdatenDto.setFDauerUebersteuert(zeitdaten.getFDauerUebersteuert());
 		}
 		return zeitdatenDto;
 	}

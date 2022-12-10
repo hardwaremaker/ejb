@@ -107,7 +107,8 @@ public class ComparatorAusgabeListe implements Comparator<Object> {
 				if (i == 0) {
 
 					if (afmDto1 != null && afmDto1.getSBezeichnung() != null
-							&& afmDto2 != null && afmDto2.getSBezeichnung() != null) {
+							&& afmDto2 != null
+							&& afmDto2.getSBezeichnung() != null) {
 						return afmDto1.getSBezeichnung().compareTo(
 								afmDto2.getSBezeichnung());
 					} else {
@@ -119,7 +120,8 @@ public class ComparatorAusgabeListe implements Comparator<Object> {
 			} else {
 				if (afmDto1 != null && afmDto1.getSBezeichnung() != null
 						&& afmDto2 != null && afmDto2.getSBezeichnung() != null) {
-					return afmDto1.getSBezeichnung().compareTo(afmDto2.getSBezeichnung());
+					return afmDto1.getSBezeichnung().compareTo(
+							afmDto2.getSBezeichnung());
 				} else {
 					return 0;
 				}
@@ -377,6 +379,36 @@ public class ComparatorAusgabeListe implements Comparator<Object> {
 						&& afmDto2.getSArtikelklasse() != null) {
 					return afmDto1.getSArtikelklasse().compareTo(
 							afmDto2.getSArtikelklasse());
+				} else {
+					return 0;
+				}
+			}
+
+		}
+		case Helper.SORTIERUNG_NACH_WIE_ERFASST: {
+			if (bVorrangigNachFarbcode == true) {
+				int j = afmDto1.getSFarbcode()
+						.compareTo(afmDto2.getSFarbcode());
+
+				if (j == 0) {
+					if (afmDto1 != null
+							&& afmDto1.getSSortAusStueckliste() != null
+							&& afmDto2 != null
+							&& afmDto2.getSSortAusStueckliste() != null) {
+						return afmDto1.getSSortAusStueckliste().compareTo(
+								afmDto2.getSSortAusStueckliste());
+					} else {
+						return 0;
+					}
+				} else {
+					return j;
+				}
+			} else {
+				if (afmDto1 != null && afmDto1.getSSortAusStueckliste() != null
+						&& afmDto2 != null
+						&& afmDto2.getSSortAusStueckliste() != null) {
+					return afmDto1.getSSortAusStueckliste().compareTo(
+							afmDto2.getSSortAusStueckliste());
 				} else {
 					return 0;
 				}

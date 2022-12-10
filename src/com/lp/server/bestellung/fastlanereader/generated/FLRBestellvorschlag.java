@@ -1,40 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.bestellung.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
+import com.lp.server.artikel.fastlanereader.generated.FLRGebinde;
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
+import com.lp.server.partner.fastlanereader.generated.FLRPartner;
 import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.system.fastlanereader.generated.FLRBelegart;
 import java.io.Serializable;
@@ -98,6 +68,27 @@ public class FLRBestellvorschlag implements Serializable {
     private String x_textinhalt;
 
     /** nullable persistent field */
+    private Integer partner_i_id_standort;
+
+    /** nullable persistent field */
+    private Integer personal_i_id;
+
+    /** nullable persistent field */
+    private Integer i_wiederbeschaffungszeit;
+
+    /** nullable persistent field */
+    private Date t_bearbeitet;
+
+    /** nullable persistent field */
+    private Double f_lagermindest;
+
+    /** nullable persistent field */
+    private Integer gebinde_i_id;
+
+    /** nullable persistent field */
+    private BigDecimal n_anzahlgebinde;
+
+    /** nullable persistent field */
     private FLRArtikel flrartikel;
 
     /** nullable persistent field */
@@ -115,8 +106,14 @@ public class FLRBestellvorschlag implements Serializable {
     /** nullable persistent field */
     private FLRProjekt flrprojekt;
 
+    /** nullable persistent field */
+    private FLRPartner flrpartner_standort;
+
+    /** nullable persistent field */
+    private FLRGebinde flrgebinde;
+
     /** full constructor */
-    public FLRBestellvorschlag(BigDecimal n_zubestellendemenge, Date t_liefertermin, Integer artikel_i_id, Integer lieferant_i_id, BigDecimal n_nettoeinzelpreis, BigDecimal n_rabattbetrag, BigDecimal n_nettogesamtpreisminusrabatte, BigDecimal n_nettogesamtpreis, String belegart_c_nr, Integer i_belegartid, Integer i_belegartpositionid, String mandant_c_nr, Short b_nettopreisuebersteuert, Short b_vormerkung, Integer projekt_i_id, String x_textinhalt, FLRArtikel flrartikel, FLRArtikelliste flrartikelliste, FLRLieferant flrlieferant, FLRBelegart flrbelegart, com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung, FLRProjekt flrprojekt) {
+    public FLRBestellvorschlag(BigDecimal n_zubestellendemenge, Date t_liefertermin, Integer artikel_i_id, Integer lieferant_i_id, BigDecimal n_nettoeinzelpreis, BigDecimal n_rabattbetrag, BigDecimal n_nettogesamtpreisminusrabatte, BigDecimal n_nettogesamtpreis, String belegart_c_nr, Integer i_belegartid, Integer i_belegartpositionid, String mandant_c_nr, Short b_nettopreisuebersteuert, Short b_vormerkung, Integer projekt_i_id, String x_textinhalt, Integer partner_i_id_standort, Integer personal_i_id, Integer i_wiederbeschaffungszeit, Date t_bearbeitet, Double f_lagermindest, Integer gebinde_i_id, BigDecimal n_anzahlgebinde, FLRArtikel flrartikel, FLRArtikelliste flrartikelliste, FLRLieferant flrlieferant, FLRBelegart flrbelegart, com.lp.server.bestellung.fastlanereader.generated.FLRBestellung flrbestellung, FLRProjekt flrprojekt, FLRPartner flrpartner_standort, FLRGebinde flrgebinde) {
         this.n_zubestellendemenge = n_zubestellendemenge;
         this.t_liefertermin = t_liefertermin;
         this.artikel_i_id = artikel_i_id;
@@ -133,12 +130,21 @@ public class FLRBestellvorschlag implements Serializable {
         this.b_vormerkung = b_vormerkung;
         this.projekt_i_id = projekt_i_id;
         this.x_textinhalt = x_textinhalt;
+        this.partner_i_id_standort = partner_i_id_standort;
+        this.personal_i_id = personal_i_id;
+        this.i_wiederbeschaffungszeit = i_wiederbeschaffungszeit;
+        this.t_bearbeitet = t_bearbeitet;
+        this.f_lagermindest = f_lagermindest;
+        this.gebinde_i_id = gebinde_i_id;
+        this.n_anzahlgebinde = n_anzahlgebinde;
         this.flrartikel = flrartikel;
         this.flrartikelliste = flrartikelliste;
         this.flrlieferant = flrlieferant;
         this.flrbelegart = flrbelegart;
         this.flrbestellung = flrbestellung;
         this.flrprojekt = flrprojekt;
+        this.flrpartner_standort = flrpartner_standort;
+        this.flrgebinde = flrgebinde;
     }
 
     /** default constructor */
@@ -281,6 +287,62 @@ public class FLRBestellvorschlag implements Serializable {
         this.x_textinhalt = x_textinhalt;
     }
 
+    public Integer getPartner_i_id_standort() {
+        return this.partner_i_id_standort;
+    }
+
+    public void setPartner_i_id_standort(Integer partner_i_id_standort) {
+        this.partner_i_id_standort = partner_i_id_standort;
+    }
+
+    public Integer getPersonal_i_id() {
+        return this.personal_i_id;
+    }
+
+    public void setPersonal_i_id(Integer personal_i_id) {
+        this.personal_i_id = personal_i_id;
+    }
+
+    public Integer getI_wiederbeschaffungszeit() {
+        return this.i_wiederbeschaffungszeit;
+    }
+
+    public void setI_wiederbeschaffungszeit(Integer i_wiederbeschaffungszeit) {
+        this.i_wiederbeschaffungszeit = i_wiederbeschaffungszeit;
+    }
+
+    public Date getT_bearbeitet() {
+        return this.t_bearbeitet;
+    }
+
+    public void setT_bearbeitet(Date t_bearbeitet) {
+        this.t_bearbeitet = t_bearbeitet;
+    }
+
+    public Double getF_lagermindest() {
+        return this.f_lagermindest;
+    }
+
+    public void setF_lagermindest(Double f_lagermindest) {
+        this.f_lagermindest = f_lagermindest;
+    }
+
+    public Integer getGebinde_i_id() {
+        return this.gebinde_i_id;
+    }
+
+    public void setGebinde_i_id(Integer gebinde_i_id) {
+        this.gebinde_i_id = gebinde_i_id;
+    }
+
+    public BigDecimal getN_anzahlgebinde() {
+        return this.n_anzahlgebinde;
+    }
+
+    public void setN_anzahlgebinde(BigDecimal n_anzahlgebinde) {
+        this.n_anzahlgebinde = n_anzahlgebinde;
+    }
+
     public FLRArtikel getFlrartikel() {
         return this.flrartikel;
     }
@@ -327,6 +389,22 @@ public class FLRBestellvorschlag implements Serializable {
 
     public void setFlrprojekt(FLRProjekt flrprojekt) {
         this.flrprojekt = flrprojekt;
+    }
+
+    public FLRPartner getFlrpartner_standort() {
+        return this.flrpartner_standort;
+    }
+
+    public void setFlrpartner_standort(FLRPartner flrpartner_standort) {
+        this.flrpartner_standort = flrpartner_standort;
+    }
+
+    public FLRGebinde getFlrgebinde() {
+        return this.flrgebinde;
+    }
+
+    public void setFlrgebinde(FLRGebinde flrgebinde) {
+        this.flrgebinde = flrgebinde;
     }
 
     public String toString() {

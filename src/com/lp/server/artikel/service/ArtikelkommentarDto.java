@@ -45,10 +45,19 @@ public class ArtikelkommentarDto implements Serializable {
 	private ArtikelkommentarsprDto artikelkommentarsprDto;
 	private ArtikelkommentardruckDto[] artikelkommentardruckDto;
 	private Integer iSort;
-	
-	
+
 	public Integer getIId() {
 		return iId;
+	}
+
+	private Short bDateiverweis;
+
+	public Short getBDateiverweis() {
+		return bDateiverweis;
+	}
+
+	public void setBDateiverweis(Short bDateiverweis) {
+		this.bDateiverweis = bDateiverweis;
 	}
 
 	private String datenformatCNr;
@@ -95,7 +104,6 @@ public class ArtikelkommentarDto implements Serializable {
 		this.iArt = iArt;
 	}
 
-
 	public void setArtikelkommentarartIId(Integer artikelkommentarartIId) {
 		this.artikelkommentarartIId = artikelkommentarartIId;
 	}
@@ -125,7 +133,7 @@ public class ArtikelkommentarDto implements Serializable {
 	public void setISort(Integer iSort) {
 		this.iSort = iSort;
 	}
-	
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

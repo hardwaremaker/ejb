@@ -85,8 +85,7 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -100,35 +99,26 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 				FLRPersonalverfuegbarkeit personalverfuegbarkeit = (FLRPersonalverfuegbarkeit) resultListIterator
 						.next();
 				rows[row][col++] = personalverfuegbarkeit.getI_id();
-				try {
-					com.lp.server.artikel.service.ArtikelDto artikelDto = getArtikelFac()
-							.artikelFindByPrimaryKeySmall(
-									personalverfuegbarkeit.getArtikel_i_id(),
-									theClientDto);
-					rows[row][col++] = artikelDto.getCNr();
-					rows[row][col++] = artikelDto.formatBezeichnung();
-					String ag=null;
-					
-					if(artikelDto.getArtgruIId()!=null){
-						ArtgruDto artgruDto=getArtikelFac().artgruFindByPrimaryKey(artikelDto.getArtgruIId(), theClientDto);
-						ag=artgruDto.getBezeichnung();
-					}
-					
-					rows[row][col++] = ag;
-					
-					
-					
-				} catch (RemoteException ex) {
-					throwEJBExceptionLPRespectOld(ex);
+
+				com.lp.server.artikel.service.ArtikelDto artikelDto = getArtikelFac()
+						.artikelFindByPrimaryKeySmall(personalverfuegbarkeit.getArtikel_i_id(), theClientDto);
+				rows[row][col++] = artikelDto.getCNr();
+				rows[row][col++] = artikelDto.formatBezeichnung();
+				String ag = null;
+
+				if (artikelDto.getArtgruIId() != null) {
+					ArtgruDto artgruDto = getArtikelFac().artgruFindByPrimaryKey(artikelDto.getArtgruIId(),
+							theClientDto);
+					ag = artgruDto.getBezeichnung();
 				}
 
-				rows[row++][col++] = personalverfuegbarkeit
-						.getF_anteilprozent();
+				rows[row][col++] = ag;
+
+				rows[row++][col++] = personalverfuegbarkeit.getF_anteilprozent();
 
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -147,8 +137,7 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
-					+ this.buildWhereClause();
+			String queryString = "select count(*) " + this.getFromClause() + this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -167,8 +156,8 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -179,8 +168,7 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -190,8 +178,7 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" personalverfuegbarkeit."
-							+ filterKriterien[i].kritName);
+					where.append(" personalverfuegbarkeit." + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
@@ -222,8 +209,7 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("personalverfuegbarkeit."
-								+ kriterien[i].kritName);
+						orderBy.append("personalverfuegbarkeit." + kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -233,14 +219,12 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append("personalverfuegbarkeit."
-						+ PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL
-						+ ".c_nr ");
+				orderBy.append(
+						"personalverfuegbarkeit." + PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL + ".c_nr ");
 				sortAdded = true;
 			}
-			if (orderBy.indexOf("personalverfuegbarkeit."
-					+ PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL
-					+ ".c_nr") < 0) {
+			if (orderBy.indexOf(
+					"personalverfuegbarkeit." + PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL + ".c_nr") < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -249,9 +233,8 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" personalverfuegbarkeit."
-						+ PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL
-						+ ".c_nr" + " ");
+				orderBy.append(
+						" personalverfuegbarkeit." + PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL + ".c_nr" + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -270,8 +253,7 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 		return "from FLRPersonalverfuegbarkeit personalverfuegbarkeit ";
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -326,32 +308,18 @@ public class PersonalverfuegbarkeitHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, Double.class, },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("artikel.artikelnummerlang",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.artikelgruppe", mandantCNr,
-									locUI),
-							getTextRespectUISpr("personal.anteilinprozent",
-									mandantCNr, locUI) },
+					new Class[] { Integer.class, String.class, String.class, String.class, Double.class, },
+					new String[] { "Id", getTextRespectUISpr("artikel.artikelnummerlang", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.artikelgruppe", mandantCNr, locUI),
+							getTextRespectUISpr("personal.anteilinprozent", mandantCNr, locUI) },
 
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new int[] { -1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 
-					new String[] {
-							"i_id",
-							PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL
-									+ ".c_nr",
-							Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR,
+					new String[] { "i_id", PersonalFac.FLR_PERSONALVERFUEGBARKEIT_FLRARTIKEL + ".c_nr",
+							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
 							PersonalFac.FLR_PERSONALVERFUEGBARKEIT_F_ANTEILPROZENT }));
 		}
 		return super.getTableInfo();

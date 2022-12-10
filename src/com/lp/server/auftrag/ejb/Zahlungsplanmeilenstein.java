@@ -41,7 +41,11 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "ZahlungsplanmeilensteinFindByMeilensteinIIdZahlungplanIId", query = "SELECT OBJECT (O) FROM Zahlungsplanmeilenstein o WHERE o.meilensteinIId=?1 AND o.zahlungsplanIId = ?2") })
+@NamedQueries({
+		@NamedQuery(name = "ZahlungsplanmeilensteinFindByMeilensteinIIdZahlungplanIId", query = "SELECT OBJECT (O) FROM Zahlungsplanmeilenstein o WHERE o.meilensteinIId=?1 AND o.zahlungsplanIId = ?2"),
+		@NamedQuery(name = "ZahlungsplanmeilensteinFindByZahlungplanIId", query = "SELECT OBJECT (O) FROM Zahlungsplanmeilenstein o WHERE o.zahlungsplanIId = ?1 ORDER BY o.iSort"),
+		@NamedQuery(name = "ZahlungsplanmeilensteinFindByZahlungplanIIdOrderByTErledigt", query = "SELECT OBJECT (O) FROM Zahlungsplanmeilenstein o WHERE o.zahlungsplanIId = ?1 ORDER BY o.tErledigt DESC"),
+		@NamedQuery(name = "ZahlungsplanmeilensteinejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Zahlungsplanmeilenstein AS o WHERE o.zahlungsplanIId=?1") })
 @Entity
 @Table(name = "AUFT_ZAHLUNGSPLANMEILENSTEIN")
 public class Zahlungsplanmeilenstein implements Serializable {
@@ -54,6 +58,17 @@ public class Zahlungsplanmeilenstein implements Serializable {
 
 	@Column(name = "ZAHLUNGSPLAN_I_ID")
 	private Integer zahlungsplanIId;
+
+	@Column(name = "I_SORT")
+	private Integer iSort;
+
+	public Integer getISort() {
+		return iSort;
+	}
+
+	public void setISort(Integer iSort) {
+		this.iSort = iSort;
+	}
 
 	public Integer getMeilensteinIId() {
 		return meilensteinIId;
@@ -87,7 +102,7 @@ public class Zahlungsplanmeilenstein implements Serializable {
 
 	@Column(name = "T_ERLEDIGT")
 	private java.sql.Timestamp tErledigt;
-	
+
 	@Column(name = "PERSONAL_I_ID_ERLEDIGT")
 	private Integer personalIIdErledigt;
 
@@ -106,10 +121,11 @@ public class Zahlungsplanmeilenstein implements Serializable {
 	}
 
 	public Zahlungsplanmeilenstein(Integer id, Integer zahlungsplanIId,
-			Integer meilensteinIId) {
+			Integer meilensteinIId, Integer iSort) {
 		setIId(id);
 		setZahlungsplanIId(zahlungsplanIId);
 		setMeilensteinIId(meilensteinIId);
+		setISort(iSort);
 	}
 
 	public String getCKommentar() {

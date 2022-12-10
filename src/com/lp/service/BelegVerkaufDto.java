@@ -42,7 +42,7 @@ public class BelegVerkaufDto extends BelegDto implements IIId {
 
 	protected Double fVersteckterAufschlag = 0.0;
 	protected Double fProjektierungsRabattsatz = 0.0;
-
+	
 	public Double getFVersteckterAufschlag() {
 		return fVersteckterAufschlag;
 	}
@@ -69,6 +69,10 @@ public class BelegVerkaufDto extends BelegDto implements IIId {
 		this.nKorrekturbetrag = nKorrekturbetrag;
 	}
 
-	
+	public String getLaenderartCnr() {
+		return null;
+	}
 
+	public void setLaenderartCnr(String laenderartCnr) {
+	}	
 }

@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
 
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -54,6 +55,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -123,11 +125,11 @@ public class KontoLandHandler extends UseCaseHandler {
 			while (resultListIterator.hasNext()) {
 				FLRKontoLand kontoland = (FLRKontoLand) resultListIterator
 						.next();
-				rows[row][col++] = kontoland.getId_comp();
+				rows[row][col++] = kontoland.getI_id();
 				rows[row][col++] = kontoland.getFlrland().getC_name();
 				rows[row][col++] = kontoland.getFlrkonto_uebersetzt().getC_nr();
-				rows[row][col++] = kontoland.getFlrkonto_uebersetzt()
-						.getC_bez();
+				rows[row][col++] = kontoland.getFlrkonto_uebersetzt().getC_bez();
+				rows[row][col++] = Helper.asDate(kontoland.getGueltigAb());
 				row++;
 				col = 0;
 			}
@@ -136,14 +138,10 @@ public class KontoLandHandler extends UseCaseHandler {
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-			}
+			closeSession(session);
 		}
-		return result;
 
+		return result;
 	}
 
 	/**
@@ -271,16 +269,17 @@ public class KontoLandHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class }, new String[] {
+					String.class, String.class, String.class, Date.class }, new String[] {
 					"i_id", getTextRespectUISpr("fb.land", mandantCNr, locUI),
 					getTextRespectUISpr("lp.konto", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-
+					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.gueltig_ab", mandantCNr, locUI)},
 			new int[] {
 					-1, // diese Spalte wird ausgeblendet
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST},
 
 			new String[] {
 					"",
@@ -289,7 +288,8 @@ public class KontoLandHandler extends UseCaseHandler {
 					FinanzFac.FLR_KONTOLAENDERART_FLRKONTOUEBERSETZT + "."
 							+ FinanzFac.FLR_KONTO_C_NR,
 					FinanzFac.FLR_KONTOLAENDERART_FLRKONTOUEBERSETZT + "."
-							+ FinanzFac.FLR_KONTO_C_BEZ }));
+							+ FinanzFac.FLR_KONTO_C_BEZ,
+					FinanzFac.FLR_KONTOLAND_GUELTIG_AB}));
 		}
 		return super.getTableInfo();
 	}
@@ -322,6 +322,30 @@ public class KontoLandHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
+				String queryString = "select " + FLR_KONTOLAND 
+						+ FinanzFac.FLR_KONTOLAND_I_ID
+						+ " from FLRKontoLand flrkontoland" 
+						+ this.buildWhereClause() + this.buildOrderByClause();
+				Query query = session.createQuery(queryString);
+				ScrollableResults scrollableResult = query.scroll();
+				if (scrollableResult != null) {
+					scrollableResult.beforeFirst();
+					while (scrollableResult.next()) {
+						Integer id = (Integer) scrollableResult.getInteger(0);
+						if (selectedId.equals(id)) {
+							rowNumber = scrollableResult.getRowNumber();
+							break;
+						}
+					}
+				}
+			} catch (Exception e) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
+			} finally {
+				closeSession(session);
+			}
+/*			
+			try {
+				session = factory.openSession();
 				String queryString = "select " + FLR_KONTOLAND
 						+ FinanzFac.FLR_KONTOLAND_FLRKONTOUEBERSETZT + "."
 						+ FinanzFac.FLR_KONTO_C_NR + FLR_KONTOLAND_FROM_CLAUSE
@@ -341,12 +365,9 @@ public class KontoLandHandler extends UseCaseHandler {
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 			} finally {
-				try {
-					session.close();
-				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER, he);
-				}
+				closeSession(session);
 			}
+*/			
 		}
 
 		if (rowNumber < 0 || rowNumber >= this.getRowCount()) {

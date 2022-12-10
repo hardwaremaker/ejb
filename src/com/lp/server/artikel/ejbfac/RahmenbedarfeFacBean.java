@@ -61,7 +61,6 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.jboss.annotation.ejb.TransactionTimeout;
 
 import com.lp.server.anfrage.service.ReportAnfragestatistikKriterienDto;
 import com.lp.server.artikel.ejb.Artikel;
@@ -379,7 +378,7 @@ public class RahmenbedarfeFacBean extends LPReport implements RahmenbedarfeFac {
 
 	// TODO Ein Riesenauftrag bei Kunde. Funktion sollte jedoch
 	// optimiert werden
-	@TransactionTimeout(60000)
+	@org.jboss.ejb3.annotation.TransactionTimeout(60000)
 	public void aktualisiereRahmenbedarfe(DetailbedarfDto b,
 			TheClientDto theClientDto) {
 
@@ -408,7 +407,7 @@ public class RahmenbedarfeFacBean extends LPReport implements RahmenbedarfeFac {
 
 							BigDecimal positionsmenge = strukt
 									.getStuecklistepositionDto()
-									.getNZielmenge().multiply(b.getNMenge());
+									.getNZielmenge(b.getNMenge());
 
 							// CK: PJ 09/0013848
 							// Lt. WH Lagerstaende bei

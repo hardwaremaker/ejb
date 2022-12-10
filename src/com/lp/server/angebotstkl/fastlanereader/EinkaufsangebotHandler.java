@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.angebotstkl.fastlanereader;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -50,8 +51,8 @@ import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
-import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.FlrFirmaAnsprechpartnerFilterBuilder;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
@@ -87,6 +88,24 @@ public class EinkaufsangebotHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private static final String FLR_EINKAUFSANGEBOT = "einkaufsangebot.";
+	
+	private class EinkaufsangebotKundeAnsprechpartnerFilterBuilder extends FlrFirmaAnsprechpartnerFilterBuilder {
+
+		public EinkaufsangebotKundeAnsprechpartnerFilterBuilder(boolean bSuchenInklusiveKBez) {
+			super(bSuchenInklusiveKBez);
+		}
+
+		@Override
+		public String getFlrPartner() {
+			return FLR_EINKAUFSANGEBOT + AngebotstklFac.FLR_EINKAUFSANGEBOT_FLRKUNDE + "." + KundeFac.FLR_PARTNER;
+		}
+
+		@Override
+		public String getFlrPropertyAnsprechpartnerIId() {
+			return FLR_EINKAUFSANGEBOT + "ansprechpartner_i_id";
+		}
+	}
 
 	/**
 	 * The information needed for the kundes table.
@@ -218,6 +237,19 @@ public class EinkaufsangebotHandler extends UseCaseHandler {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
 									new Exception(ex));
 						}
+					}  else if (filterKriterien[i].kritName
+							.equals("c_projekt")) {
+
+						where.append(" (");
+						where.append(buildWhereClauseExtendedSearch(Arrays
+								.asList(filterKriterien[i].value.split(" ")),
+								filterKriterien[i].kritName, filterKriterien[i]
+										.isBIgnoreCase()));
+						where.append(") ");
+					} else if (isKundeFilter(filterKriterien[i])) {
+						EinkaufsangebotKundeAnsprechpartnerFilterBuilder filterBuilder = new EinkaufsangebotKundeAnsprechpartnerFilterBuilder(
+								getParameterFac().getSuchenInklusiveKBez(theClientDto.getMandant()));
+						filterBuilder.buildFirmaAnsprechpartnerFilter(filterKriterien[i], where);
 					} else {
 						if (filterKriterien[i].isBIgnoreCase()) {
 							where.append(" upper(" + "einkaufsangebot."
@@ -244,6 +276,14 @@ public class EinkaufsangebotHandler extends UseCaseHandler {
 		}
 
 		return where.toString();
+	}
+
+	private boolean isKundeFilter(FilterKriterium filterKriterium) {
+		return filterKriterium.kritName.equals(AngebotstklFac.FLR_AGSTKL_FLRKUNDE
+				+ "."
+				+ KundeFac.FLR_PARTNER 
+				+ "."
+				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
 	}
 
 	/**

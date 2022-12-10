@@ -44,8 +44,8 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "ArtikelkommentardruckfindByArtikelIIdArtikelkommentarIIdBelegartCNr", query = "SELECT OBJECT (o) FROM Artikelkommentardruck o WHERE o.artikelIId=?1 AND o.artikelkommentarIId=?2 AND o.belegartCNr=?3"),
 		@NamedQuery(name = "ArtikelkommentardruckfindByArtikelIId", query = "SELECT OBJECT (o) FROM Artikelkommentardruck o WHERE o.artikelIId=?1"),
-		@NamedQuery(name = "ArtikelkommentardruckfindByArtikelIIdArtikelkommentarIId", query = "SELECT OBJECT (o) FROM Artikelkommentardruck o WHERE o.artikelIId=?1 AND o.artikelkommentarIId=?2"),
-		@NamedQuery(name = "ArtikelkommentardruckfindByArtikelIIdBelegartCNr", query = "SELECT OBJECT (o) FROM Artikelkommentardruck o WHERE o.artikelIId=?1 AND o.belegartCNr =?2") })
+		@NamedQuery(name = ArtikelkommentardruckQuery.ByArtikelIIdArtikelkommentarIId, query = "SELECT OBJECT (o) FROM Artikelkommentardruck o WHERE o.artikelIId=?1 AND o.artikelkommentarIId=?2"),
+		@NamedQuery(name = ArtikelkommentardruckQuery.ByArtikelIIdBelegartCNr, query = "SELECT OBJECT (o) FROM Artikelkommentardruck o WHERE o.artikelIId=?1 AND o.belegartCNr =?2") })
 @Entity
 @Table(name = "WW_ARTIKELKOMMENTARDRUCK")
 public class Artikelkommentardruck implements Serializable {

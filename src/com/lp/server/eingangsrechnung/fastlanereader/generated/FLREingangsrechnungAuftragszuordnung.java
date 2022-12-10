@@ -1,40 +1,10 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.eingangsrechnung.fastlanereader.generated;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -54,16 +24,32 @@ public class FLREingangsrechnungAuftragszuordnung implements Serializable {
     private String c_text;
 
     /** nullable persistent field */
+    private Short b_keine_auftragswertung;
+
+    /** nullable persistent field */
+    private Double f_verrechenbar;
+
+    /** nullable persistent field */
+    private Date t_erledigt;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonal_erledigt;
+
+    /** nullable persistent field */
     private FLRAuftragReport flrauftrag;
 
     /** nullable persistent field */
     private com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung flreingangsrechnung;
 
     /** full constructor */
-    public FLREingangsrechnungAuftragszuordnung(Integer eingangsrechnung_i_id, BigDecimal n_betrag, String c_text, FLRAuftragReport flrauftrag, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung flreingangsrechnung) {
+    public FLREingangsrechnungAuftragszuordnung(Integer eingangsrechnung_i_id, BigDecimal n_betrag, String c_text, Short b_keine_auftragswertung, Double f_verrechenbar, Date t_erledigt, FLRPersonal flrpersonal_erledigt, FLRAuftragReport flrauftrag, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung flreingangsrechnung) {
         this.eingangsrechnung_i_id = eingangsrechnung_i_id;
         this.n_betrag = n_betrag;
         this.c_text = c_text;
+        this.b_keine_auftragswertung = b_keine_auftragswertung;
+        this.f_verrechenbar = f_verrechenbar;
+        this.t_erledigt = t_erledigt;
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
         this.flrauftrag = flrauftrag;
         this.flreingangsrechnung = flreingangsrechnung;
     }
@@ -102,6 +88,38 @@ public class FLREingangsrechnungAuftragszuordnung implements Serializable {
 
     public void setC_text(String c_text) {
         this.c_text = c_text;
+    }
+
+    public Short getB_keine_auftragswertung() {
+        return this.b_keine_auftragswertung;
+    }
+
+    public void setB_keine_auftragswertung(Short b_keine_auftragswertung) {
+        this.b_keine_auftragswertung = b_keine_auftragswertung;
+    }
+
+    public Double getF_verrechenbar() {
+        return this.f_verrechenbar;
+    }
+
+    public void setF_verrechenbar(Double f_verrechenbar) {
+        this.f_verrechenbar = f_verrechenbar;
+    }
+
+    public Date getT_erledigt() {
+        return this.t_erledigt;
+    }
+
+    public void setT_erledigt(Date t_erledigt) {
+        this.t_erledigt = t_erledigt;
+    }
+
+    public FLRPersonal getFlrpersonal_erledigt() {
+        return this.flrpersonal_erledigt;
+    }
+
+    public void setFlrpersonal_erledigt(FLRPersonal flrpersonal_erledigt) {
+        this.flrpersonal_erledigt = flrpersonal_erledigt;
     }
 
     public FLRAuftragReport getFlrauftrag() {

@@ -33,6 +33,8 @@
 package com.lp.server.auftrag.ejbfac;
 
 import javax.ejb.Stateless;
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
 import javax.jws.WebService;
 import javax.jws.soap.SOAPBinding;
 import javax.jws.soap.SOAPBinding.ParameterStyle;
@@ -40,15 +42,39 @@ import javax.jws.soap.SOAPBinding.Style;
 import javax.jws.soap.SOAPBinding.Use;
 import javax.xml.ws.BindingType;
 
-import org.jboss.wsf.spi.annotation.WebContext;
+import com.lp.server.auftrag.service.CreateOrderResult;
+import com.lp.server.auftrag.service.WebshopOrderServiceInterface;
+import com.lp.server.system.service.WebshopAuthHeader;
+import com.lp.server.util.Facade;
 
-@WebService(name = "IWebshop2OrderServices", serviceName = "HeliumVOrderServiceCCOpenTrans")
+// @WebService(name = "IWebshop2OrderServices", serviceName = "HeliumVOrderServiceCCOpenTrans")
+@WebService
 @SOAPBinding(style = Style.DOCUMENT, use = Use.LITERAL, parameterStyle = ParameterStyle.WRAPPED)
 @BindingType(value = "http://schemas.xmlsoap.org/wsdl/soap/http?mtom=true")
 @Stateless
-@WebContext (urlPattern="/version1/AuftragFacBeanCC")  
-public class AuftragFacBeanCC extends AuftragFacBeanRest {
+//@WebContext (urlPattern="/version1/AuftragFacBeanCC") 
+public class AuftragFacBeanCC extends Facade implements
+		WebshopOrderServiceInterface {
+
+	private WebshopOrderServiceInterface delegate;
+
 	public AuftragFacBeanCC() {
-		setDelegate(getWebshopOrderServiceFac()) ;
+	}
+	
+
+	private WebshopOrderServiceInterface getDelegate() {
+		if(delegate == null) {
+			delegate = getWebshopOrderServiceFac();
+		}
+		return delegate;
+	}
+	
+	@Override
+	@WebMethod
+	@org.jboss.ejb3.annotation.TransactionTimeout(1200)
+	public CreateOrderResult createOrder(
+			@WebParam(header = true) WebshopAuthHeader header,
+			@WebParam(name="xmlOpenTransOrder") String xmlOpenTransOrder) {
+		return getDelegate().createOrder(header, xmlOpenTransOrder);
 	}
 }

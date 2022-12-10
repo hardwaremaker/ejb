@@ -36,10 +36,8 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 
 public class KontolandDto implements Serializable {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
+
 	private Integer kontoIId;
 	private Integer landIId;
 	private Integer kontoIIdUebersetzt;
@@ -47,7 +45,9 @@ public class KontolandDto implements Serializable {
 	private Integer personalIIdAnlegen;
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
-
+	private Timestamp tGueltigAb;
+	private Integer iId;
+	
 	public Integer getKontoIId() {
 		return kontoIId;
 	}
@@ -104,6 +104,22 @@ public class KontolandDto implements Serializable {
 		this.personalIIdAendern = personalIIdAendern;
 	}
 
+	public Timestamp getTGueltigAb() {
+		return tGueltigAb;
+	}
+
+	public void setTGueltigAb(Timestamp tGueltigAb) {
+		this.tGueltigAb = tGueltigAb;
+	}
+
+	public void setIId(Integer iId) {
+		this.iId = iId;
+	}
+	
+	public Integer getIId() {
+		return this.iId;
+	}
+	
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

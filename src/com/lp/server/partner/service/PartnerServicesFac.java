@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
@@ -238,15 +239,79 @@ public interface PartnerServicesFac {
 
 	public void removePartnerkommentar(PartnerkommentarDto partnerkommentarDto);
 
-	public String[] getPartnerhinweise(Integer partnerIId, boolean bKunde,
+	public ArrayList<PartnerkommentarDto> getPartnerhinweise(Integer partnerIId, boolean bKunde,
 			String belegartCNr, TheClientDto theClientDto);
 
 	public ArrayList<byte[]> getPartnerkommentarBilderUndPDFAlsBilderUmgewandelt(
 			Integer partnerIId, boolean bKunde, String belegartCNr,
 			Integer iArt, TheClientDto theClientDto);
 
-	public LPDatenSubreport getSubreportAllerMitzudruckendenPartnerkommentare(
-			Integer partnerIId, boolean bKunde, String belegartCNr,
+	public void updateNewslettergrund(NewslettergrundDto dtoI,
 			TheClientDto theClientDto);
 
+	public void removeNewslettergrund(Integer iIdI, TheClientDto theClientDto);
+
+	public Integer createNewslettergrund(NewslettergrundDto dto,
+			TheClientDto theClientDto);
+
+	public NewslettergrundDto newslettergrundFindByPrimaryKey(Integer iIdI,
+			TheClientDto theClientDto);
+
+	public Map getAllNewslettergrund(TheClientDto theClientDto);
+
+	public Integer createLiefermengen(LiefermengenDto dto);
+
+	public void removeLiefermengen(LiefermengenDto dto);
+
+	public LiefermengenDto liefermengenFindByPrimaryKey(Integer iId);
+
+	public void updateLiefermengen(LiefermengenDto dto);
+
+	public LiefermengenDto liefermengenFindByArtikelIIdKundeIIdLieferadresseTDatum(
+			Integer artikelIId, Integer kundeIIdLieferadresse, Timestamp tDatum);
+
+	Integer createLiefermengenUnique(LiefermengenDto dto);
+
+	public NewslettergrundDto newslettergrundFindByCBez(String cBez);
+
+	public Integer createIdentifikation(IdentifikationDto dto,
+			TheClientDto theClientDto);
+
+	public IdentifikationDto identifikationFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto);
+
+	public void removeIdentifikation(IdentifikationDto dto);
+
+	public void updateIdentifikation(IdentifikationDto dto,
+			TheClientDto theClientDto);
+
+	public Integer createBeauskunftung(BeauskunftungDto dto,TheClientDto theClientDto);
+	public void removeBeauskunftung(BeauskunftungDto dto);
+	public BeauskunftungDto beauskunftungFindByPrimaryKey(Integer iId);
+	public void updateBeauskunftung(BeauskunftungDto dto);
+	public KontaktartDto getVorschlagFuerWiedervorlageAusSerienbrief();
+	
+	public DsgvokategorieDto dsgvokategorieFindByPrimaryKey(Integer iIdI,
+			TheClientDto theClientDto);
+	public void updateDsgvokategorie(DsgvokategorieDto dto,
+			TheClientDto theClientDto);
+	public void removeDsgvokategorie(DsgvokategorieDto dto,
+			TheClientDto theClientDto);
+	public Integer createDsgvotext(DsgvotextDto dto, TheClientDto theClientDto);
+	public void updateDsgvotext(DsgvotextDto dto);
+	public DsgvotextDto dsgvotextFindByPrimaryKey(Integer iId);
+	public void removeDsgvotext(DsgvotextDto dto);
+	public Map getAllDSGVOKategorie(TheClientDto theClientDto);
+	public void vertauscheDsgvotext(Integer id1,
+			Integer id2);
+	
+	public Map getAllBranche(String cNrLocaleI, TheClientDto theClientDto);
+	
+	public byte[] partnerbildFindByPartnerIId(Integer partnerIId);
+	public void updatePartnerbild(Integer partnerIId, byte[] bild);
+	public Map getAllKontaktart(TheClientDto theClientDto);
+	
+	public ArrayList<PartnerkommentarDto> getPartnerkommentarAnhaenge(Integer partnerIId, boolean bKunde,
+			String belegartCNr, TheClientDto theClientDto);
+	
 }

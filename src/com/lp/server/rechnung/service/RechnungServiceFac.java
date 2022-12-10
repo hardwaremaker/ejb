@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.rechnung.service;
 
+import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.Locale;
 import java.util.Map;
@@ -52,7 +53,6 @@ public interface RechnungServiceFac {
 	// Rechnungsstatus
 	public static final String RECHNUNGSSTATUS_ANGELEGT = LocaleFac.STATUS_ANGELEGT;
 
-
 	// FLR Spaltennamen aus Hibernate Mapping
 	public static final String FLR_RECHNUNGTEXT_I_ID = "i_id";
 	public static final String FLR_RECHNUNGTEXT_MANDANT_C_NR = "mandant_c_nr";
@@ -71,126 +71,100 @@ public interface RechnungServiceFac {
 	public static final String FLR_GUTSCHRIFTTEXT_C_NR = "c_nr";
 	public static final String FLR_GUTSCHRIFTTEXT_X_TEXTINHALT = "c_textinhalt";
 
-
-	public Integer createRechnungtext(RechnungtextDto rechnungtextDto,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public Integer createGutschriftsgrund(GutschriftsgrundDto gutschriftsgrundDto,
-			TheClientDto theClientDto) throws EJBExceptionLP , RemoteException;
-
-	public void removeRechnungtext(RechnungtextDto rechnungtextDto,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public void updateRechnungtext(RechnungtextDto rechnungtextDto,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public void removeGutschrifttext(GutschrifttextDto gutschrifttextDto,
-			TheClientDto theClientDto);
-
-	public void updateGutschrifttext(GutschrifttextDto gutschrifttextDto,
-			TheClientDto theClientDto);
-
-	public RechnungtextDto rechnungtextFindByPrimaryKey(Integer iId)
+	public Integer createRechnungtext(RechnungtextDto rechnungtextDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public GutschrifttextDto gutschrifttextFindByPrimaryKey(Integer iId)
-		throws EJBExceptionLP , RemoteException;
-
-	public GutschriftsgrundDto gutschriftsgrundFindByPrimaryKey(Integer iId)
-		throws EJBExceptionLP , RemoteException;
-
-	public RechnungtextDto rechnungtextFindByMandantLocaleCNr(String pMandant,
-			String pSprache, String pText) throws EJBExceptionLP,
-			RemoteException;
-
-	public GutschrifttextDto gutschrifttextFindByMandantLocaleCNr(String pMandant,
-			String pSprache, String pText) throws EJBExceptionLP ,
-			RemoteException;
-
-	public RechnungtextDto createDefaultRechnungtext(String sMediaartI,
-			String sTextinhaltI, String localeCNr, TheClientDto theClientDto)
+	public Integer createGutschriftsgrund(GutschriftsgrundDto gutschriftsgrundDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public GutschrifttextDto createDefaultGutschrifttext(String sMediaartI,
-			String sTextinhaltI, String localeCNr, TheClientDto theClientDto)
-			throws EJBExceptionLP,RemoteException;
+	public void removeRechnungtext(RechnungtextDto rechnungtextDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
-	public Map<String, String> getAllRechnungpositionsart(Locale locale1,
-			Locale locale2) throws EJBExceptionLP, RemoteException;
+	public void updateRechnungtext(RechnungtextDto rechnungtextDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
-	public Map<String, String> getAllGutschriftpositionsart(Locale locale1,
-			Locale locale2) throws EJBExceptionLP, RemoteException;
+	public void removeGutschrifttext(GutschrifttextDto gutschrifttextDto, TheClientDto theClientDto);
 
-	public Map<String, String> getAllProformarechnungpositionsart(
-			Locale locale1, Locale locale2) throws EJBExceptionLP,
-			RemoteException;
+	public void updateGutschrifttext(GutschrifttextDto gutschrifttextDto, TheClientDto theClientDto);
 
-	public RechnungartsprDto rechnungartsprFindByPrimaryKey(
-			String rechnungartCNr, Locale locale) throws EJBExceptionLP,
-			RemoteException;
+	public RechnungtextDto rechnungtextFindByPrimaryKey(Integer iId) throws EJBExceptionLP, RemoteException;
 
-	public RechnungartsprDto rechnungartsprFindByPrimaryKeyOhneExc(
-			String rechnungartCNr, Locale locale);
+	public GutschrifttextDto gutschrifttextFindByPrimaryKey(Integer iId) throws EJBExceptionLP, RemoteException;
 
-	public Map<String, String> uebersetzeRechnungartOptimal(
-			DatenspracheIf[] pArray, Locale locale1, Locale locale2)
+	public GutschriftsgrundDto gutschriftsgrundFindByPrimaryKey(Integer iId) throws EJBExceptionLP, RemoteException;
+
+	public RechnungtextDto rechnungtextFindByMandantLocaleCNr(String pMandant, String pSprache, String pText)
+			throws EJBExceptionLP, RemoteException;
+
+	public GutschrifttextDto gutschrifttextFindByMandantLocaleCNr(String pMandant, String pSprache, String pText)
+			throws EJBExceptionLP, RemoteException;
+
+	public RechnungtextDto createDefaultRechnungtext(String sMediaartI, String sTextinhaltI, String localeCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public GutschrifttextDto createDefaultGutschrifttext(String sMediaartI, String sTextinhaltI, String localeCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public Map<String, String> getAllRechnungpositionsart(Locale locale1, Locale locale2)
+			throws EJBExceptionLP, RemoteException;
+
+	public Map<String, String> getAllGutschriftpositionsart(Locale locale1, Locale locale2)
+			throws EJBExceptionLP, RemoteException;
+
+	public Map<String, String> getAllProformarechnungpositionsart(Locale locale1, Locale locale2)
+			throws EJBExceptionLP, RemoteException;
+
+	public RechnungartsprDto rechnungartsprFindByPrimaryKey(String rechnungartCNr, Locale locale)
+			throws EJBExceptionLP, RemoteException;
+
+	public RechnungartsprDto rechnungartsprFindByPrimaryKeyOhneExc(String rechnungartCNr, Locale locale);
+
+	public Map<String, String> uebersetzeRechnungartOptimal(DatenspracheIf[] pArray, Locale locale1, Locale locale2)
 			throws RemoteException;
 
-	public String uebersetzeRechnungartOptimal(String cNr, Locale locale1,
-			Locale locale2) throws RemoteException;
+	public String uebersetzeRechnungartOptimal(String cNr, Locale locale1, Locale locale2) throws RemoteException;
 
-	public Map<String, String> uebersetzeZahlungsartOptimal(
-			DatenspracheIf[] pArray, Locale locale1, Locale locale2)
+	public Map<String, String> uebersetzeZahlungsartOptimal(DatenspracheIf[] pArray, Locale locale1, Locale locale2)
 			throws RemoteException;
 
-	public String uebersetzeZahlungsartOptimal(String cNr, Locale locale1,
-			Locale locale2) throws RemoteException;
+	public String uebersetzeZahlungsartOptimal(String cNr, Locale locale1, Locale locale2) throws RemoteException;
 
-	public ZahlungsartsprDto zahlungsartsprFindByPrimaryKey(
-			String zahlungsartCNr, Locale locale) throws EJBExceptionLP,
-			RemoteException;
-
-	public void createGutschriftpositionsart(
-			GutschriftpositionsartDto gutschriftpositionsartDto, TheClientDto theClientDto)
+	public ZahlungsartsprDto zahlungsartsprFindByPrimaryKey(String zahlungsartCNr, Locale locale)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateGutschriftpositionsart(
-			GutschriftpositionsartDto gutschriftpositionsartDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void createGutschriftpositionsart(GutschriftpositionsartDto gutschriftpositionsartDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void updateGutschriftpositionsart(GutschriftpositionsartDto gutschriftpositionsartDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void updateGutschriftsgrund(GutschriftsgrundDto gutschriftsgrundDto, TheClientDto theClientDto)
-		throws EJBExceptionLP, RemoteException;
-
-	public GutschriftpositionsartDto gutschriftpositionsartFindByPrimaryKey(
-			String positionsartCNr) throws EJBExceptionLP, RemoteException;
-
-	public GutschriftpositionsartDto[] gutschriftpositionsartFindAll()
 			throws EJBExceptionLP, RemoteException;
 
-	public void createRechnungpositionsart(
-			RechnungpositionsartDto rechnungpositionsartDto, TheClientDto theClientDto)
+	public GutschriftpositionsartDto gutschriftpositionsartFindByPrimaryKey(String positionsartCNr)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateRechnungpositionsart(
-			RechnungpositionsartDto rechnungpositionsartDto, TheClientDto theClientDto)
+	public GutschriftpositionsartDto[] gutschriftpositionsartFindAll() throws EJBExceptionLP, RemoteException;
+
+	public void createRechnungpositionsart(RechnungpositionsartDto rechnungpositionsartDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public RechnungpositionsartDto rechnungpositionsartFindByPrimaryKey(
-			String positionsartCNr) throws EJBExceptionLP, RemoteException;
-
-	public RechnungpositionsartDto[] rechnungpositionsartFindAll()
+	public void updateRechnungpositionsart(RechnungpositionsartDto rechnungpositionsartDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void createProformarechnungpositionsart(
-			ProformarechnungpositionsartDto proformarechnungpositionsartDto,
+	public RechnungpositionsartDto rechnungpositionsartFindByPrimaryKey(String positionsartCNr)
+			throws EJBExceptionLP, RemoteException;
+
+	public RechnungpositionsartDto[] rechnungpositionsartFindAll() throws EJBExceptionLP, RemoteException;
+
+	public void createProformarechnungpositionsart(ProformarechnungpositionsartDto proformarechnungpositionsartDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void updateProformarechnungpositionsart(
-			ProformarechnungpositionsartDto proformarechnungpositionsartDto,
+	public void updateProformarechnungpositionsart(ProformarechnungpositionsartDto proformarechnungpositionsartDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public ProformarechnungpositionsartDto proformarechnungpositionsartFindByPrimaryKey(
-			String positionsartCNr) throws EJBExceptionLP, RemoteException;
+	public ProformarechnungpositionsartDto proformarechnungpositionsartFindByPrimaryKey(String positionsartCNr)
+			throws EJBExceptionLP, RemoteException;
 
 	public ProformarechnungpositionsartDto[] proformarechnungpositionsartFindAll()
 			throws EJBExceptionLP, RemoteException;
@@ -204,24 +178,20 @@ public interface RechnungServiceFac {
 	public void createRechnungtyp(RechnungtypDto rechnungtypDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public RechnungtypDto rechnungtypFindByPrimaryKey(String cNr)
+	public RechnungtypDto rechnungtypFindByPrimaryKey(String cNr) throws EJBExceptionLP, RemoteException;
+
+	public RechnungtypDto[] rechnungtypFindAll() throws EJBExceptionLP, RemoteException;
+
+	public Map<?, ?> getAllZahlungsarten(Locale locale1, Locale locale2) throws EJBExceptionLP, RemoteException;
+
+	public Map<String, String> getAllRechnungartRechnung(Locale locale1, Locale locale2)
 			throws EJBExceptionLP, RemoteException;
 
-	public RechnungtypDto[] rechnungtypFindAll() throws EJBExceptionLP,
-			RemoteException;
-
-	public Map<?, ?> getAllZahlungsarten(Locale locale1, Locale locale2)
+	public Map<String, String> getAllRechnungartGutschrift(Locale locale1, Locale locale2)
 			throws EJBExceptionLP, RemoteException;
 
-	public Map<String, String> getAllRechnungartRechnung(Locale locale1,
-			Locale locale2) throws EJBExceptionLP, RemoteException;
-
-	public Map<String, String> getAllRechnungartGutschrift(Locale locale1,
-			Locale locale2) throws EJBExceptionLP, RemoteException;
-
-	public Map<String, String> getAllRechnungartProformarechnung(
-			Locale locale1, Locale locale2) throws EJBExceptionLP,
-			RemoteException;
+	public Map<String, String> getAllRechnungartProformarechnung(Locale locale1, Locale locale2)
+			throws EJBExceptionLP, RemoteException;
 
 	public void createRechnungart(RechnungartDto rechnungartDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -229,45 +199,54 @@ public interface RechnungServiceFac {
 	public RechnungartDto rechnungartFindByPrimaryKey(String cNr, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public RechnungartDto[] rechnungartFindAll() throws EJBExceptionLP,
-			RemoteException;
+	public RechnungartDto[] rechnungartFindAll() throws EJBExceptionLP, RemoteException;
 
-	public RechnungartDto[] rechnungartFindByRechnungtyp(String rechnungtypCNr)
-			throws EJBExceptionLP, RemoteException;
+	public RechnungartDto[] rechnungartFindByRechnungtyp(String rechnungtypCNr) throws EJBExceptionLP, RemoteException;
 
 	public void createZahlungsart(ZahlungsartDto zahlungsartDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public ZahlungsartDto[] zahlungsartFindAll() throws EJBExceptionLP,
-			RemoteException;
+	public ZahlungsartDto[] zahlungsartFindAll() throws EJBExceptionLP, RemoteException;
 
-	public void createRechnungstatus(RechnungstatusDto rechnungstatusDto,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public void removeRechnungstatus(RechnungstatusDto rechnungstatusDto,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public void removeGutschriftsgrund(GutschriftsgrundDto gutschriftsgrundDto,
-			TheClientDto theClientDto) throws EJBExceptionLP , RemoteException;
-
-	public void updateRechnungstatus(RechnungstatusDto rechnungstatusDto,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public RechnungstatusDto rechnungstatusFindByPrimaryKey(String statusCNr)
+	public void createRechnungstatus(RechnungstatusDto rechnungstatusDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public ZahlungsartDto zahlungsartFindByPrimaryKey(String cNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public void removeRechnungstatus(RechnungstatusDto rechnungstatusDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
+	public void removeGutschriftsgrund(GutschriftsgrundDto gutschriftsgrundDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public void updateRechnungstatus(RechnungstatusDto rechnungstatusDto, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public RechnungstatusDto rechnungstatusFindByPrimaryKey(String statusCNr) throws EJBExceptionLP, RemoteException;
+
+	public ZahlungsartDto zahlungsartFindByPrimaryKey(String cNrI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	
+	public ZahlungsartDto zahlungsartFindByPrimaryKeyUndLocale(String cNrI, Locale locale ) throws EJBExceptionLP;
 	/**
-	 * Ermittelt in einem Auftrag das RechnungDto f&uuml;r die IId der Rechnung
-	 * und das AuftragDto des Hauptauftrags sofern dieser vorhanden ist.
-	 * Gibt es einen Hauptauftrag wird gepr&uuml;ft, ob f&uuml;r diese Rechnung
-	 * weitere Auftr&auml;ge existieren.
+	 * Ermittelt in einem Auftrag das RechnungDto f&uuml;r die IId der Rechnung und
+	 * das AuftragDto des Hauptauftrags sofern dieser vorhanden ist. Gibt es einen
+	 * Hauptauftrag wird gepr&uuml;ft, ob f&uuml;r diese Rechnung weitere
+	 * Auftr&auml;ge existieren.
 	 *
 	 * @param iId
 	 * @return die Daten f&uuml;r die Rechnung-Sicht Auftrag der iId
 	 * @throws EJBExceptionLP
 	 */
-	RechnungSichtAuftragDto rechnungFindByPrimaryKey(Integer iId) throws EJBExceptionLP ;
+	RechnungSichtAuftragDto rechnungFindByPrimaryKey(Integer iId) throws EJBExceptionLP;
+
+	public Integer createMmz(MmzDto dto);
+
+	public MmzDto mmzFindByPrimaryKey(Integer iId);
+
+	public void removeMmz(MmzDto dto);
+
+	public void updateMmz(MmzDto dto);
+	
+	public MmzDto getMindermengenzuschlag(BigDecimal bdWert , Integer landIId, TheClientDto theClientDto);
+	
 }

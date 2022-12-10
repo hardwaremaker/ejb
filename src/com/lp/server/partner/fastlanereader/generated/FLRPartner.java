@@ -1,35 +1,3 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- *  
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- *  
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- *  
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *   
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *   
- * Contact: developers@heliumv.com
- *******************************************************************************/
 package com.lp.server.partner.fastlanereader.generated;
 
 import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
@@ -118,6 +86,12 @@ public class FLRPartner implements Serializable {
     private Date t_aendern;
 
     /** nullable persistent field */
+    private String c_exchangeid;
+
+    /** nullable persistent field */
+    private Date t_zuletzt_exportiert;
+
+    /** nullable persistent field */
     private FLRLandplzort flrlandplzort;
 
     /** nullable persistent field */
@@ -133,7 +107,7 @@ public class FLRPartner implements Serializable {
     private Set ansprechpartner;
 
     /** full constructor */
-    public FLRPartner(String anrede_c_nr, String c_name1nachnamefirmazeile1, String c_name2vornamefirmazeile2, String c_name3vorname2abteilung, String c_strasse, String c_titel, String c_ntitel, String partnerart_c_nr, Short b_versteckt, String c_kbez, String locale_c_nr_kommunikation, String x_bemerkung, Integer branche_i_id, Integer partnerklasse_i_id, String c_adressart, String c_iln, String c_uid, String c_filialnummer, Double f_gmtversatz, String c_email, String c_fax, String c_telefon, Date t_geburtsdatumansprechpartner, Date t_aendern, FLRLandplzort flrlandplzort, com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse flrpartnerklasse, com.lp.server.partner.fastlanereader.generated.FLRBranche flrbranche, Set partner_paselektion_set, Set ansprechpartner) {
+    public FLRPartner(String anrede_c_nr, String c_name1nachnamefirmazeile1, String c_name2vornamefirmazeile2, String c_name3vorname2abteilung, String c_strasse, String c_titel, String c_ntitel, String partnerart_c_nr, Short b_versteckt, String c_kbez, String locale_c_nr_kommunikation, String x_bemerkung, Integer branche_i_id, Integer partnerklasse_i_id, String c_adressart, String c_iln, String c_uid, String c_filialnummer, Double f_gmtversatz, String c_email, String c_fax, String c_telefon, Date t_geburtsdatumansprechpartner, Date t_aendern, String c_exchangeid, Date t_zuletzt_exportiert, FLRLandplzort flrlandplzort, com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse flrpartnerklasse, com.lp.server.partner.fastlanereader.generated.FLRBranche flrbranche, Set partner_paselektion_set, Set ansprechpartner) {
         this.anrede_c_nr = anrede_c_nr;
         this.c_name1nachnamefirmazeile1 = c_name1nachnamefirmazeile1;
         this.c_name2vornamefirmazeile2 = c_name2vornamefirmazeile2;
@@ -158,6 +132,8 @@ public class FLRPartner implements Serializable {
         this.c_telefon = c_telefon;
         this.t_geburtsdatumansprechpartner = t_geburtsdatumansprechpartner;
         this.t_aendern = t_aendern;
+        this.c_exchangeid = c_exchangeid;
+        this.t_zuletzt_exportiert = t_zuletzt_exportiert;
         this.flrlandplzort = flrlandplzort;
         this.flrpartnerklasse = flrpartnerklasse;
         this.flrbranche = flrbranche;
@@ -373,6 +349,22 @@ public class FLRPartner implements Serializable {
 
     public void setT_aendern(Date t_aendern) {
         this.t_aendern = t_aendern;
+    }
+
+    public String getC_exchangeid() {
+        return this.c_exchangeid;
+    }
+
+    public void setC_exchangeid(String c_exchangeid) {
+        this.c_exchangeid = c_exchangeid;
+    }
+
+    public Date getT_zuletzt_exportiert() {
+        return this.t_zuletzt_exportiert;
+    }
+
+    public void setT_zuletzt_exportiert(Date t_zuletzt_exportiert) {
+        this.t_zuletzt_exportiert = t_zuletzt_exportiert;
     }
 
     public FLRLandplzort getFlrlandplzort() {

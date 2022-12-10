@@ -265,8 +265,7 @@ public class LoslagerentnahmeHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select " + FLR_LOSLAGER
-						+ FertigungFac.FLR_LOSLAGERENTNAHME_I_SORT
+				String queryString = "select " + FLR_LOSLAGER + "i_id"
 						+ FLR_LOSLAGER_FROM_CLAUSE + this.buildWhereClause()
 						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);

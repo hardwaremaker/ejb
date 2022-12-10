@@ -43,7 +43,8 @@ public class ReklamationbildDto implements Serializable {
 	private Integer iSort;
 	private Integer reklamationIId;
 	private String cBez;
-	
+	private String cDateiname;
+	private String datenformatCNr;
 
 	public Integer getIId() {
 		return iId;
@@ -75,6 +76,18 @@ public class ReklamationbildDto implements Serializable {
 	}
 	public void setOBild(byte[] bild) {
 		oBild = bild;
+	}
+	public String getCDateiname() {
+		return cDateiname;
+	}
+	public void setCDateiname(String cDateiname) {
+		this.cDateiname = cDateiname;
+	}
+	public String getDatenformatCNr() {
+		return datenformatCNr;
+	}
+	public void setDatenformatCNr(String datenformatCNr) {
+		this.datenformatCNr = datenformatCNr;
 	}
 	private byte[] oBild;
 

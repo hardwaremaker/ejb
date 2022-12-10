@@ -39,6 +39,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -72,6 +73,8 @@ import com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.artikel.service.MaterialDto;
+import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.artikel.service.VkPreisfindungPreislisteDto;
 import com.lp.server.artikel.service.VkpfMengenstaffelDto;
@@ -79,6 +82,8 @@ import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragFac;
+import com.lp.server.benutzer.service.RechteFac;
+import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.lieferschein.service.LieferscheinFac;
 import com.lp.server.lieferschein.service.LieferscheinpositionFac;
@@ -86,9 +91,12 @@ import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
 import com.lp.server.partner.fastlanereader.generated.FLRKontakt;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.partner.fastlanereader.generated.FLRKurzbrief;
+import com.lp.server.partner.fastlanereader.generated.FLRLiefermengen;
 import com.lp.server.partner.fastlanereader.generated.FLRPASelektion;
+import com.lp.server.partner.fastlanereader.generated.FLRPartnerbank;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.AnsprechpartnerfunktionDto;
+import com.lp.server.partner.service.BankDto;
 import com.lp.server.partner.service.CustomerPricelistItemDescriptionDto;
 import com.lp.server.partner.service.CustomerPricelistItemDto;
 import com.lp.server.partner.service.CustomerPricelistPriceDto;
@@ -102,6 +110,7 @@ import com.lp.server.partner.service.KundeReportFac;
 import com.lp.server.partner.service.KundesokoDto;
 import com.lp.server.partner.service.KundesokomengenstaffelDto;
 import com.lp.server.partner.service.LieferantDto;
+import com.lp.server.partner.service.LiefermengenDto;
 import com.lp.server.partner.service.PASelektionDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
@@ -114,10 +123,14 @@ import com.lp.server.projekt.service.ProjektServiceFac;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.system.service.LieferartDto;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.SpediteurDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.system.service.ZahlungszielDto;
 import com.lp.server.util.FacadeBeauftragter;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -130,12 +143,11 @@ import com.lp.util.LPDatenSubreport;
 
 @Stateless
 @Interceptors(TimingInterceptor.class)
-public class KundeReportFacBean extends LPReport implements KundeReportFac,
-		JRDataSource {
+public class KundeReportFacBean extends LPReport implements KundeReportFac, JRDataSource {
 
 	private int useCase;
 	private Object[][] data = null;
-	private BigDecimal summePreis = null;
+
 	// private BigDecimal summeWert = null ;
 
 	private IJasperPrintTransformer jasperPrintTransformer;
@@ -151,6 +163,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 	private static int REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_FAXDW = 5;
 	private static int REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_MOBIL = 6;
 	private static int REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_EMAIL = 7;
+	private static int REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_VERSTECKT = 8;
+	private static int REPORT_KUNDENSTAMMBLATT_ANZAHL_SPALTEN = 9;
 
 	private static int REPORT_KUNDENLISTE_BRIEFANREDE = 0;
 	private static int REPORT_KUNDENLISTE_PARTNERART = 1;
@@ -243,7 +257,11 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 	private static int REPORT_KUNDENLISTE_SUBREPORT_PROJEKTE = 88;
 	private static int REPORT_KUNDENLISTE_KUNDENNUMMER = 89;
 	private static int REPORT_KUNDENLISTE_KUNDE_I_ID = 90;
-	private static int REPORT_KUNDENLISTE_ANZAHL_SPALTEN = 91;
+	private static int REPORT_KUNDENLISTE_OFFEN_LS = 91;
+	private static int REPORT_KUNDENLISTE_OFFEN_RE = 92;
+	private static int REPORT_KUNDENLISTE_ANSPRECHPARTNER_VERSTECKT = 93;
+	private static int REPORT_KUNDENLISTE_LIEFERART_KENNUNG = 94;
+	private static int REPORT_KUNDENLISTE_ANZAHL_SPALTEN = 95;
 
 	private static int REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE = 0;
 	private static int REPORT_WARTUNGSAUSWERTUNG_FAELLIGKEIT = 1;
@@ -336,6 +354,10 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			value = getFieldValueWartungsauswertung(fieldName);
 		}
 			break;
+		case KundeReportFac.UC_REPORT_KUNDE_LIEFERMENGEN: {
+			value = getFieldValueLiefermengen(fieldName);
+		}
+			break;
 		}
 		return value;
 	}
@@ -343,8 +365,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 	/**
 	 * getFieldValueStatistik
 	 * 
-	 * @param fieldName
-	 *            String
+	 * @param fieldName String
 	 * @return Object
 	 */
 	private Object getFieldValueStatistik(String fieldName) {
@@ -357,6 +378,18 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			value = data[index][REPORT_STATISTIK_RECHNUNGSNUMMER];
 		} else if ("F_LIEFERSCHEIN".equals(fieldName)) {
 			value = data[index][REPORT_STATISTIK_LIEFERSCHEINNUMMER];
+		} else if ("F_LIEFERSCHEINART".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_LIEFERSCHEINART];
+		} else if ("F_AUFTRAG".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_AUFTRAGSNUMMER];
+		} else if ("F_RE_OR_GS".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_RE_OR_GS];
+		} else if ("F_RECHNUNGSDATUM".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_RECHNUNGSDATUM];
+		} else if ("F_RUECKGABEDATUM".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_RUECKGABE];
+		} else if ("F_MANUELLERLEDIGTDATUM".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_MANUELL_ERLEDIGT];
 		} else if ("F_DATUM".equals(fieldName)) {
 			value = data[index][REPORT_STATISTIK_DATUM];
 		} else if ("F_IDENT".equals(fieldName)) {
@@ -390,18 +423,16 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			}
 			value = wert;
 		} else if ("F_PREIS".equals(fieldName)) {
-			BigDecimal preis = (BigDecimal) data[index][REPORT_STATISTIK_PREIS];
-			BigDecimal menge = (BigDecimal) data[index][REPORT_STATISTIK_MENGE];
-			if (preis != null && menge != null) {
-				summePreis = summePreis.add(preis.multiply(menge));
-			}
+
 			value = data[index][REPORT_STATISTIK_PREIS];
-		} else if ("F_SUMMEPREIS".equals(fieldName)) {
-			value = summePreis;
 		} else if ("F_VERLEIHTAGE".equals(fieldName)) {
 			value = data[index][REPORT_STATISTIK_VERLEIHTAGE];
 		} else if ("F_VERLEIHFAKTOR".equals(fieldName)) {
 			value = data[index][REPORT_STATISTIK_VERLEIHFAKTOR];
+		} else if ("F_ARTIKELGRUPPE".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_ARTIKELGRUPPE];
+		} else if ("F_ARTIKELKLASSE".equals(fieldName)) {
+			value = data[index][REPORT_STATISTIK_ARTIKELKLASSE];
 		}
 		return value;
 	}
@@ -424,6 +455,35 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			value = data[index][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_TITEL];
 		} else if ("F_VORNAME".equals(fieldName)) {
 			value = data[index][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_VORNAME];
+		} else if ("F_VERSTECKT".equals(fieldName)) {
+			value = data[index][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_VERSTECKT];
+		}
+
+		return value;
+	}
+
+	private Object getFieldValueLiefermengen(String fieldName) {
+		Object value = null;
+		if ("Artikelnummer".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_ARTIKELNUMMER];
+		} else if ("Bezeichnung".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_BEZEICHUNG];
+		} else if ("Datum".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_DATUM];
+		} else if ("Einheit".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_EINHEIT];
+		} else if ("LSText".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_LSTEXT];
+		} else if ("Menge".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_MENGE];
+		} else if ("LetzterStartwert".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_LETZTER_STARTWERT];
+		} else if ("LiefermengeGesamt".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_LIEFERMENGE_GESAMT];
+		} else if ("DatumLetzterStartwert".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_DATUM_LETZTER_STARTWERT];
+		} else if ("MengeUnterwegs".equals(fieldName)) {
+			value = data[index][REPORT_LIEFERMENGEN_MENGE_UNTERWEGS];
 		}
 
 		return value;
@@ -538,6 +598,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			value = data[index][REPORT_KUNDENLISTE_ANSPRECHPARTNER_MOBIL];
 		} else if ("F_ANSPRECHPARTNER_BEMERKUNG".equals(fieldName)) {
 			value = data[index][REPORT_KUNDENLISTE_ANSPRECHPARTNER_BEMERKUNG];
+		} else if ("F_ANSPRECHPARTNER_VERSTECKT".equals(fieldName)) {
+			value = data[index][REPORT_KUNDENLISTE_ANSPRECHPARTNER_VERSTECKT];
 		} else if ("F_ANSPRECHPARTNER_NACHNAME".equals(fieldName)) {
 			value = data[index][REPORT_KUNDENLISTE_ANSPRECHPARTNER_NACHNAME];
 		} else if ("F_ANSPRECHPARTNER_TELDW".equals(fieldName)) {
@@ -596,6 +658,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			value = data[index][REPORT_KUNDENLISTE_LIEFERANTENNUMMER];
 		} else if ("F_LIEFERART".equals(fieldName)) {
 			value = data[index][REPORT_KUNDENLISTE_LIEFERART];
+		} else if ("F_LIEFERART_KENNUNG".equals(fieldName)) {
+			value = data[index][REPORT_KUNDENLISTE_LIEFERART_KENNUNG];
 		} else if ("F_MWSTSATZ".equals(fieldName)) {
 			value = data[index][REPORT_KUNDENLISTE_MWSTSATZ];
 		} else if ("F_ORT".equals(fieldName)) {
@@ -704,15 +768,18 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			value = data[index][REPORT_KUNDENLISTE_SUBREPORT_PROJEKTE];
 		} else if ("F_KUNDE_I_ID".equals(fieldName)) {
 			value = data[index][REPORT_KUNDENLISTE_KUNDE_I_ID];
+		} else if ("F_OFFEN_LS".equals(fieldName)) {
+			value = data[index][REPORT_KUNDENLISTE_OFFEN_LS];
+		} else if ("F_OFFEN_RE".equals(fieldName)) {
+			value = data[index][REPORT_KUNDENLISTE_OFFEN_RE];
 		}
 
 		return value;
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printWartungsauswertung(java.sql.Timestamp tStichtag,
-			boolean bVerdichtet, boolean bSortiertNachArtikellieferant,
-			TheClientDto theClientDto) {
+	public JasperPrintLP printWartungsauswertung(java.sql.Timestamp tStichtag, boolean bVerdichtet,
+			boolean bSortiertNachArtikellieferant, TheClientDto theClientDto) {
 		useCase = KundeReportFac.UC_REPORT_KUNDE_WARTUNGSAUSWERTUNG;
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 
@@ -720,32 +787,20 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		parameter.put("P_VERDICHTET", new Boolean(bVerdichtet));
 
 		if (bSortiertNachArtikellieferant == true) {
-			parameter
-					.put("P_SORTIERUNG",
-							getTextRespectUISpr("lp.artikellieferant",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()));
+			parameter.put("P_SORTIERUNG",
+					getTextRespectUISpr("lp.artikellieferant", theClientDto.getMandant(), theClientDto.getLocUi()));
 		} else {
-			parameter
-					.put("P_SORTIERUNG",
-							getTextRespectUISpr("lp.pruefer",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()));
+			parameter.put("P_SORTIERUNG",
+					getTextRespectUISpr("lp.pruefer", theClientDto.getMandant(), theClientDto.getLocUi()));
 		}
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		String sQuery = "SELECT ap FROM FLRAuftragposition ap WHERE ap.flrauftrag.auftragstatus_c_nr IN ('"
-				+ LocaleFac.STATUS_OFFEN
-				+ "','"
-				+ LocaleFac.STATUS_TEILERLEDIGT
-				+ "') "
-				+ " AND ap.flrartikel.i_id IS NOT NULL AND ap.flrauftrag.mandant_c_nr='"
-				+ theClientDto.getMandant()
+				+ LocaleFac.STATUS_OFFEN + "','" + LocaleFac.STATUS_TEILERLEDIGT + "') "
+				+ " AND ap.flrartikel.i_id IS NOT NULL AND ap.flrauftrag.mandant_c_nr='" + theClientDto.getMandant()
 				+ "' AND ap.t_uebersteuerterliefertermin<='"
-				+ Helper.formatDateWithSlashes(new java.sql.Date(tStichtag
-						.getTime()))
-				+ "'"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tStichtag.getTime())) + "'"
 				+ " ORDER BY ap.flrauftrag.flrkunde.flrpartner.c_name1nachnamefirmazeile1 ASC";
 
 		Query inventurliste = session.createQuery(sQuery);
@@ -758,84 +813,62 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 		while (resultListIterator.hasNext()) {
 
-			FLRAuftragposition pos = (FLRAuftragposition) resultListIterator
-					.next();
+			FLRAuftragposition pos = (FLRAuftragposition) resultListIterator.next();
 
 			Object[] zeile = new Object[20];
 			zeile[REPORT_WARTUNGSAUSWERTUNG_PRUEFER] = "";
-			java.sql.Timestamp tTermin = new java.sql.Timestamp(pos
-					.getT_uebersteuerterliefertermin().getTime());
+			java.sql.Timestamp tTermin = new java.sql.Timestamp(pos.getT_uebersteuerterliefertermin().getTime());
 
-			zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE] = pos
-					.getFlrauftrag().getFlrkunde().getFlrpartner()
+			zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE] = pos.getFlrauftrag().getFlrkunde().getFlrpartner()
 					.getC_name1nachnamefirmazeile1();
 
-			if (pos.getFlrauftrag().getFlrkunde().getFlrpartner()
-					.getFlrlandplzort() != null) {
-				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ] = pos
-						.getFlrauftrag().getFlrkunde().getFlrpartner()
+			if (pos.getFlrauftrag().getFlrkunde().getFlrpartner().getFlrlandplzort() != null) {
+				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ] = pos.getFlrauftrag().getFlrkunde().getFlrpartner()
 						.getFlrlandplzort().getFlrland().getC_lkz();
 
-				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ] = pos
-						.getFlrauftrag().getFlrkunde().getFlrpartner()
+				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ] = pos.getFlrauftrag().getFlrkunde().getFlrpartner()
 						.getFlrlandplzort().getC_plz();
 
-				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT] = pos
-						.getFlrauftrag().getFlrkunde().getFlrpartner()
+				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT] = pos.getFlrauftrag().getFlrkunde().getFlrpartner()
 						.getFlrlandplzort().getFlrort().getC_name();
 
-				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE] = pos
-						.getFlrauftrag().getFlrkunde().getFlrpartner()
-						.getC_strasse();
+				zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE] = pos.getFlrauftrag().getFlrkunde()
+						.getFlrpartner().getC_strasse();
 			}
-			zeile[REPORT_WARTUNGSAUSWERTUNG_POSITIONSKOMMENTAR_AUFTRAG] = pos
-					.getX_textinhalt();
+			zeile[REPORT_WARTUNGSAUSWERTUNG_POSITIONSKOMMENTAR_AUFTRAG] = pos.getX_textinhalt();
 
 			PartnerDto partnerDto = getPartnerFac()
-					.partnerFindByPrimaryKey(
-							pos.getFlrauftrag().getFlrkunde().getFlrpartner()
-									.getI_id(), theClientDto);
+					.partnerFindByPrimaryKey(pos.getFlrauftrag().getFlrkunde().getFlrpartner().getI_id(), theClientDto);
 
-			zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_FILIALNUMMER] = partnerDto
-					.getCFilialnummer();
+			zeile[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_FILIALNUMMER] = partnerDto.getCFilialnummer();
 
-			zeile[REPORT_WARTUNGSAUSWERTUNG_AUFTRAG_AUSLOESER] = pos
-					.getFlrauftrag().getC_nr();
+			zeile[REPORT_WARTUNGSAUSWERTUNG_AUFTRAG_AUSLOESER] = pos.getFlrauftrag().getC_nr();
 
 			PersonalDto personalDtoAB = getPersonalFac()
-					.personalFindByPrimaryKey(
-							pos.getFlrauftrag().getVertreter_i_id(),
-							theClientDto);
-			zeile[REPORT_WARTUNGSAUSWERTUNG_PRUEFER] = personalDtoAB
-					.getPartnerDto().formatAnrede();
+					.personalFindByPrimaryKey(pos.getFlrauftrag().getVertreter_i_id(), theClientDto);
+			zeile[REPORT_WARTUNGSAUSWERTUNG_PRUEFER] = personalDtoAB.getPartnerDto().formatAnrede();
 
-			ArtikelDto artikelDto = getArtikelFac()
-					.artikelFindByPrimaryKeySmall(
-							pos.getFlrartikel().getI_id(), theClientDto);
+			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(pos.getFlrartikel().getI_id(),
+					theClientDto);
 
-			zeile[REPORT_WARTUNGSAUSWERTUNG_ARTIKELNUMMER] = artikelDto
-					.getCNr();
+			zeile[REPORT_WARTUNGSAUSWERTUNG_ARTIKELNUMMER] = artikelDto.getCNr();
 
 			// 1. Artikellieferant einfuegen
 
-			ArtikellieferantDto[] aldtos = getArtikelFac()
-					.artikellieferantFindByArtikelIId(artikelDto.getIId(),
-							theClientDto);
+			ArtikellieferantDto[] aldtos = getArtikelFac().artikellieferantFindByArtikelIId(artikelDto.getIId(),
+					theClientDto);
 			if (aldtos != null && aldtos.length > 0) {
 
-				LieferantDto lDto = getLieferantFac()
-						.lieferantFindByPrimaryKey(aldtos[0].getLieferantIId(),
-								theClientDto);
+				LieferantDto lDto = getLieferantFac().lieferantFindByPrimaryKey(aldtos[0].getLieferantIId(),
+						theClientDto);
 
-				zeile[REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT] = lDto
-						.getPartnerDto().formatAnrede();
+				zeile[REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT] = lDto.getPartnerDto().formatAnrede();
 			} else {
 				zeile[REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT] = "";
 			}
 
 			if (artikelDto.getArtikelsprDto() != null) {
-				zeile[REPORT_WARTUNGSAUSWERTUNG_BEZEICHNUNG] = artikelDto
-						.getArtikelsprDto().getCBez();
+				zeile[REPORT_WARTUNGSAUSWERTUNG_BEZEICHNUNG] = artikelDto.getArtikelsprDto().getCBez();
 			}
 			int iWartungsintervall = 0;
 			if (artikelDto.getIWartungsintervall() != null) {
@@ -848,27 +881,19 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				zeile[REPORT_WARTUNGSAUSWERTUNG_FAELLIGKEIT] = tTermin;
 			}
 
-			zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRT] = new Boolean(
-					true);
+			zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRT] = new Boolean(true);
 
-			zeile[REPORT_WARTUNGSAUSWERTUNG_INTERVALL] = new Integer(
-					iWartungsintervall);
+			zeile[REPORT_WARTUNGSAUSWERTUNG_INTERVALL] = new Integer(iWartungsintervall);
 
 			// Nun die letzte Lieferscheinposition des Artkels mit der
 			// Auftragsadresse holen
 			Session session2 = FLRSessionFactory.getFactory().openSession();
 
 			String sQuery2 = "SELECT lp FROM FLRLieferscheinposition lp WHERE lp.flrlieferschein.lieferscheinstatus_status_c_nr NOT IN ('"
-					+ LocaleFac.STATUS_STORNIERT
-					+ "') "
-					+ " AND lp.flrartikel.i_id="
-					+ artikelDto.getIId()
-					+ "AND lp.flrlieferschein.flrkunde="
-					+ pos.getFlrauftrag().getFlrkunde().getI_id()
+					+ LocaleFac.STATUS_STORNIERT + "') " + " AND lp.flrartikel.i_id=" + artikelDto.getIId()
+					+ "AND lp.flrlieferschein.flrkunde=" + pos.getFlrauftrag().getFlrkunde().getI_id()
 					+ " AND lp.flrlieferschein.d_belegdatum>='"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(tTermin
-							.getTime()))
-					+ "' "
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tTermin.getTime())) + "' "
 					+ " ORDER BY lp.flrlieferschein.d_belegdatum DESC";
 
 			Query query2 = session2.createQuery(sQuery2);
@@ -876,45 +901,35 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			List<?> resultList2 = query2.list();
 
 			if (resultList2.size() > 0) {
-				FLRLieferscheinposition lsPos = (FLRLieferscheinposition) resultList2
-						.iterator().next();
+				FLRLieferscheinposition lsPos = (FLRLieferscheinposition) resultList2.iterator().next();
 
 				// Faelligkeit berechnen
 				java.sql.Timestamp tLetzteWartung = new java.sql.Timestamp(
 						lsPos.getFlrlieferschein().getD_belegdatum().getTime());
 
-				PersonalDto personalDto = getPersonalFac()
-						.personalFindByPrimaryKey(
-								lsPos.getFlrlieferschein()
-										.getPersonal_i_id_vertreter(),
-								theClientDto);
+				PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
+						lsPos.getFlrlieferschein().getPersonal_i_id_vertreter(), theClientDto);
 
-				zeile[REPORT_WARTUNGSAUSWERTUNG_POSITIONSKOMMENTAR_LIEFERSCHEIN] = lsPos
-						.getC_textinhalt();
+				zeile[REPORT_WARTUNGSAUSWERTUNG_POSITIONSKOMMENTAR_LIEFERSCHEIN] = lsPos.getC_textinhalt();
 
-				zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRTLS] = lsPos
-						.getFlrlieferschein().getC_nr();
+				zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRTLS] = lsPos.getFlrlieferschein().getC_nr();
 
 				zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNG] = tLetzteWartung;
-				zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRTPERSON] = personalDto
-						.getPartnerDto().formatAnrede();
+				zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRTPERSON] = personalDto.getPartnerDto()
+						.formatAnrede();
 
 				Calendar c = Calendar.getInstance();
 				c.setTimeInMillis(tLetzteWartung.getTime());
-				c.set(Calendar.MONTH, c.get(Calendar.MONTH)
-						+ iWartungsintervall);
+				c.set(Calendar.MONTH, c.get(Calendar.MONTH) + iWartungsintervall);
 
 				if (c.getTimeInMillis() <= tStichtag.getTime()) {
-					zeile[REPORT_WARTUNGSAUSWERTUNG_FAELLIGKEIT] = new java.sql.Timestamp(
-							c.getTimeInMillis());
+					zeile[REPORT_WARTUNGSAUSWERTUNG_FAELLIGKEIT] = new java.sql.Timestamp(c.getTimeInMillis());
 				} else {
 					continue;
 				}
 
-				if (lsPos.getN_menge() != null
-						&& lsPos.getN_menge().doubleValue() == 0) {
-					zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRT] = new Boolean(
-							false);
+				if (lsPos.getN_menge() != null && lsPos.getN_menge().doubleValue() == 0) {
+					zeile[REPORT_WARTUNGSAUSWERTUNG_LETZTEPRUEFUNGDURCHGEFUEHRT] = new Boolean(false);
 				}
 
 			} else {
@@ -935,45 +950,35 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 					String s1 = (String) a1[REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT];
 
-					s1 += " "
-							+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
+					s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
 
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
 					}
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
 					}
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
 					}
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
 					}
 
 					String s2 = (String) a2[REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT];
-					s2 += " "
-							+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
+					s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
 
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
 					}
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
 					}
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
 					}
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
 					}
 
 					if (s1.compareTo(s2) > 0) {
@@ -991,45 +996,35 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 					String s1 = (String) a1[REPORT_WARTUNGSAUSWERTUNG_PRUEFER];
 
-					s1 += " "
-							+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
+					s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
 
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
 					}
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
 					}
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
 					}
 					if (a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE] != null) {
-						s1 += " "
-								+ a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
+						s1 += " " + a1[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
 					}
 
 					String s2 = (String) a2[REPORT_WARTUNGSAUSWERTUNG_PRUEFER];
-					s2 += " "
-							+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
+					s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_KUNDE];
 
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_LKZ];
 					}
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_PLZ];
 					}
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_ORT];
 					}
 					if (a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE] != null) {
-						s2 += " "
-								+ a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
+						s2 += " " + a2[REPORT_WARTUNGSAUSWERTUNG_LIEFERADRESSE_STRASSE];
 					}
 
 					if (s1.compareTo(s2) > 0) {
@@ -1049,78 +1044,86 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		setData((Object[][]) alDaten.toArray(data));
 
 		if (bSortiertNachArtikellieferant == true) {
-			initJRDS(parameter, KundeReportFac.REPORT_MODUL,
-					KundeReportFac.REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT,
-					theClientDto.getMandant(), theClientDto.getLocUi(),
-					theClientDto);
+			initJRDS(parameter, KundeReportFac.REPORT_MODUL, KundeReportFac.REPORT_WARTUNGSAUSWERTUNG_ARTIKELLIEFERANT,
+					theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 		} else {
 
-			initJRDS(parameter, KundeReportFac.REPORT_MODUL,
-					KundeReportFac.REPORT_WARTUNGSAUSWERTUNG,
-					theClientDto.getMandant(), theClientDto.getLocUi(),
-					theClientDto);
+			initJRDS(parameter, KundeReportFac.REPORT_MODUL, KundeReportFac.REPORT_WARTUNGSAUSWERTUNG,
+					theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 		}
 
 		return getReportPrint();
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public CustomerPricelistReportDto printKundenpreislisteRaw(
-			Integer kundeIId, Integer artikelgruppeIId,
-			Integer artikelklasseIId, boolean bMitGesperrten,
-			String artikelNrVon, String artikelNrBis, boolean bMitVersteckten,
-			java.sql.Date datGueltikeitsdatumI, boolean nurSonderkonditionen,
-			boolean bMitArtikelbezeichnungenInMandantensprache,
-			boolean nurWebshopartikel, TheClientDto theClientDto) {
+	public CustomerPricelistReportDto printKundenpreislisteRaw(Integer kundeIId, Integer artikelgruppeIId,
+			Integer artikelklasseIId, boolean bMitGesperrten, String artikelNrVon, String artikelNrBis,
+			boolean bMitVersteckten, java.sql.Date datGueltikeitsdatumI, boolean nurSonderkonditionen,
+			boolean bMitArtikelbezeichnungenInMandantensprache, boolean nurWebshopartikel, Integer shopgruppeIId,
+			TheClientDto theClientDto) {
 
 		CustomerPricelistReportDto returnDto = new CustomerPricelistReportDto();
 
 		useCase = KundeReportFac.UC_REPORT_KUNDE_KUNDENPREISLISTE;
-		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
-				theClientDto);
+		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
 		if (!kundeDto.getMandantCNr().equals(theClientDto.getMandant())) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FALSCHER_MANDANT,
-					"Kunde (i_id = " + kundeIId + ") in Mandant "
-							+ theClientDto.getMandant() + " nicht vorhanden");
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FALSCHER_MANDANT,
+					"Kunde (i_id = " + kundeIId + ") in Mandant " + theClientDto.getMandant() + " nicht vorhanden");
 		}
-		// HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		boolean bVKMengenstaffelAnstattSokoMengestaffel = false;
 		try {
-			returnDto.setCustomer(new IdValueDto(kundeDto.getIId(), kundeDto
-					.getPartnerDto().formatAnrede()));
+			ParametermandantDto p = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ARTIKEL, ParameterFac.PARAMETER_VK_MENGENSTAFFEL_ANSTATT_SOKO_MENGESTAFFEL);
+
+			bVKMengenstaffelAnstattSokoMengestaffel = (Boolean) p.getCWertAsObject();
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		try {
+			returnDto.setCustomer(new IdValueDto(kundeDto.getIId(), kundeDto.getPartnerDto().formatAnrede()));
 
 			if (artikelgruppeIId != null) {
 				returnDto.setItemgroup(new IdValueDto(artikelgruppeIId,
-						getArtikelFac().artgruFindByPrimaryKey(
-								artikelgruppeIId, theClientDto).getCNr()));
+						getArtikelFac().artgruFindByPrimaryKey(artikelgruppeIId, theClientDto).getCNr()));
 			}
 			if (artikelklasseIId != null) {
 				returnDto.setItemclass(new IdValueDto(artikelklasseIId,
-						getArtikelFac().artklaFindByPrimaryKey(
-								artikelklasseIId, theClientDto).getCNr()));
+						getArtikelFac().artklaFindByPrimaryKey(artikelklasseIId, theClientDto).getCNr()));
+			}
+			if (shopgruppeIId != null) {
+				returnDto.setShoproup(new IdValueDto(shopgruppeIId,
+						getArtikelFac().shopgruppeFindByPrimaryKey(shopgruppeIId, theClientDto).getBezeichnung()));
+			}
+
+			String mandant = null;
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				mandant = getSystemFac().getHauptmandant();
+			} else {
+				mandant = theClientDto.getMandant();
 			}
 
 			returnDto.setOnlyWebshopItems(nurWebshopartikel);
-			ParametermandantDto param = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
-					ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
+			ParametermandantDto param = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_KUNDEN, ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
 
 			int iPreisbasis = (Integer) param.getCWertAsObject();
 			// Mwstsatz aus Artikel
 
 			String sQuery = "SELECT artikelliste.i_id, artikelliste.c_nr, aspr.c_bez, aspr.c_kbez, aspr.c_zbez,aspr.c_zbez2,artikelliste.einheit_c_nr, gruppe.c_nr, "
-					+ " klasse.c_nr, artikelliste.b_versteckt,artikelliste.mwstsatz_i_id, gruppe.i_id, shopgruppe, sgspr.c_bez "
+					+ " klasse.c_nr, artikelliste.b_versteckt,artikelliste.mwstsatz_i_id, gruppe.i_id, shopgruppe, sgspr.c_bez, material.i_id, artikelliste.f_materialgewicht "
 					+ " FROM FLRArtikelliste AS artikelliste"
 					+ " LEFT OUTER JOIN artikelliste.flrshopgruppe as shopgruppe "
 					+ " LEFT OUTER JOIN shopgruppe.shopgruppesprset AS sgspr "
 					+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS gruppe "
+					+ " LEFT OUTER JOIN artikelliste.flrmaterial AS material "
 					+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS klasse "
-					// +
-					// " LEFT OUTER JOIN artikelliste.artikelsperreset AS sperren "
-					+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr WHERE artikelliste.mandant_c_nr='"
-					+ theClientDto.getMandant()
-					+ "' AND artikelliste.artikelart_c_nr NOT IN ('"
-					+ ArtikelFac.ARTIKELART_HANDARTIKEL + "') ";
+					+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr WHERE artikelliste.mandant_c_nr='" + mandant
+					+ "' AND artikelliste.artikelart_c_nr NOT IN ('" + ArtikelFac.ARTIKELART_HANDARTIKEL + "') ";
 
 			if (!bMitGesperrten) {
 				sQuery += " AND artikelliste.artikelsperreset IS EMPTY";
@@ -1131,6 +1134,9 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			if (artikelgruppeIId != null) {
 				sQuery += " AND gruppe.i_id=" + artikelgruppeIId.intValue();
 			}
+			if (shopgruppeIId != null) {
+				sQuery += " AND shopgruppe.i_id=" + shopgruppeIId.intValue();
+			}
 			if (bMitVersteckten == false) {
 				sQuery += " AND artikelliste.b_versteckt=0 ";
 			}
@@ -1138,8 +1144,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				sQuery += " AND artikelliste.c_nr >='" + artikelNrVon + "'";
 			}
 			if (artikelNrBis != null) {
-				sQuery = sQuery + " AND artikelliste.c_nr <='" + artikelNrBis
-						+ "'";
+				sQuery = sQuery + " AND artikelliste.c_nr <='" + artikelNrBis + "'";
 			}
 			if (nurWebshopartikel) {
 				sQuery = sQuery + " AND shopgruppe.i_id IS NOT NULL ";
@@ -1171,8 +1176,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				Integer artikel_i_id = (Integer) o[0];
 				Integer artgruIId = (Integer) o[11];
 
-				CustomerPricelistItemDto reportArtikel = new CustomerPricelistItemDto(
-						artikel_i_id, (String) o[1]);
+				CustomerPricelistItemDto reportArtikel = new CustomerPricelistItemDto(artikel_i_id, (String) o[1]);
 				// Integer artikel_i_id = (Integer) o[0];
 				// String artikelnummer = (String) o[1];
 				// String bezeichnung = (String) o[2];
@@ -1196,8 +1200,27 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				reportArtikel.setVATId((Integer) o[10]);
 				// reportArtikel.setArtikelgruppeId(artgruIId);
 				reportArtikel.setSpecialCondition(false);
-				reportArtikel.setItemGroupDto(new IdValueDto(artgruIId,
-						(String) o[7]));
+				reportArtikel.setItemGroupDto(new IdValueDto(artgruIId, (String) o[7]));
+
+				if (o[14] != null) {
+					Integer materialIId = (Integer) o[14];
+
+					MaterialzuschlagDto mzDto = getMaterialFac().getKursMaterialzuschlagDtoVKInZielwaehrung(kundeIId,
+							artikel_i_id, datGueltikeitsdatumI, kundeDto.getCWaehrung(), theClientDto);
+
+					if (mzDto != null) {
+						reportArtikel.setItemKursMaterialzuschlag(mzDto.getNZuschlag());
+					}
+
+					MaterialDto materialDto = getMaterialFac().materialFindByPrimaryKey(materialIId, theClientDto);
+
+					reportArtikel.setItemMaterial(materialDto.getBezeichnung());
+
+					if (o[15] != null) {
+						reportArtikel.setItemMaterialgewicht(new BigDecimal((Double) o[15]));
+					}
+
+				}
 
 				if (o[12] != null) {
 					FLRShopgruppe flrShopgruppe = (FLRShopgruppe) o[12];
@@ -1205,25 +1228,19 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					shopgroupDto.setId(flrShopgruppe.getI_id());
 					shopgroupDto.setCnr(flrShopgruppe.getC_nr());
 					shopgroupDto.setName(flrShopgruppe.getC_nr());
-					shopgroupDto.setName(o[13] != null ? (String) o[13]
-							: flrShopgruppe.getC_nr());
+					shopgroupDto.setName(o[13] != null ? (String) o[13] : flrShopgruppe.getC_nr());
 					reportArtikel.setShopgroupDto(shopgroupDto);
 				}
 
 				BigDecimal preisBasis = null;
 				if (iPreisbasis == 0 || iPreisbasis == 2) {
 
-					preisBasis = getVkPreisfindungFac().ermittlePreisbasis(
-							artikel_i_id, datGueltikeitsdatumI, null,
+					preisBasis = getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id, datGueltikeitsdatumI, null,
 							kundeDto.getCWaehrung(), theClientDto);
 				} else {
 
-					preisBasis = getVkPreisfindungFac()
-							.ermittlePreisbasis(
-									artikel_i_id,
-									datGueltikeitsdatumI,
-									kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-									kundeDto.getCWaehrung(), theClientDto);
+					preisBasis = getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id, datGueltikeitsdatumI,
+							kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(), kundeDto.getCWaehrung(), theClientDto);
 
 				}
 
@@ -1238,8 +1255,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 				if (nurSonderkonditionen == false) {
 					CustomerPricelistPriceDto preisDto = new CustomerPricelistPriceDto(
-							CustomerPricelistPriceDto.PREISTYP_VKPREISBASIS,
-							preisNachkommastellen);
+							CustomerPricelistPriceDto.PREISTYP_VKPREISBASIS, preisNachkommastellen);
 					preisDto.setBasePrice(preisBasis);
 
 					// Object[] zeile = new Object[iAnzahlZeilenSubreport];
@@ -1251,12 +1267,9 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					VkPreisfindungPreislisteDto artikelPreisliste = null;
 
 					try {
-						artikelPreisliste = getVkPreisfindungFac()
-								.getAktuellePreislisteByArtikelIIdPreislisteIId(
-										artikel_i_id,
-										kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-										new Date(System.currentTimeMillis()),
-										kundeDto.getCWaehrung(), theClientDto);
+						artikelPreisliste = getVkPreisfindungFac().getAktuellePreislisteByArtikelIIdPreislisteIId(
+								artikel_i_id, kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+								new Date(System.currentTimeMillis()), kundeDto.getCWaehrung(), theClientDto);
 					} catch (Throwable t) {
 						// ignore
 					}
@@ -1266,27 +1279,26 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 						if (artikelPreisliste.getNArtikelfixpreis() != null) {
 							// zeile[5] =
 							// artikelPreisliste.getNArtikelfixpreis();
-							preisDto.setCalculatedPrice(artikelPreisliste
-									.getNArtikelfixpreis());
+							preisDto.setCalculatedPrice(artikelPreisliste.getNArtikelfixpreis());
 						} else {
-							
-							BigDecimal standardRabattsatz=artikelPreisliste
-									.getNArtikelstandardrabattsatz();
-							if(iPreisbasis==1){
-								standardRabattsatz=BigDecimal.ZERO;
+
+							BigDecimal standardRabattsatz = artikelPreisliste.getNArtikelstandardrabattsatz();
+							if (iPreisbasis == 1 || iPreisbasis == 3) {
+								standardRabattsatz = BigDecimal.ZERO;
+
+								// PJ20014
+								preisDto.setBasePrice(getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id,
+										datGueltikeitsdatumI, null, kundeDto.getCWaehrung(), theClientDto));
+
+								preisDto.setDiscountRate(
+										artikelPreisliste.getNArtikelstandardrabattsatz().doubleValue());
+							} else {
+								preisDto.setDiscountRate(standardRabattsatz.doubleValue());
 							}
-							
-							
-							
-							// zeile[4] = artikelPreisliste
-							// .getNArtikelstandardrabattsatz()
-							// .doubleValue();
-							preisDto.setDiscountRate(standardRabattsatz.doubleValue());
+
 							if (preisBasis != null) {
-								BigDecimal p = getVkPreisfindungFac()
-										.berechneVerkaufspreis(
-												preisBasis,
-												standardRabattsatz.doubleValue()).nettopreis;
+								BigDecimal p = getVkPreisfindungFac().berechneVerkaufspreis(preisBasis,
+										standardRabattsatz.doubleValue(), theClientDto).nettopreis;
 								preisDto.setCalculatedPrice(p);
 								// zeile[5] = getVkPreisfindungFac()
 								// .berechneVerkaufspreis(
@@ -1315,50 +1327,33 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 					// Staffelpreis
 					VkpfMengenstaffelDto[] vkpfMengenstaffelDtos = getVkPreisfindungFac()
-							.vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(
-									artikel_i_id,
-									datGueltikeitsdatumI,
-									kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-									theClientDto);
+							.vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(artikel_i_id, datGueltikeitsdatumI,
+									kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(), theClientDto);
 					for (int i = 0; i < vkpfMengenstaffelDtos.length; i++) {
 						VkpfMengenstaffelDto vkpfMengenstaffelDto = vkpfMengenstaffelDtos[i];
 
 						if (vkpfMengenstaffelDto.getVkpfartikelpreislisteIId() == null
-								|| vkpfMengenstaffelDto
-										.getVkpfartikelpreislisteIId()
-										.equals(kundeDto
-												.getVkpfArtikelpreislisteIIdStdpreisliste())) {
-							BigDecimal preisBasisStaffel = getVkPreisfindungFac()
-									.ermittlePreisbasis(
-											artikel_i_id,
-											datGueltikeitsdatumI,
-											vkpfMengenstaffelDto.getNMenge(),
-											vkpfMengenstaffelDto
-													.getVkpfartikelpreislisteIId(),
-											kundeDto.getCWaehrung(),
-											theClientDto);
+								|| vkpfMengenstaffelDto.getVkpfartikelpreislisteIId()
+										.equals(kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste())) {
+							BigDecimal preisBasisStaffel = getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id,
+									datGueltikeitsdatumI, vkpfMengenstaffelDto.getNMenge(),
+									vkpfMengenstaffelDto.getVkpfartikelpreislisteIId(), kundeDto.getCWaehrung(),
+									theClientDto);
 
 							CustomerPricelistPriceDto staffelpreisDto = new CustomerPricelistPriceDto(
-									CustomerPricelistPriceDto.PREISTYP_VKSTAFFELPREIS,
-									preisNachkommastellen);
-							staffelpreisDto.setAmount(vkpfMengenstaffelDto
-									.getNMenge());
+									CustomerPricelistPriceDto.PREISTYP_VKSTAFFELPREIS, preisNachkommastellen);
+							staffelpreisDto.setAmount(vkpfMengenstaffelDto.getNMenge());
 							staffelpreisDto.setBasePrice(preisBasisStaffel);
 							// zeile = new Object[iAnzahlZeilenSubreport];
 							// zeile[0] = vkpfMengenstaffelDto.getNMenge();
 							// zeile[1] = "VK-Staffelpreis";
 							// zeile[2] = preisBasisStaffel;
 
-							String waehrung = theClientDto
-									.getSMandantenwaehrung();
+							String waehrung = theClientDto.getSMandantenwaehrung();
 
-							if (vkpfMengenstaffelDto
-									.getVkpfartikelpreislisteIId() != null) {
-								waehrung = getVkPreisfindungFac()
-										.vkpfartikelpreislisteFindByPrimaryKey(
-												vkpfMengenstaffelDto
-														.getVkpfartikelpreislisteIId())
-										.getWaehrungCNr();
+							if (vkpfMengenstaffelDto.getVkpfartikelpreislisteIId() != null) {
+								waehrung = getVkPreisfindungFac().vkpfartikelpreislisteFindByPrimaryKey(
+										vkpfMengenstaffelDto.getVkpfartikelpreislisteIId()).getWaehrungCNr();
 							}
 
 							// zeile[5] = waehrung;
@@ -1370,36 +1365,20 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 								// .getNArtikelfixpreis();
 								// zeile[6] = waehrung;
 
-								staffelpreisDto
-										.setFixPrice(vkpfMengenstaffelDto
-												.getNArtikelfixpreis());
-								staffelpreisDto
-										.setCalculatedPrice(vkpfMengenstaffelDto
-												.getNArtikelfixpreis());
+								staffelpreisDto.setFixPrice(vkpfMengenstaffelDto.getNArtikelfixpreis());
+								staffelpreisDto.setCalculatedPrice(vkpfMengenstaffelDto.getNArtikelfixpreis());
 								staffelpreisDto.setCurrency(waehrung);
 							} else {
-								// zeile[3] = null;
-								// zeile[4] = vkpfMengenstaffelDto
-								// .getFArtikelstandardrabattsatz();
-								// zeile[5] = getVkPreisfindungFac()
-								// .berechneVerkaufspreis(
-								// preisBasisStaffel,
-								// vkpfMengenstaffelDto
-								// .getFArtikelstandardrabattsatz()).nettopreis;
-								// zeile[6] = kundeDto.getCWaehrung();
-								// zeile[7] = new Boolean(false);
+								// SP5213
+								if (preisBasisStaffel != null) {
 
-								staffelpreisDto
-										.setDiscountRate(vkpfMengenstaffelDto
-												.getFArtikelstandardrabattsatz());
-								staffelpreisDto
-										.setCalculatedPrice(getVkPreisfindungFac()
-												.berechneVerkaufspreis(
-														preisBasisStaffel,
-														vkpfMengenstaffelDto
-																.getFArtikelstandardrabattsatz()).nettopreis);
-								staffelpreisDto.setCurrency(kundeDto
-										.getCWaehrung());
+									staffelpreisDto
+											.setDiscountRate(vkpfMengenstaffelDto.getFArtikelstandardrabattsatz());
+									staffelpreisDto.setCalculatedPrice(getVkPreisfindungFac().berechneVerkaufspreis(
+											preisBasisStaffel, vkpfMengenstaffelDto.getFArtikelstandardrabattsatz(),
+											theClientDto).nettopreis);
+									staffelpreisDto.setCurrency(kundeDto.getCWaehrung());
+								}
 							}
 
 							// al.add(zeile);
@@ -1410,8 +1389,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 				// Soko Artikel
 				KundesokoDto kundeSokoArtikel = getKundesokoFac()
-						.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
-								kundeIId, artikel_i_id, datGueltikeitsdatumI);
+						.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(kundeIId, artikel_i_id,
+								datGueltikeitsdatumI);
 
 				if (kundeSokoArtikel != null) {
 					// oZeile[REPORT_KUNDENPREISLISTE_ENTHAELT_SOKO] = new
@@ -1419,19 +1398,25 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					// true);
 					reportArtikel.setSpecialCondition(true);
 
+					reportArtikel.setKundeartikelnummer(kundeSokoArtikel.getCKundeartikelnummer());
+					reportArtikel.setKundeartikelbezeichnung(kundeSokoArtikel.getCKundeartikelbez());
+
 					KundesokomengenstaffelDto[] kundesokomengenstaffelDto = getKundesokoFac()
-							.kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(
-									kundeSokoArtikel.getIId(),
-									datGueltikeitsdatumI,
-									kundeDto.getCWaehrung(), theClientDto);
+							.kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(kundeSokoArtikel.getIId(),
+									datGueltikeitsdatumI, kundeDto.getCWaehrung(), theClientDto);
 
 					for (int u = 0; u < kundesokomengenstaffelDto.length; u++) {
 
 						KundesokomengenstaffelDto kdsDto = kundesokomengenstaffelDto[u];
 
+						if (bVKMengenstaffelAnstattSokoMengestaffel) {
+							if (kdsDto.getNMenge().doubleValue() > 1) {
+								continue;
+							}
+						}
+
 						CustomerPricelistPriceDto sokopreisDto = new CustomerPricelistPriceDto(
-								CustomerPricelistPriceDto.PREISTYP_SOKOARTIKEL,
-								preisNachkommastellen);
+								CustomerPricelistPriceDto.PREISTYP_SOKOARTIKEL, preisNachkommastellen);
 						sokopreisDto.setSpecialCondition(true);
 						sokopreisDto.setBasePrice(preisBasis);
 						// Object[] zeile = new Object[iAnzahlZeilenSubreport];
@@ -1442,15 +1427,12 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 						if (kdsDto.getNArtikelfixpreis() != null) {
 							// zeile[3] = kdsDto.getNArtikelfixpreis();
 							// zeile[5] = kdsDto.getNArtikelfixpreis();
-							sokopreisDto.setFixPrice(kdsDto
-									.getNArtikelfixpreis());
-							sokopreisDto.setCalculatedPrice(kdsDto
-									.getNArtikelfixpreis());
+							sokopreisDto.setFixPrice(kdsDto.getNArtikelfixpreis());
+							sokopreisDto.setCalculatedPrice(kdsDto.getNArtikelfixpreis());
 						} else {
 							// zeile[4] =
 							// kdsDto.getFArtikelstandardrabattsatz();
-							sokopreisDto.setDiscountRate(kdsDto
-									.getFArtikelstandardrabattsatz());
+							sokopreisDto.setDiscountRate(kdsDto.getFArtikelstandardrabattsatz());
 
 							BigDecimal nPreisbasis = null;
 							if (iPreisbasis == 0 || iPreisbasis == 2) {
@@ -1458,19 +1440,12 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 								// WH 21.06.06 Es gilt die VK-Basis, die zu
 								// Beginn
 								// der Mengenstaffel gueltig ist
-								nPreisbasis = getVkPreisfindungFac()
-										.ermittlePreisbasis(artikel_i_id,
-												datGueltikeitsdatumI, null,
-												kundeDto.getCWaehrung(),
-												theClientDto);
+								nPreisbasis = getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id,
+										datGueltikeitsdatumI, null, kundeDto.getCWaehrung(), theClientDto);
 							} else {
-								nPreisbasis = getVkPreisfindungFac()
-										.ermittlePreisbasis(
-												artikel_i_id,
-												datGueltikeitsdatumI,
-												kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-												kundeDto.getCWaehrung(),
-												theClientDto);
+								nPreisbasis = getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id,
+										datGueltikeitsdatumI, kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+										kundeDto.getCWaehrung(), theClientDto);
 							}
 
 							if (nPreisbasis != null) {
@@ -1480,10 +1455,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 								// nPreisbasis,
 								// kdsDto.getFArtikelstandardrabattsatz()).nettopreis;
 								sokopreisDto
-										.setCalculatedPrice(getVkPreisfindungFac()
-												.berechneVerkaufspreis(
-														nPreisbasis,
-														kdsDto.getFArtikelstandardrabattsatz()).nettopreis);
+										.setCalculatedPrice(getVkPreisfindungFac().berechneVerkaufspreis(nPreisbasis,
+												kdsDto.getFArtikelstandardrabattsatz(), theClientDto).nettopreis);
 							}
 						}
 
@@ -1493,28 +1466,42 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 						// al.add(zeile);
 						reportArtikel.getPrices().add(sokopreisDto);
+
+						// PJ19363
+
+						if (bVKMengenstaffelAnstattSokoMengestaffel
+								&& Helper.short2boolean(kundeSokoArtikel.getBKeineMengenstaffel()) == false) {
+
+							sokoVKMengenstaffelHinzufuegen(datGueltikeitsdatumI, theClientDto, kundeDto,
+									preisNachkommastellen, artikel_i_id, reportArtikel, sokopreisDto, true);
+
+						}
+
 					}
 				}
 
 				// Soko Artikelgruppe
 				if (artgruIId != null) {
 					KundesokoDto kundeSokoArtGru = getKundesokoFac()
-							.kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(
-									kundeIId, artgruIId, datGueltikeitsdatumI);
+							.kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(kundeIId, artgruIId,
+									datGueltikeitsdatumI);
 					if (kundeSokoArtGru != null) {
 						KundesokomengenstaffelDto[] kundesokomengenstaffelDto = getKundesokoFac()
-								.kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(
-										kundeSokoArtGru.getIId(),
-										datGueltikeitsdatumI,
-										kundeDto.getCWaehrung(), theClientDto);
+								.kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(kundeSokoArtGru.getIId(),
+										datGueltikeitsdatumI, kundeDto.getCWaehrung(), theClientDto);
 
 						for (int u = 0; u < kundesokomengenstaffelDto.length; u++) {
 
 							KundesokomengenstaffelDto kdsDto = kundesokomengenstaffelDto[u];
 
+							if (bVKMengenstaffelAnstattSokoMengestaffel) {
+								if (kdsDto.getNMenge().doubleValue() > 1) {
+									continue;
+								}
+							}
+
 							CustomerPricelistPriceDto sokopreisDto = new CustomerPricelistPriceDto(
-									CustomerPricelistPriceDto.PREISTYP_SOKOARTIKELGRUPPE,
-									preisNachkommastellen);
+									CustomerPricelistPriceDto.PREISTYP_SOKOARTIKELGRUPPE, preisNachkommastellen);
 							sokopreisDto.setSpecialCondition(true);
 							sokopreisDto.setAmount(kdsDto.getNMenge());
 							sokopreisDto.setBasePrice(preisBasis);
@@ -1525,15 +1512,12 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 							// zeile[2] = preisBasis;
 
 							if (kdsDto.getNArtikelfixpreis() != null) {
-								sokopreisDto.setFixPrice(kdsDto
-										.getNArtikelfixpreis());
-								sokopreisDto.setCalculatedPrice(kdsDto
-										.getNArtikelfixpreis());
+								sokopreisDto.setFixPrice(kdsDto.getNArtikelfixpreis());
+								sokopreisDto.setCalculatedPrice(kdsDto.getNArtikelfixpreis());
 								// zeile[3] = kdsDto.getNArtikelfixpreis();
 								// zeile[5] = kdsDto.getNArtikelfixpreis();
 							} else {
-								sokopreisDto.setDiscountRate(kdsDto
-										.getFArtikelstandardrabattsatz());
+								sokopreisDto.setDiscountRate(kdsDto.getFArtikelstandardrabattsatz());
 								// zeile[4] = kdsDto
 								// .getFArtikelstandardrabattsatz();
 
@@ -1544,27 +1528,18 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 									// zu
 									// Beginn
 									// der Mengenstaffel gueltig ist
-									nPreisbasis = getVkPreisfindungFac()
-											.ermittlePreisbasis(artikel_i_id,
-													datGueltikeitsdatumI, null,
-													kundeDto.getCWaehrung(),
-													theClientDto);
+									nPreisbasis = getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id,
+											datGueltikeitsdatumI, null, kundeDto.getCWaehrung(), theClientDto);
 								} else {
-									nPreisbasis = getVkPreisfindungFac()
-											.ermittlePreisbasis(
-													artikel_i_id,
-													datGueltikeitsdatumI,
-													kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-													kundeDto.getCWaehrung(),
-													theClientDto);
+									nPreisbasis = getVkPreisfindungFac().ermittlePreisbasis(artikel_i_id,
+											datGueltikeitsdatumI, kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+											kundeDto.getCWaehrung(), theClientDto);
 								}
 
 								if (nPreisbasis != null) {
-									sokopreisDto
-											.setCalculatedPrice(getVkPreisfindungFac()
-													.berechneVerkaufspreis(
-															nPreisbasis,
-															kdsDto.getFArtikelstandardrabattsatz()).nettopreis);
+									sokopreisDto.setCalculatedPrice(
+											getVkPreisfindungFac().berechneVerkaufspreis(nPreisbasis,
+													kdsDto.getFArtikelstandardrabattsatz(), theClientDto).nettopreis);
 									// zeile[5] = getVkPreisfindungFac()
 									// .berechneVerkaufspreis(
 									// nPreisbasis,
@@ -1576,7 +1551,16 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 							// zeile[6] = kundeDto.getCWaehrung();
 
 							reportArtikel.getPrices().add(sokopreisDto);
-							// al.add(zeile);
+
+							// PJ19363
+
+							if (bVKMengenstaffelAnstattSokoMengestaffel) {
+
+								sokoVKMengenstaffelHinzufuegen(datGueltikeitsdatumI, theClientDto, kundeDto,
+										preisNachkommastellen, artikel_i_id, reportArtikel, sokopreisDto, false);
+
+							}
+
 						}
 					}
 				}
@@ -1593,10 +1577,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				if (bMitArtikelbezeichnungenInMandantensprache) {
 					// Object[] oZeileMand = oZeile.clone();
 
-					Artikelspr artikelspr = em.find(
-							Artikelspr.class,
-							new ArtikelsprPK(artikel_i_id, theClientDto
-									.getLocUiAsString()));
+					Artikelspr artikelspr = em.find(Artikelspr.class,
+							new ArtikelsprPK(artikel_i_id, theClientDto.getLocUiAsString()));
 					CustomerPricelistItemDescriptionDto bezDto = new CustomerPricelistItemDescriptionDto();
 					if (artikelspr != null) {
 						bezDto.setName(artikelspr.getCBez());
@@ -1629,9 +1611,48 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					// alDaten.add(oZeileMand);
 				}
 
-				if (!nurSonderkonditionen
-						|| (nurSonderkonditionen & reportArtikel
-								.getSpecialCondition())) {
+				if (bVKMengenstaffelAnstattSokoMengestaffel) {
+
+					// SP4289
+					// Wenns Sokos gibt, dann VK-Staffel rausloeschen
+
+					List<CustomerPricelistPriceDto> liste = reportArtikel.getPrices();
+					boolean bSokoVorhanden = false;
+
+					for (int i = 0; i < liste.size(); i++) {
+						String s = liste.get(i).getPricetypKey();
+
+						if (s != null) {
+
+							if (s.equals(CustomerPricelistPriceDto.PREISTYP_SOKOARTIKELGRUPPE)
+									|| s.equals(CustomerPricelistPriceDto.PREISTYP_SOKOARTIKEL)
+									|| s.equals(CustomerPricelistPriceDto.PREISTYP_SOKOARTIKELGRUPPEVKSTAFFEL)
+									|| s.equals(CustomerPricelistPriceDto.PREISTYP_SOKOARTIKELVKSTAFFEL)) {
+								bSokoVorhanden = true;
+							}
+
+						}
+					}
+
+					if (bSokoVorhanden == true) {
+						List<CustomerPricelistPriceDto> listeOhneVKStaffel = new ArrayList();
+
+						for (int i = 0; i < liste.size(); i++) {
+							String s = liste.get(i).getPricetypKey();
+
+							if (s == null || !s.equals(CustomerPricelistPriceDto.PREISTYP_VKSTAFFELPREIS)) {
+
+								listeOhneVKStaffel.add(liste.get(i));
+							}
+						}
+
+						reportArtikel.setPrices(listeOhneVKStaffel);
+
+					}
+
+				}
+
+				if (!nurSonderkonditionen || (nurSonderkonditionen & reportArtikel.getSpecialCondition())) {
 					returnDto.getItems().add(reportArtikel);
 				}
 			}
@@ -1652,9 +1673,10 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			returnDto.setItemRangeFrom(artikelNrVon);
 			returnDto.setItemRangeTo(artikelNrBis);
 			returnDto.setWithHidden(bMitVersteckten);
+			returnDto.setWithBlocked(bMitGesperrten);
 			returnDto.setOnlySpecialCondition(nurSonderkonditionen);
-			returnDto
-					.setWithClientLanguage(bMitArtikelbezeichnungenInMandantensprache);
+			returnDto.setAppliedQuantityScale(bVKMengenstaffelAnstattSokoMengestaffel);
+			returnDto.setWithClientLanguage(bMitArtikelbezeichnungenInMandantensprache);
 			returnDto.setPriceValidityMs(datGueltikeitsdatumI.getTime());
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
@@ -1668,497 +1690,227 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		return returnDto;
 	}
 
-	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printKundenpreisliste(Integer kundeIId,
-			Integer artikelgruppeIId, Integer artikelklasseIId,
-			boolean bMitGesperrten, String artikelNrVon, String artikelNrBis,
-			boolean bMitVersteckten, java.sql.Date datGueltikeitsdatumI,
-			boolean nurSonderkonditionen,
-			boolean bMitArtikelbezeichnungenInMandantensprache,
-			TheClientDto theClientDto) {
-		boolean useOld = false;
-		if (useOld) {
-			return printKundenpreislisteOld(kundeIId, artikelgruppeIId,
-					artikelklasseIId, bMitGesperrten, artikelNrVon,
-					artikelNrBis, bMitVersteckten, datGueltikeitsdatumI,
-					nurSonderkonditionen,
-					bMitArtikelbezeichnungenInMandantensprache, theClientDto);
+	private CustomerPricelistItemDto sokoVKMengenstaffelHinzufuegen(java.sql.Date datGueltikeitsdatumI,
+			TheClientDto theClientDto, KundeDto kundeDto, int preisNachkommastellen, Integer artikel_i_id,
+			CustomerPricelistItemDto reportArtikel, CustomerPricelistPriceDto sokopreisDto, boolean sokoArtikel)
+			throws RemoteException {
+
+		// Staffelpreis
+		VkpfMengenstaffelDto[] vkpfMengenstaffelDtos = getVkPreisfindungFac()
+				.vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(artikel_i_id, datGueltikeitsdatumI,
+						kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(), theClientDto);
+		for (int i = 0; i < vkpfMengenstaffelDtos.length; i++) {
+			VkpfMengenstaffelDto vkpfMengenstaffelDto = vkpfMengenstaffelDtos[i];
+
+			if (vkpfMengenstaffelDto.getVkpfartikelpreislisteIId() == null || vkpfMengenstaffelDto
+					.getVkpfartikelpreislisteIId().equals(kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste())) {
+				BigDecimal preisBasisStaffel = sokopreisDto.getCalculatedPrice();
+
+				CustomerPricelistPriceDto staffelpreisDto = new CustomerPricelistPriceDto(
+						CustomerPricelistPriceDto.PREISTYP_SOKOARTIKELGRUPPEVKSTAFFEL, preisNachkommastellen);
+				if (sokoArtikel == true) {
+					staffelpreisDto.setPricetypKey(CustomerPricelistPriceDto.PREISTYP_SOKOARTIKELVKSTAFFEL);
+				}
+
+				staffelpreisDto.setAmount(vkpfMengenstaffelDto.getNMenge());
+				staffelpreisDto.setBasePrice(preisBasisStaffel);
+
+				String waehrung = theClientDto.getSMandantenwaehrung();
+
+				if (vkpfMengenstaffelDto.getVkpfartikelpreislisteIId() != null) {
+					waehrung = getVkPreisfindungFac()
+							.vkpfartikelpreislisteFindByPrimaryKey(vkpfMengenstaffelDto.getVkpfartikelpreislisteIId())
+							.getWaehrungCNr();
+				}
+
+				if (vkpfMengenstaffelDto.getNArtikelfixpreis() != null) {
+
+					staffelpreisDto.setFixPrice(vkpfMengenstaffelDto.getNArtikelfixpreis());
+					staffelpreisDto.setCalculatedPrice(vkpfMengenstaffelDto.getNArtikelfixpreis());
+					staffelpreisDto.setCurrency(waehrung);
+				} else {
+
+					staffelpreisDto.setDiscountRate(vkpfMengenstaffelDto.getFArtikelstandardrabattsatz());
+					staffelpreisDto.setCalculatedPrice(getVkPreisfindungFac().berechneVerkaufspreis(preisBasisStaffel,
+							vkpfMengenstaffelDto.getFArtikelstandardrabattsatz(), theClientDto).nettopreis);
+					staffelpreisDto.setCurrency(kundeDto.getCWaehrung());
+				}
+
+				// al.add(zeile);
+				reportArtikel.getPrices().add(staffelpreisDto);
+			}
 		}
 
-		CustomerPricelistReportDto reportDto = printKundenpreislisteRaw(
-				kundeIId, artikelgruppeIId, artikelklasseIId, bMitGesperrten,
-				artikelNrVon, artikelNrBis, bMitVersteckten,
-				datGueltikeitsdatumI, nurSonderkonditionen,
-				bMitArtikelbezeichnungenInMandantensprache, false, theClientDto);
+		return reportArtikel;
 
-		setDataTransformer(new KundenpreislisteTransformer(reportDto));
-		initJRDS(jasperPrintTransformer.transformParameter(),
-				KundeReportFac.REPORT_MODUL,
-				KundeReportFac.REPORT_KUNDENPREISLISTE,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
-		return getReportPrint();
 	}
 
-	private JasperPrintLP printKundenpreislisteOld(Integer kundeIId,
-			Integer artikelgruppeIId, Integer artikelklasseIId,
-			boolean bMitInaktiven, String artikelNrVon, String artikelNrBis,
-			boolean bMitVersteckten, java.sql.Date datGueltikeitsdatumI,
-			boolean nurSonderkonditionen,
-			boolean bMitArtikelbezeichnungenInMandantensprache,
-			TheClientDto theClientDto) {
-		useCase = KundeReportFac.UC_REPORT_KUNDE_KUNDENPREISLISTE;
-		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
-				theClientDto);
-		HashMap<String, Object> parameter = new HashMap<String, Object>();
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printKundenpreisliste(Integer kundeIId, Integer artikelgruppeIId, Integer artikelklasseIId,
+			boolean bMitGesperrten, String artikelNrVon, String artikelNrBis, boolean bMitVersteckten,
+			java.sql.Date datGueltikeitsdatumI, boolean nurSonderkonditionen,
+			boolean bMitArtikelbezeichnungenInMandantensprache, Integer shopgruppeIId, TheClientDto theClientDto) {
+
+		CustomerPricelistReportDto reportDto = printKundenpreislisteRaw(kundeIId, artikelgruppeIId, artikelklasseIId,
+				bMitGesperrten, artikelNrVon, artikelNrBis, bMitVersteckten, datGueltikeitsdatumI, nurSonderkonditionen,
+				bMitArtikelbezeichnungenInMandantensprache, false, shopgruppeIId, theClientDto);
+
+		setDataTransformer(new KundenpreislisteTransformer(reportDto));
+
+		HashMap parameter = jasperPrintTransformer.transformParameter();
+
 		try {
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
+			if (kundeDto.getNKupferzahl() != null) {
+				parameter.put("P_KUPFERZAHL", kundeDto.getNKupferzahl());
+			} else {
+				// PJ19683
+				ParametermandantDto parameterKupferzahl = getParameterFac().getMandantparameter(
+						theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN, ParameterFac.PARAMETER_KUPFERZAHL);
 
-			parameter.put("P_KUNDE", kundeDto.getPartnerDto().formatAnrede());
-
-			if (artikelgruppeIId != null) {
-				parameter.put("P_ARTIKELGRUPPE", getArtikelFac()
-						.artgruFindByPrimaryKey(artikelgruppeIId, theClientDto)
-						.getCNr());
-			}
-			if (artikelklasseIId != null) {
-				parameter.put("P_ARTIKELKLASSE", getArtikelFac()
-						.artklaFindByPrimaryKey(artikelklasseIId, theClientDto)
-						.getCNr());
-			}
-
-			ParametermandantDto param = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
-					ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
-
-			int iPreisbasis = (Integer) param.getCWertAsObject();
-
-			// Mwstsatz aus Artikel
-
-			String sQuery = "SELECT artikelliste.i_id, artikelliste.c_nr, aspr.c_bez, aspr.c_kbez, aspr.c_zbez,aspr.c_zbez2,artikelliste.einheit_c_nr, gruppe.c_nr, klasse.c_nr, artikelliste.b_versteckt,artikelliste.mwstsatz_i_id, gruppe.i_id "
-					+ " FROM FLRArtikelliste AS artikelliste"
-					+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS gruppe "
-					+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS klasse "
-					+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr WHERE artikelliste.mandant_c_nr='"
-					+ theClientDto.getMandant()
-					+ "' AND artikelliste.artikelart_c_nr NOT IN ('"
-					+ ArtikelFac.ARTIKELART_HANDARTIKEL + "') ";
-
-			if (artikelklasseIId != null) {
-				sQuery += " AND klasse.i_id=" + artikelklasseIId.intValue();
-			}
-			if (artikelgruppeIId != null) {
-				sQuery += " AND gruppe.i_id=" + artikelgruppeIId.intValue();
-			}
-			if (bMitVersteckten == false) {
-				sQuery += " AND artikelliste.b_versteckt=0 ";
-			}
-			if (artikelNrVon != null) {
-				sQuery += " AND artikelliste.c_nr >='" + artikelNrVon + "'";
-			}
-			if (artikelNrBis != null) {
-				sQuery = sQuery + " AND artikelliste.c_nr <='" + artikelNrBis
-						+ "'";
-			}
-
-			sQuery += "ORDER BY artikelliste.c_nr";
-
-			Session session = FLRSessionFactory.getFactory().openSession();
-			Query inventurliste = session.createQuery(sQuery);
-
-			session.enableFilter("filterLocale").setParameter("paramLocale",
-					kundeDto.getPartnerDto().getLocaleCNrKommunikation());
-
-			List<?> resultList = inventurliste.list();
-
-			Iterator<?> resultListIterator = resultList.iterator();
-
-			ArrayList alDaten = new ArrayList();
-
-			int row = 0;
-
-			while (resultListIterator.hasNext()) {
-				Object o[] = (Object[]) resultListIterator.next();
-
-				Integer artikel_i_id = (Integer) o[0];
-				String artikelnummer = (String) o[1];
-				String bezeichnung = (String) o[2];
-				String kurzbezeichnung = (String) o[3];
-				String zusatzbezeichnung = (String) o[4];
-				String zusatzbezeichnung2 = (String) o[5];
-				String einheit = (String) o[6];
-				String gruppe = (String) o[7];
-				String klasse = (String) o[8];
-				Short versteckt = (Short) o[9];
-				Integer mwstsatzIId = (Integer) o[10];
-				Integer artgruIId = (Integer) o[11];
-
-				Object[] oZeile = new Object[REPORT_KUNDENPREISLISTE_ANZAHL_SPALTEN];
-
-				oZeile[REPORT_KUNDENPREISLISTE_ARTIKELNUMMER] = artikelnummer;
-				oZeile[REPORT_KUNDENPREISLISTE_BEZEICHNUNG] = bezeichnung;
-				oZeile[REPORT_KUNDENPREISLISTE_KURZBEZEICHNUNG] = kurzbezeichnung;
-				oZeile[REPORT_KUNDENPREISLISTE_ZUSATZBEZEICHNUNG] = zusatzbezeichnung;
-				oZeile[REPORT_KUNDENPREISLISTE_ZUSATZBEZEICHNUNG2] = zusatzbezeichnung2;
-				oZeile[REPORT_KUNDENPREISLISTE_ARTIKELGRUPPE] = gruppe;
-				oZeile[REPORT_KUNDENPREISLISTE_ARTIKELKLASSE] = klasse;
-				oZeile[REPORT_KUNDENPREISLISTE_VERSTECKT] = Helper
-						.short2Boolean(versteckt);
-				oZeile[REPORT_KUNDENPREISLISTE_ENTHAELT_SOKO] = new Boolean(
-						false);
-
-				BigDecimal preisBasis = getVkPreisfindungFac()
-						.ermittlePreisbasis(artikel_i_id, datGueltikeitsdatumI,
-								null, kundeDto.getCWaehrung(), theClientDto);
-
-				// Preisbasis fuer Menge =1 ist nun definiert
-
-				int iAnzahlZeilenSubreport = 8;
-				String[] fieldnames = new String[] { "Menge", "Basis",
-						"BasisPreis", "Fixpreis", "Rabattsatz",
-						"BerechneterPreis", "Waehrung", "Soko" };
-
-				ArrayList al = new ArrayList();
-
-				if (nurSonderkonditionen == false) {
-
-					Object[] zeile = new Object[iAnzahlZeilenSubreport];
-					zeile[0] = null;
-					zeile[1] = "VK-Preisbasis";
-					zeile[2] = preisBasis;
-					zeile[3] = null;
-
-					VkPreisfindungPreislisteDto artikelPreisliste = null;
-
-					try {
-						artikelPreisliste = getVkPreisfindungFac()
-								.getAktuellePreislisteByArtikelIIdPreislisteIId(
-										artikel_i_id,
-										kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-										new Date(System.currentTimeMillis()),
-										kundeDto.getCWaehrung(), theClientDto);
-					} catch (Throwable t) {
-						// ignore
-					}
-
-					if (artikelPreisliste != null) {
-
-						if (artikelPreisliste.getNArtikelfixpreis() != null) {
-							zeile[5] = artikelPreisliste.getNArtikelfixpreis();
-						} else {
-							zeile[4] = artikelPreisliste
-									.getNArtikelstandardrabattsatz()
-									.doubleValue();
-
-							if (preisBasis != null) {
-
-								zeile[5] = getVkPreisfindungFac()
-										.berechneVerkaufspreis(
-												preisBasis,
-												artikelPreisliste
-														.getNArtikelstandardrabattsatz()
-														.doubleValue()).nettopreis;
-							} else {
-								zeile[5] = new BigDecimal(0);
-							}
-						}
-
-					} else {
-
-						zeile[5] = preisBasis;
-					}
-
-					zeile[6] = kundeDto.getCWaehrung();
-					zeile[7] = new Boolean(false);
-
-					al.add(zeile);
-
-					// Staffelpreis
-					VkpfMengenstaffelDto[] vkpfMengenstaffelDtos = getVkPreisfindungFac()
-							.vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(
-									artikel_i_id,
-									datGueltikeitsdatumI,
-									kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-									theClientDto);
-					for (int i = 0; i < vkpfMengenstaffelDtos.length; i++) {
-						VkpfMengenstaffelDto vkpfMengenstaffelDto = vkpfMengenstaffelDtos[i];
-
-						if (vkpfMengenstaffelDto.getVkpfartikelpreislisteIId() == null
-								|| vkpfMengenstaffelDto
-										.getVkpfartikelpreislisteIId()
-										.equals(kundeDto
-												.getVkpfArtikelpreislisteIIdStdpreisliste())) {
-							BigDecimal preisBasisStaffel = getVkPreisfindungFac()
-									.ermittlePreisbasis(
-											artikel_i_id,
-											datGueltikeitsdatumI,
-											vkpfMengenstaffelDto.getNMenge(),
-											vkpfMengenstaffelDto
-													.getVkpfartikelpreislisteIId(),
-											kundeDto.getCWaehrung(),
-											theClientDto);
-
-							zeile = new Object[iAnzahlZeilenSubreport];
-							zeile[0] = vkpfMengenstaffelDto.getNMenge();
-							zeile[1] = "VK-Staffelpreis";
-							zeile[2] = preisBasisStaffel;
-
-							String waehrung = theClientDto
-									.getSMandantenwaehrung();
-
-							if (vkpfMengenstaffelDto
-									.getVkpfartikelpreislisteIId() != null) {
-								waehrung = getVkPreisfindungFac()
-										.vkpfartikelpreislisteFindByPrimaryKey(
-												vkpfMengenstaffelDto
-														.getVkpfartikelpreislisteIId())
-										.getWaehrungCNr();
-							}
-
-							zeile[5] = waehrung;
-							if (vkpfMengenstaffelDto.getNArtikelfixpreis() != null) {
-								zeile[3] = vkpfMengenstaffelDto
-										.getNArtikelfixpreis();
-								zeile[5] = vkpfMengenstaffelDto
-										.getNArtikelfixpreis();
-								zeile[6] = waehrung;
-
-							} else {
-
-								zeile[3] = null;
-								zeile[4] = vkpfMengenstaffelDto
-										.getFArtikelstandardrabattsatz();
-								zeile[5] = getVkPreisfindungFac()
-										.berechneVerkaufspreis(
-												preisBasisStaffel,
-												vkpfMengenstaffelDto
-														.getFArtikelstandardrabattsatz()).nettopreis;
-								zeile[6] = kundeDto.getCWaehrung();
-								zeile[7] = new Boolean(false);
-							}
-
-							al.add(zeile);
-						}
-
-					}
-
+				Double kupferzahl = (Double) parameterKupferzahl.getCWertAsObject();
+				if (kupferzahl != null) {
+					parameter.put("P_KUPFERZAHL", new BigDecimal(kupferzahl));
 				}
-
-				// Soko Artikel
-				KundesokoDto kundeSokoArtikel = getKundesokoFac()
-						.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
-								kundeIId, artikel_i_id, datGueltikeitsdatumI);
-
-				if (kundeSokoArtikel != null) {
-					oZeile[REPORT_KUNDENPREISLISTE_ENTHAELT_SOKO] = new Boolean(
-							true);
-					KundesokomengenstaffelDto[] kundesokomengenstaffelDto = getKundesokoFac()
-							.kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(
-									kundeSokoArtikel.getIId(),
-									datGueltikeitsdatumI,
-									kundeDto.getCWaehrung(), theClientDto);
-
-					for (int u = 0; u < kundesokomengenstaffelDto.length; u++) {
-
-						KundesokomengenstaffelDto kdsDto = kundesokomengenstaffelDto[u];
-
-						Object[] zeile = new Object[iAnzahlZeilenSubreport];
-						zeile[0] = kdsDto.getNMenge();
-						zeile[1] = "Soko-Artikel";
-						zeile[2] = preisBasis;
-
-						if (kdsDto.getNArtikelfixpreis() != null) {
-							zeile[3] = kdsDto.getNArtikelfixpreis();
-							zeile[5] = kdsDto.getNArtikelfixpreis();
-						} else {
-							zeile[4] = kdsDto.getFArtikelstandardrabattsatz();
-
-							BigDecimal nPreisbasis = null;
-							if (iPreisbasis == 0 || iPreisbasis == 2) {
-
-								// WH 21.06.06 Es gilt die VK-Basis, die zu
-								// Beginn
-								// der Mengenstaffel gueltig ist
-								nPreisbasis = getVkPreisfindungFac()
-										.ermittlePreisbasis(artikel_i_id,
-												datGueltikeitsdatumI, null,
-												kundeDto.getCWaehrung(),
-												theClientDto);
-							} else {
-								nPreisbasis = getVkPreisfindungFac()
-										.ermittlePreisbasis(
-												artikel_i_id,
-												datGueltikeitsdatumI,
-												kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-												kundeDto.getCWaehrung(),
-												theClientDto);
-							}
-
-							if (nPreisbasis != null) {
-								zeile[6] = kundeDto.getCWaehrung();
-								zeile[5] = getVkPreisfindungFac()
-										.berechneVerkaufspreis(
-												nPreisbasis,
-												kdsDto.getFArtikelstandardrabattsatz()).nettopreis;
-							}
-
-						}
-
-						zeile[6] = kundeDto.getCWaehrung();
-
-						al.add(zeile);
-					}
-
-					// Soko Artikelgruppe
-					if (artgruIId != null) {
-						KundesokoDto kundeSokoArtGru = getKundesokoFac()
-								.kundesokoFindByKundeIIdArtgruIIdGueltigkeitsdatumOhneExc(
-										kundeIId, artgruIId,
-										datGueltikeitsdatumI);
-
-						if (kundeSokoArtGru != null) {
-							kundesokomengenstaffelDto = getKundesokoFac()
-									.kundesokomengenstaffelFindByKundesokoIIdInZielWaehrung(
-											kundeSokoArtGru.getIId(),
-											datGueltikeitsdatumI,
-											kundeDto.getCWaehrung(),
-											theClientDto);
-
-							for (int u = 0; u < kundesokomengenstaffelDto.length; u++) {
-
-								KundesokomengenstaffelDto kdsDto = kundesokomengenstaffelDto[u];
-
-								Object[] zeile = new Object[iAnzahlZeilenSubreport];
-								zeile[0] = kdsDto.getNMenge();
-								zeile[1] = "Soko-Artikelgruppe";
-								zeile[2] = preisBasis;
-
-								if (kdsDto.getNArtikelfixpreis() != null) {
-									zeile[3] = kdsDto.getNArtikelfixpreis();
-									zeile[5] = kdsDto.getNArtikelfixpreis();
-								} else {
-									zeile[4] = kdsDto
-											.getFArtikelstandardrabattsatz();
-
-									BigDecimal nPreisbasis = null;
-									if (iPreisbasis == 0 || iPreisbasis == 2) {
-
-										// WH 21.06.06 Es gilt die VK-Basis, die
-										// zu
-										// Beginn
-										// der Mengenstaffel gueltig ist
-										nPreisbasis = getVkPreisfindungFac()
-												.ermittlePreisbasis(
-														artikel_i_id,
-														datGueltikeitsdatumI,
-														null,
-														kundeDto.getCWaehrung(),
-														theClientDto);
-									} else {
-										nPreisbasis = getVkPreisfindungFac()
-												.ermittlePreisbasis(
-														artikel_i_id,
-														datGueltikeitsdatumI,
-														kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-														kundeDto.getCWaehrung(),
-														theClientDto);
-									}
-
-									if (nPreisbasis != null) {
-
-										zeile[5] = getVkPreisfindungFac()
-												.berechneVerkaufspreis(
-														nPreisbasis,
-														kdsDto.getFArtikelstandardrabattsatz()).nettopreis;
-									}
-
-								}
-
-								zeile[6] = kundeDto.getCWaehrung();
-
-								al.add(zeile);
-							}
-
-						}
-					}
-
-				}
-				Object[][] dataSub = new Object[al.size()][fieldnames.length];
-				dataSub = (Object[][]) al.toArray(dataSub);
-
-				oZeile[REPORT_KUNDENPREISLISTE_SUBREPORT_PREISE] = new LPDatenSubreport(
-						dataSub, fieldnames);
-				alDaten.add(oZeile);
-
-				if (bMitArtikelbezeichnungenInMandantensprache) {
-					Object[] oZeileMand = oZeile.clone();
-
-					Artikelspr artikelspr = em.find(
-							Artikelspr.class,
-							new ArtikelsprPK(artikel_i_id, theClientDto
-									.getLocUiAsString()));
-					if (artikelspr != null) {
-						oZeileMand[REPORT_KUNDENPREISLISTE_BEZEICHNUNG] = artikelspr
-								.getCBez();
-						oZeileMand[REPORT_KUNDENPREISLISTE_KURZBEZEICHNUNG] = artikelspr
-								.getCKbez();
-						oZeileMand[REPORT_KUNDENPREISLISTE_ZUSATZBEZEICHNUNG] = artikelspr
-								.getCZbez();
-						oZeileMand[REPORT_KUNDENPREISLISTE_ZUSATZBEZEICHNUNG2] = artikelspr
-								.getCZbez2();
-					} else {
-						oZeileMand[REPORT_KUNDENPREISLISTE_BEZEICHNUNG] = null;
-						oZeileMand[REPORT_KUNDENPREISLISTE_KURZBEZEICHNUNG] = null;
-						oZeileMand[REPORT_KUNDENPREISLISTE_ZUSATZBEZEICHNUNG] = null;
-						oZeileMand[REPORT_KUNDENPREISLISTE_ZUSATZBEZEICHNUNG2] = null;
-					}
-
-					alDaten.add(oZeileMand);
-
-				}
-
 			}
-
-			session.close();
-
-			Object[][] dataTemp = new Object[1][1];
-			data = (Object[][]) alDaten.toArray(dataTemp);
-			parameter.put("P_ARTIKELNRVON", artikelNrVon);
-			parameter.put("P_ARTIKELNRBIS", artikelNrBis);
-			parameter.put("P_MITVERSTECKTEN", new Boolean(bMitVersteckten));
-			parameter.put("P_NURSOKO", new Boolean(nurSonderkonditionen));
-			parameter.put("P_MITMANDANTENSPRACHE", new Boolean(
-					bMitArtikelbezeichnungenInMandantensprache));
-
-			parameter.put("P_PREISGUELTIGKEIT", datGueltikeitsdatumI);
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}
-		initJRDS(parameter, KundeReportFac.REPORT_MODUL,
-				KundeReportFac.REPORT_KUNDENPREISLISTE,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+
+		initJRDS(parameter, KundeReportFac.REPORT_MODUL, KundeReportFac.REPORT_KUNDENPREISLISTE,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 		return getReportPrint();
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printKundenliste(TheClientDto theClientDto,
-			boolean bUmsatzNachStatistikadresse, boolean bMitVersteckten,
-			boolean bMitInteressenten, boolean bMitAnsprechpartner,
-			Integer kundeIIdSelektiert, int iProjektemitdrucken, String cPlz,
-			Integer landIId, Integer brancheIId, Integer partnerklasseIId) {
+	public JasperPrintLP printLiefermengen(Integer kundeIId, TheClientDto theClientDto) {
+
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
+
+		parameter.put("P_KUNDE", kundeDto.getPartnerDto().formatAnrede());
+
+		parameter.put("P_KUNDE_I_ID", kundeDto.getIId());
+
+		parameter.put("P_LIEFERDAUER", kundeDto.getILieferdauer());
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT lm FROM FLRLiefermengen lm WHERE kunde_i_id_lieferadresse=" + kundeIId
+				+ " ORDER BY lm.flrartikel.c_nr, lm.t_datum";
+
+		Query inventurliste = session.createQuery(sQuery);
+
+		List<?> resultList = inventurliste.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		ArrayList alDaten = new ArrayList();
+
+		while (resultListIterator.hasNext()) {
+
+			FLRLiefermengen lm = (FLRLiefermengen) resultListIterator.next();
+
+			Object[] oZeile = befuelleLiefermengenReportZeile(kundeIId, theClientDto, lm.getI_id());
+
+			alDaten.add(oZeile);
+		}
+
+		session.close();
+		useCase = KundeReportFac.UC_REPORT_KUNDE_LIEFERMENGEN;
+
+		Object[][] dataTemp = new Object[alDaten.size()][REPORT_LIEFERMENGEN_ANZAHL_SPALTEN];
+		data = (Object[][]) alDaten.toArray(dataTemp);
+
+		initJRDS(parameter, KundeReportFac.REPORT_MODUL, KundeReportFac.REPORT_LIEFERMENGEN, theClientDto.getMandant(),
+				theClientDto.getLocUi(), theClientDto);
+		return getReportPrint();
+	}
+
+	public Object[] befuelleLiefermengenReportZeile(Integer kundeIId, TheClientDto theClientDto,
+			Integer liefermengenIId) {
+		return befuelleLiefermengenReportZeile(kundeIId, theClientDto, liefermengenIId, null, null);
+	}
+
+	public Object[] befuelleLiefermengenReportZeile(Integer kundeIId, TheClientDto theClientDto,
+			Integer liefermengenIId, Object[][] zeilenLieferstatistik, ArtikelDto aDto) {
+		Object[] oZeile = new Object[REPORT_LIEFERMENGEN_ANZAHL_SPALTEN];
+
+		LiefermengenDto lmDto = getPartnerServicesFac().liefermengenFindByPrimaryKey(liefermengenIId);
+
+		if (aDto == null) {
+			aDto = getArtikelFac().artikelFindByPrimaryKeySmall(lmDto.getArtikelIId(), theClientDto);
+		}
+
+		oZeile[REPORT_LIEFERMENGEN_ARTIKELNUMMER] = aDto.getCNr();
+
+		oZeile[REPORT_LIEFERMENGEN_BEZEICHUNG] = aDto.formatBezeichnung();
+		oZeile[REPORT_LIEFERMENGEN_EINHEIT] = aDto.getEinheitCNr();
+		oZeile[REPORT_LIEFERMENGEN_DATUM] = lmDto.getTDatum();
+		oZeile[REPORT_LIEFERMENGEN_MENGE] = lmDto.getNMenge();
+		oZeile[REPORT_LIEFERMENGEN_LSTEXT] = lmDto.getCLstext();
+
+		try {
+
+//			// PJ19890
+//			KundesokoDto kundeSokoDto_gueltig = getKundesokoFac()
+//					.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+//							kundeIId, aDto.getIId(),
+//							new java.sql.Date(System.currentTimeMillis()));
+			// PJ19890
+			KundesokoDto kundeSokoDto_gueltig = getKundesokoFac()
+					.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(kundeIId, aDto.getIId(),
+							new java.sql.Date(lmDto.getTDatum().getTime()));
+//							new java.sql.Date(System.currentTimeMillis()));
+			BigDecimal bdLetzterStartwert = BigDecimal.ZERO;
+
+			if (kundeSokoDto_gueltig != null && kundeSokoDto_gueltig.getNStartwertLiefermenge() != null) {
+
+				bdLetzterStartwert = kundeSokoDto_gueltig.getNStartwertLiefermenge();
+
+				oZeile[REPORT_LIEFERMENGEN_LETZTER_STARTWERT] = kundeSokoDto_gueltig.getNStartwertLiefermenge();
+				oZeile[REPORT_LIEFERMENGEN_DATUM_LETZTER_STARTWERT] = kundeSokoDto_gueltig.getTPreisgueltigab();
+			}
+
+			if (zeilenLieferstatistik == null) {
+				zeilenLieferstatistik = getDataLieferstatistik(theClientDto, kundeIId, aDto.getIId(), null, null, null,
+						Helper.SORTIERUNG_NACH_DATUM, null, false, false, false, false,
+						REPORT_LIEFERSTATISTIK_OPTION_LIEFERADRESSE, false);
+			}
+
+			BigDecimal bdGesamtmenge = BigDecimal.ZERO;
+
+			for (int i = 0; i < zeilenLieferstatistik.length; i++) {
+				if (zeilenLieferstatistik[i][REPORT_STATISTIK_MENGE] != null) {
+					bdGesamtmenge = bdGesamtmenge.add((BigDecimal) zeilenLieferstatistik[i][REPORT_STATISTIK_MENGE]);
+				}
+			}
+
+			oZeile[REPORT_LIEFERMENGEN_LIEFERMENGE_GESAMT] = bdGesamtmenge;
+			oZeile[REPORT_LIEFERMENGEN_MENGE_UNTERWEGS] = bdGesamtmenge.add(bdLetzterStartwert)
+					.subtract(lmDto.getNMenge());
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		return oZeile;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printKundenliste(TheClientDto theClientDto, boolean bUmsatzNachStatistikadresse,
+			boolean bMitVersteckten, boolean bMitInteressenten, boolean bMitAnsprechpartner, Integer kundeIIdSelektiert,
+			int iProjektemitdrucken, String cPlz, Integer landIId, Integer brancheIId, Integer partnerklasseIId) {
 		useCase = KundeReportFac.UC_REPORT_KUNDE_KUNDENLISTE;
 		Session session = FLRSessionFactory.getFactory().openSession();
 
 		org.hibernate.Criteria crit = session.createCriteria(FLRKunde.class);
 		crit.createAlias(KundeFac.FLR_PARTNER, "p");
-		crit.createAlias("p." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT,
-				"landplzort", CriteriaSpecification.LEFT_JOIN);
-		crit.createAlias("landplzort.flrland", "land",
-				CriteriaSpecification.LEFT_JOIN);
+		crit.createAlias("p." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT, "landplzort", CriteriaSpecification.LEFT_JOIN);
+		crit.createAlias("landplzort.flrland", "land", CriteriaSpecification.LEFT_JOIN);
 
 		// SP3266
-		crit.add(Restrictions.eq(KundeFac.FLR_KUNDE_B_VERSTECKTERLIEFERANT,
-				Helper.boolean2Short(false)));
+		crit.add(Restrictions.eq(KundeFac.FLR_KUNDE_B_VERSTECKTERLIEFERANT, Helper.boolean2Short(false)));
 
 		if (kundeIIdSelektiert != null) {
 			crit.add(Restrictions.eq("i_id", kundeIIdSelektiert));
@@ -2179,238 +1931,176 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		}
 
 		crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
-		crit.addOrder(Order.asc("p."
-				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1));
+		crit.addOrder(Order.asc("p." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1));
 		if (bMitVersteckten == false) {
-			crit.add(Restrictions.eq("p." + PartnerFac.FLR_PARTNER_VERSTECKT,
-					Helper.boolean2Short(false)));
+			crit.add(Restrictions.eq("p." + PartnerFac.FLR_PARTNER_VERSTECKT, Helper.boolean2Short(false)));
 		}
 		if (bMitInteressenten == false) {
-			crit.add(Restrictions.eq(KundeFac.FLR_KUNDE_B_ISTINTERESSENT,
-					Helper.boolean2Short(false)));
+			crit.add(Restrictions.eq(KundeFac.FLR_KUNDE_B_ISTINTERESSENT, Helper.boolean2Short(false)));
 		}
 		ArrayList<Object[]> daten = new ArrayList<Object[]>();
 		List<?> list = crit.list();
 		Iterator<?> resultListIterator = list.iterator();
 		while (resultListIterator.hasNext()) {
-			Object[] zeile = new Object[92];
+			Object[] zeile = new Object[REPORT_KUNDENLISTE_ANZAHL_SPALTEN];
 			FLRKunde kunde = (FLRKunde) resultListIterator.next();
 
 			try {
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						kunde.getI_id(), theClientDto);
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kunde.getI_id(), theClientDto);
 				zeile[REPORT_KUNDENLISTE_ABC] = kundeDto.getCAbc();
 				zeile[REPORT_KUNDENLISTE_KUNDE_I_ID] = kundeDto.getIId();
 
 				if (kundeDto.getPartnerDto().getLandIIdAbweichendesustland() != null) {
 					zeile[REPORT_KUNDENLISTE_ABW_UST_LAND] = getSystemFac()
-							.landFindByPrimaryKey(
-									kundeDto.getPartnerDto()
-											.getLandIIdAbweichendesustland())
-							.getCLkz();
+							.landFindByPrimaryKey(kundeDto.getPartnerDto().getLandIIdAbweichendesustland()).getCLkz();
 				}
-				zeile[REPORT_KUNDENLISTE_ANREDE] = kundeDto.getPartnerDto()
-						.getAnredeCNr();
+				zeile[REPORT_KUNDENLISTE_ANREDE] = kundeDto.getPartnerDto().getAnredeCNr();
 
 				if (kundeDto.getPartnerDto().getBrancheIId() != null) {
 					zeile[REPORT_KUNDENLISTE_BRANCHE] = getPartnerServicesFac()
-							.brancheFindByPrimaryKey(
-									kundeDto.getPartnerDto().getBrancheIId(),
-									theClientDto).getBezeichnung();
+							.brancheFindByPrimaryKey(kundeDto.getPartnerDto().getBrancheIId(), theClientDto)
+							.getBezeichnung();
 				}
 
-				zeile[REPORT_KUNDENLISTE_CNAME1] = kundeDto.getPartnerDto()
-						.getCName1nachnamefirmazeile1();
-				zeile[REPORT_KUNDENLISTE_CNAME2] = kundeDto.getPartnerDto()
-						.getCName2vornamefirmazeile2();
-				zeile[REPORT_KUNDENLISTE_CNAME3] = kundeDto.getPartnerDto()
-						.getCName3vorname2abteilung();
+				zeile[REPORT_KUNDENLISTE_CNAME1] = kundeDto.getPartnerDto().getCName1nachnamefirmazeile1();
+				zeile[REPORT_KUNDENLISTE_CNAME2] = kundeDto.getPartnerDto().getCName2vornamefirmazeile2();
+				zeile[REPORT_KUNDENLISTE_CNAME3] = kundeDto.getPartnerDto().getCName3vorname2abteilung();
 
-				zeile[REPORT_KUNDENLISTE_BEMERKUNG] = kundeDto.getPartnerDto()
-						.getXBemerkung();
+				zeile[REPORT_KUNDENLISTE_BEMERKUNG] = kundeDto.getPartnerDto().getXBemerkung();
 
-				zeile[REPORT_KUNDENLISTE_KUNDENNUMMER] = kundeDto
-						.getIKundennummer();
+				zeile[REPORT_KUNDENLISTE_KUNDENNUMMER] = kundeDto.getIKundennummer();
 
 				if (kundeDto.getIidErloeseKonto() != null) {
 					zeile[REPORT_KUNDENLISTE_ERLOESKONTO] = getFinanzFac()
-							.kontoFindByPrimaryKey(
-									kundeDto.getIidErloeseKonto()).getCNr();
+							.kontoFindByPrimaryKey(kundeDto.getIidErloeseKonto()).getCNr();
 				}
 				if (kunde.getFlrkonto() != null) {
-					zeile[REPORT_KUNDENLISTE_DEBITORENKONTO] = kunde
-							.getFlrkonto().getC_nr();
+					zeile[REPORT_KUNDENLISTE_DEBITORENKONTO] = kunde.getFlrkonto().getC_nr();
 				}
 
-				zeile[REPORT_KUNDENLISTE_EMAIL] = kundeDto.getPartnerDto()
-						.getCEmail();
+				zeile[REPORT_KUNDENLISTE_EMAIL] = kundeDto.getPartnerDto().getCEmail();
 
-				zeile[REPORT_KUNDENLISTE_FAX] = kundeDto.getPartnerDto()
-						.getCFax();
+				zeile[REPORT_KUNDENLISTE_FAX] = kundeDto.getPartnerDto().getCFax();
 
-				zeile[REPORT_KUNDENLISTE_HOMEPAGE] = kundeDto.getPartnerDto()
-						.getCHomepage();
+				zeile[REPORT_KUNDENLISTE_HOMEPAGE] = kundeDto.getPartnerDto().getCHomepage();
 
-				zeile[REPORT_KUNDENLISTE_TELEFON] = kundeDto.getPartnerDto()
-						.getCTelefon();
+				zeile[REPORT_KUNDENLISTE_TELEFON] = kundeDto.getPartnerDto().getCTelefon();
 
-				zeile[REPORT_KUNDENLISTE_FIRMENBUCHNUMMER] = kundeDto
-						.getPartnerDto().getCFirmenbuchnr();
-				zeile[REPORT_KUNDENLISTE_GERICHTSSTAND] = kundeDto
-						.getPartnerDto().getCGerichtsstand();
-				zeile[REPORT_KUNDENLISTE_INTERESSENT] = kundeDto
-						.getbIstinteressent();
-				zeile[REPORT_KUNDENLISTE_KOMMUNIKATIONSSPRACHE] = kundeDto
-						.getPartnerDto().getLocaleCNrKommunikation();
+				zeile[REPORT_KUNDENLISTE_FIRMENBUCHNUMMER] = kundeDto.getPartnerDto().getCFirmenbuchnr();
+				zeile[REPORT_KUNDENLISTE_GERICHTSSTAND] = kundeDto.getPartnerDto().getCGerichtsstand();
+				zeile[REPORT_KUNDENLISTE_INTERESSENT] = kundeDto.getbIstinteressent();
+				zeile[REPORT_KUNDENLISTE_KOMMUNIKATIONSSPRACHE] = kundeDto.getPartnerDto().getLocaleCNrKommunikation();
 
 				if (kundeDto.getKostenstelleIId() != null) {
 					zeile[REPORT_KUNDENLISTE_KOSTENSTELLE] = getSystemFac()
-							.kostenstelleFindByPrimaryKey(
-									kundeDto.getKostenstelleIId()).getCNr();
+							.kostenstelleFindByPrimaryKey(kundeDto.getKostenstelleIId()).getCNr();
 				}
-				zeile[REPORT_KUNDENLISTE_KREDITLIMIT] = kundeDto
-						.getNKreditlimit();
-				zeile[REPORT_KUNDENLISTE_KURZBEZEICHNUNG] = kundeDto
-						.getPartnerDto().getCKbez();
+				zeile[REPORT_KUNDENLISTE_KREDITLIMIT] = kundeDto.getNKreditlimit();
+				zeile[REPORT_KUNDENLISTE_KURZBEZEICHNUNG] = kundeDto.getPartnerDto().getCKbez();
 				if (kundeDto.getPartnerDto().getLandplzortDto() != null) {
-					zeile[REPORT_KUNDENLISTE_LAND] = kundeDto.getPartnerDto()
-							.getLandplzortDto().getLandDto().getCLkz();
-					zeile[REPORT_KUNDENLISTE_PLZ] = kundeDto.getPartnerDto()
-							.getLandplzortDto().getCPlz();
-					zeile[REPORT_KUNDENLISTE_ORT] = kundeDto.getPartnerDto()
-							.getLandplzortDto().getOrtDto().getCName();
+					zeile[REPORT_KUNDENLISTE_LAND] = kundeDto.getPartnerDto().getLandplzortDto().getLandDto().getCLkz();
+					zeile[REPORT_KUNDENLISTE_PLZ] = kundeDto.getPartnerDto().getLandplzortDto().getCPlz();
+					zeile[REPORT_KUNDENLISTE_ORT] = kundeDto.getPartnerDto().getLandplzortDto().getOrtDto().getCName();
 				}
 				if (kundeDto.getPartnerDto().getLandplzortDto_Postfach() != null) {
-					zeile[REPORT_KUNDENLISTE_LAND_POSTFACH] = kundeDto
-							.getPartnerDto().getLandplzortDto_Postfach()
+					zeile[REPORT_KUNDENLISTE_LAND_POSTFACH] = kundeDto.getPartnerDto().getLandplzortDto_Postfach()
 							.getLandDto().getCLkz();
-					zeile[REPORT_KUNDENLISTE_PLZ_POSTFACH] = kundeDto
-							.getPartnerDto().getLandplzortDto_Postfach()
+					zeile[REPORT_KUNDENLISTE_PLZ_POSTFACH] = kundeDto.getPartnerDto().getLandplzortDto_Postfach()
 							.getCPlz();
-					zeile[REPORT_KUNDENLISTE_ORT_POSTFACH] = kundeDto
-							.getPartnerDto().getLandplzortDto_Postfach()
+					zeile[REPORT_KUNDENLISTE_ORT_POSTFACH] = kundeDto.getPartnerDto().getLandplzortDto_Postfach()
 							.getOrtDto().getCName();
 				}
-				zeile[REPORT_KUNDENLISTE_POSTFACH] = kundeDto.getPartnerDto()
-						.getCPostfach();
+				zeile[REPORT_KUNDENLISTE_POSTFACH] = kundeDto.getPartnerDto().getCPostfach();
 
 				if (kundeDto.getTBonitaet() != null) {
 					zeile[REPORT_KUNDENLISTE_LETZTE_BONITAETSPRUEFUNG] = new java.sql.Timestamp(
 							kundeDto.getTBonitaet().getTime());
 				}
-				zeile[REPORT_KUNDENLISTE_LIEFERANTENNUMMER] = kundeDto
-						.getCLieferantennr();
-				zeile[REPORT_KUNDENLISTE_PARTNERART] = kundeDto.getPartnerDto()
-						.getPartnerartCNr();
+				zeile[REPORT_KUNDENLISTE_LIEFERANTENNUMMER] = kundeDto.getCLieferantennr();
+				zeile[REPORT_KUNDENLISTE_PARTNERART] = kundeDto.getPartnerDto().getPartnerartCNr();
 
 				if (kundeDto.getPartnerDto().getPartnerklasseIId() != null) {
 					zeile[REPORT_KUNDENLISTE_PARTNERKLASSE] = getPartnerFac()
-							.partnerklasseFindByPrimaryKey(
-									kundeDto.getPartnerDto()
-											.getPartnerklasseIId(),
-									theClientDto).getCNr();
+							.partnerklasseFindByPrimaryKey(kundeDto.getPartnerDto().getPartnerklasseIId(), theClientDto)
+							.getCNr();
 				}
 				zeile[REPORT_KUNDENLISTE_RABATT] = kundeDto.getFRabattsatz();
-				zeile[REPORT_KUNDENLISTE_ZESSION] = kundeDto
-						.getFZessionsfaktor();
+				zeile[REPORT_KUNDENLISTE_ZESSION] = kundeDto.getFZessionsfaktor();
 
 				if (kundeDto.getPersonaliIdProvisionsempfaenger() != null) {
 					PersonalDto personalDto = getPersonalFac()
-							.personalFindByPrimaryKey(
-									kundeDto.getPersonaliIdProvisionsempfaenger(),
-									theClientDto);
-					zeile[REPORT_KUNDENLISTE_PROVISIONSEMPFAENGER] = personalDto
-							.getPartnerDto().formatFixTitelName1Name2();
+							.personalFindByPrimaryKey(kundeDto.getPersonaliIdProvisionsempfaenger(), theClientDto);
+					zeile[REPORT_KUNDENLISTE_PROVISIONSEMPFAENGER] = personalDto.getPartnerDto()
+							.formatFixTitelName1Name2();
 				}
 
 				if (kundeDto.getPartnerRechnungsadresseDto() != null) {
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_ANREDE] = kundeDto
-							.getPartnerRechnungsadresseDto().getAnredeCNr();
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_CNAME1] = kundeDto
-							.getPartnerRechnungsadresseDto()
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_ANREDE] = kundeDto.getPartnerRechnungsadresseDto()
+							.getAnredeCNr();
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_CNAME1] = kundeDto.getPartnerRechnungsadresseDto()
 							.getCName1nachnamefirmazeile1();
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_CNAME2] = kundeDto
-							.getPartnerRechnungsadresseDto()
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_CNAME2] = kundeDto.getPartnerRechnungsadresseDto()
 							.getCName2vornamefirmazeile2();
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_CNAME3] = kundeDto
-							.getPartnerRechnungsadresseDto()
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_CNAME3] = kundeDto.getPartnerRechnungsadresseDto()
 							.getCName3vorname2abteilung();
 					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_KURZBEZEICHNUNG] = kundeDto
 							.getPartnerRechnungsadresseDto().getCKbez();
-					if (kundeDto.getPartnerRechnungsadresseDto()
-							.getLandplzortDto() != null) {
-						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_LAND] = kundeDto
-								.getPartnerRechnungsadresseDto()
+					if (kundeDto.getPartnerRechnungsadresseDto().getLandplzortDto() != null) {
+						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_LAND] = kundeDto.getPartnerRechnungsadresseDto()
 								.getLandplzortDto().getLandDto().getCName();
-						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_PLZ] = kundeDto
-								.getPartnerRechnungsadresseDto()
+						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_PLZ] = kundeDto.getPartnerRechnungsadresseDto()
 								.getLandplzortDto().getCPlz();
-						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_ORT] = kundeDto
-								.getPartnerRechnungsadresseDto()
+						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_ORT] = kundeDto.getPartnerRechnungsadresseDto()
 								.getLandplzortDto().getOrtDto().getCName();
 					}
-					if (kundeDto.getPartnerRechnungsadresseDto()
-							.getLandplzortDto_Postfach() != null) {
+					if (kundeDto.getPartnerRechnungsadresseDto().getLandplzortDto_Postfach() != null) {
 						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_LAND_POSTFACH] = kundeDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto_Postfach().getLandDto()
-								.getCName();
+								.getPartnerRechnungsadresseDto().getLandplzortDto_Postfach().getLandDto().getCName();
 						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_PLZ_POSTFACH] = kundeDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto_Postfach().getCPlz();
-						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_ORT] = kundeDto
-								.getPartnerRechnungsadresseDto()
-								.getLandplzortDto_Postfach().getOrtDto()
-								.getCName();
+								.getPartnerRechnungsadresseDto().getLandplzortDto_Postfach().getCPlz();
+						zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_ORT] = kundeDto.getPartnerRechnungsadresseDto()
+								.getLandplzortDto_Postfach().getOrtDto().getCName();
 					}
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_POSTFACH] = kundeDto
-							.getPartnerRechnungsadresseDto().getCPostfach();
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_STRASSE] = kundeDto
-							.getPartnerRechnungsadresseDto().getCStrasse();
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_TITEL] = kundeDto
-							.getPartnerRechnungsadresseDto().getCTitel();
-					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_UIDNUMMER] = kundeDto
-							.getPartnerRechnungsadresseDto().getCUid();
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_POSTFACH] = kundeDto.getPartnerRechnungsadresseDto()
+							.getCPostfach();
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_STRASSE] = kundeDto.getPartnerRechnungsadresseDto()
+							.getCStrasse();
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_TITEL] = kundeDto.getPartnerRechnungsadresseDto()
+							.getCTitel();
+					zeile[REPORT_KUNDENLISTE_RECHNUNGSADRESSE_UIDNUMMER] = kundeDto.getPartnerRechnungsadresseDto()
+							.getCUid();
 
 				}
 
-				zeile[REPORT_KUNDENLISTE_STRASSE] = kundeDto.getPartnerDto()
-						.getCStrasse();
-				zeile[REPORT_KUNDENLISTE_TITEL] = kundeDto.getPartnerDto()
-						.getCTitel();
-				zeile[REPORT_KUNDENLISTE_UIDNUMMER] = kundeDto.getPartnerDto()
-						.getCUid();
+				zeile[REPORT_KUNDENLISTE_STRASSE] = kundeDto.getPartnerDto().getCStrasse();
+				zeile[REPORT_KUNDENLISTE_TITEL] = kundeDto.getPartnerDto().getCTitel();
+				zeile[REPORT_KUNDENLISTE_UIDNUMMER] = kundeDto.getPartnerDto().getCUid();
 				zeile[REPORT_KUNDENLISTE_WAEHRUNG] = kundeDto.getCWaehrung();
 
 				if (kundeDto.getZahlungszielIId() != null) {
 					zeile[REPORT_KUNDENLISTE_ZAHLUNGSZIEL] = getMandantFac()
-							.zahlungszielFindByPrimaryKey(
-									kundeDto.getZahlungszielIId(), theClientDto)
-							.getCBez();
+							.zahlungszielFindByPrimaryKey(kundeDto.getZahlungszielIId(), theClientDto).getCBez();
 				}
 
 				if (kundeDto.getSpediteurIId() != null) {
 					zeile[REPORT_KUNDENLISTE_SPEDITEUR] = getMandantFac()
-							.spediteurFindByPrimaryKey(
-									kundeDto.getSpediteurIId())
-							.getCNamedesspediteurs();
+							.spediteurFindByPrimaryKey(kundeDto.getSpediteurIId()).getCNamedesspediteurs();
 				}
 				if (kundeDto.getLieferartIId() != null) {
-					zeile[REPORT_KUNDENLISTE_LIEFERART] = getLocaleFac()
-							.lieferartFindByPrimaryKey(
-									kundeDto.getLieferartIId(), theClientDto)
-							.formatBez();
+
+					LieferartDto lfaDto = getLocaleFac().lieferartFindByPrimaryKey(kundeDto.getLieferartIId(),
+							theClientDto);
+
+					zeile[REPORT_KUNDENLISTE_LIEFERART_KENNUNG] = lfaDto.getCNr();
+					zeile[REPORT_KUNDENLISTE_LIEFERART] = lfaDto.formatBez();
 				}
 				if (kundeDto.getMwstsatzbezIId() != null) {
 					zeile[REPORT_KUNDENLISTE_MWSTSATZ] = getMandantFac()
-							.mwstsatzbezFindByPrimaryKey(
-									kundeDto.getMwstsatzbezIId(), theClientDto)
-							.getCBezeichnung();
+							.mwstsatzbezFindByPrimaryKey(kundeDto.getMwstsatzbezIId(), theClientDto).getCBezeichnung();
 				}
 				if (kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste() != null) {
 					zeile[REPORT_KUNDENLISTE_PREISLISTE] = getVkPreisfindungFac()
-							.vkpfartikelpreislisteFindByPrimaryKey(
-									kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste())
+							.vkpfartikelpreislisteFindByPrimaryKey(kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste())
 							.getCNr();
 				}
 
@@ -2418,109 +2108,105 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 						|| iProjektemitdrucken == REPORT_KUNDENLISTE_OPTION_PROJEKTEOFFENE) {
 
 					if (iProjektemitdrucken == REPORT_KUNDENLISTE_OPTION_PROJEKTEALLE) {
-						zeile[REPORT_KUNDENLISTE_SUBREPORT_PROJEKTE] = getSubreportProjekte(
-								kundeDto.getPartnerIId(), false, theClientDto);
+						zeile[REPORT_KUNDENLISTE_SUBREPORT_PROJEKTE] = getSubreportProjekte(kundeDto.getPartnerIId(),
+								false, theClientDto);
 					} else {
-						zeile[REPORT_KUNDENLISTE_SUBREPORT_PROJEKTE] = getSubreportProjekte(
-								kundeDto.getPartnerIId(), true, theClientDto);
+						zeile[REPORT_KUNDENLISTE_SUBREPORT_PROJEKTE] = getSubreportProjekte(kundeDto.getPartnerIId(),
+								true, theClientDto);
 					}
 				}
 
-				zeile[REPORT_KUNDENLISTE_UMSATZ_HEUER] = getRechnungFac()
-						.getUmsatzVomKundenHeuer(theClientDto,
-								kundeDto.getIId(), bUmsatzNachStatistikadresse);
-				zeile[REPORT_KUNDENLISTE_UMSATZ_VORJAHR] = getRechnungFac()
-						.getUmsatzVomKundenVorjahr(theClientDto,
-								kundeDto.getIId(), bUmsatzNachStatistikadresse);
+				zeile[REPORT_KUNDENLISTE_UMSATZ_HEUER] = getRechnungFac().getUmsatzVomKundenHeuer(theClientDto,
+						kundeDto.getIId(), bUmsatzNachStatistikadresse, false);
+				zeile[REPORT_KUNDENLISTE_UMSATZ_VORJAHR] = getRechnungFac().getUmsatzVomKundenVorjahr(theClientDto,
+						kundeDto.getIId(), bUmsatzNachStatistikadresse, false);
+
+				// SP3679
+
+				BigDecimal offenLs = getLieferscheinFac().berechneOffenenLieferscheinwert(kundeDto.getIId(),
+						theClientDto);
+
+				zeile[REPORT_KUNDENLISTE_OFFEN_LS] = offenLs;
+				GregorianCalendar gcVon = new GregorianCalendar(1900, 01, 01);
+
+				GregorianCalendar gcBis = new GregorianCalendar(2099, 01, 01);
+
+				BigDecimal offenRe = getRechnungFac().berechneSummeOffenNetto(theClientDto.getMandant(),
+						RechnungFac.KRIT_MIT_GUTSCHRIFTEN, gcVon, gcBis, kundeDto.getIId(), false, theClientDto);
+				zeile[REPORT_KUNDENLISTE_OFFEN_RE] = offenRe;
+
 				zeile[REPORT_KUNDENLISTE_ANZAHL_RECHNUNGEN_HEUER] = getRechnungFac()
-						.getAnzahlDerRechnungenVomKundenHeuer(theClientDto,
-								kundeDto.getIId(), bUmsatzNachStatistikadresse);
+						.getAnzahlDerRechnungenVomKundenHeuer(theClientDto, kundeDto.getIId(),
+								bUmsatzNachStatistikadresse, false);
 				zeile[REPORT_KUNDENLISTE_ANZAHL_RECHNUNGEN_VORJAHR] = getRechnungFac()
-						.getAnzahlDerRechnungenVomKundenVorjahr(theClientDto,
-								kundeDto.getIId(), bUmsatzNachStatistikadresse);
+						.getAnzahlDerRechnungenVomKundenVorjahr(theClientDto, kundeDto.getIId(),
+								bUmsatzNachStatistikadresse, false);
 
 				// Selektionen
-				Set<?> selektionen = kunde.getFlrpartner()
-						.getPartner_paselektion_set();
+				Set<?> selektionen = kunde.getFlrpartner().getPartner_paselektion_set();
 				Iterator<?> isSel = selektionen.iterator();
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION01] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION01] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION02] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION02] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION03] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION03] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION04] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION04] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION05] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION05] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION06] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION06] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION07] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION07] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION08] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION08] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION09] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION09] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION10] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION10] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION11] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION11] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION12] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION12] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION13] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION13] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION14] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION14] = selektion.getFlrselektion().getC_nr();
 				}
 				if (isSel.hasNext() == true) {
 					FLRPASelektion selektion = (FLRPASelektion) isSel.next();
-					zeile[REPORT_KUNDENLISTE_SELEKTION15] = selektion
-							.getFlrselektion().getC_nr();
+					zeile[REPORT_KUNDENLISTE_SELEKTION15] = selektion.getFlrselektion().getC_nr();
 				}
 
-				Set<?> ansprechpartner = kunde.getFlrpartner()
-						.getAnsprechpartner();
+				Set<?> ansprechpartner = kunde.getFlrpartner().getAnsprechpartner();
 				if (ansprechpartner.size() > 0) {
 
 					int z = 0;
@@ -2528,47 +2214,36 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					while (anspIt.hasNext()) {
 						z++;
 
-						if (z == 2) {
-							int u = 0;
-						}
+						Object[] oKopie = new Object[REPORT_KUNDENLISTE_ANZAHL_SPALTEN];
 
-						Object[] oKopie = new Object[92];
-
-						for (int i = 0; i < 91; i++) {
+						for (int i = 0; i < REPORT_KUNDENLISTE_ANZAHL_SPALTEN; i++) {
 							oKopie[i] = zeile[i];
 						}
 
-						FLRAnsprechpartner flrAnsprechpartner = (FLRAnsprechpartner) anspIt
-								.next();
+						FLRAnsprechpartner flrAnsprechpartner = (FLRAnsprechpartner) anspIt.next();
 
 						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_ANREDE] = flrAnsprechpartner
-								.getFlrpartneransprechpartner()
-								.getAnrede_c_nr();
+								.getFlrpartneransprechpartner().getAnrede_c_nr();
 
-						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_EMAIL] = flrAnsprechpartner
-								.getC_email();
+						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_EMAIL] = flrAnsprechpartner.getC_email();
 
-						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_FAXDW] = flrAnsprechpartner
-								.getC_fax();
+						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_FAXDW] = flrAnsprechpartner.getC_fax();
 
-						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_MOBIL] = flrAnsprechpartner
-								.getC_handy();
+						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_MOBIL] = flrAnsprechpartner.getC_handy();
 
-						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_BEMERKUNG] = flrAnsprechpartner
-								.getX_bemerkung();
+						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_BEMERKUNG] = flrAnsprechpartner.getX_bemerkung();
+						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_VERSTECKT] = Helper
+								.short2Boolean(flrAnsprechpartner.getB_versteckt());
 
 						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_NACHNAME] = flrAnsprechpartner
-								.getFlrpartneransprechpartner()
-								.getC_name1nachnamefirmazeile1();
+								.getFlrpartneransprechpartner().getC_name1nachnamefirmazeile1();
 
-						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_TELDW] = flrAnsprechpartner
-								.getC_telefon();
+						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_TELDW] = flrAnsprechpartner.getC_telefon();
 
 						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_TITEL] = flrAnsprechpartner
 								.getFlrpartneransprechpartner().getC_titel();
 						oKopie[REPORT_KUNDENLISTE_ANSPRECHPARTNER_VORNAME] = flrAnsprechpartner
-								.getFlrpartneransprechpartner()
-								.getC_name2vornamefirmazeile2();
+								.getFlrpartneransprechpartner().getC_name2vornamefirmazeile2();
 
 						if (z == 1) {
 
@@ -2581,10 +2256,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 					}
 				} else {
-					zeile[REPORT_KUNDENLISTE_BRIEFANREDE] = getPartnerServicesFac()
-							.getBriefanredeFuerBeleg(null,
-									kundeDto.getPartnerIId(),
-									theClientDto.getLocUi(), theClientDto);
+					zeile[REPORT_KUNDENLISTE_BRIEFANREDE] = getPartnerServicesFac().getBriefanredeFuerBeleg(null,
+							kundeDto.getPartnerIId(), theClientDto.getLocUi(), theClientDto);
 					daten.add(zeile);
 				}
 			} catch (RemoteException ex) {
@@ -2595,28 +2268,27 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 		parameter.put("P_MITANSPRECHPARTNER", new Boolean(bMitAnsprechpartner));
 
-		// data = new Object[daten.size()][87];
+		parameter.put("P_MIT_VERSTECKTEN", new Boolean(bMitVersteckten));
+
 		setData(new Object[daten.size()][87]);
 		for (int i = 0; i < daten.size(); i++) {
 			data[i] = (Object[]) daten.get(i);
 		}
 
-		initJRDS(parameter, KundeReportFac.REPORT_MODUL,
-				KundeReportFac.REPORT_KUNDENLISTE, theClientDto.getMandant(),
+		initJRDS(parameter, KundeReportFac.REPORT_MODUL, KundeReportFac.REPORT_KUNDENLISTE, theClientDto.getMandant(),
 				theClientDto.getLocUi(), theClientDto);
 		return getReportPrint();
 	}
 
-	public Object[][] getDataLieferstatistik(TheClientDto theClientDto,
-			Integer kundeIId, Integer artikelIId, Integer artikelgruppeIId,
-			Date dVon, Date dBis, Integer iSortierung, String mandantCNr,
-			boolean bMitTexteingaben, boolean bVerdichtetNachArtikel,
-			boolean bEingeschraenkt, int iOptionAdrsse, boolean bRechnungsdatum)
-			throws EJBExceptionLP {
+	public Object[][] getDataLieferstatistik(TheClientDto theClientDto, Integer kundeIId, Integer artikelIId,
+			Integer artikelgruppeIId, Date dVon, Date dBis, Integer iSortierung, String mandantCNr,
+			boolean bMitTexteingaben, boolean bVerdichtetNachArtikel, boolean bSortiertNachArtikelgruppe,
+			boolean bEingeschraenkt, int iOptionAdrsse, boolean bRechnungsdatum) throws EJBExceptionLP {
 
 		Object[][] data = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
+
 		try {
 			FacadeBeauftragter fac = new FacadeBeauftragter();
 			session = factory.openSession();
@@ -2624,53 +2296,46 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			String queryRechnung = " from FLRRechnungPosition rechpos  WHERE 1=1 ";
 
 			if (bMitTexteingaben == true) {
-				queryRechnung += " AND rechpos.positionsart_c_nr NOT IN ('"
-						+ LocaleFac.POSITIONSART_LIEFERSCHEIN + "','"
-						+ LocaleFac.POSITIONSART_LEERZEILE + "')";
+				queryRechnung += " AND rechpos.positionsart_c_nr NOT IN ('" + LocaleFac.POSITIONSART_LIEFERSCHEIN
+						+ "','" + LocaleFac.POSITIONSART_LEERZEILE + "','" + LocaleFac.POSITIONSART_ENDSUMME + "')";
 			} else {
-				queryRechnung += " AND rechpos.positionsart_c_nr NOT IN ('"
-						+ LocaleFac.POSITIONSART_LIEFERSCHEIN + "','"
-						+ LocaleFac.POSITIONSART_LEERZEILE + "','"
-						+ LocaleFac.POSITIONSART_TEXTEINGABE + "')";
+				queryRechnung += " AND rechpos.positionsart_c_nr NOT IN ('" + LocaleFac.POSITIONSART_LIEFERSCHEIN
+						+ "','" + LocaleFac.POSITIONSART_LEERZEILE + "','" + "','" + LocaleFac.POSITIONSART_ENDSUMME
+						+ "','" + LocaleFac.POSITIONSART_TEXTEINGABE + "')";
 
 			}
 
-			queryRechnung += " AND rechpos.flrrechnung.status_c_nr NOT IN ('"
-					+ RechnungFac.STATUS_STORNIERT + "') ";
+			queryRechnung += " AND rechpos.flrrechnung.status_c_nr NOT IN ('" + RechnungFac.STATUS_STORNIERT + "') ";
 
 			if (kundeIId != null) {
 				if (iOptionAdrsse == REPORT_LIEFERSTATISTIK_OPTION_STATISTIKADRESSE) {
-					queryRechnung += " AND rechpos.flrrechnung.flrstatistikadresse.i_id="
-							+ kundeIId;
+					queryRechnung += " AND rechpos.flrrechnung.flrstatistikadresse.i_id=" + kundeIId;
 				} else {
-					queryRechnung += " AND rechpos.flrrechnung.flrkunde.i_id="
-							+ kundeIId;
+					queryRechnung += " AND rechpos.flrrechnung.flrkunde.i_id=" + kundeIId;
 				}
 			}
 
 			if (artikelIId != null) {
-				queryRechnung += " AND rechpos.artikel_i_id=" + artikelIId
-						+ " ";
+				queryRechnung += " AND rechpos.artikel_i_id=" + artikelIId + " ";
 			}
 
 			if (artikelgruppeIId != null) {
-				queryRechnung += " AND rechpos.flrartikel.flrartikelgruppe.i_id="
-						+ artikelgruppeIId + " ";
+				// SP7962
+				queryRechnung += " AND rechpos.flrartikel.flrartikelgruppe.i_id IN "
+						+ getArtikelFac().holeAlleArtikelgruppen(artikelgruppeIId).erzeuge_IN_Fuer_Query();
+
 			}
 
 			if (mandantCNr != null) {
-				queryRechnung += " AND rechpos.flrrechnung.mandant_c_nr= '"
-						+ mandantCNr + "'";
+				queryRechnung += " AND rechpos.flrrechnung.mandant_c_nr= '" + mandantCNr + "'";
 			}
 
 			if (dVon != null) {
 				queryRechnung += " AND rechpos.flrrechnung.d_belegdatum>='"
-						+ Helper.formatDateWithSlashes(Helper.cutDate(dVon))
-						+ "'";
+						+ Helper.formatDateWithSlashes(Helper.cutDate(dVon)) + "'";
 			}
 			if (dBis != null) {
-				queryRechnung += " AND rechpos.flrrechnung.d_belegdatum<'"
-						+ Helper.formatDateWithSlashes(dBis) + "'";
+				queryRechnung += " AND rechpos.flrrechnung.d_belegdatum<'" + Helper.formatDateWithSlashes(dBis) + "'";
 			}
 
 			queryRechnung += " ORDER BY rechpos.flrrechnung.d_belegdatum DESC, rechpos.i_sort ASC";
@@ -2687,36 +2352,36 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 			if (bMitTexteingaben == false) {
 				queryLieferschein += " AND lspos.positionsart_c_nr NOT IN ('"
-						+ LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_TEXTEINGABE
-						+ "')";
+						+ LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_TEXTEINGABE + "')";
 			}
 
 			if (kundeIId != null) {
 				if (iOptionAdrsse == REPORT_LIEFERSTATISTIK_OPTION_RECHNUNGSADRESSE) {
-					queryLieferschein += " AND lspos.flrlieferschein.kunde_i_id_rechnungsadresse="
-							+ kundeIId;
+					queryLieferschein += " AND lspos.flrlieferschein.kunde_i_id_rechnungsadresse=" + kundeIId;
+				} else if (iOptionAdrsse == REPORT_LIEFERSTATISTIK_OPTION_STATISTIKADRESSE) {
+					//SP9371
+					queryLieferschein += " AND lspos.flrlieferschein.flrrechnung.kunde_i_id_statistikadresse=" + kundeIId;
 				} else {
-					queryLieferschein += " AND lspos.flrlieferschein.kunde_i_id_lieferadresse="
-							+ kundeIId;
+					queryLieferschein += " AND lspos.flrlieferschein.kunde_i_id_lieferadresse=" + kundeIId;
 				}
 			}
 
 			if (artikelIId != null) {
-				queryLieferschein += " AND lspos.flrartikel.i_id=" + artikelIId
-						+ " ";
+				queryLieferschein += " AND lspos.flrartikel.i_id=" + artikelIId + " ";
 			}
 
 			if (artikelgruppeIId != null) {
-				queryLieferschein += " AND lspos.flrartikel.flrartikelgruppe.i_id="
-						+ artikelgruppeIId + " ";
+				// SP7962
+				queryLieferschein += " AND lspos.flrartikel.flrartikelgruppe.i_id IN "
+						+ getArtikelFac().holeAlleArtikelgruppen(artikelgruppeIId).erzeuge_IN_Fuer_Query();
+
 			}
 
 			queryLieferschein += " AND lspos.flrlieferschein.lieferscheinstatus_status_c_nr NOT IN ('"
 					+ LieferscheinFac.LSSTATUS_STORNIERT + "') ";
 
 			if (mandantCNr != null) {
-				queryLieferschein += " AND lspos.flrlieferschein.mandant_c_nr= '"
-						+ mandantCNr + "'";
+				queryLieferschein += " AND lspos.flrlieferschein.mandant_c_nr= '" + mandantCNr + "'";
 			}
 
 			if (bRechnungsdatum == true) {
@@ -2754,21 +2419,20 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 			List<?> resultListLieferschein = qLieferschein.list();
 
-			Iterator<?> resultListIteratorRechnung = resultListRechnung
-					.iterator();
+			Iterator<?> resultListIteratorRechnung = resultListRechnung.iterator();
 			// Rechnungspositionen verarbeiten
 			ArrayList<KundeLieferstatistikDto> cResult = new ArrayList<KundeLieferstatistikDto>();
 
+			boolean bKundeUmsatzR = getBenutzerServicesFac().hatRecht(RechteFac.RECHT_PART_KUNDE_UMSAETZE_R,
+					theClientDto);
+
 			while (resultListIteratorRechnung.hasNext()) {
-				FLRRechnungPosition rePos = (FLRRechnungPosition) resultListIteratorRechnung
-						.next();
-				if (RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME
-						.equals(rePos.getPositionsart_c_nr())) {
+				FLRRechnungPosition rePos = (FLRRechnungPosition) resultListIteratorRechnung.next();
+				if (RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME.equals(rePos.getPositionsart_c_nr())) {
 					continue;
 				}
 
-				RechnungDto d = fac.getRechnungFac().rechnungFindByPrimaryKey(
-						rePos.getRechnung_i_id());
+				RechnungDto d = fac.getRechnungFac().rechnungFindByPrimaryKey(rePos.getRechnung_i_id());
 
 				KundeLieferstatistikDto dto = new KundeLieferstatistikDto();
 
@@ -2777,112 +2441,99 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					dto.setiVerleihtage(rePos.getFlrverleih().getI_tage());
 				}
 
-				String sRechnungsart = d.getRechnungartCNr();
 				dto.setSWarenausgangverursacher(d.getRechnungartCNr());
 
 				// Rechnungsnummer
 				dto.setSRechnungsnummer(rePos.getFlrrechnung().getC_nr());
+				dto.setDRechnungsdatum(rePos.getFlrrechnung().getD_belegdatum());
 				// Lieferscheinnummer
 				if (rePos.getFlrlieferschein() != null) {
-					dto.setSLieferscheinnummer(rePos.getFlrlieferschein()
-							.getC_nr());
+					dto.setSLieferscheinnummer(rePos.getFlrlieferschein().getC_nr());
+					dto.setSLieferscheinart(rePos.getFlrlieferschein().getLieferscheinart_c_nr());
+
+					dto.setDRueckgabe(rePos.getFlrlieferschein().getT_rueckgabetermin());
+					dto.setDManuellErledigt(rePos.getFlrlieferschein().getT_manuellerledigt());
+
+					if (rePos.getFlrpositionensichtauftrag() != null) {
+						dto.setSAuftragsnummer(rePos.getFlrpositionensichtauftrag().getFlrauftrag().getC_nr());
+					} else if (rePos.getFlrlieferschein().getFlrauftrag() != null) {
+						dto.setSAuftragsnummer(rePos.getFlrlieferschein().getFlrauftrag().getC_nr());
+					}
+
 				}
 				// Mwstsatz
 				if (rePos.getFlrmwstsatz() != null) {
-					dto.setNMwstsatz(Helper.rundeKaufmaennisch(new BigDecimal(
-							rePos.getFlrmwstsatz().getF_mwstsatz()), 2));
+					dto.setNMwstsatz(
+							Helper.rundeKaufmaennisch(new BigDecimal(rePos.getFlrmwstsatz().getF_mwstsatz()), 2));
 				}
 				// Vertreter
 				if (rePos.getFlrrechnung().getFlrvertreter() != null) {
-					dto.setSVertreter(rePos.getFlrrechnung().getFlrvertreter()
-							.getC_kurzzeichen());
+					dto.setSVertreter(rePos.getFlrrechnung().getFlrvertreter().getC_kurzzeichen());
 				}
 				// Provisionsempfaenger
 				if (rePos.getFlrrechnung().getFlrkunde().getFlrpersonal() != null) {
-					dto.setSProvisionsempfaenger(rePos.getFlrrechnung()
-							.getFlrkunde().getFlrpersonal().getC_kurzzeichen());
+					dto.setSProvisionsempfaenger(
+							rePos.getFlrrechnung().getFlrkunde().getFlrpersonal().getC_kurzzeichen());
 				}
 				// Kunde + LAND + PLZ + ORT
-				String kundenname = rePos.getFlrrechnung().getFlrkunde()
-						.getFlrpartner().getC_name1nachnamefirmazeile1();
+				String kundenname = rePos.getFlrrechnung().getFlrkunde().getFlrpartner()
+						.getC_name1nachnamefirmazeile1();
 
-				String firma2 = rePos.getFlrrechnung().getFlrkunde()
-						.getFlrpartner().getC_name2vornamefirmazeile2();
+				String firma2 = rePos.getFlrrechnung().getFlrkunde().getFlrpartner().getC_name2vornamefirmazeile2();
 
 				if (firma2 != null) {
 					kundenname += " " + firma2;
 				}
 				dto.setSKundenname(kundenname);
-				if (rePos.getFlrrechnung().getFlrkunde().getFlrpartner()
-						.getFlrlandplzort() != null) {
-					dto.setSLand(rePos.getFlrrechnung().getFlrkunde()
-							.getFlrpartner().getFlrlandplzort().getFlrland()
+				if (rePos.getFlrrechnung().getFlrkunde().getFlrpartner().getFlrlandplzort() != null) {
+					dto.setSLand(rePos.getFlrrechnung().getFlrkunde().getFlrpartner().getFlrlandplzort().getFlrland()
 							.getC_lkz());
-					dto.setSPlz(rePos.getFlrrechnung().getFlrkunde()
-							.getFlrpartner().getFlrlandplzort().getC_plz());
-					dto.setSOrt(rePos.getFlrrechnung().getFlrkunde()
-							.getFlrpartner().getFlrlandplzort().getFlrort()
+					dto.setSPlz(rePos.getFlrrechnung().getFlrkunde().getFlrpartner().getFlrlandplzort().getC_plz());
+					dto.setSOrt(rePos.getFlrrechnung().getFlrkunde().getFlrpartner().getFlrlandplzort().getFlrort()
 							.getC_name());
 				}
 				// Statistikadresse + LAND + PLZ + ORT
-				String statistikadresse = rePos.getFlrrechnung()
-						.getFlrstatistikadresse().getFlrpartner()
+				String statistikadresse = rePos.getFlrrechnung().getFlrstatistikadresse().getFlrpartner()
 						.getC_name1nachnamefirmazeile1();
 
-				String statistikadressefirma2 = rePos.getFlrrechnung()
-						.getFlrstatistikadresse().getFlrpartner()
+				String statistikadressefirma2 = rePos.getFlrrechnung().getFlrstatistikadresse().getFlrpartner()
 						.getC_name2vornamefirmazeile2();
 
 				if (statistikadressefirma2 != null) {
 					statistikadresse += " " + statistikadressefirma2;
 				}
 				dto.setSStatistikadresse(statistikadresse);
-				if (rePos.getFlrrechnung().getFlrstatistikadresse()
-						.getFlrpartner().getFlrlandplzort() != null) {
-					dto.setSLandStatistikadresse(rePos.getFlrrechnung()
-							.getFlrstatistikadresse().getFlrpartner()
+				if (rePos.getFlrrechnung().getFlrstatistikadresse().getFlrpartner().getFlrlandplzort() != null) {
+					dto.setSLandStatistikadresse(rePos.getFlrrechnung().getFlrstatistikadresse().getFlrpartner()
 							.getFlrlandplzort().getFlrland().getC_lkz());
-					dto.setSPlzStatistikadresse(rePos.getFlrrechnung()
-							.getFlrstatistikadresse().getFlrpartner()
+					dto.setSPlzStatistikadresse(rePos.getFlrrechnung().getFlrstatistikadresse().getFlrpartner()
 							.getFlrlandplzort().getC_plz());
-					dto.setSOrtStatistikadresse(rePos.getFlrrechnung()
-							.getFlrstatistikadresse().getFlrpartner()
+					dto.setSOrtStatistikadresse(rePos.getFlrrechnung().getFlrstatistikadresse().getFlrpartner()
 							.getFlrlandplzort().getFlrort().getC_name());
 				}
 
 				// Datum
-				dto.setDWarenausgangsdatum(new Timestamp(rePos.getFlrrechnung()
-						.getD_belegdatum().getTime()));
+				dto.setDWarenausgangsdatum(new Timestamp(rePos.getFlrrechnung().getD_belegdatum().getTime()));
 				// Ident
 
-				if (rePos.getPositionsart_c_nr().equals(
-						RechnungFac.POSITIONSART_RECHNUNG_IDENT)) {
-					if (Helper.short2boolean(rePos.getFlrartikel()
-							.getB_seriennrtragend())
-							|| Helper.short2boolean(rePos.getFlrartikel()
-									.getB_chargennrtragend())) {
-						dto.setSnrs(getLagerFac()
-								.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
-										LocaleFac.BELEGART_RECHNUNG,
-										rePos.getI_id()));
+				if (rePos.getPositionsart_c_nr().equals(RechnungFac.POSITIONSART_RECHNUNG_IDENT)) {
+					if (Helper.short2boolean(rePos.getFlrartikel().getB_seriennrtragend())
+							|| Helper.short2boolean(rePos.getFlrartikel().getB_chargennrtragend())) {
+						dto.setSnrs(getLagerFac().getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
+								LocaleFac.BELEGART_RECHNUNG, rePos.getI_id()));
 					}
 				}
 
-				if (rePos.getPositionsart_c_nr().equals(
-						RechnungFac.POSITIONSART_RECHNUNG_IDENT)
-						|| rePos.getPositionsart_c_nr().equals(
-								RechnungFac.POSITIONSART_RECHNUNG_HANDEINGABE)) {
+				if (rePos.getPositionsart_c_nr().equals(RechnungFac.POSITIONSART_RECHNUNG_IDENT)
+						|| rePos.getPositionsart_c_nr().equals(RechnungFac.POSITIONSART_RECHNUNG_HANDEINGABE)) {
 					if (rePos.getFlrartikel() != null) {
-						if (rePos.getFlrartikel().getArtikelart_c_nr()
-								.equals(ArtikelFac.ARTIKELART_HANDARTIKEL)) {
-							dto.setSIdent(ArtikelFac.ARTIKELART_HANDARTIKEL
-									.trim());
+						if (rePos.getFlrartikel().getArtikelart_c_nr().equals(ArtikelFac.ARTIKELART_HANDARTIKEL)) {
+							dto.setSIdent(ArtikelFac.ARTIKELART_HANDARTIKEL.trim());
 						} else {
 							dto.setSIdent(rePos.getFlrartikel().getC_nr());
 						}
 					}
-				} else if (rePos.getPositionsart_c_nr().equals(
-						RechnungFac.POSITIONSART_RECHNUNG_TEXTEINGABE)) {
+				} else if (rePos.getPositionsart_c_nr().equals(RechnungFac.POSITIONSART_RECHNUNG_TEXTEINGABE)) {
 					dto.setSBezeichnung(rePos.getX_textinhalt());
 				}
 
@@ -2901,13 +2552,10 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				// &&
 				// !RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME.equals(posartCnr))
 				// {
-				if (!rePos.getPositionsart_c_nr().equals(
-						RechnungFac.POSITIONSART_RECHNUNG_TEXTEINGABE)) {
+				if (!rePos.getPositionsart_c_nr().equals(RechnungFac.POSITIONSART_RECHNUNG_TEXTEINGABE)) {
 					if (rePos.getFlrartikel() != null) {
 						ArtikelDto artikelDto = fac.getArtikelFac()
-								.artikelFindByPrimaryKeySmall(
-										rePos.getFlrartikel().getI_id(),
-										theClientDto);
+								.artikelFindByPrimaryKeySmall(rePos.getFlrartikel().getI_id(), theClientDto);
 
 						if (rePos.getC_bez() == null) {
 							dto.setSBezeichnung(artikelDto.formatBezeichnung());
@@ -2915,9 +2563,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 							dto.setSBezeichnung(rePos.getC_bez());
 						}
 						BigDecimal bMenge = rePos.getN_menge();
-						dto.setNMenge(sRechnungsart
-								.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT) ? bMenge
-								.negate() : bMenge);
+						dto.setNMenge(rePos.getFlrrechnung().getFlrrechnungart().getRechnungtyp_c_nr()
+								.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT) ? bMenge.negate() : bMenge);
 
 						dto.setNMaterialzuschlag(rePos.getN_materialzuschlag());
 
@@ -2932,14 +2579,11 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 						// }
 
 						if (rePos.getFlrrechnung().getN_kurs().signum() != 0) {
-							BigDecimal kurs = rePos.getFlrrechnung()
-									.getN_kurs();
-							if (rePos
-									.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt() != null) {
-								dto.setNPreis(rePos
-										.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt()
-										.divide(kurs, 4,
-												BigDecimal.ROUND_HALF_EVEN));
+							BigDecimal kurs = rePos.getFlrrechnung().getN_kurs();
+							if (rePos.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt() != null
+									&& rePos.getPosition_i_id_artikelset() == null) {
+								dto.setNPreis(rePos.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt().divide(kurs, 4,
+										BigDecimal.ROUND_HALF_EVEN));
 							} else {
 								dto.setNPreis(BigDecimal.ZERO);
 							}
@@ -2961,18 +2605,15 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 						}
 
 						if (rePos.getFlrartikel().getFlrartikelgruppe() != null) {
-							dto.setSArtikelgruppe(rePos.getFlrartikel()
-									.getFlrartikelgruppe().getC_nr());
+							dto.setSArtikelgruppe(rePos.getFlrartikel().getFlrartikelgruppe().getC_nr());
 							if (rePos.getFlrartikel().getFlrartikelgruppe()
-									.getFlrkonto() != null) {
-								dto.setSKonto(rePos.getFlrartikel()
-										.getFlrartikelgruppe().getFlrkonto()
-										.getC_nr());
+									.getFlrkonto(theClientDto.getMandant()) != null) {
+								dto.setSKonto(rePos.getFlrartikel().getFlrartikelgruppe()
+										.getFlrkonto(theClientDto.getMandant()).getC_nr());
 							}
 						}
 						if (rePos.getFlrartikel().getFlrartikelklasse() != null) {
-							dto.setSArtikelklasse(rePos.getFlrartikel()
-									.getFlrartikelklasse().getC_nr());
+							dto.setSArtikelklasse(rePos.getFlrartikel().getFlrartikelklasse().getC_nr());
 						}
 					} else {
 						dto.setSBezeichnung(rePos.getC_bez());
@@ -2982,35 +2623,48 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				if (bVerdichtetNachArtikel) {
 					boolean bGefunden = false;
 					for (int j = 0; j < cResult.size(); j++) {
-						KundeLieferstatistikDto temp = (KundeLieferstatistikDto) cResult
-								.get(j);
-						if (temp.getSIdent().equals(dto.getSIdent())) {
-							if (dto.getNMenge() != null
-									&& temp.getNMenge() != null) {
-								BigDecimal mengeNeu = dto.getNMenge().add(
-										temp.getNMenge());
+						KundeLieferstatistikDto temp = (KundeLieferstatistikDto) cResult.get(j);
 
-								BigDecimal preisWertAlt = temp.getNPreis()
-										.multiply(temp.getNMenge());
-								BigDecimal preisWertNeu = dto.getNPreis()
-										.multiply(dto.getNMenge());
+						// SP4816
+
+						boolean bSetposition1 = false;
+						boolean bSetposition2 = false;
+
+						if (temp.getSSetartikelTyp() != null
+								&& temp.getSSetartikelTyp().equals(ArtikelFac.SETARTIKEL_TYP_POSITION)) {
+							bSetposition1 = true;
+						}
+						if (dto.getSSetartikelTyp() != null
+								&& dto.getSSetartikelTyp().equals(ArtikelFac.SETARTIKEL_TYP_POSITION)) {
+							bSetposition2 = true;
+						}
+
+						if (temp.getSIdent().equals(dto.getSIdent()) && bSetposition1 == bSetposition2) {
+							if (dto.getNMenge() != null && temp.getNMenge() != null) {
+								BigDecimal mengeNeu = dto.getNMenge().add(temp.getNMenge());
+
+								BigDecimal preisWertAlt = temp.getNPreis().multiply(temp.getNMenge());
+								BigDecimal preisWertNeu = dto.getNPreis().multiply(dto.getNMenge());
 
 								BigDecimal preisNeu = dto.getNPreis();
 								if (mengeNeu.doubleValue() != 0) {
-									preisNeu = preisWertNeu.add(preisWertAlt)
-											.divide(mengeNeu,
-													BigDecimal.ROUND_HALF_EVEN);
+									preisNeu = preisWertNeu.add(preisWertAlt).divide(mengeNeu,
+											BigDecimal.ROUND_HALF_EVEN);
 								}
 								temp.setNMenge(mengeNeu);
 								temp.setNPreis(preisNeu);
 
-								temp.setSnrs(SeriennrChargennrMitMengeDto
-										.add2SnrChnrDtos(temp.getSnrs(),
-												dto.getSnrs()));
+								temp.setSnrs(
+										SeriennrChargennrMitMengeDto.add2SnrChnrDtos(temp.getSnrs(), dto.getSnrs()));
 
 								temp.setDWarenausgangsdatum(null);
 								temp.setSLieferscheinnummer(null);
+								temp.setSLieferscheinart(null);
+								temp.setSAuftragsnummer(null);
+								temp.setDRueckgabe(null);
+								temp.setDManuellErledigt(null);
 								temp.setSRechnungsnummer(null);
+								temp.setDRechnungsdatum(null);
 								cResult.set(j, temp);
 								bGefunden = true;
 								break;
@@ -3026,14 +2680,11 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				}
 			}
 
-			Iterator<?> resultListIteratorLieferschein = resultListLieferschein
-					.iterator();
+			Iterator<?> resultListIteratorLieferschein = resultListLieferschein.iterator();
 			// lieferscheinpositionen verarbeiten
 			while (resultListIteratorLieferschein.hasNext()) {
-				FLRLieferscheinposition lsPos = (FLRLieferscheinposition) resultListIteratorLieferschein
-						.next();
-				if (RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME
-						.equals(lsPos.getPositionsart_c_nr())) {
+				FLRLieferscheinposition lsPos = (FLRLieferscheinposition) resultListIteratorLieferschein.next();
+				if (RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME.equals(lsPos.getPositionsart_c_nr())) {
 					continue;
 				}
 
@@ -3047,63 +2698,65 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 				// Rechnungsnummer
 				if (lsPos.getFlrlieferschein().getFlrrechnung() != null) {
-					dto.setSRechnungsnummer(lsPos.getFlrlieferschein()
-							.getFlrrechnung().getC_nr());
+					dto.setSRechnungsnummer(lsPos.getFlrlieferschein().getFlrrechnung().getC_nr());
+					dto.setDRechnungsdatum(lsPos.getFlrlieferschein().getFlrrechnung().getD_belegdatum());
+
 				}
+
 				// Lieferscheinnummer
 				if (lsPos.getFlrlieferschein() != null) {
-					dto.setSLieferscheinnummer(lsPos.getFlrlieferschein()
-							.getC_nr());
+					dto.setSLieferscheinnummer(lsPos.getFlrlieferschein().getC_nr());
+					dto.setSLieferscheinart(lsPos.getFlrlieferschein().getLieferscheinart_c_nr());
+
+					dto.setDRueckgabe(lsPos.getFlrlieferschein().getT_rueckgabetermin());
+					dto.setDManuellErledigt(lsPos.getFlrlieferschein().getT_manuellerledigt());
+
+					if (lsPos.getFlrpositionensichtauftrag() != null) {
+						dto.setSAuftragsnummer(lsPos.getFlrpositionensichtauftrag().getFlrauftrag().getC_nr());
+					} else if (lsPos.getFlrlieferschein().getFlrauftrag() != null) {
+						dto.setSAuftragsnummer(lsPos.getFlrlieferschein().getFlrauftrag().getC_nr());
+					}
 				}
 				// Mwstsatz
 				if (lsPos.getFlrmwstsatz() != null) {
-					dto.setNMwstsatz(Helper.rundeKaufmaennisch(new BigDecimal(
-							lsPos.getFlrmwstsatz().getF_mwstsatz()), 2));
+					dto.setNMwstsatz(
+							Helper.rundeKaufmaennisch(new BigDecimal(lsPos.getFlrmwstsatz().getF_mwstsatz()), 2));
 				}
 				// Kunde + LAND + PLZ + ORT
-				String kundenname = lsPos.getFlrlieferschein().getFlrkunde()
-						.getFlrpartner().getC_name1nachnamefirmazeile1();
+				String kundenname = lsPos.getFlrlieferschein().getFlrkunde().getFlrpartner()
+						.getC_name1nachnamefirmazeile1();
 
-				String firma2 = lsPos.getFlrlieferschein().getFlrkunde()
-						.getFlrpartner().getC_name2vornamefirmazeile2();
+				String firma2 = lsPos.getFlrlieferschein().getFlrkunde().getFlrpartner().getC_name2vornamefirmazeile2();
 
 				if (firma2 != null) {
 					kundenname += " " + firma2;
 				}
 				dto.setSKundenname(kundenname);
-				if (lsPos.getFlrlieferschein().getFlrkunde().getFlrpartner()
-						.getFlrlandplzort() != null) {
-					dto.setSLand(lsPos.getFlrlieferschein().getFlrkunde()
-							.getFlrpartner().getFlrlandplzort().getFlrland()
-							.getC_lkz());
-					dto.setSPlz(lsPos.getFlrlieferschein().getFlrkunde()
-							.getFlrpartner().getFlrlandplzort().getC_plz());
-					dto.setSOrt(lsPos.getFlrlieferschein().getFlrkunde()
-							.getFlrpartner().getFlrlandplzort().getFlrort()
+				if (lsPos.getFlrlieferschein().getFlrkunde().getFlrpartner().getFlrlandplzort() != null) {
+					dto.setSLand(lsPos.getFlrlieferschein().getFlrkunde().getFlrpartner().getFlrlandplzort()
+							.getFlrland().getC_lkz());
+					dto.setSPlz(lsPos.getFlrlieferschein().getFlrkunde().getFlrpartner().getFlrlandplzort().getC_plz());
+					dto.setSOrt(lsPos.getFlrlieferschein().getFlrkunde().getFlrpartner().getFlrlandplzort().getFlrort()
 							.getC_name());
 				}
 				// Vertreter
 				if (lsPos.getFlrlieferschein().getFlrvertreter() != null) {
-					dto.setSVertreter(lsPos.getFlrlieferschein()
-							.getFlrvertreter().getC_kurzzeichen());
+					dto.setSVertreter(lsPos.getFlrlieferschein().getFlrvertreter().getC_kurzzeichen());
 				}
 				// Provisionsempfaenger
 				if (lsPos.getFlrlieferschein().getFlrkunde().getFlrpersonal() != null) {
-					dto.setSProvisionsempfaenger(lsPos.getFlrlieferschein()
-							.getFlrkunde().getFlrpersonal().getC_kurzzeichen());
+					dto.setSProvisionsempfaenger(
+							lsPos.getFlrlieferschein().getFlrkunde().getFlrpersonal().getC_kurzzeichen());
 				}
 				// Datum
 				if (bRechnungsdatum == true) {
-					dto.setDWarenausgangsdatum(lsPos.getFlrlieferschein()
-							.getFlrrechnung().getD_belegdatum());
+					dto.setDWarenausgangsdatum(lsPos.getFlrlieferschein().getFlrrechnung().getD_belegdatum());
 				} else {
-					dto.setDWarenausgangsdatum(lsPos.getFlrlieferschein()
-							.getD_belegdatum());
+					dto.setDWarenausgangsdatum(lsPos.getFlrlieferschein().getD_belegdatum());
 				}
 				// Ident
 				if (lsPos.getFlrartikel() != null) {
-					if (lsPos.getFlrartikel().getArtikelart_c_nr()
-							.equals(ArtikelFac.ARTIKELART_HANDARTIKEL)) {
+					if (lsPos.getFlrartikel().getArtikelart_c_nr().equals(ArtikelFac.ARTIKELART_HANDARTIKEL)) {
 						dto.setSIdent(ArtikelFac.ARTIKELART_HANDARTIKEL.trim());
 					} else {
 						dto.setSIdent(lsPos.getFlrartikel().getC_nr());
@@ -3127,16 +2780,19 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				// TODO: Hier werden die Werte erneut gesetzt. Ein paar Zeilen
 				// oberhalb wird mit Kurs gerechnet?
 				// dto.setNPreis(lsPos.getN_nettogesamtpreis());
-				dto.setNPreis(lsPos
-						.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
+
+				// SP4816
+				if (lsPos.getPosition_i_id_artikelset() == null) {
+					dto.setNPreis(lsPos.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
+				} else {
+					dto.setNPreis(BigDecimal.ZERO);
+				}
+
 				dto.setNMaterialzuschlag(lsPos.getN_materialzuschlag());
 
-				if (lsPos.getPositionsart_c_nr().equals(
-						RechnungFac.POSITIONSART_RECHNUNG_IDENT)) {
-					dto.setSnrs(getLagerFac()
-							.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
-									LocaleFac.BELEGART_LIEFERSCHEIN,
-									lsPos.getI_id()));
+				if (lsPos.getPositionsart_c_nr().equals(RechnungFac.POSITIONSART_RECHNUNG_IDENT)) {
+					dto.setSnrs(getLagerFac().getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+							LocaleFac.BELEGART_LIEFERSCHEIN, lsPos.getI_id()));
 
 				}
 
@@ -3152,43 +2808,34 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 				}
 
-				if (lsPos.getPositionsart_c_nr().equals(
-						LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)
-						|| lsPos.getPositionsart_c_nr()
-								.equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_HANDEINGABE)) {
+				if (lsPos.getPositionsart_c_nr().equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT) || lsPos
+						.getPositionsart_c_nr().equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_HANDEINGABE)) {
 					if (lsPos.getFlrartikel() != null) {
 						ArtikelDto artikelDto = fac.getArtikelFac()
-								.artikelFindByPrimaryKeySmall(
-										lsPos.getFlrartikel().getI_id(),
-										theClientDto);
+								.artikelFindByPrimaryKeySmall(lsPos.getFlrartikel().getI_id(), theClientDto);
 
-						if (Helper.short2boolean(lsPos
-								.getB_artikelbezeichnunguebersteuert())) {
+						if (Helper.short2boolean(lsPos.getB_artikelbezeichnunguebersteuert())) {
 							dto.setSBezeichnung(lsPos.getC_bez());
 						} else {
 							dto.setSBezeichnung(artikelDto.formatBezeichnung());
 						}
 
 						if (lsPos.getFlrartikel().getFlrartikelgruppe() != null) {
-							dto.setSArtikelgruppe(lsPos.getFlrartikel()
-									.getFlrartikelgruppe().getC_nr());
+							dto.setSArtikelgruppe(lsPos.getFlrartikel().getFlrartikelgruppe().getC_nr());
 							if (lsPos.getFlrartikel().getFlrartikelgruppe()
-									.getFlrkonto() != null) {
-								dto.setSKonto(lsPos.getFlrartikel()
-										.getFlrartikelgruppe().getFlrkonto()
-										.getC_nr());
+									.getFlrkonto(theClientDto.getMandant()) != null) {
+								dto.setSKonto(lsPos.getFlrartikel().getFlrartikelgruppe()
+										.getFlrkonto(theClientDto.getMandant()).getC_nr());
 							}
 						}
 						if (lsPos.getFlrartikel().getFlrartikelklasse() != null) {
-							dto.setSArtikelklasse(lsPos.getFlrartikel()
-									.getFlrartikelklasse().getC_nr());
+							dto.setSArtikelklasse(lsPos.getFlrartikel().getFlrartikelklasse().getC_nr());
 						}
 
 					} else {
 						dto.setSBezeichnung(lsPos.getC_bez());
 					}
-				} else if (lsPos
-						.getPositionsart_c_nr()
+				} else if (lsPos.getPositionsart_c_nr()
 						.equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_TEXTEINGABE)) {
 					dto.setSBezeichnung(lsPos.getC_textinhalt());
 				}
@@ -3196,35 +2843,44 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				if (bVerdichtetNachArtikel) {
 					boolean bGefunden = false;
 					for (int j = 0; j < cResult.size(); j++) {
-						KundeLieferstatistikDto temp = (KundeLieferstatistikDto) cResult
-								.get(j);
-						if (temp.getSIdent().equals(dto.getSIdent())) {
-							if (dto.getNMenge() != null
-									&& temp.getNMenge() != null) {
-								BigDecimal mengeNeu = dto.getNMenge().add(
-										temp.getNMenge());
+						KundeLieferstatistikDto temp = (KundeLieferstatistikDto) cResult.get(j);
 
-								BigDecimal wertAlt = temp.getNPreis().multiply(
-										temp.getNMenge());
-								BigDecimal wertNeu = dto.getNPreis().multiply(
-										dto.getNMenge());
+						// SP4816
+
+						boolean bSetposition1 = false;
+						boolean bSetposition2 = false;
+
+						if (temp.getSSetartikelTyp() != null
+								&& temp.getSSetartikelTyp().equals(ArtikelFac.SETARTIKEL_TYP_POSITION)) {
+							bSetposition1 = true;
+						}
+						if (dto.getSSetartikelTyp() != null
+								&& dto.getSSetartikelTyp().equals(ArtikelFac.SETARTIKEL_TYP_POSITION)) {
+							bSetposition2 = true;
+						}
+
+						if (temp.getSIdent().equals(dto.getSIdent()) && bSetposition1 == bSetposition2) {
+							if (dto.getNMenge() != null && temp.getNMenge() != null) {
+								BigDecimal mengeNeu = dto.getNMenge().add(temp.getNMenge());
+
+								BigDecimal wertAlt = temp.getNPreis().multiply(temp.getNMenge());
+								BigDecimal wertNeu = dto.getNPreis().multiply(dto.getNMenge());
 
 								BigDecimal preisNeu = dto.getNPreis();
 								if (mengeNeu.doubleValue() != 0) {
-									preisNeu = wertNeu.add(wertAlt).divide(
-											mengeNeu,
-											BigDecimal.ROUND_HALF_EVEN);
+									preisNeu = wertNeu.add(wertAlt).divide(mengeNeu, BigDecimal.ROUND_HALF_EVEN);
 								}
 								temp.setNMenge(mengeNeu);
 								temp.setNPreis(preisNeu);
 
-								temp.setSnrs(SeriennrChargennrMitMengeDto
-										.add2SnrChnrDtos(temp.getSnrs(),
-												dto.getSnrs()));
+								temp.setSnrs(
+										SeriennrChargennrMitMengeDto.add2SnrChnrDtos(temp.getSnrs(), dto.getSnrs()));
 
 								temp.setDWarenausgangsdatum(null);
 								temp.setSLieferscheinnummer(null);
+								temp.setSLieferscheinart(null);
 								temp.setSRechnungsnummer(null);
+								temp.setDRechnungsdatum(null);
 								cResult.set(j, temp);
 								bGefunden = true;
 								break;
@@ -3244,7 +2900,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			// Datenarray erzeugen
 			data = new Object[cResult.size()][REPORT_STATISTIK_ANZAHL_FELDER];
 
-			Collections.sort(cResult, new ComparatorKD(iSortierung.intValue()));
+			Collections.sort(cResult, new ComparatorKD(iSortierung.intValue(), bSortiertNachArtikelgruppe));
 
 			if (bEingeschraenkt) {
 				while (cResult.size() > 50) {
@@ -3252,52 +2908,49 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				}
 			}
 
-			for (Iterator<KundeLieferstatistikDto> iter = cResult.iterator(); iter
-					.hasNext();) {
-				KundeLieferstatistikDto dto = (KundeLieferstatistikDto) iter
-						.next();
-				data[row][REPORT_STATISTIK_RE_OR_GS] = dto
-						.getSWarenausgangverursacher();
+			for (Iterator<KundeLieferstatistikDto> iter = cResult.iterator(); iter.hasNext();) {
+				KundeLieferstatistikDto dto = (KundeLieferstatistikDto) iter.next();
+				data[row][REPORT_STATISTIK_RE_OR_GS] = dto.getSWarenausgangverursacher();
 				data[row][REPORT_STATISTIK_BEZEICHNUNG] = dto.getSBezeichnung();
-				data[row][REPORT_STATISTIK_DATUM] = dto
-						.getDWarenausgangsdatum();
+				data[row][REPORT_STATISTIK_DATUM] = dto.getDWarenausgangsdatum();
 				data[row][REPORT_STATISTIK_IDENT] = dto.getSIdent();
-				data[row][REPORT_STATISTIK_LIEFERSCHEINNUMMER] = dto
-						.getSLieferscheinnummer();
+				data[row][REPORT_STATISTIK_LIEFERSCHEINNUMMER] = dto.getSLieferscheinnummer();
+
+				data[row][REPORT_STATISTIK_LIEFERSCHEINART] = dto.getSLieferscheinart();
+
 				data[row][REPORT_STATISTIK_MENGE] = dto.getNMenge();
-				data[row][REPORT_STATISTIK_PREIS] = dto.getNPreis();
-				data[row][REPORT_STATISTIK_MATERIALZUSCHLAG] = dto
-						.getNMaterialzuschlag();
-				data[row][REPORT_STATISTIK_RECHNUNGSNUMMER] = dto
-						.getSRechnungsnummer();
+
+				// SP5342
+				if (bKundeUmsatzR) {
+					data[row][REPORT_STATISTIK_PREIS] = dto.getNPreis();
+				}
+
+				data[row][REPORT_STATISTIK_MATERIALZUSCHLAG] = dto.getNMaterialzuschlag();
+				data[row][REPORT_STATISTIK_RECHNUNGSNUMMER] = dto.getSRechnungsnummer();
+				data[row][REPORT_STATISTIK_AUFTRAGSNUMMER] = dto.getSAuftragsnummer();
+				data[row][REPORT_STATISTIK_RECHNUNGSDATUM] = dto.getDRechnungsdatum();
+				data[row][REPORT_STATISTIK_RUECKGABE] = dto.getDRueckgabe();
+				data[row][REPORT_STATISTIK_MANUELL_ERLEDIGT] = dto.getDManuellErledigt();
 				data[row][REPORT_STATISTIK_SERIENNUMMER] = SeriennrChargennrMitMengeDto
 						.erstelleStringAusMehrerenSeriennummern(dto.getSnrs());
 				data[row][REPORT_STATISTIK_LAND] = dto.getSLand();
-				data[row][REPORT_STATISTIK_STATISTIKADRESSE] = dto
-						.getSStatistikadresse();
+				data[row][REPORT_STATISTIK_STATISTIKADRESSE] = dto.getSStatistikadresse();
 				data[row][REPORT_STATISTIK_VERTRETER] = dto.getSVertreter();
-				data[row][REPORT_STATISTIK_PROVISIONSEMPFAENGER] = dto
-						.getSProvisionsempfaenger();
+				data[row][REPORT_STATISTIK_PROVISIONSEMPFAENGER] = dto.getSProvisionsempfaenger();
 				data[row][REPORT_STATISTIK_PLZ] = dto.getSPlz();
 				data[row][REPORT_STATISTIK_MWSTSATZ] = dto.getNMwstsatz();
 				data[row][REPORT_STATISTIK_KUNDENNAME] = dto.getSKundenname();
 				data[row][REPORT_STATISTIK_KONTO] = dto.getSKonto();
-				data[row][REPORT_STATISTIK_ARTIKELGRUPPE] = dto
-						.getSArtikelgruppe();
-				data[row][REPORT_STATISTIK_ARTIKELKLASSE] = dto
-						.getSArtikelklasse();
-				data[row][REPORT_STATISTIK_SETARTIKEL_TYP] = dto
-						.getSSetartikelTyp();
+				data[row][REPORT_STATISTIK_ARTIKELGRUPPE] = dto.getSArtikelgruppe();
+				data[row][REPORT_STATISTIK_ARTIKELKLASSE] = dto.getSArtikelklasse();
+				data[row][REPORT_STATISTIK_SETARTIKEL_TYP] = dto.getSSetartikelTyp();
 
 				data[row][REPORT_STATISTIK_ORT] = dto.getSOrt();
-				data[row][REPORT_STATISTIK_ORT_STATISTIKADRESSE] = dto
-						.getSOrtStatistikadresse();
-				data[row][REPORT_STATISTIK_PLZ_STATISTIKADRESSE] = dto
-						.getSPlzStatistikadresse();
-				data[row][REPORT_STATISTIK_LAND_STATISTIKADRESSE] = dto
-						.getSLandStatistikadresse();
-				data[row][REPORT_STATISTIK_VERLEIHFAKTOR] = dto
-						.getdVerleihfaktor();
+				data[row][REPORT_STATISTIK_ORT_STATISTIKADRESSE] = dto.getSOrtStatistikadresse();
+				data[row][REPORT_STATISTIK_PLZ_STATISTIKADRESSE] = dto.getSPlzStatistikadresse();
+				data[row][REPORT_STATISTIK_LAND_STATISTIKADRESSE] = dto.getSLandStatistikadresse();
+				data[row][REPORT_STATISTIK_VERLEIHFAKTOR] = dto.getdVerleihfaktor();
+				data[row][REPORT_STATISTIK_VERLEIHTAGE] = dto.getiVerleihtage();
 				data[row][REPORT_STATISTIK_VERLEIHTAGE] = dto.getiVerleihtage();
 
 				row++;
@@ -3316,12 +2969,10 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printLieferStatistik(TheClientDto theClientDto,
-			Integer iIdkundeI, Integer artikelIId, Integer artikelgruppeIId,
-			Date dVonI, Date dBisI, Integer iSortierungI,
-			boolean bMitTexteingaben, boolean bVerdichtetNachArtikel,
-			boolean bEingeschraenkt, boolean bMonatsstatistik,
-			int iOptionAdresse, boolean bRechnungsdatum) {
+	public JasperPrintLP printLieferStatistik(TheClientDto theClientDto, Integer iIdkundeI, Integer artikelIId,
+			Integer artikelgruppeIId, Date dVonI, Date dBisI, Integer iSortierungI, boolean bMitTexteingaben,
+			boolean bVerdichtetNachArtikel, boolean bSortiertNachArtikelgruppe, boolean bEingeschraenkt,
+			boolean bMonatsstatistik, int iOptionAdresse, boolean bRechnungsdatum) {
 
 		if (dBisI != null) {
 			dBisI = Helper.cutDate(dBisI);
@@ -3347,11 +2998,9 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		// theClientDto.getMandant(), bMitTexteingaben,
 		// bVerdichtetNachArtikel, bEingeschraenkt, iOptionAdresse,
 		// bRechnungsdatum);
-		setData(getDataLieferstatistik(theClientDto, iIdkundeI, artikelIId,
-				artikelgruppeIId, dVonI, dBisI, iSortierungI,
-				theClientDto.getMandant(), bMitTexteingaben,
-				bVerdichtetNachArtikel, bEingeschraenkt, iOptionAdresse,
-				bRechnungsdatum));
+		setData(getDataLieferstatistik(theClientDto, iIdkundeI, artikelIId, artikelgruppeIId, dVonI, dBisI,
+				iSortierungI, theClientDto.getMandant(), bMitTexteingaben, bVerdichtetNachArtikel,
+				bSortiertNachArtikelgruppe, bEingeschraenkt, iOptionAdresse, bRechnungsdatum));
 
 		String report = PartnerReportFac.REPORT_KUNDE_LIEFERSTATISTIK;
 
@@ -3361,17 +3010,14 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			useCase = KundeReportFac.UC_REPORT_KUNDE_MONATSSTATISTIK;
 			report = PartnerReportFac.REPORT_KUNDE_MONATSSTATISTIK;
 
-			java.text.DateFormatSymbols symbols = new java.text.DateFormatSymbols(
-					theClientDto.getLocUi());
+			java.text.DateFormatSymbols symbols = new java.text.DateFormatSymbols(theClientDto.getLocUi());
 			String[] defaultMonths = symbols.getMonths();
 
 			Calendar cAktuell = Calendar.getInstance();
-			cAktuell.setTimeInMillis(((Timestamp) data[data.length - 1][REPORT_STATISTIK_DATUM])
-					.getTime());
+			cAktuell.setTimeInMillis(((java.util.Date) data[data.length - 1][REPORT_STATISTIK_DATUM]).getTime());
 			cAktuell.set(Calendar.DAY_OF_MONTH, 1);
 
-			while (cAktuell.getTimeInMillis() <= ((Timestamp) data[0][REPORT_STATISTIK_DATUM])
-					.getTime()) {
+			while (cAktuell.getTimeInMillis() <= ((java.util.Date) data[0][REPORT_STATISTIK_DATUM]).getTime()) {
 				BigDecimal menge = new BigDecimal(0);
 				BigDecimal wert = new BigDecimal(0);
 				for (int i = 0; i < data.length; i++) {
@@ -3381,10 +3027,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					Calendar cZeile = Calendar.getInstance();
 					cZeile.setTimeInMillis(d.getTime());
 
-					if (cAktuell.get(Calendar.MONTH) == cZeile
-							.get(Calendar.MONTH)
-							&& cAktuell.get(Calendar.YEAR) == cZeile
-									.get(Calendar.YEAR)) {
+					if (cAktuell.get(Calendar.MONTH) == cZeile.get(Calendar.MONTH)
+							&& cAktuell.get(Calendar.YEAR) == cZeile.get(Calendar.YEAR)) {
 						BigDecimal mengeZeile = (BigDecimal) zeile[REPORT_STATISTIK_MENGE];
 						BigDecimal preisZeile = (BigDecimal) zeile[REPORT_STATISTIK_PREIS];
 						if (mengeZeile != null && preisZeile != null) {
@@ -3396,10 +3040,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				}
 
 				Object[] zeileMonate = new Object[KundeReportFac.REPORT_MONATSSTATISTIK_ANZAHL_FELDER];
-				zeileMonate[REPORT_MONATSSTATISTIK_MONAT] = defaultMonths[cAktuell
-						.get(Calendar.MONTH)];
-				zeileMonate[REPORT_MONATSSTATISTIK_JAHR] = cAktuell
-						.get(Calendar.YEAR);
+				zeileMonate[REPORT_MONATSSTATISTIK_MONAT] = defaultMonths[cAktuell.get(Calendar.MONTH)];
+				zeileMonate[REPORT_MONATSSTATISTIK_JAHR] = cAktuell.get(Calendar.YEAR);
 				zeileMonate[REPORT_MONATSSTATISTIK_MENGE] = menge;
 				zeileMonate[REPORT_MONATSSTATISTIK_WERT] = wert;
 				alMonate.add(zeileMonate);
@@ -3414,131 +3056,125 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		JasperPrintLP print = null;
 		HashMap<String, Object> parameter = null;
 		try {
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(iIdkundeI,
-					theClientDto);
-			summePreis = BigDecimal.ZERO;
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(iIdkundeI, theClientDto);
 
 			parameter = new HashMap<String, Object>();
-			parameter.put("P_KUNDE_NAME", kundeDto.getPartnerDto()
-					.formatTitelAnrede());
-			parameter.put("P_KUNDE_ANSCHRIFT", kundeDto.getPartnerDto()
-					.formatLKZPLZOrt());
+
+			parameter.put("P_KUNDE_I_ID", iIdkundeI);
+
+			parameter.put("P_KUNDE_NAME", kundeDto.getPartnerDto().formatTitelAnrede());
+			parameter.put("P_KUNDE_ANSCHRIFT", kundeDto.getPartnerDto().formatLKZPLZOrt());
 
 			if (artikelIId != null) {
-				parameter.put("P_ARTIKEL", getArtikelFac()
-						.artikelFindByPrimaryKeySmall(artikelIId, theClientDto)
+				parameter.put("P_ARTIKEL", getArtikelFac().artikelFindByPrimaryKeySmall(artikelIId, theClientDto)
 						.formatArtikelbezeichnung());
 			}
 			if (artikelgruppeIId != null) {
-				parameter.put("P_ARTIKELGRUPPE", getArtikelFac()
-						.artgruFindByPrimaryKey(artikelgruppeIId, theClientDto)
-						.getBezeichnung());
+				parameter.put("P_ARTIKELGRUPPE",
+						getArtikelFac().artgruFindByPrimaryKey(artikelgruppeIId, theClientDto).getBezeichnung());
 			}
 			parameter.put("P_VON", dVonI);
 			parameter.put("P_BIS", dBisI);
 			if (Helper.SORTIERUNG_NACH_IDENT == iSortierungI) {
-				parameter.put(
-						"P_SORTIERUNG",
-						getTextRespectUISpr("lp.artikel",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()));
+				parameter.put("P_SORTIERUNG",
+						getTextRespectUISpr("lp.artikel", theClientDto.getMandant(), theClientDto.getLocUi()));
 			} else {
-				parameter.put(
-						"P_SORTIERUNG",
-						getTextRespectUISpr("lp.datum",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()));
+				parameter.put("P_SORTIERUNG",
+						getTextRespectUISpr("lp.datum", theClientDto.getMandant(), theClientDto.getLocUi()));
 			}
 			parameter.put("P_VERDICHTET", new Boolean(bVerdichtetNachArtikel));
+			parameter.put("P_SORTIERT_NACH_ARTIKELGRUPPE", new Boolean(bSortiertNachArtikelgruppe));
+			parameter.put("P_RECHNUNGSDATUM", new Boolean(bRechnungsdatum));
 			parameter.put("P_EINGESCHRAENKT", new Boolean(bEingeschraenkt));
 			if (iOptionAdresse == REPORT_LIEFERSTATISTIK_OPTION_STATISTIKADRESSE) {
-				parameter.put(
-						"P_ADRESSE",
-						getTextRespectUISpr("rech.statistikadresse",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()));
+				parameter.put("P_ADRESSE", getTextRespectUISpr("rech.statistikadresse", theClientDto.getMandant(),
+						theClientDto.getLocUi()));
 			} else if (iOptionAdresse == REPORT_LIEFERSTATISTIK_OPTION_LIEFERADRESSE) {
-				parameter.put(
-						"P_ADRESSE",
-						getTextRespectUISpr("lsch.lieferadreesse",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()));
+				parameter.put("P_ADRESSE",
+						getTextRespectUISpr("lsch.lieferadreesse", theClientDto.getMandant(), theClientDto.getLocUi()));
 			} else if (iOptionAdresse == REPORT_LIEFERSTATISTIK_OPTION_RECHNUNGSADRESSE) {
-				parameter.put(
-						"P_ADRESSE",
-						getTextRespectUISpr("lp.rechnungsadresse",
-								theClientDto.getMandant(),
-								theClientDto.getLocUi()));
+				parameter.put("P_ADRESSE",
+						getTextRespectUISpr("lp.rechnungsadresse", theClientDto.getMandant(), theClientDto.getLocUi()));
 			}
 
-			initJRDS(parameter, PartnerReportFac.REPORT_MODUL, report,
-					theClientDto.getMandant(), theClientDto.getLocUi(),
-					theClientDto);
+			initJRDS(parameter, PartnerReportFac.REPORT_MODUL, report, theClientDto.getMandant(),
+					theClientDto.getLocUi(), theClientDto);
 			print = getReportPrint();
 		} catch (Exception ex) {
 			throw new EJBExceptionLP(ex);
 		}
 
-		myLogger.logData("KD>Lieferstatistik 2: "
-				+ (System.currentTimeMillis() - t));
+		myLogger.logData("KD>Lieferstatistik 2: " + (System.currentTimeMillis() - t));
 		t = System.currentTimeMillis();
 		return print;
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printKundenstammblatt(Integer kundeIId,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public JasperPrintLP printKundenstammblatt(Integer kundeIId, boolean bStatistikadresse, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		useCase = KundeReportFac.UC_REPORT_KUNDE_STAMMBLATT;
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		try {
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
-					theClientDto);
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto);
 
-			parameter.put("P_NAME1", kundeDto.getPartnerDto()
-					.getCName1nachnamefirmazeile1());
-			parameter.put("P_NAME2", kundeDto.getPartnerDto()
-					.getCName2vornamefirmazeile2());
-			parameter.put("P_NAME3", kundeDto.getPartnerDto()
-					.getCName3vorname2abteilung());
+			parameter.put("P_STATISTIKADRESSE", new Boolean(bStatistikadresse));
+
+			parameter.put("P_NAME1", kundeDto.getPartnerDto().getCName1nachnamefirmazeile1());
+			parameter.put("P_NAME2", kundeDto.getPartnerDto().getCName2vornamefirmazeile2());
+			parameter.put("P_NAME3", kundeDto.getPartnerDto().getCName3vorname2abteilung());
 			parameter.put("P_STRASSE", kundeDto.getPartnerDto().getCStrasse());
 
+			ZahlungszielDto zzDto = getMandantFac().zahlungszielFindByPrimaryKey(kundeDto.getZahlungszielIId(),
+					theClientDto);
+			parameter.put("P_ZAHLUNGSZIEL", zzDto.getCBez());
+			parameter.put("P_ZAHLUNGSZIEL_NETTOTAGE", zzDto.getAnzahlZieltageFuerNetto());
+
+			parameter.put("P_LIEFERART", getLocaleFac().lieferartFindByIIdLocaleOhneExc(kundeDto.getLieferartIId(),
+					theClientDto.getLocUi(), theClientDto));
+			SpediteurDto spediteurDto = getMandantFac().spediteurFindByPrimaryKey(kundeDto.getSpediteurIId());
+			parameter.put("P_SPEDITEUR", spediteurDto.getCNamedesspediteurs());
+
 			if (kundeDto.getPartnerDto().getLandplzortDto() != null) {
-				parameter.put("P_LANDPLZORT", kundeDto.getPartnerDto()
-						.getLandplzortDto().formatLandPlzOrt());
+				parameter.put("P_LANDPLZORT", kundeDto.getPartnerDto().getLandplzortDto().formatLandPlzOrt());
 			}
 
 			parameter.put("P_TELEFON", kundeDto.getPartnerDto().getCTelefon());
 
-			parameter
-					.put("P_HOMEPAGE", kundeDto.getPartnerDto().getCHomepage());
+			parameter.put("P_HOMEPAGE", kundeDto.getPartnerDto().getCHomepage());
 
 			parameter.put("P_FAX", kundeDto.getPartnerDto().getCFax());
 
 			parameter.put("P_EMAIL", kundeDto.getPartnerDto().getCEmail());
 
+			if (kundeDto.getIidDebitorenkonto() != null) {
+				KontoDto kontoDto = getFinanzFac().kontoFindByPrimaryKey(kundeDto.getIidDebitorenkonto());
+
+				parameter.put("P_DEBITORENNUMMER", kontoDto.getCNr());
+			}
+
 			parameter.put("P_HINWEISEXTERN", kundeDto.getSHinweisextern());
 			parameter.put("P_HINWEISINTERN", kundeDto.getSHinweisintern());
+
+			// PJ20113
+			parameter.put("P_KUNDE_I_ID", kundeDto.getIId());
+			parameter.put("P_UID", kundeDto.getPartnerDto().getCUid());
+			parameter.put("P_FIRMENBUCHNUMMER", kundeDto.getPartnerDto().getCFirmenbuchnr());
+			parameter.put("P_GERICHTSSTAND", kundeDto.getPartnerDto().getCGerichtsstand());
 
 			String sKommentar = null;
 
 			if (kundeDto.getPartnerDto().getXBemerkung() != null
 					&& kundeDto.getPartnerDto().getXBemerkung().length() > 0) {
-				sKommentar = getTextRespectUISpr("lp.partner",
-						theClientDto.getMandant(), theClientDto.getLocUi());
-				sKommentar += ":\n" + kundeDto.getPartnerDto().getXBemerkung()
-						+ "\n";
+				sKommentar = getTextRespectUISpr("lp.partner", theClientDto.getMandant(), theClientDto.getLocUi());
+				sKommentar += ":\n" + kundeDto.getPartnerDto().getXBemerkung() + "\n";
 			}
 
-			if (kundeDto.getXKommentar() != null
-					&& kundeDto.getXKommentar().length() > 0) {
+			if (kundeDto.getXKommentar() != null && kundeDto.getXKommentar().length() > 0) {
 				if (sKommentar == null) {
-					sKommentar = getTextRespectUISpr("lp.kunde",
-							theClientDto.getMandant(), theClientDto.getLocUi());
+					sKommentar = getTextRespectUISpr("lp.kunde", theClientDto.getMandant(), theClientDto.getLocUi());
 				} else {
 					sKommentar += "\n"
-							+ getTextRespectUISpr("lp.kunde",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi());
+							+ getTextRespectUISpr("lp.kunde", theClientDto.getMandant(), theClientDto.getLocUi());
 				}
 				sKommentar += ":\n" + kundeDto.getXKommentar();
 			}
@@ -3546,61 +3182,50 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			parameter.put("P_KOMMENTAR", sKommentar);
 
 			// Selektionen
-			PASelektionDto[] paselDtos = getPartnerFac()
-					.pASelektionFindByPartnerIId(kundeDto.getPartnerIId());
+			PASelektionDto[] paselDtos = getPartnerFac().pASelektionFindByPartnerIId(kundeDto.getPartnerIId());
 			if (paselDtos != null && paselDtos.length > 0) {
 				String sPasel = "";
 				for (int i = 0; i < paselDtos.length; i++) {
 					PASelektionDto paselDto = paselDtos[i];
 					SelektionDto selektionDto = getPartnerServicesFac()
-							.selektionFindByPrimaryKey(
-									paselDto.getSelektionIId(), theClientDto);
-					sPasel += " " + (i + 1) + ": "
-							+ selektionDto.getBezeichnung();
+							.selektionFindByPrimaryKey(paselDto.getSelektionIId(), theClientDto);
+					sPasel += " " + (i + 1) + ": " + selektionDto.getBezeichnung();
 				}
 				parameter.put("P_SELEKTIONEN", sPasel);
 			}
 
-			ArrayList<?> alAnsprechpartner = getAnsprechpartnerFac()
-					.getAllAnsprechpartner(kundeDto.getPartnerIId(),
-							theClientDto);
+			ArrayList<?> alAnsprechpartner = getAnsprechpartnerFac().getAllAnsprechpartner(kundeDto.getPartnerIId(),
+					theClientDto);
 
 			// data = new Object[alAnsprechpartner.size()][8];
-			setData(new Object[alAnsprechpartner.size()][8]);
+			setData(new Object[alAnsprechpartner.size()][REPORT_KUNDENSTAMMBLATT_ANZAHL_SPALTEN]);
 			if (alAnsprechpartner.size() == 0) {
-				data = new Object[0][8];
+				data = new Object[0][REPORT_KUNDENSTAMMBLATT_ANZAHL_SPALTEN];
 			}
 
 			for (int i = 0; i < alAnsprechpartner.size(); i++) {
-				AnsprechpartnerDto dtoTemp = (AnsprechpartnerDto) alAnsprechpartner
-						.get(i);
-				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_NACHNAME] = dtoTemp
-						.getPartnerDto().getCName1nachnamefirmazeile1();
-				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_VORNAME] = dtoTemp
-						.getPartnerDto().getCName2vornamefirmazeile2();
-				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_TITEL] = dtoTemp
-						.getPartnerDto().getCTitel();
+				AnsprechpartnerDto dtoTemp = (AnsprechpartnerDto) alAnsprechpartner.get(i);
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_NACHNAME] = dtoTemp.getPartnerDto()
+						.getCName1nachnamefirmazeile1();
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_VORNAME] = dtoTemp.getPartnerDto()
+						.getCName2vornamefirmazeile2();
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_TITEL] = dtoTemp.getPartnerDto().getCTitel();
 
 				if (dtoTemp.getAnsprechpartnerfunktionIId() != null) {
-					AnsprechpartnerfunktionDto dto = getAnsprechpartnerFac()
-							.ansprechpartnerfunktionFindByPrimaryKey(
-									dtoTemp.getAnsprechpartnerfunktionIId(),
-									theClientDto);
-					data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_FUNKTION] = dto
-							.getBezeichnung();
+					AnsprechpartnerfunktionDto dto = getAnsprechpartnerFac().ansprechpartnerfunktionFindByPrimaryKey(
+							dtoTemp.getAnsprechpartnerfunktionIId(), theClientDto);
+					data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_FUNKTION] = dto.getBezeichnung();
 				}
 
-				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_FAXDW] = dtoTemp
-						.getCFax();
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_FAXDW] = dtoTemp.getCFax();
 
-				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_TELDW] = dtoTemp
-						.getCTelefon();
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_TELDW] = dtoTemp.getCTelefon();
 
-				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_MOBIL] = dtoTemp
-						.getCHandy();
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_MOBIL] = dtoTemp.getCHandy();
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_VERSTECKT] = Helper
+						.short2Boolean(dtoTemp.getBVersteckt());
 
-				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_EMAIL] = dtoTemp
-						.getCEmail();
+				data[i][REPORT_KUNDENSTAMMBLATT_ANSPRECHPARTNER_EMAIL] = dtoTemp.getCEmail();
 
 			}
 
@@ -3610,9 +3235,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			// Filter und Sortierung
 			Criteria crit = session.createCriteria(FLRAuftragReport.class);
 			// Filter nach Kunde
-			crit.add(Restrictions
-					.eq(AuftragFac.FLR_AUFTRAG_KUNDE_I_ID_AUFTRAGSADRESSE,
-							kundeIId));
+			crit.add(Restrictions.eq(AuftragFac.FLR_AUFTRAG_KUNDE_I_ID_AUFTRAGSADRESSE, kundeIId));
 			crit.addOrder(Order.desc(AuftragFac.FLR_AUFTRAG_C_NR));
 
 			List<?> list = crit.list();
@@ -3625,17 +3248,12 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				o[0] = flrauftrag.getC_nr();
 				o[1] = flrauftrag.getAuftragstatus_c_nr();
 
-				BigDecimal wert = flrauftrag
-						.getN_gesamtauftragswertinauftragswaehrung();
+				BigDecimal wert = flrauftrag.getN_gesamtauftragswertinauftragswaehrung();
 
 				if (wert != null) {
 
-					wert = getLocaleFac()
-							.rechneUmInMandantenWaehrung(
-									wert,
-									new BigDecimal(
-											flrauftrag
-													.getF_wechselkursmandantwaehrungzuauftragswaehrung()));
+					wert = getLocaleFac().rechneUmInMandantenWaehrung(wert,
+							new BigDecimal(flrauftrag.getF_wechselkursmandantwaehrungzuauftragswaehrung()));
 
 					o[2] = wert;
 				}
@@ -3647,17 +3265,50 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Auftragsnummer",
-						"Status", "Wert", "OffenerWert", "Liefertermin",
+				String[] fieldnames = new String[] { "Auftragsnummer", "Status", "Wert", "OffenerWert", "Liefertermin",
 						"Projekt", "Bestellnummer" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_AUFTRAEGE",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_AUFTRAEGE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
+			session.close();
+			// Bankverbindungen
+			session = FLRSessionFactory.getFactory().openSession();
+			crit = session.createCriteria(FLRPartnerbank.class);
+			crit.add(Restrictions.eq("partner_i_id", kundeDto.getPartnerIId()));
+			crit.addOrder(Order.asc("i_sort"));
+
+			list = crit.list();
+			it = list.iterator();
+			al = new ArrayList<Object[]>();
+			while (it.hasNext()) {
+				FLRPartnerbank partnerbank = (FLRPartnerbank) it.next();
+
+				BankDto bankDto = getBankFac().bankFindByPrimaryKey(partnerbank.getFlrpartner().getI_id(),
+						theClientDto);
+
+				Object[] o = new Object[5];
+				o[0] = partnerbank.getFlrpartner().getC_name1nachnamefirmazeile1();
+				o[1] = partnerbank.getC_iban();
+				o[2] = bankDto.getCBic();
+				o[3] = partnerbank.getC_sepamandatsnummer();
+				o[4] = partnerbank.getT_sepaerteilt();
+
+				al.add(o);
+			}
+
+			if (al.size() > 0) {
+				String[] fieldnames = new String[] { "Name", "Iban", "Bic", "SepaMandatsnummer",
+						"SepaMandatsnummerErteiltAm" };
+				Object[][] dataSub = new Object[al.size()][fieldnames.length];
+				dataSub = (Object[][]) al.toArray(dataSub);
+
+				parameter.put("P_SUBREPORT_BANKVERBINDUNGEN",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
+			}
+
 			session.close();
 
 			// Kurzbriefe
@@ -3666,6 +3317,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			crit = session.createCriteria(FLRKurzbrief.class);
 			// Filter nach Kunde
 			crit.add(Restrictions.eq("partner_i_id", kundeDto.getPartnerIId()));
+			crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
+			crit.add(Restrictions.eq("belegart_c_nr", LocaleFac.BELEGART_KUNDE));
 			crit.addOrder(Order.desc("t_aendern"));
 
 			list = crit.list();
@@ -3679,15 +3332,11 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 				if (kurzbrief.getFlransprechpartner() != null) {
 					AnsprechpartnerDto oAnsprechpartner = getAnsprechpartnerFac()
-							.ansprechpartnerFindByPrimaryKey(
-									kurzbrief.getFlransprechpartner().getI_id(),
-									theClientDto);
+							.ansprechpartnerFindByPrimaryKey(kurzbrief.getFlransprechpartner().getI_id(), theClientDto);
 					o[1] = oAnsprechpartner.getPartnerDto().formatAnrede();
 				}
 				PersonalDto personalDto = getPersonalFac()
-						.personalFindByPrimaryKey(
-								kurzbrief.getPersonal_i_id_aendern(),
-								theClientDto);
+						.personalFindByPrimaryKey(kurzbrief.getPersonal_i_id_aendern(), theClientDto);
 
 				o[2] = personalDto.getPartnerDto().formatAnrede();
 				o[3] = kurzbrief.getT_aendern();
@@ -3695,15 +3344,12 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Betreff",
-						"Ansprechpartner", "Person", "Zeitpunkt" };
+				String[] fieldnames = new String[] { "Betreff", "Ansprechpartner", "Person", "Zeitpunkt" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_KURZBRIEFE",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_KURZBRIEFE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 
 			// Umsaetze der vergangenen Jahre
@@ -3728,32 +3374,33 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				java.sql.Date dBis = new java.sql.Date(cBis.getTime().getTime());
 
 				// den Umsatz errechnen
-				BigDecimal bdUmsatz = getRechnungFac()
-						.getUmsatzVomKundenImZeitraum(theClientDto, kundeIId,
-								dVon, dBis, false);
-				Object[] o = new Object[2];
+				BigDecimal bdUmsatz = getRechnungFac().getUmsatzVomKundenImZeitraum(theClientDto, kundeIId, dVon, dBis,
+						bStatistikadresse);
+				Object[] o = new Object[4];
 				o[0] = new Integer(iJahr);
 				o[1] = bdUmsatz;
+				o[2] = getRechnungFac().getZahlungsmoraleinesKunden(kundeIId, bStatistikadresse, dVon, dBis,
+						theClientDto);
+				o[3] = getRechnungFac().getAnzahlDerRechnungenVomKundenImZeitraum(theClientDto, kundeIId, dVon, dBis,
+						bStatistikadresse);
+
 				cVon.set(Calendar.YEAR, cVon.get(Calendar.YEAR) - 1);
 				cBis.set(Calendar.YEAR, cBis.get(Calendar.YEAR) - 1);
 				al.add(o);
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Jahr", "Umsatz" };
+				String[] fieldnames = new String[] { "Jahr", "Umsatz", "Zahlungsmoral", "AnzahlRechnungen" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_UMSAETZE",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_UMSAETZE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 
 			// Umsaetze der vergangenen Geschaeftsjahre
 
-			Integer gfJahr = getParameterFac().getGeschaeftsjahr(
-					theClientDto.getMandant());
+			Integer gfJahr = getParameterFac().getGeschaeftsjahr(theClientDto.getMandant());
 
 			al = new ArrayList<Object[]>();
 
@@ -3761,34 +3408,33 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 				int iJahr = gfJahr;
 
-				Timestamp[] tVonBis = getBuchenFac()
-						.getDatumVonBisGeschaeftsjahr(gfJahr, theClientDto);
+				Timestamp[] tVonBis = getBuchenFac().getDatumVonBisGeschaeftsjahr(gfJahr, theClientDto);
 
 				java.sql.Date dVon = new java.sql.Date(tVonBis[0].getTime());
 				java.sql.Date dBis = new java.sql.Date(tVonBis[1].getTime());
 
 				// den Umsatz errechnen
-				BigDecimal bdUmsatz = getRechnungFac()
-						.getUmsatzVomKundenImZeitraum(theClientDto, kundeIId,
-								dVon, dBis, false);
-				Object[] o = new Object[2];
+				BigDecimal bdUmsatz = getRechnungFac().getUmsatzVomKundenImZeitraum(theClientDto, kundeIId, dVon, dBis,
+						bStatistikadresse);
+				Object[] o = new Object[4];
 				o[0] = new Integer(iJahr);
 				o[1] = bdUmsatz;
-
+				o[2] = getRechnungFac().getZahlungsmoraleinesKunden(kundeIId, bStatistikadresse, dVon, dBis,
+						theClientDto);
+				o[3] = getRechnungFac().getAnzahlDerRechnungenVomKundenImZeitraum(theClientDto, kundeIId, dVon, dBis,
+						bStatistikadresse);
 				al.add(o);
 
 				gfJahr--;
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Jahr", "Umsatz" };
+				String[] fieldnames = new String[] { "Jahr", "Umsatz", "Zahlungsmoral", "AnzahlRechnungen" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_UMSAETZEGFJAHR",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_UMSAETZEGFJAHR",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 
 			// Kontakte
@@ -3813,25 +3459,20 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				o[2] = kontakt.getT_kontakt();
 				o[3] = kontakt.getT_kontaktbis();
 
-				PersonalDto personalDto = getPersonalFac()
-						.personalFindByPrimaryKey(
-								kontakt.getFlrpersonal().getI_id(),
-								theClientDto);
+				PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(kontakt.getFlrpersonal().getI_id(),
+						theClientDto);
 
 				o[4] = personalDto.getPartnerDto().formatAnrede();
 				al.add(o);
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Titel", "Kontaktart",
-						"Von", "Bis", "Zugewiesener" };
+				String[] fieldnames = new String[] { "Titel", "Kontaktart", "Von", "Bis", "Zugewiesener" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_KONTAKTE",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_KONTAKTE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 
 			// Angebote
@@ -3839,9 +3480,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			// Filter und Sortierung
 			crit = session.createCriteria(FLRAngebot.class);
 			// Filter nach Kunde
-			crit.add(Restrictions
-					.eq(AngebotFac.FLR_ANGEBOT_KUNDE_I_ID_ANGEBOTSADRESSE,
-							kundeIId));
+			crit.add(Restrictions.eq(AngebotFac.FLR_ANGEBOT_KUNDE_I_ID_ANGEBOTSADRESSE, kundeIId));
 			crit.addOrder(Order.desc("c_nr"));
 
 			list = crit.list();
@@ -3854,16 +3493,12 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				o[0] = angebot.getC_nr();
 				o[1] = angebot.getAngebotstatus_c_nr();
 
-				BigDecimal wert = angebot
-						.getN_gesamtangebotswertinangebotswaehrung();
+				BigDecimal wert = angebot.getN_gesamtangebotswertinangebotswaehrung();
 
 				if (wert != null) {
 
-					wert = getLocaleFac()
-							.rechneUmInMandantenWaehrung(
-									wert,
-									new BigDecimal(
-											angebot.getF_wechselkursmandantwaehrungzuangebotswaehrung()));
+					wert = getLocaleFac().rechneUmInMandantenWaehrung(wert,
+							new BigDecimal(angebot.getF_wechselkursmandantwaehrungzuangebotswaehrung()));
 
 					o[2] = wert;
 				}
@@ -3871,9 +3506,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				o[4] = angebot.getAngeboterledigungsgrund_c_nr();
 				o[5] = angebot.getT_manuellerledigt();
 
-				AuftragDto[] aAuftragDto = getAuftragFac()
-						.auftragFindByAngebotIId(angebot.getI_id(),
-								theClientDto);
+				AuftragDto[] aAuftragDto = getAuftragFac().auftragFindByAngebotIId(angebot.getI_id(), theClientDto);
 
 				String s = "";
 				for (int i = 0; i < aAuftragDto.length; i++) {
@@ -3887,40 +3520,36 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			}
 
 			if (al.size() > 0) {
-				String[] fieldnames = new String[] { "Angebotsnummer",
-						"Status", "Wert", "Belegdatum", "Erledigungsgrund",
-						"Erledigungsdatum", "Erledigungsauftrag", "Projekt" };
+				String[] fieldnames = new String[] { "Angebotsnummer", "Status", "Wert", "Belegdatum",
+						"Erledigungsgrund", "Erledigungsdatum", "Erledigungsauftrag", "Projekt" };
 				Object[][] dataSub = new Object[al.size()][fieldnames.length];
 				dataSub = (Object[][]) al.toArray(dataSub);
 
-				parameter
-						.put("P_SUBREPORT_ANGEBOTE",
-								((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(
-										dataSub, fieldnames)));
+				parameter.put("P_SUBREPORT_ANGEBOTE",
+						((net.sf.jasperreports.engine.JRDataSource) new LPDatenSubreport(dataSub, fieldnames)));
 			}
 			session.close();
 
-			parameter.put(
-					"P_SUBREPORT_PROJEKTE",
-					getSubreportProjekte(kundeDto.getPartnerIId(), false,
-							theClientDto));
+			parameter.put("P_SUBREPORT_PROJEKTE", getSubreportProjekte(kundeDto.getPartnerIId(), false, theClientDto));
+
+			// Partnerkommentar
+			LPDatenSubreport subrepPartnerkomm = getPartnerServicesFacLocal().getSubreportAllerPartnerkommentare(kundeDto.getPartnerIId(),
+					true, theClientDto);
+			parameter.put("P_SUBREPORT_PARTNERKOMMENTAR", subrepPartnerkomm);
 
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
 
-		parameter.put("P_MANDANTENWAEHRUNG",
-				theClientDto.getSMandantenwaehrung());
+		parameter.put("P_MANDANTENWAEHRUNG", theClientDto.getSMandantenwaehrung());
+		
 
-		initJRDS(parameter, KundeReportFac.REPORT_MODUL,
-				KundeReportFac.REPORT_KUNDENSTAMMBLATT,
-				theClientDto.getMandant(), theClientDto.getLocUi(),
-				theClientDto);
+		initJRDS(parameter, KundeReportFac.REPORT_MODUL, KundeReportFac.REPORT_KUNDENSTAMMBLATT,
+				theClientDto.getMandant(), theClientDto.getLocUi(), theClientDto);
 		return getReportPrint();
 	}
 
-	public LPDatenSubreport getSubreportProjekte(Integer partnerIId,
-			boolean bNurOffene, TheClientDto theClientDto) {
+	public LPDatenSubreport getSubreportProjekte(Integer partnerIId, boolean bNurOffene, TheClientDto theClientDto) {
 		// Projekte
 		Session session = FLRSessionFactory.getFactory().openSession();
 		// Filter und Sortierung
@@ -3930,8 +3559,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
 
 		if (bNurOffene) {
-			crit.add(Restrictions.in("status_c_nr", new String[] {
-					ProjektServiceFac.PROJEKT_STATUS_ANGELEGT,
+			crit.add(Restrictions.in("status_c_nr", new String[] { ProjektServiceFac.PROJEKT_STATUS_ANGELEGT,
 					ProjektServiceFac.PROJEKT_STATUS_OFFEN }));
 		}
 
@@ -3943,15 +3571,13 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		while (it.hasNext()) {
 			FLRProjekt projekt = (FLRProjekt) it.next();
 
-			Object[] o = new Object[11];
+			Object[] o = new Object[13];
 			o[0] = projekt.getC_nr();
 			o[1] = projekt.getC_titel();
 			o[2] = projekt.getTyp_c_nr();
 
 			PersonalDto personalDto = getPersonalFac()
-					.personalFindByPrimaryKey(
-							projekt.getFlrpersonalZugewiesener().getI_id(),
-							theClientDto);
+					.personalFindByPrimaryKey(projekt.getFlrpersonalZugewiesener().getI_id(), theClientDto);
 
 			o[3] = personalDto.getPartnerDto().formatAnrede();
 			o[4] = projekt.getT_anlegen();
@@ -3961,15 +3587,16 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			o[8] = projekt.getI_prio();
 			o[9] = projekt.getN_umsatzgeplant();
 			o[10] = projekt.getI_wahrscheinlichkeit();
+			o[11] = projekt.getFlrbereich().getC_bez();
+			o[12] = projekt.getI_id();
 
 			al.add(o);
 		}
 
 		if (al.size() > 0) {
-			String[] fieldnames = new String[] { "Projektnummer", "Titel",
-					"Typ", "Zugewiesener", "Anlagedatum", "Status",
-					"Schaetzung", "Kategorie", "Prio", "UmsatzGeplant",
-					"Wahrscheinlichkeit" };
+			String[] fieldnames = new String[] { "Projektnummer", "Titel", "Typ", "Zugewiesener", "Anlagedatum",
+					"Status", "Schaetzung", "Kategorie", "Prio", "UmsatzGeplant", "Wahrscheinlichkeit", "Bereich",
+					"PROJEKT_I_ID" };
 			Object[][] dataSub = new Object[al.size()][fieldnames.length];
 			dataSub = (Object[][]) al.toArray(dataSub);
 
@@ -3980,16 +3607,14 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printKundenstatistik(
-			StatistikParamDto statistikParamDtoI) {
+	public JasperPrintLP printKundenstatistik(StatistikParamDto statistikParamDtoI) {
 		return null;
 	}
 
 	public class KundenpreislisteTransformer implements IJasperPrintTransformer {
 		private CustomerPricelistReportDto reportDto;
-		private String[] fieldnames = new String[] { "Menge", "Basis",
-				"BasisPreis", "Fixpreis", "Rabattsatz", "BerechneterPreis",
-				"Waehrung", "Soko" };
+		private String[] fieldnames = new String[] { "Menge", "Basis", "BasisPreis", "Fixpreis", "Rabattsatz",
+				"BerechneterPreis", "Waehrung", "Soko" };
 		private int totalSize;
 
 		public KundenpreislisteTransformer(CustomerPricelistReportDto reportDto) {
@@ -4007,19 +3632,20 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			HashMap<String, Object> parameter = new HashMap<String, Object>();
 			parameter.put("P_KUNDE", reportDto.getCustomer().getValue());
 			parameter.put("P_ARTIKELGRUPPE",
-					reportDto.getItemgroup() != null ? reportDto.getItemgroup()
-							.getValue() : null);
+					reportDto.getItemgroup() != null ? reportDto.getItemgroup().getValue() : null);
 			parameter.put("P_ARTIKELKLASSE",
-					reportDto.getItemclass() != null ? reportDto.getItemclass()
-							.getValue() : null);
+					reportDto.getItemclass() != null ? reportDto.getItemclass().getValue() : null);
+			parameter.put("P_SHOPGRUPPE",
+					reportDto.getShopgroup() != null ? reportDto.getShopgroup().getValue() : null);
 			parameter.put("P_ARTIKELNRVON", reportDto.getItemRangeFrom());
 			parameter.put("P_ARTIKELNRBIS", reportDto.getItemRangeTo());
 			parameter.put("P_MITVERSTECKTEN", reportDto.getWithHidden());
+			parameter.put("P_MITGESPERRTEN", reportDto.getWithBlocked());
+
 			parameter.put("P_NURSOKO", reportDto.getOnlySpecialCondition());
-			parameter.put("P_MITMANDANTENSPRACHE",
-					reportDto.getWithClientLanguage());
-			parameter.put("P_PREISGUELTIGKEIT",
-					new Date(reportDto.getPriceValidityMs()));
+			parameter.put("P_MITMANDANTENSPRACHE", reportDto.getWithClientLanguage());
+			parameter.put("P_PREISGUELTIGKEIT", new Date(reportDto.getPriceValidityMs()));
+			parameter.put("P_VK_MENGENSTAFFEL_ANSTATT_SOKO_MENGESTAFFEL", reportDto.getAppliedQuantityScale());
 			return parameter;
 		}
 
@@ -4028,9 +3654,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			if (reportDto.getWithClientLanguage()) {
 				index >>= 1;
 			}
-			CustomerPricelistItemDescriptionDto descDto = reportDto
-					.getWithClientLanguage() && ((rowIndex & 1) == 1) ? reportDto
-					.getItems().get(index).getClientDescriptionDto()
+			CustomerPricelistItemDescriptionDto descDto = reportDto.getWithClientLanguage() && ((rowIndex & 1) == 1)
+					? reportDto.getItems().get(index).getClientDescriptionDto()
 					: reportDto.getItems().get(index).getDescriptionDto();
 			// CustomerPricelistItemDescriptionDto descDto =
 			// reportDto.getItems().get(index).getDescriptionDto() ;
@@ -4057,22 +3682,37 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			} else if ("Versteckt".equals(keyName)) {
 				return reportDto.getItems().get(index).getHidden();
 			} else if ("Artikelgruppe".equals(keyName)) {
-				return reportDto.getItems().get(index).getItemGroupDto()
-						.getValue();
+				return reportDto.getItems().get(index).getItemGroupDto().getValue();
 			} else if ("Artikelklasse".equals(keyName)) {
 				return reportDto.getItems().get(index).getItemClass();
 			} else if ("SubreportPreise".equals(keyName)) {
-				return createPreiseSubreport(reportDto.getItems().get(index)
-						.getPrices());
+				return createPreiseSubreport(reportDto.getItems().get(index).getPrices());
 			} else if ("EnthaeltSokos".equals(keyName)) {
 				return reportDto.getItems().get(index).getSpecialCondition();
+			} else if ("Kundenartikelnummer".equals(keyName)) {
+				return reportDto.getItems().get(index).getKundeartikelnummer();
+			} else if ("Kundenartikelbezeichnung".equals(keyName)) {
+				return reportDto.getItems().get(index).getKundeartikelbezeichnung();
+			}
+
+			else if ("Material".equals(keyName)) {
+				return reportDto.getItems().get(index).getItemMaterial();
+			} else if ("Materialgewicht".equals(keyName)) {
+				return reportDto.getItems().get(index).getItemMaterialgewicht();
+			} else if ("KursMaterialzuschlag".equals(keyName)) {
+				return reportDto.getItems().get(index).getItemKursMaterialzuschlag();
+			} else if ("Artikeleinheit".equals(keyName)) {
+				return reportDto.getItems().get(index).getUnit();
+			} else if ("Shopgruppe".equals(keyName)) {
+				if (reportDto.getItems().get(index).getShopgroupDto() != null) {
+					return reportDto.getItems().get(index).getShopgroupDto().getName();
+				}
 			}
 
 			return null;
 		}
 
-		private LPDatenSubreport createPreiseSubreport(
-				List<CustomerPricelistPriceDto> preise) {
+		private LPDatenSubreport createPreiseSubreport(List<CustomerPricelistPriceDto> preise) {
 			Object[][] dataSub = new Object[preise.size()][fieldnames.length];
 			for (int i = 0; i < preise.size(); i++) {
 				CustomerPricelistPriceDto preisDto = preise.get(i);

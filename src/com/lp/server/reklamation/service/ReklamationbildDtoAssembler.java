@@ -49,7 +49,8 @@ public class ReklamationbildDtoAssembler {
 			reklamationbildDto.setISort(reklamationbild.getISort());
 			reklamationbildDto.setReklamationIId(reklamationbild.getReklamationIId());
 			reklamationbildDto.setOBild(reklamationbild.getOBild());
-
+			reklamationbildDto.setCDateiname(reklamationbild.getCDateiname());
+			reklamationbildDto.setDatenformatCNr(reklamationbild.getDatenformatCNr());
 		}
 		return reklamationbildDto;
 	}

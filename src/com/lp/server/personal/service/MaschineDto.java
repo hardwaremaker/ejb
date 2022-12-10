@@ -33,6 +33,7 @@
 package com.lp.server.personal.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 public class MaschineDto implements Serializable {
@@ -48,7 +49,19 @@ public class MaschineDto implements Serializable {
 	private String cBez;
 	private Short bAutoendebeigeht;
 	private Timestamp tKaufdatum;
+
+	private Integer artikelIIdVerrechnen;
+
+	public Integer getArtikelIIdVerrechnen() {
+		return artikelIIdVerrechnen;
+	}
+
+	public void setArtikelIIdVerrechnen(Integer artikelIIdVerrechnen) {
+		this.artikelIIdVerrechnen = artikelIIdVerrechnen;
+	}
+
 	private Short bVersteckt;
+
 	public Short getBVersteckt() {
 		return bVersteckt;
 	}
@@ -56,10 +69,103 @@ public class MaschineDto implements Serializable {
 	public void setBVersteckt(Short versteckt) {
 		bVersteckt = versteckt;
 	}
+
+	private Short bManuelleBedienung;
+
+	public Short getBManuelleBedienung() {
+		return bManuelleBedienung;
+	}
+
+	public void setBManuelleBedienung(Short bManuelleBedienung) {
+		this.bManuelleBedienung = bManuelleBedienung;
+	}
+
+	private BigDecimal nAnschaffungskosten;
+
+	public BigDecimal getNAnschaffungskosten() {
+		return nAnschaffungskosten;
+	}
+
+	public void setNAnschaffungskosten(BigDecimal nAnschaffungskosten) {
+		this.nAnschaffungskosten = nAnschaffungskosten;
+	}
+
+	public Integer getIAbschreibungInMonaten() {
+		return iAbschreibungInMonaten;
+	}
+
+	public void setIAbschreibungInMonaten(Integer iAbschreibungInMonaten) {
+		this.iAbschreibungInMonaten = iAbschreibungInMonaten;
+	}
+
+	public BigDecimal getNVerzinsung() {
+		return nVerzinsung;
+	}
+
+	public void setNVerzinsung(BigDecimal nVerzinsung) {
+		this.nVerzinsung = nVerzinsung;
+	}
+
+	public BigDecimal getNEnergiekosten() {
+		return nEnergiekosten;
+	}
+
+	public void setNEnergiekosten(BigDecimal nEnergiekosten) {
+		this.nEnergiekosten = nEnergiekosten;
+	}
+
+	public BigDecimal getNRaumkosten() {
+		return nRaumkosten;
+	}
+
+	public void setNRaumkosten(BigDecimal nRaumkosten) {
+		this.nRaumkosten = nRaumkosten;
+	}
+
+	public BigDecimal getNSonstigekosten() {
+		return nSonstigekosten;
+	}
+
+	public void setNSonstigekosten(BigDecimal nSonstigekosten) {
+		this.nSonstigekosten = nSonstigekosten;
+	}
+
+	public Integer getIPlanstunden() {
+		return iPlanstunden;
+	}
+
+	public void setIPlanstunden(Integer iPlanstunden) {
+		this.iPlanstunden = iPlanstunden;
+	}
+
+	private Integer iAbschreibungInMonaten;
+
+	private BigDecimal nVerzinsung;
+
+	private BigDecimal nEnergiekosten;
+
+	private BigDecimal nRaumkosten;
+
+	private BigDecimal nSonstigekosten;
+
+	private Integer iPlanstunden;
+
 	public Integer getIId() {
 		return iId;
 	}
 
+	
+	private String cSeriennummer;
+	
+	public String getCSeriennummer() {
+		return cSeriennummer;
+	}
+
+	public void setCSeriennummer(String cSeriennummer) {
+		this.cSeriennummer = cSeriennummer;
+	}
+
+	
 	private Integer maschinengruppeIId;
 
 	private String cIdentifikationsnr;
@@ -106,7 +212,6 @@ public class MaschineDto implements Serializable {
 		this.cBez = cBez;
 	}
 
-
 	public Short getBAutoendebeigeht() {
 		return bAutoendebeigeht;
 	}
@@ -147,20 +252,17 @@ public class MaschineDto implements Serializable {
 		MaschineDto that = (MaschineDto) obj;
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		if (!(that.mandantCNr == null ? this.mandantCNr == null : that.mandantCNr.equals(this.mandantCNr)))
 			return false;
 		if (!(that.cInventarnummer == null ? this.cInventarnummer == null
 				: that.cInventarnummer.equals(this.cInventarnummer)))
 			return false;
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez)))
+		if (!(that.cBez == null ? this.cBez == null : that.cBez.equals(this.cBez)))
 			return false;
 		if (!(that.bAutoendebeigeht == null ? this.bAutoendebeigeht == null
 				: that.bAutoendebeigeht.equals(this.bAutoendebeigeht)))
 			return false;
-		if (!(that.tKaufdatum == null ? this.tKaufdatum == null
-				: that.tKaufdatum.equals(this.tKaufdatum)))
+		if (!(that.tKaufdatum == null ? this.tKaufdatum == null : that.tKaufdatum.equals(this.tKaufdatum)))
 			return false;
 		return true;
 	}

@@ -153,6 +153,7 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 					rows[row][col++] = "";
 				}
 				rows[row][col++] = buchungDetail.getI_auszug();
+				rows[row][col++] = buchungDetail.getI_ausziffern();
 
 				if (buchungDetail.getFlrbuchung().getT_storniert() != null) {
 					rows[row][col++] = LocaleFac.STATUS_STORNIERT;
@@ -467,6 +468,7 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 							java.util.Date.class, String.class, String.class,
 							String.class, String.class, BigDecimal.class,
 							BigDecimal.class, String.class, Integer.class,
+							Integer.class,
 							Icon.class },
 					new String[] {
 							"Id",
@@ -483,6 +485,7 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.gegenkonto", mandantCNr,
 									locUI),
 							getTextRespectUISpr("fb.auszug", mandantCNr, locUI),
+							getTextRespectUISpr("fb.ausziffern", mandantCNr, locUI),
 							getTextRespectUISpr("fb.storno", mandantCNr, locUI) },
 
 					new int[] {
@@ -496,6 +499,7 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_S },
 
@@ -518,6 +522,7 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 							FinanzFac.FLR_BUCHUNGDETAIL_FLRGEGENKONTO + "."
 									+ FinanzFac.FLR_KONTO_C_NR,
 							FinanzFac.FLR_BUCHUNGDETAIL_I_AUSZUG,
+							FinanzFac.FLR_BUCHUNGDETAIL_I_AUSZIFFERN,
 							FinanzFac.FLR_BUCHUNGDETAIL_FLRBUCHUNG + "."
 									+ FinanzFac.FLR_BUCHUNG_T_STORNIERT }));
 		}

@@ -34,6 +34,8 @@ package com.lp.server.util.logger;
 
 import java.io.Serializable;
 
+import org.apache.log4j.Logger;
+
 import com.lp.server.util.Facade;
 import com.lp.util.LpLoggerCS;
 
@@ -45,8 +47,9 @@ public class PLStandardLogger implements ILPLogger, Serializable {
 	/**
 	 * Wrapped Log4j <code>Logger</code> instance.
 	 */
-	protected LpLoggerCS logger;
-
+//	protected LpLoggerCS logger;
+	protected Logger logger ;
+	
 	/**
 	 * Initializes this <code>PLStandardLogger</code> by instantiating a Log4j
 	 * <code>Logger</code>.
@@ -56,7 +59,7 @@ public class PLStandardLogger implements ILPLogger, Serializable {
 	 *            this class in which to log)
 	 */
 	public PLStandardLogger(Class<?> clazz) {
-		this.logger = (LpLoggerCS) LpLoggerCS.getInstance(clazz);
+		this.logger = LpLoggerCS.getInstance(clazz);
 	}
 
 	/**

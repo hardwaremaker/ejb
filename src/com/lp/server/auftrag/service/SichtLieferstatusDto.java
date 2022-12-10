@@ -46,6 +46,15 @@ public class SichtLieferstatusDto implements Serializable {
 	private BigDecimal nMengeGesamt;
 	private BigDecimal nMengeGeliefert;
 	private String sBezeichnung;
+	private String sReferenznummer;
+	public String getSReferenznummer() {
+		return sReferenznummer;
+	}
+
+	public void setSReferenznummer(String sReferenznummer) {
+		this.sReferenznummer = sReferenznummer;
+	}
+
 	private String sIdent;
 	private BigDecimal nMengeOffen;
 	public BigDecimal getNMengeOffen() {

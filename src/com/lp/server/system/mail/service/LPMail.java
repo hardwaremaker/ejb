@@ -124,7 +124,7 @@ public class LPMail {
 		if(text == null) {
 			text = "" ;
 		}
-		if(text.startsWith("<html")) {
+		if(text.startsWith("<html") || text.startsWith("<!DOCTYPE")) {
 			((MimeBodyPart)messageBodyPart).setText(text, "utf-8", "html") ;
 		} else {
 			messageBodyPart.setText(text) ;
@@ -168,12 +168,8 @@ public class LPMail {
 	}
 	
 	public void store(String imapHost, String user, String password, String sentFolder, Message message) throws MessagingException {
-		Store store = mailSession.getStore("imap");
-		store.connect(imapHost, user, password);
-		Folder folder = store.getFolder(sentFolder);
-		folder.open(Folder.READ_WRITE);
-		folder.appendMessages(new Message[] {message});
-		folder.close(true);
+		Store store = connectToStore(imapHost, user, password);
+		store(store, sentFolder, message);
 		store.close();
 	}
 	
@@ -182,5 +178,18 @@ public class LPMail {
 		transport.connect(smtpHost, user, password);
 		transport.sendMessage(message, message.getAllRecipients());
 		transport.close();
+	}
+	
+	public Store connectToStore(String imapHost, String user, String password) throws MessagingException {
+		Store store = mailSession.getStore("imap");
+		store.connect(imapHost, user, password);
+		return store;
+	}
+	
+	public void store(Store store, String sentFolder, Message message) throws MessagingException {
+		Folder folder = store.getFolder(sentFolder);
+		folder.open(Folder.READ_WRITE);
+		folder.appendMessages(new Message[] {message});
+		folder.close(true);
 	}
 }

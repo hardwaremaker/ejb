@@ -46,18 +46,23 @@ import javax.jws.soap.SOAPBinding.Use;
 import javax.xml.ws.BindingType;
 import javax.xml.ws.soap.MTOM;
 
-import org.jboss.wsf.spi.annotation.WebContext;
+// import org.jboss.wsf.spi.annotation.WebContext;
 
+import com.lp.server.system.service.WebshopError;
+import com.lp.server.system.service.WebshopErrorResult;
+import com.lp.server.system.service.WebshopPingResult;
+import com.lp.server.system.service.WebshopSystemInfoServiceInterface;
 import com.lp.server.util.Facade;
 import com.lp.server.util.ServerConfiguration;
 import com.lp.server.util.logger.webservice.WebserviceCallInterceptor;
 
 @Stateless
 @MTOM
-@WebService(name="IWebshop2SystemInfoServices", serviceName="HeliumVSystemInfoService")
+// @WebService(name="IWebshop2SystemInfoServices", serviceName="HeliumVSystemInfoService")
+@WebService
 @SOAPBinding(style = Style.DOCUMENT, use = Use.LITERAL, parameterStyle = ParameterStyle.WRAPPED)
 @BindingType(value = "http://schemas.xmlsoap.org/wsdl/soap/http?mtom=true")
-@WebContext (urlPattern="/version1/SystemInfoFacBeanRest")  
+// @WebContext (urlPattern="/version1/SystemInfoFacBeanRest")  
 @Interceptors(WebserviceCallInterceptor.class)
 public class SystemInfoFacBeanWS extends Facade implements WebshopSystemInfoServiceInterface {
 	@WebMethod

@@ -1,37 +1,6 @@
-/*******************************************************************************
- * HELIUM V, Open Source ERP software for sustained success
- * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
- * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
- * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
- * AGPL does not imply a trademark license. Therefore any rights, title and
- * interest in our trademarks remain entirely with us. If you want to propagate
- * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
- * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
- * at trademark@heliumv.com).
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Contact: developers@heliumv.com
- ******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
+import com.lp.server.partner.fastlanereader.generated.FLRPartner;
 import java.io.Serializable;
 import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -56,22 +25,46 @@ public class FLRLager implements Serializable {
     private Short b_versteckt;
 
     /** nullable persistent field */
+    private Short b_lagerstand_bei_0_anzeigen;
+
+    /** nullable persistent field */
+    private Short b_bestellvorschlag;
+
+    /** nullable persistent field */
+    private Short b_internebestellung;
+
+    /** nullable persistent field */
     private Short b_konsignationslager;
 
     /** nullable persistent field */
     private Integer i_loslagersort;
 
+    /** nullable persistent field */
+    private Integer parnter_i_id_standort;
+
+    /** nullable persistent field */
+    private Integer i_sort;
+
+    /** nullable persistent field */
+    private FLRPartner flrpartner;
+
     /** persistent field */
     private Set artikellagerset;
 
     /** full constructor */
-    public FLRLager(String c_nr, String mandant_c_nr, String lagerart_c_nr, Short b_versteckt, Short b_konsignationslager, Integer i_loslagersort, Set artikellagerset) {
+    public FLRLager(String c_nr, String mandant_c_nr, String lagerart_c_nr, Short b_versteckt, Short b_lagerstand_bei_0_anzeigen, Short b_bestellvorschlag, Short b_internebestellung, Short b_konsignationslager, Integer i_loslagersort, Integer parnter_i_id_standort, Integer i_sort, FLRPartner flrpartner, Set artikellagerset) {
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
         this.lagerart_c_nr = lagerart_c_nr;
         this.b_versteckt = b_versteckt;
+        this.b_lagerstand_bei_0_anzeigen = b_lagerstand_bei_0_anzeigen;
+        this.b_bestellvorschlag = b_bestellvorschlag;
+        this.b_internebestellung = b_internebestellung;
         this.b_konsignationslager = b_konsignationslager;
         this.i_loslagersort = i_loslagersort;
+        this.parnter_i_id_standort = parnter_i_id_standort;
+        this.i_sort = i_sort;
+        this.flrpartner = flrpartner;
         this.artikellagerset = artikellagerset;
     }
 
@@ -126,6 +119,30 @@ public class FLRLager implements Serializable {
         this.b_versteckt = b_versteckt;
     }
 
+    public Short getB_lagerstand_bei_0_anzeigen() {
+        return this.b_lagerstand_bei_0_anzeigen;
+    }
+
+    public void setB_lagerstand_bei_0_anzeigen(Short b_lagerstand_bei_0_anzeigen) {
+        this.b_lagerstand_bei_0_anzeigen = b_lagerstand_bei_0_anzeigen;
+    }
+
+    public Short getB_bestellvorschlag() {
+        return this.b_bestellvorschlag;
+    }
+
+    public void setB_bestellvorschlag(Short b_bestellvorschlag) {
+        this.b_bestellvorschlag = b_bestellvorschlag;
+    }
+
+    public Short getB_internebestellung() {
+        return this.b_internebestellung;
+    }
+
+    public void setB_internebestellung(Short b_internebestellung) {
+        this.b_internebestellung = b_internebestellung;
+    }
+
     public Short getB_konsignationslager() {
         return this.b_konsignationslager;
     }
@@ -140,6 +157,30 @@ public class FLRLager implements Serializable {
 
     public void setI_loslagersort(Integer i_loslagersort) {
         this.i_loslagersort = i_loslagersort;
+    }
+
+    public Integer getParnter_i_id_standort() {
+        return this.parnter_i_id_standort;
+    }
+
+    public void setParnter_i_id_standort(Integer parnter_i_id_standort) {
+        this.parnter_i_id_standort = parnter_i_id_standort;
+    }
+
+    public Integer getI_sort() {
+        return this.i_sort;
+    }
+
+    public void setI_sort(Integer i_sort) {
+        this.i_sort = i_sort;
+    }
+
+    public FLRPartner getFlrpartner() {
+        return this.flrpartner;
+    }
+
+    public void setFlrpartner(FLRPartner flrpartner) {
+        this.flrpartner = flrpartner;
     }
 
     public Set getArtikellagerset() {

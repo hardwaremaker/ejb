@@ -46,6 +46,7 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "InventurlistefindByInventurIIdLagerIIdArtikelIId", query = "SELECT OBJECT (o) FROM Inventurliste o WHERE o.inventurIId=?1 AND o.lagerIId=?2 AND o.artikelIId=?3"),
 		@NamedQuery(name = "InventurlistefindByInventurIIdArtikelIId", query = "SELECT OBJECT (o) FROM Inventurliste o WHERE o.inventurIId=?1 AND o.artikelIId=?2"),
+		@NamedQuery(name = "InventurlistefindByArtikelIId", query = "SELECT OBJECT (o) FROM Inventurliste o WHERE o.artikelIId=?1"),
 		@NamedQuery(name = "InventurlistefindByInventurIIdLagerIIdArtikelIIdCSeriennrchargennr", query = "SELECT OBJECT (o) FROM Inventurliste o WHERE o.inventurIId=?1 AND o.lagerIId=?2 AND o.artikelIId=?3 AND o.cSeriennrchargennr=?4") })
 @Entity
 @Table(name = "WW_INVENTURLISTE")

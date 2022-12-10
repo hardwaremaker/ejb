@@ -32,18 +32,38 @@
  *******************************************************************************/
 package com.lp.server.personal.service;
 
-import javax.ejb.Remote;
+import java.math.BigDecimal;
 
+import javax.ejb.Remote;
 
 @Remote
 public interface PersonalApiFac {
 	int bucheLosGroessenAenderung(
 			String cSeriennummerLeser, String idUser,
-			String station, String losCNr, Integer menge, String cAusweis) ;
+		String station, String losCNr, Integer menge, String cAusweis);
+	
+	int bucheLosAblieferungSubtransaction(
+			String cSeriennummerLeser, String idUser,
+			String station, String losCNr, Integer menge, String cAusweis, Integer mengeSchrott);
+
+	int bucheLosAblieferung(String cSeriennummerLeser, String idUser,
+			String station, String losCNr, Integer menge, String cAusweis);
 	
 	int bucheLosAblieferung(String cSeriennummerLeser, String idUser,
-			String station, String losCNr, Integer menge, String cAusweis) ;
-	
+			String station, String losCNr, Integer menge, String cAusweis, Integer mengeSchrott);
+
 	int bucheLosAblieferungSeriennummer(String idUser,
-			String station, String losCNr, String artikelCNr, String cSeriennummer, String cVersion) ;
+			String station, String losCNr, String artikelCNr, String cSeriennummer, String cVersion);
+	
+	int bucheLosAblieferungChargennummer(String idUser,
+			String station, String losCNr, String artikelCNr, String cChargennummer, BigDecimal menge);
+	
+	int bucheLosAblieferungChargennummerSchrott(String idUser,
+			String station, String losCNr, String artikelCNr, String cChargennummer, BigDecimal menge, BigDecimal mengeSchrott);
+
+	int bucheLosAblieferungStueckzaehler(
+			String cSeriennummerLeser, String idUser, 
+			String station, String losCNr, Integer zaehler, String cAusweis,
+			String artikelCNr, String cChargennummer);
+
 }

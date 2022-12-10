@@ -41,9 +41,10 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "BereichFindByMandantCNrCBez", query = "SELECT OBJECT(o) FROM Bereich o WHERE o.mandantCNr = ?1 AND o.cBez = ?2"),
-	@NamedQuery(name = "BereichFindByMandantCNr", query = "SELECT OBJECT(o) FROM Bereich o WHERE o.mandantCNr = ?1 ORDER BY o.iSort"),
-	@NamedQuery(name = "BereichejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Bereich o WHERE  o.mandantCNr = ?1") })
+@NamedQueries({
+		@NamedQuery(name = "BereichFindByMandantCNrCBez", query = "SELECT OBJECT(o) FROM Bereich o WHERE o.mandantCNr = ?1 AND o.cBez = ?2"),
+		@NamedQuery(name = "BereichFindByMandantCNr", query = "SELECT OBJECT(o) FROM Bereich o WHERE o.mandantCNr = ?1 ORDER BY o.iSort"),
+		@NamedQuery(name = "BereichejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Bereich o WHERE  o.mandantCNr = ?1") })
 @Entity
 @Table(name = "PROJ_BEREICH")
 public class Bereich implements Serializable {
@@ -60,6 +61,71 @@ public class Bereich implements Serializable {
 	@Column(name = "I_SORT")
 	private Integer iSort;
 
+	@Column(name = "B_DURCHGEFUEHRT_VON_IN_OFFENE")
+	private Short bDurchgefuehrtVonInOffene;
+
+	@Column(name = "B_DETAILTEXT_IST_PFLICHTFELD")
+	private Short bDetailtextIstPflichtfeld;
+	
+	public Short getBDetailtextIstPflichtfeld() {
+		return bDetailtextIstPflichtfeld;
+	}
+
+	public void setBDetailtextIstPflichtfeld(Short bDetailtextIstPflichtfeld) {
+		this.bDetailtextIstPflichtfeld = bDetailtextIstPflichtfeld;
+	}
+
+	public Short getBDurchgefuehrtVonInOffene() {
+		return bDurchgefuehrtVonInOffene;
+	}
+
+	public void setBDurchgefuehrtVonInOffene(Short bDurchgefuehrtVonInOffene) {
+		this.bDurchgefuehrtVonInOffene = bDurchgefuehrtVonInOffene;
+	}
+
+	@Column(name = "B_PROJEKT_MIT_ARTIKEL")
+	private Short bProjektMitArtikel;
+
+	public Short getBProjektMitArtikel() {
+		return bProjektMitArtikel;
+	}
+
+	public void setBProjektMitArtikel(Short bProjektMitArtikel) {
+		this.bProjektMitArtikel = bProjektMitArtikel;
+	}
+
+	public Short getBProjektArtikeleindeutig() {
+		return bProjektArtikeleindeutig;
+	}
+
+	public void setBProjektArtikeleindeutig(Short bProjektArtikeleindeutig) {
+		this.bProjektArtikeleindeutig = bProjektArtikeleindeutig;
+	}
+
+	public Short getBProjektArtikelPflichtfeld() {
+		return bProjektArtikelPflichtfeld;
+	}
+
+	public void setBProjektArtikelPflichtfeld(Short bProjektArtikelPflichtfeld) {
+		this.bProjektArtikelPflichtfeld = bProjektArtikelPflichtfeld;
+	}
+
+	@Column(name = "B_PROJEKT_ARTIKEL_EINDEUTIG")
+	private Short bProjektArtikeleindeutig;
+	@Column(name = "B_PROJEKT_ARTIKEL_PFLICHTFELD")
+	private Short bProjektArtikelPflichtfeld;
+
+	@Column(name = "B_PROJEKT_MIT_BETREIBER")
+	private Short bProjektMitBetreiber;
+
+	public Short getBProjektMitBetreiber() {
+		return bProjektMitBetreiber;
+	}
+
+	public void setBProjektMitBetreiber(Short bProjektMitBetreiber) {
+		this.bProjektMitBetreiber = bProjektMitBetreiber;
+	}
+
 	public String getMandantCNr() {
 		return mandantCNr;
 	}
@@ -74,11 +140,19 @@ public class Bereich implements Serializable {
 		super();
 	}
 
-	public Bereich(Integer id, String mandantCNr, String cBez, Integer iSort) {
+	public Bereich(Integer id, String mandantCNr, String cBez, Short bProjektMitBetreiber, Short bProjektMitArtikel,
+			Short bProjektArtikeleindeutig, Short bProjektArtikelPflichtfeld,Short bDurchgefuehrtVonInOffene, Short bDetailtextIstPflichtfeld, Integer iSort) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setCBez(cBez);
 		setISort(iSort);
+		setBProjektMitBetreiber(bProjektMitBetreiber);
+		setBProjektMitArtikel(bProjektMitArtikel);
+		setBProjektArtikeleindeutig(bProjektArtikeleindeutig);
+		setBProjektArtikelPflichtfeld(bProjektArtikelPflichtfeld);
+		setBDurchgefuehrtVonInOffene(bDurchgefuehrtVonInOffene);
+		setBDetailtextIstPflichtfeld(bDetailtextIstPflichtfeld);
+
 	}
 
 	public Integer getISort() {

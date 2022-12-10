@@ -35,10 +35,11 @@ package com.lp.server.personal.ejbfac;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
-import java.util.Calendar;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
@@ -47,24 +48,19 @@ import javax.persistence.Query;
 import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.fertigung.ejb.Los;
-import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
-import com.lp.server.fertigung.service.LosgutschlechtDto;
-import com.lp.server.fertigung.service.LossollarbeitsplanDto;
+import com.lp.server.fertigung.service.LosablieferungTerminalDto;
 import com.lp.server.fertigung.service.LoszusatzstatusDto;
 import com.lp.server.fertigung.service.ZusatzstatusDto;
 import com.lp.server.personal.ejb.Personal;
-import com.lp.server.personal.ejb.Taetigkeit;
 import com.lp.server.personal.service.PersonalApiFac;
-import com.lp.server.personal.service.ZeitdatenDto;
-import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.personal.service.ZeiterfassungFacLocal;
 import com.lp.server.stueckliste.ejb.Stueckliste;
 import com.lp.server.system.service.LocaleFac;
-import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.LosId;
 import com.lp.util.EJBExceptionLP;
 
 @Stateless
@@ -92,24 +88,6 @@ public class PersonalApiFacBean extends PersonalFacBean implements PersonalApiFa
 			//
 		}
 		return los;
-	}
-	
-	private Taetigkeit getTaetigkeit(String cNr) {
-		Query query1 = em.createNamedQuery("TaetigkeitfindByCNr");
-		query1.setParameter(1, cNr);
-		return (Taetigkeit) query1.getSingleResult();
-	}
-	
-	private Integer getIntegerParameter(String mandantCnr, String kategorie,
-			String parameter) {
-		ParametermandantDto p;
-		try {
-			p = getParameterFac().getMandantparameter(mandantCnr, kategorie,
-					parameter);
-		} catch (Exception e) {
-			return new Integer(0);
-		}
-		return new Integer(p.getCWert());
 	}
 	
 	private String getStringParameter(String mandantCnr, String kategorie,
@@ -152,25 +130,20 @@ public class PersonalApiFacBean extends PersonalFacBean implements PersonalApiFa
 		}
 	}
 	
-	private LosablieferungDto abliefernLos(TheClientDto theClientDto, Los los,
-			BigDecimal bdGesamt, LosablieferungDto laDto) {
-		boolean fertig = false;
-		
-		// PJ 18681 Fertig wenn alles abgeliefert
-		if (getIntegerParameter(theClientDto.getMandant(), 
-				ParameterFac.KATEGORIE_FERTIGUNG, 
-				ParameterFac.PARAMETER_AUTOFERTIG_ABLIEFERUNG_TERMINAL).intValue() == 1) {
-			if (los.getNLosgroesse().compareTo(bdGesamt) != 1) {
-				// wenn gesamte Abliefermenge >= Losmenge dann Position ist Fertig
-				fertig = true;
-			}
+	//PJ21261 mit GutSchlecht
+	private LosablieferungDto abliefernLos(TheClientDto theClientDto, Los los, LosablieferungTerminalDto laDto) throws RemoteException, EJBExceptionLP {
+
+		LosablieferungDto losablieferungDto = getFertigungFac().createLosablieferungFuerTerminal(laDto,
+							theClientDto);
+		if (losablieferungDto != null) {
+			// PJ20428
+			getFertigungReportFac().printAblieferEtikettOnServer(
+					losablieferungDto.getIId(), null, theClientDto);
 		}
-					
-		// SP 2013/01671 neue Methode ohne Preisaufrollung
-		return getFertigungFac().createLosablieferungFuerTerminalOhnePreisberechnung(laDto,
-						theClientDto, fertig);
+		
+		return losablieferungDto;
 	}
-	
+
 	private Integer getArtikelIId(String mandantCNr, String artikelCNr) {
 		Query query = em.createNamedQuery("ArtikelfindByCNrMandantCNr");
 		query.setParameter(1, artikelCNr);
@@ -269,14 +242,44 @@ public class PersonalApiFacBean extends PersonalFacBean implements PersonalApiFa
 		}
 		return 1;
 	}
-	
-	public int bucheLosAblieferung(String cSeriennummerLeser, String idUser,
-			String station, String losCNr, Integer menge, String cAusweis) {
+
+	public int bucheLosAblieferungStueckzaehler(String cSeriennummerLeser, String idUser,
+			String station, String losCNr, Integer zaehler, String cAusweis, String artikelCNr, String cChargennummer) {
 		TheClientDto theClientDto = check(idUser);
+		BigDecimal losErledigt;
+		
+		Los los = getLos(losCNr, theClientDto.getMandant());
+		if (los == null) {
+			// Los nicht vorhanden
+			return -1;
+		}
+
+		try {
+			losErledigt = getFertigungFac().getErledigteMenge(los.getIId(),
+					theClientDto);
+		} catch (EJBExceptionLP e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
+		} catch (RemoteException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
+		}
+		// die zu buchende Menge ist der Zaehlerstand minus der bisherigen Ablieferungen
+		Integer menge = zaehler - losErledigt.intValue();
+		if (Integer.signum(menge) != 1) {
+			return -7;
+		} else {
+			if (cChargennummer == null)
+				return bucheLosAblieferung(cSeriennummerLeser, idUser, station, losCNr, menge, cAusweis);
+			else
+				return bucheLosAblieferungChargennummer(idUser, station, losCNr, artikelCNr, cChargennummer, new BigDecimal(menge));
+		}
+		
+	}
+	
+	private Personal validateAndGetPersonal(String station, String cAusweis, TheClientDto theClientDto) {
 		Personal personal = null;
 		if (station.equals("MEMOR")) {
 			if (theClientDto.getIDPersonal() == null) {
-				return -4;
+				return null;
 			}
 			personal = em.find(Personal.class, theClientDto.getIDPersonal());
 		} else { 
@@ -286,11 +289,15 @@ public class PersonalApiFacBean extends PersonalFacBean implements PersonalApiFa
 			// die PersonalID des Buchenden verwendet wird!!
 			theClientDto.setIDPersonal(personal.getIId());
 		}
-		if (personal == null) {
-			return -4;
-		}
+		
+		return personal;
+	}
 
-		Los los = getLos(losCNr, theClientDto.getMandant());
+	/**
+	 * @param theClientDto
+	 * @param los
+	 */
+	private int validateLosBerechtigungen(TheClientDto theClientDto, Los los, Integer ziellagerIId) {
 		if (los == null) {
 			// Los nicht vorhanden
 			return -1;
@@ -301,136 +308,125 @@ public class PersonalApiFacBean extends PersonalFacBean implements PersonalApiFa
 			return -2;
 		}
 //TODO: Rolle setzen
-		if (!getLagerFac().hatRolleBerechtigungAufLager(los.getLagerIIdZiel(),
+		if (!getLagerFac().hatRolleBerechtigungAufLager(ziellagerIId,
 				theClientDto)) {
 			// Person hat kein Recht umn auf Ziellager zu buchen
 			return -4;
 		}
+		
+		return 1;
+	}	
 
-		// TODO: Parameter fuer nicht "ueberbuchen"
+	public int bucheLosAblieferung(String cSeriennummerLeser, String idUser,
+			String station, String losCNr, Integer menge, String cAusweis) {
+//		return getPersonalApiFac().bucheLosAblieferungSubtransaction(
+//				cSeriennummerLeser, idUser, station, losCNr, menge, cAusweis);
+		return bucheLosAblieferungSubtransaction(
+				cSeriennummerLeser, idUser, station, losCNr, menge, cAusweis, null);
+	}
+	
+	public int bucheLosAblieferung(String cSeriennummerLeser, String idUser,
+			String station, String losCNr, Integer menge, String cAusweis, Integer mengeSchrott) {
+//		return getPersonalApiFac().bucheLosAblieferungSubtransaction(
+//				cSeriennummerLeser, idUser, station, losCNr, menge, cAusweis);
+		return bucheLosAblieferungSubtransaction(
+				cSeriennummerLeser, idUser, station, losCNr, menge, cAusweis, mengeSchrott);
+	}
+
+	@Override
+	@TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
+	public int bucheLosAblieferungSubtransaction(
+			String cSeriennummerLeser, String idUser,
+			String station, String losCNr, Integer menge, String cAusweis, Integer mengeSchrott) {
+		TheClientDto theClientDto = check(idUser);
+		
+		Personal personal = validateAndGetPersonal(station, cAusweis, theClientDto);
+		if (personal == null) {
+			return -4;
+		}
+
+		Los los = getLos(losCNr, theClientDto.getMandant());
+		int losValidationValue = validateLosBerechtigungen(theClientDto, los, los.getLagerIIdZiel());
+		if (losValidationValue < 0) {
+			return losValidationValue;
+		}
+
 		try {
-			BigDecimal bdMenge = new BigDecimal(menge);
-
-			BigDecimal bdGesamt = getFertigungFac().getErledigteMenge(
-					los.getIId(), theClientDto).add(bdMenge);
-			if (los.getNLosgroesse().compareTo(bdGesamt) == -1) {
-				// wenn gesamte Abliefermenge > Losmenge dann Losgroesse
-				// anpassen
-				getFertigungFac().aendereLosgroesse(los.getIId(),
-						bdGesamt.intValue(), false, theClientDto);
-			}
-
-			// fehlendes Material buchen
-			LosDto losDto = getFertigungFac().losFindByPrimaryKey(los.getIId());
-			getFertigungFac().bucheMaterialAufLos(losDto, bdMenge, false,
-					false, true, theClientDto, null, false);
-
-			// Pruefung ist abhaengig von Parameter
-			if (getIntegerParameter(theClientDto.getMandant(),
-					ParameterFac.KATEGORIE_FERTIGUNG,
-					ParameterFac.PARAMETER_SOLLSATZGROESSE_PRUEFEN).intValue() == 1) {
-				try {
-					getFertigungFac()
-							.pruefePositionenMitSollsatzgroesseUnterschreitung(
-									los.getIId(), bdMenge, theClientDto);
-				} catch (EJBExceptionLP e) {
-					if (e.getCode() == EJBExceptionLP.FEHLER_FERTIGUNG_SOLLSATZGROESSE_UNTERSCHRITTEN) {
-						return -3;
-					}
+			LosablieferungDto losablieferungDto = null;
+			if (mengeSchrott == null) {
+				losablieferungDto = getFertigungFacLocal().losAbliefernUeberSoap(
+					new LosId(los.getIId()), new BigDecimal(menge), station, theClientDto);
+				// PJ21402
+				if (losablieferungDto != null && station.startsWith("ZT ") && !theClientDto.getBenutzername().contains("|")) {
+					theClientDto.setBenutzername(theClientDto.getBenutzername().trim() + "|" + station);
+					getFertigungReportFac().printAblieferEtikettOnServer(
+							losablieferungDto.getIId(), null, theClientDto);
 				}
+			} else {
+				LosablieferungTerminalDto laDto = new LosablieferungTerminalDto();
+				laDto.setMengeSchrott(new BigDecimal(mengeSchrott));
+				laDto.setLosIId(los.getIId());
+				laDto.setNMenge(new BigDecimal(menge));
+				//ArrayList<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge = new ArrayList<SeriennrChargennrMitMengeDto>();
+				losablieferungDto = abliefernLos(theClientDto, los, laDto);
 			}
-
-			// SP 2013/01036
-			ZeitdatenDto zeitdatenDto = new ZeitdatenDto();
-			Integer zeitdatenIId = null;
-			if (getIntegerParameter(theClientDto.getMandant(),
-					ParameterFac.KATEGORIE_FERTIGUNG,
-					ParameterFac.PARAMETER_ABLIEFERUNG_BUCHT_ENDE).intValue() == 1) {
-				zeitdatenDto.setPersonalIId(personal.getIId());
-				zeitdatenDto.setCWowurdegebucht(station);
-				Calendar cal = Calendar.getInstance();
-				cal.setTimeInMillis(System.currentTimeMillis());
-				zeitdatenDto.setTZeit(new java.sql.Timestamp(cal
-						.getTimeInMillis()));
-				zeitdatenDto.setTAendern(zeitdatenDto.getTZeit());
-				zeitdatenDto.setTaetigkeitIId(getTaetigkeit(
-						ZeiterfassungFac.TAETIGKEIT_ENDE).getIId());
-				zeitdatenDto.setCBelegartnr(null);
-				zeitdatenDto.setArtikelIId(null);
-				zeitdatenDto.setIBelegartid(null);
-				zeitdatenDto.setIBelegartpositionid(null);
-				zeitdatenIId = zfa.createZeitdaten(zeitdatenDto, false, false,
-						false, false, theClientDto);
-
-				// PJ17797
-				if (bdMenge.signum() == 1) {
-					if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-							MandantFac.ZUSATZFUNKTION_STUECKRUECKMELDUNG,
-							theClientDto)) {
-						Integer lossollarbeitsplanIId = null;
-						LossollarbeitsplanDto[] sollDtos = getFertigungFac()
-								.lossollarbeitsplanFindByLosIId(losDto.getIId());
-						if (sollDtos.length > 0) {
-							lossollarbeitsplanIId = sollDtos[sollDtos.length - 1]
-									.getIId();
-						} else {
-							lossollarbeitsplanIId = getFertigungFac()
-									.defaultArbeitszeitartikelErstellen(losDto,
-											theClientDto);
-						}
-
-						LosgutschlechtDto losgutschlechtDto = new LosgutschlechtDto();
-						losgutschlechtDto.setZeitdatenIId(zeitdatenIId);
-						losgutschlechtDto
-								.setLossollarbeitsplanIId(lossollarbeitsplanIId);
-						losgutschlechtDto.setNGut(bdMenge);
-						losgutschlechtDto.setNSchlecht(new BigDecimal(0));
-						losgutschlechtDto.setNInarbeit(new BigDecimal(0));
-						getFertigungFac().createLosgutschlecht(
-								losgutschlechtDto, theClientDto);
-					}
-				}
+			int returnValue = losablieferungDto.getIId();
+			return returnValue > 0 ? 1 : returnValue;
+		} catch (EJBExceptionLP ex) {
+			if (EJBExceptionLP.FEHLER_FERTIGUNG_SOLLSATZGROESSE_UNTERSCHRITTEN == ex.getCode()) {
+				return -3;
 			}
-
-			LosablieferungDto laDto = new LosablieferungDto();
-			laDto.setLosIId(los.getIId());
-			laDto.setNMenge(bdMenge);
-			abliefernLos(theClientDto, los, bdGesamt, laDto);
-		} catch (EJBExceptionLP e) {
-			throw new EJBExceptionLP(e);
+			throw new EJBExceptionLP(ex);
 		} catch (RemoteException e) {
 			throw new EJBExceptionLP(e);
 		}
-		return 1;
+		
 	}	
 
 	public int bucheLosAblieferungSeriennummer(String idUser,
 			String station, String losCNr, String artikelCNr, String cSeriennummer, String cVersion) {
+		
+		// Menge kommt aus Anzahl der Seriennummern
+		String[] seriennrs = cSeriennummer.split(",");
+		BigDecimal bdMenge = new BigDecimal(seriennrs.length);
+
+		return bucheLosAblieferungSerienChargennummer(idUser, station, losCNr, artikelCNr, seriennrs, bdMenge, cVersion, true, null);
+	}
+
+	public int bucheLosAblieferungChargennummer(String idUser,
+			String station, String losCNr, String artikelCNr, String cChargennummer, BigDecimal menge) {
+		return bucheLosAblieferungSerienChargennummer(idUser, station, losCNr, artikelCNr, new String[] {cChargennummer}, menge, null, false, null);
+	}
+
+	public int bucheLosAblieferungChargennummerSchrott(String idUser,
+			String station, String losCNr, String artikelCNr, String cChargennummer, BigDecimal menge, BigDecimal mengeSchrott) {
+		if (cChargennummer == null) {
+			return bucheLosAblieferungSerienChargennummer(idUser, station, losCNr, artikelCNr, null, menge, null, false, mengeSchrott);
+		} else {
+			return bucheLosAblieferungSerienChargennummer(idUser, station, losCNr, artikelCNr, new String[] {cChargennummer}, menge, null, false, mengeSchrott);
+		}
+	}
+
+	private int bucheLosAblieferungSerienChargennummer(String idUser,
+			String station, String losCNr, String artikelCNr, String[] cSerienChargennummer, BigDecimal bdMenge, String cVersion, boolean isSeriennummern, BigDecimal mengeSchrott) {
 		TheClientDto theClientDto = check(idUser);
 
 		Los los = getLos(losCNr, theClientDto.getMandant());
-		if (los == null) {
-			// Los nicht vorhanden
-			return -1;
-		}
-
-		if (!istLosBuchenErlaubt(los.getStatusCNr())) {
-			// Status erlaubt keine Buchung
-			return -2;
-		}
-
-		if (!getLagerFac().hatRolleBerechtigungAufLager(los.getLagerIIdZiel(),
-				theClientDto)) {
-			// Person hat kein Recht umn auf Ziellager zu buchen
-			return -4;
+		int losValidationValue = validateLosBerechtigungen(theClientDto, los, los.getLagerIIdZiel());
+		if (losValidationValue < 0) {
+			return losValidationValue;
 		}
 
 		Integer stuecklisteIId = null;
-		try {
-			stuecklisteIId = getStuecklisteIId(artikelCNr,
-					theClientDto.getMandant());
-		} catch (Exception e1) {
-			//
+		if (artikelCNr == null || artikelCNr.length() == 0) {
+			stuecklisteIId = los.getStuecklisteIId();
+		} else {
+			try {
+				stuecklisteIId = getStuecklisteIId(artikelCNr,
+						theClientDto.getMandant());
+			} catch (Exception e1) {
+				//
+			}
 		}
 		if (stuecklisteIId == null)
 			// Stueckliste nicht vorhanden
@@ -441,46 +437,42 @@ public class PersonalApiFacBean extends PersonalFacBean implements PersonalApiFa
 			return -6;
 
 		try {
-			// Menge kommt aus Anzahl der Seriennummern
-			String[] seriennrs = cSeriennummer.split(",");
-			BigDecimal bdMenge = new BigDecimal(seriennrs.length);
-
-			BigDecimal bdGesamt = getFertigungFac().getErledigteMenge(
-					los.getIId(), theClientDto).add(bdMenge);
-
-			// fehlendes Material buchen
-			LosDto losDto = getFertigungFac().losFindByPrimaryKey(los.getIId());
-			getFertigungFac().bucheMaterialAufLos(losDto, bdMenge, false,
-					false, true, theClientDto, null, false);
-
-			try {
-				getFertigungFac()
-						.pruefePositionenMitSollsatzgroesseUnterschreitung(
-								los.getIId(), bdMenge, theClientDto);
-			} catch (EJBExceptionLP e) {
-				if (e.getCode() == EJBExceptionLP.FEHLER_FERTIGUNG_SOLLSATZGROESSE_UNTERSCHRITTEN) {
-					return -3;
-				}
-			}
-			LosablieferungDto laDto = new LosablieferungDto();
+			LosablieferungDto losablieferungDto = null;
+			LosablieferungTerminalDto laDto = new LosablieferungTerminalDto();
 			laDto.setLosIId(los.getIId());
 			laDto.setNMenge(bdMenge);
+			laDto.setMengeSchrott(mengeSchrott);
 			ArrayList<SeriennrChargennrMitMengeDto> alSeriennrChargennrMitMenge = new ArrayList<SeriennrChargennrMitMengeDto>();
-			for (int i = 0; i < seriennrs.length; i++) {
+			if (isSeriennummern) {
+				for (int i = 0; i < cSerienChargennummer.length; i++) {
+					alSeriennrChargennrMitMenge
+							.add(new SeriennrChargennrMitMengeDto(cSerienChargennummer[i]
+									.trim(), new BigDecimal(1)));
+				}
+			} else {
 				alSeriennrChargennrMitMenge
-						.add(new SeriennrChargennrMitMengeDto(seriennrs[i]
-								.trim(), new BigDecimal(1)));
+				.add(new SeriennrChargennrMitMengeDto(cSerienChargennummer[0].trim(), bdMenge));
 			}
 			laDto.setSeriennrChargennrMitMenge(alSeriennrChargennrMitMenge);
+			losablieferungDto = abliefernLos(theClientDto, los, laDto);
 
-			LosablieferungDto losablieferungDto = abliefernLos(theClientDto, los, bdGesamt, laDto);
-			if (losablieferungDto != null) {
+			// PJ21402
+			if (losablieferungDto != null && station.startsWith("ZT ") && !theClientDto.getBenutzername().contains("|")) {
+				theClientDto.setBenutzername(theClientDto.getBenutzername().trim() + "|" + station);
+				getFertigungReportFac().printAblieferEtikettOnServer(
+						losablieferungDto.getIId(), null, theClientDto);
+			}
+
+			if ((losablieferungDto != null) && (cVersion != null)) {
 				// version jetzt nachtragen
 				getLagerFac().versionInLagerbewegungUpdaten(
 						LocaleFac.BELEGART_LOSABLIEFERUNG,
 						losablieferungDto.getIId(), cVersion);
 			}
 		} catch (EJBExceptionLP e) {
+			if (e.getCode() == EJBExceptionLP.FEHLER_FERTIGUNG_SOLLSATZGROESSE_UNTERSCHRITTEN) {
+				return -3;
+			}
 			throw new EJBExceptionLP(e);
 		} catch (RemoteException e) {
 			throw new EJBExceptionLP(e);

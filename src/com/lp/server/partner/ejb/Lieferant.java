@@ -43,14 +43,22 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+import com.lp.server.system.service.ITablenames;
+import com.lp.util.Helper;
+
+@NamedQueries({
 		@NamedQuery(name = "LieferantfindByiIdPartnercNrMandant", query = "SELECT OBJECT (o) FROM Lieferant o WHERE o.partnerIId=?1 and o.mandantCNr=?2"),
 		@NamedQuery(name = "LieferantfindBycKundennrcNrMandant", query = "SELECT OBJECT (o) FROM Lieferant o WHERE o.cKundennr=?1 and o.mandantCNr=?2"),
 		@NamedQuery(name = "LieferantfindByKontoIIdKreditorenkonto", query = "SELECT OBJECT (o) FROM Lieferant o WHERE o.kontoIIdKreditorenkonto=?1"),
 		@NamedQuery(name = "LieferantfindByRechnungsadresseiIdPartnercNrMandant", query = "SELECT OBJECT (o) FROM Lieferant o WHERE o.partnerIIdRechnungsadresse=?1 and o.mandantCNr=?2"),
-		@NamedQuery(name = "LieferantfindByPartnerIId", query = "SELECT OBJECT (O) FROM Lieferant o WHERE o.partnerIId=?1") })
+		@NamedQuery(name = "LieferantfindByPartnerIId", query = "SELECT OBJECT (O) FROM Lieferant o WHERE o.partnerIId=?1"),
+		@NamedQuery(name = LieferantQuery.ByMandantCnr, query = "SELECT OBJECT (o) FROM Lieferant o WHERE o.mandantCNr=:mandant"),
+		@NamedQuery(name = LieferantQuery.MaxFremdsystemnr, query = "SELECT MAX(CAST(o.cFremdsystemnr AS integer)) FROM Lieferant o"),
+		@NamedQuery(name = LieferantQuery.ByMandantCnrFremdsystemnr, query = "SELECT OBJECT (o) FROM Lieferant o WHERE o.mandantCNr=:mandant AND o.cFremdsystemnr=:fremdsystemnr"),
+		@NamedQuery(name = LieferantQuery.IIdsByPartnerIIds, query = "SELECT o.iId FROM Lieferant o WHERE o.partnerIId IN (:partnerIds)") })
+
 @Entity
-@Table(name = "PART_LIEFERANT")
+@Table(name = ITablenames.PART_LIEFERANT)
 public class Lieferant implements Serializable {
 	public Lieferant() {
 		// TODO Auto-generated constructor stub
@@ -66,13 +74,23 @@ public class Lieferant implements Serializable {
 	@Column(name = "T_AENDERN")
 	private Timestamp tAendern;
 
+	@Column(name = "B_VERSTECKTERKUNDE")
+	private Short bVersteckterkunde;
+
+	public Short getBVersteckterkunde() {
+		return bVersteckterkunde;
+	}
+
+	public void setBVersteckterkunde(Short bVersteckterkunde) {
+		this.bVersteckterkunde = bVersteckterkunde;
+	}
+
 	@Column(name = "B_MOEGLICHERLIEFERANT")
 	private Short bMoeglicherlieferant;
 
 	@Column(name = "B_ZOLLIMPORTPAPIER")
 	private Short bZollimportpapier;
 
-	
 	public Short getBZollimportpapier() {
 		return bZollimportpapier;
 	}
@@ -86,7 +104,7 @@ public class Lieferant implements Serializable {
 
 	@Column(name = "N_MINDESTBESTELLWERT")
 	private BigDecimal nMindestbestellwert;
-	
+
 	public BigDecimal getNKupferzahl() {
 		return nKupferzahl;
 	}
@@ -97,27 +115,50 @@ public class Lieferant implements Serializable {
 
 	@Column(name = "N_KUPFERZAHL")
 	private BigDecimal nKupferzahl;
-	
+
 	@Column(name = "N_TRANSPORTKOSTENPROLIEFERUNG")
 	private BigDecimal nTransportkostenprolieferung;
-	
+
 	public BigDecimal getNTransportkostenprolieferung() {
 		return nTransportkostenprolieferung;
 	}
 
-	public void setNTransportkostenprolieferung(
-			BigDecimal transportkostenprolieferung) {
+	public void setNTransportkostenprolieferung(BigDecimal transportkostenprolieferung) {
 		nTransportkostenprolieferung = transportkostenprolieferung;
+	}
+
+	@Column(name = "B_ZUSCHLAG_INKLUSIVE")
+	private Short bZuschlagInklusive;
+
+	public Short getBZuschlagInklusive() {
+		return bZuschlagInklusive;
+	}
+
+	public void setBZuschlagInklusive(Short bZuschlagInklusive) {
+		this.bZuschlagInklusive = bZuschlagInklusive;
+	}
+
+	@Column(name = "PARTNER_I_ID_LIEFERADRESSE")
+	private Integer partnerIIdLieferadresse;
+
+	public Integer getPartnerIIdLieferadresse() {
+		return this.partnerIIdLieferadresse;
+	}
+
+	public void setPartnerIIdLieferadresse(Integer partnerIIdLieferadresse) {
+		this.partnerIIdLieferadresse = partnerIIdLieferadresse;
 	}
 
 	@Column(name = "B_REVERSECHARGE")
 	private Short bReversecharge;
+
 	public Short getBReversecharge() {
 		return this.bReversecharge;
 	}
-	
+
 	@Column(name = "B_IGERWERB")
 	private Short bIgErwerb;
+
 	public Short getBIgErwerb() {
 		return this.bIgErwerb;
 	}
@@ -125,21 +166,33 @@ public class Lieferant implements Serializable {
 	public void setBIgErwerb(Short bIgErwerb) {
 		this.bIgErwerb = bIgErwerb;
 	}
+
 	public void setBReversecharge(Short bReversecharge) {
 		this.bReversecharge = bReversecharge;
 	}
-	
+
 	@Column(name = "LAGER_I_ID_ZUBUCHUNGSLAGER")
 	private Integer lagerIIdZubuchungslager;
 
 	public Integer getLagerIIdZubuchungslager() {
 		return this.lagerIIdZubuchungslager;
 	}
+
 	public void setLagerIIdZubuchungslager(Integer lagerIIdZubuchungslager) {
 		this.lagerIIdZubuchungslager = lagerIIdZubuchungslager;
 	}
 
-	
+	@Column(name = "I_LIEFERTAG")
+	private Integer iLiefertag;
+
+	public Integer getILiefertag() {
+		return iLiefertag;
+	}
+
+	public void setILiefertag(Integer iLiefertag) {
+		this.iLiefertag = iLiefertag;
+	}
+
 	@Column(name = "N_KREDIT")
 	private BigDecimal nKredit;
 
@@ -203,28 +256,33 @@ public class Lieferant implements Serializable {
 	@Column(name = "PARTNER_I_ID_RECHNUNGSADRESSE")
 	private Integer partnerIIdRechnungsadresse;
 
-
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
 
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
-	
-	@Column(name= "T_BESTELLSPERREAM")
+
+	@Column(name = "T_BESTELLSPERREAM")
 	private Timestamp tBestellsperream;
 
 	@Column(name = "T_FREIGABE")
 	private Timestamp tFreigabe;
-	
+
 	@Column(name = "T_PERSONAL_FREIGABE")
 	private Timestamp tPersonalFreigabe;
-	
+
 	@Column(name = "PERSONAL_I_ID_FREIGABE")
 	private Integer personalIIdFreigabe;
 
 	@Column(name = "C_FREIGABE")
 	private String cFreigabe;
-	
+
+	@Column(name = "REVERSECHARGEART_I_ID")
+	private Integer reversechargeartId;
+
+	@Column(name = "C_FREMDSYSTEMNR")
+	private String cFremdsystemnr;
+
 	public Timestamp getTFreigabe() {
 		return tFreigabe;
 	}
@@ -259,17 +317,11 @@ public class Lieferant implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	public Lieferant(Integer iId,
-			Integer partnerIId, 
-			String mandantCNr,
-			Integer personalAnlegenIId,
-			Integer personalAendernIId,
-			String cWaehrung,
-			Short moeglicherlieferant,
-			Short beurteilen,
-			Integer spediteurIId,
-			Integer lieferartIId, 
-			Integer zahlungszielIId, Short bReversecharge, Short bIgErwerb, Integer lagerIIdZubuchungslager,Short bZollimportpapier) {
+	public Lieferant(Integer iId, Integer partnerIId, String mandantCNr, Integer personalAnlegenIId,
+			Integer personalAendernIId, String cWaehrung, Short moeglicherlieferant, Short beurteilen,
+			Integer spediteurIId, Integer lieferartIId, Integer zahlungszielIId, Short bIgErwerb,
+			Integer lagerIIdZubuchungslager, Short bZollimportpapier, Short bVersteckterkunde,
+			Integer reversechargeartId) {
 		setIId(iId);
 		setPartnerIId(partnerIId);
 		setMandantCNr(mandantCNr);
@@ -277,18 +329,21 @@ public class Lieferant implements Serializable {
 		setPersonalIIdAendern(personalAendernIId);
 		setWaehrungCNr(cWaehrung);
 
-	    //Setzte die defaults fuer die Notnuller
-	    setBBeurteilen(beurteilen);
-	    setBMoeglicherlieferant(moeglicherlieferant);
-	    setTAendern(new Timestamp(System.currentTimeMillis()));
-	    setTAnlegen(new Timestamp(System.currentTimeMillis()));
+		// Setzte die defaults fuer die Notnuller
+		setBBeurteilen(beurteilen);
+		setBMoeglicherlieferant(moeglicherlieferant);
+		setTAendern(new Timestamp(System.currentTimeMillis()));
+		setTAnlegen(new Timestamp(System.currentTimeMillis()));
 		setLieferartIId(lieferartIId);
 		setZahlungszielIId(zahlungszielIId);
 		setSpediteurIId(spediteurIId);
-		setBReversecharge(bReversecharge);
 		setBIgErwerb(bIgErwerb);
 		setLagerIIdZubuchungslager(lagerIIdZubuchungslager);
 		setBZollimportpapier(bZollimportpapier);
+		setBVersteckterkunde(bVersteckterkunde);
+		setReversechargeartId(reversechargeartId);
+		setBReversecharge(Helper.getShortFalse());
+		setBZuschlagInklusive(Helper.boolean2Short(false));
 	}
 
 	public Integer getIId() {
@@ -507,7 +562,6 @@ public class Lieferant implements Serializable {
 		this.partnerIIdRechnungsadresse = partnerIIdRechnungsadresse;
 	}
 
-
 	public Integer getPersonalIIdAnlegen() {
 		return this.personalIIdAnlegen;
 	}
@@ -523,7 +577,6 @@ public class Lieferant implements Serializable {
 	public void setPersonalIIdAendern(Integer personalIIdAendern) {
 		this.personalIIdAendern = personalIIdAendern;
 	}
-	
 
 	public Timestamp getTBestellsperream() {
 		return this.tBestellsperream;
@@ -533,6 +586,19 @@ public class Lieferant implements Serializable {
 		this.tBestellsperream = tBestellsperream;
 	}
 
+	public Integer getReversechargeartId() {
+		return reversechargeartId;
+	}
 
+	public void setReversechargeartId(Integer reversechargeartId) {
+		this.reversechargeartId = reversechargeartId;
+	}
 
+	public String getCFremdsystemnr() {
+		return cFremdsystemnr;
+	}
+
+	public void setCFremdsystemnr(String cFremdsystemnr) {
+		this.cFremdsystemnr = cFremdsystemnr;
+	}
 }

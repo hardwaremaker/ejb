@@ -161,6 +161,17 @@ public class InventurDto implements Serializable {
 		this.lagerIId = lagerIId;
 	}
 
+	private Short bNichtinventierteSnrchnrArtikelabbuchen;
+
+	public Short getBNichtinventierteSnrchnrArtikelabbuchen() {
+		return bNichtinventierteSnrchnrArtikelabbuchen;
+	}
+
+	public void setBNichtinventierteSnrchnrArtikelabbuchen(
+			Short bNichtinventierteSnrchnrArtikelabbuchen) {
+		this.bNichtinventierteSnrchnrArtikelabbuchen = bNichtinventierteSnrchnrArtikelabbuchen;
+	}
+
 	private Short bNichtinventierteartikelabbuchen;
 
 	public Short getBNichtinventierteartikelabbuchen() {

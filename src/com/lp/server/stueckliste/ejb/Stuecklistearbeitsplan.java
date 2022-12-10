@@ -33,6 +33,7 @@
 package com.lp.server.stueckliste.ejb;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -43,10 +44,11 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 		@NamedQuery(name = "StuecklistearbeitsplanejbSelectNextReihung", query = "SELECT MAX (o.iArbeitsgang) FROM Stuecklistearbeitsplan o WHERE o.stuecklisteIId = ?1"),
-		@NamedQuery(name = "StuecklistearbeitsplanfindByStuecklisteIIdIArbeitsgangnummer", query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.stuecklisteIId=?1 AND o.iArbeitsgang=?2 ORDER BY o.iUnterarbeitsgang"),
-		@NamedQuery(name = "StuecklistearbeitsplanfindByStuecklisteIId", query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.stuecklisteIId=?1 ORDER BY o.iArbeitsgang,o.iUnterarbeitsgang ASC"),
-		@NamedQuery(name = "StuecklistearbeitsplanfindByStuecklistepositionIId", query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.stuecklistepositionIId=?1"),
-		@NamedQuery(name = "StuecklistearbeitsplanfindByArtikelIId", query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.artikelIId=?1")})
+		@NamedQuery(name = StuecklistearbeitsplanQuery.ByStuecklisteIIdIArbeitsgangnummer, query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.stuecklisteIId=?1 AND o.iArbeitsgang=?2 ORDER BY o.iUnterarbeitsgang"),
+		@NamedQuery(name = StuecklistearbeitsplanQuery.ByStuecklisteIId, query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.stuecklisteIId=?1 ORDER BY o.iArbeitsgang,o.iUnterarbeitsgang ASC"),
+		@NamedQuery(name = StuecklistearbeitsplanQuery.ByStuecklistepositionIId, query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.stuecklistepositionIId=?1"),
+		@NamedQuery(name = StuecklistearbeitsplanQuery.ByArtikelIId, query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.artikelIId=?1"),
+		@NamedQuery(name = StuecklistearbeitsplanQuery.ByMaschineIId, query = "SELECT OBJECT(o) FROM Stuecklistearbeitsplan o WHERE o.maschineIId=?1")})
 @Entity
 @Table(name = "STK_STUECKLISTEARBEITSPLAN")
 public class Stuecklistearbeitsplan implements Serializable {
@@ -75,6 +77,61 @@ public class Stuecklistearbeitsplan implements Serializable {
 	@Column(name = "STUECKLISTEPOSITION_I_ID")
 	private Integer stuecklistepositionIId;
 	
+	@Column(name = "B_INITIAL")
+	private Short bInitial;
+	
+	public Short getBInitial() {
+		
+		return bInitial;
+	}
+
+	public void setBInitial(Short bInitial) {
+		this.bInitial = bInitial;
+	}
+	
+	@Column(name = "I_MITARBEITERGLEICHZEITIG")
+	private Integer iMitarbeitergleichzeitig;
+	
+	public Integer getIMitarbeitergleichzeitig() {
+		return iMitarbeitergleichzeitig;
+	}
+
+	public void setIMitarbeitergleichzeitig(Integer iMitarbeitergleichzeitig) {
+		this.iMitarbeitergleichzeitig = iMitarbeitergleichzeitig;
+	}
+
+	@Column(name = "X_FORMEL")
+	private String xFormel;
+	public String getXFormel() {
+		return xFormel;
+	}
+	
+	public void setXFormel(String formel) {
+		this.xFormel = formel;
+	}
+	
+	@Column(name = "N_PPM")
+	private BigDecimal nPpm;
+	
+	public BigDecimal getNPpm() {
+		return nPpm;
+	}
+
+	public void setNPpm(BigDecimal nPpm) {
+		this.nPpm = nPpm;
+	}
+
+	@Column(name = "APKOMMENTAR_I_ID")
+	private Integer apkommentarIId;
+	
+	public Integer getApkommentarIId() {
+		return apkommentarIId;
+	}
+
+	public void setApkommentarIId(Integer apkommentarIId) {
+		this.apkommentarIId = apkommentarIId;
+	}
+
 	public Integer getStuecklistepositionIId() {
 		return stuecklistepositionIId;
 	}
@@ -153,7 +210,7 @@ public class Stuecklistearbeitsplan implements Serializable {
 
 	public Stuecklistearbeitsplan(Integer id, Integer stuecklisteIId,
 			Integer arbeitsgang, Integer artikelIId, Long stueckzeit,
-			Long ruestzeit,Short bNurmaschinenzeit) {
+			Long ruestzeit,Short bNurmaschinenzeit, Short bInitial) {
 		setIId(id);
 		setStuecklisteIId(stuecklisteIId);
 		setIArbeitsgang(arbeitsgang);
@@ -161,6 +218,7 @@ public class Stuecklistearbeitsplan implements Serializable {
 		setLStueckzeit(stueckzeit);
 		setLRuestzeit(ruestzeit);
 		setBNurmaschinenzeit(bNurmaschinenzeit);
+		setBInitial(bInitial);
 	}
 
 	public Integer getIId() {

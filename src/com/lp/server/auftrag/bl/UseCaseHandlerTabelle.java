@@ -32,6 +32,9 @@
  ******************************************************************************/
 package com.lp.server.auftrag.bl;
 
+import java.sql.Timestamp;
+import java.util.GregorianCalendar;
+
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
@@ -89,6 +92,65 @@ public abstract class UseCaseHandlerTabelle extends UseCaseHandler {
 		return tableInfo;
 	}
 
+	protected GregorianCalendar[] getVorjahr(Integer iJahr, Integer plusJahre, boolean bGeschaeftsjahr) {
+
+		if (bGeschaeftsjahr == true) {
+			java.sql.Timestamp[] tVonBis = getBuchenFac().getDatumVonBisGeschaeftsjahr(iJahr - 1, theClientDto);
+
+			tVonBis[0] = addiereJahre(tVonBis[0], plusJahre);
+			tVonBis[1] = addiereJahre(tVonBis[1], plusJahre);
+
+			GregorianCalendar gcVon = new GregorianCalendar();
+			gcVon.setTimeInMillis(tVonBis[0].getTime());
+
+			GregorianCalendar gcBis = new GregorianCalendar();
+			gcBis.setTimeInMillis(tVonBis[1].getTime());
+			gcBis.add(GregorianCalendar.DAY_OF_MONTH, 1);
+
+			return new GregorianCalendar[] { gcVon, gcBis };
+
+		} else {
+			return new GregorianCalendar[] { new GregorianCalendar(iJahr - 1 + plusJahre, GregorianCalendar.JANUARY, 1),
+					new GregorianCalendar(iJahr, GregorianCalendar.JANUARY, 1) };
+
+		}
+
+	}
+	
+	protected GregorianCalendar[] getAktuellesJahr(Integer iJahr, Integer plusJahre, boolean bGeschaeftsjahr) {
+
+		if (bGeschaeftsjahr == true) {
+			java.sql.Timestamp[] tVonBis = getBuchenFac().getDatumVonBisGeschaeftsjahr(iJahr, theClientDto);
+
+			tVonBis[0] = addiereJahre(tVonBis[0], plusJahre);
+			tVonBis[1] = addiereJahre(tVonBis[1], plusJahre);
+
+			GregorianCalendar gcVon = new GregorianCalendar();
+			gcVon.setTimeInMillis(tVonBis[0].getTime());
+
+			GregorianCalendar gcBis = new GregorianCalendar();
+			gcBis.setTimeInMillis(tVonBis[1].getTime());
+			gcBis.add(GregorianCalendar.DAY_OF_MONTH, 1);
+
+			return new GregorianCalendar[] { gcVon, gcBis };
+
+		} else {
+			return new GregorianCalendar[] { new GregorianCalendar(iJahr + plusJahre, GregorianCalendar.JANUARY, 1),
+					new GregorianCalendar(iJahr + 1 + plusJahre, GregorianCalendar.JANUARY, 1) };
+
+		}
+
+	}
+	
+	protected Timestamp addiereJahre(Timestamp ts, int iJahre) {
+
+		GregorianCalendar gc = new GregorianCalendar();
+		gc.setTimeInMillis(ts.getTime());
+		gc.add(GregorianCalendar.YEAR, iJahre);
+
+		return new Timestamp(gc.getTimeInMillis());
+	}
+	
 	/**
 	 * Jede ableitende Klasse muss in dieser Methode die Anzahl der Zeilen
 	 * festlegen.

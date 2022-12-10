@@ -89,6 +89,9 @@ public class Anwender implements Serializable {
  	@Column(name = "O_HINTERGRUND")
 	private byte[] oHintergrund;
  	
+	@Column(name = "I_SERVERID")
+	private Integer serverId;
+
 	private static final long serialVersionUID = 1L;
 
 	public Anwender() {
@@ -211,5 +214,12 @@ public class Anwender implements Serializable {
 	public byte[] getOHash() {
 		return oHash;
 	}
-
+	
+	public Integer getServerId() {
+		return serverId;
+	}
+	
+	public void setServerId(Integer serverId) {
+		this.serverId = serverId;
+	}
 }

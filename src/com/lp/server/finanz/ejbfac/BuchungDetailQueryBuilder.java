@@ -56,12 +56,18 @@ public class BuchungDetailQueryBuilder {
 
 	private static final String NUR_OFFENE_BUCHUNGEN = NUR_OFFENE_BUCHUNGEN_WHERE_PLACEHOLDER.replaceAll("\\{WHERE\\}", "");
 	private static final String NUR_OFFENE_BUCHUNGEN_STICHTAG = NUR_OFFENE_BUCHUNGEN_WHERE_PLACEHOLDER
-			.replaceAll("\\{WHERE\\}", "AND bd.flrbuchung.d_buchungsdatum<='{STICHTAG}' ");
+			.replaceAll("\\{WHERE\\}",
+					"AND bd.flrbuchung.d_buchungsdatum<'{STICHTAG}' ");
+	private static final String NUR_OFFENE_BUCHUNGEN_STICHTAG_GJ = NUR_OFFENE_BUCHUNGEN_WHERE_PLACEHOLDER
+			.replaceAll("\\{WHERE\\}",
+					"AND bd.flrbuchung.d_buchungsdatum<'{STICHTAG}' " + 
+					"AND bd.flrbuchung.geschaeftsjahr_i_geschaeftsjahr >= {GESCHAEFTSJAHR} ");
 	
 	
 	private static final String NICHT_ZUORDENBARE_BUCHUNGEN = 
 			" ({ALIASBUCHUNGDETAIL}.konto_i_id={ALIASKONTO}" +
 			" AND {ALIASBUCHUNG}.t_storniert IS NULL" +
+			" AND {ALIASBUCHUNG}.geschaeftsjahr_i_geschaeftsjahr >= {GESCHAEFTSJAHR}" +
 			" AND ({ALIASBUCHUNG}.b_autombuchungeb IS NULL" +
 				" OR {ALIASBUCHUNG}.b_autombuchungeb = 0)" +
 			" AND (SELECT COUNT(*)" +
@@ -72,14 +78,27 @@ public class BuchungDetailQueryBuilder {
 		return NUR_OFFENE_BUCHUNGEN.replaceAll("\\{ALIAS\\}", flrBuchungdetailName);
 	}
 	
-	public static String buildNurOffeneBuchungDetails(String flrBuchungdetailName, Timestamp tStichtag) {
-		return NUR_OFFENE_BUCHUNGEN_STICHTAG.replaceAll("\\{ALIAS\\}", flrBuchungdetailName)
+	public static String buildNurOffeneBuchungDetails(
+			String flrBuchungdetailName, Timestamp tStichtag) {
+		return NUR_OFFENE_BUCHUNGEN_STICHTAG
+				.replaceAll("\\{ALIAS\\}", flrBuchungdetailName)
+				.replaceAll("\\{STICHTAG\\}", Helper.formatDateWithSlashes(Helper.addiereTageZuDatum(tStichtag, 1)));
+	}
+
+	public static String buildNurOffeneBuchungDetails(
+			String flrBuchungdetailName, Timestamp tStichtag, Integer geschaeftsjahr) {
+		return NUR_OFFENE_BUCHUNGEN_STICHTAG_GJ
+				.replaceAll("\\{ALIAS\\}", flrBuchungdetailName)
+				.replaceAll("\\{GESCHAEFTSJAHR\\}", geschaeftsjahr.toString())
 				.replaceAll("\\{STICHTAG\\}", Helper.formatDateWithSlashes(Helper.addiereTageZuDatum(tStichtag, 1)));
 	}
 	
-	public static String buildNichtZuordenbareVonKonto(String flrBuchungdetailName, String flrBuchungName, Integer kontoIId) {
+	public static String buildNichtZuordenbareVonKonto(
+			String flrBuchungdetailName, String flrBuchungName, 
+			Integer kontoIId, Integer geschaeftsjahr) {
 		return NICHT_ZUORDENBARE_BUCHUNGEN.replaceAll("\\{ALIASBUCHUNGDETAIL\\}", flrBuchungdetailName)
 				.replaceAll("\\{ALIASBUCHUNG\\}", flrBuchungName)
+				.replaceAll("\\{GESCHAEFTSJAHR\\}", geschaeftsjahr.toString())
 				.replaceAll("\\{ALIASKONTO\\}", kontoIId.toString());
 	}
 }

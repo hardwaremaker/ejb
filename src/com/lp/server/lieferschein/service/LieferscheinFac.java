@@ -34,15 +34,18 @@ package com.lp.server.lieferschein.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import javax.ejb.Remote;
 import javax.naming.NamingException;
 
+import com.lp.server.partner.service.KundeDto;
 import com.lp.server.system.service.IAktivierbarControlled;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.TheClientDto;
@@ -177,10 +180,6 @@ public interface LieferscheinFac extends IAktivierbarControlled {
 	public void aktiviereLieferschein(Integer iIdLieferscheinI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void setzeStatusLieferschein(Integer iIdLieferscheinI,
-			String sStatusI, Integer iIdRechnungI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
 	public BigDecimal berechneGestehungswert(Integer iIdLieferscheinI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
@@ -261,22 +260,19 @@ public interface LieferscheinFac extends IAktivierbarControlled {
 	public void stornieren(Integer iIdLieferscheinI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
+	public void stornoAufheben(Integer lieferscheinIId, TheClientDto theClientDto);
 	public BigDecimal berechneVerkaufswertIst(Integer iIdLieferscheinI,HashMap lieferscheinpositionIIds,
 			String sArtikelartI, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
-	public BigDecimal berechneGestehungswertIst(Integer iIdLieferscheinI,HashMap lieferscheinpositionIIds,
-			String sArtikelartI, TheClientDto theClientDto) throws EJBExceptionLP,
+	public BigDecimal berechneGestehungswertOderEinstandwertIst(Integer iIdLieferscheinI,HashMap lieferscheinpositionIIds,
+			String sArtikelartI,boolean bGestehungswert, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
 	public BigDecimal berechneOffenenLieferscheinwert(Integer kundeIId, TheClientDto theClientDto);
 	
-	public void uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktion(
-			Integer iIdLieferscheinI, Integer auftragIIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
-	public void uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktionNew (
-			Integer iIdLieferscheinI, Integer auftragIIdI, List<Artikelset> artikelsets,
+	public Set<Integer> uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktionNew (
+			Integer iIdLieferscheinI, Integer auftragIIdI, List<Artikelset> artikelsets, List<Integer> auftragspositionIIds, 
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
 
 	public void updateLieferscheinOhneWeitereAktion(
@@ -344,4 +340,83 @@ public interface LieferscheinFac extends IAktivierbarControlled {
 
 	List<Integer> repairLieferscheinZws2276GetList(TheClientDto theClientDto) ;
 	void repairLieferscheinZws2276(Integer lieferscheinId, TheClientDto theClientDto) throws RemoteException ;
+
+	/**
+	 * Das LieferscheinDto vorbelegen mit:</br>
+	 * <p>Freier Lieferschein, aktuelles Belegdatum</p>
+	 *  
+	 * @param kundeDto der Kunde f&uuml;r den der Lieferschein erstellt werden soll
+	 * @param theClientDto
+	 * @return vorbelegtes LieferscheinDto
+	 * @throws RemoteException
+	 */
+	LieferscheinDto setupDefaultLieferschein(KundeDto kundeDto, TheClientDto theClientDto) throws RemoteException ;
+	
+	/**
+	 * Das Auslieferdatum des Lieferscheins auf "jetzt" setzen
+	 * @param lieferscheinIId ist die Id des Lieferscheins
+	 * @return das Auslieferdatum
+	 */
+	Timestamp setzeAuslieferdatumAufJetzt(Integer lieferscheinIId) ;
+	
+	public Long getNextPackstuecknummer(Integer lieferscheinIId,
+			Integer lieferscheinpositionIId, Integer losIId,
+			Integer losablieferungIId, TheClientDto theClientDto);
+	
+	public void lieferscheinGesamtwertaufgrundGeaenderterMaterialkurseImStatusVerrechnetNeuSetzten(Integer lieferscheinIId, TheClientDto theClientDto);
+	
+	List<LieferscheinDto> lieferscheinFindByKundeIIdLieferadresseMandantCNrBelegdatumOhneExc(
+			Integer kundeIId, String mandantCnr, java.sql.Date belegdatum, TheClientDto theClientDto);
+	
+	List<LieferscheinDto> lieferscheinFindByKundeIIdLieferadresseMandantCNrStatusCNrOhneExc(
+			Integer kundeIId, String mandantCnr, String statusCnr, TheClientDto theClientDto);
+	
+	/**
+	 * 
+	 * @param forecastpositionId (mandatory) die ForecastpositionId
+	 * @param losId (optional) wenn die Forecastposition mit Los verknuepft, dann die LosId (!= null)
+	 * @param theClientDto
+	 * @return die n&auml;chste Packst&uuml;cknummer
+	 */
+	Long getNextPackstuecknummerForecast(Integer forecastpositionId, Integer losId, TheClientDto theClientDto);
+
+	void setzeStatusLieferschein(Integer lieferscheinIId, String statusCnr);
+
+	EasydataImportResult importXMLEasydataStockMovements(String xmlDaten, boolean checkOnly,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	
+	/**
+	 * Eine Liste von Lieferschein-I_IDs die Artikelsetpositionen mit 0 EinzelpreisplusAufschlagMinusRabatt haben 
+	 * @param theClientDto
+	 * @return eine (leere) Liste von Lieferschein-I_Ids deren EinzelpreisAufschlagMinusRabatt nicht mit 
+	 * dem Nettoeinzelpreis �bereinstimmt.
+	 * @throws RemoteException
+	 */
+	List<Integer> repairLieferscheinSP6402GetList(
+			TheClientDto theClientDto) throws RemoteException;
+	
+	void repairLieferscheinSP6402(Integer lieferscheinId,
+			TheClientDto theClientDto) throws RemoteException;
+	void repairLieferscheinSP6999(Integer lieferscheinId,
+			TheClientDto theClientDto) throws RemoteException;
+	
+	boolean isPaketEtikettErzeugbar(Integer lieferscheinId, 
+			TheClientDto theClientDto) throws RemoteException;
+	PaketVersandAntwortDto erzeugePaketInfo(
+			Integer lieferscheinId, TheClientDto theClientDto) throws RemoteException;
+	
+	
+	public List<Integer> getRechnungsadressenGelieferterLieferscheine(java.sql.Date tBisInclBelegdatum,
+			TheClientDto theClientDto);
+	public void verrechneGelieferteLieferscheine(List<Integer> kundeIIdRechnungsadresse, java.sql.Date tBisInclBelegdatum, java.sql.Date neuDatum,
+			TheClientDto theClientDto);
+	void archiveSignedResponse(
+			BestaetigterLieferscheinDto bestaetigungDto, TheClientDto theClientDto) throws RemoteException;
+	
+	public BigDecimal getEKWertUeberLoseAusKundenlaegern(Integer lieferscheinpositionIId, boolean bMaxSollmenge, TheClientDto theClientDto);
+	
+	public void updateLieferscheinVersandinfos(LieferscheinDto lieferscheinDtoI, TheClientDto theClientDto);
+	public void uebersteuereIntelligenteZwischensumme(Integer lieferscheinpositionIId,
+			BigDecimal bdBetragInBelegwaehrungUebersteuert, TheClientDto theClientDto);
+	
 }

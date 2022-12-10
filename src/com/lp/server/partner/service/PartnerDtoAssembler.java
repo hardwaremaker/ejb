@@ -100,6 +100,7 @@ public class PartnerDtoAssembler {
 			partnerDto.setFGmtversatz(partner.getFGmtversatz());
 			partnerDto.setCEori(partner.getCEori());
 			partnerDto.setVersandwegIId(partner.getVersandwegIId());
+			partnerDto.setNewslettergrundIId(partner.getNewslettergrundIId());
 
 		}
 		return partnerDto;

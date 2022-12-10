@@ -68,6 +68,7 @@ public abstract class LpBelegnummerFormat {
 	}
 
 	public abstract String format(LpBelegnummer lpBeelegnummer);
+	public abstract String formatMitStellenZufall(LpBelegnummer lpBeelegnummer);
 
 	public int getStellenLfdNummer() {
 		return stellenLfdNummer;

@@ -43,29 +43,36 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.IBelegVerkaufEntity;
 import com.lp.server.util.IISort;
 import com.lp.server.util.IPositionIIdArtikelset;
 import com.lp.server.util.IZwsPosition;
 
 @NamedQueries({
 		@NamedQuery(name = "LieferscheinpositionfindByLieferschein", query = "SELECT OBJECT(o) FROM Lieferscheinposition o WHERE o.lieferscheinIId=?1 ORDER BY o.iSort"),
-		@NamedQuery(name = "LieferscheinpositionfindByLieferscheinIIdAuftragpositionIId", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinIId=?1 AND o.auftragpositionIId=?2"),
+		@NamedQuery(name = "LieferscheinpositionfindByLieferscheinIIdAuftragpositionIId", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinIId=?1 AND o.auftragpositionIId=?2 ORDER BY o.iSort"),
 		@NamedQuery(name = "LieferscheinpositionfindPositiveByAuftragpositionIIdArtikelIId", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.auftragpositionIId=?1 AND o.artikelIId=?2 AND o.nMenge>0"),
 		@NamedQuery(name = "LieferscheinpositionejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Lieferscheinposition o WHERE o.lieferscheinIId = ?1"),
 		@NamedQuery(name = "LieferscheinpositionfindByAuftragposition", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.auftragpositionIId=?1"),
+		@NamedQuery(name = LieferscheinpositionQuery.ByForecastpositionId, query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.forecastpositionIId=?1 ORDER BY o.lieferscheinIId"),
 		@NamedQuery(name = "LieferscheinpositionfindByLieferscheinMenge", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinIId = ?1 AND o.nMenge IS NOT NULL"),
 		@NamedQuery(name = "LieferscheinpositionpositionfindByLieferscheinIIdLieferscheinpositionartCNr", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinIId=?1 AND o.lieferscheinpositionartCNr=?2 ORDER BY o.iSort"),
 		@NamedQuery(name = "LieferscheinpositionfindByLieferscheinISort", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinIId = ?1 AND o.iSort = ?2"),
 		@NamedQuery(name = "LieferscheinpositionfindByLieferscheinIIdPositionIId", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinIId = ?1 AND o.iId = ?2"),
 		@NamedQuery(name = "LieferscheinpositionfindByPositionIId", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.positionIId=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0"),
-		@NamedQuery(name = "LieferscheinpositionfindByPositionIIdArtikelset", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.positionIIdArtikelset=?1 AND o.nMenge IS NOT NULL AND o.nMenge>0 ORDER BY o.iSort ASC"),
+		@NamedQuery(name = "LieferscheinpositionfindByPositionIIdZugehoerig", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.positionIIdZugehoerig=?1 AND o.nMenge IS NOT NULL ORDER BY o.iSort"),
+		@NamedQuery(name = "LieferscheinpositionfindByWareneingangspositionIIdAndererMandant", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.wareneingangspositionIIdAndererMandant=?1"),
+		@NamedQuery(name = LieferscheinpositionQuery.ByPositionIIdArtikelset, query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.positionIIdArtikelset=?1 AND o.nMenge IS NOT NULL AND o.nMenge<>0 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "LieferscheinpositionfindByPositionartCNr", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinpositionartCNr=?1 AND o.nMenge IS NOT NULL"),
 		@NamedQuery(name = "getWertLieferscheinpositionartPosition", query = "SELECT sum(o.nMenge*o.nNettogesamtpreisplusversteckteraufschlag) FROM Lieferscheinposition o WHERE o.positionIId=?1 AND o.lieferscheinpositionartCNr IN (?2,?3)"),
 		@NamedQuery(name = "LieferscheinpositionfindByPositionIIdISort", query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.positionIId = ?1 AND o.iSort = ?2"),
-		@NamedQuery(name = Lieferscheinposition.QueryFindIZwsByVonBisIId, query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.zwsVonPosition= :iid OR o.zwsBisPosition= :iid")})
+		@NamedQuery(name = Lieferscheinposition.QueryFindIZwsByVonBisIId, query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.zwsVonPosition= :iid OR o.zwsBisPosition= :iid"),
+		@NamedQuery(name = LieferscheinpositionQuery.ByPositionIIdArtikelsetAll, query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.positionIIdArtikelset=?1 ORDER BY o.iSort ASC"),
+		@NamedQuery(name = LieferscheinpositionQuery.ByLieferscheinIdArtikelIId, query = "SELECT OBJECT (o) FROM Lieferscheinposition o WHERE o.lieferscheinIId=?1 AND o.artikelIId=?2 ORDER BY o.iSort ASC"),		
+})
 @Entity
 @Table(name = "LS_LIEFERSCHEINPOSITION")
-public class Lieferscheinposition implements Serializable, IISort, IPositionIIdArtikelset, IZwsPosition  {
+public class Lieferscheinposition implements Serializable, IISort, IPositionIIdArtikelset, IZwsPosition, IBelegVerkaufEntity  {
 
 	public final static String QueryFindIZwsByVonBisIId = "LieferscheinpositionFindIZwsByVonBisIId" ;
 	
@@ -130,9 +137,76 @@ public class Lieferscheinposition implements Serializable, IISort, IPositionIIdA
 	@Column(name = "C_ZBEZ")
 	private String cZbez;
 
+	@Column(name = "POSITION_I_ID_ZUGEHOERIG")
+	private Integer positionIIdZugehoerig;
+
+	public Integer getPositionIIdZugehoerig() {
+		return positionIIdZugehoerig;
+	}
+
+	public void setPositionIIdZugehoerig(Integer positionIIdZugehoerig) {
+		this.positionIIdZugehoerig = positionIIdZugehoerig;
+	}
+	
+	@Column(name = "N_DIM_MENGE")
+	private BigDecimal nDimMenge;
+	public BigDecimal getNDimMenge() {
+		return nDimMenge;
+	}
+
+	public void setNDimMenge(BigDecimal nDimMenge) {
+		this.nDimMenge = nDimMenge;
+	}
+
+	public BigDecimal getNDimHoehe() {
+		return nDimHoehe;
+	}
+
+	public void setNDimHoehe(BigDecimal nDimHoehe) {
+		this.nDimHoehe = nDimHoehe;
+	}
+
+	public BigDecimal getNDimBreite() {
+		return nDimBreite;
+	}
+
+	public void setNDimBreite(BigDecimal nDimBreite) {
+		this.nDimBreite = nDimBreite;
+	}
+
+	public BigDecimal getNDimTiefe() {
+		return nDimTiefe;
+	}
+
+	public void setNDimTiefe(BigDecimal nDimTiefe) {
+		this.nDimTiefe = nDimTiefe;
+	}
+
+	@Column(name = "N_DIM_HOEHE")
+	private BigDecimal nDimHoehe;
+
+	@Column(name = "N_DIM_BREITE")
+	private BigDecimal nDimBreite;
+
+	@Column(name = "N_DIM_TIEFE")
+	private BigDecimal nDimTiefe;
+	
 	@Column(name = "POSITION_I_ID")
 	private Integer positionIId;
 	
+	@Column(name = "WARENEINGANGSPOSITION_I_ID_ANDERERMANDANT")
+	private Integer wareneingangspositionIIdAndererMandant;
+	
+	
+	public Integer getWareneingangspositionIIdAndererMandant() {
+		return wareneingangspositionIIdAndererMandant;
+	}
+
+	public void setWareneingangspositionIIdAndererMandant(
+			Integer wareneingangspositionIIdAndererMandant) {
+		this.wareneingangspositionIIdAndererMandant = wareneingangspositionIIdAndererMandant;
+	}
+
 	@Column(name = "LAGER_I_ID")
 	private Integer lagerIId;
 
@@ -239,6 +313,17 @@ public class Lieferscheinposition implements Serializable, IISort, IPositionIIdA
 
 	@Column(name = "AUFTRAGPOSITION_I_ID")
 	private Integer auftragpositionIId;
+
+	@Column(name = "FORECASTPOSITION_I_ID")
+	private Integer forecastpositionIId;
+	
+	public Integer getForecastpositionIId() {
+		return forecastpositionIId;
+	}
+
+	public void setForecastpositionIId(Integer forecastpositionIId) {
+		this.forecastpositionIId = forecastpositionIId;
+	}
 
 	@Column(name = "EINHEIT_C_NR")
 	private String einheitCNr;
@@ -441,11 +526,11 @@ public class Lieferscheinposition implements Serializable, IISort, IPositionIIdA
 		this.nNettogesamtpreisplusversteckteraufschlag = nNettogesamtpreisplusversteckteraufschlag;
 	}
 
-	public BigDecimal getNNettogesamtpreisplusversteckteraufschlagminusrabatt() {
+	public BigDecimal getNNettogesamtpreisplusversteckteraufschlagminusrabatte() {
 		return this.nNettogesamtpreisplusversteckteraufschlagminusrabatt;
 	}
 
-	public void setNNettogesamtpreisplusversteckteraufschlagminusrabatt(
+	public void setNNettogesamtpreisplusversteckteraufschlagminusrabatte(
 			BigDecimal nNettogesamtpreisplusversteckteraufschlagminusrabatt) {
 		this.nNettogesamtpreisplusversteckteraufschlagminusrabatt = nNettogesamtpreisplusversteckteraufschlagminusrabatt;
 	}

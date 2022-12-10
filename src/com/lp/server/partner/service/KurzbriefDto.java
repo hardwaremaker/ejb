@@ -55,6 +55,17 @@ public class KurzbriefDto implements Serializable {
 	public int iFicBetreff = iF++;
 	private String cBetreff;
 
+	private String mandantCNr;
+	public String getMandantCNr() {
+		return this.mandantCNr;
+	}
+
+	public void setMandantCNr(String mandantCNr) {
+		this.mandantCNr = mandantCNr;
+	}
+
+	
+	
 	public int iFitAnlegen = iF++;
 	private Timestamp tAnlegen;
 
@@ -206,6 +217,14 @@ public class KurzbriefDto implements Serializable {
 		return true;
 	}
 
+	public boolean isHtml() {
+		return bHtml == null ? false : bHtml > 0 ;
+	}
+
+	public boolean isPlain() {
+		return bHtml == null || bHtml == 0 ;
+	}
+	
 	public int hashCode() {
 		int result = 17;
 		result = 37 * result + this.iId.hashCode();

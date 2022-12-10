@@ -33,7 +33,6 @@
 package com.lp.server.personal.ejb;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import javax.persistence.Column;
@@ -45,7 +44,7 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 		@NamedQuery(name = "ZeitdatenfindZeitdatenEinesTagesUndEinerPerson", query = "SELECT OBJECT(o) FROM Zeitdaten o WHERE o.personalIId = ?1 AND o.tZeit >= ?2 AND o.tZeit < ?3 ORDER BY o.tZeit ASC"),
-		@NamedQuery(name = "ZeitdatenfindZeitdatenEinesBelegs", query = "SELECT OBJECT(o) FROM Zeitdaten o WHERE o.cBelegartnr = ?1 AND o.iBelegartid = ?2 ORDER BY o.tZeit ASC"),
+		@NamedQuery(name = ZeitdatenQuery.ByZeitdatenEinesBelegs, query = "SELECT OBJECT(o) FROM Zeitdaten o WHERE o.cBelegartnr = ?1 AND o.iBelegartid = ?2 ORDER BY o.tZeit ASC"),
 		@NamedQuery(name = "ZeitdatenfindByPersonalIIdTZeit", query = "SELECT OBJECT(o) FROM Zeitdaten o WHERE o.personalIId = ?1 AND o.tZeit = ?2"),
 		@NamedQuery(name = "ZeitdatenfindByPersonalIIdTaetigkeitIIdTVonTBis", query = "SELECT OBJECT(o) FROM Zeitdaten o WHERE o.personalIId = ?1 AND o.taetigkeitIId = ?2 AND o.tZeit >= ?3 AND o.tZeit < ?4"),
 		@NamedQuery(name = "ZeitdatenejbSelectAllBelegeByPersonalIIdTVonTBis", query = "SELECT DISTINCT o.iBelegartid FROM Zeitdaten o WHERE o.cBelegartnr = ?1 AND o.personalIId = ?2 AND o.tZeit >= ?3 AND o.tZeit < ?4"),
@@ -93,6 +92,17 @@ public class Zeitdaten implements Serializable {
 
 	@Column(name = "X_KOMMENTAR")
 	private String xKommentar;
+	
+	@Column(name = "X_KOMMENTAR_INTERN")
+	private String xKommentarIntern;
+
+	public String getXKommentarIntern() {
+		return xKommentarIntern;
+	}
+
+	public void setXKommentarIntern(String xKommentarIntern) {
+		this.xKommentarIntern = xKommentarIntern;
+	}
 
 	@Column(name = "C_WOWURDEGEBUCHT")
 	private String cWowurdegebucht;
@@ -106,11 +116,59 @@ public class Zeitdaten implements Serializable {
 	@Column(name = "PERSONAL_I_ID")
 	private Integer personalIId;
 
+	@Column(name = "MASCHINE_I_ID")
+	private Integer maschineIId;
+	
 	@Column(name = "TAETIGKEIT_I_ID")
 	private Integer taetigkeitIId;
 
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
+	
+	@Column(name = "PERSONAL_I_ID_ERLEDIGT")
+	private Integer personalIIdErledigt;
+	
+	@Column(name = "T_ERLEDIGT")
+	private Timestamp tErledigt;
+	
+	@Column(name = "F_DAUER_UEBERSTEUERT")
+	private Double fDauerUebersteuert;
+	
+	public Double getFDauerUebersteuert() {
+		return fDauerUebersteuert;
+	}
+
+	public void setFDauerUebersteuert(Double fDauerUebersteuert) {
+		this.fDauerUebersteuert = fDauerUebersteuert;
+	}
+
+	@Column(name = "F_VERRECHENBAR")
+	private Double fVerrechenbar;
+	
+
+	public Integer getPersonalIIdErledigt() {
+		return personalIIdErledigt;
+	}
+
+	public void setPersonalIIdErledigt(Integer personalIIdErledigt) {
+		this.personalIIdErledigt = personalIIdErledigt;
+	}
+
+	public Timestamp getTErledigt() {
+		return tErledigt;
+	}
+
+	public void setTErledigt(Timestamp tErledigt) {
+		this.tErledigt = tErledigt;
+	}
+
+	public Double getFVerrechenbar() {
+		return fVerrechenbar;
+	}
+
+	public void setFVerrechenbar(Double fVerrechenbar) {
+		this.fVerrechenbar = fVerrechenbar;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -159,6 +217,14 @@ public class Zeitdaten implements Serializable {
 		this.bTaetigkeitgeaendert = bTaetigkeitgeaendert;
 	}
 
+	public Integer getMaschineIId() {
+		return this.maschineIId;
+	}
+
+	public void setMaschineIId(Integer maschineIId) {
+		this.maschineIId = maschineIId;
+	}
+	
 	public String getCBelegartnr() {
 		return this.cBelegartnr;
 	}

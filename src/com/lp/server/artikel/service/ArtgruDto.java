@@ -33,7 +33,10 @@
 package com.lp.server.artikel.service;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
+
+import javax.persistence.Column;
 
 public class ArtgruDto implements Serializable {
 	/**
@@ -46,7 +49,77 @@ public class ArtgruDto implements Serializable {
 	private ArtgrusprDto artgrusprDto;
 	private Integer kontoIId;
 
+	private Integer artikelIIdKommentar;
+
+	public Integer getArtikelIIdKommentar() {
+		return artikelIIdKommentar;
+	}
+
+	public void setArtikelIIdKommentar(Integer artikelIIdKommentar) {
+		this.artikelIIdKommentar = artikelIIdKommentar;
+	}
+
+	private Short bAufschlagEinzelpreis;
+
+	public Short getBAufschlagEinzelpreis() {
+		return bAufschlagEinzelpreis;
+	}
+
+	public void setBAufschlagEinzelpreis(Short bAufschlagEinzelpreis) {
+		this.bAufschlagEinzelpreis = bAufschlagEinzelpreis;
+	}
+
+	private Short bKeinBelegdruckMitRabatt;
+
+	public Short getBKeinBelegdruckMitRabatt() {
+		return bKeinBelegdruckMitRabatt;
+	}
+
+	public void setBKeinBelegdruckMitRabatt(Short bKeinBelegdruckMitRabatt) {
+		this.bKeinBelegdruckMitRabatt = bKeinBelegdruckMitRabatt;
+	}
+
+	private Short bSeriennrtragend;
+	private Short bChargennrtragend;
+
+	public Short getBSeriennrtragend() {
+		return this.bSeriennrtragend;
+	}
+
+	public void setBSeriennrtragend(Short bSeriennrtragend) {
+		this.bSeriennrtragend = bSeriennrtragend;
+	}
+
+	public Short getBChargennrtragend() {
+		return this.bChargennrtragend;
+	}
+
+	public void setBChargennrtragend(Short bChargennrtragend) {
+		this.bChargennrtragend = bChargennrtragend;
+	}
+
+	private BigDecimal nEkpreisaufschlag;
+
+	public BigDecimal getNEkpreisaufschlag() {
+		return nEkpreisaufschlag;
+	}
+
+	public void setNEkpreisaufschlag(BigDecimal nEkpreisaufschlag) {
+		this.nEkpreisaufschlag = nEkpreisaufschlag;
+	}
+
+	private Integer kostenstelleIId;
+
+	public Integer getKostenstelleIId() {
+		return this.kostenstelleIId;
+	}
+
+	public void setKostenstelleIId(Integer kostenstelle) {
+		this.kostenstelleIId = kostenstelle;
+	}
+
 	private Short bKeinevkwarnmeldungimls;
+
 	public Short getBKeinevkwarnmeldungimls() {
 		return bKeinevkwarnmeldungimls;
 	}
@@ -55,11 +128,8 @@ public class ArtgruDto implements Serializable {
 		this.bKeinevkwarnmeldungimls = bKeinevkwarnmeldungimls;
 	}
 
-	
 	private Short bZertifizierung;
 
-	
-	
 	public Short getBZertifizierung() {
 		return bZertifizierung;
 	}
@@ -85,6 +155,29 @@ public class ArtgruDto implements Serializable {
 	public void setCNr(String cNr) {
 		this.cNr = cNr;
 	}
+	
+	private Short bFremdfertigung;
+
+	public Short getBFremdfertigung() {
+		return this.bFremdfertigung;
+	}
+
+	public void setBFremdfertigung(Short bFremdfertigung) {
+		this.bFremdfertigung = bFremdfertigung;
+	}
+	
+	private Short bBeiErsterZeitbuchungAbbuchen;
+	
+
+	public Short getBBeiErsterZeitbuchungAbbuchen() {
+		return bBeiErsterZeitbuchungAbbuchen;
+	}
+
+	public void setBBeiErsterZeitbuchungAbbuchen(Short bBeiErsterZeitbuchungAbbuchen) {
+		this.bBeiErsterZeitbuchungAbbuchen = bBeiErsterZeitbuchungAbbuchen;
+	}
+
+	
 
 	public Integer getArtgruIId() {
 		return artgruIId;
@@ -140,6 +233,18 @@ public class ArtgruDto implements Serializable {
 		this.kontoIId = kontoIId;
 	}
 
+	public boolean isChargennrtragend() {
+		if (null == bChargennrtragend)
+			return false;
+		return bChargennrtragend > 0;
+	}
+
+	public boolean isSeriennrtragend() {
+		if (null == bSeriennrtragend)
+			return false;
+		return bSeriennrtragend > 0;
+	}
+
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;
@@ -151,8 +256,7 @@ public class ArtgruDto implements Serializable {
 		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr))) {
 			return false;
 		}
-		if (!(that.artgruIId == null ? this.artgruIId == null : that.artgruIId
-				.equals(this.artgruIId))) {
+		if (!(that.artgruIId == null ? this.artgruIId == null : that.artgruIId.equals(this.artgruIId))) {
 			return false;
 		}
 		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {

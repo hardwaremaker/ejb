@@ -49,6 +49,8 @@ public interface IKontoImporterBeanServices {
 
 	public FinanzamtDto[] finanzamtFindAllByMandantCNr() throws RemoteException ;
 	
+	public KontoartDto kontoartFindByCnr(String kontoartCnr) throws RemoteException;
+	
 	public TheClientDto getTheClientDto() ;
 
 }

@@ -59,6 +59,7 @@ public class AuftragteilnehmerDtoAssembler {
 			auftragteilnehmerDto.setTAnlegen(auftragteilnehmer.getTAnlegen());
 			auftragteilnehmerDto.setPersonalIIdAnlegen(auftragteilnehmer
 					.getPersonalIIdAnlegen());
+			auftragteilnehmerDto.setKostenstelleIId(auftragteilnehmer.getKostenstelleIId());
 		}
 		return auftragteilnehmerDto;
 	}

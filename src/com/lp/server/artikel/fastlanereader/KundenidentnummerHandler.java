@@ -445,7 +445,11 @@ public class KundenidentnummerHandler extends UseCaseHandler {
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("lp.firma",
 									theClientDto.getMandant(),
-									theClientDto.getLocUi()), "S" }, new int[] {
+									theClientDto.getLocUi()), 
+							getTextRespectUISpr("artikel.sperre",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),  }, 
+					new int[] {
 							-1, // diese Spalte wird ausgeblendet
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_L,
@@ -453,12 +457,15 @@ public class KundenidentnummerHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_L,
-
-							QueryParameters.FLR_BREITE_S }, new String[] {
+							QueryParameters.FLR_BREITE_S }, 
+					new String[] {
 							"i_id", "kundesoko.c_kundeartikelnummer",
 							"artikelliste.c_nr", "aspr.c_bez", "aspr.c_zbez",
 							"aspr.c_zbez2", Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR }));
+							Facade.NICHT_SORTIERBAR },
+					new String[]{ null, null, null, null, null, null, null, 
+							getTextRespectUISpr("artikel.sperre.tooltip", theClientDto.getMandant(), theClientDto.getLocUi()), 	
+					}));
 
 		}
 		return super.getTableInfo();

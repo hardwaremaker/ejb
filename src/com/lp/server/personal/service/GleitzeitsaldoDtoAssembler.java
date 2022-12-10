@@ -68,6 +68,7 @@ public class GleitzeitsaldoDtoAssembler {
 					.getTAbrechnungsstichtag());
 			gleitzeitsaldoDto.setNSaldouest200(gleitzeitsaldo
 					.getNSaldouest200());
+			gleitzeitsaldoDto.setNGzSaldoMitUestdInNormalstunden(gleitzeitsaldo.getNGzSaldoMitUestdInNormalstunden());
 		}
 		return gleitzeitsaldoDto;
 	}

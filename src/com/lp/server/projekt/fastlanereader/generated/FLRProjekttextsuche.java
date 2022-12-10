@@ -33,11 +33,13 @@
 package com.lp.server.projekt.fastlanereader.generated;
 
 import java.io.Serializable;
+
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
 /** @author Hibernate CodeGenerator */
 public class FLRProjekttextsuche implements Serializable {
+
 
     /**
 	 * 

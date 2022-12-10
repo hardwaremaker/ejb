@@ -44,15 +44,17 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
+import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
-import com.lp.server.artikel.ejb.Artklaspr;
 import com.lp.server.fertigung.ejb.Losbereich;
 import com.lp.server.fertigung.ejb.Losklasse;
 import com.lp.server.fertigung.ejb.Losklassespr;
 import com.lp.server.fertigung.ejb.LosklassesprPK;
+import com.lp.server.fertigung.ejb.Lospruefplan;
 import com.lp.server.fertigung.ejb.Losstatus;
+import com.lp.server.fertigung.ejb.Pruefergebnis;
 import com.lp.server.fertigung.service.FertigungServiceFac;
 import com.lp.server.fertigung.service.LosbereichDto;
 import com.lp.server.fertigung.service.LosbereichDtoAssembler;
@@ -60,9 +62,14 @@ import com.lp.server.fertigung.service.LosklasseDto;
 import com.lp.server.fertigung.service.LosklasseDtoAssembler;
 import com.lp.server.fertigung.service.LosklassesprDto;
 import com.lp.server.fertigung.service.LosklassesprDtoAssembler;
+import com.lp.server.fertigung.service.LospruefplanDto;
+import com.lp.server.fertigung.service.LospruefplanDtoAssembler;
 import com.lp.server.fertigung.service.LosstatusDto;
 import com.lp.server.fertigung.service.LosstatusDtoAssembler;
+import com.lp.server.fertigung.service.PruefergebnisDto;
+import com.lp.server.fertigung.service.PruefergebnisDtoAssembler;
 import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.util.EJBExceptionLP;
@@ -173,6 +180,232 @@ public class FertigungServiceFacBean extends Facade implements
 		return (LosstatusDto[]) list.toArray(returnArray);
 	}
 
+	public Integer createLospruefplan(LospruefplanDto dto,
+			TheClientDto theClientDto) {
+
+		try {
+
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_LOSPRUEFPLAN);
+			dto.setIId(pk);
+
+			if (dto.getISort() == null) {
+				Integer i = null;
+				try {
+					Query querynext = em
+							.createNamedQuery("LospruefplanejbSelectNextReihung");
+					querynext.setParameter(1, dto.getLosIId());
+					i = (Integer) querynext.getSingleResult();
+				} catch (NoResultException ex) {
+					// nothing here
+				} catch (NonUniqueResultException ex1) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, ex1);
+				}
+				if (i == null) {
+					i = new Integer(0);
+				}
+				i = new Integer(i.intValue() + 1);
+				dto.setISort(i);
+			}
+
+			dto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
+			dto.setTAendern(new Timestamp(System.currentTimeMillis()));
+			dto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
+			dto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+
+			Lospruefplan lospruefplan = new Lospruefplan(dto.getIId(),
+					dto.getLosIId(), dto.getPruefartIId(),
+					dto.getLossollmaterialIIdKontakt(),
+					dto.getBDoppelanschlag(), dto.getISort(),
+
+					dto.getPersonalIIdAnlegen(), dto.getTAnlegen(),
+					dto.getPersonalIIdAendern(), dto.getTAendern());
+			em.persist(lospruefplan);
+			em.flush();
+			setLospruefplanFromLospruefplanDto(lospruefplan, dto);
+
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+	}
+
+	public ArrayList<LospruefplanDto> lospruefplanFindyByLosIId(Integer losIId) {
+		Query query = em.createNamedQuery("LospruefplanFindByLosIId");
+		query.setParameter(1, losIId);
+
+		Collection c = query.getResultList();
+
+		ArrayList<LospruefplanDto> list = new ArrayList<LospruefplanDto>();
+
+		Iterator<?> iterator = c.iterator();
+		while (iterator.hasNext()) {
+			list.add(LospruefplanDtoAssembler.createDto((Lospruefplan) iterator
+					.next()));
+		}
+
+		return list;
+	}
+
+	public ArrayList<PruefergebnisDto> pruefergebnisFindByLosablieferungIId(
+			Integer losablieferungIId) {
+		Query query = em
+				.createNamedQuery("PruefergebnisFindByLosablieferungIId");
+		query.setParameter(1, losablieferungIId);
+
+		Collection c = query.getResultList();
+
+		ArrayList<PruefergebnisDto> list = new ArrayList<PruefergebnisDto>();
+
+		Iterator<?> iterator = c.iterator();
+		while (iterator.hasNext()) {
+			list.add(PruefergebnisDtoAssembler
+					.createDto((Pruefergebnis) iterator.next()));
+		}
+		return list;
+
+	}
+
+	public void removePruefergebnisse(Integer losablieferungIId,
+			TheClientDto theClientDto) {
+		Query query = em
+				.createNamedQuery("PruefergebnisFindByLosablieferungIId");
+		query.setParameter(1, losablieferungIId);
+		Collection<?> cl = query.getResultList();
+		Iterator it = cl.iterator();
+
+		while (it.hasNext()) {
+			Pruefergebnis p = (Pruefergebnis) it.next();
+			em.remove(p);
+			em.flush();
+		}
+	}
+
+	public void updatePruefergebnisse(ArrayList<PruefergebnisDto> dtos,
+			Integer losablieferungIId, TheClientDto theClientDto) {
+
+		Query query = em
+				.createNamedQuery("PruefergebnisFindByLosablieferungIId");
+		query.setParameter(1, losablieferungIId);
+		Collection<?> cl = query.getResultList();
+		Iterator it = cl.iterator();
+
+		while (it.hasNext()) {
+			Pruefergebnis p = (Pruefergebnis) it.next();
+			em.remove(p);
+			em.flush();
+		}
+
+		for (PruefergebnisDto dto : dtos) {
+
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_PRUEFERGEBNIS);
+			dto.setIId(pk);
+			dto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
+			dto.setTAendern(new Timestamp(System.currentTimeMillis()));
+			dto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
+			dto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+
+			Pruefergebnis pruefergebnis = new Pruefergebnis(dto.getIId(),
+					dto.getLosablieferungIId(), dto.getLospruefplanIId(),
+
+					dto.getPersonalIIdAnlegen(), dto.getTAnlegen(),
+					dto.getPersonalIIdAendern(), dto.getTAendern());
+			em.persist(pruefergebnis);
+			em.flush();
+
+			setPruefergebnisFromPruefergebnisDto(pruefergebnis, dto);
+
+		}
+	}
+
+	public void updateLospruefplan(LospruefplanDto dto,
+			TheClientDto theClientDto) {
+
+		Integer iId = dto.getIId();
+
+		Lospruefplan bean = em.find(Lospruefplan.class, iId);
+
+		dto.setTAendern(new Timestamp(System.currentTimeMillis()));
+
+		dto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+
+		setLospruefplanFromLospruefplanDto(bean, dto);
+
+	}
+
+	private void setLospruefplanFromLospruefplanDto(Lospruefplan bean,
+			LospruefplanDto dto) {
+
+		bean.setIId(dto.getIId());
+		bean.setLossollmaterialIIdKontakt(dto.getLossollmaterialIIdKontakt());
+		bean.setLossollmaterialIIdLitze(dto.getLossollmaterialIIdLitze());
+		bean.setLosIId(dto.getLosIId());
+		bean.setPruefartIId(dto.getPruefartIId());
+		bean.setPersonalIIdAendern(dto.getPersonalIIdAendern());
+		bean.setPersonalIIdAnlegen(dto.getPersonalIIdAnlegen());
+
+		bean.setTAendern(dto.getTAendern());
+		bean.setTAnlegen(dto.getTAnlegen());
+		bean.setWerkzeugIId(dto.getWerkzeugIId());
+		bean.setVerschleissteilIId(dto.getVerschleissteilIId());
+		bean.setISort(dto.getISort());
+		bean.setBDoppelanschlag(dto.getBDoppelanschlag());
+		bean.setLossollmaterialIIdLitze2(dto.getLossollmaterialIIdLitze2());
+		bean.setVerschleissteilIId(dto.getVerschleissteilIId());
+		bean.setPruefkombinationId(dto.getPruefkombinationId());
+
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setPruefergebnisFromPruefergebnisDto(Pruefergebnis bean,
+			PruefergebnisDto dto) {
+
+		bean.setIId(dto.getIId());
+		bean.setLosablieferungIId(dto.getLosablieferungIId());
+		bean.setLospruefplanIId(dto.getLospruefplanIId());
+
+		bean.setNWert(dto.getNWert());
+		bean.setBWert(dto.getBWert());
+
+		bean.setNCrimpbreitDraht(dto.getNCrimpbreitDraht());
+		bean.setNCrimphoeheDraht(dto.getNCrimphoeheDraht());
+		bean.setNCrimphoeheIsolation(dto.getNCrimphoeheIsolation());
+		bean.setNCrimpbreiteIsolation(dto.getNCrimpbreiteIsolation());
+		bean.setPersonalIIdAendern(dto.getPersonalIIdAendern());
+		bean.setPersonalIIdAnlegen(dto.getPersonalIIdAnlegen());
+
+		bean.setNAbzugskraftLitze(dto.getNAbzugskraftLitze());
+		bean.setNAbzugskraftLitze2(dto.getNAbzugskraftLitze2());
+		
+		bean.setTAendern(dto.getTAendern());
+		bean.setTAnlegen(dto.getTAnlegen());
+
+		bean.setCWert(dto.getCWert());
+		
+		em.merge(bean);
+		em.flush();
+	}
+
+	public void removeLospruefplan(Integer iId) {
+		Lospruefplan toRemove = em.find(Lospruefplan.class, iId);
+		em.remove(toRemove);
+		em.flush();
+
+	}
+
+	public LospruefplanDto lospruefplanFindByPrimaryKey(Integer iId) {
+
+		Lospruefplan bean = em.find(Lospruefplan.class, iId);
+
+		return LospruefplanDtoAssembler.createDto(bean);
+	}
+
 	public Integer createLosklasse(LosklasseDto losklasseDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// log
@@ -209,7 +442,8 @@ public class FertigungServiceFacBean extends Facade implements
 			TheClientDto theClientDto) {
 		// log
 
-		Losbereich losbereichVorhanden = em.find(Losbereich.class, losbereichDto.getIId());
+		Losbereich losbereichVorhanden = em.find(Losbereich.class,
+				losbereichDto.getIId());
 
 		if (losbereichVorhanden == null) {
 
@@ -239,7 +473,8 @@ public class FertigungServiceFacBean extends Facade implements
 		try {
 			if (losklasseDto != null) {
 				Integer iId = losklasseDto.getIId();
-				Query query = em.createNamedQuery("LosklassesprfindByLosklasseIId");
+				Query query = em
+						.createNamedQuery("LosklassesprfindByLosklasseIId");
 				query.setParameter(1, iId);
 				Collection<?> allLosklassespr = query.getResultList();
 				Iterator<?> iter = allLosklassespr.iterator();
@@ -247,7 +482,7 @@ public class FertigungServiceFacBean extends Facade implements
 					Losklassespr losklassesprTemp = (Losklassespr) iter.next();
 					em.remove(losklassesprTemp);
 				}
-				
+
 				Losklasse toRemove = em.find(Losklasse.class, iId);
 				if (toRemove == null) {
 					throw new EJBExceptionLP(
@@ -464,6 +699,30 @@ public class FertigungServiceFacBean extends Facade implements
 		// }
 	}
 
+	public void vertauscheLospruefplan(Integer iId1, Integer iId2) {
+
+		Lospruefplan o1 = em.find(Lospruefplan.class, iId1);
+		if (o1 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Lospruefplan o2 = em.find(Lospruefplan.class, iId2);
+		if (o2 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Integer iSort1 = o1.getISort();
+		Integer iSort2 = o2.getISort();
+
+		o2.setISort(new Integer(-1));
+
+		o1.setISort(iSort2);
+		o2.setISort(iSort1);
+
+	}
+	
 	private void updateLosklassespr(LosklassesprDto losklassesprDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// log

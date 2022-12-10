@@ -50,6 +50,8 @@ public class FLRReklamationbild implements Serializable {
 
     /** nullable persistent field */
     private Integer reklamation_i_id;
+    
+    private String datenformat_c_nr;
 
     /** full constructor */
     public FLRReklamationbild(String c_bez, String datenformat_c_nr, Integer i_sort, Integer reklamation_i_id) {
@@ -100,5 +102,13 @@ public class FLRReklamationbild implements Serializable {
             .append("i_id", getI_id())
             .toString();
     }
+
+	public String getDatenformat_c_nr() {
+		return datenformat_c_nr;
+	}
+
+	public void setDatenformat_c_nr(String datenformat_c_nr) {
+		this.datenformat_c_nr = datenformat_c_nr;
+	}
 
 }

@@ -41,6 +41,35 @@ public class ReportAnfrageLieferdatenuebersichtDto implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	private String cNrArtikelcnr;
+	private String cNrArtikelOriginal;
+
+	public String getCNrArtikelOriginal() {
+		return cNrArtikelOriginal;
+	}
+
+	public void setCNrArtikelOriginal(String cNrArtikelOriginal) {
+		this.cNrArtikelOriginal = cNrArtikelOriginal;
+	}
+
+	private Boolean billigsterArtikel = null;
+	private Boolean schnellsterArtikel = null;
+
+	public Boolean isBilligsterArtikel() {
+		return billigsterArtikel;
+	}
+
+	public void setBilligsterArtikel(boolean billigsterArtikel) {
+		this.billigsterArtikel = billigsterArtikel;
+	}
+
+	public Boolean isSchnellsterArtikel() {
+		return schnellsterArtikel;
+	}
+
+	public void setSchnellsterArtikel(boolean schnellsterArtikel) {
+		this.schnellsterArtikel = schnellsterArtikel;
+	}
+
 	private BigDecimal nLiefermenge;
 	private String einheitCNr;
 	private Integer artikelIId;
@@ -48,6 +77,25 @@ public class ReportAnfrageLieferdatenuebersichtDto implements Serializable {
 	private Integer anfrageIId;
 	private Integer iAnlieferzeit;
 	private String lieferantName;
+	private String lieferadresseName;
+
+	public String getLieferadresseName() {
+		return lieferadresseName;
+	}
+
+	public void setLieferadresseName(String lieferadresseName) {
+		this.lieferadresseName = lieferadresseName;
+	}
+
+	public boolean isErsatzartikel() {
+		return ersatzartikel;
+	}
+
+	public void setErsatzartikel(boolean ersatzartikel) {
+		this.ersatzartikel = ersatzartikel;
+	}
+
+	boolean ersatzartikel;
 	private String anfrageCNr;
 	private String anfrageCBez;
 	private String waehrungCNr;
@@ -89,8 +137,7 @@ public class ReportAnfrageLieferdatenuebersichtDto implements Serializable {
 		return nLieferpreisInAnfragewaehrung;
 	}
 
-	public void setNLieferpreisInAnfragewaehrung(
-			BigDecimal nLieferpreisInAnfragewaehrung) {
+	public void setNLieferpreisInAnfragewaehrung(BigDecimal nLieferpreisInAnfragewaehrung) {
 		this.nLieferpreisInAnfragewaehrung = nLieferpreisInAnfragewaehrung;
 	}
 
@@ -146,8 +193,7 @@ public class ReportAnfrageLieferdatenuebersichtDto implements Serializable {
 		return this.fWechselkursMandantwaehrungZuAnfragewaehrung;
 	}
 
-	public void setFWechselkursMandantwaehrungZuAnfragewaehrung(
-			Double fWechselkursI) {
+	public void setFWechselkursMandantwaehrungZuAnfragewaehrung(Double fWechselkursI) {
 		this.fWechselkursMandantwaehrungZuAnfragewaehrung = fWechselkursI;
 	}
 }

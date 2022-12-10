@@ -46,6 +46,9 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellistespr;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelsperren;
+import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.artikel.service.SperrenIcon;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.partner.fastlanereader.generated.FLRKundesoko;
 import com.lp.server.partner.service.KundesokoFac;
@@ -90,18 +93,16 @@ public class KundesokoHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_KUNDESOKO = "flrkundesoko.";
-	public static final String FLR_KUNDESOKO_FROM_CLAUSE = " from FLRKundesoko AS flrkundesoko LEFT OUTER JOIN flrkundesoko.flrartikel AS flrart LEFT OUTER JOIN flrkundesoko.flrartikelgruppe AS flrag LEFT OUTER JOIN flrart.artikelsprset AS aspr";
+	public static final String FLR_KUNDESOKO_FROM_CLAUSE = "SELECT flrkundesoko, (SELECT s FROM FLRArtikelsperren as s WHERE s.artikel_i_id=flrkundesoko.artikel_i_id AND s.i_sort=1) as sperren, aspr from FLRKundesoko AS flrkundesoko LEFT OUTER JOIN flrkundesoko.flrartikel AS flrart LEFT OUTER JOIN flrkundesoko.flrartikelgruppe AS flrag LEFT OUTER JOIN flrart.artikelsprset AS aspr";
 	int iPreisbasis = 0;
 
 	/**
 	 * gets the page of data for the specified row using the current
 	 * queryParameters.
 	 * 
-	 * @param rowIndex
-	 *            diese Zeile soll selektiert sein
+	 * @param rowIndex diese Zeile soll selektiert sein
 	 * @return QueryResult das Ergebnis der Abfrage
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
+	 * @throws EJBExceptionLP Ausnahme
 	 * @see UseCaseHandler#getPageAt(java.lang.Integer)
 	 */
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
@@ -116,8 +117,7 @@ public class KundesokoHandler extends UseCaseHandler {
 
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = this.getFromClause() + this.buildWhereClause() + this.buildOrderByClause();
 			// myLogger.info("HQL: " + queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -132,13 +132,11 @@ public class KundesokoHandler extends UseCaseHandler {
 				FLRKundesoko kundesoko = (FLRKundesoko) o[0];
 
 				rows[row][col++] = kundesoko.getI_id();
-				rows[row][col++] = kundesoko.getArtgru_i_id() == null ? null
-						: "G";
+				rows[row][col++] = kundesoko.getArtgru_i_id() == null ? null : "G";
 
 				// Artikel oder Artikelgruppe
-				rows[row][col++] = kundesoko.getArtikel_i_id() == null ? kundesoko
-						.getFlrartikelgruppe().getC_nr() : kundesoko
-						.getFlrartikel().getC_nr();
+				rows[row][col++] = kundesoko.getArtikel_i_id() == null ? kundesoko.getFlrartikelgruppe().getC_nr()
+						: kundesoko.getFlrartikel().getC_nr();
 
 				if (o[2] != null) {
 					rows[row][col++] = ((FLRArtikellistespr) o[2]).getC_bez();
@@ -148,76 +146,107 @@ public class KundesokoHandler extends UseCaseHandler {
 
 				// die hinterlegten Mengenstaffeln holen
 				KundesokomengenstaffelDto[] aMengenstaffelDtos = getKundesokoFac()
-						.kundesokomengenstaffelFindByKundesokoIId(
-								kundesoko.getI_id(), theClientDto);
+						.kundesokomengenstaffelFindByKundesokoIId(kundesoko.getI_id(), theClientDto);
 
-				BigDecimal nBerechneterPreis = null;
+				BigDecimal nBerechneterPreisGueltigAbZeitpunkt = null;
+
+				BigDecimal nBerechneterPreisHeute = null;
+
 				if (aMengenstaffelDtos != null && aMengenstaffelDtos.length > 0) {
 					if (kundesoko.getArtikel_i_id() != null) {
 						// der Preis muss an dieser Stelle berechnet werden
-						nBerechneterPreis = new BigDecimal(0);
+						nBerechneterPreisGueltigAbZeitpunkt = new BigDecimal(0);
+
 						if (aMengenstaffelDtos[0].getNArtikelfixpreis() != null) {
-							nBerechneterPreis = aMengenstaffelDtos[0]
-									.getNArtikelfixpreis();
+							
+							nBerechneterPreisGueltigAbZeitpunkt = getLocaleFac().rechneUmInAndereWaehrungZuDatum(aMengenstaffelDtos[0].getNArtikelfixpreis(),
+									kundesoko.getFlrkunde().getWaehrung_c_nr(), theClientDto.getSMandantenwaehrung(),
+									new java.sql.Date(kundesoko.getT_preisgueltigab().getTime()), theClientDto);
+							nBerechneterPreisHeute = getLocaleFac().rechneUmInAndereWaehrungZuDatum(aMengenstaffelDtos[0].getNArtikelfixpreis(),
+									kundesoko.getFlrkunde().getWaehrung_c_nr(), theClientDto.getSMandantenwaehrung(),
+									new java.sql.Date(System.currentTimeMillis()), theClientDto);
 						} else {
 							BigDecimal nPreisbasis = null;
+							BigDecimal nPreisbasisHeute = null;
+
 							if (iPreisbasis == 0 || iPreisbasis == 2) {
 
 								// WH 21.06.06 Es gilt die VK-Basis, die zu
 								// Beginn
 								// der Mengenstaffel gueltig ist
-								nPreisbasis = getVkPreisfindungFac()
-										.ermittlePreisbasis(
-												kundesoko.getArtikel_i_id(),
-												new java.sql.Date(kundesoko
-														.getT_preisgueltigab()
-														.getTime()),
-												null,
-												theClientDto
-														.getSMandantenwaehrung(),
-												theClientDto);
+								nPreisbasis = getVkPreisfindungFac().ermittlePreisbasis(kundesoko.getArtikel_i_id(),
+										new java.sql.Date(kundesoko.getT_preisgueltigab().getTime()), null,
+										theClientDto.getSMandantenwaehrung(), theClientDto);
+
+								nPreisbasisHeute = getVkPreisfindungFac().ermittlePreisbasis(
+										kundesoko.getArtikel_i_id(), new java.sql.Date(System.currentTimeMillis()),
+										null, theClientDto.getSMandantenwaehrung(), theClientDto);
+
 							} else {
-								nPreisbasis = getVkPreisfindungFac()
-										.ermittlePreisbasis(
-												kundesoko.getArtikel_i_id(),
-												new java.sql.Date(kundesoko
-														.getT_preisgueltigab()
-														.getTime()),
-												kundesoko
-														.getFlrkunde()
-														.getVkpfartikelpreisliste_i_id_stdpreisliste(),
-												theClientDto
-														.getSMandantenwaehrung(),
-												theClientDto);
+								nPreisbasis = getVkPreisfindungFac().ermittlePreisbasis(kundesoko.getArtikel_i_id(),
+										new java.sql.Date(kundesoko.getT_preisgueltigab().getTime()),
+										kundesoko.getFlrkunde().getVkpfartikelpreisliste_i_id_stdpreisliste(),
+										theClientDto.getSMandantenwaehrung(), theClientDto);
+
+								nPreisbasisHeute = getVkPreisfindungFac().ermittlePreisbasis(
+										kundesoko.getArtikel_i_id(),
+										new java.sql.Date(kundesoko.getT_preisgueltigab().getTime()),
+										kundesoko.getFlrkunde().getVkpfartikelpreisliste_i_id_stdpreisliste(),
+										theClientDto.getSMandantenwaehrung(), theClientDto);
 							}
 
 							if (nPreisbasis != null) {
 
-								VerkaufspreisDto vkpfDto = getVkPreisfindungFac()
-										.berechneVerkaufspreis(
-												nPreisbasis,
-												aMengenstaffelDtos[0]
-														.getFArtikelstandardrabattsatz());
+								VerkaufspreisDto vkpfDto = getVkPreisfindungFac().berechneVerkaufspreis(nPreisbasis,
+										aMengenstaffelDtos[0].getFArtikelstandardrabattsatz(), theClientDto);
 
-								nBerechneterPreis = vkpfDto.nettopreis;
+								nBerechneterPreisGueltigAbZeitpunkt = vkpfDto.nettopreis;
 							}
+
+							if (nPreisbasisHeute != null) {
+
+								VerkaufspreisDto vkpfDto = getVkPreisfindungFac().berechneVerkaufspreis(
+										nPreisbasisHeute, aMengenstaffelDtos[0].getFArtikelstandardrabattsatz(),
+										theClientDto);
+
+								nBerechneterPreisHeute = vkpfDto.nettopreis;
+							}
+
 						}
 					}
 				}
 
-				rows[row][col++] = nBerechneterPreis;
+				rows[row][col++] = nBerechneterPreisHeute;
 
 				rows[row][col++] = kundesoko.getC_kundeartikelnummer();
 				rows[row][col++] = kundesoko.getT_preisgueltigab();
-				rows[row][col++] = kundesoko.getT_preisgueltigbis() == null ? null
-						: kundesoko.getT_preisgueltigbis();
+				rows[row][col++] = nBerechneterPreisGueltigAbZeitpunkt;
+				rows[row][col++] = kundesoko.getT_preisgueltigbis() == null ? null : kundesoko.getT_preisgueltigbis();
+
+				FLRArtikelsperren as = (FLRArtikelsperren) o[1];
+				String gesperrt = null;
+				if (as != null) {
+
+					if (as != null) {
+						gesperrt = as.getFlrsperren().getC_bez();
+					}
+
+				}
+
+				rows[row][col++] = gesperrt;
+
 				if (kundesoko.getArtikel_i_id() != null) {
 
-					if (Helper.short2boolean(getArtikelFac()
-							.artikelFindByPrimaryKeySmall(
-									kundesoko.getArtikel_i_id(), theClientDto)
-							.getBRabattierbar())) {
-						rows[row][col++] = null;
+					ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(kundesoko.getArtikel_i_id(),
+							theClientDto);
+
+					if (Helper.short2boolean(aDto.getBRabattierbar())) {
+						if (Helper.short2boolean(aDto.getBVersteckt())) {
+							rows[row][col++] = Color.LIGHT_GRAY;
+						} else {
+							rows[row][col++] = null;
+						}
+
 					} else {
 						rows[row][col++] = Color.RED;
 					}
@@ -228,8 +257,7 @@ public class KundesokoHandler extends UseCaseHandler {
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+			result = new QueryResult(rows, this.getRowCount(), startIndex, endIndex, 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
@@ -256,7 +284,7 @@ public class KundesokoHandler extends UseCaseHandler {
 		try {
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "select count(*) " + this.getFromClause()
+			String queryString = "SELECT count(*) from FLRKundesoko AS flrkundesoko LEFT OUTER JOIN flrkundesoko.flrartikel AS flrart LEFT OUTER JOIN flrkundesoko.flrartikelgruppe AS flrag LEFT OUTER JOIN flrart.artikelsprset AS aspr "
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -270,8 +298,7 @@ public class KundesokoHandler extends UseCaseHandler {
 				try {
 					session.close();
 				} catch (HibernateException he) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE,
-							he);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HIBERNATE, he);
 				}
 			}
 		}
@@ -279,8 +306,8 @@ public class KundesokoHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
-	 * using the current query.
+	 * builds the where clause of the HQL (Hibernate Query Language) statement using
+	 * the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
@@ -291,8 +318,7 @@ public class KundesokoHandler extends UseCaseHandler {
 				&& this.getQuery().getFilterBlock().filterKrit != null) {
 
 			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
-					.getFilterBlock().filterKrit;
+			FilterKriterium[] filterKriterien = this.getQuery().getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
 
@@ -303,23 +329,18 @@ public class KundesokoHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 
-					if (filterKriterien[i].isBIgnoreCase()) {
-
-						where.append(" lower(" + FLR_KUNDESOKO
-								+ filterKriterien[i].kritName + ")");
+					if (isArtikelnummerArtikelgruppe(filterKriterien[i])) {
+						where.append(" (");
+						where.append(buildWhereClausePart(FLR_KUNDESOKO, "flrartikel.c_nr", filterKriterien[i].operator,
+								filterKriterien[i].value, filterKriterien[i].isBIgnoreCase()));
+						where.append(" " + FilterKriterium.BOOLOPERATOR_OR + " ");
+						where.append(buildWhereClausePart(FLR_KUNDESOKO, "flrartikelgruppe.c_nr",
+								filterKriterien[i].operator, filterKriterien[i].value,
+								filterKriterien[i].isBIgnoreCase()));
+						where.append(")");
 					} else {
-						where.append(" " + FLR_KUNDESOKO
-								+ filterKriterien[i].kritName + "");
+						where.append(buildWhereClausePart(FLR_KUNDESOKO, filterKriterien[i]));
 					}
-					where.append(" " + filterKriterien[i].operator);
-
-					if (filterKriterien[i].isBIgnoreCase()) {
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase());
-					} else {
-						where.append(" " + filterKriterien[i].value);
-					}
-
 				}
 			}
 			if (filterAdded) {
@@ -328,6 +349,10 @@ public class KundesokoHandler extends UseCaseHandler {
 		}
 
 		return where.toString();
+	}
+
+	private boolean isArtikelnummerArtikelgruppe(FilterKriterium filterKriterium) {
+		return filterKriterium.kritName.equals("flrartikel.c_nr");
 	}
 
 	/**
@@ -343,15 +368,13 @@ public class KundesokoHandler extends UseCaseHandler {
 			boolean sortAdded = false;
 			if (kriterien != null && kriterien.length > 0) {
 				for (int i = 0; i < kriterien.length; i++) {
-					if (!kriterien[i].kritName
-							.endsWith(Facade.NICHT_SORTIERBAR)) {
+					if (!kriterien[i].kritName.endsWith(Facade.NICHT_SORTIERBAR)) {
 						if (kriterien[i].isKrit) {
 							if (sortAdded) {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append(FLR_KUNDESOKO
-									+ kriterien[i].kritName);
+							orderBy.append(FLR_KUNDESOKO + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -363,16 +386,13 @@ public class KundesokoHandler extends UseCaseHandler {
 					orderBy.append(", ");
 				}
 				orderBy.append(FLR_KUNDESOKO + "flrartikel.c_nr").append(",");
-				orderBy.append(FLR_KUNDESOKO + "flrartikelgruppe.c_nr").append(
-						",");
-				orderBy.append(FLR_KUNDESOKO
-						+ KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB);
+				orderBy.append(FLR_KUNDESOKO + "flrartikelgruppe.c_nr").append(",");
+				orderBy.append(FLR_KUNDESOKO + KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB);
 
 				sortAdded = true;
 			}
 
-			if (orderBy.indexOf(FLR_KUNDESOKO
-					+ KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB) < 0) {
+			if (orderBy.indexOf(FLR_KUNDESOKO + KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -381,8 +401,7 @@ public class KundesokoHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_KUNDESOKO
-						+ KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB);
+				orderBy.append(FLR_KUNDESOKO + KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB);
 
 				sortAdded = true;
 			}
@@ -407,10 +426,8 @@ public class KundesokoHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			try {
-				ParametermandantDto param = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_KUNDEN,
-								ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
+				ParametermandantDto param = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_KUNDEN, ParameterFac.PARAMETER_PREISBASIS_VERKAUF);
 
 				iPreisbasis = (Integer) param.getCWertAsObject();
 
@@ -419,51 +436,39 @@ public class KundesokoHandler extends UseCaseHandler {
 			}
 
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, BigDecimal.class, String.class,
-							java.util.Date.class, java.util.Date.class,
-							Color.class },
-					new String[] {
-							"i_id",
-							"",
-							getTextRespectUISpr("lp.artikel", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr(
-									"bes.nettogesamtpreisminusrabatte",
-									mandantCNr, locUI),
+					new Class[] { Integer.class, String.class, String.class, String.class, BigDecimal.class,
+							String.class, java.util.Date.class, BigDecimal.class, java.util.Date.class,
+							SperrenIcon.class, Color.class },
+					new String[] { "i_id", "", getTextRespectUISpr("lp.artikel", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("part.kundesoko.nettopreisheute", mandantCNr, locUI)+ " ["
+									+ theClientDto.getSMandantenwaehrung() + "]",
 
-							getTextRespectUISpr("lp.kundenartikelnummer",
-									mandantCNr, locUI),
-							getTextRespectUISpr("lp.gueltig_ab", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.gueltig_bis", mandantCNr,
-									locUI), },
+							getTextRespectUISpr("lp.kundenartikelnummer", mandantCNr, locUI),
+							getTextRespectUISpr("lp.gueltig_ab", mandantCNr, locUI),
+							getTextRespectUISpr("part.kundesoko.nettopreisgueltigab", mandantCNr, locUI)+ " ["
+									+ theClientDto.getSMandantenwaehrung() + "]",
+							getTextRespectUISpr("lp.gueltig_bis", mandantCNr, locUI),
+							getTextRespectUISpr("artikel.sperre.tooltip", mandantCNr, locUI), },
 
-					new int[] { -1, QueryParameters.FLR_BREITE_XXS,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					new int[] { -1, QueryParameters.FLR_BREITE_XXS, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_XS
 
-					}, new String[] {
-							"i_id",
-							Facade.NICHT_SORTIERBAR,
-							"flrartikel.c_nr",
-							Facade.NICHT_SORTIERBAR,// Artikel oder
+					}, new String[] { "i_id", Facade.NICHT_SORTIERBAR, "flrartikel.c_nr", Facade.NICHT_SORTIERBAR, // Artikel
+																													// oder
 							// Artikelgruppe
-							Facade.NICHT_SORTIERBAR,
-							KundesokoFac.FLR_KUNDESOKO_KUNDEARTIKELNUMMER,
-							KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB,
-							KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGBIS }));
+							Facade.NICHT_SORTIERBAR, KundesokoFac.FLR_KUNDESOKO_KUNDEARTIKELNUMMER,
+							KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB, Facade.NICHT_SORTIERBAR,
+							KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGBIS, Facade.NICHT_SORTIERBAR }));
+
 		}
 		return super.getTableInfo();
 	}
 
-	public QueryResult sort(SortierKriterium[] sortierKriterien,
-			Object selectedId) throws EJBExceptionLP {
+	public QueryResult sort(SortierKriterium[] sortierKriterien, Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
 
 		QueryResult result = null;
@@ -476,12 +481,11 @@ public class KundesokoHandler extends UseCaseHandler {
 			try {
 				session = factory.openSession();
 				session = setFilter(session);
-				String queryString = "select " + FLR_KUNDESOKO + "i_id"
-						+ FLR_KUNDESOKO_FROM_CLAUSE + this.buildWhereClause()
-						+ this.buildOrderByClause();
+				String queryString = "SELECT flrkundesoko.i_id from FLRKundesoko AS flrkundesoko LEFT OUTER JOIN flrkundesoko.flrartikel AS flrart LEFT OUTER JOIN flrkundesoko.flrartikelgruppe AS flrag LEFT OUTER JOIN flrart.artikelsprset AS aspr "
+						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-//				boolean idFound = false;
+				// boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

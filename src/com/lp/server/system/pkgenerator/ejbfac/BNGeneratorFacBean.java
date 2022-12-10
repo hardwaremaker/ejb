@@ -155,6 +155,7 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PK_GENERATOR, ex);
 		}
 	}
+
 	/**
 	 * Kreiert eine neue Belegnummer inkl. Primaerschluessel, wobei auch mehrere
 	 * verschiedene Belegnummernarten innerhalb einer Tabelle moeglich sind z.B.
@@ -179,12 +180,14 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 	public LpBelegnummer getNextBelegNr(Integer geschaeftsjahr,
 			String nameTabelle, String nameBeleg, String mandantCNr,
 			TheClientDto theClientDto) {
-		return getNextBelegNr(geschaeftsjahr, nameTabelle, nameBeleg, mandantCNr, true, theClientDto);
+		return getNextBelegNr(geschaeftsjahr, nameTabelle, nameBeleg,
+				mandantCNr, true, theClientDto);
 	}
-	
+
 	private LpBelegnummer getNextBelegNr(Integer geschaeftsjahr,
-			String nameTabelle, String nameBeleg, String mandantCNr, boolean rueckdatierungPruefen,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			String nameTabelle, String nameBeleg, String mandantCNr,
+			boolean rueckdatierungPruefen, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		myLogger.logData(geschaeftsjahr + ", " + nameTabelle + ", " + nameBeleg
 				+ ", " + mandantCNr + ")");
 		try {
@@ -199,11 +202,14 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 						new Exception(
 								"FEHLER_BELEG_DARF_NICHT_INS_NAECHSTE_GJ_DATIERT_WERDEN"));
 			}
-			
-			Integer jahreRueckdatierbar = getMandantFac().mandantFindByPrimaryKey(mandantCNr, theClientDto)
+
+			Integer jahreRueckdatierbar = getMandantFac()
+					.mandantFindByPrimaryKey(mandantCNr, theClientDto)
 					.getJahreRueckdatierbar();
 			// Rueckdatieren ins vorletzte GJ ist nicht gestattet
-			if (rueckdatierungPruefen && (iAktGJ - jahreRueckdatierbar) > geschaeftsjahr.intValue()) {
+			if (rueckdatierungPruefen
+					&& (iAktGJ - jahreRueckdatierbar) > geschaeftsjahr
+							.intValue()) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BELEG_DARF_NICHT_INS_VORLETZTE_GJ_DATIERT_WERDEN,
 						new Exception(
@@ -226,30 +232,33 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 				if (getSystemFac().geschaeftsjahrFindByPrimaryKeyOhneExc(
 						geschaeftsjahr, mandantCNr) == null) {
 					createGeschaeftsjahr(geschaeftsjahr, theClientDto);
-					
-//					GeschaeftsjahrMandantDto gDto = new GeschaeftsjahrMandantDto();
-//					// Beginndatum berechnen
-//					GregorianCalendar gcBeginn = new GregorianCalendar();
-//					gcBeginn.set(GregorianCalendar.DATE, 1);
-//					ParametermandantDto pmBeginnMonat = null;
-//					pmBeginnMonat = getParameterFac().getMandantparameter(
-//							mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
-//							ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT);
-//					int beginnMonat = Integer
-//							.parseInt(pmBeginnMonat.getCWert());
-//					beginnMonat = beginnMonat - 1; // wegen Jaenner = 0, Feb. =
-//					// 1 etc.
-//					gcBeginn.set(GregorianCalendar.YEAR, geschaeftsjahr);
-//					gcBeginn.set(GregorianCalendar.MONTH, beginnMonat);
-//					gDto.setDBeginndatum(new Timestamp(gcBeginn
-//							.getTimeInMillis()));
-//					
-//
-//					gDto.setIGeschaeftsjahr(geschaeftsjahr);
-//					gDto.setMandantCnr(mandantCNr) ;
-//					gDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
-//					gDto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
-//					getSystemFac().createGeschaeftsjahr(gDto);
+
+					// GeschaeftsjahrMandantDto gDto = new
+					// GeschaeftsjahrMandantDto();
+					// // Beginndatum berechnen
+					// GregorianCalendar gcBeginn = new GregorianCalendar();
+					// gcBeginn.set(GregorianCalendar.DATE, 1);
+					// ParametermandantDto pmBeginnMonat = null;
+					// pmBeginnMonat = getParameterFac().getMandantparameter(
+					// mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
+					// ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT);
+					// int beginnMonat = Integer
+					// .parseInt(pmBeginnMonat.getCWert());
+					// beginnMonat = beginnMonat - 1; // wegen Jaenner = 0, Feb.
+					// =
+					// // 1 etc.
+					// gcBeginn.set(GregorianCalendar.YEAR, geschaeftsjahr);
+					// gcBeginn.set(GregorianCalendar.MONTH, beginnMonat);
+					// gDto.setDBeginndatum(new Timestamp(gcBeginn
+					// .getTimeInMillis()));
+					//
+					//
+					// gDto.setIGeschaeftsjahr(geschaeftsjahr);
+					// gDto.setMandantCnr(mandantCNr) ;
+					// gDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
+					// gDto.setTAnlegen(new
+					// Timestamp(System.currentTimeMillis()));
+					// getSystemFac().createGeschaeftsjahr(gDto);
 				}
 				Integer iStartwert = new Integer(0);
 				// Fuer Rechnungen und Lose kann der Startwert gesetzt werden
@@ -270,6 +279,14 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 									mandantCNr,
 									ParameterFac.KATEGORIE_GUTSCHRIFT,
 									ParameterFac.PARAMETER_GUTSCHRIFT_BELEGNUMMERSTARTWERT);
+					iStartwert = ((Integer) parameter.getCWertAsObject()) - 1;
+				} else if (nameTabelle.equals(PKConst.PK_RECHNUNG_TABELLE)
+						&& nameBeleg.equals("proformare")) {
+					ParametermandantDto parameter = getParameterFac()
+							.getMandantparameter(
+									mandantCNr,
+									ParameterFac.KATEGORIE_AUSGANGSRECHNUNG,
+									ParameterFac.PARAMETER_PROFORMARECHNUNG_BELEGNUMMERSTARTWERT);
 					iStartwert = ((Integer) parameter.getCWertAsObject()) - 1;
 				} else if (nameTabelle.equals(PKConst.PK_LIEFERSCHEIN)) {
 					ParametermandantDto parameter = getParameterFac()
@@ -315,7 +332,7 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 									ParameterFac.PARAMETER_LOS_BELEGNUMMERSTARTWERT_FREIE_LOSE);
 					iStartwert = ((Integer) parameter.getCWertAsObject()) - 1;
 
-				}else if (nameTabelle.equals(PKConst.PK_PROJEKT)) {
+				} else if (nameTabelle.equals(PKConst.PK_PROJEKT)) {
 					ParametermandantDto parameter = getParameterFac()
 							.getMandantparameter(
 									mandantCNr,
@@ -323,7 +340,7 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 									ParameterFac.PARAMETER_PROJEKT_BELEGNUMMERSTARTWERT);
 					iStartwert = ((Integer) parameter.getCWertAsObject()) - 1;
 
-				}else if (nameTabelle.equals(PKConst.PK_REKLAMATION)) {
+				} else if (nameTabelle.equals(PKConst.PK_REKLAMATION)) {
 					ParametermandantDto parameter = getParameterFac()
 							.getMandantparameter(
 									mandantCNr,
@@ -506,6 +523,8 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 	public LpBelegnummerFormat getBelegnummernFormat(String mandantCNr)
 			throws EJBExceptionLP {
 		try {
+			
+			System.out.println("XX");
 			ParametermandantDto pStellenGJ = getParameterFac()
 					.getMandantparameter(
 							mandantCNr,
@@ -521,6 +540,11 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 							mandantCNr,
 							ParameterFac.KATEGORIE_ALLGEMEIN,
 							ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_BELEGNUMMER);
+			ParametermandantDto pStellenZufall = getParameterFac()
+					.getMandantparameter(
+							mandantCNr,
+							ParameterFac.KATEGORIE_ALLGEMEIN,
+							ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_ZUFALL);
 			ParameteranwenderDto parameteranwenderDto = getParameterFac()
 					.getAnwenderparameter(
 							ParameterFac.KATEGORIE_ALLGEMEIN,
@@ -529,7 +553,8 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 				return new LpDefaultBelegnummerFormat(
 						Integer.parseInt(pStellenGJ.getCWert()), pTrennzeichen
 								.getCWert().toCharArray()[0],
-						Integer.parseInt(pStellenBelegnummer.getCWert()));
+						Integer.parseInt(pStellenBelegnummer.getCWert()),
+						Integer.parseInt(pStellenZufall.getCWert()));
 			} else {
 				parameteranwenderDto = getParameterFac()
 						.getAnwenderparameter(
@@ -539,21 +564,22 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 						Integer.parseInt(pStellenGJ.getCWert()), pTrennzeichen
 								.getCWert().toCharArray()[0],
 						Integer.parseInt(parameteranwenderDto.getCWert()),
-						Integer.parseInt(pStellenBelegnummer.getCWert()));
+						Integer.parseInt(pStellenBelegnummer.getCWert()),
+						Integer.parseInt(pStellenZufall.getCWert()));
 			}
 		} catch (NumberFormatException ex) {
 			// Standard-Belenummernformat: 2007/1234567
-			return new LpDefaultBelegnummerFormat(4, '/', 7);
+			return new LpDefaultBelegnummerFormat(4, '/', 7, 0);
 		} catch (Exception ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PK_GENERATOR, ex);
 		}
 	}
 
 	/**
-	 * Kreiert eine neue Belegnummer inkl. Prim&auml;schl&uuml;ssel, wobei auch mehrere
-	 * verschiedene Belegnummernarten innerhalb einer Tabelle m&ouml;glich sind z.B.
-	 * Rechnungen und Gutschriften werden in einer Tabelle verwaltet, aber haben
-	 * einen eigenen Nummernkreis
+	 * Kreiert eine neue Belegnummer inkl. Prim&auml;schl&uuml;ssel, wobei auch
+	 * mehrere verschiedene Belegnummernarten innerhalb einer Tabelle
+	 * m&ouml;glich sind z.B. Rechnungen und Gutschriften werden in einer
+	 * Tabelle verwaltet, aber haben einen eigenen Nummernkreis
 	 * ------------------------------------------------
 	 * ---------------------------
 	 * 
@@ -563,7 +589,8 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 	 *            String
 	 * @param mandantCNr
 	 *            String
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return LpBelegnummer
 	 * @throws EJBExceptionLP
 	 */
@@ -571,33 +598,34 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 	public LpBelegnummer getNextBelegNrFinanz(Integer geschaeftsjahr,
 			String name, String mandantCNr, TheClientDto theClientDto)
 			throws EJBExceptionLP {
-		return getNextBelegNr(geschaeftsjahr, name, name, mandantCNr, false, theClientDto);
+		return getNextBelegNr(geschaeftsjahr, name, name, mandantCNr, false,
+				theClientDto);
 	}
-	
-	private void createGeschaeftsjahr(Integer geschaeftsjahr, TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
-		int beginnMonat = getParameterFac().getMandantparameter(theClientDto.getMandant(),
-				ParameterFac.KATEGORIE_ALLGEMEIN,
-				ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT).asInteger() - 1;
-		boolean plusEins = getParameterFac().getMandantparameter(theClientDto.getMandant(),
-				ParameterFac.KATEGORIE_ALLGEMEIN,
-				ParameterFac.PARAMETER_GESCHAEFTSJAHRPLUSEINS).asBoolean() ;
 
-		int kalenderjahr = geschaeftsjahr ;
-		if(plusEins) {
-			--kalenderjahr ;
+	private void createGeschaeftsjahr(Integer geschaeftsjahr,
+			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
+		int beginnMonat = getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_ALLGEMEIN,
+				ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT).asInteger() - 1;
+		boolean plusEins = getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_ALLGEMEIN,
+				ParameterFac.PARAMETER_GESCHAEFTSJAHRPLUSEINS).asBoolean();
+
+		int kalenderjahr = geschaeftsjahr;
+		if (plusEins) {
+			--kalenderjahr;
 		}
-		
+
 		GregorianCalendar gcBeginn = new GregorianCalendar();
 		gcBeginn.set(GregorianCalendar.DATE, 1);
 		gcBeginn.set(GregorianCalendar.YEAR, kalenderjahr);
 		gcBeginn.set(GregorianCalendar.MONTH, beginnMonat);
 
 		GeschaeftsjahrMandantDto gDto = new GeschaeftsjahrMandantDto();
-		gDto.setDBeginndatum(new Timestamp(gcBeginn
-				.getTimeInMillis()));
-		
+		gDto.setDBeginndatum(new Timestamp(gcBeginn.getTimeInMillis()));
+
 		gDto.setIGeschaeftsjahr(geschaeftsjahr);
-		gDto.setMandantCnr(theClientDto.getMandant()) ;
+		gDto.setMandantCnr(theClientDto.getMandant());
 		gDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
 		gDto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
 		getSystemFac().createGeschaeftsjahr(gDto);

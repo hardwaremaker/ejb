@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2022 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -57,29 +57,37 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import org.apache.commons.lang.StringUtils;
 import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
-import org.jboss.annotation.ejb.TransactionTimeout;
 
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.benutzer.service.RechteFac;
+import com.lp.server.bestellung.fastlanereader.generated.FLRBestellposition;
+import com.lp.server.bestellung.fastlanereader.generated.FLRBestellung;
 import com.lp.server.bestellung.fastlanereader.generated.FLRWareneingangspositionen;
 import com.lp.server.bestellung.service.BestellpositionFac;
 import com.lp.server.bestellung.service.BestellungFac;
 import com.lp.server.bestellung.service.WareneingangFac;
 import com.lp.server.bestellung.service.WareneingangspositionDto;
+import com.lp.server.eingangsrechnung.ejb.Eingangsrechnung;
+import com.lp.server.eingangsrechnung.ejb.EingangsrechnungQuery;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungzahlungDto;
+import com.lp.server.finanz.assembler.ExportdatenDtoAssembler;
+import com.lp.server.finanz.assembler.ExportlaufDtoAssembler;
 import com.lp.server.finanz.bl.FibuExportFormatterAbacus;
 import com.lp.server.finanz.bl.FibuExportManager;
 import com.lp.server.finanz.bl.FibuExportManagerFactory;
 import com.lp.server.finanz.bl.datevexport.BuchungsjournalDatevExportHeaderFormatter;
 import com.lp.server.finanz.bl.datevexport.BuchungsjournalExportDatevBuchung;
-import com.lp.server.finanz.bl.datevexport.BuchungsjournalExportDatevFormatter;
+import com.lp.server.finanz.bl.datevexport.DatevExportBuchungFormatter;
 import com.lp.server.finanz.bl.hvraw.BuchungsjournalExportHVRawFormatter;
 import com.lp.server.finanz.bl.rzlexport.BuchungsjournalExportRzlFormatter;
 import com.lp.server.finanz.ejb.Exportdaten;
@@ -89,11 +97,12 @@ import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchungDetail;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzExportdaten;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzExportlauf;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
+import com.lp.server.finanz.service.BelegbuchungDto;
 import com.lp.server.finanz.service.BuchenFac;
+import com.lp.server.finanz.service.BuchungsjournalExportDatumsart;
+import com.lp.server.finanz.service.BuchungsjournalExportProperties;
 import com.lp.server.finanz.service.ExportdatenDto;
-import com.lp.server.finanz.service.ExportdatenDtoAssembler;
 import com.lp.server.finanz.service.ExportlaufDto;
-import com.lp.server.finanz.service.ExportlaufDtoAssembler;
 import com.lp.server.finanz.service.FibuExportFac;
 import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuKontoExportDto;
@@ -103,8 +112,10 @@ import com.lp.server.finanz.service.FinanzServiceFac;
 import com.lp.server.finanz.service.FinanzamtDto;
 import com.lp.server.finanz.service.IBuchungsjournalExportFormatter;
 import com.lp.server.finanz.service.IntrastatDto;
+import com.lp.server.finanz.service.ReversechargeartDto;
 import com.lp.server.finanz.service.SteuerkategorieDto;
 import com.lp.server.finanz.service.WarenverkehrsnummerDto;
+import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.lieferschein.service.LieferscheinFac;
 import com.lp.server.lieferschein.service.LieferscheinpositionDto;
@@ -115,16 +126,23 @@ import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.LieferantFac;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.rechnung.ejb.Rechnung;
+import com.lp.server.rechnung.ejb.RechnungQuery;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnung;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.server.rechnung.service.RechnungzahlungDto;
+import com.lp.server.system.ejbfac.EJBExcFactory;
+import com.lp.server.system.ejbfac.HvCreatingCachingProvider;
+import com.lp.server.system.ejbfac.SteuercodeInfo;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.service.GeschaeftsjahrMandantDto;
+import com.lp.server.system.service.HvBelegnummernformatHistorisch;
+import com.lp.server.system.service.IHvBelegnummernformat;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MwstsatzDto;
@@ -134,6 +152,9 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HvOptional;
+import com.lp.server.util.MwstsatzId;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
@@ -143,7 +164,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 	@PersistenceContext
 	private EntityManager entityManager;
 
-	@TransactionTimeout(20000)
+	@org.jboss.ejb3.annotation.TransactionTimeout(20000)
 	public String exportiereBelege(
 			FibuExportKriterienDto fibuExportKriterienDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
@@ -194,17 +215,15 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public String exportierePersonenkonten(String kontotypCNr,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+	public String exportierePersonenkonten(String kontotypCNr, boolean nurVerwendete, TheClientDto theClientDto) throws EJBExceptionLP {
 		if (kontotypCNr == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FINANZ_EXPORT_STICHTAG_NICHT_DEFINIERT,
 					new Exception("kontotypCNr == null"));
 		}
-		FibuExportManager em = FibuExportManagerFactory.getFibuExportManager(
-				getExportVariante(theClientDto), getExportFormat(theClientDto),
-				null, theClientDto);
-		return exportierePersonenkonten(em, kontotypCNr, theClientDto);
+		FibuExportManager em = FibuExportManagerFactory.getFibuExportManager(getExportVariante(theClientDto),
+				getExportFormat(theClientDto), kontotypCNr, null, theClientDto);
+		return exportierePersonenkonten(em, kontotypCNr, nurVerwendete, theClientDto);
 	}
 
 	private String getExportVariante(TheClientDto theClientDto)
@@ -242,45 +261,47 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			throws EJBExceptionLP {
 		StringBuffer sExport = new StringBuffer();
 		try {
-			FLREingangsrechnung[] er = getVerbuchbareEingangsrechnungen(
+			FLREingangsrechnung[] eingangsrechnungen = getVerbuchbareEingangsrechnungen(
 					dStichtag, theClientDto);
 			// keine daten?
-			if (er == null || er.length == 0) {
+			if (eingangsrechnungen == null || eingangsrechnungen.length == 0) {
 				return null;
 			}
 			// jetzt alle sperren
-			sperreEingangsrechnungen(er, true, theClientDto);
+			sperreEingangsrechnungen(eingangsrechnungen, true, theClientDto);
 			sExport.append(em.exportiereUeberschriftBelege());
-			for (int i = 0; i < er.length; i++) {
-				// wenn ausserhalb gueltigem Exportzeitraum und
-				// diese auch zu exportieren sind und
-				// diese aber nur als exportiert zu markieren sind
-				// dann also nicht wirklich exportieren
-				if (!(!em
-						.liegtBelegdatumInnerhalbGueltigemExportZeitraum(er[i])
-						&& fibuExportKriterienDto
-								.isBAuchBelegeAusserhalbGueltigkeitszeitraum() && fibuExportKriterienDto
-						.isBBelegeAusserhalbGueltigkeitszeitraumAlsExportiertMarkieren())) {
-					// anhaengen
-					sExport.append(em.exportiereEingangsrechnung(er[i].getI_id(),
+			
+			ExportEingangsrechnungValidator exportValidator = new ExportEingangsrechnungValidator(em, fibuExportKriterienDto);
+			for (FLREingangsrechnung er : eingangsrechnungen) {
+				exportValidator.validate(er);
+				if (exportValidator.shouldExport()) {
+					sExport.append(em.exportiereEingangsrechnung(er.getI_id(),
 							fibuExportKriterienDto.getDStichtag()));
-				} else {
-					myLogger.warn("ER " + er[i].getC_nr()
-							+ " wurde als exportiert markiert");
 				}
-				// Exportprotokoll
-				ExportdatenDto exportdatenDto = new ExportdatenDto();
-				exportdatenDto
-						.setBelegartCNr(LocaleFac.BELEGART_EINGANGSRECHNUNG);
-				exportdatenDto.setExportlaufIId(exportlaufIId);
-				exportdatenDto.setIBelegiid(er[i].getI_id());
-				createExportdaten(exportdatenDto);
-				// ER-Status setzen
-				getEingangsrechnungFac().setzeEingangsrechnungFibuUebernahme(
-						er[i].getI_id(), theClientDto);
+				
+				if (exportValidator.shouldExport()
+						|| exportValidator.shouldMark()) {
+					// Exportprotokoll
+					ExportdatenDto exportdatenDto = new ExportdatenDto();
+					exportdatenDto
+							.setBelegartCNr(LocaleFac.BELEGART_EINGANGSRECHNUNG);
+					exportdatenDto.setExportlaufIId(exportlaufIId);
+					exportdatenDto.setIBelegiid(er.getI_id());
+					createExportdaten(exportdatenDto);
+					
+					if (!exportValidator.shouldExport()) {
+						myLogger.warn("ER " + er.getC_nr()
+								+ " wurde als exportiert markiert");
+					}
+					// ER-Status setzen
+					getEingangsrechnungFac().setzeEingangsrechnungFibuUebernahme(
+							er.getI_id(), theClientDto);
+					
+				}
+				
 			}
 			// die locks aufheben
-			sperreEingangsrechnungen(er, false, theClientDto);
+			sperreEingangsrechnungen(eingangsrechnungen, false, theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -302,32 +323,33 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			// jetzt alle sperren
 			sperreRechnungen(re, true, theClientDto);
 			sExport.append(em.exportiereUeberschriftBelege());
-			for (int i = 0; i < re.length; i++) {
-				// wenn ausserhalb gueltigem Exportzeitraum und
-				// diese auch zu exportieren sind und
-				// diese aber nur als exportiert zu markieren sind
-				// dann also nicht wirklich exportieren
-				if (!(!em
-						.liegtBelegdatumInnerhalbGueltigemExportZeitraum(re[i])
-						&& fibuExportKriterienDto
-								.isBAuchBelegeAusserhalbGueltigkeitszeitraum() && fibuExportKriterienDto
-						.isBBelegeAusserhalbGueltigkeitszeitraumAlsExportiertMarkieren())) {
-					// anhaengen
-					sExport.append(em.exportiereRechnung(re[i].getI_id(),
-							dStichtag));
-				} else {
-					myLogger.warn("RE " + re[i].getC_nr()
-							+ " wurde als exportiert markiert");
+			
+			ExportRechnungValidator exportValidator = new ExportRechnungValidator(em, fibuExportKriterienDto);
+			for (FLRRechnung rechnung : re) {
+				exportValidator.validate(rechnung);
+				if (exportValidator.shouldExport()) {
+					sExport.append(em.exportiereRechnung(
+							rechnung.getI_id(), dStichtag));
 				}
-				// Exportprotokoll
-				ExportdatenDto exportdatenDto = new ExportdatenDto();
-				exportdatenDto.setBelegartCNr(LocaleFac.BELEGART_RECHNUNG);
-				exportdatenDto.setExportlaufIId(exportlaufIId);
-				exportdatenDto.setIBelegiid(re[i].getI_id());
-				createExportdaten(exportdatenDto);
-				// AER-Status setzen
-				getRechnungFac().setzeRechnungFibuUebernahme(re[i].getI_id(),
-						theClientDto);
+				
+				if (exportValidator.shouldExport()
+						|| exportValidator.shouldMark()) {
+					// Exportprotokoll
+					ExportdatenDto exportdatenDto = new ExportdatenDto();
+					exportdatenDto.setBelegartCNr(LocaleFac.BELEGART_RECHNUNG);
+					exportdatenDto.setExportlaufIId(exportlaufIId);
+					exportdatenDto.setIBelegiid(rechnung.getI_id());
+					createExportdaten(exportdatenDto);
+					
+					if (!exportValidator.shouldExport()) {
+						myLogger.warn("RE " + rechnung.getC_nr()
+								+ " wurde als exportiert markiert");
+					}
+					// AER-Status setzen
+					getRechnungFac().setzeRechnungFibuUebernahme(rechnung.getI_id(),
+							theClientDto);
+					
+				}
 			}
 			if (em.getExportFormatter() instanceof FibuExportFormatterAbacus) {
 				FibuExportFormatterAbacus temp = (FibuExportFormatterAbacus) em
@@ -343,18 +365,17 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public List<String> exportiereBuchungsjournal(String format, Date von, Date bis,
-			boolean mitAutoEB, boolean mitManEB, boolean mitAutoB, boolean mitStornierte, String bezeichnung,
+	public List<String> exportiereBuchungsjournal(BuchungsjournalExportProperties exportProperties,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP { 
 		
 		
 		IBuchungsjournalExportFormatter formatter = null;
-		if(DATEV.equals(format))
-			formatter = getBuchungsjournalExportFormatterDatev(von, bis, mitAutoEB, mitManEB, mitAutoB, bezeichnung, theClientDto);
-		else if(HV_RAW.equals(format))
-			formatter = getBuchungsjournalExportFormatterHVRaw(von, bis, mitAutoEB, mitManEB, mitAutoB, mitStornierte, bezeichnung, theClientDto);
-		else if(RZL_CSV.equals(format))
-			formatter = getBuchungsjournalExportFormatterRzl(von, bis, mitAutoEB, mitManEB, mitAutoB, bezeichnung, theClientDto);
+		if(DATEV.equals(exportProperties.getFormat()))
+			formatter = getBuchungsjournalExportFormatterDatev(exportProperties, theClientDto);
+		else if(HV_RAW.equals(exportProperties.getFormat()))
+			formatter = getBuchungsjournalExportFormatterHVRaw(exportProperties, theClientDto);
+		else if(RZL_CSV.equals(exportProperties.getFormat()))
+			formatter = getBuchungsjournalExportFormatterRzl(exportProperties, theClientDto);
 		
 		if(formatter == null)
 			return null;
@@ -362,30 +383,34 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 	}
 	
 	private IBuchungsjournalExportFormatter getBuchungsjournalExportFormatterHVRaw(
-			Date von, Date bis, boolean mitAutoEB, boolean mitManEB,
-			boolean mitAutoB, boolean mitStornierte, String bezeichnung, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			BuchungsjournalExportProperties exportProperties, TheClientDto theClientDto) 
+					throws EJBExceptionLP, RemoteException {
 
 		List<Integer> mitlaufendeKonten = getIIdsMitlaufendeKonten(theClientDto);
 		Session session = FLRSessionFactory.getFactory().openSession();
 		Criteria c = session.createCriteria(FLRFinanzBuchung.class, "b");
 		c.createAlias("b.flrkostenstelle", "ks");
-		if (!mitAutoB)
-			c.add(Restrictions.like("b.b_autombuchung", 0));
-		if (!mitAutoEB)
-			c.add(Restrictions.like("b.b_autombuchungeb", 0));
-		if (!mitManEB)
+		if (!exportProperties.isMitAutoBuchungen())
+			c.add(Restrictions.eq("b.b_autombuchung", Helper.getShortFalse()));
+		if (!exportProperties.isMitAutoEroeffnungsbuchungen())
+			c.add(Restrictions.eq("b.b_autombuchungeb", Helper.getShortFalse()));
+		if (!exportProperties.isMitManEroeffnungsbuchungen())
 			c.add(Restrictions.not(Restrictions.like("b.buchungsart_c_nr",
 					FinanzFac.BUCHUNGSART_EROEFFNUNG)));
-		if(!mitStornierte)
+		if(!exportProperties.isMitStornierte())
 			c.add(Restrictions.isNull("b.t_storniert"));
-		c.add(Restrictions.ge("b.d_buchungsdatum", von))
-				.add(Restrictions.le("b.d_buchungsdatum", bis))
+		String datumsartFilter = "b." + getDatumsartFilterForFLRFinanzBuchung(exportProperties.getDatumsart());
+		
+		Timestamp von = new Timestamp(exportProperties.getVon().getTime());
+		Timestamp bis = new Timestamp(exportProperties.getBis().getTime());
+		bis = Helper.addiereTageZuTimestamp(bis, 1);
+		c.add(Restrictions.ge(datumsartFilter, von))
+				.add(Restrictions.lt(datumsartFilter, bis))
 				.add(Restrictions.like("ks.mandant_c_nr", theClientDto.getMandant()))
-				.addOrder(Order.asc("b.d_buchungsdatum"))
+				.addOrder(Order.asc(datumsartFilter))
 				.addOrder(Order.asc("b.i_id"));
-		
 		Iterator<?> iter = c.list().iterator();
-		
+
 		List<FLRFinanzBuchungDetail> details = new ArrayList<FLRFinanzBuchungDetail>();
 		while (iter.hasNext()) {
 			FLRFinanzBuchung buchung = (FLRFinanzBuchung) iter.next();
@@ -435,37 +460,19 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			}
 			
 		}		
-		return new BuchungsjournalExportHVRawFormatter(details, mitStornierte);
+		return new BuchungsjournalExportHVRawFormatter(details, exportProperties.isMitStornierte());
 	}
 	
 	private IBuchungsjournalExportFormatter getBuchungsjournalExportFormatterDatev(
-			Date von, Date bis, boolean mitAutoEB, boolean mitManEB,
-			boolean mitAutoB, String bezeichnung, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		ParametermandantDto pBerater = getParameterFac().getMandantparameter(
-				theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_BERATER);
-		ParametermandantDto pMandant = getParameterFac().getMandantparameter(
-				theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_MANDANT);
-		ParametermandantDto pKontostellen = getParameterFac().getMandantparameter(
-				theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_KONTONUMMER_STELLENANZAHL_SACHKONTEN);
-		String berater = pBerater.getCWert();
-		String mandant = pMandant.getCWert();
-		Integer kontostellen = new Integer(pKontostellen.getCWert());
-		
-		Integer gf = getBuchenFac().findGeschaeftsjahrFuerDatum(von, theClientDto.getMandant());
-		GeschaeftsjahrMandantDto gfDto = getSystemFac().geschaeftsjahrFindByPrimaryKey(gf, theClientDto.getMandant());
-		
-		MandantDto mDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
-		List<BuchungsjournalExportDatevBuchung> buchungen = getBuchungen(von, bis, mitAutoEB, mitManEB, mitAutoB, theClientDto);
-		BuchungsjournalDatevExportHeaderFormatter head = new BuchungsjournalDatevExportHeaderFormatter(
-				theClientDto, berater, mandant, gfDto.getDBeginndatum()
-						.getTime(), kontostellen, von.getTime(), bis.getTime(),
-				bezeichnung, mDto.getWaehrungCNr());
-		return new BuchungsjournalExportDatevFormatter(head, buchungen);
+			BuchungsjournalExportProperties exportProperties, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		BuchungsjournalDatevExporter datevExporter = new BuchungsjournalDatevExporter(exportProperties, theClientDto);
+		exportBuchungsjournalImpl(exportProperties, datevExporter, theClientDto);
+		return datevExporter;
 	}
 
+
 	private IBuchungsjournalExportFormatter getBuchungsjournalExportFormatterRzl(
-			Date von, Date bis, boolean mitAutoEB, boolean mitManEB,
-			boolean mitAutoB, String bezeichnung, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			BuchungsjournalExportProperties exportProperties, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		ParametermandantDto pBerater = getParameterFac().getMandantparameter(
 				theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_BERATER);
 		ParametermandantDto pMandant = getParameterFac().getMandantparameter(
@@ -476,15 +483,15 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		String mandant = pMandant.getCWert();
 		Integer kontostellen = new Integer(pKontostellen.getCWert());
 		
-		Integer gf = getBuchenFac().findGeschaeftsjahrFuerDatum(von, theClientDto.getMandant());
+		Integer gf = getBuchenFac().findGeschaeftsjahrFuerDatum(exportProperties.getVon(), theClientDto.getMandant());
 		GeschaeftsjahrMandantDto gfDto = getSystemFac().geschaeftsjahrFindByPrimaryKey(gf, theClientDto.getMandant());
 		
 		MandantDto mDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
-		List<BuchungsjournalExportDatevBuchung> buchungen = getBuchungen(von, bis, mitAutoEB, mitManEB, mitAutoB, theClientDto);
+		List<BuchungsjournalExportDatevBuchung> buchungen = getBuchungen0(exportProperties, theClientDto);
 		BuchungsjournalDatevExportHeaderFormatter head = new BuchungsjournalDatevExportHeaderFormatter(
 				theClientDto, berater, mandant, gfDto.getDBeginndatum()
-						.getTime(), kontostellen, von.getTime(), bis.getTime(),
-				bezeichnung, mDto.getWaehrungCNr());
+						.getTime(), kontostellen, exportProperties.getVon().getTime(), exportProperties.getBis().getTime(),
+				exportProperties.getBezeichnung(), mDto.getWaehrungCNr());
 		return new BuchungsjournalExportRzlFormatter(head, buchungen);
 	}
 
@@ -505,10 +512,145 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				
 	}
 	
+	private String getDatumsartFilterForFLRFinanzBuchung(BuchungsjournalExportDatumsart datumsart) {
+		if (BuchungsjournalExportDatumsart.BUCHUNGSDATUM.equals(datumsart)) {
+			return "d_buchungsdatum";
+		} else if (BuchungsjournalExportDatumsart.GEBUCHTAM.equals(datumsart)) {
+			return "t_anlegen";
+		} else {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, 
+					new IllegalArgumentException("Datumsart " + datumsart + " hat noch kein FLR-Mapping fuer Buchungsjournalexport")) ;
+		}
+	}
+	
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	private List<BuchungsjournalExportDatevBuchung> getBuchungen(Date von,
-			Date bis, boolean mitAutoEB, boolean mitManEB, boolean mitAutoB,
+	private void exportBuchungsjournalImpl(
+			BuchungsjournalExportProperties exportProperties, BuchungsjournalExportVisitor exportVisitor, 
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
+		FinanzamtDto[] finanzaemter = getFinanzFac().finanzamtFindAll(theClientDto);
+		
+		Map<Integer, SteuerkontoInfo> mwstKonten = new HashMap<Integer, SteuerkontoInfo>();
+		Set<Integer> mitlaufendeKonten = new HashSet<Integer>();
+		for(FinanzamtDto amt : finanzaemter) {
+			mwstKonten.putAll(getFinanzServiceFac().getAllIIdsSteuerkontoMitIIdMwstBez(amt.getPartnerIId(), theClientDto));
+			mitlaufendeKonten.addAll(getFinanzServiceFac().getAllMitlaufendeKonten(amt.getPartnerIId(), theClientDto));
+		}
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		Criteria c = session.createCriteria(FLRFinanzBuchung.class);
+		c.createAlias("flrkostenstelle", "ks");
+		if (!exportProperties.isMitAutoBuchungen())
+			c.add(Restrictions.eq("b_autombuchung", Helper.getShortFalse()));
+		if (!exportProperties.isMitAutoEroeffnungsbuchungen())
+			c.add(Restrictions.eq("b_autombuchungeb", Helper.getShortFalse()));
+		if(!exportProperties.isMitStornierte())
+			c.add(Restrictions.isNull("t_storniert"));
+		if (!exportProperties.isMitManEroeffnungsbuchungen())
+			c.add(Restrictions.not(Restrictions.like("buchungsart_c_nr",
+					FinanzFac.BUCHUNGSART_EROEFFNUNG)));
+		String datumsartFilter = getDatumsartFilterForFLRFinanzBuchung(exportProperties.getDatumsart());
+		
+		Timestamp von = new Timestamp(exportProperties.getVon().getTime());
+		Timestamp bis = new Timestamp(exportProperties.getBis().getTime());
+		bis = Helper.addiereTageZuTimestamp(bis, 1);
+		c.add(Restrictions.ge(datumsartFilter, von))
+				.add(Restrictions.lt(datumsartFilter, bis))
+				.add(Restrictions.like("ks.mandant_c_nr", theClientDto.getMandant()))
+				.addOrder(Order.asc(datumsartFilter))
+				.addOrder(Order.asc("c_belegnummer"));
+		Iterator<?> iter = c.list().iterator();
+		while(iter.hasNext()) {
+			FLRFinanzBuchung hvBuchung = (FLRFinanzBuchung)iter.next();
+			@SuppressWarnings("unchecked")
+			List<FLRFinanzBuchungDetail> haben = session.createCriteria(FLRFinanzBuchungDetail.class)
+					.createAlias("flrbuchung", "b")
+					.add(Restrictions.eq("buchung_i_id", hvBuchung.getI_id()))
+					.add(Restrictions.or(
+						Restrictions.and(
+								Restrictions.like("buchungdetailart_c_nr", BuchenFac.HabenBuchung),
+								Restrictions.gt("n_betrag", BigDecimal.ZERO)
+								),
+						Restrictions.and(
+								Restrictions.like("buchungdetailart_c_nr", BuchenFac.SollBuchung),
+								Restrictions.lt("n_betrag", BigDecimal.ZERO)
+							)))
+					.add(Restrictions.or(
+							Restrictions.eq("b.buchungsart_c_nr", FinanzFac.BUCHUNGSART_EROEFFNUNG),
+							Restrictions.not(Restrictions.in("konto_i_id", mitlaufendeKonten))
+							))
+					.addOrder(Order.asc("i_id"))
+					.list();
+			@SuppressWarnings("unchecked")
+			List<FLRFinanzBuchungDetail> soll = session.createCriteria(FLRFinanzBuchungDetail.class)
+					.createAlias("flrbuchung", "b")
+					.add(Restrictions.eq("buchung_i_id", hvBuchung.getI_id()))
+					.add(Restrictions.or(
+						Restrictions.and(
+								Restrictions.like("buchungdetailart_c_nr", BuchenFac.SollBuchung),
+								Restrictions.gt("n_betrag", BigDecimal.ZERO)
+								),
+						Restrictions.and(
+								Restrictions.like("buchungdetailart_c_nr", BuchenFac.HabenBuchung),
+								Restrictions.lt("n_betrag", BigDecimal.ZERO)
+							)))
+					.add(Restrictions.or(
+							Restrictions.eq("b.buchungsart_c_nr", FinanzFac.BUCHUNGSART_EROEFFNUNG),
+							Restrictions.not(Restrictions.in("konto_i_id", mitlaufendeKonten))
+							))
+					.addOrder(Order.asc("i_id"))
+					.list();
+			
+			FLRFinanzKonto flrGegenkonto = null;
+			List<FLRFinanzBuchungDetail> zuBuchen;
+			if(soll.size() == 1) {
+				flrGegenkonto = soll.get(0).getFlrkonto();
+				zuBuchen = haben;
+			} else if(haben.size() == 1) {
+				flrGegenkonto = haben.get(0).getFlrkonto();
+				zuBuchen = soll;
+			} else {
+				zuBuchen = soll;
+				zuBuchen.addAll(haben);
+			}
+			
+			exportVisitor.visitBuchung(hvBuchung, flrGegenkonto);
+			
+			for(int i = 0; i < zuBuchen.size(); i++) {
+				FLRFinanzBuchungDetail buchungDetail = zuBuchen.get(i);
+				validateSteuerkontobuchungStornierung(hvBuchung, buchungDetail, mwstKonten);
+
+				FLRFinanzBuchungDetail mwstBuchung = zuBuchen.size() > i+1 ? zuBuchen.get(i+1) : null;
+				if (mwstBuchung != null
+						&& mwstKonten.containsKey(mwstBuchung.getKonto_i_id())) {
+					exportVisitor.visitSteuer(buchungDetail, mwstBuchung);
+					i++;
+				} else {
+					exportVisitor.visit(buchungDetail);
+				}
+			}
+			exportVisitor.visitBuchungDone();
+		}
+	}
+	
+	private void validateSteuerkontobuchungStornierung(FLRFinanzBuchung hvBuchung, FLRFinanzBuchungDetail hvDetail,
+			Map<Integer, SteuerkontoInfo> mwstKonten) {
+		if(!mwstKonten.containsKey(hvDetail.getKonto_i_id())) {
+			return;
+		}
+
+		myLogger.warn("Buchungsdetail " + hvDetail.getI_id() +
+				" ist eine unerwartete Mwst-Buchung. Storniert: " + 
+				(hvBuchung.getT_storniert() != null));
+		// Bei nicht stornierter Buchung handelt es sich um einen Fehler, sonst durchlassen
+		if(hvBuchung.getT_storniert() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KONTIERUNG_ZUGEORDNET, "Fehler! keine Mwst-Buchung erwartet!",
+			(hvBuchung.getFlrfbbelegart() == null ? hvBuchung.getC_text() : hvBuchung.getFlrfbbelegart().getC_nr()) + " " + hvBuchung.getC_belegnummer());					
+		}
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	private List<BuchungsjournalExportDatevBuchung> getBuchungen0(
+			BuchungsjournalExportProperties exportProperties, TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
 		String mandant = theClientDto.getMandant();
 		ParametermandantDto pMitlaufendesKonto = getParameterFac().getMandantparameter(
 				mandant, ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_MITLAUFENDES_KONTO);
@@ -519,7 +661,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		
 		FinanzamtDto[] finanzaemter = getFinanzFac().finanzamtFindAll(theClientDto);
 		
-		Map<Integer, Integer> mwstKonten = new HashMap<Integer, Integer>();
+		Map<Integer, SteuerkontoInfo> mwstKonten = new HashMap<Integer, SteuerkontoInfo>();
 		Set<Integer> mitlaufendeKonten = new HashSet<Integer>();
 		for(FinanzamtDto amt : finanzaemter) {
 			mwstKonten.putAll(getFinanzServiceFac().getAllIIdsSteuerkontoMitIIdMwstBez(amt.getPartnerIId(), theClientDto));
@@ -529,17 +671,24 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		Session session = FLRSessionFactory.getFactory().openSession();
 		Criteria c = session.createCriteria(FLRFinanzBuchung.class);
 		c.createAlias("flrkostenstelle", "ks");
-		if (!mitAutoB)
-			c.add(Restrictions.like("b_autombuchung", Helper.getShortFalse()));
-		if (!mitAutoEB)
-			c.add(Restrictions.like("b_autombuchungeb", Helper.getShortFalse()));
-		if (!mitManEB)
+		if (!exportProperties.isMitAutoBuchungen())
+			c.add(Restrictions.eq("b_autombuchung", Helper.getShortFalse()));
+		if (!exportProperties.isMitAutoEroeffnungsbuchungen())
+			c.add(Restrictions.eq("b_autombuchungeb", Helper.getShortFalse()));
+		if(!exportProperties.isMitStornierte())
+			c.add(Restrictions.isNull("t_storniert"));
+		if (!exportProperties.isMitManEroeffnungsbuchungen())
 			c.add(Restrictions.not(Restrictions.like("buchungsart_c_nr",
 					FinanzFac.BUCHUNGSART_EROEFFNUNG)));
-		c.add(Restrictions.ge("d_buchungsdatum", von))
-				.add(Restrictions.le("d_buchungsdatum", bis))
+		String datumsartFilter = getDatumsartFilterForFLRFinanzBuchung(exportProperties.getDatumsart());
+		
+		Timestamp von = new Timestamp(exportProperties.getVon().getTime());
+		Timestamp bis = new Timestamp(exportProperties.getBis().getTime());
+		bis = Helper.addiereTageZuTimestamp(bis, 1);
+		c.add(Restrictions.ge(datumsartFilter, von))
+				.add(Restrictions.lt(datumsartFilter, bis))
 				.add(Restrictions.like("ks.mandant_c_nr", mandant))
-				.addOrder(Order.asc("d_buchungsdatum"))
+				.addOrder(Order.asc(datumsartFilter))
 				.addOrder(Order.asc("c_belegnummer"));
 		Iterator<?> iter = c.list().iterator();
 		while(iter.hasNext()) {
@@ -595,8 +744,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				uid = getUIDZuKonto(flrGegenkonto, theClientDto);
 				zuBuchen = haben;
 			} else if(haben.size() == 1) {
-				gegenkontoCNr = haben.get(0).getFlrkonto().getC_nr();
-				flrGegenkonto = soll.get(0).getFlrkonto();
+				flrGegenkonto = haben.get(0).getFlrkonto();
+				gegenkontoCNr = flrGegenkonto.getC_nr();
 				uid = getUIDZuKonto(flrGegenkonto, theClientDto);
 				zuBuchen = soll;
 			} else {
@@ -631,32 +780,36 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				Integer fibuCode = 0;
 				BigDecimal umsatz = null;
 				if(mwstKonten.containsKey(b.getKonto_i_id())) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KONTIERUNG_ZUGEORDNET, "Fehler! keine Mwst-Buchung erwartet!",
-							(hvBuchung.getFlrfbbelegart() == null ? hvBuchung.getC_text() : hvBuchung.getFlrfbbelegart().getC_nr()) + " " + hvBuchung.getC_belegnummer());
-//					System.out.println("Fehler! keine Mwst-Buchung erwartet! " + hvBuchung.getC_belegnummer() + ", id = " + hvBuchung.getI_id());
-//					break;
-				} else {
-					if(zuBuchen.size() > i+1) { 
-						FLRFinanzBuchungDetail mwstBuchung = zuBuchen.get(i+1);
-						if(mwstKonten.containsKey(mwstBuchung.getKonto_i_id())) {
-							Integer mwstIId = mwstKonten.get(mwstBuchung.getKonto_i_id());
-							MwstsatzDto mwstDto;
-							if(mwstIId != null) {
-								mwstDto = getMandantFac().mwstsatzFindZuDatum(mwstIId, new Timestamp(hvBuchung.getD_buchungsdatum().getTime()));
-							} else {
-								mwstDto = getMandantFac().getMwstSatzVonBruttoBetragUndUst(mandant, new Timestamp(hvBuchung.getD_buchungsdatum().getTime()),
-									b.getN_betrag(), mwstBuchung.getN_betrag());								
-							}
-							fibuCode = mwstDto.getIFibumwstcode();
-							if(fibuCode == null) {
-								MwstsatzbezDto mwstsatzbezDto = getMandantFac().mwstsatzbezFindByPrimaryKey(mwstDto.getIIMwstsatzbezId(), theClientDto);
-								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_EXPORT_KEIN_MWSTCODE, "", mwstsatzbezDto.getCBezeichnung());
-							}
-							umsatz = b.getN_betrag().add(mwstBuchung.getN_betrag()).abs();
-							i++;
-						}
+					myLogger.warn("Buchungsdetail " + b.getI_id() +
+							" ist eine unerwartete Mwst-Buchung. Storniert: " + 
+							(b.getFlrbuchung().getT_storniert() != null));
+					// Bei nicht stornierter Buchung handelt es sich um einen Fehler, sonst durchlassen
+					if(b.getFlrbuchung().getT_storniert() == null) {
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KONTIERUNG_ZUGEORDNET, "Fehler! keine Mwst-Buchung erwartet!",
+						(hvBuchung.getFlrfbbelegart() == null ? hvBuchung.getC_text() : hvBuchung.getFlrfbbelegart().getC_nr()) + " " + hvBuchung.getC_belegnummer());					
 					}
 				}
+				if(zuBuchen.size() > i+1) { 
+					FLRFinanzBuchungDetail mwstBuchung = zuBuchen.get(i+1);
+					if(mwstKonten.containsKey(mwstBuchung.getKonto_i_id())) {
+						Integer mwstIId = mwstKonten.get(mwstBuchung.getKonto_i_id()).getMwstsatzbezId() ;
+						MwstsatzDto mwstDto;
+						if(mwstIId != null) {
+							mwstDto = getMandantFac().mwstsatzFindZuDatum(mwstIId, new Timestamp(hvBuchung.getD_buchungsdatum().getTime()));
+						} else {
+							mwstDto = getMandantFac().getMwstSatzVonBruttoBetragUndUst(mandant, new Timestamp(hvBuchung.getD_buchungsdatum().getTime()),
+								b.getN_betrag(), mwstBuchung.getN_betrag());								
+						}
+						fibuCode = getFibuSteuercode(mwstDto, theClientDto);
+						if(fibuCode == null) {
+							MwstsatzbezDto mwstsatzbezDto = getMandantFac().mwstsatzbezFindByPrimaryKey(mwstDto.getIIMwstsatzbezId(), theClientDto);
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_EXPORT_KEIN_MWSTCODE, "", mwstsatzbezDto.getCBezeichnung());
+						}
+						umsatz = b.getN_betrag().add(mwstBuchung.getN_betrag()).abs();
+						i++;
+					}
+				}
+//				}
 				BuchungsjournalExportDatevBuchung datevBuchung = new BuchungsjournalExportDatevBuchung();
 				datevBuchung.setUmsatz(umsatz == null ? b.getN_betrag().abs() : umsatz);
 				boolean negativ = b.getN_betrag().signum() < 0;
@@ -672,20 +825,12 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				datevBuchung.setBeleg(hvBuchung.getC_belegnummer());
 				datevBuchung.setBuchungstext(hvBuchung.getC_text());
 				datevBuchung.setUid(uid == null ? getUIDZuKonto(b.getFlrkonto(), theClientDto) : uid);
+				setBelegInfo(datevBuchung, hvBuchung, theClientDto);
 				buchungen.add(datevBuchung);
 			}
 		}
 		
 		return buchungen;
-	}
-	
-	private List<FLRFinanzBuchungDetail> getBuchungenKorrekteUst(List<FLRFinanzBuchungDetail> buchungen, Map<Integer, Integer> mwstKonten) {
-		List<FLRFinanzBuchungDetail> buchungenNeu = new ArrayList<FLRFinanzBuchungDetail>();
-		
-		for(int i = 0; i < buchungen.size(); i++) {
-			
-		}
-		return buchungenNeu;
 	}
 	
 	private String getUIDZuKonto(FLRFinanzKonto konto, TheClientDto theClientDto) {
@@ -734,32 +879,32 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			// jetzt alle sperren
 			sperreGutschriften(gs, true, theClientDto);
 			sExport.append(em.exportiereUeberschriftBelege());
-			for (int i = 0; i < gs.length; i++) {
-				// wenn ausserhalb gueltigem Exportzeitraum und
-				// diese auch zu exportieren sind und
-				// diese aber nur als exportiert zu markieren sind
-				// dann also nicht wirklich exportieren
-				if (!(!em
-						.liegtBelegdatumInnerhalbGueltigemExportZeitraum(gs[i])
-						&& fibuExportKriterienDto
-								.isBAuchBelegeAusserhalbGueltigkeitszeitraum() && fibuExportKriterienDto
-						.isBBelegeAusserhalbGueltigkeitszeitraumAlsExportiertMarkieren())) {
-					// anhaengen
-					sExport.append(em.exportiereGutschrift(gs[i].getI_id(),
-							dStichtag));
-				} else {
-					myLogger.warn("GS " + gs[i].getC_nr()
-							+ " wurde als exportiert markiert");
+			
+			ExportRechnungValidator exportValidator = new ExportRechnungValidator(em, fibuExportKriterienDto);
+			for (FLRRechnung gutschrift : gs) {
+				exportValidator.validate(gutschrift);
+				if (exportValidator.shouldExport()) {
+					sExport.append(em.exportiereGutschrift(
+							gutschrift.getI_id(), dStichtag));
 				}
-				// Exportprotokoll
-				ExportdatenDto exportdatenDto = new ExportdatenDto();
-				exportdatenDto.setBelegartCNr(LocaleFac.BELEGART_GUTSCHRIFT);
-				exportdatenDto.setExportlaufIId(exportlaufIId);
-				exportdatenDto.setIBelegiid(gs[i].getI_id());
-				createExportdaten(exportdatenDto);
-				// GS-Status setzen
-				getRechnungFac().setzeRechnungFibuUebernahme(gs[i].getI_id(),
-						theClientDto);
+
+				if (exportValidator.shouldExport()
+						|| exportValidator.shouldMark()) {
+					// Exportprotokoll
+					ExportdatenDto exportdatenDto = new ExportdatenDto();
+					exportdatenDto.setBelegartCNr(LocaleFac.BELEGART_GUTSCHRIFT);
+					exportdatenDto.setExportlaufIId(exportlaufIId);
+					exportdatenDto.setIBelegiid(gutschrift.getI_id());
+					createExportdaten(exportdatenDto);
+					
+					if (!exportValidator.shouldExport()) {
+						myLogger.warn("GS " + gutschrift.getC_nr()
+								+ " wurde als exportiert markiert");
+					}
+					// GS-Status setzen
+					getRechnungFac().setzeRechnungFibuUebernahme(gutschrift.getI_id(),
+							theClientDto);
+				}
 			}
 			// die locks aufheben
 			sperreGutschriften(gs, false, theClientDto);
@@ -767,6 +912,102 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			throwEJBExceptionLPRespectOld(ex);
 		}
 		return sExport.toString();
+	}
+	
+	
+	protected abstract class ExportBelegValidator {
+		private FibuExportKriterienDto kritDto;
+		private FibuExportManager fibuEm;
+		private boolean shouldExport;
+		private boolean shouldMark;
+		
+		public ExportBelegValidator(FibuExportManager fibuEm, FibuExportKriterienDto kritDto) {
+			this.kritDto = kritDto;
+			this.fibuEm = fibuEm;
+		}
+		
+		protected void validate() {
+			validateImpl();
+			shouldExport = shouldExport 
+					&& customExportCondition();
+		}
+		
+		private void validateImpl() {
+			if (liegtBelegdatumInnerhalbGueltigemExportZeitraum()) {
+				shouldExport = true;
+				shouldMark = true;
+				return;
+			}
+			
+			if (!kritDto.isBAuchBelegeAusserhalbGueltigkeitszeitraum()) {
+				shouldExport = false;
+				shouldMark = false;
+				return;
+			}
+			
+			shouldExport = !kritDto.isBBelegeAusserhalbGueltigkeitszeitraumAlsExportiertMarkieren();
+			shouldMark = true;
+		}
+		
+		public boolean shouldExport() {
+			return shouldExport;
+		}
+		
+		public boolean shouldMark() {
+			return shouldMark;
+		}
+		
+		protected boolean customExportCondition() {
+			return true;
+		}
+		
+		protected abstract boolean liegtBelegdatumInnerhalbGueltigemExportZeitraum();
+		
+		protected FibuExportManager fibuEm() {
+			return fibuEm;
+		}
+	}
+	
+	public class ExportRechnungValidator extends ExportBelegValidator {
+		private FLRRechnung flrRechnung;
+
+		public ExportRechnungValidator(FibuExportManager fibuEm, FibuExportKriterienDto kritDto) {
+			super(fibuEm, kritDto);
+		}
+		
+		public void validate(FLRRechnung flrRechnung) {
+			this.flrRechnung = flrRechnung;
+			super.validate();
+		}
+
+		@Override
+		protected boolean customExportCondition() {
+			return flrRechnung.getN_wert() != null
+					&& flrRechnung.getN_wert().signum() != 0;
+		}
+		
+		@Override
+		protected boolean liegtBelegdatumInnerhalbGueltigemExportZeitraum() {
+			return fibuEm().liegtBelegdatumInnerhalbGueltigemExportZeitraum(flrRechnung);
+		}
+	}
+	
+	public class ExportEingangsrechnungValidator extends ExportBelegValidator {
+		private FLREingangsrechnung flrEingangsrechnung;
+		
+		public ExportEingangsrechnungValidator(FibuExportManager fibuEm, FibuExportKriterienDto kritDto) {
+			super(fibuEm, kritDto);
+		}
+		
+		public void validate(FLREingangsrechnung flrEingangsrechnung) {
+			this.flrEingangsrechnung = flrEingangsrechnung;
+			super.validate();
+		}
+		
+		@Override
+		protected boolean liegtBelegdatumInnerhalbGueltigemExportZeitraum() {
+			return fibuEm().liegtBelegdatumInnerhalbGueltigemExportZeitraum(flrEingangsrechnung);
+		}
 	}
 
 	private FLREingangsrechnung[] getVerbuchbareEingangsrechnungen(
@@ -1033,19 +1274,12 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 
 	public ExportdatenDto exportdatenFindByPrimaryKey(Integer iId)
 			throws EJBExceptionLP {
-		// try {
 		Exportdaten exportdaten = entityManager.find(Exportdaten.class, iId);
 		if (exportdaten == null) { // @ToDo null Pruefung?
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleExportdatenDto(exportdaten);
-
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
 	}
 
 	public ExportdatenDto exportdatenFindByBelegartCNrBelegiid(
@@ -1110,7 +1344,6 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 	}
 
 	private void removeExportlauf(Integer exportlaufIId) throws EJBExceptionLP {
-		// try {
 		if (exportlaufIId != null) {
 			Exportlauf toRemove = entityManager.find(Exportlauf.class,
 					exportlaufIId);
@@ -1126,10 +1359,6 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 						er);
 			}
 		}
-		// }
-		// catch (RemoveException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
-		// }
 	}
 
 	private void updateExportlauf(ExportlaufDto exportlaufDto)
@@ -1151,19 +1380,12 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 
 	public ExportlaufDto exportlaufFindByPrimaryKey(Integer iId)
 			throws EJBExceptionLP {
-		// try {
 		Exportlauf exportlauf = entityManager.find(Exportlauf.class, iId);
 		if (exportlauf == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleExportlaufDto(exportlauf);
-
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
 	}
 
 	public Integer exportlaufFindLetztenExportlauf(String mandantCNr)
@@ -1272,12 +1494,10 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		}
 	}
 
-	private String exportierePersonenkonten(FibuExportManager em,
-			String kontotypCNr, TheClientDto theClientDto)
+	private String exportierePersonenkonten(FibuExportManager em, String kontotypCNr, boolean nurVerwendete, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		StringBuffer sExport = new StringBuffer();
-		FibuKontoExportDto[] konten = getZuExportierendeKonten(kontotypCNr,
-				theClientDto);
+		FibuKontoExportDto[] konten = getZuExportierendeKonten(kontotypCNr, nurVerwendete, theClientDto);
 		if (konten == null || konten.length == 0) {
 			return null;
 		}
@@ -1288,64 +1508,58 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		return sExport.toString();
 	}
 
-	private FibuKontoExportDto[] getZuExportierendeKonten(String kontotypCNr,
-			TheClientDto theClientDto) {
-		FibuKontoExportDto[] konten;
+	private FibuKontoExportDto[] getZuExportierendeKonten(String kontotypCNr, boolean nurVerwendete, TheClientDto theClientDto) {
+		List<FibuKontoExportDto> konten;
 		Session session = null;
 		try {
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
 			Criteria c = session.createCriteria(FLRFinanzKonto.class);
 			// Filter nach Kontotyp
-			c.add(Restrictions.eq(FinanzFac.FLR_KONTO_KONTOTYP_C_NR,
-					kontotypCNr));
+			c.add(Restrictions.eq(FinanzFac.FLR_KONTO_KONTOTYP_C_NR, kontotypCNr));
 			// Filter nach Mandant
-			c.add(Restrictions.eq(FinanzFac.FLR_KONTO_MANDANT_C_NR,
-					theClientDto.getMandant()));
+			c.add(Restrictions.eq(FinanzFac.FLR_KONTO_MANDANT_C_NR, theClientDto.getMandant()));
 			// Sortierung aufsteigend nach Kontonummer
 			c.addOrder(Order.asc(FinanzFac.FLR_KONTO_C_NR));
 			List<?> list = c.list();
 			// Array
-			konten = new FibuKontoExportDto[list.size()];
-			for (int i = 0; i < konten.length; i++) {
-				konten[i] = new FibuKontoExportDto();
-			}
-			int i = 0;
+			konten = new ArrayList<FibuKontoExportDto>(list.size());
+//			for (int i = 0; i < konten.length; i++) {
+//				konten[i] = new FibuKontoExportDto();
+//			}
 			for (Iterator<?> iter = list.iterator(); iter.hasNext();) {
 				FLRFinanzKonto konto = (FLRFinanzKonto) iter.next();
-				konten[i].setKontoDto(getFinanzFac().kontoFindByPrimaryKey(
-						konto.getI_id()));
+				FibuKontoExportDto exportDto = new FibuKontoExportDto();
+				exportDto.setKontoDto(getFinanzFac().kontoFindByPrimaryKey(konto.getI_id()));
 				// Fuer ein Debitorenkonto schaun, ob es einen Kunden gibt
 				if (kontotypCNr.equals(FinanzServiceFac.KONTOTYP_DEBITOR)) {
 					Criteria cKunde = session.createCriteria(FLRKunde.class);
-					cKunde.add(Restrictions.eq(
-							KundeFac.FLR_KUNDE_KONTO_I_ID_DEBITORENKONTO, konto
-									.getI_id()));
+					cKunde.add(Restrictions.eq(KundeFac.FLR_KUNDE_KONTO_I_ID_DEBITORENKONTO, konto.getI_id()));
 					List<?> listKunde = cKunde.list();
 					if (!listKunde.isEmpty()) {
 						FLRKunde kunde = (FLRKunde) listKunde.get(0);
-						konten[i].setPartnerDto(getKundeFac()
-								.kundeFindByPrimaryKeyOhneExc(kunde.getI_id(),
-										theClientDto).getPartnerDto());
+						exportDto.setPartnerDto(getKundeFac()
+								.kundeFindByPrimaryKeyOhneExc(kunde.getI_id(), theClientDto).getPartnerDto());
+					}
+					else if(nurVerwendete) {
+						continue;
 					}
 				}
 				// Fuer ein Kreditorenkonto schaun, ob es einen Lieferanten gibt
 				else if (kontotypCNr.equals(FinanzServiceFac.KONTOTYP_KREDITOR)) {
-					Criteria cLieferant = session
-							.createCriteria(FLRLieferant.class);
-					cLieferant.add(Restrictions.eq(
-							LieferantFac.FLR_KONTO_I_ID_KREDITORENKONTO, konto
-									.getI_id()));
+					Criteria cLieferant = session.createCriteria(FLRLieferant.class);
+					cLieferant.add(Restrictions.eq(LieferantFac.FLR_KONTO_I_ID_KREDITORENKONTO, konto.getI_id()));
 					List<?> listLieferant = cLieferant.list();
 					if (!listLieferant.isEmpty()) {
-						FLRLieferant lieferant = (FLRLieferant) listLieferant
-								.get(0);
-						konten[i].setPartnerDto(getLieferantFac()
-								.lieferantFindByPrimaryKey(lieferant.getI_id(),
-										theClientDto).getPartnerDto());
+						FLRLieferant lieferant = (FLRLieferant) listLieferant.get(0);
+						exportDto.setPartnerDto(getLieferantFac()
+								.lieferantFindByPrimaryKey(lieferant.getI_id(), theClientDto).getPartnerDto());
+					}
+					else if(nurVerwendete) {
+						continue;
 					}
 				}
-				i++;
+				konten.add(exportDto);
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -1355,7 +1569,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				session.close();
 			}
 		}
-		return konten;
+		return konten.toArray(new FibuKontoExportDto[konten.size()]);
 	}
 
 	public void removeExportdaten(Integer exportdatenIId,
@@ -1404,7 +1618,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 
 	
 	
-	@TransactionTimeout(20000)
+	@org.jboss.ejb3.annotation.TransactionTimeout(20000)
 	public ArrayList<IntrastatDto> exportiereIntrastatmeldung(
 			String sVerfahren, java.sql.Date dVon, java.sql.Date dBis,
 			BigDecimal bdTransportkosten, TheClientDto theClientDto)
@@ -1432,24 +1646,33 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 					"Verfahren = " + sVerfahren));
 		}
+		
 		ArrayList<IntrastatDto> alToRemove = new ArrayList<IntrastatDto>();
 		for (IntrastatDto iDto : daten) {
-			// pruefen, ob alle Artikel eine gueltige Warenverkehrsnummer haben
-			if (iDto.getWarenverkehrsnummerDto() == null) {
-				if (!(iDto.getUid() == null || iDto.getUid().equals(""))) {
-					EJBExceptionLP ex = new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_FINANZ_INTRASTAT_KEINE_WVK_NR,
-							new Exception(
-									"Beim Artikel ist keine WVK-Nummer eingetragen:"
-											+ iDto.getArtikelDto()
-													.formatArtikelbezeichnung()));
-					ArrayList<Object> aList = new ArrayList<Object>();
-					aList.add(iDto.getArtikelDto().formatArtikelbezeichnung());
-					ex.setAlInfoForTheClient(aList);
-					throw ex;
-				} else {
-					alToRemove.add(iDto);
-				}
+			//PJ19680 alle 0000 00 00 entfernen
+			
+			if (iDto.getArtikelDto() != null && iDto.getArtikelDto().getCWarenverkehrsnummer() != null && iDto.getArtikelDto().getCWarenverkehrsnummer().equals("0000 00 00")) {
+				alToRemove.add(iDto);
+			} else {
+			
+				// pruefen, ob alle Artikel eine gueltige Warenverkehrsnummer haben
+				//PJ19680 alle 0000 00 00 entfernen
+				if (iDto.getWarenverkehrsnummerDto() == null) {
+					if (!(iDto.getUid() == null || iDto.getUid().equals(""))) {
+						EJBExceptionLP ex = new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_FINANZ_INTRASTAT_KEINE_WVK_NR,
+								new Exception(
+										"Beim Artikel ist keine WVK-Nummer eingetragen:"
+												+ iDto.getArtikelDto()
+														.formatArtikelbezeichnung()));
+						ArrayList<Object> aList = new ArrayList<Object>();
+						aList.add(iDto.getArtikelDto().formatArtikelbezeichnung());
+						ex.setAlInfoForTheClient(aList);
+						throw ex;
+					} else {
+						alToRemove.add(iDto);
+					}
+				}			
 			}
 
 			// Verfahren setzen
@@ -1458,23 +1681,33 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		for (int i = 0; i < alToRemove.size(); i++) {
 			daten.remove(alToRemove.get(i));
 		}
+		
 		return verdichteIntrastatDaten(daten);
 	}
 
 	private ArrayList<IntrastatDto> verdichteIntrastatDaten(
 			ArrayList<IntrastatDto> list) throws EJBExceptionLP {
 		// zuerst sortieren.
-		Collections.sort(list, new ComparatorIntrastat());
+		ComparatorIntrastat comparator = new ComparatorIntrastat();
+		Collections.sort(list, comparator);
+		
 		// hier kommen die verdichteten daten rein.
+		// Ab 2022 muss die Empfaenger-UID (beim Versand) angegeben werden, 
+		// deshalb kann nur noch deutlich weniger verdichtet werden.
+		// Ab 2022 muss ein Gewicht > 0 vorhanden sein
 		ArrayList<IntrastatDto> aVerdichtet = new ArrayList<IntrastatDto>();
 		IntrastatDto iDtoLetztesZiel = null;
 		for (IntrastatDto iDto : list) {
-			iDto.setBeistell("1");
 			if (iDtoLetztesZiel == null) {
 				iDtoLetztesZiel = iDto;
 				aVerdichtet.add(iDtoLetztesZiel);
 			} else {
-				if (new ComparatorIntrastat().compare(iDtoLetztesZiel, iDto) == 0) {
+				if (comparator.compare(iDtoLetztesZiel, iDto) == 0) {
+					myLogger.info("verdichte: " + iDto.getArtikelDto().getCNr() + ", " + iDto.getGewichtInKg() + ".");
+					if (iDto.getGewichtInKg().signum() != 1) {
+						throw EJBExcFactory.artikelBenoetigtGewicht(iDto.getArtikelDto());
+					}
+					
 					// hab 2 gleiche gefunden. -> Werte addieren
 					iDtoLetztesZiel.setMenge(iDtoLetztesZiel.getMenge().add(
 							iDto.getMenge()));
@@ -1491,9 +1724,11 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				}
 			}
 		}
+		
 		return aVerdichtet;
 	}
-	@TransactionTimeout(20000)
+	
+	@org.jboss.ejb3.annotation.TransactionTimeout(20000)
 	public ArrayList<IntrastatDto> getIntrastatDatenWareneingang(
 			java.sql.Date dVon, java.sql.Date dBis,
 			BigDecimal bdTransportkosten, TheClientDto theClientDto)
@@ -1523,7 +1758,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 					theClientDto.getMandant(), theClientDto);
 			//und die die eine UID-Nummer haben
-			cPartner.add(Restrictions.isNotNull(PartnerFac.FLR_PARTNER_C_UID));
+			// gilt ab Berichtsjahr 2022 nicht mehr
+//			cPartner.add(Restrictions.isNotNull(PartnerFac.FLR_PARTNER_C_UID));
 			
 			cLand
 					.add(Restrictions.ne(SystemFac.FLR_LP_LANDLKZ, mandantDto
@@ -1554,18 +1790,38 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			// :
 			// 59
 
+			IntrastatWareneingangBuilder b = new IntrastatWareneingangBuilder(theClientDto);
+			
 			List<?> list = c.list();
 			for (Iterator<?> iter = list.iterator(); iter.hasNext();) {
 				FLRWareneingangspositionen wePos = (FLRWareneingangspositionen) iter
 						.next();
+/*				
 				IntrastatDto iDto = new IntrastatDto();
 				iDto.setArtikelDto(getArtikelFac()
 						.artikelFindByPrimaryKey(
 								wePos.getFlrbestellposition().getFlrartikel()
 										.getI_id(), theClientDto));
+*/	
+				FLRBestellposition flrBestellposition = wePos.getFlrbestellposition();
+				FLRBestellung flrBestellung = wePos.getFlrbestellposition().getFlrbestellung();
+				
+				b.artikel(flrBestellposition.getFlrartikel().getI_id(),
+					wePos.getN_geliefertemenge());
+				b.bsBeleg(flrBestellung.getC_nr())
+					.lieferant(flrBestellung.getFlrlieferant());
+				if (!b.isEU(
+						Helper.asTimestamp(flrBestellung.getT_belegdatum()))) {
+					myLogger.info("Ignored BS " + flrBestellung.getC_nr() + ", not EU");
+					continue;
+				}
+				b.verkehrszweig(flrBestellung.getFlrspediteur().getC_verkehrszweig());
+
+/*				
 				iDto.setBelegart("BS");
 				iDto.setBelegnummer(wePos.getFlrbestellposition()
 						.getFlrbestellung().getC_nr());
+*/						
 				// Einstandspreis in Mandantenwaehrung
 				BigDecimal bdEinstandspreis;
 				if (wePos.getN_einstandspreis() != null) {
@@ -1577,11 +1833,14 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				} else {
 					bdEinstandspreis = new BigDecimal(0);
 				}
+				b.einzelpreis(bdEinstandspreis);
+/*				
 				iDto.setEinzelpreis(bdEinstandspreis);
 				iDto.setMenge(wePos.getN_geliefertemenge() != null ? wePos
 						.getN_geliefertemenge() : new BigDecimal(0));
 				// Wert = Menge * Preis
 				iDto.setWert(iDto.getMenge().multiply(iDto.getEinzelpreis()));
+*/				
 				// Zur Aufteilung der Transportkosten den Gesamtwert des
 				// Wareneingangs berechnen
 				BigDecimal bdGesamtwertDesWareneingangs = new BigDecimal(0);
@@ -1603,6 +1862,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 														.getN_wechselkurs()));
 					}
 				}
+/*				
 				BigDecimal bdAnteiligeTransportkosten;
 				if (bdGesamtwertDesWareneingangs.compareTo(new BigDecimal(0)) > 0) {
 					bdAnteiligeTransportkosten = bdGesamtwertDesWareneingangs
@@ -1624,7 +1884,9 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 					iDto.setStatistischerWert(iDto.getWert().add(
 							bdAnteiligeTransportkosten));
 				}
-
+*/
+				b.versandWert(bdGesamtwertDesWareneingangs, bdTransportkosten);
+/*				
 				iDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
 						wePos.getFlrbestellposition().getFlrbestellung()
 								.getFlrlieferant().getFlrpartner().getI_id(),
@@ -1647,7 +1909,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 					bdGewicht = new BigDecimal(0);
 				}
 				iDto.setGewichtInKg(bdGewicht);
-				daten.add(iDto);
+*/				
+				daten.add(b.build());
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -1656,7 +1919,277 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		}
 		return daten;
 	}
-	@TransactionTimeout(20000)
+	
+	protected  class IntrastatBuilder {
+		private ArtikelDto artikelDto;
+		private WarenverkehrsnummerDto wvkDto;
+		private TheClientDto theClientDto;
+		private BigDecimal amount;
+		private String kennungCnr;
+		private String belegCnr;
+		private BigDecimal einzelpreis;
+		// private PartnerDto partnerDto;
+		private BigDecimal lsWert;
+		private BigDecimal transportKosten;
+		private Integer partnerId;
+		private PartnerCache partnerCache;
+		private MandantDto mandantDto;
+		private String verkehrszweig;
+		
+		public IntrastatBuilder(TheClientDto theClientDto) {
+			this.theClientDto = theClientDto;
+			this.partnerCache = new PartnerCache(this.theClientDto);
+			try {
+				this.mandantDto = getMandantFac().mandantFindByPrimaryKey(
+					this.theClientDto.getMandant(), this.theClientDto);
+			} catch(RemoteException e) {
+				throw EJBExcFactory.respectOld(e);
+			}
+		}
+		
+		public IntrastatBuilder artikel(Integer artikelId,
+				BigDecimal amount) throws RemoteException {
+			Validator.notNull(artikelId, "artikelId");
+
+			wvkDto = null;
+			einzelpreis = null;
+			lsWert = null;
+			transportKosten = null;
+			partnerId = null;
+			kennungCnr = null;
+			
+			artikelDto = getArtikelFac().artikelFindByPrimaryKey(
+					artikelId, this.theClientDto);
+			
+			if (artikelDto.getCWarenverkehrsnummer() != null) {
+				wvkDto = getFinanzServiceFac()
+						.warenverkehrsnummerFindByPrimaryKeyOhneExc(
+								artikelDto.getCWarenverkehrsnummer());
+			}
+
+			this.amount = asDecimal(amount);
+			return this;
+		}
+
+		/**
+		 * Der Einzelpreis der Position
+		 * 
+		 * @param preis
+		 * @return
+		 */
+		public IntrastatBuilder einzelpreis(BigDecimal preis) {
+			this.einzelpreis = asDecimal(preis);
+			return this;
+		}
+		
+		/**
+		 * Der Warenempfaenger
+		 * 
+		 * @param partnerId
+		 * @return
+		 */
+		public IntrastatBuilder partner(Integer partnerId) {
+			Validator.notNull(partnerId, "partnerId");
+			this.partnerId = partnerId;
+			return this;
+		}
+		
+		public IntrastatBuilder versandWert(
+				BigDecimal lsWert, BigDecimal transportkosten) {
+			this.lsWert = lsWert;
+			this.transportKosten = transportkosten;
+			return this;
+		}
+
+		public IntrastatBuilder verkehrszweig(String verkehrszweig) {
+			this.verkehrszweig = verkehrszweig;
+			return this;
+		}
+		
+		public boolean isEU(Timestamp belegDatum) throws RemoteException {
+			Validator.notNullUserMessage(partnerId, "empfaenger() nicht verwendet");			
+			PartnerDto partnerDto = partnerCache.getValueOfKey(partnerId);
+			
+			String laenderart = getFinanzServiceFac().getLaenderartZuPartner(
+					mandantDto, partnerDto, belegDatum, theClientDto);
+			boolean isIntrastatEU = Helper.isOneOf(laenderart, 
+					FinanzFac.LAENDERART_EU_AUSLAND_MIT_UID, 
+					FinanzFac.LAENDERART_EU_AUSLAND_OHNE_UID);
+			if (!isIntrastatEU) {
+				// Nordirland (LKZ XI) ist kein EU-Mitglied, aber trotzdem Intrastat (Brexit)
+				isIntrastatEU = "XI".equals(partnerDto.getLandplzortDto().getLandDto().getCLkz());
+			}
+
+			return isIntrastatEU;
+		}
+
+		protected void beleg(String kennungCnr, String belegCnr) {
+			Validator.notEmpty(belegCnr, "belegCnr");
+			this.belegCnr = belegCnr;
+			this.kennungCnr = kennungCnr;		
+		}
+
+		private BigDecimal gewicht() {
+			if (artikelDto.getFGewichtkg() == null) return BigDecimal.ZERO;
+
+			return this.amount.multiply(BigDecimal.valueOf(artikelDto.getFGewichtkg()));
+		}
+		
+		private BigDecimal asDecimal(BigDecimal value) {
+			return value == null ? BigDecimal.ZERO : value;
+		}
+		
+		public IntrastatDto build() {
+			IntrastatDto dto = new IntrastatDto();
+			dto.setArtikelDto(artikelDto);
+			dto.setWarenverkehrsnummerDto(wvkDto);
+			dto.setMenge(amount);
+
+//			if(wvkDto != null && "73269098".equals(wvkDto.getCNr().replace(" ", ""))) {
+//				System.out.println("halt");
+//			}
+			Validator.notNullUserMessage(this.kennungCnr, "reBeleg()/lsBeleg() wurde nicht verwendet");
+			dto.setBelegart(this.kennungCnr);
+			dto.setBelegnummer(this.belegCnr);
+			dto.setEinzelpreis(asDecimal(this.einzelpreis));
+			
+			Validator.notNullUserMessage(this.partnerId, "empfaenger() nicht verwendet");
+			dto.setPartnerDto(partnerCache.getValueOfKey(partnerId));
+			
+			dto.setGewichtInKg(gewicht());
+			dto.setWert(dto.getMenge().multiply(asDecimal(this.einzelpreis)));
+			
+			/*
+			BigDecimal bdAnteiligeTransportkosten;
+			if (bdGesamtwertDesWareneingangs.compareTo(new BigDecimal(0)) > 0) {
+				bdAnteiligeTransportkosten = bdGesamtwertDesWareneingangs
+						.divide(
+								bdGesamtwertDesWareneingangs
+										.add(bdTransportkosten),
+								FinanzReportFac.INTRASTAT_NACHKOMMASTELLEN_PREISE,
+								BigDecimal.ROUND_HALF_EVEN);
+				if (bdAnteiligeTransportkosten.compareTo(new BigDecimal(0)) == 0) {
+					bdAnteiligeTransportkosten = new BigDecimal(1);
+				}
+				iDto.setStatistischerWert(iDto.getWert().divide(
+						bdAnteiligeTransportkosten,
+						FinanzReportFac.INTRASTAT_NACHKOMMASTELLEN_PREISE,
+						BigDecimal.ROUND_HALF_EVEN));
+			} else {
+				// kann nicht aufgeteilt werden
+				bdAnteiligeTransportkosten = bdTransportkosten;
+				iDto.setStatistischerWert(iDto.getWert().add(
+						bdAnteiligeTransportkosten));
+			}
+			
+*/
+			if (lsWert.signum() > 0) {
+				BigDecimal anteilig = lsWert.divide(lsWert.add(transportKosten), 
+						FinanzReportFac.INTRASTAT_NACHKOMMASTELLEN_PREISE, BigDecimal.ROUND_HALF_EVEN);
+				if (anteilig.signum() == 0) {
+					anteilig = BigDecimal.ONE;
+				}
+				dto.setStatistischerWert(dto.getWert().divide(anteilig, 
+						FinanzReportFac.INTRASTAT_NACHKOMMASTELLEN_PREISE, BigDecimal.ROUND_HALF_EVEN));
+			} else {
+				dto.setStatistischerWert(dto.getWert().add(transportKosten));
+			}
+
+			// Wir haben/unterstuetzen keine Lohnveredelung
+//			dto.setBeistell("1");
+			dto.setBeistell(Helper.isStringEmpty(dto.getUid()) ? "12" : "11");
+			
+			dto.setVerkehrszweig(Helper.isStringEmpty(verkehrszweig) 
+					? FinanzReportFac.INTRASTAT_VERKEHRSZWEIG : verkehrszweig);
+			return dto;
+		}
+
+		private class PartnerCache extends HvCreatingCachingProvider<Integer, PartnerDto> {
+			private TheClientDto theClientDto;
+			
+			public PartnerCache(TheClientDto theClientDto) {
+				this.theClientDto = theClientDto;
+			}
+			
+			@Override
+			protected PartnerDto provideValue(Integer key, Integer transformedKey) {
+				return getPartnerFac().partnerFindByPrimaryKey(transformedKey, theClientDto);
+			}			
+		}
+	}
+
+	public class IntrastatVersandBuilder extends IntrastatBuilder {
+		public IntrastatVersandBuilder(TheClientDto theClientDto) {
+			super(theClientDto);
+		}
+
+		/**
+		 * Es handelt sich um einen Lieferschein
+		 * 
+		 * @param belegCnr die Lieferscheinnummer
+		 * @return
+		 */
+		public IntrastatVersandBuilder lsBeleg(String belegCnr) {
+			beleg("LS", belegCnr);
+			return this;
+		}
+		
+		/**
+		 * Es handelt sich um eine Rechnung
+		 * 
+		 * @param belegCnr die Rechnungsnummer
+		 * @return
+		 */
+		public IntrastatVersandBuilder reBeleg(String belegCnr) {
+			beleg("RE", belegCnr);
+			return this;			
+		}
+		
+		public IntrastatVersandBuilder empfaenger(FLRKunde flrKunde) {
+			Validator.notNull(flrKunde, "flrKunde");
+			partner(flrKunde.getFlrpartner().getI_id());
+			return this;
+		}
+
+		public IntrastatVersandBuilder empfaenger(Integer partnerId) {
+			Validator.notNull(partnerId, "partnerId");
+			partner(partnerId);
+			return this;
+		}
+	}
+	
+
+	public class IntrastatWareneingangBuilder extends IntrastatBuilder {
+		public IntrastatWareneingangBuilder(TheClientDto theClientDto) {
+			super(theClientDto);
+		}
+
+		/**
+		 * Es handelt sich um eine Bestellung 
+		 * 
+		 * @param belegCnr die Bestellnummer
+		 * @return
+		 */
+		public IntrastatWareneingangBuilder bsBeleg(String belegCnr) {
+			beleg("BS", belegCnr);
+			return this;
+		}
+
+		public IntrastatWareneingangBuilder lieferant(FLRLieferant flrLieferant) {
+			Validator.notNull(flrLieferant, "flrLieferant");
+			partner(flrLieferant.getFlrpartner().getI_id());
+			return this;
+		}
+
+		public IntrastatBuilder lieferant(Integer partnerId) {
+			Validator.notNull(partnerId, "partnerId");
+			partner(partnerId);
+			return this;
+		}
+	}
+	
+	
+	@org.jboss.ejb3.annotation.TransactionTimeout(20000)
 	public ArrayList<IntrastatDto> getIntrastatDatenVersand(java.sql.Date dVon,
 			java.sql.Date dBis, BigDecimal bdTransportkosten,
 			TheClientDto theClientDto) throws EJBExceptionLP {
@@ -1683,7 +2216,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 					theClientDto.getMandant(), theClientDto);
 			
 			//und die die eine UID-Nummer haben
-			cLSPartner.add(Restrictions.isNotNull(PartnerFac.FLR_PARTNER_C_UID));
+// Gilt ab Berichtsjahr 2022 nicht mehr			
+//			cLSPartner.add(Restrictions.isNotNull(PartnerFac.FLR_PARTNER_C_UID));
 			
 			cLSLand
 					.add(Restrictions.ne(SystemFac.FLR_LP_LANDLKZ, mandantDto
@@ -1715,19 +2249,37 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			// :
 			// 59
 
+			IntrastatVersandBuilder b = new IntrastatVersandBuilder(theClientDto);
+			
 			List<?> listLSPos = cLS.list();
 			for (Iterator<?> iter = listLSPos.iterator(); iter.hasNext();) {
 				FLRLieferscheinposition lsPos = (FLRLieferscheinposition) iter
 						.next();
+				FLRLieferschein flrLs = lsPos.getFlrlieferschein();
+				
+				b.artikel(lsPos.getFlrartikel().getI_id(), lsPos.getN_menge());
+				b.lsBeleg(flrLs.getC_nr())
+					.empfaenger(flrLs.getFlrkunde())
+					.einzelpreis(lsPos.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
+				b.verkehrszweig(flrLs.getFlrspediteur().getC_verkehrszweig());
+				
+				if (!b.isEU(Helper.asTimestamp(flrLs.getD_belegdatum()))) {
+					myLogger.info("Ignored LS " + flrLs.getC_nr() + ", not EU");
+					continue;
+				}
+				
+/*				
 				IntrastatDto iDto = new IntrastatDto();
 				iDto.setArtikelDto(getArtikelFac().artikelFindByPrimaryKey(
 						lsPos.getFlrartikel().getI_id(), theClientDto));
 				iDto.setBelegart("LS");
 				iDto.setBelegnummer(lsPos.getFlrlieferschein().getC_nr());
+*/				
 				/**
 				 * @todo MB ist das der richtige Preis?
 				 * @todo MB Wechselkurs beruecksichtigen
 				 */
+/*				
 				iDto
 						.setEinzelpreis(lsPos
 								.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt() != null ? lsPos
@@ -1738,10 +2290,11 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				iDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
 						lsPos.getFlrlieferschein().getFlrkunde()
 								.getFlrpartner().getI_id(), theClientDto));
+*/								
 				/**
 				 * @todo das mit den Transportkosten noch besser loesen
 				 */
-				BigDecimal bdGesamtwertDesWareneingangs = new BigDecimal(0);
+				BigDecimal bdGesamtwertDesWareneingangs = BigDecimal.ZERO;
 				LieferscheinpositionDto[] lsPositionen = getLieferscheinpositionFac()
 						.lieferscheinpositionFindByLieferscheinIId(
 								lsPos.getFlrlieferschein().getI_id());
@@ -1763,12 +2316,16 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 																.getF_wechselkursmandantwaehrungzulieferscheinwaehrung())));
 					}
 				}
-
+/*
 				iDto.setWert(iDto.getMenge().multiply(iDto.getEinzelpreis()));
+*/				
 				/*
 				 * iDto .setStatistischerWert(iDto.getWert().add(
 				 * bdTransportkosten));
 				 */
+				b.versandWert(bdGesamtwertDesWareneingangs, bdTransportkosten);
+	
+/*				
 				BigDecimal bdAnteiligeTransportkosten;
 				if (bdGesamtwertDesWareneingangs.compareTo(new BigDecimal(0)) > 0) {
 					bdAnteiligeTransportkosten = bdGesamtwertDesWareneingangs
@@ -1790,6 +2347,9 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 					iDto.setStatistischerWert(iDto.getWert().add(
 							bdAnteiligeTransportkosten));
 				}
+*/
+
+/*				
 				WarenverkehrsnummerDto wvk = null;
 				if (iDto.getArtikelDto().getCWarenverkehrsnummer() != null) {
 					wvk = getFinanzServiceFac()
@@ -1798,8 +2358,9 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 											.getCWarenverkehrsnummer());
 				}
 				iDto.setWarenverkehrsnummerDto(wvk);
+*/				
+/*				
 				BigDecimal bdGewicht = null;
-				iDto.setWarenverkehrsnummerDto(wvk);
 				if (iDto.getArtikelDto().getFGewichtkg() != null) {
 					bdGewicht = iDto.getMenge()
 							.multiply(
@@ -1810,6 +2371,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				}
 				iDto.setGewichtInKg(bdGewicht);
 				daten.add(iDto);
+*/
+				daten.add(b.build());
 			}
 
 			// Rechnungspositionen
@@ -1858,23 +2421,41 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			List<?> listREPos = cREPos.list();
 			for (Iterator<?> iter = listREPos.iterator(); iter.hasNext();) {
 				FLRRechnungPosition rePos = (FLRRechnungPosition) iter.next();
+				FLRRechnung flrRe = rePos.getFlrrechnung();
+				
 				// Die Rechnung muss aktiviert sein
-				if (rePos.getFlrrechnung().getStatus_c_nr().equals(
+				if (flrRe.getStatus_c_nr().equals(
 						RechnungFac.STATUS_ANGELEGT)) {
 					throw new EJBExceptionLP(
 							EJBExceptionLP.FEHLER_FINANZ_EXPORT_BELEG_IST_NOCH_NICHT_AKTIVIERT,
 							new Exception("Rechnung "
 									+ rePos.getFlrrechnung().getC_nr()));
 				}
+/*				
 				IntrastatDto iDto = new IntrastatDto();
 				iDto.setArtikelDto(getArtikelFac().artikelFindByPrimaryKey(
 						rePos.getFlrartikel().getI_id(), theClientDto));
 				iDto.setBelegart("RE");
 				iDto.setBelegnummer(rePos.getFlrrechnung().getC_nr());
+*/				
+				b.artikel(rePos.getFlrartikel().getI_id(), rePos.getN_menge());
+				b.empfaenger(flrRe.getFlrkunde())
+					.reBeleg(flrRe.getC_nr())
+					.einzelpreis(rePos.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt());
+
+				b.verkehrszweig(flrRe.getFlrspediteur().getC_verkehrszweig());
+				
+				if (!b.isEU(Helper.asTimestamp(
+						flrRe.getD_belegdatum()))) {
+					myLogger.info("Ignored AR " + flrRe.getC_nr() + ", not EU");
+					continue;
+				}
+				
 				/**
 				 * @todo MB ist das der richtige Preis?
 				 * @todo MB Wechselkurs beruecksichtigen
 				 */
+/*				
 				iDto
 						.setEinzelpreis(rePos
 								.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt() != null ? rePos
@@ -1885,6 +2466,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				iDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
 						rePos.getFlrrechnung().getFlrkunde().getFlrpartner()
 								.getI_id(), theClientDto));
+*/								
 				/**
 				 * @todo das mit den Transportkosten noch besser loesen
 				 */
@@ -1911,14 +2493,14 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 						}
 					}
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					myLogger.error("Exc", e);
 				}
+/*				
 				iDto.setWert(iDto.getMenge().multiply(iDto.getEinzelpreis()));
-				/*
-				 * iDto .setStatistischerWert(iDto.getWert().add(
-				 * bdTransportkosten));
-				 */
+*/				
+
+				b.versandWert(bdGesamtwertDesWareneingangs, bdTransportkosten);
+/*				
 				BigDecimal bdAnteiligeTransportkosten;
 				if (bdGesamtwertDesWareneingangs.compareTo(new BigDecimal(0)) > 0) {
 					bdAnteiligeTransportkosten = bdGesamtwertDesWareneingangs
@@ -1940,6 +2522,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 					iDto.setStatistischerWert(iDto.getWert().add(
 							bdAnteiligeTransportkosten));
 				}
+*/
+/*				
 				WarenverkehrsnummerDto wvk = null;
 				if (iDto.getArtikelDto().getCWarenverkehrsnummer() != null) {
 					wvk = getFinanzServiceFac()
@@ -1959,7 +2543,9 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 					bdGewicht = new BigDecimal(0);
 				}
 				iDto.setGewichtInKg(bdGewicht);
-				daten.add(iDto);
+*/				
+//				daten.add(iDto);
+				daten.add(b.build());
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -1980,16 +2566,24 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		StringBuffer warn = new StringBuffer();
 		int warnCount = 0 ;
 		int errCount = 0 ;
+		private Collection<IHvBelegnummernformat> bnFormate;
+		private Integer idxFormate = 0;
 		
-		public OpBelegnummer(String prefixAR, String prefixGS, int belegnrLaenge, int jahrLaenge, String belegTrennzeichen) {
+//		public OpBelegnummer(String prefixAR, String prefixGS, int belegnrLaenge, int jahrLaenge, String belegTrennzeichen) {
+//			this.prefixAR = prefixAR ;
+//			this.prefixGS = prefixGS ;
+//			this.belegnrLaenge = belegnrLaenge ;
+//			this.jahrLaenge = jahrLaenge ;
+//			this.belegTrennzeichen = belegTrennzeichen ;
+//		}
+		
+		public OpBelegnummer(String prefixAR, String prefixGS, Collection<IHvBelegnummernformat> bnFormate) {
 			this.prefixAR = prefixAR ;
 			this.prefixGS = prefixGS ;
-			this.belegnrLaenge = belegnrLaenge ;
-			this.jahrLaenge = jahrLaenge ;
-			this.belegTrennzeichen = belegTrennzeichen ;
+			this.bnFormate = bnFormate;
 		}
 		
-		public boolean isValid(String anyNumber) {
+		private boolean isValid(IHvBelegnummernformat bnFormat, String anyNumber) {
 			String candidate = anyNumber ;
 			if(prefixAR.length() > 0 && anyNumber.startsWith(prefixAR)) {
 				candidate = anyNumber.substring(prefixAR.length()) ;
@@ -1999,14 +2593,64 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 				candidate = anyNumber.substring(prefixGS.length()) ;
 			}
 			
-			if(candidate.length() != jahrLaenge + belegTrennzeichen.length() + belegnrLaenge) {
+			if(candidate.length() != bnFormat.getLaengeGesamt()) {
 				return false ;
 			}
 
+			String trennzeichen = bnFormat.getTrennzeichen() 
+					+ (bnFormat.getMandantkennung() != null ? bnFormat.getMandantkennung() : "");
 			return candidate.substring(
-				jahrLaenge, jahrLaenge + belegTrennzeichen.length()).equals(belegTrennzeichen) ;
+					bnFormat.getLaengeGj(), bnFormat.getLaengeGj() + trennzeichen.length()).equals(trennzeichen) ;
 		}
-
+		
+		public boolean isValid(String anyNumber) {
+			for (IHvBelegnummernformat format : bnFormate) {
+				if (isValid(format, anyNumber))
+					return true;
+			}
+			return false;
+//			String candidate = anyNumber ;
+//			if(prefixAR.length() > 0 && anyNumber.startsWith(prefixAR)) {
+//				candidate = anyNumber.substring(prefixAR.length()) ;
+//			}			
+//			
+//			if(prefixGS.length() > 0 && anyNumber.startsWith(prefixGS)) {
+//				candidate = anyNumber.substring(prefixGS.length()) ;
+//			}
+//			
+//			if(candidate.length() != jahrLaenge + belegTrennzeichen.length() + belegnrLaenge) {
+//				return false ;
+//			}
+//
+//			return candidate.substring(
+//				jahrLaenge, jahrLaenge + belegTrennzeichen.length()).equals(belegTrennzeichen) ;
+		}
+		
+		public String formatBelegnummer(IHvBelegnummernformat format, String anyNumber) {
+			anyNumber = getExternalBelegnummer(anyNumber);
+			String trennzeichen = format.getTrennzeichen() 
+					+ (format.getMandantkennung() != null ? format.getMandantkennung() : "");
+			int idxTrennzeichen = anyNumber.lastIndexOf(trennzeichen);
+			if (idxTrennzeichen < 0)
+				return null;
+			
+			String cLfdNr = anyNumber.substring(idxTrennzeichen + trennzeichen.length());
+			if (!StringUtils.isNumeric(cLfdNr))
+				return null;
+			
+			Integer lfdNr = new Integer(cLfdNr);
+			if (String.valueOf(lfdNr).length() > format.getLaengeBelegnr())
+				return null;
+			
+			String transformed = anyNumber.substring(0, idxTrennzeichen + 1)
+					+ String.format("%0" + format.getLaengeBelegnr() + "d", lfdNr);
+			return transformed;
+		}
+		
+		public Collection<IHvBelegnummernformat> getBnFormate() {
+			return bnFormate;
+		}
+		
 		/**
 		 * Ist prefix AR definiert und die Nummer beginnt mit Prefix und ist gueltig dann AR.
 		 * Ist prefix GS definiert und die Nummer beginnt
@@ -2025,23 +2669,31 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		}
 		
 		public String getKeyedBelegnummer(String anyNumber) {
-			if(prefixAR.length() > 0 && anyNumber.startsWith(prefixAR) && isValid(anyNumber)) {
+			if(prefixAR.length() > 0 && anyNumber.startsWith(prefixAR)) {
 				return buildKeyedBelegnummer("Rechnung", anyNumber.substring(prefixAR.length())) ;
 			}
 
-			if(prefixGS.length() > 0 && anyNumber.startsWith(prefixGS) && isValid(anyNumber)) {
+			if(prefixGS.length() > 0 && anyNumber.startsWith(prefixGS)) {
 				return buildKeyedBelegnummer("Gutschrift", anyNumber.substring(prefixGS.length())) ;
 			}
 			
 			return anyNumber ;
 		}
 		
+		public String getKeyedBelegnummer(boolean bAR, String anyNumber) {
+			if(bAR) {
+				return buildKeyedBelegnummer("Rechnung", anyNumber) ;
+			} else {
+				return buildKeyedBelegnummer("Gutschrift", anyNumber) ;
+			}
+		}
+		
 		public String getExternalBelegnummer(String anyNumber) {
-			if(prefixAR.length() > 0 && anyNumber.startsWith(prefixAR) && isValid(anyNumber)) {
+			if(prefixAR.length() > 0 && anyNumber.startsWith(prefixAR)) {
 				return anyNumber.substring(prefixAR.length()) ;
 			}
 
-			if(prefixGS.length() > 0 && anyNumber.startsWith(prefixGS) && isValid(anyNumber)) {
+			if(prefixGS.length() > 0 && anyNumber.startsWith(prefixGS)) {
 				return anyNumber.substring(prefixGS.length()) ;
 			}
 			
@@ -2112,11 +2764,11 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 	}
 	
 //	@TransactionTimeout(1000)
-	@TransactionTimeout(10000)
-	public String importiereOffenePosten(ArrayList<String[]> daten,
+	@org.jboss.ejb3.annotation.TransactionTimeout(20000)
+	public String importiereOffenePosten(List<String[]> daten,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
-		final int MAX_ERROR = 30;
+		final int MAX_ERROR = 100;
 		final int FI_KONTONUMMER = 0;
 		final int FI_RECHNUNGSNR = 1;
 		final int FI_RECHNUNGSDATUM = 2;
@@ -2134,41 +2786,43 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		String opPrefixAR = getStringParameter(ParameterFac.PARAMETER_FINANZ_OP_PREFIX_RECHNUNG, theClientDto);
 		String opPrefixGS = getStringParameter(ParameterFac.PARAMETER_FINANZ_OP_PREFIX_GUTSCHRIFT, theClientDto);
 
-		Integer belegNrlaenge = new Integer(7);
-		Integer belegNrlaengeJahr = new Integer(2);
-		String belegNrTrennzeichen = "/";
-		
-		try {
-			p = getParameterFac()
-					.getMandantparameter(
-							theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_BELEGNUMMER);
-			belegNrlaenge = new Integer(p.getCWert());
-		} catch (Exception e) {
-			//
-		}
-		try {
-			p = getParameterFac()
-					.getMandantparameter(
-							theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_GESCHAEFTSJAHR);
-			belegNrlaengeJahr = new Integer(p.getCWert());
-		} catch (Exception e) {
-			//
-		}
-		try {
-			p = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(),
-					ParameterFac.KATEGORIE_ALLGEMEIN,
-					ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_TRENNZEICHEN);
-			belegNrTrennzeichen = p.getCWert();
-		} catch (Exception e) {
-			//
-		}
+//		Integer belegNrlaenge = new Integer(7);
+//		Integer belegNrlaengeJahr = new Integer(2);
+//		String belegNrTrennzeichen = "/";
+//		
+//		try {
+//			p = getParameterFac()
+//					.getMandantparameter(
+//							theClientDto.getMandant(),
+//							ParameterFac.KATEGORIE_ALLGEMEIN,
+//							ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_BELEGNUMMER);
+//			belegNrlaenge = new Integer(p.getCWert());
+//		} catch (Exception e) {
+//			//
+//		}
+//		try {
+//			p = getParameterFac()
+//					.getMandantparameter(
+//							theClientDto.getMandant(),
+//							ParameterFac.KATEGORIE_ALLGEMEIN,
+//							ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_GESCHAEFTSJAHR);
+//			belegNrlaengeJahr = new Integer(p.getCWert());
+//		} catch (Exception e) {
+//			//
+//		}
+//		try {
+//			p = getParameterFac().getMandantparameter(
+//					theClientDto.getMandant(),
+//					ParameterFac.KATEGORIE_ALLGEMEIN,
+//					ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_TRENNZEICHEN);
+//			belegNrTrennzeichen = p.getCWert();
+//		} catch (Exception e) {
+//			//
+//		}
+//		OpBelegnummer bn = new OpBelegnummer(opPrefixAR, opPrefixGS, belegNrlaenge, belegNrlaengeJahr, belegNrTrennzeichen) ;
 
-		OpBelegnummer bn = new OpBelegnummer(opPrefixAR, opPrefixGS, belegNrlaenge, belegNrlaengeJahr, belegNrTrennzeichen) ;
+		Collection<IHvBelegnummernformat> validBnFormate = getBelegnummernformate(theClientDto.getMandant());
+		OpBelegnummer bn = new OpBelegnummer(opPrefixAR, opPrefixGS, validBnFormate);
 		
 		String mandantCNr = theClientDto.getMandant();
 		MandantDto mDto = getMandantFac().mandantFindByPrimaryKey(
@@ -2176,26 +2830,67 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		Integer kontoIId = mDto.getIBankverbindung();
 		HashMap<String, String> hmNummern = new HashMap<String, String>();
 		for (int i = 1; i < daten.size(); i++) { // bei 1 beginnen, da erste
+			myLogger.warn("Importiere Zeile " + i + "...");
 			// Zeile Header
 			String[] as = daten.get(i);
 			if (as.length < CSV_LEN) {
 				bn.error(i, "Falsche Feldanzahl:" + as.length + " erwartet:" + CSV_LEN ) ;
 			} else {
 				if(bn.isValid(as[FI_RECHNUNGSNR])) {
-					String rechnungsNummer = bn.getKeyedBelegnummer(as[FI_RECHNUNGSNR]) ;					
-					String found = hmNummern.get(rechnungsNummer) ;
+					HvOptional<Rechnung> hvRechnung = HvOptional.empty();
+					//OP-Rechnungsnr mit jedem moeglichen Belegnrformat pruefen
+					for (IHvBelegnummernformat format : bn.getBnFormate()) {
+						HvOptional<String> reNr = HvOptional.ofNullable(bn.formatBelegnummer(format, as[FI_RECHNUNGSNR]));
+						if (reNr.isEmpty()) {
+							continue;
+						}
+						
+						hvRechnung = findARGS(bn.isAR(as[FI_RECHNUNGSNR]), reNr.get(), mandantCNr);
+						if (hvRechnung.isPresent()) {
+							break;
+						}
+					}
+					
+					if (hvRechnung.isEmpty()) {
+						bn.error(i, bn.getKeyedBelegnummer(bn.getExternalBelegnummer(as[FI_RECHNUNGSNR]))
+								+ " nicht vorhanden");
+						continue;
+					}
+					
+					String reNummer = hvRechnung.get().getCNr();
+					String keyedReNummer = bn.getKeyedBelegnummer(bn.isAR(as[FI_RECHNUNGSNR]), hvRechnung.get().getCNr());
+					String found = hmNummern.get(keyedReNummer);
+					myLogger.warn("> Verarbeite Rechnung " + keyedReNummer + "(" + found + ")");
 					if(found != null) {
 //						bn.warn(as[FI_RECHNUNGSNR] + "(Raffung?" + i + ")");
 						continue ;
 					}
 					
-					hmNummern.put(rechnungsNummer, as[FI_RECHNUNGSNR]) ;
-					String sErr = importARGS(bn.isAR(as[FI_RECHNUNGSNR]), bn.getExternalBelegnummer(as[FI_RECHNUNGSNR]),
+					hmNummern.put(keyedReNummer, as[FI_RECHNUNGSNR]) ;
+					String sErr = importARGS(bn.isAR(as[FI_RECHNUNGSNR]), reNummer, hvRechnung,
 							as[FI_SALDO], as[FI_SH_SALDO], "", IMPORT_TEXT,
 							kontoIId, mandantCNr, theClientDto);
+					myLogger.warn(">> " + sErr);
 					if (sErr.length() > 0) {
 						bn.error(i,  sErr);
 					}
+					
+//					String rechnungsNummer = bn.getKeyedBelegnummer(as[FI_RECHNUNGSNR]) ;					
+//					String found = hmNummern.get(rechnungsNummer) ;
+//					myLogger.warn("> Verarbeite Rechnung " + rechnungsNummer + "(" + found + ")");
+//					if(found != null) {
+////						bn.warn(as[FI_RECHNUNGSNR] + "(Raffung?" + i + ")");
+//						continue ;
+//					}
+//					
+//					hmNummern.put(rechnungsNummer, as[FI_RECHNUNGSNR]) ;
+//					String sErr = importARGS(bn.isAR(as[FI_RECHNUNGSNR]), bn.getExternalBelegnummer(as[FI_RECHNUNGSNR]),
+//							as[FI_SALDO], as[FI_SH_SALDO], "", IMPORT_TEXT,
+//							kontoIId, mandantCNr, theClientDto);
+//					myLogger.warn(">> " + sErr);
+//					if (sErr.length() > 0) {
+//						bn.error(i,  sErr);
+//					}
 				} else {
 					bn.warn(as[FI_RECHNUNGSNR] + "(" + i + ")") ;
 				}
@@ -2210,7 +2905,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		if (bn.getErrorCount() <= MAX_ERROR) {
 			// restliche Rechnungen erledigen
 			Session session = FLRSessionFactory.getFactory().openSession();
-			String sQuery = "SELECT r.c_nr, r.flrrechnungart.c_nr "
+			String sQuery = "SELECT r.c_nr, r.flrrechnungart.rechnungtyp_c_nr "
 					+ "FROM FLRRechnung AS r "
 					+ "WHERE r.t_fibuuebernahme != NULL AND "
 					+ "(r.status_c_nr = 'Offen' OR r.status_c_nr = 'Teilbezahlt') AND "
@@ -2218,11 +2913,9 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 					+ mandantCNr
 					+ "' AND "
 //					+ "(r.flrrechnungart.c_nr IN ('Rechnung', 'Anzahlungsrechnung'))";
-					+ "(r.flrrechnungart.c_nr IN ('Rechnung', 'Anzahlungsrechnung', 'Gutschrift'))";
+					+ "(r.flrrechnungart.rechnungtyp_c_nr IN ('Rechnung', 'Gutschrift'))";
 			org.hibernate.Query query = session.createQuery(sQuery);
 			List<Object[]> baseList = new ArrayList<Object[]>() ;
-//			baseList.add(new Object[]{"12/0000788", "Rechnung"}) ;
-//			baseList.add(new Object[]{"12/0000809", "Rechnung"});
 			baseList.addAll(query.list()) ;
 			Iterator<?> it = baseList.iterator() ;
 			
@@ -2234,6 +2927,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 //				try {
 					String externalBelegNr = hmNummern.get(bn.buildKeyedBelegnummer(artCnr, cNr)) ;
 					if (externalBelegNr == null) {
+						myLogger.warn("erledigen von " + artCnr + "/" + cNr + "...");
 						String sErr = importARGS(!"Gutschrift".equals(artCnr), cNr, "0", "S", "",
 								IMPORT_TEXT, kontoIId, mandantCNr, theClientDto);
 						if (sErr.length() > 0) {
@@ -2257,6 +2951,18 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		return result ;
 	}
 
+	private Collection<IHvBelegnummernformat> getBelegnummernformate(String mandantCnr) {
+		Set<IHvBelegnummernformat> validBnFormate = new HashSet<IHvBelegnummernformat>();
+		List<HvBelegnummernformatHistorisch> bnFormateAll = getParameterFac().getHvBelegnummernformatHistorischAll(mandantCnr);
+		bnFormateAll.forEach(format -> {
+			if (format.isValidPattern())
+				validBnFormate.add(format);
+		});
+		IHvBelegnummernformat currentBnFormat = getParameterFac().getHvBelegnummernformat(mandantCnr);
+		validBnFormate.add(currentBnFormat);
+		return validBnFormate;
+	}
+	
 	private boolean checkRechnungsnummer(String nummer, String prefix,
 			int belegNrlaenge, int belegNrlaengeJahr, String belegNrTrennzeichen) {
 		String s = null;
@@ -2286,53 +2992,69 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			Integer kontoIId, String sMandantCNr, TheClientDto theClientDto) {
 		return "";
 	}
+	
+	private HvOptional<Rechnung> findARGS(boolean bAR, String belegnummer, String mandantCnr) {
+		List<String> rechnungarten = bAR
+				? getRechnungarten()
+				: getGutschriftarten();
+				
+		return HvOptional.ofNullable(
+				RechnungQuery.resultByCNrMehrereRechnungartCNrMandant(
+						entityManager, belegnummer, rechnungarten, mandantCnr));
+	}
 
 	private String importARGS(boolean bARGS, String sBelegnummer,
 			String sSaldo, String sSHSaldo, String sKurs, Integer sBuchungsText,
 			Integer kontoIId, String sMandantCNr, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
+		HvOptional<Rechnung> rechnung = findARGS(bARGS, sBelegnummer, sMandantCNr);
+		return importARGS(bARGS, sBelegnummer, rechnung, sSaldo, sSHSaldo, sKurs, 
+				sBuchungsText, kontoIId, sMandantCNr, theClientDto);
+	}
+	
+	private String importARGS(boolean bARGS, String sBelegnummer, HvOptional<Rechnung> rechnungOpt,
+			String sSaldo, String sSHSaldo, String sKurs, Integer sBuchungsText,
+			Integer kontoIId, String sMandantCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		String belegBez = (bARGS ? "Rechnung " : "Gutschrift ") + sBelegnummer;
 
-		Query query;
-		if (bARGS) {
-			// AR
-			query = entityManager
-					.createNamedQuery("RechnungfindByRechnungartRechnungCNrMandant");
-			query.setParameter(1, sBelegnummer);
-			query.setParameter(2, sMandantCNr);
-		} else {
-			// GS
-			query = entityManager
-					.createNamedQuery("RechnungfindByCNrRechnungartCNrMandant");
-			query.setParameter(1, sBelegnummer);
-			query.setParameter(2, RechnungFac.RECHNUNGART_GUTSCHRIFT);
-			query.setParameter(3, sMandantCNr);
-		}
-		Rechnung rechnung = null;
+		if (!rechnungOpt.isPresent())
+			return belegBez + " nicht vorhanden";
+		
+		Rechnung rechnung = rechnungOpt.get();
 
-		try {
-			rechnung = (Rechnung) query.getSingleResult();
-		} catch (NoResultException e) {
-			return (bARGS ? "Rechnung " : "Gutschrift ") + sBelegnummer + " nicht vorhanden";
+		if (RechnungFac.STATUS_STORNIERT.equals(rechnung.getStatusCNr())) {
+			return belegBez + " wurde storniert";
 		}
-
-		if (rechnung.getStatusCNr().equals(RechnungFac.STATUS_STORNIERT)) {
-			return "Rechnung " + sBelegnummer + " wurde storniert";
+		if(RechnungFac.STATUS_BEZAHLT.equals(rechnung.getStatusCNr())) {
+			return belegBez + " ist bereits bezahlt";
 		}
+			
 		if (rechnung.getNWert().signum() == 0) {
-			return "Rechnung " + sBelegnummer + " hat Wert = 0";
+			return belegBez + " hat Wert = 0";
 		}
+
 		BigDecimal bezahlt = getRechnungFac().getBereitsBezahltWertVonRechnung(
 				rechnung.getIId(), null);
+		BigDecimal bezahltUst = getRechnungFac()
+				.getBereitsBezahltWertVonRechnungUst(rechnung.getIId(), null);
+
 		BigDecimal saldo = new BigDecimal(sSaldo);
-		BigDecimal saldodiff = (rechnung.getNWert().add(rechnung.getNWertust())
-				.subtract(bezahlt)).subtract(saldo);
+		if (bARGS && "H".equals(sSHSaldo)
+				|| !bARGS && "S".equals(sSHSaldo)) {
+			// Fall der Ueberzahlung bei RE und GS
+			saldo = saldo.negate();
+		}
+		
+		BigDecimal saldodiff = rechnung.getNWert().add(rechnung.getNWertust())
+				.subtract(bezahlt).subtract(bezahltUst).subtract(saldo);
 		// gemischter Steuersatz der Rechnung
 		BigDecimal ustproz = rechnung.getNWertust().divide(rechnung.getNWert(),
 				BigDecimal.ROUND_HALF_EVEN).movePointRight(2);
 		if (saldodiff.signum() < 0) {
-			return "Ung\u00FCltiger offener Saldo f\u00FCr " + sBelegnummer + 
+			return "Ung\u00FCltiger offener Saldo f\u00FCr " + belegBez + 
 					". Negativer Betrag. [" + saldodiff.toPlainString() + 
-					", bezahlt=" + bezahlt.toPlainString() + 
+					", bezahlt=" + bezahlt.add(bezahltUst).toPlainString() + 
 					", RE-Wert=" + rechnung.getNWert().toPlainString() + 
 					", RE-Ust=" + rechnung.getNWertust() + "]";
 		} else if (saldodiff.signum() > 0) {
@@ -2351,22 +3073,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			rzDto.setNKurs(BigDecimal.ONE);
 			rzDto.setNBetragfw(rzDto.getNBetrag());
 			rzDto.setNBetragUstfw(rzDto.getNBetragUst());
-//			if (bARGS)
-//				rzDto.setRechnungIId(rechnung.getIId());
-//			else
-//				rzDto.setRechnungIIdGutschrift(rechnung.getIId());
-//			// TODO: Zahlungsart
-//			rzDto.setZahlungsartCNr(RechnungFac.ZAHLUNGSART_BANK);
-
-			if (bARGS) {
-				rzDto.setRechnungIId(rechnung.getIId());
-				rzDto.setZahlungsartCNr(RechnungFac.ZAHLUNGSART_BANK);
-			} else {
-//				rzDto.setRechnungIIdGutschrift(rechnung.getIId());
-				rzDto.setRechnungIId(rechnung.getIId());
-				rzDto.setZahlungsartCNr(RechnungFac.ZAHLUNGSART_GUTSCHRIFT);
-			}
-
+			rzDto.setRechnungIId(rechnung.getIId());
+			rzDto.setZahlungsartCNr(RechnungFac.ZAHLUNGSART_BANK);
 			rzDto.setBankkontoIId(kontoIId);
 			rzDto.setIAuszug(sBuchungsText);
 
@@ -2387,4 +3095,519 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		return assembleExportdatenDtos(list);
 	}
 
+	private List<String> rechnungarten;
+	public List<String> getRechnungarten() {
+		if (rechnungarten == null) {
+			rechnungarten = Arrays.asList(RechnungFac.RECHNUNGART_RECHNUNG, 
+					RechnungFac.RECHNUNGART_ANZAHLUNG, RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG);
+		}
+		return rechnungarten;
+	}
+	
+	private List<String> gutschriftarten;
+	public List<String> getGutschriftarten() {
+		if (gutschriftarten == null) {
+			gutschriftarten = Arrays.asList(RechnungFac.RECHNUNGART_GUTSCHRIFT, 
+					RechnungFac.RECHNUNGART_WERTGUTSCHRIFT);
+		}
+		return gutschriftarten;
+	}
+
+	public interface BuchungsjournalExportVisitor {
+		void visitBuchung(FLRFinanzBuchung flrBuchung, FLRFinanzKonto flrGegenkonto);
+		void visit(FLRFinanzBuchungDetail flrDetail);
+		void visitSteuer(FLRFinanzBuchungDetail flrDetail1, FLRFinanzBuchungDetail flrDetail2);
+		void visitBuchungDone();
+	}
+	
+	private void setBelegInfo(BuchungsjournalExportDatevBuchung datevBuchung, FLRFinanzBuchung hvBuchung, TheClientDto theClientDto) {
+		String belegart = hvBuchung.getFlrfbbelegart() != null ? hvBuchung.getFlrfbbelegart().getC_nr() : "";
+		String belegnummer = hvBuchung.getC_belegnummer() != null ? hvBuchung.getC_belegnummer().trim() : "";
+		if (Helper.isStringEmpty(belegart) || Helper.isStringEmpty(belegnummer))
+			return;
+		
+		if (LocaleFac.BELEGART_EINGANGSRECHNUNG.equals(belegart)) {
+			Eingangsrechnung eingangsrechnung = EingangsrechnungQuery.resultByCNrMandantCNrOhneZusatzkosten(
+					entityManager, belegnummer, theClientDto.getMandant());
+			if (eingangsrechnung == null) return;
+			
+			datevBuchung.setBelegInfo1(eingangsrechnung.getCLieferantenrechnungsnummer());
+			
+		} else if (LocaleFac.BELEGART_RECHNUNG.equals(belegart) 
+				|| LocaleFac.BELEGART_GUTSCHRIFT.equals(belegart)) {
+			List<String> rechnungarten = LocaleFac.BELEGART_RECHNUNG.equals(belegart) ? 
+					getRechnungarten() : getGutschriftarten();
+					
+			Rechnung rechnung = RechnungQuery.resultByCNrMehrereRechnungartCNrMandant(
+					entityManager, belegnummer, rechnungarten, theClientDto.getMandant());
+			if (rechnung == null) return;
+			
+			datevBuchung.setBelegInfo1(rechnung.getCBestellnummer());
+			datevBuchung.setBelegInfo2(rechnung.getCBez());
+		}
+	}
+
+	public class HvBuchungExport {
+		private FLRFinanzBuchung flrBuchung;
+		private FLRFinanzKonto flrGegenkonto;
+		
+		private EingangsrechnungDto erDto;
+		private RechnungDto rechnungDto;
+		
+		public HvBuchungExport() {
+		}
+		
+		public FLRFinanzBuchung getFlrBuchung() {
+			return flrBuchung;
+		}
+
+		public FLRFinanzKonto getFlrGegenkonto() {
+			return flrGegenkonto;
+		}
+		
+		public void setErDto(EingangsrechnungDto erDto) {
+			this.erDto = erDto;
+		}
+		
+		public EingangsrechnungDto getErDto() {
+			return erDto;
+		}
+		
+		public boolean isEingangsrechnung() {
+			return getErDto() != null;
+		}
+		
+		public void setRechnungDto(RechnungDto rechnungDto) {
+			this.rechnungDto = rechnungDto;
+		}
+		
+		public RechnungDto getRechnungDto() {
+			return rechnungDto;
+		}
+		
+		public boolean isRechnung() {
+			return getRechnungDto() != null;
+		}
+
+		public void init(FLRFinanzBuchung flrBuchung, FLRFinanzKonto flrGegenkonto, TheClientDto theClientDto) {
+			this.flrBuchung = flrBuchung;
+			this.flrGegenkonto = flrGegenkonto;
+			
+			try {
+				String belegart = flrBuchung.getFlrfbbelegart() != null ? flrBuchung.getFlrfbbelegart().getC_nr() : "";
+			
+				BelegbuchungDto belegBuchungDto = getBelegbuchungFac(theClientDto.getMandant())
+						.belegbuchungFindByBuchungIIdOhneExc(flrBuchung.getI_id());
+				if (belegBuchungDto == null) {
+					// Handelt sich um Umbuchung und dergleichen
+					return;
+				}
+				
+				Integer belegId = belegBuchungDto.getIBelegiid();
+				
+				if (LocaleFac.BELEGART_EINGANGSRECHNUNG.equals(belegart)) {
+					if (LocaleFac.BELEGART_ERZAHLUNG.equals(belegBuchungDto.getBelegartCNr())) {
+						EingangsrechnungzahlungDto erzDto = getEingangsrechnungFac()
+								.eingangsrechnungzahlungFindByPrimaryKey(belegId);
+						belegId = erzDto.getEingangsrechnungIId();
+					} 
+					setErDto(getEingangsrechnungFac()
+							.eingangsrechnungFindByPrimaryKey(belegId));			
+				} else if (LocaleFac.BELEGART_RECHNUNG.equals(belegart) || 
+						LocaleFac.BELEGART_GUTSCHRIFT.equals(belegart)) {
+					if (LocaleFac.BELEGART_REZAHLUNG.equals(belegBuchungDto.getBelegartCNr())) {
+						RechnungzahlungDto rezDto = getRechnungFac()
+								.rechnungzahlungFindByPrimaryKey(belegId);
+						belegId = rezDto.getRechnungIId();
+					}
+					
+					setRechnungDto(getRechnungFac()
+							.rechnungFindByPrimaryKey(belegId));						
+				}
+/*				
+				String belegnummer = flrBuchung.getC_belegnummer() != null ? flrBuchung.getC_belegnummer().trim() : "";
+				if (LocaleFac.BELEGART_EINGANGSRECHNUNG.equals(belegart)) {
+					Eingangsrechnung eingangsrechnung = EingangsrechnungQuery.resultByCNrMandantCNrOhneZusatzkosten(
+							entityManager, belegnummer, theClientDto.getMandant());
+					if (eingangsrechnung != null) {
+						setErDto(getEingangsrechnungFac().eingangsrechnungFindByPrimaryKey(eingangsrechnung.getIId()));
+					}
+				} else if (LocaleFac.BELEGART_RECHNUNG.equals(belegart) 
+						|| LocaleFac.BELEGART_GUTSCHRIFT.equals(belegart)) {
+					List<String> rechnungarten = LocaleFac.BELEGART_RECHNUNG.equals(belegart) ? 
+							getRechnungarten() : getGutschriftarten();
+					Rechnung rechnung = RechnungQuery.resultByCNrMehrereRechnungartCNrMandant(
+							entityManager, belegnummer, rechnungarten, theClientDto.getMandant());
+					if (rechnung != null) { 
+						setRechnungDto(getRechnungFac().rechnungFindByPrimaryKey(rechnung.getIId()));
+					}
+				}
+*/				
+			} catch (RemoteException re) {
+				throwEJBExceptionLPRespectOld(re);
+			}
+		}
+	}
+	
+	public class BuchungsjournalDatevExporter implements BuchungsjournalExportVisitor, IBuchungsjournalExportFormatter {
+		private String durchlaufKonto;
+		private List<String> kontoklassenOhneBU;
+		private Map<Integer, SteuerkontoInfo> mwstKonten;
+		private HvCreatingCachingProvider<Integer, MwstsatzDto> mwstsatzCache;
+		private ReversechargeartDto rcOhneDto;
+		private TheClientDto theClientDto;
+		private BuchungsjournalExportProperties exportProperties;
+		
+		private HvBuchungExport hvBuchung;
+		private boolean buSchluesselBuchungForbidden;
+		
+		private List<BuchungsjournalExportDatevBuchung> resultBuchungen;
+		
+		private BuchungsfallVisitor buchungsfallVisitor;
+
+		public BuchungsjournalDatevExporter(BuchungsjournalExportProperties exportProperties, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			this.theClientDto = theClientDto;
+			this.exportProperties = exportProperties;
+			initParams();
+			initFormatter();
+		}
+		
+		public void setBuSchluesselBuchungForbidden(boolean buSchluesselBuchungForbidden) {
+			this.buSchluesselBuchungForbidden = buSchluesselBuchungForbidden;
+		}
+		
+		public boolean isBuSchluesselBuchungForbidden() {
+			return buSchluesselBuchungForbidden;
+		}
+		
+		private void initParams() throws EJBExceptionLP, RemoteException {
+			durchlaufKonto = getParameterFac().getExportDatevMitlaufendesKonto(theClientDto.getMandant());
+			kontoklassenOhneBU = getParameterFac().getExportDatevKontoklassenOhneBuSchluessel(theClientDto.getMandant());
+
+			mwstKonten = new HashMap<Integer, SteuerkontoInfo>();
+			FinanzamtDto[] finanzaemter = getFinanzFac().finanzamtFindAll(theClientDto);
+			for(FinanzamtDto amt : finanzaemter) {
+				mwstKonten.putAll(getFinanzServiceFac().getAllIIdsSteuerkontoMitIIdMwstBez(amt.getPartnerIId(), theClientDto));
+			}
+			
+			mwstsatzCache = new HvCreatingCachingProvider<Integer, MwstsatzDto>() {
+				protected MwstsatzDto provideValue(Integer kontoId, Integer transformedKey) {
+					Integer mwstIId = mwstKonten.get(kontoId).getMwstsatzbezId();
+					if (mwstIId == null) 
+						return null;
+					
+					MwstsatzDto mwstDto = getMandantFac().mwstsatzFindZuDatum(
+							mwstIId, new Timestamp(getHvBuchung().getFlrBuchung().getD_buchungsdatum().getTime()));
+					return mwstDto;
+				}
+			};
+			rcOhneDto = getFinanzServiceFac().reversechargeartFindOhne(theClientDto);
+			resultBuchungen = new ArrayList<BuchungsjournalExportDatevBuchung>();
+		}
+
+		private void resetHvBuchung() {
+			hvBuchung = null;
+		}
+		
+		private HvBuchungExport getHvBuchung() {
+			if (hvBuchung == null) {
+				hvBuchung = new HvBuchungExport();
+			}
+			return hvBuchung;
+		}
+
+		private boolean isBuSchluesselRequiredForBuchungDetail(FLRFinanzBuchungDetail flrDetail) {
+			if (isBuSchluesselBuchungForbidden())
+				return false;
+			
+			return validateBuSchluesselRequired(flrDetail.getFlrkonto());
+		}
+
+		private boolean validateBuSchluesselRequired(FLRFinanzKonto flrKonto) {
+			if(flrKonto == null 
+					|| !FinanzServiceFac.KONTOTYP_SACHKONTO.equals(flrKonto.getKontotyp_c_nr())) {
+				return true;
+			}
+
+			for(String klassen : kontoklassenOhneBU) {
+				if(!klassen.isEmpty() && flrKonto.getC_nr().startsWith(klassen)) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+		
+		private void initHvBuchung(FLRFinanzBuchung flrBuchung, FLRFinanzKonto flrGegenkonto) {
+			getHvBuchung().init(flrBuchung, flrGegenkonto, theClientDto);
+			// TODO Exc wenn Durchlaufkonto == null
+			setBuSchluesselBuchungForbidden(!validateBuSchluesselRequired(flrGegenkonto));
+		}
+		
+		private BuchungsjournalExportDatevBuchung setupBuchungsjournalExportDatevBuchung(FLRFinanzBuchung flrBuchung, FLRFinanzKonto flrGegenkonto) {
+			BuchungsjournalExportDatevBuchung datevBuchung = new BuchungsjournalExportDatevBuchung();
+			datevBuchung.setGegenkonto(flrGegenkonto != null ? flrGegenkonto.getC_nr() : durchlaufKonto);
+			datevBuchung.setBelegdatum(flrBuchung.getD_buchungsdatum());
+			datevBuchung.setBeleg(flrBuchung.getC_belegnummer());
+			datevBuchung.setBuchungstext(flrBuchung.getC_text());
+			datevBuchung.setUid(flrGegenkonto != null ? getUIDZuKonto(flrGegenkonto, theClientDto) : null);
+			
+			if (getHvBuchung().isEingangsrechnung()) {
+				datevBuchung.setBelegInfo1(getHvBuchung().getErDto().getCLieferantenrechnungsnummer());
+			} else if (getHvBuchung().isRechnung()) {
+				datevBuchung.setBelegInfo1(getHvBuchung().getRechnungDto().getCBestellnummer());
+				datevBuchung.setBelegInfo2(getHvBuchung().getRechnungDto().getCBez());
+			}
+			
+			return datevBuchung;
+		}
+		
+		public boolean isEingangsrechnungIgErwerb() {
+			return getHvBuchung().isEingangsrechnung()
+					&& Helper.short2boolean(getHvBuchung().getErDto().getBIgErwerb())
+					&& FinanzFac.BUCHUNGSART_BUCHUNG.equals(getHvBuchung().getFlrBuchung().getBuchungsart_c_nr());
+		}
+		
+		public boolean isEingangsrechnungReverseCharge() {
+			return getHvBuchung().isEingangsrechnung()
+					&& !rcOhneDto.getIId().equals(getHvBuchung().getErDto().getReversechargeartId())
+					&& FinanzFac.BUCHUNGSART_BUCHUNG.equals(getHvBuchung().getFlrBuchung().getBuchungsart_c_nr());
+		}
+
+		private void initBuchungsfallVisitor() {
+			if (getHvBuchung().getFlrBuchung().getT_storniert() != null) {
+				buchungsfallVisitor = new DatevBuchungDefault();
+			} else if (isEingangsrechnungIgErwerb()) {
+				buchungsfallVisitor = new DatevBuchungErIgErwerb();
+			} else if (isEingangsrechnungReverseCharge()) {
+				buchungsfallVisitor = new DatevBuchungErReverseCharge();
+			} else {
+				buchungsfallVisitor = new DatevBuchungDefault();
+			}
+		}
+		
+		public BuchungsfallVisitor getBuchungsfallVisitor() {
+			return buchungsfallVisitor;
+		}
+
+		private Integer getFibuCode(FLRFinanzBuchungDetail nettoDetail, FLRFinanzBuchungDetail mwstDetail) {
+			if(!mwstKonten.containsKey(mwstDetail.getKonto_i_id())) {
+				return 0;
+			}
+			
+			MwstsatzDto mwstDto = mwstsatzCache.getValueOfKey(mwstDetail.getKonto_i_id());
+			if (mwstDto == null) {
+				mwstDto = getMandantFac().getMwstSatzVonBruttoBetragUndUst(
+						theClientDto.getMandant(), new Timestamp(getHvBuchung().getFlrBuchung().getD_buchungsdatum().getTime()),
+						nettoDetail.getN_betrag(), mwstDetail.getN_betrag());
+			}
+			
+			return getFibuSteuercode(mwstDto, theClientDto);
+		}
+
+		@Override
+		public void visitBuchung(FLRFinanzBuchung flrBuchung, FLRFinanzKonto flrGegenkonto) {
+			resetHvBuchung();
+			initHvBuchung(flrBuchung, flrGegenkonto);
+			
+			initBuchungsfallVisitor();
+		}
+
+		@Override
+		public void visit(FLRFinanzBuchungDetail flrDetail) {
+			getBuchungsfallVisitor().visit(flrDetail);
+		}
+
+		@Override
+		public void visitSteuer(FLRFinanzBuchungDetail nettoDetail, FLRFinanzBuchungDetail mwstDetail) {
+			getBuchungsfallVisitor().visitSteuer(nettoDetail, mwstDetail);
+		}
+
+		@Override
+		public void visitBuchungDone() {
+			resultBuchungen.addAll(getBuchungsfallVisitor().getBuchungen());
+		}
+		
+		public List<BuchungsjournalExportDatevBuchung> getBuchungen() {
+			return resultBuchungen;
+		}
+		
+		private BuchungsjournalExportDatevBuchung createDefaultBuchung(FLRFinanzBuchungDetail flrDetail) {
+			BuchungsjournalExportDatevBuchung datevDetail = setupBuchungsjournalExportDatevBuchung(getHvBuchung().getFlrBuchung(), getHvBuchung().getFlrGegenkonto());
+			datevDetail.setUmsatz(flrDetail.getN_betrag().abs());
+			boolean negativ = flrDetail.getN_betrag().signum() < 0;
+			datevDetail.setSoll(negativ != BuchenFac.SollBuchung.equals(flrDetail.getBuchungdetailart_c_nr()));
+			datevDetail.setKonto(flrDetail.getFlrkonto().getC_nr());
+			datevDetail.setUid(datevDetail.getUid() != null ? datevDetail.getUid() : getUIDZuKonto(flrDetail.getFlrkonto(), theClientDto));
+			if (isBuSchluesselRequiredForBuchungDetail(flrDetail)) {
+				datevDetail.setBuSchluessel(getHvBuchung().getFlrBuchung().getT_storniert() != null ? "20" : "");
+			}
+			
+			return datevDetail;
+		}
+		
+		private BuchungsjournalExportDatevBuchung createDefaultSteuerBuchung(FLRFinanzBuchungDetail nettoDetail, FLRFinanzBuchungDetail mwstDetail) {
+			BuchungsjournalExportDatevBuchung datevDetail = setupBuchungsjournalExportDatevBuchung(
+					getHvBuchung().getFlrBuchung(), getHvBuchung().getFlrGegenkonto());
+			datevDetail.setUmsatz(nettoDetail.getN_betrag().add(mwstDetail.getN_betrag()).abs());
+			
+			boolean negativ = nettoDetail.getN_betrag().signum() < 0;
+			datevDetail.setSoll(negativ != BuchenFac.SollBuchung.equals(nettoDetail.getBuchungdetailart_c_nr()));
+			datevDetail.setKonto(nettoDetail.getFlrkonto().getC_nr());
+			datevDetail.setUid(datevDetail.getUid() != null ? datevDetail.getUid() : getUIDZuKonto(nettoDetail.getFlrkonto(), theClientDto));
+			if (isBuSchluesselRequiredForBuchungDetail(nettoDetail)) {
+				Integer fibuCode = getFibuCode(nettoDetail, mwstDetail);
+				if (getHvBuchung().getFlrBuchung().getT_storniert() != null) {
+					fibuCode += 20;
+				}
+				datevDetail.setBuSchluessel(fibuCode.equals(0) ? "" : fibuCode.toString());
+			}
+			return datevDetail;
+		}
+
+		public class DatevBuchungDefault implements BuchungsfallVisitor {
+			private List<BuchungsjournalExportDatevBuchung> datevBuchungen = new ArrayList<BuchungsjournalExportDatevBuchung>();
+			
+			@Override
+			public void visit(FLRFinanzBuchungDetail flrDetail) {
+				datevBuchungen.add(createDefaultBuchung(flrDetail));
+			}
+
+			@Override
+			public void visitSteuer(FLRFinanzBuchungDetail nettoDetail, FLRFinanzBuchungDetail mwstDetail) {
+				datevBuchungen.add(createDefaultSteuerBuchung(nettoDetail, mwstDetail));
+			}
+
+			@Override
+			public List<BuchungsjournalExportDatevBuchung> getBuchungen() {
+				return datevBuchungen;
+			}
+		}
+		
+		public class DatevBuchungErIgErwerb implements BuchungsfallVisitor {
+			private List<FLRFinanzBuchungDetail> flrDetails = new ArrayList<FLRFinanzBuchungDetail>();
+			
+			@Override
+			public void visit(FLRFinanzBuchungDetail flrDetail) {
+				flrDetails.add(flrDetail);
+			}
+
+			@Override
+			public void visitSteuer(FLRFinanzBuchungDetail nettoDetail, FLRFinanzBuchungDetail mwstDetail) {
+				flrDetails.add(nettoDetail);
+				flrDetails.add(mwstDetail);
+			}
+
+			@Override
+			public List<BuchungsjournalExportDatevBuchung> getBuchungen() {
+				if (flrDetails.size() == 1) {
+					return Arrays.asList(createDefaultBuchung(flrDetails.get(0)));
+				}
+				if (flrDetails.size() == 4) {
+					FLRFinanzBuchungDetail nettoDetail = flrDetails.get(0);
+					FLRFinanzBuchungDetail mwstDetail = flrDetails.get(1);
+					BuchungsjournalExportDatevBuchung igErwerbBuchung = createDefaultSteuerBuchung(nettoDetail, mwstDetail);
+					igErwerbBuchung.setUmsatz(nettoDetail.getN_betrag().abs()); // Nettobetrag
+					
+					FLRFinanzBuchungDetail kreditorDetail = flrDetails.get(2);
+					igErwerbBuchung.setGegenkonto(kreditorDetail.getFlrkonto().getC_nr());
+					igErwerbBuchung.setUid(igErwerbBuchung.getUid() != null ? igErwerbBuchung.getUid() : getUIDZuKonto(kreditorDetail.getFlrkonto(), theClientDto));
+					return Arrays.asList(igErwerbBuchung);
+				}
+				
+				if (flrDetails.size() == 6) {
+					FLRFinanzBuchungDetail nettoDetail = flrDetails.get(0);
+					FLRFinanzBuchungDetail mwstDetail = flrDetails.get(1);
+					BuchungsjournalExportDatevBuchung igErwerbBuchung = createDefaultSteuerBuchung(nettoDetail, mwstDetail);
+					igErwerbBuchung.setUmsatz(nettoDetail.getN_betrag().abs()); // Nettobetrag
+					
+					FLRFinanzBuchungDetail kreditorDetail = flrDetails.get(3);
+					igErwerbBuchung.setGegenkonto(kreditorDetail.getFlrkonto().getC_nr());
+					igErwerbBuchung.setUid(igErwerbBuchung.getUid() != null ? igErwerbBuchung.getUid() : getUIDZuKonto(kreditorDetail.getFlrkonto(), theClientDto));
+					BuchungsjournalExportDatevBuchung anzahlungBuchung = createDefaultBuchung(flrDetails.get(2));
+					anzahlungBuchung.setGegenkonto(flrDetails.get(2).getFlrgegenkonto().getC_nr());
+					return Arrays.asList(igErwerbBuchung, anzahlungBuchung);
+				}
+
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, 
+						"Unerwartete Anzahl an Buchungsdetails (" + flrDetails.size() 
+						+ ") fuer ER mit IG-Erwerb oder ReverseCharge [Buchung-Id=" + getHvBuchung().getFlrBuchung().getI_id() + "]");
+			}
+		}
+		
+		public class DatevBuchungErReverseCharge extends DatevBuchungErIgErwerb {
+		}
+		
+		private BuchungsjournalDatevExportHeaderFormatter headerFormatter;
+		
+		private void initFormatter() throws RemoteException, EJBExceptionLP {
+			initHeaderFormatter();
+		}
+		
+		private void initHeaderFormatter() throws RemoteException, EJBExceptionLP {
+			ParametermandantDto pBerater = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_BERATER);
+			ParametermandantDto pMandant = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_MANDANT);
+			ParametermandantDto pKontostellen = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_KONTONUMMER_STELLENANZAHL_SACHKONTEN);
+			String berater = pBerater.getCWert();
+			String mandant = pMandant.getCWert();
+			Integer kontostellen = new Integer(pKontostellen.getCWert());
+			
+			Integer gf = getBuchenFac().findGeschaeftsjahrFuerDatum(exportProperties.getVon(), theClientDto.getMandant());
+			GeschaeftsjahrMandantDto gfDto = getSystemFac().geschaeftsjahrFindByPrimaryKey(gf, theClientDto.getMandant());
+			
+			MandantDto mDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
+			headerFormatter = new BuchungsjournalDatevExportHeaderFormatter(
+					theClientDto, berater, mandant, gfDto.getDBeginndatum().getTime(), 
+					kontostellen, exportProperties.getVon().getTime(), exportProperties.getBis().getTime(),
+					exportProperties.getBezeichnung(), mDto.getWaehrungCNr());
+		}
+
+		@Override
+		public List<String> getExportLines() {
+			List<String> lines = new ArrayList<String>();
+			lines.add(headerFormatter.format());
+			
+			boolean printTitles = true;
+			for (BuchungsjournalExportDatevBuchung b : getBuchungen()) {
+				if(printTitles) {
+					lines.add(new DatevExportBuchungFormatter(b).formatFieldNames(false));
+					printTitles = false;
+				}
+				lines.add(new DatevExportBuchungFormatter(b).format());
+			}		
+			return lines;
+		}
+	}
+
+	public interface BuchungsfallVisitor {
+		void visit(FLRFinanzBuchungDetail flrDetail);
+		void visitSteuer(FLRFinanzBuchungDetail nettoDetail, FLRFinanzBuchungDetail mwstDetail);
+		List<BuchungsjournalExportDatevBuchung> getBuchungen();
+	}
+	
+	private Integer getFibuSteuercode(MwstsatzDto mwstsatzDto, TheClientDto theClientDto) {
+		try {
+			// TODO: Noch auf den jeweiligen Buchungsfall umstellen (ana)
+			HvOptional<SteuercodeInfo> codeOpt = getMandantFac().getSteuercodeArDefault(new MwstsatzId(mwstsatzDto.getIId()));
+			if (codeOpt.isEmpty()) {
+					MwstsatzbezDto mwstsatzbezDto = getMandantFac().mwstsatzbezFindByPrimaryKey(mwstsatzDto.getIIMwstsatzbezId(), theClientDto);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_EXPORT_KEIN_MWSTCODE, "", mwstsatzbezDto.getCBezeichnung());
+			}
+			
+			try {
+				Integer codeNumber = Integer.parseInt(codeOpt.get().getCode());
+				return codeNumber;
+			} catch (NumberFormatException ex) {
+				MwstsatzbezDto mwstsatzbezDto = getMandantFac().mwstsatzbezFindByPrimaryKey(mwstsatzDto.getIIMwstsatzbezId(), theClientDto);
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_EXPORT_KEIN_MWSTCODE, 
+						"FIBU Mwst-Code ist keine Zahl", mwstsatzbezDto.getCBezeichnung());
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+			return null;
+		}
+	}
 }

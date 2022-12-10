@@ -36,6 +36,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+import javax.persistence.EntityManager;
 import javax.persistence.FlushModeType;
 import javax.persistence.Query;
 import javax.persistence.TemporalType;
@@ -133,5 +134,35 @@ public class HvTypedQuery<T> implements Query{
 	public Query setParameter(int arg0, Calendar arg1, TemporalType arg2) {
 		query.setParameter(arg0, arg1, arg2);
 		return this ;
+	}
+
+	/**
+	 * Einen (erwarteten) Ergebnissatz zur&uuml;ckliefern</br>
+	 * <p>Gibt es keinen, oder mehr als einen Datensatz, wird null geliefert</p>
+	 * @return null wenn es keinen oder mehr als einen Satz gibt, ansonsten den gesuchten Satz
+	 */
+	public T getSingleResultNoEx() {
+		List<T> resultList = (List<T>) query.getResultList() ;
+		return (resultList == null || resultList.size() != 1)
+				? null : resultList.get(0) ;
+	}
+
+	/**
+	 * Erzeugt eine <code>HvTypedQuery</code> &uuml;ber einen Namen einen <code>NamedQuery</code>
+	 * und ihren ben&ouml;tigten Parametern 
+	 * 
+	 * @param em EntityManager
+	 * @param queryName Name der NamedQuery
+	 * @param params Parameter der NamedQuery, die in der &uuml;bermittelten Reihenfolge der erzeugten 
+	 * 		Query gesetzt werden (beginnend mit Nummer 1)
+	 * @return erzeugte <code>HvTypedQuery</code>
+	 */
+	public static <T> HvTypedQuery<T> namedQuery(EntityManager em, String queryName, Object... params) {
+		HvTypedQuery<T> theQuery = new HvTypedQuery<T>(em.createNamedQuery(queryName));
+		int paramNr = 1;
+		for (Object p : params) {
+			theQuery.setParameter(paramNr++, p);
+		}
+		return theQuery;
 	}
 }

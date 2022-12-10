@@ -43,7 +43,10 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries({ @NamedQuery(name = "BestellvorschlagfindByLieferantIIdMandantCNr", query = "SELECT OBJECT (o) FROM Bestellvorschlag o WHERE o.lieferantIId=?1 AND o.mandantCNr=?2") })
+@NamedQueries({ 
+	@NamedQuery(name = "BestellvorschlagfindByLieferantIIdMandantCNr", query = "SELECT OBJECT (o) FROM Bestellvorschlag o WHERE o.lieferantIId=?1 AND o.mandantCNr=?2"),
+	@NamedQuery(name = BestellvorschlagQuery.byArtikelIIdVormerkungMandantCnr, query = "SELECT OBJECT (o) FROM Bestellvorschlag o WHERE o.artikelIId=?1 AND o.mandantCNr=?2 AND tVormerkung IS NOT NULL")
+})
 @Entity
 @Table(name = "BES_BESTELLVORSCHLAG")
 public class Bestellvorschlag implements Serializable {
@@ -57,6 +60,9 @@ public class Bestellvorschlag implements Serializable {
 	@Column(name = "T_BESTELLTERMIN")
 	private Timestamp tLiefertermin;
 
+	@Column(name = "I_WIEDERBESCHAFFUNGSZEIT")
+	private Integer iWiederbeschaffungszeit;
+	
 	@Column(name = "I_BELEGARTID")
 	private Integer iBelegartid;
 
@@ -103,6 +109,39 @@ public class Bestellvorschlag implements Serializable {
 		return bVormerkung;
 	}
 
+	@Column(name = "F_LAGERMINDEST")
+	private Double fLagermindest;
+	
+	public Double getFLagermindest() {
+		return this.fLagermindest;
+	}
+
+	public void setFLagermindest(Double fLagermindest) {
+		this.fLagermindest = fLagermindest;
+	}
+
+	
+	
+	@Column(name = "PERSONAL_I_ID")
+	private Integer personalIId;
+	
+	public Integer getPersonalIId() {
+		return personalIId;
+	}
+
+	public void setPersonalIId(Integer personalIId) {
+		this.personalIId = personalIId;
+	}
+
+	
+	public Integer getIWiederbeschaffungszeit() {
+		return this.iWiederbeschaffungszeit;
+	}
+
+	public void setIWiederbeschaffungszeit(Integer iWiederbeschaffungszeit) {
+		this.iWiederbeschaffungszeit = iWiederbeschaffungszeit;
+	}
+	
 	@Column(name = "PERSONAL_I_ID_VORMERKUNG")
 	private Integer personalIIdVormerkung;
 	@Column(name = "T_VORMERKUNG")
@@ -128,6 +167,62 @@ public class Bestellvorschlag implements Serializable {
 		this.bVormerkung = bVormerkung;
 	}
 
+	@Column(name = "PARTNER_I_ID_STANDORT")
+	private Integer partnerIIdStandort;
+	
+	public Integer getPartnerIIdStandort() {
+		return partnerIIdStandort;
+	}
+
+	public void setPartnerIIdStandort(Integer partnerIIdStandort) {
+		this.partnerIIdStandort = partnerIIdStandort;
+	}
+	@Column(name = "N_ANZAHLGEBINDE")
+	private BigDecimal nAnzahlgebinde;
+
+	public BigDecimal getNAnzahlgebinde() {
+		return nAnzahlgebinde;
+	}
+
+	public void setNAnzahlgebinde(BigDecimal nAnzahlgebinde) {
+		this.nAnzahlgebinde = nAnzahlgebinde;
+	}
+	
+	
+	@Column(name = "GEBINDE_I_ID")
+	private Integer gebindeIId;
+	
+	public Integer getGebindeIId() {
+		return gebindeIId;
+	}
+
+	public void setGebindeIId(Integer gebindeIId) {
+		this.gebindeIId = gebindeIId;
+	}
+	
+	
+	@Column(name = "PERSONAL_I_ID_BEARBEITET")
+	private Integer personalIIdBearbeitet;
+
+	public Integer getPersonalIIdBearbeitet() {
+		return personalIIdBearbeitet;
+	}
+
+	public void setPersonalIIdBearbeitet(Integer personalIIdBearbeitet) {
+		this.personalIIdBearbeitet = personalIIdBearbeitet;
+	}
+
+	public Timestamp getTBearbeitet() {
+		return tBearbeitet;
+	}
+
+	public void setTBearbeitet(Timestamp tBearbeitet) {
+		this.tBearbeitet = tBearbeitet;
+	}
+
+	@Column(name = "T_BEARBEITET")
+	private Timestamp tBearbeitet;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Bestellvorschlag() {

@@ -33,107 +33,140 @@
 package com.lp.server.util;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.auftrag.ejb.Auftragposition;
+import com.lp.server.system.ejbfac.HvCreatingCachingProvider;
+import com.lp.util.Helper;
 
-public class AuftragPositionNumberAdapter extends PositionNumberAdapter
+public class AuftragPositionNumberAdapter extends PositionNumberCachingAdapter
 		implements Serializable {
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1348423071950648840L;
 
-	@PersistenceContext
 	private EntityManager em;
+	private Auftragposition auftragPos;
+	private HvCreatingCachingProvider<Integer, Artikel> artikelCache;
+	
+	protected AuftragPositionNumberAdapter() {
+	}
 
-	private Auftragposition auftragPos ;
-	
-	protected AuftragPositionNumberAdapter() {}
-	
 	public AuftragPositionNumberAdapter(EntityManager em) {
-		this.em = em ;
+		this.em = em;
 	}
-	
+
 	public AuftragPositionNumberAdapter(Auftragposition auftragPos) {
-		this.auftragPos = auftragPos ;
+		this.auftragPos = auftragPos;
 	}
-	
+
+	@Override
+	public Object getAdaptee() {
+		return auftragPos;
+	}
 	
 	@Override
 	public void setAdaptee(Object adaptee) {
-		auftragPos = (Auftragposition) adaptee ;
+		auftragPos = (Auftragposition) adaptee;
 	}
 
 	@Override
 	public Integer getIId() {
-		return auftragPos.getIId() ;
+		return auftragPos.getIId();
 	}
 
 	@Override
 	public Integer getPositionIId() {
-		return auftragPos.getPositionIId() ;
+		return auftragPos.getPositionIId();
 	}
 
 	@Override
 	public String getPositionartCNr() {
-		return auftragPos.getAuftragpositionartCNr() ;
+		return auftragPos.getAuftragpositionartCNr();
 	}
 
 	@Override
 	public String getCZbez() {
-		return auftragPos.getCZusatzbezeichnung() ;
+		return auftragPos.getCZusatzbezeichnung();
 	}
 
 	@Override
 	public String getTypCNr() {
-		return auftragPos.getTypCNr() ;
+		return auftragPos.getTypCNr();
 	}
 
 	@Override
 	public Integer getHeadIIdFromPosition(Integer posIId) {
-		if(null == posIId) return null ;
-		
+		if (null == posIId)
+			return null;
+
 		Auftragposition ap = em.find(Auftragposition.class, posIId);
-		if(null == ap) return null ;
-		
-		return ap.getAuftragIId() ;
+		if (null == ap)
+			return null;
+
+		return ap.getAuftragIId();
 	}
 
 	@Override
 	public Integer getPositionIIdArtikelset() {
-		return auftragPos.getPositionIIdArtikelset() ;
+		return auftragPos.getPositionIIdArtikelset();
 	}
 
 	@Override
 	public Integer getAuftragPositionIId() {
-		// Kein Bezug zu einer Auftragposition moeglich, weil selbst eine Auftragposition
+		// Kein Bezug zu einer Auftragposition moeglich, weil selbst eine
+		// Auftragposition
 		return null;
+	}
+
+	@Override
+	public Iterator<?> getPositionsIteratorForAnyPosition(Integer anyPosIId) {
+		return getPositionsIteratorForHeadIId(getHeadIIdFromPosition(anyPosIId));
+	}
+
+
+	private Artikel findArtikel(Integer artikelId) {
+		if(artikelCache == null) {
+			artikelCache = new HvCreatingCachingProvider<Integer, Artikel>() {@Override
+				protected Artikel provideValue(Integer key, Integer transformedKey) {
+					Artikel a = em.find(Artikel.class, auftragPos.getArtikelIId());
+					System.out.println("Caching item id '" + key + "' => " + a.getCNr() + " (" + artikelCache.getSize() + ").");
+					return a;
+				}
+			};
+		}
+		return artikelCache.getValueOfKey(artikelId);
 	}
 	
 	@Override
-	public Iterator<?> getPositionsIteratorForAnyPosition(Integer anyPosIId) {
-		return getPositionsIteratorForHeadIId(getHeadIIdFromPosition(anyPosIId)) ; 
-	}
+	public boolean isIdent() {
+//		return true ;
+//		Artikel a = em.find(Artikel.class, auftragPos.getArtikelIId());
+		Artikel a = findArtikel(auftragPos.getArtikelIId());
+		return !Helper.short2boolean(a.getBKalkulatorisch()) ;
+	}	
 
 	@Override
-	public Iterator<?> getPositionsIteratorForHeadIId(Integer headIId) {
-		if(null == headIId) return new ArrayList().iterator();
-		try {
-			Query query = em.createNamedQuery("AuftragpositionfindByAuftrag");
-			query.setParameter(1, headIId);
-			return query.getResultList().iterator(); 
-		} catch(NoResultException e) {	
-		}
-		
-		return new ArrayList().iterator() ;
+	protected Iterator<?> getPositionsIteratorForHeadIIdImpl(
+			Integer headIIdNotNull) {
+		return getPositionsListForHeadIIdImpl(headIIdNotNull).iterator();
+//		Query query = em.createNamedQuery("AuftragpositionfindByAuftrag");
+//		query.setParameter(1, headIIdNotNull);
+//		return query.getResultList().iterator() ;
 	}
-
+	
+	@Override
+	protected List<?> getPositionsListForHeadIIdImpl(Integer headIIdNotNull) {
+		Query query = em.createNamedQuery("AuftragpositionfindByAuftrag");
+		query.setParameter(1, headIIdNotNull);
+		return query.getResultList() ;
+	}
+	
+	@Override
+	public List<?> getPositionsListForHeadIId(Integer headIId) {
+		return getPositionsListForHeadIIdImpl(headIId);
+	}
 }

@@ -46,7 +46,6 @@ import java.security.cert.CertificateException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -54,14 +53,14 @@ import javax.net.ssl.SSLContext;
 import javax.persistence.EntityManager;
 
 import com.lp.server.system.ejb.VersandwegCC;
-import com.lp.server.system.service.VersandwegCCPartnerDto;
+import com.lp.server.system.service.VersandwegPartnerCCDto;
 import com.lp.service.BelegpositionDto;
 import com.lp.util.EJBExceptionLP;
 
 public class CleverCureProducer {
 	private DateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss") ;
 	
-	protected KeyStore getKeystore(VersandwegCCPartnerDto versandwegPartnerDto)
+	protected KeyStore getKeystore(VersandwegPartnerCCDto versandwegPartnerDto)
 			throws KeyStoreException, FileNotFoundException, CertificateException, NoSuchAlgorithmException, IOException {
 		KeyStore keystore = KeyStore.getInstance("jks") ;
 		String certfileName = SystemServicesFacBean.getPathFromSSLDir(versandwegPartnerDto.getCKeystore()) ;
@@ -70,18 +69,20 @@ public class CleverCureProducer {
 		return keystore ;
 	}
 	
-	protected SSLContext getSslContext(VersandwegCCPartnerDto versandwegPartnerDo, KeyStore keystore)
+	protected SSLContext getSslContext(VersandwegPartnerCCDto versandwegPartnerDo, KeyStore keystore)
 		throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 		kmf.init(keystore, versandwegPartnerDo.getCKeystoreKennwort().toCharArray());
 		KeyManager[] keyManagers = kmf.getKeyManagers();
 		 
-		SSLContext sslContext = SSLContext.getInstance("TLS");
+//		SSLContext sslContext = SSLContext.getInstance("TLS");
+// PJ21401 TLSv1.2 erzwingen		
+		SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
 		sslContext.init(keyManagers, null, null);
 		return sslContext ;
 	}
 	
-	protected String getCCEndpunkt(EntityManager em, VersandwegCCPartnerDto ccPartnerDto) {
+	protected String getCCEndpunkt(EntityManager em, VersandwegPartnerCCDto ccPartnerDto) {
 		VersandwegCC versandweg = em.find(VersandwegCC.class, ccPartnerDto.getVersandwegId()) ;
 		if(null == versandweg) throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ccPartnerDto.getVersandwegId().toString()) ;
 		

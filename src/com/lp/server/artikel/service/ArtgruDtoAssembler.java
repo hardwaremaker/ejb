@@ -46,15 +46,24 @@ public class ArtgruDtoAssembler {
 			artgruDto.setCNr(artgru.getCNr());
 			artgruDto.setArtgruIId(artgru.getArtgruIId());
 			artgruDto.setIId(artgru.getIId());
-			artgruDto.setKontoIId(artgru.getKontoIId());
+			artgruDto.setNEkpreisaufschlag(artgru.getNEkpreisaufschlag());
+
 			artgruDto.setBRueckgabe(artgru.getBRueckgabe());
 			artgruDto.setMandantCNr(artgru.getMandantCNr());
 			artgruDto.setBZertifizierung(artgru.getBZertifizierung());
 			artgruDto.setBKeinevkwarnmeldungimls(artgru.getBKeinevkwarnmeldungimls());
+			artgruDto.setKostenstelleIId(artgru.getKostenstelleIId());
 			artgruDto.setTAendern(artgru.getTAendern());
 			artgruDto.setTAnlegen(artgru.getTAnlegen());
 			artgruDto.setPersonalIIdAendern(artgru.getPersonalIIdAendern());
 			artgruDto.setPersonalIIdAnlegen(artgru.getPersonalIIdAnlegen());
+			artgruDto.setBSeriennrtragend(artgru.getBSeriennrtragend());
+			artgruDto.setBChargennrtragend(artgru.getBChargennrtragend());
+			artgruDto.setBKeinBelegdruckMitRabatt(artgru.getBKeinBelegdruckMitRabatt());
+			artgruDto.setBAufschlagEinzelpreis(artgru.getBAufschlagEinzelpreis());
+			artgruDto.setArtikelIIdKommentar(artgru.getArtikelIIdKommentar());
+			artgruDto.setBFremdfertigung(artgru.getBFremdfertigung());
+			artgruDto.setBBeiErsterZeitbuchungAbbuchen(artgru.getBBeiErsterZeitbuchungAbbuchen());
 
 		}
 		return artgruDto;

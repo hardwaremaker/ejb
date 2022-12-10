@@ -43,19 +43,79 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "KollektivfindByCBez", query = "SELECT OBJECT(C) FROM Kollektiv c WHERE c.cBez = ?1") })
+import com.lp.server.util.ICBez;
+
+@NamedQueries( { @NamedQuery(name = "KollektivfindByCBez", query = "SELECT OBJECT(C) FROM Kollektiv c WHERE c.cBez = ?1"),
+	@NamedQuery(name = "KollektivfindByCAbrechungsart", query = "SELECT OBJECT(C) FROM Kollektiv c WHERE c.cAbrechungsart = ?1")})
 @Entity
 @Table(name = "PERS_KOLLEKTIV")
-public class Kollektiv implements Serializable {
+public class Kollektiv implements Serializable, ICBez {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
 
+	
+	@Column(name = "I_FAKTOR_PASSIVE_REISEZEIT")
+	private Integer iFaktorPassiveReisezeit;
+	
+	
+	public Integer getIFaktorPassiveReisezeit() {
+		return iFaktorPassiveReisezeit;
+	}
+
+	public void setIFaktorPassiveReisezeit(Integer iFaktorPassiveReisezeit) {
+		this.iFaktorPassiveReisezeit = iFaktorPassiveReisezeit;
+	}
+
+	@Column(name = "I_BERECHNUNGSBASIS")
+	private Integer iBerechnungsbasis;
+	
+	public Integer getIBerechnungsbasis() {
+		return iBerechnungsbasis;
+	}
+
+	public void setIBerechnungsbasis(Integer iBerechnungsbasis) {
+		this.iBerechnungsbasis = iBerechnungsbasis;
+	}
+
 	@Column(name = "C_BEZ")
 	private String cBez;
+	
+	@Column(name = "C_ABRECHNUNGSART")
+	private String cAbrechungsart;
+
+	public String getCAbrechungsart() {
+		return cAbrechungsart;
+	}
+
+	public void setCAbrechungsart(String cAbrechungsart) {
+		this.cAbrechungsart = cAbrechungsart;
+	}
+
+	@Column(name = "B_FEIERTAGSUEBERSTUNDEN_AB_SOLL")
+	private Short bFeiertagsueberstundenAbSoll;
+	
+	public Short getBFeiertagsueberstundenAbSoll() {
+		return bFeiertagsueberstundenAbSoll;
+	}
+
+	public void setBFeiertagsueberstundenAbSoll(Short bFeiertagsueberstundenAbSoll) {
+		this.bFeiertagsueberstundenAbSoll = bFeiertagsueberstundenAbSoll;
+	}
 
 	@Column(name = "B_VERBRAUCHEUESTD")
 	private Short bVerbraucheuestd;
+	
+	@Column(name = "B_WOCHENGESAMTSICHT")
+	private Short bWochengesamtsicht;
+
+	public Short getbWochengesamtsicht() {
+		return bWochengesamtsicht;
+	}
+
+	public void setbWochengesamtsicht(Short bWochengesamtsicht) {
+		this.bWochengesamtsicht = bWochengesamtsicht;
+	}
 
 	@Column(name = "N_NORMALSTUNDEN")
 	private BigDecimal nNormalstunden;
@@ -125,10 +185,11 @@ public class Kollektiv implements Serializable {
 		super();
 	}
 
-	public Kollektiv(Integer id, String bez, Short bVerbraucheuestd,
-			BigDecimal faktoruestd50, BigDecimal faktoruestd100, BigDecimal faktormehrstd, Short bUestdabsollstderbracht, Short bUestverteilen,BigDecimal faktoruestd200,BigDecimal n200prozentigeab) {
+	public Kollektiv(Integer id, String bez,String abrechnungsart, Short bVerbraucheuestd,
+			BigDecimal faktoruestd50, BigDecimal faktoruestd100, BigDecimal faktormehrstd, Short bUestdabsollstderbracht, Short bUestverteilen,BigDecimal faktoruestd200,BigDecimal n200prozentigeab, Integer iBerechnungsbasis, Short bWochengesamtsicht, Short bFeiertagsueberstundenAbSoll, Integer iFaktorPassiveReisezeit) {
 		setIId(id);
 		setCBez(bez);
+		setCAbrechungsart(abrechnungsart);
 		setBVerbraucheuestdt(bVerbraucheuestd);
 		setNFaktoruestd50(faktoruestd50);
 		setNFaktoruestd100(faktoruestd100);
@@ -137,6 +198,10 @@ public class Kollektiv implements Serializable {
 		setBUestdverteilen(bUestverteilen);
 		setN200prozentigeab(n200prozentigeab);
 		setNFaktoruestd200(faktoruestd200);
+		setIBerechnungsbasis(iBerechnungsbasis);
+		setbWochengesamtsicht(bWochengesamtsicht);
+		setBFeiertagsueberstundenAbSoll(bFeiertagsueberstundenAbSoll);
+		setIFaktorPassiveReisezeit(iFaktorPassiveReisezeit);
 	}
 
 	public Integer getIId() {

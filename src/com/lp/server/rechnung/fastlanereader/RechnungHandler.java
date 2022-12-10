@@ -34,6 +34,7 @@ package com.lp.server.rechnung.fastlanereader;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +48,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.benutzer.service.RechteFac;
+import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.LieferantFac;
@@ -54,9 +56,15 @@ import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnung;
+import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungtextsuche;
+import com.lp.server.rechnung.service.IRechnungFLRData;
 import com.lp.server.rechnung.service.RechnungDto;
+import com.lp.server.rechnung.service.RechnungFLRDataDto;
 import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.rechnung.service.RechnungHandlerFeature;
+import com.lp.server.rechnung.service.RechnungQueryResult;
 import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeRechnung;
 import com.lp.server.system.jcr.service.docnode.DocPath;
@@ -66,10 +74,13 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.FlrFirmaAnsprechpartnerFilterBuilder;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.FlrFeatureBase;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
+import com.lp.server.util.fastlanereader.service.query.QueryParametersFeatures;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -101,9 +112,99 @@ public class RechnungHandler extends UseCaseHandler {
 	private static final long serialVersionUID = 1L;
 	Integer iAnlegerStattVertreterAnzeigen = 0;
 	boolean bBruttoStattNetto = false;
+	boolean bAuswahllisteMitDebitorennummer = false;
 	public static final String FLR_RECHNUNG = "rechnung.";
 	boolean bHatFibu = false;
 
+	private RechnungFeature cachedFeature ;
+	
+	private class RechnungFeature extends FlrFeatureBase<IRechnungFLRData> {
+		private boolean enabled ;
+		
+		public RechnungFeature(QueryParameters query) {
+			super(query) ;
+		}
+
+		public boolean isEnabled() {
+			return enabled ;
+		}
+		
+		@Override
+		protected void initialize(QueryParametersFeatures qpf) {			
+			enabled = qpf.hasFeature(RechnungHandlerFeature.BRUTTOWERTE) ;
+		}
+		
+		@Override
+		protected IRechnungFLRData[] createFlrData(int rows) {
+			return new RechnungFLRDataDto[rows];
+		}
+
+		@Override
+		protected IRechnungFLRData createFlrDataObject(int index) {
+			return new RechnungFLRDataDto();
+		}
+		
+		public void setBruttobetrag(int row, BigDecimal bruttoBetrag) {
+			getFlrDataObject(row).setGrossValue(bruttoBetrag);
+		}
+
+		public void setNettobetrag(int row, BigDecimal nettoBetrag) {
+			getFlrDataObject(row).setNetValue(nettoBetrag);
+		}
+
+		public void setKundeId(int row, Integer kundeId) {
+			if(isEnabled()) {
+				getFlrDataObject(row).setKundeId(kundeId);
+			}
+		}
+		
+		public void setProject(int row, String project) {
+			if(isEnabled()) {
+				getFlrDataObject(row).setProject(project);
+			}
+		}
+		
+		public void setCurrency(int row, String currency) {
+			if(isEnabled()) {
+				getFlrDataObject(row).setCurrency(currency) ;
+			}
+		}
+		
+		public void setStatusCnr(int row, String statusCnr) {
+			if(isEnabled()) {
+				getFlrDataObject(row).setStatusCnr(statusCnr);
+			}
+		}
+
+		public void setOffenerBruttobetrag(int row, BigDecimal betrag) {
+			getFlrDataObject(row).setOpenGrossValue(betrag);
+		}
+	}
+
+	private RechnungFeature getFeature() {
+		if(cachedFeature == null) {
+			cachedFeature = new RechnungFeature(getQuery()) ;
+		}
+		return cachedFeature ;
+	}
+	
+	private class RechnungKundeAnsprechpartnerFilterBuilder extends FlrFirmaAnsprechpartnerFilterBuilder {
+
+		public RechnungKundeAnsprechpartnerFilterBuilder(boolean bSuchenInklusiveKBez) {
+			super(bSuchenInklusiveKBez);
+		}
+
+		@Override
+		public String getFlrPartner() {
+			return FLR_RECHNUNG + RechnungFac.FLR_RECHNUNG_FLRKUNDE + "." + LieferantFac.FLR_PARTNER;
+		}
+
+		@Override
+		public String getFlrPropertyAnsprechpartnerIId() {
+			return FLR_RECHNUNG + "ansprechpartner_i_id";
+		}
+		
+	}
 	/**
 	 * gets the data page for the specified row using the current query. The row
 	 * at rowIndex will be located in the middle of the page.
@@ -120,8 +221,8 @@ public class RechnungHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit() ;
+			int startIndex = getStartIndex(rowIndex, pageSize) ;
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -132,6 +233,7 @@ public class RechnungHandler extends UseCaseHandler {
 					+ " left join rechnung.flrkunde.flrpartner.flrlandplzort.flrort as flrort "
 					+ " left join rechnung.flrkunde.flrpartner.flrlandplzort.flrland as flrland "
 					+ " left join rechnung.flrvertreter as flrvertreter "
+					+ " left join rechnung.flrkunde.flrkonto as flrkonto "
 					+ this.buildWhereClause() + this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -145,6 +247,8 @@ public class RechnungHandler extends UseCaseHandler {
 			final boolean bDarfPreiseSehen = getTheJudgeFac().hatRecht(
 					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF, theClientDto);
 
+			getFeature().setFlrRowCount(rows.length);
+			
 			while (resultListIterator.hasNext()) {
 				Object[] o = (Object[]) resultListIterator.next();
 				FLRRechnung rechnung = (FLRRechnung) o[0];
@@ -158,11 +262,15 @@ public class RechnungHandler extends UseCaseHandler {
 				rows[row][col++] = rechnung.getC_nr();
 				FLRLandplzort anschrift = null;
 				String kunde = null;
-				kunde = rechnung.getFlrkunde() == null ? null : rechnung
-						.getFlrkunde().getFlrpartner()
-						.getC_name1nachnamefirmazeile1();
-				anschrift = rechnung.getFlrkunde().getFlrpartner()
-						.getFlrlandplzort();
+				FLRKunde flrKunde = rechnung.getFlrkunde() ;
+				if(flrKunde != null) {
+					kunde = flrKunde.getFlrpartner()
+							.getC_name1nachnamefirmazeile1();
+					anschrift = flrKunde.getFlrpartner()
+							.getFlrlandplzort();
+					
+					getFeature().setKundeId(row, flrKunde.getI_id());
+				}
 
 				rows[row][col++] = kunde;
 				if (anschrift != null) {
@@ -172,6 +280,37 @@ public class RechnungHandler extends UseCaseHandler {
 				} else {
 					rows[row][col++] = "";
 				}
+
+				if (bAuswahllisteMitDebitorennummer) {
+					if(flrKunde != null && flrKunde.getFlrkonto() != null) {
+						rows[row][col++] = rechnung.getFlrkunde().getFlrkonto()
+								.getC_nr();
+					} else {
+						rows[row][col++] = null;
+					}
+				}
+
+				String proj_bestellnummer = "";
+				
+				
+				if (bTitelInAF_BS_LS_RE_LOS) {
+					if (rechnung.getFlrprojekt() != null) {
+						proj_bestellnummer = rechnung.getFlrprojekt().getC_titel()+" | ";
+					}
+				}
+				
+				
+				if (rechnung.getC_bez() != null) {
+					proj_bestellnummer += rechnung.getC_bez();
+				}
+
+				if (rechnung.getC_bestellnummer() != null) {
+					proj_bestellnummer += " | " + rechnung.getC_bestellnummer();
+				}
+
+				rows[row][col++] = proj_bestellnummer;
+				getFeature().setProject(row, proj_bestellnummer);
+				
 				rows[row][col++] = rechnung.getD_belegdatum();
 
 				if (iAnlegerStattVertreterAnzeigen == 1) {
@@ -198,6 +337,8 @@ public class RechnungHandler extends UseCaseHandler {
 				}
 
 				String sStatus = rechnung.getStatus_c_nr();
+				getFeature().setStatusCnr(row, sStatus);
+				
 				rows[row][col++] = getStatusMitUebersetzung(sStatus,
 						rechnung.getT_versandzeitpunkt(),
 						rechnung.getC_versandtype());
@@ -213,13 +354,29 @@ public class RechnungHandler extends UseCaseHandler {
 						} else {
 							rows[row][col++] = null;
 						}
-
 					}
 
+					if(getFeature().isEnabled()) {
+						getFeature().setNettobetrag(row, rechnung.getN_wertfw());
+						BigDecimal bruttoBetrag = null ;
+						if(rechnung.getN_wertfw() != null && rechnung.getN_wertustfw() != null) {
+							bruttoBetrag = rechnung.getN_wertfw().add(rechnung.getN_wertustfw());
+							getFeature().setBruttobetrag(row, bruttoBetrag);							
+						}
+						
+						BigDecimal bezahltBrutto = getRechnungFac()
+							.getBereitsBezahltWertBruttoVonRechnungFwOhneFSkonto(
+									rechnung.getI_id(), null) ;
+						if(bruttoBetrag != null && bezahltBrutto != null) {
+							getFeature().setOffenerBruttobetrag(row, bruttoBetrag.subtract(bezahltBrutto));							
+						}
+					}
 				} else {
 					rows[row][col++] = null;
 				}
 				rows[row][col++] = rechnung.getWaehrung_c_nr();
+				getFeature().setCurrency(row, rechnung.getWaehrung_c_nr());
+				
 				if (rechnung.getT_mahnsperrebis() != null) {
 					rows[row][col++] = getTextRespectUISpr("lp.m",
 							theClientDto.getMandant(), theClientDto.getLocUi());
@@ -228,12 +385,12 @@ public class RechnungHandler extends UseCaseHandler {
 							.toString() : "";
 				}
 				if (bHatFibu == true) {
-					if (lVerbucht > 0) {
-						rows[row][col++] = new Boolean(true);
-					} else {
-						rows[row][col++] = new Boolean(false);
-					}
-
+					rows[row][col++] = new Boolean(lVerbucht > 0) ;
+//					if (lVerbucht > 0) {
+//						rows[row][col++] = new Boolean(true);
+//					} else {
+//						rows[row][col++] = new Boolean(false);
+//					}
 				} else {
 					rows[row][col++] = new Boolean(
 							rechnung.getT_fibuuebernahme() != null);
@@ -241,8 +398,16 @@ public class RechnungHandler extends UseCaseHandler {
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, this.getRowCount(), startIndex,
+			
+			if(getFeature().isEnabled()) {
+				RechnungQueryResult rechnungResult = new RechnungQueryResult(
+						rows, this.getRowCount(), startIndex, endIndex, 0) ;
+				rechnungResult.setFlrData(getFeature().getFlrData());
+				result = rechnungResult ;
+			} else {
+				result = new QueryResult(rows, this.getRowCount(), startIndex,
 					endIndex, 0);
+			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} finally {
@@ -268,6 +433,7 @@ public class RechnungHandler extends UseCaseHandler {
 					+ " left join rechnung.flrkunde.flrpartner.flrlandplzort.flrort as flrort "
 					+ " left join rechnung.flrkunde.flrpartner.flrlandplzort.flrland as flrland "
 					+ " left join rechnung.flrvertreter as flrvertreter "
+					+ " left join rechnung.flrkunde.flrkonto as flrkonto "
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -313,10 +479,13 @@ public class RechnungHandler extends UseCaseHandler {
 							.equals(RechnungFac.FLR_RECHNUNG_C_NR)) {
 						try {
 							String sValue = super.buildWhereBelegnummer(
-									filterKriterien[i], false);
+									filterKriterien[i], false,ParameterFac.KATEGORIE_AUSGANGSRECHNUNG,ParameterFac.PARAMETER_RECHNUNG_BELEGNUMMERSTARTWERT);
 							// Belegnummernsuche auch in "altem" Jahr, wenn im
 							// neuen noch keines vorhanden ist
-							if (!istBelegnummernInJahr("FLRRechnung", sValue)) {
+							if (!istBelegnummernInJahr("FLRRechnung", sValue,
+									"flrrechnungart.rechnungtyp_c_nr='"
+											+ RechnungFac.RECHNUNGTYP_RECHNUNG
+											+ "'")) {
 								sValue = super.buildWhereBelegnummer(
 										filterKriterien[i], true);
 							}
@@ -330,74 +499,29 @@ public class RechnungHandler extends UseCaseHandler {
 						}
 					} else if (filterKriterien[i].kritName
 							.equals(RechnungFac.FLR_RECHNUNG_C_BEZ)) {
-						
-						where.append(" (upper(rechnung.c_bez) LIKE "
-								+ filterKriterien[i].value.toUpperCase()
-								+ " OR upper(rechnung.c_bestellnummer) LIKE "
-								+ filterKriterien[i].value.toUpperCase() + ")");
-						
-					} else if (filterKriterien[i].kritName
-							.equals(RechnungFac.FLR_RECHNUNG_FLRKUNDE
-									+ "."
-									+ LieferantFac.FLR_PARTNER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1)) {
-						ParametermandantDto parameter = null;
-						try {
-							parameter = getParameterFac()
-									.getMandantparameter(
-											theClientDto.getMandant(),
-											ParameterFac.KATEGORIE_ALLGEMEIN,
-											ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
-						} catch (RemoteException ex) {
-							throwEJBExceptionLPRespectOld(ex);
-						}
-						Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter
-								.getCWertAsObject();
-						if (bSuchenInklusiveKbez) {
-							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" (upper(" + FLR_RECHNUNG
-										+ filterKriterien[i].kritName + ")");
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase());
-								where.append("OR upper(" + FLR_RECHNUNG
-										+ "flrkunde.flrpartner.c_kbez" + ")");
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase() + ") ");
-							} else {
-								where.append(" (" + FLR_RECHNUNG
-										+ filterKriterien[i].kritName);
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" " + filterKriterien[i].value);
-								where.append("OR " + FLR_RECHNUNG
-										+ "flrkunde.flrpartner.c_kbez");
-								where.append(" " + filterKriterien[i].operator);
-								where.append(" " + filterKriterien[i].value
-										+ ") ");
-							}
-						} else {
-							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" upper(" + FLR_RECHNUNG
-										+ filterKriterien[i].kritName + ")");
-							} else {
-								where.append(" " + FLR_RECHNUNG
-										+ filterKriterien[i].kritName);
-							}
 
-							where.append(" " + filterKriterien[i].operator);
+						where.append(" (");
+						where.append(buildWhereClauseExtendedSearch(Arrays
+								.asList(filterKriterien[i].value.split(" ")),
+								FLR_RECHNUNG + filterKriterien[i].kritName,
+								filterKriterien[i].isBIgnoreCase()));
+						where.append(" OR ");
+						where.append(buildWhereClauseExtendedSearch(Arrays
+								.asList(filterKriterien[i].value.split(" ")),
+								FLR_RECHNUNG + "c_bestellnummer",
+								filterKriterien[i].isBIgnoreCase()));
+						where.append(") ");
 
-							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" "
-										+ filterKriterien[i].value
-												.toUpperCase());
-							} else {
-								where.append(" " + filterKriterien[i].value);
-							}
-						}
+					} else if (isAdresseKunde(filterKriterien[i])) {
+						RechnungKundeAnsprechpartnerFilterBuilder whereBuilder = new RechnungKundeAnsprechpartnerFilterBuilder(
+								getParameterFac().getSuchenInklusiveKBez(theClientDto.getMandant()));
+						whereBuilder.buildFirmaAnsprechpartnerFilter(filterKriterien[i], where);
+//						buildFirmaFilterOld(filterKriterien[i], where);
+					} else if (filterKriterien[i].kritName.equals("c_suche")) {
+
+						where.append(buildWhereClauseExtendedSearchWithoutDuplicates(
+								FLRRechnungtextsuche.class.getSimpleName(),
+								FLR_RECHNUNG, filterKriterien[i]));
 					} else {
 						// belegfilter: 2 der rest im else-block
 						where.append(buildWhereClausePart("rechnung.",
@@ -411,6 +535,75 @@ public class RechnungHandler extends UseCaseHandler {
 		}
 
 		return where.toString();
+	}
+
+	private void buildFirmaFilterOld(FilterKriterium filterKriterium, StringBuffer where) {
+		ParametermandantDto parameter = null;
+		try {
+			parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ALLGEMEIN,
+							ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		Boolean bSuchenInklusiveKbez = (java.lang.Boolean) parameter
+				.getCWertAsObject();
+		where.append("(");
+		if (bSuchenInklusiveKbez) {
+			if (filterKriterium.isBIgnoreCase()) {
+				where.append(" (upper(" + FLR_RECHNUNG
+						+ filterKriterium.kritName + ")");
+				where.append(" " + filterKriterium.operator);
+				where.append(" "
+						+ filterKriterium.value
+								.toUpperCase());
+				where.append("OR upper(" + FLR_RECHNUNG
+						+ "flrkunde.flrpartner.c_kbez" + ")");
+				where.append(" " + filterKriterium.operator);
+				where.append(" "
+						+ filterKriterium.value
+								.toUpperCase() + ") ");
+			} else {
+				where.append(" (" + FLR_RECHNUNG
+						+ filterKriterium.kritName);
+				where.append(" " + filterKriterium.operator);
+				where.append(" " + filterKriterium.value);
+				where.append("OR " + FLR_RECHNUNG
+						+ "flrkunde.flrpartner.c_kbez");
+				where.append(" " + filterKriterium.operator);
+				where.append(" " + filterKriterium.value
+						+ ") ");
+			}
+		} else {
+			if (filterKriterium.isBIgnoreCase()) {
+				where.append(" upper(" + FLR_RECHNUNG
+						+ filterKriterium.kritName + ")");
+			} else {
+				where.append(" " + FLR_RECHNUNG
+						+ filterKriterium.kritName);
+			}
+
+			where.append(" " + filterKriterium.operator);
+
+			if (filterKriterium.isBIgnoreCase()) {
+				where.append(" "
+						+ filterKriterium.value
+								.toUpperCase());
+			} else {
+				where.append(" " + filterKriterium.value);
+			}
+		}
+	}
+
+	private boolean isAdresseKunde(FilterKriterium filterKriterium) {
+		return filterKriterium.kritName.equals(
+				RechnungFac.FLR_RECHNUNG_FLRKUNDE
+						+ "."
+						+ LieferantFac.FLR_PARTNER
+						+ "."
+						+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
 	}
 
 	/**
@@ -523,6 +716,7 @@ public class RechnungHandler extends UseCaseHandler {
 	 */
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 
@@ -543,72 +737,126 @@ public class RechnungHandler extends UseCaseHandler {
 				bHatFibu = getMandantFac().darfAnwenderAufModulZugreifen(
 						LocaleFac.BELEGART_FINANZBUCHHALTUNG, theClientDto);
 
+				parameter = getParameterFac().getMandantparameter(
+						theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_RECHNUNG,
+						ParameterFac.PARAMETER_DEBITORENNUMMER_IN_AUSWAHLLISTE);
+				bAuswahllisteMitDebitorennummer = (Boolean) parameter
+						.getCWertAsObject();
+
 			} catch (RemoteException ex) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 			}
 
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class, Date.class,
-							String.class, Icon.class, BigDecimal.class,
-							String.class, String.class, Boolean.class },
-					new String[] {
-							"Id",
-							" ",
-							getTextRespectUISpr("lp.rechnr", mandantCNr, locUI),
-							getTextRespectUISpr("lp.kunde", mandantCNr, locUI),
-							getTextRespectUISpr("lp.ort", mandantCNr, locUI),
-							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
-							getTextRespectUISpr("lp.vertreter", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.status", mandantCNr, locUI),
-							bBruttoStattNetto ? getTextRespectUISpr(
-									"lp.bruttobetrag", mandantCNr, locUI)
-									: getTextRespectUISpr("lp.nettobetrag",
-											mandantCNr, locUI),
-							getTextRespectUISpr("lp.whg", mandantCNr, locUI),
-							getTextRespectUISpr("lp.m", mandantCNr, locUI),
-							getTextRespectUISpr("lp.fb", mandantCNr, locUI) },
-					new int[] { -1, 1, QueryParameters.FLR_BREITE_M, -1, -1,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_WAEHRUNG, 2, 3 },
-					new String[] {
-							RechnungFac.FLR_RECHNUNG_I_ID,
-							RechnungFac.FLR_RECHNUNG_FLRRECHNUNGART + "."
-									+ RechnungFac.FLR_RECHNUNGART_C_NR,
-							RechnungFac.FLR_RECHNUNG_C_NR,
-							RechnungFac.FLR_RECHNUNG_FLRKUNDE
-									+ "."
-									+ KundeFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-							// Sortierung fuers erste mal nach LKZ
-							RechnungFac.FLR_RECHNUNG_FLRKUNDE + "."
-									+ KundeFac.FLR_PARTNER + "."
-									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-									+ "."
-									+ SystemFac.FLR_LP_FLRLAND
-									+ "."
-									+ SystemFac.FLR_LP_LANDLKZ
-									+ ", "
-									+
-									// und dann nach plz
-									"rechnung."
-									+ RechnungFac.FLR_RECHNUNG_FLRKUNDE + "."
-									+ KundeFac.FLR_PARTNER + "."
-									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-									+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
-							RechnungFac.FLR_RECHNUNG_D_BELEGDATUM,
-							RechnungFac.FLR_RECHNUNG_FLRVERTRETER + "."
-									+ PersonalFac.FLR_PERSONAL_C_KURZZEICHEN,
-							RechnungFac.FLR_RECHNUNG_STATUS_C_NR,
-							bBruttoStattNetto ? RechnungFac.FLR_RECHNUNG_N_WERTFW
-									+ "+rechnung.n_wertustfw"
-									: RechnungFac.FLR_RECHNUNG_N_WERTFW,
-							RechnungFac.FLR_RECHNUNG_WAEHRUNG_C_NR,
-							Facade.NICHT_SORTIERBAR,
-							RechnungFac.FLR_RECHNUNG_T_FIBUUEBERNAHME }));
+			TableColumnInformation columns = new TableColumnInformation();
+
+			columns.add("i_id", Integer.class, "i_id", -1,
+					RechnungFac.FLR_RECHNUNG_I_ID);
+
+			columns.add("art", String.class, " ", 1,
+					RechnungFac.FLR_RECHNUNG_FLRRECHNUNGART + "."
+							+ RechnungFac.FLR_RECHNUNGART_C_NR);
+
+			columns.add("lp.rechnr", String.class,
+					getTextRespectUISpr("lp.rechnr", mandantCNr, locUI),
+					QueryParameters.FLR_BREITE_M, RechnungFac.FLR_RECHNUNG_C_NR);
+
+			columns.add("lp.kunde", String.class,
+					getTextRespectUISpr("lp.kunde", mandantCNr, locUI),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					RechnungFac.FLR_RECHNUNG_FLRKUNDE + "."
+							+ KundeFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1);
+
+			columns.add("lp.ort", String.class,
+					getTextRespectUISpr("lp.ort", mandantCNr, locUI),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					RechnungFac.FLR_RECHNUNG_FLRKUNDE + "."
+							+ KundeFac.FLR_PARTNER + "."
+							+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+							+ SystemFac.FLR_LP_FLRLAND
+							+ "."
+							+ SystemFac.FLR_LP_LANDLKZ
+							+ ", "
+							+
+							// und dann nach plz
+							"rechnung." + RechnungFac.FLR_RECHNUNG_FLRKUNDE
+							+ "." + KundeFac.FLR_PARTNER + "."
+							+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
+							+ SystemFac.FLR_LP_LANDPLZORTPLZ);
+
+			if (bAuswahllisteMitDebitorennummer) {
+				columns.add("lp.debitoren", String.class,
+						getTextRespectUISpr("lp.debitoren", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						RechnungFac.FLR_RECHNUNG_FLRKUNDE + "."
+								+ KundeFac.FLR_KONTO + ".c_nr");
+			}
+
+			columns.add(
+					"re.projektbestellnummer",
+					String.class,
+					getTextRespectUISpr("re.projektbestellnummer", mandantCNr,
+							locUI), QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					RechnungFac.FLR_RECHNUNG_C_BEZ);
+
+			columns.add("lp.datum", Date.class,
+					getTextRespectUISpr("lp.datum", mandantCNr, locUI),
+					QueryParameters.FLR_BREITE_M,
+					RechnungFac.FLR_RECHNUNG_D_BELEGDATUM);
+
+			
+			String orderVertreter = "flrvertreter.c_kurzzeichen";
+			if (iAnlegerStattVertreterAnzeigen == 1) {
+				orderVertreter = "flrpersonalanleger.c_kurzzeichen";
+			} else if (iAnlegerStattVertreterAnzeigen == 2) {
+				orderVertreter = "flrpersonalaenderer.c_kurzzeichen";
+
+			}
+			
+			columns.add("lp.vertreter", String.class,
+					getTextRespectUISpr("lp.vertreter", mandantCNr, locUI),
+					QueryParameters.FLR_BREITE_XS,
+					orderVertreter);
+			columns.add("lp.status", Icon.class,
+					getTextRespectUISpr("lp.status", mandantCNr, locUI),
+					QueryParameters.FLR_BREITE_XS,
+					RechnungFac.FLR_RECHNUNG_STATUS_C_NR);
+
+			if (bBruttoStattNetto) {
+				columns.add(
+						"lp.bruttobetrag",
+						BigDecimal.class,
+						getTextRespectUISpr("lp.bruttobetrag", mandantCNr,
+								locUI), QueryParameters.FLR_BREITE_PREIS,
+						RechnungFac.FLR_RECHNUNG_N_WERTFW
+								+ "+rechnung.n_wertustfw");
+			} else {
+				columns.add(
+						"lp.nettobetrag",
+						BigDecimal.class,
+						getTextRespectUISpr("lp.nettobetrag", mandantCNr, locUI),
+						QueryParameters.FLR_BREITE_PREIS,
+						RechnungFac.FLR_RECHNUNG_N_WERTFW);
+			}
+
+			columns.add("lp.whg", String.class,
+					getTextRespectUISpr("lp.whg", mandantCNr, locUI),
+					QueryParameters.FLR_BREITE_WAEHRUNG,
+					RechnungFac.FLR_RECHNUNG_WAEHRUNG_C_NR);
+
+			columns.add("lp.m", String.class,
+					getTextRespectUISpr("rechnung.mahnstufe", mandantCNr, locUI), 2,
+					Facade.NICHT_SORTIERBAR,getTextRespectUISpr("rechnung.mahnstufe.tooltip", mandantCNr, locUI) );
+
+			columns.add("lp.fb", Boolean.class,
+					getTextRespectUISpr("lp.fb", mandantCNr, locUI), 3,
+					RechnungFac.FLR_RECHNUNG_T_FIBUUEBERNAHME, getTextRespectUISpr("rechnung.fb.tooltip", mandantCNr,
+							locUI));
+
+			setTableInfo(new TableInfo(columns.getClasses(),
+					columns.getHeaderNames(), columns.getWidths(),
+					columns.getDbColumNames(), columns.getHeaderToolTips()));
+
 		}
 
 		return super.getTableInfo();

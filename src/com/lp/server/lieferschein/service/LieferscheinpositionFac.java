@@ -34,13 +34,18 @@ package com.lp.server.lieferschein.service;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.TreeMap;
 
 import javax.ejb.Remote;
 
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
+import com.lp.server.system.jcr.service.JCRDocDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
@@ -64,7 +69,7 @@ public interface LieferscheinpositionFac {
 	public static final String LIEFERSCHEINPOSITIONSART_URSPRUNGSLAND = LocaleFac.POSITIONSART_URSPRUNGSLAND;
 	public static final String LIEFERSCHEINPOSITIONSART_STUECKLISTENPOSITION = LocaleFac.POSITIONSART_STUECKLISTENPOSITION; // diese
 	public static final String LIEFERSCHEINPOSITIONSART_ENDSUMME = LocaleFac.POSITIONSART_ENDSUMME; // endsumme
-	public static final String LIEFERSCHEINPOSITIONSART_INTELLIGENTE_ZWISCHENSUMME = LocaleFac.POSITIONSART_INTELLIGENTE_ZWISCHENSUMME ;
+	public static final String LIEFERSCHEINPOSITIONSART_INTELLIGENTE_ZWISCHENSUMME = LocaleFac.POSITIONSART_INTELLIGENTE_ZWISCHENSUMME;
 
 	// Positionsart
 	// existiert
@@ -131,173 +136,160 @@ public interface LieferscheinpositionFac {
 	public static final String FLR_LIEFERSCHEINPOSITION_FLRMEDIASTANDARD = "flrmediastandard";
 	public static final String FLR_LIEFERSCHEINPOSITION_FLRMWSTSATZ = "flrmwstsatz";
 
-	public Integer createLieferscheinposition(
-			LieferscheinpositionDto lieferscheinpositionDtoI, boolean bArtikelSetAufloesen, TheClientDto theClientDto)
+	public Integer createLieferscheinposition(LieferscheinpositionDto lieferscheinpositionDtoI,
+			boolean bArtikelSetAufloesen, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public Integer createLieferscheinposition(LieferscheinpositionDto lieferscheinpositionDtoI,
+			boolean bArtikelSetAufloesen, List<SeriennrChargennrMitMengeDto> identities, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public Integer createLieferscheinposition(
-			LieferscheinpositionDto lieferscheinpositionDtoI, boolean bArtikelSetAufloesen, 
-			List<SeriennrChargennrMitMengeDto> identities, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException ;
-	
-	public LieferscheinpositionDto befuelleZusaetzlichePreisfelder(Integer iIdPositionI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public LieferscheinpositionDto befuelleZusaetzlichePreisfelder(Integer iIdPositionI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
-	public void removeLieferscheinposition(
-			LieferscheinpositionDto lieferscheinpositionDtoI, TheClientDto theClientDto)
+	public void removeLieferscheinposition(LieferscheinpositionDto lieferscheinpositionDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public void removeLieferscheinpositionen(Object[] idsI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void storniereLieferscheinposition(Integer iIdLieferscheinpositionI,
+	public void storniereLieferscheinposition(Integer iIdLieferscheinpositionI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public int berechneAnzahlMengenbehaftetePositionen(Integer iIdLieferscheinI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	public int berechneAnzahlArtikelpositionen(Integer iIdLieferscheinI) throws EJBExceptionLP, RemoteException;
+
+	public LieferscheinpositionDto[] lieferscheinpositionFindByLieferscheinIId(Integer iIdLieferscheinI)
+			throws EJBExceptionLP, RemoteException;
+
+	public Collection<LieferscheinpositionDto> lieferscheinpositionFindByLieferscheinIId(Integer iIdLieferscheinI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public int berechneAnzahlMengenbehaftetePositionen(
-			Integer iIdLieferscheinI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public LieferscheinpositionDto[] lieferscheinpositionFindByLieferscheinMenge(Integer iIdLieferscheinI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public int berechneAnzahlArtikelpositionen(Integer iIdLieferscheinI)
-			throws EJBExceptionLP, RemoteException;
+	public void setzeKupferzuschlag(Integer iIdLieferscheinpositionI, Double ddKupferzuschlagI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public LieferscheinpositionDto[] lieferscheinpositionFindByLieferscheinIId(
-			Integer iIdLieferscheinI) throws EJBExceptionLP, RemoteException;
-	
-	public Collection<LieferscheinpositionDto> lieferscheinpositionFindByLieferscheinIId(Integer
-			iIdLieferscheinI,TheClientDto theClientDto)
-	throws EJBExceptionLP, RemoteException;
+	public void vertauscheLieferscheinpositionenMinus(Integer iIdBasePosition, List<Integer> possibleIIds,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public LieferscheinpositionDto[] lieferscheinpositionFindByLieferscheinMenge(
-			Integer iIdLieferscheinI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public void vertauscheLieferscheinpositionenPlus(Integer iIdBasePosition, List<Integer> possibleIIds,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void setzeKupferzuschlag(Integer iIdLieferscheinpositionI,
-			Double ddKupferzuschlagI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(Integer iIdLieferscheinI,
+			int iSortierungNeuePositionI) throws EJBExceptionLP, RemoteException;
 
-	public void vertauscheLieferscheinpositionenMinus(Integer iIdBasePosition,
-			List<Integer> possibleIIds, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public LieferscheinpositionDto lieferscheinpositionFindByPrimaryKey(Integer iIdLieferscheinpositionI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void vertauscheLieferscheinpositionenPlus(Integer iIdBasePosition,
-			List<Integer> possibleIIds, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ; 
-	
-	
-	public void sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(
-			Integer iIdLieferscheinI, int iSortierungNeuePositionI)
-			throws EJBExceptionLP, RemoteException;
-
-	public LieferscheinpositionDto lieferscheinpositionFindByPrimaryKey(
-			Integer iIdLieferscheinpositionI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
-	public LieferscheinpositionDto lieferscheinpositionFindByPrimaryKeyOhneExc(
-			Integer iIdLieferscheinpositionI, TheClientDto theClientDto);
-
-	public LieferscheinpositionDto[] lieferscheinpositionFindByAuftragpositionIId(
-			Integer iIdAuftragpositionI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-	
-	public LieferscheinpositionDto lieferscheinpositionFindPositionIIdISort(
-			Integer positionIId,Integer iSort) throws EJBExceptionLP ,RemoteException;
-
-	public Integer updateLieferscheinposition(
-			LieferscheinpositionDto oLieferscheinpositionDtoI,
-			TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-	
-	public Integer updateLieferscheinposition(
-			LieferscheinpositionDto oLieferscheinpositionDtoI,
-			List<SeriennrChargennrMitMengeDto> identities,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
-
-	public boolean enthaeltLieferscheinpositionLagerbewirtschaftetenArtikel(
-			Integer iIdLieferscheinpositionI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
-
-
-	public void preiseAusAuftragspositionenUebernehmen(Integer auftragIId,
+	public LieferscheinpositionDto lieferscheinpositionFindByPrimaryKeyOhneExc(Integer iIdLieferscheinpositionI,
 			TheClientDto theClientDto);
-	
-	public void updateLieferscheinpositionSichtAuftrag(
-			LieferscheinpositionDto lieferscheinpositionDtoI, TheClientDto theClientDto)
+
+	/**
+	 * Alle Lieferscheinpositionen der angegebenen Auftragsposition laden</br>
+	 * <p>
+	 * Es werden auch s&auml;tliche Chargen- bzw. Seriennnrn geladen
+	 * </p>
+	 * 
+	 * @param iIdAuftragpositionI die auftragspositionId
+	 * @param theClientDto
+	 * @return
+	 * @throws EJBExceptionLP
+	 * @throws RemoteException
+	 */
+	public LieferscheinpositionDto[] lieferscheinpositionFindByAuftragpositionIId(Integer iIdAuftragpositionI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public LieferscheinpositionDto lieferscheinpositionFindPositionIIdISort(Integer positionIId, Integer iSort)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateLieferscheinpositionOhneWeitereAktion(
-			LieferscheinpositionDto lieferscheinpositionDtoI, TheClientDto theClientDto)
+	public Integer updateLieferscheinposition(LieferscheinpositionDto oLieferscheinpositionDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public Integer updateLieferscheinposition(LieferscheinpositionDto oLieferscheinpositionDtoI,
+			List<SeriennrChargennrMitMengeDto> identities, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateLieferscheinpositionAusRechnung(
-			LieferscheinpositionDto oLieferscheinpositionDtoI,
-			Integer rechnungpositionIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public boolean enthaeltLieferscheinpositionLagerbewirtschaftetenArtikel(Integer iIdLieferscheinpositionI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void updateLieferscheinpositionAusRechnung(
-			LieferscheinpositionDto oLieferscheinpositionDtoI,
+	public ArrayList<LieferscheinpositionDto> preiseAusAuftragspositionenUebernehmen(Integer auftragIId,
+			TheClientDto theClientDto);
+
+	public void updateLieferscheinpositionSichtAuftrag(LieferscheinpositionDto lieferscheinpositionDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void updateLieferscheinpositionOhneWeitereAktion(LieferscheinpositionDto lieferscheinpositionDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void updateLieferscheinpositionAusRechnung(LieferscheinpositionDto oLieferscheinpositionDtoI,
+			Integer rechnungpositionIId, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void updateLieferscheinpositionAusRechnung(LieferscheinpositionDto oLieferscheinpositionDtoI,
 			Integer rechnungpositionIId, List<SeriennrChargennrMitMengeDto> snrs, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
-	public void lieferscheinpositionKeinLieferrestEintragen(
-			Integer lieferscheinpositionIId, boolean bKeinLieferrest, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
-	public BigDecimal getGesamtpreisPosition(Integer iIdPositionI,
+
+	public void lieferscheinpositionKeinLieferrestEintragen(Integer lieferscheinpositionIId, boolean bKeinLieferrest,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public boolean gehoertZuArtikelset(Integer lieferscheinpositionIId);
-	
-	public LieferscheinpositionDto[] getLieferscheinPositionenByLieferschein(
-			Integer iIdLieferscheinI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-
-	public LieferscheinpositionDto befuelleZusaetzlichePositionfelder(
-			LieferscheinpositionDto lieferscheinpositionDtoI, TheClientDto theClientDto)
+	public BigDecimal getGesamtpreisPosition(Integer iIdPositionI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
+
+	public boolean gehoertZuArtikelset(Integer lieferscheinpositionIId);
+
+	public LieferscheinpositionDto[] getLieferscheinPositionenByLieferschein(Integer iIdLieferscheinI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public LieferscheinpositionDto befuelleZusaetzlichePositionfelder(LieferscheinpositionDto lieferscheinpositionDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
 	/**
 	 * Die Positionsnummer im Lieferschein unabh&auml;ngig von Lieferauftr&auml;gen
-	 * @param lsposIId die Lieferscheinposition f&uuml;r die die Nummer ermittelt werden soll.
-	 * @return die Positionsnummer unabh&auml;ngig von irgendwelchen Auftragszuordnungen zwischen 1 ... n
+	 * 
+	 * @param lsposIId die Lieferscheinposition f&uuml;r die die Nummer ermittelt
+	 *                 werden soll.
+	 * @return die Positionsnummer unabh&auml;ngig von irgendwelchen
+	 *         Auftragszuordnungen zwischen 1 ... n
 	 */
-	public Integer getLSPositionNummer(Integer lsposIId) ;
+	public Integer getLSPositionNummer(Integer lsposIId);
 
 	public Integer getPositionNummer(Integer lsposIId) throws RemoteException;
 
-	public Integer getPositionIIdFromPositionNummer(Integer lieferscheinIId, Integer position) ;
+	public Integer getPositionIIdFromPositionNummer(Integer lieferscheinIId, Integer position);
 
-	public Integer getLSPositionIIdFromPositionNummer(Integer lieferscheinIId,
-			Integer position) ;
-	
-	
-	public void berechnePauschalposition(BigDecimal wert,Integer positionIId,Integer belegIId,TheClientDto theClientDto) 
-		throws EJBExceptionLP, RemoteException;
-	
-	public void pruefeVKPreisAufLagerbewegung(TheClientDto theClientDto)
-		throws EJBExceptionLP, RemoteException;
-	
-	public HashMap lieferscheinpositionFindByLieferscheinIIdAuftragIId(Integer lieferscheinIId,Integer iIdAuftragI,
+	public Integer getLSPositionIIdFromPositionNummer(Integer lieferscheinIId, Integer position);
+
+	public void berechnePauschalposition(BigDecimal wert, Integer positionIId, Integer belegIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public void pruefeVKPreisAufLagerbewegung(TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public HashMap lieferscheinpositionFindByLieferscheinIIdAuftragIId(Integer lieferscheinIId, Integer iIdAuftragI,
 			TheClientDto theClientDto);
-	
-	public Integer getLastPositionNummer(Integer reposIId) throws EJBExceptionLP, RemoteException ;
 
-	public Integer getLSLastPositionNummer(Integer lsposIId) ;
-	
+	public Integer getLastPositionNummer(Integer reposIId) throws EJBExceptionLP, RemoteException;
+
+	public Integer getLSLastPositionNummer(Integer lsposIId);
+
 	/**
 	 * Die hoechste/letzte in einer Rechnung bestehende Positionsnummer ermitteln
 	 * 
-	 * @param rechnungIId die RechnungsIId fuer die die hoechste Pos.Nummer ermittelt 
-	 *   werden soll.
-	 *   
-	 * @return 0 ... n 
+	 * @param rechnungIId die RechnungsIId fuer die die hoechste Pos.Nummer
+	 *                    ermittelt werden soll.
+	 * 
+	 * @return 0 ... n
 	 */
-	public Integer getHighestPositionNumber(Integer rechnungIId) throws EJBExceptionLP ;
+	public Integer getHighestPositionNumber(Integer rechnungIId) throws EJBExceptionLP;
 
-	public Integer getLSHighestPositionNumber(Integer rechnungIId) throws EJBExceptionLP ;
-	
-	public void bucheAbLager(LieferscheinpositionDto oDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP;
-	
+	public Integer getLSHighestPositionNumber(Integer rechnungIId) throws EJBExceptionLP;
+
+	public void bucheAbLager(LieferscheinpositionDto oDtoI, TheClientDto theClientDto) throws EJBExceptionLP;
+
 	/**
-	 * Prueft, ob fuer alle Rechnungspositionen zwischen den beiden angegebenen Positionsnummern
-	 * der gleiche Mehrwertsteuersatz definiert ist.
+	 * Prueft, ob fuer alle Rechnungspositionen zwischen den beiden angegebenen
+	 * Positionsnummern der gleiche Mehrwertsteuersatz definiert ist.
 	 * 
 	 * @param rechnungIId
 	 * @param vonPositionNumber
@@ -305,20 +297,71 @@ public interface LieferscheinpositionFac {
 	 * @return true wenn alle Positionen den gleichen Mehrwertsteuersatz haben.
 	 * @throws EJBExceptionLP
 	 */
-	public boolean pruefeAufGleichenMwstSatz(
-			Integer rechnungIId, Integer vonPositionNumber, Integer bisPositionNumber) throws EJBExceptionLP ;
-	public void bucheZuLager(LieferscheinpositionDto oDtoI,
-			TheClientDto theClientDto) throws EJBExceptionLP;
-	
-	public List<SeriennrChargennrMitMengeDto> getSeriennrchargennrForArtikelsetPosition(
-			Integer lieferscheinposIId) throws EJBExceptionLP ;	
-	public void positionenAnhandAuftragsreihenfolgeAnordnen(Integer iIdLieferscheinI,
+	public boolean pruefeAufGleichenMwstSatz(Integer rechnungIId, Integer vonPositionNumber, Integer bisPositionNumber)
+			throws EJBExceptionLP;
+
+	public void bucheZuLager(LieferscheinpositionDto oDtoI, TheClientDto theClientDto) throws EJBExceptionLP;
+
+	public List<SeriennrChargennrMitMengeDto> getSeriennrchargennrForArtikelsetPosition(Integer lieferscheinposIId)
+			throws EJBExceptionLP;
+
+	public void positionenAnhandAuftragsreihenfolgeAnordnen(Integer iIdLieferscheinI, TheClientDto theClientDto);
+
+	public Integer createLieferscheinAusLieferschein(Integer lieferscheinIId, boolean bUebernimmKonditionenDesKunden,
 			TheClientDto theClientDto);
-	public Integer createLieferscheinAusLieferschein(Integer lieferscheinIId,
-			boolean bUebernimmKonditionenDesKunden, TheClientDto theClientDto);
-	
+
 	public LieferscheinpositionDto lieferscheinpositionFindByPrimaryKeyOhneExcUndOhneSnrChnrList(
 			Integer iIdLieferscheinpositionI);
-	public Integer reservierungAufloesen(Integer auftragIId, LieferscheinpositionDto lsPosDto, TheClientDto theClientDto);
-	
+
+	public Integer reservierungAufloesen(Integer auftragIId, LieferscheinpositionDto lsPosDto,
+			TheClientDto theClientDto);
+
+	public void sortiereNachAuftragsnummer(Integer lieferscheinIId, TheClientDto theClientDto);
+
+	LieferscheinpositionDto setupLieferscheinpositionDto(LieferscheinDto ls, ArtikelDto artikel, BigDecimal menge,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	/**
+	 * Alle Lieferscheinpositionen der angegbenen Auftragposition laden</br>
+	 * 
+	 * @param iIdAuftragpositionI
+	 * @param ladeSerienChargennummern true, wenn auch die Serien-/Chargeninfos
+	 *                                 geladen werden sollen
+	 * @param theClientDto
+	 * @return
+	 * @throws EJBExceptionLP
+	 */
+	LieferscheinpositionDto[] lieferscheinpositionFindByAuftragpositionIId(Integer iIdAuftragpositionI,
+			boolean ladeSerienChargennummern, TheClientDto theClientDto) throws EJBExceptionLP;
+
+	public Integer istLieferscheinpositionMitWEPosAnderermandantVerknuepft(Integer wareneingangspositionIId);
+
+	void preiseEinesArtikelsetsUpdatenLocal(Integer positionIIdKopfartikel, TheClientDto theClientDto);
+
+	/**
+	 * Gib mir bitte jene Lieferscheinposition, die die Kopfposition des Artikelsets
+	 * repraesentiert, das mit der angegebenen Auftragsposition verknuepft ist.
+	 * 
+	 * Es wird derzeit nicht weiter ueberprueft, ob die angegebene AB-Position
+	 * tatsaechlich existiert, oder gar ein Artikelset repraesentiert.
+	 * 
+	 * @param lieferscheinId
+	 * @param auftragpositionId
+	 * @param theClientDto
+	 * @return
+	 */
+	LieferscheinpositionDto lieferscheinpositionKopfFindByLieferscheinIdAuftragpositionId(Integer lieferscheinId,
+			Integer auftragpositionId, TheClientDto theClientDto);
+
+	Integer createLieferscheinpositionService(LieferscheinpositionDto lieferscheinpositionDtoI,
+			boolean bArtikelSetAufloesen, List<SeriennrChargennrMitMengeDto> identities, boolean erlaubeVerteilen,
+			TheClientDto theClientDto) throws RemoteException;
+
+	void sortiereNachArtikelnummer(Integer lieferscheinIId, TheClientDto theClientDto);
+
+	Collection<LieferscheinpositionDto> lieferscheinpositionFindByLieferschein(Integer lieferscheinId,
+			TheClientDto theClientDto);
+
+	public TreeMap<String, ArrayList<JCRDocDto>> getWEPDokumente(String belegartCNr, Integer belegartpositionIId,
+			String sBelegartDokumentenablage, String sGruppierung, boolean bAlleVersionen, TheClientDto theClientDto);
 }
